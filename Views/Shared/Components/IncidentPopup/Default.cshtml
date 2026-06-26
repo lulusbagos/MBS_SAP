@@ -1,0 +1,351 @@
+@model MBS_SAP.Models.IncidentNews
+@{
+    // If there is no recent incident, render nothing
+    if (Model == null)
+    {
+        return;
+    }
+    var excerpt = (Model.Konten ?? "").Length > 200 ? (Model.Konten.Substring(0, 200) + "…") : Model.Konten;
+
+    // Kategori badge color mapping
+    var kategoriColor = (Model.Kategori ?? "").ToLower() switch
+    {
+        "fatal" => "#dc3545",
+        "berat" => "#e65100",
+        "sedang" => "#f59e0b",
+        "ringan" => "#22c55e",
+        _ => "#6b7280"
+    };
+}
+
+<style>
+    /* Incident Popup Styles */
+    #incidentPopupModal .modal-dialog {
+        max-width: 620px;
+        margin: 1rem auto;
+    }
+    #incidentPopupModal .incident-popup-card {
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: #1a1a2e;
+        color: #e0e0e0;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+    }
+    #incidentPopupModal .incident-popup-img {
+        width: 100%;
+        height: 240px;
+        object-fit: cover;
+        display: block;
+    }
+    #incidentPopupModal .incident-popup-img-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(0deg, #1a1a2e 0%, transparent 60%);
+        pointer-events: none;
+    }
+    #incidentPopupModal .incident-popup-no-img {
+        height: 130px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    }
+    #incidentPopupModal .incident-popup-close-x {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 10;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(0,0,0,0.55);
+        color: #fff;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        line-height: 1;
+        padding: 0;
+    }
+    #incidentPopupModal .incident-popup-close-x:hover {
+        background: rgba(244,63,95,0.7);
+    }
+    #incidentPopupModal .incident-popup-badge {
+        position: absolute;
+        bottom: 14px;
+        left: 20px;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 14px;
+        border-radius: 20px;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+    }
+    #incidentPopupModal .incident-popup-body {
+        padding: 20px 24px 24px 24px;
+    }
+    #incidentPopupModal .incident-popup-title {
+        font-weight: 700;
+        font-size: 1.15rem;
+        color: #ffffff;
+        margin-bottom: 10px;
+        line-height: 1.4;
+    }
+    #incidentPopupModal .incident-popup-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 12px;
+        font-size: 12px;
+        color: #9ca3af;
+    }
+    #incidentPopupModal .incident-popup-divider {
+        border-color: rgba(255,255,255,0.08);
+        margin: 0 0 12px 0;
+    }
+    #incidentPopupModal .incident-popup-excerpt {
+        font-size: 13.5px;
+        color: #cbd5e1;
+        line-height: 1.7;
+        max-height: 140px;
+        overflow-y: auto;
+    }
+    #incidentPopupModal .incident-popup-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 20px;
+        gap: 10px;
+    }
+    #incidentPopupModal .btn-incident-close {
+        background: rgba(255,255,255,0.06);
+        color: #9ca3af;
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        padding: 8px 18px;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    #incidentPopupModal .btn-incident-close:hover {
+        background: rgba(255,255,255,0.12);
+        color: #e2e8f0;
+    }
+    #incidentPopupModal .btn-incident-read {
+        background: linear-gradient(135deg, #f43f5e, #e11d48);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 8px 20px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(244,63,95,0.3);
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    #incidentPopupModal .btn-incident-read:hover {
+        box-shadow: 0 6px 20px rgba(244,63,95,0.45);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    /* ===== MOBILE OPTIMIZATION ===== */
+    @@media (max-width: 576px) {
+        #incidentPopupModal .modal-dialog {
+            margin: 0.5rem;
+            max-width: calc(100% - 1rem);
+        }
+        #incidentPopupModal .incident-popup-card {
+            border-radius: 14px;
+        }
+        #incidentPopupModal .incident-popup-img {
+            height: 170px;
+        }
+        #incidentPopupModal .incident-popup-no-img {
+            height: 100px;
+        }
+        #incidentPopupModal .incident-popup-no-img i {
+            font-size: 40px !important;
+        }
+        #incidentPopupModal .incident-popup-body {
+            padding: 16px 18px 20px 18px;
+        }
+        #incidentPopupModal .incident-popup-title {
+            font-size: 1rem;
+        }
+        #incidentPopupModal .incident-popup-meta {
+            gap: 10px;
+            font-size: 11px;
+        }
+        #incidentPopupModal .incident-popup-excerpt {
+            font-size: 12.5px;
+            max-height: 110px;
+        }
+        #incidentPopupModal .incident-popup-actions {
+            flex-direction: column-reverse;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        #incidentPopupModal .btn-incident-close,
+        #incidentPopupModal .btn-incident-read {
+            width: 100%;
+            text-align: center;
+            padding: 10px 16px;
+        }
+        #incidentPopupModal .incident-popup-badge {
+            bottom: 10px;
+            left: 14px;
+            font-size: 10px;
+            padding: 3px 10px;
+        }
+        #incidentPopupModal .incident-popup-close-x {
+            width: 32px;
+            height: 32px;
+            font-size: 15px;
+            top: 10px;
+            right: 10px;
+        }
+    }
+</style>
+
+<!-- Incident Popup Modal -->
+<div class="modal fade" id="incidentPopupModal" tabindex="-1" aria-labelledby="incidentPopupLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content incident-popup-card">
+
+            <!-- Image / Header Area -->
+            <div class="position-relative">
+                @if (!string.IsNullOrEmpty(Model.GambarUrl))
+                {
+                    <img src="@Model.GambarUrl" class="incident-popup-img" alt="@Model.Judul" />
+                    <div class="incident-popup-img-overlay"></div>
+                }
+                else
+                {
+                    <div class="incident-popup-no-img">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 50px; color: rgba(244,63,95,0.3);"></i>
+                    </div>
+                }
+
+                <!-- Close Button (X) -->
+                <button type="button" class="incident-popup-close-x" id="incidentPopupCloseX" aria-label="Tutup">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+
+                <!-- Kategori Badge -->
+                @if (!string.IsNullOrEmpty(Model.Kategori))
+                {
+                    <span class="incident-popup-badge" style="background: @(kategoriColor);">
+                        <i class="bi bi-shield-exclamation me-1"></i>@Model.Kategori
+                    </span>
+                }
+            </div>
+
+            <!-- Modal Body -->
+            <div class="incident-popup-body">
+
+                <!-- Title -->
+                <h5 id="incidentPopupLabel" class="incident-popup-title">
+                    <i class="bi bi-megaphone-fill me-2" style="color: #f43f5e;"></i>@Model.Judul
+                </h5>
+
+                <!-- Meta info -->
+                <div class="incident-popup-meta">
+                    @if (Model.TanggalKejadian.HasValue)
+                    {
+                        <span>
+                            <i class="bi bi-calendar-event me-1" style="color: #60a5fa;"></i>
+                            @Model.TanggalKejadian.Value.ToString("dd MMM yyyy")
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Lokasi))
+                    {
+                        <span>
+                            <i class="bi bi-geo-alt-fill me-1" style="color: #f59e0b;"></i>
+                            @Model.Lokasi
+                        </span>
+                    }
+                    <span>
+                        <i class="bi bi-person-fill me-1" style="color: #a78bfa;"></i>
+                        @Model.DibuatOleh
+                    </span>
+                </div>
+
+                <!-- Divider -->
+                <hr class="incident-popup-divider" />
+
+                <!-- Content Excerpt -->
+                <div class="incident-popup-excerpt">
+                    @Html.Raw(excerpt)
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="incident-popup-actions">
+                    <button type="button" class="btn-incident-close" id="incidentPopupCloseBtn">
+                        <i class="bi bi-x-lg me-1"></i> Tutup
+                    </button>
+                    <a asp-controller="Incident" asp-action="Detail" asp-route-id="@Model.Id" class="btn-incident-read">
+                        Baca Selengkapnya <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var modalEl = document.getElementById('incidentPopupModal');
+        if (!modalEl) return;
+
+        // Only show popup once per session (per incident).
+        // If a NEW incident is published, it will show again.
+        var incidentId = '@Model.Id';
+        var storageKey = 'incident_popup_shown';
+        var shownId = sessionStorage.getItem(storageKey);
+
+        if (shownId === incidentId) {
+            // Already shown this incident in this session — skip
+            return;
+        }
+
+        var modal = new bootstrap.Modal(modalEl, {
+            backdrop: true,
+            keyboard: true
+        });
+
+        // Close handlers — manual cleanup to avoid stuck backdrop/overlay
+        function closePopup() {
+            modal.hide();
+        }
+
+        // Close button (X) at top
+        var closeX = document.getElementById('incidentPopupCloseX');
+        if (closeX) closeX.addEventListener('click', closePopup);
+
+        // Close button at bottom
+        var closeBtn = document.getElementById('incidentPopupCloseBtn');
+        if (closeBtn) closeBtn.addEventListener('click', closePopup);
+
+        // Cleanup: when modal is fully hidden, make sure backdrop & body state are cleaned up
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            // Remove any leftover backdrop elements
+            document.querySelectorAll('.modal-backdrop').forEach(function (el) { el.remove(); });
+            // Restore body scrolling
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        });
+
+        // Mark as shown and display the popup
+        sessionStorage.setItem(storageKey, incidentId);
+        modal.show();
+    });
+</script>

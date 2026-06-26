@@ -1,0 +1,1141 @@
+@model IEnumerable<MBS_SAP.Models.HazardReport>
+@{
+    ViewData["Title"] = "Hazard Reports - SAP";
+}
+
+<div class="animate-fade-in">
+    <div class="screen-title">Temuan Hazard</div>
+    <p class="screen-subtitle">Kelola dan laporkan kondisi/tindakan berbahaya di seluruh area operasional PT. Mandiri Bara Sangatta.</p>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(34, 197, 94, 0.15); color: var(--color-primary); border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["WarningMessage"] != null)
+    {
+        <div class="alert alert-warning alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(245, 158, 11, 0.18); color: #f59e0b; border-radius: 12px;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["WarningMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Hybrid Grid Layout: Form and List side-by-side on laptop, stacked on mobile -->
+    <div class="form-responsive-row">
+        
+        <!-- Form Column -->
+        <div class="card-sap border-orange-accent" style="overflow: visible;">
+            <form asp-controller="Hazard" asp-action="Submit" method="post" enctype="multipart/form-data" id="hazardForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="hazardId" name="id" value="" />
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 text-white" style="font-weight: 700;" id="formTitle"><i class="bi bi-plus-circle-fill me-2" style="color: var(--color-orange);"></i>Buat Laporan Baru</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnCancelEdit" onclick="cancelEditHazard()">
+                        <i class="bi bi-x-circle me-1"></i> Batal Edit
+                    </button>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="tanggal">Tanggal Temuan</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-calendar-event-fill input-sap-icon"></i>
+                            <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="waktuStr">Waktu Temuan</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-clock-fill input-sap-icon"></i>
+                            <input type="time" id="waktuStr" name="waktuStr" class="input-sap" value="@DateTime.Now.ToString("HH:mm")" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="area">Area Utama</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="input-sap-wrapper flex-grow-1 mb-0">
+                                <i class="bi bi-geo-alt-fill input-sap-icon"></i>
+                                <select id="area" name="area" class="input-sap" required>
+                                    <option value="" disabled selected>Loading Area...</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-primary shadow-sm" style="height: 46px; border-radius: 12px; padding: 0 16px; background-color: var(--color-primary); border: none;" onclick="$('#addAreaModal').modal('show')" title="Tambah Area Baru">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="lokasi">Lokasi Spesifik</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-geo-fill input-sap-icon"></i>
+                            <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Klik ikon target di kanan untuk mengambil lokasi GPS..." style="padding-right: 40px;" readonly required />
+                            <button type="button" class="btn btn-link p-0 position-absolute" id="btnGetLocation" style="right: 12px; top: 10px; color: var(--color-primary);" onclick="getLocation()" title="Ambil Lokasi GPS">
+                                <i class="bi bi-crosshair"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted" style="font-size: 10px;">GPS otomatis mengambil kordinat Anda</small>
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="detilLokasi">Detail Lokasi / Benchmark</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-compass-fill input-sap-icon"></i>
+                        <input type="text" id="detilLokasi" name="detilLokasi" class="input-sap" placeholder="Misal: Depan Pos Security KM 3" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="kategoriBahaya">Kategori Bahaya</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-tag-fill input-sap-icon"></i>
+                            <select id="kategoriBahaya" name="kategoriBahaya" class="input-sap" required>
+                                <option value="" disabled selected>Pilih Kategori...</option>
+                                <option value="Kondisi Tidak Aman">Kondisi Tidak Aman (Unsafe Condition)</option>
+                                <option value="Tindakan Tidak Aman">Tindakan Tidak Aman (Unsafe Action)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="jenisBahaya">Jenis Bahaya</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-shield-fill-exclamation input-sap-icon"></i>
+                            <select id="jenisBahaya" name="jenisBahaya" class="input-sap text-uppercase" required>
+                                <option value="" disabled selected>Pilih Jenis...</option>
+                                <option value="Biologi">Biologi</option>
+                                <option value="Dan lain-lain">Dan lain-lain</option>
+                                <option value="Ergonomi">Ergonomi</option>
+                                <option value="Fasilitas Emergency">Fasilitas Emergency</option>
+                                <option value="Fisikal">Fisikal</option>
+                                <option value="Kelistrikan">Kelistrikan</option>
+                                <option value="Kimia">Kimia</option>
+                                <option value="Lingkungan">Lingkungan</option>
+                                <option value="Longsor">Longsor</option>
+                                <option value="Mekanikal">Mekanikal</option>
+                                <option value="Perilaku">Perilaku</option>
+                                <option value="Traffic">Traffic</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="jenisKetidaksesuaian">Jenis Ketidaksesuaian</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-question-circle-fill input-sap-icon"></i>
+                        <input type="text" id="jenisKetidaksesuaian" name="jenisKetidaksesuaian" class="input-sap" placeholder="Misal: Rambu Lalu Lintas Tidak Jelas, Tidak Pakai APD" />
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap">Tingkat Risiko</label>
+                    <div class="d-flex gap-2">
+                        <div class="flex-fill">
+                            <input type="radio" name="tingkatResiko" value="Rendah" class="btn-check" id="riskLow" checked>
+                            <label class="risk-select-btn low" for="riskLow">RENDAH</label>
+                        </div>
+                        <div class="flex-fill">
+                            <input type="radio" name="tingkatResiko" value="Sedang" class="btn-check" id="riskMedium">
+                            <label class="risk-select-btn medium" for="riskMedium">SEDANG</label>
+                        </div>
+                        <div class="flex-fill">
+                            <input type="radio" name="tingkatResiko" value="Tinggi" class="btn-check" id="riskHigh">
+                            <label class="risk-select-btn high" for="riskHigh">TINGGI</label>
+                        </div>
+                        <div class="flex-fill">
+                            <input type="radio" name="tingkatResiko" value="Ekstrim" class="btn-check" id="riskExtreme">
+                            <label class="risk-select-btn extreme" for="riskExtreme">EKSTRIM</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="temuan">Detil Temuan Hazard</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-file-text-fill input-sap-icon" style="top: 14px;"></i>
+                        <textarea id="temuan" name="temuan" class="input-sap" rows="3" placeholder="Jelaskan kondisi bahaya sedetail mungkin..." style="padding-left: 42px;" required></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="perbaikan">Tindakan Perbaikan Langsung (Bila Ada)</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-wrench-adjustable input-sap-icon" style="top: 14px;"></i>
+                        <textarea id="perbaikan" name="perbaikan" class="input-sap" rows="2" placeholder="Tindakan koreksi instan yang sudah dilakukan..." style="padding-left: 42px;"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="tindakanPerbaikan">Rencana Tindakan Lanjutan</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-arrow-right-circle-fill input-sap-icon" style="top: 14px;"></i>
+                        <textarea id="tindakanPerbaikan" name="tindakanPerbaikan" class="input-sap" rows="2" placeholder="Rekomendasi rencana perbaikan permanen..." style="padding-left: 42px;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Penanggung Jawab Area (PJA) Section -->
+                <div class="card-sap bg-dark-card border-0 mb-3 px-3 py-3 position-relative" style="z-index: 1050; overflow: visible;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-white mb-0" style="font-size: 13px; font-weight: 700;"><i class="bi bi-person-fill-lock me-1"></i>Penanggung Jawab Area (PJA)</h6>
+                        <div class="form-check form-switch m-0" style="font-size: 11px;">
+                            <input class="form-check-input" type="checkbox" role="switch" id="lintasPerusahaanToggle" onchange="toggleLintasPerusahaanSearch()">
+                            <label class="form-check-label text-white" for="lintasPerusahaanToggle" style="opacity: 0.8;">Lintas Perusahaan</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group-sap position-relative mb-0">
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-search input-sap-icon" style="top: 14px;"></i>
+                            <input type="text" id="pjaSearchInput" class="input-sap" style="padding-left: 42px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;" placeholder="Ketik NIK atau Nama PJA..." autocomplete="off" />
+                        </div>
+                        <div id="pjaSearchResults" class="dropdown-menu w-100" style="background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 300px; overflow-y: auto;">
+                        </div>
+                        <input type="hidden" id="pja" name="pja" required />
+                        <input type="hidden" id="nikPja" name="nikPja" />
+                        <input type="hidden" id="departemenPja" name="departemenPja" />
+                    </div>
+
+                    <!-- Selected PJA Card -->
+                    <div id="selectedPjaCard" class="d-none mt-3" style="background: var(--bg-body); border-radius: 12px; padding: 12px; border: 1px solid var(--border-color);">
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--color-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px;" id="pjaInitial">
+                            </div>
+                            <div style="flex-grow: 1;">
+                                <div style="font-weight: 800; font-size: 14px; color: var(--text-main);" id="pjaDisplayNama"></div>
+                                <div style="font-weight: 600; font-size: 12px; color: var(--color-primary);" id="pjaDisplayJabatan"></div>
+                                <div style="font-size: 11px; color: var(--text-muted);"><i class="bi bi-building me-1"></i><span id="pjaDisplayDept"></span> &bull; <span id="pjaDisplayPerusahaan"></span></div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearSelectedPja()" style="border-radius: 50%; width: 32px; height: 32px; padding: 0;"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group-sap mb-4">
+                    <label class="form-label-sap">Foto Bukti Temuan (Opsional)</label>
+                    <input type="file" id="photoInput" name="fotoTemuan" accept="image/*" capture="environment" class="d-none" onchange="previewImage(this)" />
+                    <div class="upload-card" onclick="document.getElementById('photoInput').click()">
+                        <div id="uploadPlaceholder">
+                            <i class="bi bi-camera-fill"></i>
+                            <h6 class="mb-1 text-white" style="font-weight: 700; font-size: 14px;">Ambil Foto / Pilih File</h6>
+                            <span class="text-muted" style="font-size: 11px;">Mendukung input kamera langsung</span>
+                        </div>
+                        <div id="imagePreviewContainer" class="d-none">
+                            <img id="imagePreview" src="" alt="Preview" style="max-width: 100%; max-height: 120px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-color);" />
+                            <div style="font-size: 12px; color: var(--color-primary); font-weight: 600;"><i class="bi bi-arrow-repeat me-1"></i>Ganti Gambar</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-sap-primary w-100 py-3">
+                    <i class="bi bi-send-fill me-2"></i> KIRIM LAPORAN HAZARD
+                </button>
+            </form>
+        </div>
+
+        <!-- History/List Column -->
+        <div>
+            <div class="history-header mb-3">
+                <h6 class="text-white" style="font-weight: 700;"><i class="bi bi-clock-history me-2" style="color: var(--color-primary);"></i>Histori Laporan Terbaru</h6>
+            </div>
+            
+            @if (Model == null || !Model.Any())
+            {
+                <div class="card-sap text-center py-4 text-muted">
+                    <i class="bi bi-inbox-fill d-block mb-2" style="font-size: 32px;"></i>
+                    Belum ada laporan hazard tercatat.
+                </div>
+            }
+            else
+            {
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    @{ int loopIndex = 1; }
+                    @foreach (var item in Model)
+                    {
+                        var delayClass = "delay-" + (loopIndex > 6 ? 6 : loopIndex);
+                        <div class="card-sap animate-fade-in @delayClass @(item.TingkatResiko == "Ekstrim" || item.TingkatResiko == "Tinggi" ? "border-red-accent" : item.TingkatResiko == "Sedang" ? "border-orange-accent" : "border-primary-accent") mb-0">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="history-badge @(item.KategoriBahaya != null && item.KategoriBahaya.Contains("Tindakan") ? "hazard" : "inspection")" style="width: 28px; height: 28px; font-size: 14px;">
+                                        <i class="bi @(item.KategoriBahaya != null && item.KategoriBahaya.Contains("Tindakan") ? "bi-person-fill-exclamation" : "bi-exclamation-triangle-fill")"></i>
+                                    </div>
+                                    <span style="font-weight: 700; font-size: 13px;">@(item.Lokasi ?? item.Area ?? "Unknown Location")</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="status-badge @(item.StatusTemuan != null ? item.StatusTemuan.ToLower() : "open")">@item.StatusTemuan</span>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
+                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editHazard(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
+                                            @if (!string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <li><a class="dropdown-item text-success" href="javascript:void(0)" onclick="openCloseHazard(@item.Id, '@((item.NikPja ?? string.Empty).Replace("'", "\\'"))', '@((item.Pja ?? string.Empty).Replace("'", "\\'"))')"><i class="bi bi-check2-circle me-2"></i>Close Hazard</a></li>
+                                            }
+                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="generateHazardPdf(@item.Id, 'download', event)"><i class="bi bi-file-earmark-pdf-fill me-2 text-danger"></i>Download PDF</a></li>
+                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="generateHazardPdf(@item.Id, 'share', event)"><i class="bi bi-share-fill me-2 text-info"></i>Share PDF</a></li>
+                                            <li><hr class="dropdown-divider border-secondary"></li>
+                                            <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteHazard(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus Laporan</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px; text-align: justify; line-height: 1.4;">
+                                @item.Temuan
+                            </p>
+
+                            @if (!string.IsNullOrEmpty(item.FotoTemuan))
+                            {
+                                <div class="mb-2">
+                                    <a href="@item.FotoTemuan" target="_blank">
+                                        <img src="@item.FotoTemuan" alt="Attachment" style="max-height: 80px; border-radius: 6px; border: 1px solid var(--border-color);" />
+                                    </a>
+                                </div>
+                            }
+
+                            <div class="d-flex justify-content-between align-items-center pt-2" style="border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
+                                <span><i class="bi bi-person me-1"></i>@item.Nama</span>
+                                <span><i class="bi bi-calendar-event me-1"></i>@item.Tanggal.ToString("dd MMM yyyy") @item.Waktu.ToString(@"hh\:mm")</span>
+                            </div>
+                        </div>
+                        loopIndex++;
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Close Hazard -->
+<div class="modal fade" id="closeHazardModal" tabindex="-1" aria-labelledby="closeHazardModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-white fw-bold" id="closeHazardModalLabel"><i class="bi bi-check2-circle text-success me-2"></i>Close Hazard</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-4">
+                <div class="alert alert-info py-2" style="font-size: 12px; border-radius: 8px;">
+                    <i class="bi bi-info-circle me-1"></i> Pilih cara penutupan hazard: kirim ke PJA atau selesaikan sendiri.
+                </div>
+
+                <div class="d-flex gap-2 mb-3">
+                    <div class="flex-fill">
+                        <input type="radio" class="btn-check" name="closeMode" id="closeModePja" value="pja" checked>
+                        <label class="risk-select-btn medium" for="closeModePja" style="width: 100%; text-align: center;">Kirim ke PJA</label>
+                    </div>
+                    <div class="flex-fill">
+                        <input type="radio" class="btn-check" name="closeMode" id="closeModeSelf" value="self">
+                        <label class="risk-select-btn low" for="closeModeSelf" style="width: 100%; text-align: center;">Selesaikan Sendiri</label>
+                    </div>
+                </div>
+
+                <div class="form-group-sap mb-0">
+                    <label class="form-label-sap" for="closeHazardNote">Catatan Penutupan</label>
+                    <textarea id="closeHazardNote" class="input-sap" rows="3" placeholder="Tulis catatan penutupan / rencana tindak lanjut..."></textarea>
+                    <div id="closeHazardPjaInfo" class="text-muted mt-2" style="font-size: 12px;"></div>
+                    <div id="closeHazardError" class="text-danger mt-2" style="font-size: 12px; display:none;"></div>
+                </div>
+                <input type="hidden" id="closeHazardId" />
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Batal</button>
+                <button type="button" class="btn btn-success" id="btnConfirmCloseHazard" onclick="submitCloseHazard()" style="border-radius: 8px; font-weight: 600;">Close Hazard</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Add Area -->
+<div class="modal fade" id="addAreaModal" tabindex="-1" aria-labelledby="addAreaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-white fw-bold" id="addAreaModalLabel"><i class="bi bi-plus-square-fill text-primary me-2"></i>Tambah Area Utama Baru</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-4">
+                <div class="alert alert-info py-2" style="font-size: 12px; border-radius: 8px;">
+                    <i class="bi bi-info-circle me-1"></i> Area yang Anda tambahkan hanya akan terlihat oleh karyawan di perusahaan Anda.
+                </div>
+                <div class="form-group-sap mb-3">
+                    <label class="form-label-sap">Nama Area</label>
+                    <input type="text" id="newAreaName" class="form-control input-sap text-uppercase" placeholder="Misal: PIT TEMPUDO" />
+                    <div id="addAreaError" class="text-danger mt-2" style="font-size: 12px; display: none;"></div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="text-white fw-bold mb-2" style="font-size: 13px;"><i class="bi bi-list-task me-1 text-primary"></i>Daftar Area Terdaftar</h6>
+                    <div id="existingAreasList" class="list-group" style="max-height: 180px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2);">
+                        <div class="p-3 text-center text-muted" style="font-size: 12px;">Memuat daftar area...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Tutup</button>
+                <button type="button" class="btn btn-primary" id="btnSaveArea" onclick="saveNewArea()" style="border-radius: 8px; font-weight: 600;">Simpan Area</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openCloseHazard(id, nikPja, pjaName) {
+            $('#closeHazardId').val(id);
+            $('#closeHazardNote').val('');
+            $('#closeHazardError').hide().text('');
+            $('#closeModePja').prop('checked', true);
+
+            if (nikPja && pjaName) {
+                $('#closeHazardPjaInfo').html('<i class="bi bi-person-check me-1"></i>Akan dikirim ke PJA: <strong>' + pjaName + ' (' + nikPja + ')</strong>');
+            } else {
+                $('#closeHazardPjaInfo').html('<i class="bi bi-exclamation-triangle me-1 text-warning"></i>PJA belum ditentukan pada laporan ini. Pilih mode <strong>Selesaikan Sendiri</strong> atau edit laporan untuk menetapkan PJA.');
+            }
+
+            $('#closeHazardModal').modal('show');
+        }
+
+        function submitCloseHazard() {
+            var id = $('#closeHazardId').val();
+            var mode = $('input[name="closeMode"]:checked').val();
+            var note = $('#closeHazardNote').val();
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            if (!id) {
+                $('#closeHazardError').text('Data hazard tidak valid.').show();
+                return;
+            }
+
+            var form = $('<form method="post" action="/Hazard/Close/' + id + '"></form>');
+            form.append('<input type="hidden" name="__RequestVerificationToken" value="' + token + '" />');
+            form.append('<input type="hidden" name="closeMode" value="' + mode + '" />');
+            form.append($('<input type="hidden" name="closeNote" />').val(note));
+            $('body').append(form);
+            form.submit();
+        }
+
+        function previewImage(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').src = e.target.result;
+                    document.getElementById('uploadPlaceholder').classList.add('d-none');
+                    document.getElementById('imagePreviewContainer').classList.remove('d-none');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // PJA Search Logic
+        let pjaTimeout = null;
+        let pjaIsLintasPerusahaan = false;
+
+        function toggleLintasPerusahaanSearch() {
+            pjaIsLintasPerusahaan = document.getElementById('lintasPerusahaanToggle').checked;
+            const input = document.getElementById('pjaSearchInput').value;
+            if(input.length >= 3) {
+                searchPja();
+            }
+        }
+
+        $('#pjaSearchInput').on('input', function() {
+            clearTimeout(pjaTimeout);
+            const query = $(this).val();
+            
+            if (query.length < 3) {
+                $('#pjaSearchResults').hide();
+                return;
+            }
+
+            pjaTimeout = setTimeout(searchPja, 500);
+        });
+
+        function searchPja() {
+            const query = $('#pjaSearchInput').val();
+            if (query.length < 3) return;
+
+            $.get('/Api/SearchEmployee', { 
+                query: query, 
+                lintasPerusahaan: pjaIsLintasPerusahaan 
+            }, function(data) {
+                const resultsContainer = $('#pjaSearchResults');
+                resultsContainer.empty();
+                
+                if (data.length === 0) {
+                    resultsContainer.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">PJA tidak ditemukan.</div>');
+                } else {
+                    data.forEach(function(k) {
+                        const init = k.nama.charAt(0);
+                        const item = $(`
+                            <div class="dropdown-item p-3" style="cursor: pointer; border-bottom: 1px solid var(--border-color);" onclick="selectPja('${k.nik}', '${k.nama}', '${k.jabatan || ''}', '${k.departemen || ''}', '${k.perusahaan || ''}')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-layout); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; color: var(--color-primary);">
+                                        ${init}
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 13px; color: var(--text-main);">${k.nama}</div>
+                                        <div style="font-size: 11px; color: var(--text-muted);"><i class="bi bi-person-badge me-1"></i>${k.nik} &bull; ${k.jabatan || '-'}</div>
+                                        <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;"><i class="bi bi-building me-1"></i>${k.departemen || '-'} | ${k.perusahaan || '-'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                        resultsContainer.append(item);
+                    });
+                }
+                resultsContainer.show();
+            });
+        }
+
+        function selectPja(nik, nama, jabatan, dept, perusahaan) {
+            $('#nikPja').val(nik);
+            $('#pja').val(nama);
+            $('#departemenPja').val(dept);
+            
+            // Display Logic
+            let initial = nama.charAt(0).toUpperCase();
+            $('#pjaInitial').text(initial);
+            $('#pjaDisplayNama').text(nama);
+            $('#pjaDisplayJabatan').text(jabatan || '-');
+            $('#pjaDisplayDept').text(dept || '-');
+            $('#pjaDisplayPerusahaan').text(perusahaan || '-');
+
+            $('#selectedPjaCard').removeClass('d-none');
+            $('#pjaSearchResults').hide();
+            $('#pjaSearchInput').val('');
+            $('#pjaSearchInput').parent().hide();
+            $('#lintasPerusahaanToggle').closest('.d-flex').hide();
+        }
+
+        function cancelEditHazard() {
+            $('#hazardForm')[0].reset();
+            $('#hazardId').val('');
+            $('#formTitle').html('<i class="bi bi-plus-circle-fill me-2" style="color: var(--color-orange);"></i>Buat Laporan Baru');
+            $('#btnCancelEdit').addClass('d-none');
+            clearSelectedPja();
+
+            // Reset image preview
+            $('#imagePreview').attr('src', '');
+            $('#imagePreviewContainer').addClass('d-none');
+            $('#uploadPlaceholder').show();
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function editHazard(id) {
+            $.get('/Hazard/GetData/' + id, function(data) {
+                if (data) {
+                    $('#hazardId').val(data.id);
+                    
+                    // Format dates and times
+                    if (data.tanggal) $('#tanggal').val(data.tanggal.split('T')[0]);
+                    if (data.waktu) $('#waktuStr').val(data.waktu.substring(0, 5));
+                    
+                    // Selects
+                    $('#area').val(data.area).change();
+                    $('#kategoriBahaya').val(data.kategoriBahaya).change();
+                    $('input[name="tingkatResiko"][value="' + data.tingkatResiko + '"]').prop('checked', true);
+
+                    // Inputs
+                    $('#lokasi').val(data.lokasi);
+                    $('#detilLokasi').val(data.detilLokasi);
+                    $('#temuan').val(data.temuan);
+                    $('#jenisBahaya').val(data.jenisBahaya);
+                    $('#jenisKetidaksesuaian').val(data.jenisKetidaksesuaian);
+                    $('#perbaikan').val(data.perbaikan);
+                    $('#tindakanPerbaikan').val(data.tindakanPerbaikan);
+
+                    // PJA
+                    if (data.nikPja && data.pja) {
+                        selectPja(data.nikPja, data.pja, '', data.departemenPja, '');
+                    } else {
+                        clearSelectedPja();
+                    }
+
+                    // Existing Photo Preview
+                    if (data.fotoTemuan) {
+                        $('#imagePreview').attr('src', data.fotoTemuan);
+                        $('#imagePreviewContainer').removeClass('d-none');
+                        $('#uploadPlaceholder').hide();
+                    } else {
+                        $('#imagePreview').attr('src', '');
+                        $('#imagePreviewContainer').addClass('d-none');
+                        $('#uploadPlaceholder').show();
+                    }
+
+                    $('#formTitle').html('<i class="bi bi-pencil-square me-2" style="color: var(--color-primary);"></i>Edit Laporan');
+                    $('#btnCancelEdit').removeClass('d-none');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }).fail(function() {
+                alert("Gagal mengambil data laporan. Laporan mungkin sudah dihapus.");
+            });
+        }
+
+        function deleteHazard(id) {
+            if (confirm("Apakah Anda yakin ingin menghapus laporan ini? Data yang dihapus tidak dapat dikembalikan.")) {
+                // Buat form dinamis untuk post delete
+                var form = $('<form action="/Hazard/Delete/' + id + '" method="post">' +
+                             '<input type="hidden" name="__RequestVerificationToken" value="' + $('input[name="__RequestVerificationToken"]').val() + '" />' +
+                             '</form>');
+                $('body').append(form);
+                form.submit();
+            }
+        }
+
+        function clearSelectedPja() {
+            $('#pja').val('');
+            $('#nikPja').val('');
+            $('#departemenPja').val('');
+            
+            $('#selectedPjaCard').addClass('d-none');
+            $('#pjaSearchInput').parent().show();
+            $('#lintasPerusahaanToggle').closest('.d-flex').show();
+            $('#pjaSearchInput').focus();
+        }
+
+        function getLocation() {
+            var btn = document.getElementById('btnGetLocation');
+            var input = document.getElementById('lokasi');
+            
+            if (navigator.geolocation) {
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 14px; height: 14px;"></span>';
+                
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    var lat = position.coords.latitude.toFixed(6);
+                    var lon = position.coords.longitude.toFixed(6);
+                    if (!input.value || input.value.indexOf(',') !== -1 || input.value === '') {
+                        input.value = lat + ", " + lon;
+                    }
+                    btn.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+                }, function(error) {
+                    console.log('GPS error: ' + error.message);
+                    btn.innerHTML = '<i class="bi bi-crosshair text-danger"></i>';
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                });
+            }
+        }
+
+        let globalAreasList = [];
+
+        function renderAreasList() {
+            var container = $('#existingAreasList');
+            if (!container.length) return;
+            container.empty();
+            if (globalAreasList && globalAreasList.length > 0) {
+                globalAreasList.forEach(function(item) {
+                    var row = $(`
+                        <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 border-bottom text-white p-2" id="area-row-${item.id}" style="border-color: rgba(255,255,255,0.05) !important;">
+                            <span style="font-size: 13px; font-weight: 600;">${item.namaArea}</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger p-0" onclick="confirmDeleteArea(${item.id}, '${item.namaArea}')" style="border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    `);
+                    container.append(row);
+                });
+            } else {
+                container.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">Belum ada Area Utama</div>');
+            }
+        }
+
+        function confirmDeleteArea(id, namaArea) {
+            var row = $(`#area-row-${id}`);
+            row.html(`
+                <div class="d-flex align-items-center gap-2 w-100 py-1">
+                    <span class="text-danger fw-bold text-truncate" style="font-size: 11px; flex-grow: 1;">Hapus ${namaArea}?</span>
+                    <input type="password" placeholder="Passcode" class="form-control form-control-sm text-center bg-dark border-secondary text-white" style="width: 80px; font-size: 10px; height: 26px; border-radius: 6px; padding: 0 4px;" id="passcode-${id}" />
+                    <button type="button" class="btn btn-danger btn-sm p-0" onclick="executeDeleteArea(${id}, '${namaArea}')" style="font-size: 10px; height: 26px; width: 42px; border-radius: 6px; font-weight: 600;">Hapus</button>
+                    <button type="button" class="btn btn-secondary btn-sm p-0" onclick="renderAreasList()" style="font-size: 10px; height: 26px; width: 42px; border-radius: 6px; font-weight: 600; background: var(--bg-body); border-color: var(--border-color);">Batal</button>
+                </div>
+            `);
+            $(`#passcode-${id}`).focus();
+        }
+
+        function executeDeleteArea(id, namaArea) {
+            var passcode = $(`#passcode-${id}`).val();
+            if (!passcode) {
+                alert("Passcode wajib diisi!");
+                return;
+            }
+
+            $.ajax({
+                url: '/Api/DeleteArea',
+                type: 'POST',
+                data: { id: id, passcode: passcode },
+                success: function(response) {
+                    loadAreas();
+                },
+                error: function(xhr) {
+                    alert(xhr.responseText || "Gagal menghapus area.");
+                    renderAreasList();
+                }
+            });
+        }
+
+        function loadAreas(selectedValue) {
+            $.ajax({
+                url: '/Api/GetAreas',
+                type: 'GET',
+                cache: false,
+                dataType: 'json',
+                success: function(data) {
+                    globalAreasList = data;
+                    renderAreasList();
+                    
+                    var select = $('#area');
+                    select.empty();
+                    select.append('<option value="" disabled selected>Pilih Area...</option>');
+                    if (data && data.length > 0) {
+                        data.forEach(function(item) {
+                            select.append('<option value="' + item.namaArea + '">' + item.namaArea + '</option>');
+                        });
+                    } else {
+                        select.append('<option value="" disabled>Belum ada Area Utama</option>');
+                    }
+                    
+                    if (selectedValue) {
+                        select.val(selectedValue);
+                    }
+                    
+                    select.trigger('refresh');
+                },
+                error: function(xhr, status, error) {
+                    console.error("Failed to load areas:", error);
+                    var select = $('#area');
+                    select.empty();
+                    select.append('<option value="" disabled>Gagal memuat area</option>');
+                    select.trigger('refresh');
+                }
+            });
+        }
+
+        function saveNewArea() {
+            var btn = $('#btnSaveArea');
+            var errorDiv = $('#addAreaError');
+            var areaName = $('#newAreaName').val();
+
+            if (!areaName || areaName.trim() === '') {
+                errorDiv.text('Nama area tidak boleh kosong').show();
+                return;
+            }
+
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...');
+            errorDiv.hide();
+
+            $.ajax({
+                url: '/Api/AddArea',
+                type: 'POST',
+                dataType: 'json',
+                data: { namaArea: areaName },
+                success: function(response) {
+                    $('#addAreaModal').modal('hide');
+                    $('#newAreaName').val('');
+                    var areaToSelect = (response && response.data) ? response.data.namaArea : null;
+                    loadAreas(areaToSelect);
+                    btn.prop('disabled', false).text('Simpan Area');
+                },
+                error: function(xhr) {
+                    errorDiv.text(xhr.responseText || 'Terjadi kesalahan saat menyimpan area').show();
+                    btn.prop('disabled', false).text('Simpan Area');
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            loadAreas();
+            
+            // Auto fetch GPS if creating new hazard
+            if (!$('#hazardId').val()) {
+                getLocation();
+            }
+
+            // Prevent double submission
+            $('#hazardForm').on('submit', function() {
+                var btn = $(this).find('button[type="submit"]');
+                if (btn.prop('disabled')) {
+                    return false;
+                }
+                btn.prop('disabled', true);
+                var originalText = btn.html();
+                btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');
+                
+                // Allow form to submit normally
+                return true;
+            });
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.form-group-sap').length) {
+                $('#pjaSearchResults').hide();
+            }
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        function generateHazardPdf(id, action, event) {
+            const targetBtn = event ? event.currentTarget : null;
+            let originalText = '';
+            if (targetBtn) {
+                originalText = targetBtn.innerHTML;
+                targetBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading...';
+                targetBtn.style.pointerEvents = 'none';
+            }
+
+            $.get('/Hazard/GetData/' + id, function(data) {
+                if (!data) {
+                    alert("Gagal memuat data laporan.");
+                    if (targetBtn) {
+                        targetBtn.innerHTML = originalText;
+                        targetBtn.style.pointerEvents = 'auto';
+                    }
+                    return;
+                }
+
+                // Create parent wrapper to hide the container from viewport without using display: none or opacity: 0
+                const pdfWrapper = document.createElement('div');
+                pdfWrapper.style.position = 'fixed';
+                pdfWrapper.style.left = '0';
+                pdfWrapper.style.top = '0';
+                pdfWrapper.style.width = '0';
+                pdfWrapper.style.height = '0';
+                pdfWrapper.style.overflow = 'hidden';
+                pdfWrapper.style.zIndex = '-9999';
+                pdfWrapper.style.pointerEvents = 'none';
+
+                // Create document container for PDF rendering
+                const pdfContainer = document.createElement('div');
+                pdfContainer.style.width = '718px'; // Adjust width to fit exactly inside the margins (794px - 76px margins)
+                pdfContainer.style.background = '#ffffff';
+                pdfContainer.style.color = '#000000';
+                pdfContainer.style.fontFamily = "'Plus Jakarta Sans', Arial, sans-serif";
+                pdfContainer.style.padding = '20px';
+                pdfContainer.style.boxSizing = 'border-box';
+
+                // Format Date
+                let rawDate = new Date(data.tanggal);
+                let options = { year: 'numeric', month: 'long', day: 'numeric' };
+                let formattedDate = rawDate.toLocaleDateString('id-ID', options);
+
+                // Format Time
+                let formattedTime = data.waktu.substring(0, 5);
+
+                // Risk Level Badge Styling
+                let riskColor = '#10b981'; // default green (low)
+                let riskBg = 'rgba(16, 185, 129, 0.1)';
+                if (data.tingkatResiko === 'Sedang') {
+                    riskColor = '#f97316';
+                    riskBg = 'rgba(249, 115, 22, 0.1)';
+                } else if (data.tingkatResiko === 'Tinggi') {
+                    riskColor = '#ef4444';
+                    riskBg = 'rgba(239, 68, 68, 0.1)';
+                } else if (data.tingkatResiko === 'Ekstrim') {
+                    riskColor = '#b91c1c';
+                    riskBg = 'rgba(185, 28, 28, 0.1)';
+                }
+
+                // Status Badge Styling
+                let statusColor = data.statusTemuan === 'Closed' ? '#10b981' : '#f59e0b';
+                let statusBg = data.statusTemuan === 'Closed' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+
+                // HTML Content
+                pdfContainer.innerHTML = `
+                    <!-- Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 24px;">
+                        <img src="/images/logo_indexim.png" style="height: 45px; width: auto; object-fit: contain;" />
+                        <div style="text-align: center; flex-grow: 1; padding: 0 15px;">
+                            <h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: 800; color: #0f172a; font-size: 18px; line-height: 1.2;">PT INDEXIM COALINDO</h2>
+                            <p style="margin: 4px 0 0; color: #64748b; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Safety Accountability Program (SAP)</p>
+                        </div>
+                        <img src="/images/logo_mbs_clean.png" style="height: 45px; width: auto; object-fit: contain;" />
+                    </div>
+
+                    <!-- Title -->
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <h1 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 800; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; display: inline-block;">LAPORAN TEMUAN HAZARD</h1>
+                        <div style="margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 12px; font-size: 12px;">
+                            <span style="color: #64748b;">No. Laporan: #HZR-${data.id}</span>
+                            <span style="font-size: 11px; font-weight: 800; color: ${statusColor}; background: ${statusBg}; padding: 3px 8px; border-radius: 12px; text-transform: uppercase;">STATUS: ${data.statusTemuan}</span>
+                        </div>
+                    </div>
+
+                    <!-- Details Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; page-break-inside: avoid; break-inside: avoid;">
+                        <thead>
+                            <tr>
+                                <th colspan="4" style="background: #f8fafc; text-align: left; padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">1. Detail Pelapor & Waktu</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="width: 20%; padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Nama Pelapor</td>
+                                <td style="width: 30%; padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${data.nama}</td>
+                                <td style="width: 20%; padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">NIK</td>
+                                <td style="width: 30%; padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${data.nik}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Departemen</td>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${data.departemen || '-'}</td>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Waktu Temuan</td>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${formattedDate} pukul ${formattedTime}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Location Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; page-break-inside: avoid; break-inside: avoid;">
+                        <thead>
+                            <tr>
+                                <th colspan="4" style="background: #f8fafc; text-align: left; padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">2. Lokasi Temuan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="width: 20%; padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Area Utama</td>
+                                <td style="width: 30%; padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${data.area || '-'}</td>
+                                <td style="width: 20%; padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Spesifik / GPS</td>
+                                <td style="width: 30%; padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a; font-family: monospace;">${data.lokasi || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Detail Lokasi</td>
+                                <td colspan="3" style="padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${data.detilLokasi || '-'}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Classification Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; page-break-inside: avoid; break-inside: avoid;">
+                        <thead>
+                            <tr>
+                                <th colspan="4" style="background: #f8fafc; text-align: left; padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">3. Klasifikasi Bahaya</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="width: 20%; padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Kategori Bahaya</td>
+                                <td style="width: 30%; padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${data.kategoriBahaya || '-'}</td>
+                                <td style="width: 20%; padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Jenis Bahaya</td>
+                                <td style="width: 30%; padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${data.jenisBahaya || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Ketidaksesuaian</td>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${data.jenisKetidaksesuaian || '-'}</td>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Tingkat Risiko</td>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">
+                                    <span style="font-weight: 800; color: ${riskColor}; background: ${riskBg}; padding: 3px 8px; border-radius: 4px; display: inline-block;">${data.tingkatResiko || 'Rendah'}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Findings & Description -->
+                    <div style="border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 24px; overflow: hidden; font-size: 12px; page-break-inside: avoid; break-inside: avoid;">
+                        <div style="background: #f8fafc; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">4. Uraian Temuan Hazard</div>
+                        <div style="padding: 12px; line-height: 1.6; color: #0f172a; white-space: pre-line; background: #ffffff;">${data.temuan}</div>
+                    </div>
+
+                    <!-- Action Details Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px; page-break-inside: avoid; break-inside: avoid;">
+                        <thead>
+                            <tr>
+                                <th colspan="2" style="background: #f8fafc; text-align: left; padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">5. Tindakan Perbaikan & Penanggung Jawab</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="width: 25%; padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Perbaikan Langsung</td>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${data.perbaikan || 'Tidak ada / Belum dilakukan'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Rencana Tindakan Lanjutan</td>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${data.tindakanPerbaikan || '-'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: 600; color: #475569; background: #f8fafc;">Penanggung Jawab Area (PJA)</td>
+                                <td style="padding: 8px 12px; border: 1px solid #e2e8f0; color: #0f172a;">${data.pja ? `${data.pja} (${data.nikPja || ''}) - ${data.departemenPja || ''}` : 'Belum ditetapkan'}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Photo Evidence -->
+                    <div id="pdf-photo-section" style="border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 24px; overflow: hidden; font-size: 12px; display: none; page-break-before: always; break-before: page; page-break-inside: avoid; break-inside: avoid;">
+                        <div style="background: #f8fafc; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">6. Lampiran Bukti Foto Temuan</div>
+                        <div style="padding: 16px; text-align: center; background: #ffffff;">
+                            <img id="pdf-evidence-img" src="" style="max-width: 100%; max-height: 380px; border-radius: 4px; border: 1px solid #cbd5e1;" />
+                        </div>
+                    </div>
+
+                    <!-- PDF Footer Copyright -->
+                    <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 10px; color: #64748b; line-height: 1.5; page-break-inside: avoid; break-inside: avoid;">
+                        <div>&copy; 2026 PT Indexim Coalindo. All Rights Reserved.</div>
+                        <div style="font-weight: 500;">Developed & Maintained by System Integration Department.</div>
+                    </div>
+                `;
+
+                pdfWrapper.appendChild(pdfContainer);
+                document.body.appendChild(pdfWrapper);
+
+                // Track and preload all images to ensure they load before canvas rendering
+                const imagesToLoad = [];
+
+                // Preload Indexim Logo
+                const logoIndexim = new Image();
+                logoIndexim.src = '/images/logo_indexim.png';
+                imagesToLoad.push(new Promise((resolve) => {
+                    if (logoIndexim.complete) resolve();
+                    else {
+                        logoIndexim.onload = () => resolve();
+                        logoIndexim.onerror = () => {
+                            console.warn("Logo Indexim failed to load.");
+                            resolve();
+                        };
+                    }
+                }));
+
+                // Preload MBS Logo
+                const logoMbs = new Image();
+                logoMbs.src = '/images/logo_mbs_clean.png';
+                imagesToLoad.push(new Promise((resolve) => {
+                    if (logoMbs.complete) resolve();
+                    else {
+                        logoMbs.onload = () => resolve();
+                        logoMbs.onerror = () => {
+                            console.warn("Logo MBS failed to load.");
+                            resolve();
+                        };
+                    }
+                }));
+
+                // Check if photo is present and set the src
+                const imgElement = pdfContainer.querySelector('#pdf-evidence-img');
+                const photoSection = pdfContainer.querySelector('#pdf-photo-section');
+
+                let photoPromise = Promise.resolve();
+                if (data.fotoTemuan) {
+                    photoSection.style.display = 'block';
+                    photoPromise = new Promise((resolve) => {
+                        imgElement.onload = () => resolve();
+                        imgElement.onerror = () => {
+                            console.warn("Evidence photo failed to load. Exporting PDF without photo...");
+                            photoSection.style.display = 'none';
+                            resolve();
+                        };
+                        imgElement.src = data.fotoTemuan;
+                    });
+                }
+                imagesToLoad.push(photoPromise);
+
+                const proceedGenerate = () => {
+                    const filename = `Laporan_Hazard_${data.id}_${data.tanggal.split('T')[0]}.pdf`;
+                    const opt = {
+                        margin: 10,
+                        filename: filename,
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                        pagebreak: { mode: ['css', 'legacy'] }
+                    };
+
+                    if (action === 'share') {
+                        html2pdf().set(opt).from(pdfContainer).toPdf().get('pdf').then(function(pdfObj) {
+                            const blob = pdfObj.output('blob');
+                            const file = new File([blob], filename, { type: 'application/pdf' });
+
+                            document.body.removeChild(pdfWrapper);
+                            if (targetBtn) {
+                                targetBtn.innerHTML = originalText;
+                                targetBtn.style.pointerEvents = 'auto';
+                            }
+
+                            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                                navigator.share({
+                                    files: [file],
+                                    title: 'Laporan Temuan Hazard #' + data.id,
+                                    text: 'Berikut adalah Laporan Temuan Hazard dari MBS SAP.'
+                                }).catch(err => {
+                                    console.log('Share cancelled or failed:', err);
+                                });
+                            } else {
+                                alert("Browser atau perangkat Anda tidak mendukung berbagi file langsung. Mengunduh file sebagai gantinya...");
+                                const link = document.createElement('a');
+                                link.href = URL.createObjectURL(blob);
+                                link.download = filename;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }
+                        }).catch(function(err) {
+                            console.error(err);
+                            alert("Terjadi kesalahan saat memproses share PDF.");
+                            document.body.removeChild(pdfWrapper);
+                            if (targetBtn) {
+                                targetBtn.innerHTML = originalText;
+                                targetBtn.style.pointerEvents = 'auto';
+                            }
+                        });
+                    } else {
+                        html2pdf().set(opt).from(pdfContainer).save().then(function() {
+                            document.body.removeChild(pdfWrapper);
+                            if (targetBtn) {
+                                targetBtn.innerHTML = originalText;
+                                targetBtn.style.pointerEvents = 'auto';
+                            }
+                        }).catch(function(err) {
+                            console.error(err);
+                            alert("Terjadi kesalahan saat mengunduh PDF.");
+                            document.body.removeChild(pdfWrapper);
+                            if (targetBtn) {
+                                targetBtn.innerHTML = originalText;
+                                targetBtn.style.pointerEvents = 'auto';
+                            }
+                        });
+                    }
+                };
+
+                Promise.all(imagesToLoad).then(() => {
+                    proceedGenerate();
+                });
+
+            }).fail(function() {
+                alert("Gagal mengambil data laporan dari server.");
+                if (targetBtn) {
+                    targetBtn.innerHTML = originalText;
+                    targetBtn.style.pointerEvents = 'auto';
+                }
+            });
+        }
+    </script>
+    <style>
+        input[type="text"].input-sap, textarea.input-sap {
+            text-transform: uppercase;
+        }
+        .risk-select-btn.extreme {
+            background: rgba(220, 38, 38, 0.05);
+            color: #dc2626;
+            border-color: rgba(220, 38, 38, 0.2);
+        }
+        .btn-check:checked + .risk-select-btn.extreme {
+            background: #b91c1c;
+            color: white;
+            border-color: #b91c1c;
+        }
+    </style>
+}

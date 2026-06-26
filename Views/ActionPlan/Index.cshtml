@@ -1,0 +1,425 @@
+@model IEnumerable<MBS_SAP.Models.ActionPlan>
+@{
+    ViewData["Title"] = "Action Plan - SAP";
+}
+
+<style>
+    /* ─── Filter Bar ─────────────────────────────────────────────── */
+    .ap-filter-bar {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 18px 20px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        flex-wrap: wrap;
+    }
+
+    .ap-filter-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .ap-filter-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--text-muted);
+        white-space: nowrap;
+        margin-right: 2px;
+    }
+
+    .ap-pill {
+        padding: 6px 16px;
+        border-radius: 99px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1.5px solid var(--border-color);
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.18s ease;
+        line-height: 1;
+    }
+
+    .ap-pill:hover {
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+    }
+
+    .ap-pill.active {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
+    }
+
+    .ap-pill.active-green {
+        background: #10b981;
+        border-color: #10b981;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+    }
+
+    .ap-pill.active-red {
+        background: #f43f5e;
+        border-color: #f43f5e;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(244, 63, 94, 0.35);
+    }
+
+    .ap-divider {
+        width: 1px;
+        height: 28px;
+        background: var(--border-color);
+    }
+
+    /* ─── Dialihkan Badge ─────────────────────────────────────────── */
+    .reassigned-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        border-radius: 8px;
+        padding: 8px 12px;
+        margin-bottom: 12px;
+        font-size: 11px;
+        color: #f59e0b;
+        line-height: 1.5;
+    }
+
+    .reassigned-banner i {
+        font-size: 14px;
+        margin-top: 1px;
+        flex-shrink: 0;
+    }
+
+    /* ─── Card accent ─────────────────────────────────────────────── */
+    .border-red-accent  { border-left: 3px solid var(--color-red)  !important; }
+    .border-green-accent { border-left: 3px solid var(--color-green) !important; }
+</style>
+
+<div class="animate-fade-in pb-4">
+
+    <!-- ── Header Banner ──────────────────────────────────────────── -->
+    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #059669, #10b981); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <i class="bi bi-calendar-check-fill text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px; letter-spacing: 0.5px;">ACTION PLAN</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Monitor dan tindak lanjuti temuan.</p>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(16, 185, 129, 0.15); color: var(--color-green); border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- ── Modern Pill Filter Bar ─────────────────────────────────── -->
+    <div class="ap-filter-bar">
+        <!-- Tipe -->
+        <div class="ap-filter-group">
+            <span class="ap-filter-label">Tipe</span>
+            <button class="ap-pill active filter-type" data-type="all">Semua</button>
+            <button class="ap-pill filter-type" data-type="hazard" data-active-class="active">Hazard</button>
+            <button class="ap-pill filter-type" data-type="inspection" data-active-class="active">Inspeksi</button>
+        </div>
+
+        <div class="ap-divider d-none d-md-block"></div>
+
+        <!-- Status -->
+        <div class="ap-filter-group">
+            <span class="ap-filter-label">Status</span>
+            <button class="ap-pill active filter-status" data-status="all">Semua</button>
+            <button class="ap-pill filter-status" data-status="open" data-active-class="active-red">Open</button>
+            <button class="ap-pill filter-status" data-status="closed" data-active-class="active-green">Closed</button>
+        </div>
+
+        <!-- Count badge -->
+        <div class="ms-auto">
+            <span id="visibleCount" class="badge" style="background: rgba(56,189,248,0.15); color: var(--color-primary); font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 99px; border: 1px solid rgba(56,189,248,0.25);">
+                @(Model?.Count() ?? 0) item
+            </span>
+        </div>
+    </div>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="card-sap text-center py-5 text-muted">
+            <i class="bi bi-shield-fill-check d-block mb-3" style="font-size: 48px; color: var(--color-green);"></i>
+            <h5>Semua Aman!</h5>
+            <p class="mb-0">Tidak ada action plan temuan safety yang terbuka saat ini.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row action-plan-container">
+            @foreach (var item in Model)
+            {
+                var isOpen = item.Status?.Equals("Open", StringComparison.OrdinalIgnoreCase) ?? true;
+                var displayType = item.ItemSap;
+                if (!string.IsNullOrEmpty(displayType) && displayType.Contains(":"))
+                {
+                    displayType = displayType.Split(':')[0];
+                }
+                var isReassigned = !string.IsNullOrEmpty(item.ReassignedFrom) && !string.IsNullOrEmpty(item.ReassignedTo);
+
+                <div class="col-md-6 mb-4 action-plan-item"
+                     data-type="@(displayType?.ToLower() ?? "hazard")"
+                     data-status="@(isOpen ? "open" : "closed")">
+                    <div class="card-sap @(isOpen ? "border-red-accent" : "border-green-accent") h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <!-- ── Card Header ── -->
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="badge bg-secondary text-white" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">
+                                        @displayType
+                                    </span>
+                                    <h6 class="text-white mt-1 mb-0" style="font-weight: 800; font-size: 16px;">
+                                        @item.KategoriTemuan
+                                    </h6>
+                                </div>
+                                <span class="status-badge @(isOpen ? "pending" : "approved")">
+                                    @(isOpen ? "Open" : "Closed")
+                                </span>
+                            </div>
+
+                            <!-- ── Location & Date ── -->
+                            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                                <i class="bi bi-geo-alt-fill me-1"></i>@(item.Lokasi ?? item.Area ?? "General")
+                                &bull;
+                                <i class="bi bi-calendar3 me-1"></i>@item.Tanggal.ToString("dd MMM yyyy")
+                            </div>
+
+                            <!-- ── Dialihkan Banner ── -->
+                            @if (isReassigned)
+                            {
+                                <div class="reassigned-banner">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    <div>
+                                        <strong>Laporan telah dialihkan</strong><br />
+                                        Dari <strong>@item.ReassignedFrom</strong> → kepada <strong>@item.ReassignedTo</strong>
+                                        @if (item.ReassignedAt.HasValue)
+                                        {
+                                            <span class="ms-1" style="opacity:.75;">(@item.ReassignedAt.Value.ToString("dd MMM yyyy, HH:mm"))</span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- ── Temuan ── -->
+                            <p style="font-size: 12px; color: var(--text-main); background-color: var(--bg-layout); padding: 10px; border-radius: 8px; margin-bottom: 14px; text-align: justify; line-height: 1.4; border-left: 3px solid var(--color-primary);">
+                                <strong>Temuan:</strong> @item.DetilTemuan
+                            </p>
+
+                            <!-- ── Foto ── -->
+                            <div class="row g-2 mb-3">
+                                @if (!string.IsNullOrEmpty(item.FotoTemuan))
+                                {
+                                    <div class="col-6">
+                                        <span class="d-block text-muted mb-1" style="font-size: 10px; font-weight: 600;">FOTO TEMUAN (BEFORE)</span>
+                                        <a href="@item.FotoTemuan" target="_blank">
+                                            <img src="@item.FotoTemuan" alt="Before" class="img-fluid rounded border" style="max-height: 100px; object-fit: cover; width: 100%;" />
+                                        </a>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(item.FotoPerbaikan))
+                                {
+                                    <div class="col-6">
+                                        <span class="d-block text-muted mb-1" style="font-size: 10px; font-weight: 600;">FOTO PERBAIKAN (AFTER)</span>
+                                        <a href="@item.FotoPerbaikan" target="_blank">
+                                            <img src="@item.FotoPerbaikan" alt="After" class="img-fluid rounded border" style="max-height: 100px; object-fit: cover; width: 100%;" />
+                                        </a>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- ── PJA & PIC ── -->
+                            <div class="mb-3" style="font-size: 11px; color: var(--text-muted); background-color: var(--bg-card-hover); padding: 10px 12px; border-radius: 8px;">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-person-badge-fill me-1" style="color: var(--color-primary);"></i>
+                                        <strong>PJA:</strong> @item.Pja (@item.NikPja) — @item.DepartemenPja
+                                    </div>
+                                    @if (isOpen)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-link p-0 m-0"
+                                                style="font-size: 11px; color: var(--color-primary); text-decoration: none;"
+                                                onclick="openReassignModal(@item.Id, 'ActionPlan')">
+                                            <i class="bi bi-person-lines-fill me-1"></i>Alihkan
+                                        </button>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrEmpty(item.Pic))
+                                {
+                                    <div class="mt-1">
+                                        <i class="bi bi-tools me-1" style="color: var(--color-green);"></i>
+                                        <strong>PIC Perbaikan:</strong> @item.Pic (@item.NikPic) — @item.DepartemenPic
+                                    </div>
+                                }
+                            </div>
+
+                            @if (!isOpen)
+                            {
+                                <div class="alert border-0 px-3 py-2" role="alert"
+                                     style="font-size: 11px; background-color: rgba(16, 185, 129, 0.1); color: var(--color-green); border-radius: 8px;">
+                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                    <strong>Perbaikan Selesai:</strong> @item.Perbaikan (@(item.TanggalPerbaikan?.ToString("dd MMM yyyy") ?? "-"))
+                                </div>
+                            }
+                        </div>
+
+                        <!-- ── Update Form ── -->
+                        @if (isOpen)
+                        {
+                            <div class="mt-3">
+                                <button class="btn btn-sap-outline w-100 py-2 btn-sm" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#updateForm-@item.Id" aria-expanded="false">
+                                    <i class="bi bi-pencil-square me-1"></i> Update Progress Perbaikan
+                                </button>
+
+                                <div class="collapse mt-3" id="updateForm-@item.Id">
+                                    <div class="card-sap bg-dark-card border-0 p-3 mb-0">
+                                        <form asp-controller="ActionPlan" asp-action="Update" method="post" enctype="multipart/form-data">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+
+                                            <div class="row">
+                                                <div class="col-md-6 form-group-sap">
+                                                    <label class="form-label-sap" style="font-size: 11px;">Nama PIC Perbaikan</label>
+                                                    <input type="text" name="pic" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="Nama PIC" required />
+                                                </div>
+                                                <div class="col-md-6 form-group-sap">
+                                                    <label class="form-label-sap" style="font-size: 11px;">NIK PIC</label>
+                                                    <input type="text" name="nikPic" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="NIK PIC" required />
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group-sap">
+                                                <label class="form-label-sap" style="font-size: 11px;">Departemen PIC</label>
+                                                <input type="text" name="departemenPic" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="Departemen PIC" required />
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-6 form-group-sap">
+                                                    <label class="form-label-sap" style="font-size: 11px;">Rencana Perbaikan</label>
+                                                    <input type="text" name="rencanaPerbaikan" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="Rencana Tindakan" required />
+                                                </div>
+                                                <div class="col-md-6 form-group-sap">
+                                                    <label class="form-label-sap" style="font-size: 11px;">Target Tanggal</label>
+                                                    <input type="date" name="tanggalRencanaPerbaikan" class="input-sap" style="height: 36px; font-size: 12px;" value="@DateTime.Today.AddDays(7).ToString("yyyy-MM-dd")" required />
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group-sap">
+                                                <label class="form-label-sap" style="font-size: 11px;">Tindakan Perbaikan Nyata</label>
+                                                <textarea name="perbaikan" class="input-sap" rows="2" style="font-size: 12px;" placeholder="Apa perbaikan konkrit yang dikerjakan?" required></textarea>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-6 form-group-sap">
+                                                    <label class="form-label-sap" style="font-size: 11px;">Tanggal Selesai</label>
+                                                    <input type="date" name="tanggalPerbaikan" class="input-sap" style="height: 36px; font-size: 12px;" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                                                </div>
+                                                <div class="col-md-6 form-group-sap">
+                                                    <label class="form-label-sap" style="font-size: 11px;">Status</label>
+                                                    <select name="status" class="input-sap" style="height: 36px; font-size: 12px;" required>
+                                                        <option value="Closed" selected>Closed (Selesai)</option>
+                                                        <option value="Open">Open (Masih Berjalan)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group-sap">
+                                                <label class="form-label-sap" style="font-size: 11px;">Foto Bukti Perbaikan (Opsional)</label>
+                                                <input type="file" name="fotoPerbaikan" class="input-sap" style="height: auto; font-size: 12px; padding: 8px 12px;" accept="image/*" />
+                                            </div>
+
+                                            <button type="submit" class="btn btn-sap-primary w-100 py-2 btn-sm mt-2">
+                                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Simpan Perubahan
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            let selectedType   = 'all';
+            let selectedStatus = 'all';
+
+            function applyFilters() {
+                let visible = 0;
+                $('.action-plan-item').each(function () {
+                    const t = $(this).data('type')   || '';
+                    const s = $(this).data('status') || '';
+                    const matchT = (selectedType   === 'all' || t === selectedType);
+                    const matchS = (selectedStatus === 'all' || s === selectedStatus);
+
+                    if (matchT && matchS) { $(this).show(); visible++; }
+                    else                  { $(this).hide(); }
+                });
+
+                $('#visibleCount').text(visible + ' item');
+
+                if (visible === 0) {
+                    if ($('#empty-filter-state').length === 0) {
+                        $('.action-plan-container').append(`
+                            <div id="empty-filter-state" class="col-12 card-sap text-center py-5 text-muted">
+                                <i class="bi bi-funnel d-block mb-3" style="font-size: 32px; color: var(--text-muted);"></i>
+                                <p class="mb-0">Tidak ada action plan yang cocok dengan filter yang dipilih.</p>
+                            </div>`);
+                    } else {
+                        $('#empty-filter-state').show();
+                    }
+                } else {
+                    $('#empty-filter-state').hide();
+                }
+            }
+
+            // Tipe filter
+            $('.filter-type').on('click', function () {
+                $('.filter-type').removeClass('active active-green active-red');
+                $(this).addClass('active');
+                selectedType = $(this).data('type');
+                applyFilters();
+            });
+
+            // Status filter
+            $('.filter-status').on('click', function () {
+                $('.filter-status').removeClass('active active-green active-red');
+                const cls = $(this).data('active-class') || 'active';
+                $(this).addClass(cls);
+                selectedStatus = $(this).data('status');
+                applyFilters();
+            });
+        });
+    </script>
+}

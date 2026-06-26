@@ -1,0 +1,633 @@
+@model IEnumerable<MBS_SAP.Models.DpaReport>
+@{
+    ViewData["Title"] = "Driver Performance Assessment";
+}
+
+<div class="animate-fade-in">
+    <div class="screen-title">Driver Performance Assessment</div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(34, 197, 94, 0.15); color: var(--color-primary); border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="form-responsive-row">
+        <!-- Form Column -->
+        <div class="card-sap border-primary-accent" style="overflow: visible;">
+            <form asp-controller="Dpa" asp-action="Create" method="post" id="dpaForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="dpaId" name="id" value="" />
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0 text-white" style="font-weight: 700;" id="formTitle">
+                        <i class="bi bi-speedometer2 me-2" style="color: var(--color-primary);"></i>Form Penilaian Driver
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnCancelEdit" onclick="cancelEditDpa()">
+                        <i class="bi bi-x-circle me-1"></i> Batal Edit
+                    </button>
+                </div>
+                <p class="text-muted mb-3" style="font-size: 11px; line-height: 1.6;" id="formSubtitle">
+                    Formulir ini digunakan untuk melakukan evaluasi performa, perilaku, keselamatan berkendara, serta kualitas pelayanan driver selama perjalanan Anda. Mohon berikan penilaian yang objektif demi menjaga keselamatan dan kualitas pelayanan transportasi perusahaan.
+                </p>
+
+                <!-- DPA LKS Text Callout -->
+                <div class="alert alert-info border-0 mb-3" role="alert" style="background-color: rgba(56, 189, 248, 0.08); color: #38bdf8; border-radius: 8px; font-size: 11.5px; line-height: 1.6;">
+                    <i class="bi bi-info-circle-fill me-2" style="color: var(--color-primary);"></i>
+                    Evaluasi kompetensi, perilaku, dan kualitas berkendara driver berdasarkan pengalaman langsung selama perjalanan, Form Penilaian Driver merupakan followup hasil meeting LKS bulan Juni 2026.
+                </div>
+
+                <!-- Assessor Info (Read-Only) -->
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap">NIK Penilai</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-person-badge-fill input-sap-icon"></i>
+                            <input type="text" class="input-sap text-muted" value="@ViewBag.UserNik" readonly style="background-color: rgba(255,255,255,0.03);" />
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap">Nama Penilai</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-person-fill input-sap-icon"></i>
+                            <input type="text" class="input-sap text-muted" value="@ViewBag.UserNama" readonly style="background-color: rgba(255,255,255,0.03);" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Driver Search -->
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label-sap mb-0" for="driverSearchInput">Nama Driver <span class="text-danger">*</span></label>
+                            <button type="button" class="btn btn-sm btn-outline-success" id="btnAddDriverManual">
+                                <i class="bi bi-plus-circle me-1"></i>Add Driver
+                            </button>
+                        </div>
+                        <div class="position-relative">
+                            <div class="input-sap-wrapper mb-0">
+                                <i class="bi bi-person-workspace input-sap-icon"></i>
+                                <input type="text" id="driverSearchInput" class="input-sap" placeholder="Cari driver..." autocomplete="off" required style="padding-right: 40px;" />
+                                <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleDriverDropdown"></i>
+                            </div>
+                            <div id="driverDropdownMenu" class="dropdown-menu shadow-lg w-100" style="display: none; position: absolute; top: 100%; left: 0; z-index: 1050; background: var(--bg-card); border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px;"></div>
+                        </div>
+                        <input type="hidden" id="driverNik" name="driverNik" />
+                        <input type="hidden" id="driverNama" name="driverNama" />
+                        <input type="hidden" id="driverDepartemen" name="driverDepartemen" />
+                        <small class="text-muted" style="font-size: 10px;">Cari dari database/master. Untuk nama baru gunakan tombol Add Driver. Nama duplikat tidak diizinkan.</small>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="tanggalPenilaian">Tanggal Penilaian <span class="text-danger">*</span></label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-calendar-event-fill input-sap-icon"></i>
+                            <input type="date" id="tanggalPenilaian" name="tanggalPenilaian" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trip Context -->
+                <div class="row">
+                    <div class="col-md-4 form-group-sap">
+                        <label class="form-label-sap" for="jenisPerjalanan">Jenis Perjalanan <span class="text-danger">*</span></label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-signpost-2-fill input-sap-icon"></i>
+                            <select id="jenisPerjalanan" name="jenisPerjalanan" class="input-sap" required>
+                                <option value="" disabled selected>Pilih Jenis...</option>
+                                <option value="Perjalanan Dinas">Perjalanan Dinas</option>
+                                <option value="Keberangkatan Cuti">Keberangkatan Cuti</option>
+                                <option value="Kepulangan Cuti">Kepulangan Cuti</option>
+                                <option value="Operasional Harian">Operasional Harian</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4 form-group-sap">
+                        <label class="form-label-sap" for="rute">Rute Perjalanan</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-geo-alt-fill input-sap-icon"></i>
+                            <input type="text" id="rute" name="rute" class="input-sap" placeholder="Misal: Site - Banjarmasin" />
+                        </div>
+                    </div>
+                    <div class="col-md-4 form-group-sap">
+                        <label class="form-label-sap" for="noLambung">No. Lambung Kendaraan</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-truck-flatbed input-sap-icon"></i>
+                            <input type="text" id="noLambung" name="noLambung" class="input-sap text-uppercase" placeholder="Misal: LV-001" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASSESSMENT SECTIONS -->
+                <div class="accordion" id="dpaAccordion" style="margin-top: 16px;">
+
+                    @* ============ SAFETY & SKILL DRIVING ============ *@
+                    <div class="accordion-item" style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 8px;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSafetySkill" aria-expanded="true" style="background-color: rgba(255,255,255,0.01); color: white; font-weight: bold; border: none; box-shadow: none;">
+                                <span class="badge me-2" style="background: linear-gradient(135deg, #f43f5e, #f59e0b);">1</span> Safety & Skill Driving <span class="text-muted ms-2" style="font-size: 11px; font-weight: normal;">(5 Pertanyaan)</span>
+                            </button>
+                        </h2>
+                        <div id="collapseSafetySkill" class="accordion-collapse collapse show" data-bs-parent="#dpaAccordion">
+                            <div class="accordion-body border-top border-secondary pt-3" style="background-color: rgba(0,0,0,0.1);">
+                                @for (int i = 0; i < MBS_SAP.Controllers.DpaController.SafetyDriving.Length; i++)
+                                {
+                                    var idx = i;
+                                    var q = MBS_SAP.Controllers.DpaController.SafetyDriving[idx];
+                                    @await Html.PartialAsync("_DpaQuestionRow", new ViewDataDictionary(ViewData) {
+                                        { "prefix", "safety" }, { "idx", idx }, { "question", q }, { "globalIdx", idx + 1 }
+                                    })
+                                }
+                                @for (int i = 0; i < MBS_SAP.Controllers.DpaController.DrivingSkill.Length; i++)
+                                {
+                                    var idx = i;
+                                    var q = MBS_SAP.Controllers.DpaController.DrivingSkill[idx];
+                                    @await Html.PartialAsync("_DpaQuestionRow", new ViewDataDictionary(ViewData) {
+                                        { "prefix", "skill" }, { "idx", idx }, { "question", q }, { "globalIdx", idx + 1 + MBS_SAP.Controllers.DpaController.SafetyDriving.Length }
+                                    })
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @* ============ BEHAVIOR & SERVIS ============ *@
+                    <div class="accordion-item" style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 8px;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBehaviorService" aria-expanded="false" style="background-color: rgba(255,255,255,0.01); color: white; font-weight: bold; border: none; box-shadow: none;">
+                                <span class="badge me-2" style="background: linear-gradient(135deg, #8b5cf6, #22c55e);">2</span> Behavior & Servis <span class="text-muted ms-2" style="font-size: 11px; font-weight: normal;">(5 Pertanyaan)</span>
+                            </button>
+                        </h2>
+                        <div id="collapseBehaviorService" class="accordion-collapse collapse" data-bs-parent="#dpaAccordion">
+                            <div class="accordion-body border-top border-secondary pt-3" style="background-color: rgba(0,0,0,0.1);">
+                                @for (int i = 0; i < MBS_SAP.Controllers.DpaController.Behavior.Length; i++)
+                                {
+                                    var idx = i;
+                                    var q = MBS_SAP.Controllers.DpaController.Behavior[idx];
+                                    @await Html.PartialAsync("_DpaQuestionRow", new ViewDataDictionary(ViewData) {
+                                        { "prefix", "behavior" }, { "idx", idx }, { "question", q }, { "globalIdx", idx + 1 + MBS_SAP.Controllers.DpaController.SafetyDriving.Length + MBS_SAP.Controllers.DpaController.DrivingSkill.Length }
+                                    })
+                                }
+                                @for (int i = 0; i < MBS_SAP.Controllers.DpaController.ServiceQuality.Length; i++)
+                                {
+                                    var idx = i;
+                                    var q = MBS_SAP.Controllers.DpaController.ServiceQuality[idx];
+                                    @await Html.PartialAsync("_DpaQuestionRow", new ViewDataDictionary(ViewData) {
+                                        { "prefix", "service" }, { "idx", idx }, { "question", q }, { "globalIdx", idx + 1 + MBS_SAP.Controllers.DpaController.SafetyDriving.Length + MBS_SAP.Controllers.DpaController.DrivingSkill.Length + MBS_SAP.Controllers.DpaController.Behavior.Length }
+                                    })
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Comments -->
+                <div class="form-group-sap mt-3">
+                    <label class="form-label-sap" for="keterangan">Catatan / Komentar Tambahan</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-chat-left-text-fill input-sap-icon" style="top: 14px;"></i>
+                        <textarea id="keterangan" name="keterangan" class="input-sap" rows="3" placeholder="Tuliskan catatan tambahan mengenai performa driver..." style="height: auto; min-height: 80px; resize: vertical;"></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 mt-2 mb-2 submit-btn-sap" id="btnSubmit">
+                    <i class="bi bi-send-fill me-2"></i>KIRIM PENILAIAN DRIVER
+                </button>
+            </form>
+
+        </div>
+
+        <!-- History Column -->
+        <div>
+            <div class="history-header mb-3">
+                <h6 class="text-white" style="font-weight: 700;">
+                    <i class="bi bi-clock-history me-2" style="color: var(--color-primary);"></i>Histori Penilaian Driver
+                </h6>
+            </div>
+
+            @if (Model == null || !Model.Any())
+            {
+                <div class="card-sap text-center py-4 text-muted">
+                    <i class="bi bi-inbox-fill d-block mb-2" style="font-size: 32px;"></i>
+                    Belum ada histori penilaian driver.
+                </div>
+            }
+            else
+            {
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    @{ int loopIndex = 1; }
+                    @foreach (var item in Model)
+                    {
+                        var delayClass = "delay-" + (loopIndex > 6 ? 6 : loopIndex);
+                        var score = item.ScoreFinal;
+                        var borderClass = score >= 80 ? "border-primary-accent" : score >= 60 ? "" : "border-red-accent";
+                        var badgeBg = score >= 90 ? "background: linear-gradient(135deg, #22c55e, #16a34a);"
+                                    : score >= 80 ? "background: linear-gradient(135deg, #38bdf8, #0284c7);"
+                                    : score >= 70 ? "background: linear-gradient(135deg, #f59e0b, #d97706);"
+                                    : score >= 60 ? "background: linear-gradient(135deg, #f97316, #ea580c);"
+                                    : "background: linear-gradient(135deg, #f43f5e, #e11d48);";
+                        var scoreIcon = score >= 90 ? "bi-trophy-fill" : score >= 80 ? "bi-hand-thumbs-up-fill" : score >= 70 ? "bi-dash-circle-fill" : "bi-exclamation-triangle-fill";
+
+                        <div class="card-sap animate-fade-in @delayClass @borderClass mb-0">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div style="width: 36px; height: 36px; border-radius: 50%; @badgeBg display: flex; align-items: center; justify-content: center; color: white; font-size: 16px;">
+                                        <i class="bi @scoreIcon"></i>
+                                    </div>
+                                    <div>
+                                        <span style="font-weight: 700; font-size: 14px; color: var(--text-main);">@item.DriverNama</span>
+                                        <div class="text-muted" style="font-size: 10px;">@item.DriverDepartemen</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="text-end">
+                                        <div style="font-weight: 900; font-size: 20px; line-height: 1; color: var(--text-main);">@item.ScoreFinal.ToString("0")</div>
+                                        <div class="text-muted" style="font-size: 9px;">/ 100</div>
+                                    </div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
+                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editDpa(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit</a></li>
+                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="shareDpa('@item.DriverNama', '@item.TanggalPenilaian.ToString("dd MMM yyyy")', @item.ScoreFinal.ToString("0"), '@item.Kategori', '@item.AssessorNama')"><i class="bi bi-share-fill me-2" style="color: #38bdf8;"></i>Bagikan</a></li>
+                                            <li><hr class="dropdown-divider border-secondary"></li>
+                                            <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteDpa(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Score Bar -->
+                            <div class="mb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="badge rounded-pill px-2 py-1 fw-bold" style="font-size: 10px; letter-spacing: 0.5px; @badgeBg color: white;">@item.Kategori</span>
+                                    <span class="text-muted" style="font-size: 10px;">@item.JenisPerjalanan</span>
+                                </div>
+                                <div class="progress" style="height: 6px; border-radius: 4px; background: rgba(255,255,255,0.06);">
+                                    <div class="progress-bar" role="progressbar" style="width: @item.ScoreFinal%; border-radius: 4px; @badgeBg" aria-valuenow="@item.ScoreFinal" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+
+                            <!-- Score Breakdown Mini -->
+                            <div class="d-flex gap-2 mb-2 flex-wrap" style="font-size: 10px;">
+                                <span class="px-2 py-1 rounded" style="background: rgba(34,197,94,0.1); color: #22c55e; font-weight: 700;">
+                                    <i class="bi bi-person-fill me-1"></i>Penumpang: @item.ScorePenumpang.ToString("0")
+                                </span>
+                                <span class="px-2 py-1 rounded" style="background: rgba(56,189,248,0.1); color: #38bdf8; font-weight: 700;">
+                                    <i class="bi bi-geo-alt-fill me-1"></i>GPS: @(item.ScoreGps > 0 ? item.ScoreGps.ToString("0") : "—")
+                                </span>
+                                <span class="px-2 py-1 rounded" style="background: rgba(139,92,246,0.1); color: #8b5cf6; font-weight: 700;">
+                                    <i class="bi bi-camera-video-fill me-1"></i>AI: @(item.ScoreLenzguard > 0 ? item.ScoreLenzguard.ToString("0") : "—")
+                                </span>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(item.Rute))
+                            {
+                                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">
+                                    <i class="bi bi-geo-alt me-1"></i>@item.Rute
+                                    @if (!string.IsNullOrEmpty(item.NoLambung)) { <span class="ms-2"><i class="bi bi-truck me-1"></i>@item.NoLambung</span> }
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(item.Keterangan))
+                            {
+                                <div class="p-2 rounded mb-2" style="background: rgba(255,255,255,0.03); font-size: 11px; color: var(--text-main); line-height: 1.4; border-left: 2px solid var(--color-primary);">
+                                    <i class="bi bi-chat-left-quote me-1 text-primary"></i>@item.Keterangan
+                                </div>
+                            }
+
+                            <div class="d-flex justify-content-between align-items-center pt-2" style="border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
+                                <span><i class="bi bi-person me-1"></i>oleh @item.AssessorNama</span>
+                                <span><i class="bi bi-calendar-event me-1"></i>@item.TanggalPenilaian.ToString("dd MMM yyyy")</span>
+                            </div>
+                        </div>
+                        loopIndex++;
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addDriverModal" tabindex="-1" aria-labelledby="addDriverModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-white fw-bold" id="addDriverModalLabel"><i class="bi bi-plus-square-fill text-primary me-2"></i>Tambah Driver Baru</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-4">
+                <div class="alert alert-info py-2" style="font-size: 12px; border-radius: 8px;">
+                    <i class="bi bi-info-circle me-1"></i> Driver yang Anda tambahkan hanya akan terlihat oleh karyawan di perusahaan Anda.
+                </div>
+                <div class="form-group-sap mb-0">
+                    <label class="form-label-sap" for="addDriverNameInput">Nama Driver</label>
+                    <input type="text" id="addDriverNameInput" class="form-control input-sap text-uppercase" placeholder="Misal: BUDI SANTOSO" maxlength="150" autocomplete="off" />
+                    <div id="addDriverError" class="text-danger mt-2" style="font-size: 12px; display: none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Batal</button>
+                <button type="button" class="btn btn-primary" id="btnConfirmAddDriver" style="border-radius: 8px; font-weight: 600;">
+                    <i class="bi bi-check-circle-fill me-1"></i>Simpan Driver
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ========= DRIVER SEARCH (with manual add + duplicate check) =========
+        let searchTimeout;
+        let knownDrivers = []; // cache to check duplicates
+        const $driverInput = $('#driverSearchInput');
+        const $driverMenu = $('#driverDropdownMenu');
+        const antiForgeryToken = $('input[name="__RequestVerificationToken"]').val();
+        const addDriverModalEl = document.getElementById('addDriverModal');
+        const addDriverModal = addDriverModalEl ? new bootstrap.Modal(addDriverModalEl) : null;
+        const $addDriverNameInput = $('#addDriverNameInput');
+        const $addDriverError = $('#addDriverError');
+
+        function normalizeDriverName(name) {
+            return (name || '').trim().replace(/\s+/g, ' ').toUpperCase();
+        }
+
+        $driverInput.on('input', function() {
+            clearTimeout(searchTimeout);
+            const q = $(this).val().trim();
+            // Clear hidden fields when typing (user might be changing)
+            $('#driverNik').val('');
+            $('#driverNama').val('');
+            $('#driverDepartemen').val('');
+
+            if (q.length < 2) { $driverMenu.hide(); return; }
+
+            searchTimeout = setTimeout(function() {
+                $.get('/Dpa/SearchDriver?query=' + encodeURIComponent(q), function(data) {
+                    $driverMenu.empty();
+                    knownDrivers = data || [];
+
+                    if (data && data.length > 0) {
+                        data.forEach(function(emp) {
+                            const html = `<button type="button" class="dropdown-item py-2 border-bottom border-secondary select-driver-btn" data-nik="${emp.nik}" data-nama="${emp.nama}" data-dept="${emp.departemen}" style="text-align: left; font-size: 13px; background: none; border-left: none; border-right: none; color: var(--text-main);">
+                                <i class="bi bi-person-fill me-2 text-primary"></i><strong>${emp.nama}</strong> <span class="text-muted">(${emp.nik})</span>
+                                <div class="text-muted" style="font-size: 10px; margin-left: 24px;">${emp.departemen}</div>
+                            </button>`;
+                            $driverMenu.append(html);
+                        });
+                    }
+
+                    if ($driverMenu.children().length > 0) {
+                        $driverMenu.show();
+                    } else {
+                        $driverMenu.hide();
+                    }
+                });
+            }, 350);
+        });
+
+        // Select existing driver
+        $driverMenu.on('click', '.select-driver-btn', function() {
+            const nik = $(this).data('nik');
+            const nama = $(this).data('nama');
+            const dept = $(this).data('dept');
+            $driverInput.val(nama);
+            $('#driverNik').val(nik);
+            $('#driverNama').val(nama);
+            $('#driverDepartemen').val(dept);
+            $driverMenu.hide();
+        });
+
+        // Add new driver via master table
+        $('#btnAddDriverManual').on('click', function() {
+            const rawName = ($driverInput.val() || '').trim();
+            $addDriverNameInput.val(normalizeDriverName(rawName));
+            $addDriverError.hide().text('');
+            if (!addDriverModal) {
+                showDpaToast('<i class="bi bi-x-circle me-1"></i> Modal tidak tersedia.', '#ef4444');
+                return;
+            }
+
+            addDriverModal.show();
+            setTimeout(function() {
+                $addDriverNameInput.trigger('focus');
+            }, 200);
+        });
+
+        $addDriverNameInput.on('input', function() {
+            $(this).val(normalizeDriverName($(this).val()));
+            if ($(this).val()) {
+                $addDriverError.hide().text('');
+            }
+        });
+
+        $('#btnConfirmAddDriver').on('click', function() {
+            const entered = normalizeDriverName($addDriverNameInput.val());
+
+            if (!entered) {
+                $addDriverError.text('Nama driver wajib diisi.').show();
+                return;
+            }
+
+            if (entered.length < 2) {
+                $addDriverError.text('Nama driver minimal 2 karakter.').show();
+                return;
+            }
+
+            const $btn = $(this);
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Menyimpan...');
+
+            $.ajax({
+                url: '/Dpa/AddDriver',
+                method: 'POST',
+                data: {
+                    driverNama: entered,
+                    __RequestVerificationToken: antiForgeryToken
+                }
+            }).done(function(res) {
+                if (!res || !res.success) {
+                    $addDriverError.text(res?.message || 'Gagal menambahkan driver.').show();
+                    return;
+                }
+
+                const driverData = res.data;
+                $driverInput.val(driverData.nama);
+                $('#driverNik').val(driverData.nik);
+                $('#driverNama').val(driverData.nama);
+                $('#driverDepartemen').val(driverData.departemen);
+                addDriverModal.hide();
+                showDpaToast('<i class="bi bi-check-circle me-1"></i> ' + res.message, '#22c55e');
+            }).fail(function() {
+                $addDriverError.text('Gagal menambahkan driver.').show();
+            }).always(function() {
+                $btn.prop('disabled', false).html('<i class="bi bi-check-circle-fill me-1"></i>Simpan Driver');
+            });
+        });
+
+        $('#toggleDriverDropdown').on('click', function(e) {
+            e.stopPropagation();
+            if ($driverMenu.is(':visible')) $driverMenu.hide();
+            else $driverInput.trigger('input');
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#driverSearchInput, #driverDropdownMenu, #toggleDriverDropdown').length) $driverMenu.hide();
+        });
+
+        // ========= FORM VALIDATION =========
+        $('#dpaForm').on('submit', function(e) {
+            const typedName = $driverInput.val().trim();
+            if (!typedName) {
+                alert('Nama driver wajib diisi.');
+                e.preventDefault();
+                return false;
+            }
+
+            // Prevent implicit manual input to keep master data clean and deduplicated.
+            if (!$('#driverNik').val()) {
+                alert('Pilih driver dari dropdown atau klik tombol Add Driver terlebih dahulu.');
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // ========= SCORE SELECTOR LOGIC =========
+        $(document).on('click', '.dpa-score-btn', function() {
+            const $group = $(this).closest('.dpa-score-group');
+            $group.find('.dpa-score-btn').removeClass('active');
+            $(this).addClass('active');
+            $group.find('input[type="hidden"]').val($(this).data('value'));
+        });
+
+        // ========= EDIT =========
+        function editDpa(id) {
+            $.get('/Dpa/GetData/' + id, function(data) {
+                if (!data) return;
+                cancelEditDpa();
+
+                $('#dpaId').val(data.id);
+                $driverInput.val(data.driverNama);
+                $('#driverNik').val(data.driverNik);
+                $('#driverNama').val(data.driverNama);
+                $('#driverDepartemen').val(data.driverDepartemen);
+                $('#tanggalPenilaian').val(data.tanggalPenilaian);
+                $('#jenisPerjalanan').val(data.jenisPerjalanan).change();
+                $('#rute').val(data.rute);
+                $('#noLambung').val(data.noLambung);
+                $('#keterangan').val(data.keterangan);
+
+                // Populate scores
+                function loadScores(prefix, items) {
+                    if (!items) return;
+                    items.forEach(function(item, i) {
+                        const $group = $(`.dpa-score-group[data-prefix="${prefix}"][data-idx="${i}"]`);
+                        $group.find('.dpa-score-btn').removeClass('active');
+                        $group.find(`.dpa-score-btn[data-value="${item.score}"]`).addClass('active');
+                        $group.find('input[type="hidden"]').val(item.score);
+                    });
+                }
+                loadScores('safety', data.safety);
+                loadScores('skill', data.skill);
+                loadScores('behavior', data.behavior);
+                loadScores('service', data.service);
+
+                $('#formTitle').html('<i class="bi bi-pencil-square me-2" style="color: var(--color-primary);"></i>Edit Penilaian Driver');
+                $('#btnCancelEdit').removeClass('d-none');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }).fail(function() {
+                alert("Gagal mengambil data penilaian.");
+            });
+        }
+
+        function cancelEditDpa() {
+            $('#dpaForm')[0].reset();
+            $('#dpaId').val('');
+            $driverInput.val('');
+            $('#driverNik').val('');
+            $('#driverNama').val('');
+            $('#driverDepartemen').val('');
+            // Reset all scores to default (5)
+            $('.dpa-score-group').each(function() {
+                $(this).find('.dpa-score-btn').removeClass('active');
+                $(this).find('.dpa-score-btn[data-value="5"]').addClass('active');
+                $(this).find('input[type="hidden"]').val(5);
+            });
+            $('#formTitle').html('<i class="bi bi-speedometer2 me-2" style="color: var(--color-primary);"></i>Form Penilaian Driver');
+            $('#btnCancelEdit').addClass('d-none');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ========= DELETE =========
+        function deleteDpa(id) {
+            if (confirm("Apakah Anda yakin ingin menghapus penilaian driver ini?")) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/Dpa/Delete/' + id;
+                const token = $('input[name="__RequestVerificationToken"]').val();
+                if (token) {
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = '__RequestVerificationToken';
+                    tokenInput.value = token;
+                    form.appendChild(tokenInput);
+                }
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        // ========= SHARE =========
+        function shareDpa(driverNama, tanggal, score, kategori, assessor) {
+            const shareText = `🏎️ DRIVER PERFORMANCE ASSESSMENT\n` +
+                              `━━━━━━━━━━━━━━━━━━━━\n` +
+                              `👤 Driver: ${driverNama}\n` +
+                              `📅 Tanggal: ${tanggal}\n` +
+                              `📊 Skor Akhir: ${score} / 100\n` +
+                              `🏆 Kategori: ${kategori}\n` +
+                              `📝 Penilai: ${assessor}\n` +
+                              `━━━━━━━━━━━━━━━━━━━━\n` +
+                              `INDEXIM Safety Accountability Program`;
+
+            if (navigator.share) {
+                navigator.share({ title: `DPA - ${driverNama}`, text: shareText }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(shareText).then(() => {
+                    showDpaToast('<i class="bi bi-clipboard-check me-1"></i> Hasil DPA disalin ke clipboard!', '#6366f1');
+                }).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = shareText;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    showDpaToast('<i class="bi bi-clipboard-check me-1"></i> Hasil DPA disalin ke clipboard!', '#6366f1');
+                });
+            }
+        }
+
+        function showDpaToast(message, bgColor) {
+            const existing = document.getElementById('dpaToast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'dpaToast';
+            toast.innerHTML = message;
+            Object.assign(toast.style, {
+                position: 'fixed', bottom: '24px', right: '24px', zIndex: '9999',
+                background: bgColor, color: 'white', padding: '12px 20px',
+                borderRadius: '12px', fontWeight: '700', fontSize: '13px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.3)', opacity: '0',
+                transform: 'translateY(20px)', transition: 'all 0.3s ease'
+            });
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; });
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(20px)'; setTimeout(() => toast.remove(), 350); }, 2500);
+        }
+    </script>
+}

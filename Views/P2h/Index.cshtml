@@ -1,0 +1,919 @@
+@model IEnumerable<MBS_SAP.Models.P2hReport>
+@{
+    ViewData["Title"] = "P2H - Pemeriksaan Harian Kendaraan";
+    var vehiclesList = ViewBag.Vehicles as List<MBS_SAP.Models.P2hVehicle> ?? new List<MBS_SAP.Models.P2hVehicle>();
+}
+
+<div class="animate-fade-in">
+    <div class="screen-title">P2H Kendaraan Harian</div>
+    <p class="screen-subtitle">Lakukan pemeriksaan kondisi unit harian sebelum memulai pekerjaan demi keselamatan kerja.</p>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(34, 197, 94, 0.15); color: var(--color-primary); border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="form-responsive-row">
+        <!-- Form Column -->
+        <div class="card-sap border-primary-accent" style="overflow: visible;">
+            <form asp-controller="P2h" asp-action="Create" method="post" id="p2hForm" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="p2hId" name="id" value="" />
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 text-white" style="font-weight: 700;" id="formTitle">
+                        <i class="bi bi-shield-check me-2" style="color: var(--color-primary);"></i>Form Pemeriksaan P2H
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnCancelEdit" onclick="cancelEditP2h()">
+                        <i class="bi bi-x-circle me-1"></i> Batal Edit
+                    </button>
+                </div>
+                
+                <!-- Date and Time -->
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="tanggal">Tanggal</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-calendar-event-fill input-sap-icon"></i>
+                            <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="waktuStr">Waktu</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-clock-fill input-sap-icon"></i>
+                            <input type="time" id="waktuStr" name="waktuStr" class="input-sap" value="@DateTime.Now.ToString("HH:mm")" required />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Info (Read-Only) -->
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap">NIK Pemeriksa</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-person-badge-fill input-sap-icon"></i>
+                            <input type="text" class="input-sap text-muted" value="@ViewBag.UserNik" readonly style="background-color: rgba(255,255,255,0.03);" />
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap">Nama Pemeriksa</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-person-fill input-sap-icon"></i>
+                            <input type="text" class="input-sap text-muted" value="@ViewBag.UserNama" readonly style="background-color: rgba(255,255,255,0.03);" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Unit & Brand Info -->
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="noLambungInput">No. Lambung Kendaraan</label>
+                        <div class="position-relative">
+                            <div class="input-sap-wrapper mb-0">
+                                <i class="bi bi-truck-flatbed input-sap-icon"></i>
+                                <input type="text" id="noLambungInput" name="noLambung" class="input-sap text-uppercase" placeholder="Cari / Masukkan No Lambung..." autocomplete="off" required style="padding-right: 40px;" />
+                                <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleUnitDropdown"></i>
+                            </div>
+                            <div id="unitDropdownMenu" class="dropdown-menu shadow-lg w-100" style="display: none; position: absolute; top: 100%; left: 0; z-index: 1050; background: #1a2332; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px;">
+                                <!-- Will be loaded by JS -->
+                            </div>
+                        </div>
+                        <small class="text-muted" style="font-size: 10px;">Ketik untuk mencari unit, atau masukkan nama baru jika belum terdaftar.</small>
+                    </div>
+                    
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="merek">Merek / Tipe Kendaraan</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-info-circle-fill input-sap-icon"></i>
+                            <input type="text" id="merek" name="merek" class="input-sap text-uppercase" placeholder="Misal: TRITON 2.5L" required />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vehicle Type & Odometer -->
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="jenisKendaraan">Jenis Kendaraan</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-car-front-fill input-sap-icon"></i>
+                            <select id="jenisKendaraan" name="jenisKendaraan" class="input-sap" required>
+                                <option value="" disabled selected>Pilih Jenis...</option>
+                                <option value="LIGHT VEHICLE">LIGHT VEHICLE</option>
+                                <option value="DUMP TRUCK">DUMP TRUCK</option>
+                                <option value="HEAVY EQUIPMENT">HEAVY EQUIPMENT (ALAT BERAT)</option>
+                                <option value="BUS / MANTRIP">BUS / MANTRIP</option>
+                                <option value="MOTORCYCLE">MOTORCYCLE</option>
+                                <option value="OTHER">OTHER</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="kilometer">Odometer / Kilometer</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-speedometer input-sap-icon"></i>
+                            <input type="number" step="any" id="kilometer" name="kilometer" class="input-sap" placeholder="Misal: 11111" required />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIMPER / KIMPER & Speedometer Photo -->
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="simperKimper">Memiliki SIMPER / KIMPER yang Aktif?</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-card-heading input-sap-icon"></i>
+                            <select id="simperKimper" name="simperKimper" class="input-sap" required>
+                                <option value="YA">YA</option>
+                                <option value="TIDAK">TIDAK</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="fotoSpeedometer">Foto Speedometer</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-camera-fill input-sap-icon" style="top: 14px;"></i>
+                            <input type="file" id="fotoSpeedometer" name="fotoSpeedometer" class="input-sap" accept="image/*" style="height: auto; padding: 8px 12px; padding-left: 42px;" />
+                        </div>
+                        <div id="speedoPreviewWrapper" class="mt-2 d-none">
+                            <span class="text-muted" style="font-size: 11px;">Foto terunggah: </span>
+                            <a id="speedoPreviewLink" href="#" target="_blank" class="text-primary fw-semibold ms-1" style="font-size: 11px;">Lihat Foto</a>
+                        </div>
+                        <small class="text-muted" style="font-size: 10px;" id="speedoHelp">Wajib melampirkan foto speedometer terbaru.</small>
+                    </div>
+                </div>
+
+                <!-- Checklist Header + Quick Actions -->
+                <div class="d-flex justify-content-between align-items-center mt-4 mb-3 flex-wrap gap-2">
+                    <h6 class="text-white mb-0" style="font-weight: 700; border-left: 3px solid var(--color-primary); padding-left: 8px;">CHECKLIST KONDISI UNIT</h6>
+                    <div class="d-flex gap-2" id="quickActionBtns">
+                        <button type="button" class="btn btn-sm px-3 py-1" id="btnAllGood" onclick="autoFillAll('GOOD')" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; box-shadow: 0 2px 8px rgba(34,197,94,0.3); transition: all 0.2s ease;">
+                            <i class="bi bi-check-all me-1"></i>Semua BAIK
+                        </button>
+                        <button type="button" class="btn btn-sm px-3 py-1" id="btnAllBad" onclick="autoFillAll('NOT_GOOD')" style="background: linear-gradient(135deg, #f43f5e, #e11d48); color: white; border: none; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; box-shadow: 0 2px 8px rgba(244,63,94,0.3); transition: all 0.2s ease;">
+                            <i class="bi bi-x-circle me-1"></i>Semua RUSAK
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Metadata validation gate overlay -->
+                <div id="checklistLockOverlay" style="position: relative;">
+                    <div id="lockMask" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: not-allowed;">
+                        <i class="bi bi-lock-fill" style="font-size: 36px; color: var(--color-primary); margin-bottom: 8px;"></i>
+                        <span class="text-white fw-bold" style="font-size: 14px;">Isi Data Kendaraan Terlebih Dahulu</span>
+                        <span class="text-muted" style="font-size: 11px; max-width: 280px; text-align: center; margin-top: 4px;">Lengkapi No. Lambung, Merek, Jenis, Odometer, dan Foto Speedometer sebelum mengisi checklist.</span>
+                    </div>
+
+                <!-- Accordion checklist -->
+                <div class="accordion" id="checklistAccordion">
+                    
+                    <!-- GOLONGAN A -->
+                    <div class="accordion-item" style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 8px;">
+                        <h2 class="accordion-header" id="headingA">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseA" aria-expanded="true" aria-controls="collapseA" style="background-color: rgba(255,255,255,0.01); color: white; font-weight: bold; border: none; box-shadow: none;">
+                                <span class="badge bg-danger me-2">GOL. A</span> Kritis (Harus Baik - Total 16 Item)
+                            </button>
+                        </h2>
+                        <div id="collapseA" class="accordion-collapse collapse show" aria-labelledby="headingA" data-bs-parent="#checklistAccordion">
+                            <div class="accordion-body border-top border-secondary pt-3" style="background-color: rgba(0,0,0,0.1);">
+                                @for (int i = 0; i < MBS_SAP.Controllers.P2hController.GolA.Length; i++)
+                                {
+                                    var idx = i;
+                                    var itemText = MBS_SAP.Controllers.P2hController.GolA[idx];
+                                    <div class="checkpoint-row py-2 border-bottom border-secondary mb-2" id="row_golA_@idx">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <span class="text-white fs-13 fw-semibold">@(idx + 1). @itemText</span>
+                                            
+                                            <div class="d-flex gap-2">
+                                                <input type="radio" class="btn-check" name="golA_status_@idx" id="golA_good_@idx" value="GOOD" checked autocomplete="off" onchange="toggleDefectPhoto('golA', @idx, 'GOOD')">
+                                                <label class="btn btn-sm btn-outline-success px-3" for="golA_good_@idx" style="border-radius: 20px; font-size: 11px; font-weight: bold;">BAIK</label>
+
+                                                <input type="radio" class="btn-check" name="golA_status_@idx" id="golA_bad_@idx" value="NOT_GOOD" autocomplete="off" onchange="toggleDefectPhoto('golA', @idx, 'NOT_GOOD')">
+                                                <label class="btn btn-sm btn-outline-danger px-3" for="golA_bad_@idx" style="border-radius: 20px; font-size: 11px; font-weight: bold;">RUSAK</label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Photo upload wrapper shown if status is NOT_GOOD -->
+                                        <div class="defect-photo-wrapper mt-2 ps-3" id="photo_wrapper_golA_@idx" style="display: none; border-left: 2px solid var(--color-red);">
+                                            <label class="form-label-sap mb-1" style="font-size: 11px; color: var(--color-red); font-weight: 600;">
+                                                <i class="bi bi-camera-fill me-1"></i> Foto Kerusakan (Wajib)
+                                            </label>
+                                            <input type="file" name="golA_photo_@idx" id="photo_input_golA_@idx" class="input-sap py-1" accept="image/*" style="height: auto; border-color: rgba(244, 63, 94, 0.4);" />
+                                            <div id="photo_preview_wrapper_golA_@idx" class="mt-1 d-none">
+                                                <span class="text-muted" style="font-size: 10px;">Foto terunggah: </span>
+                                                <a id="photo_preview_link_golA_@idx" href="#" target="_blank" class="text-primary fw-semibold ms-1" style="font-size: 10px;">Lihat Foto</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GOLONGAN B -->
+                    <div class="accordion-item" style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 8px;">
+                        <h2 class="accordion-header" id="headingB">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseB" aria-expanded="false" aria-controls="collapseB" style="background-color: rgba(255,255,255,0.01); color: white; font-weight: bold; border: none; box-shadow: none;">
+                                <span class="badge bg-warning text-dark me-2">GOL. B</span> Penting (Total 10 Item)
+                            </button>
+                        </h2>
+                        <div id="collapseB" class="accordion-collapse collapse" aria-labelledby="headingB" data-bs-parent="#checklistAccordion">
+                            <div class="accordion-body border-top border-secondary pt-3" style="background-color: rgba(0,0,0,0.1);">
+                                @for (int i = 0; i < MBS_SAP.Controllers.P2hController.GolB.Length; i++)
+                                {
+                                    var idx = i;
+                                    var itemText = MBS_SAP.Controllers.P2hController.GolB[idx];
+                                    <div class="checkpoint-row py-2 border-bottom border-secondary mb-2" id="row_golB_@idx">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <span class="text-white fs-13 fw-semibold">@(idx + 1). @itemText</span>
+                                            
+                                            <div class="d-flex gap-2">
+                                                <input type="radio" class="btn-check" name="golB_status_@idx" id="golB_good_@idx" value="GOOD" checked autocomplete="off" onchange="toggleDefectPhoto('golB', @idx, 'GOOD')">
+                                                <label class="btn btn-sm btn-outline-success px-3" for="golB_good_@idx" style="border-radius: 20px; font-size: 11px; font-weight: bold;">BAIK</label>
+
+                                                <input type="radio" class="btn-check" name="golB_status_@idx" id="golB_bad_@idx" value="NOT_GOOD" autocomplete="off" onchange="toggleDefectPhoto('golB', @idx, 'NOT_GOOD')">
+                                                <label class="btn btn-sm btn-outline-danger px-3" for="golB_bad_@idx" style="border-radius: 20px; font-size: 11px; font-weight: bold;">RUSAK</label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Photo upload wrapper shown if status is NOT_GOOD -->
+                                        <div class="defect-photo-wrapper mt-2 ps-3" id="photo_wrapper_golB_@idx" style="display: none; border-left: 2px solid var(--color-red);">
+                                            <label class="form-label-sap mb-1" style="font-size: 11px; color: var(--color-red); font-weight: 600;">
+                                                <i class="bi bi-camera-fill me-1"></i> Foto Kerusakan (Wajib)
+                                            </label>
+                                            <input type="file" name="golB_photo_@idx" id="photo_input_golB_@idx" class="input-sap py-1" accept="image/*" style="height: auto; border-color: rgba(244, 63, 94, 0.4);" />
+                                            <div id="photo_preview_wrapper_golB_@idx" class="mt-1 d-none">
+                                                <span class="text-muted" style="font-size: 10px;">Foto terunggah: </span>
+                                                <a id="photo_preview_link_golB_@idx" href="#" target="_blank" class="text-primary fw-semibold ms-1" style="font-size: 10px;">Lihat Foto</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GOLONGAN C -->
+                    <div class="accordion-item" style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 8px;">
+                        <h2 class="accordion-header" id="headingC">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseC" aria-expanded="false" aria-controls="collapseC" style="background-color: rgba(255,255,255,0.01); color: white; font-weight: bold; border: none; box-shadow: none;">
+                                <span class="badge bg-info text-dark me-2">GOL. C</span> Umum (Total 11 Item)
+                            </button>
+                        </h2>
+                        <div id="collapseC" class="accordion-collapse collapse" aria-labelledby="headingC" data-bs-parent="#checklistAccordion">
+                            <div class="accordion-body border-top border-secondary pt-3" style="background-color: rgba(0,0,0,0.1);">
+                                @for (int i = 0; i < MBS_SAP.Controllers.P2hController.GolC.Length; i++)
+                                {
+                                    var idx = i;
+                                    var itemText = MBS_SAP.Controllers.P2hController.GolC[idx];
+                                    <div class="checkpoint-row py-2 border-bottom border-secondary mb-2" id="row_golC_@idx">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                            <span class="text-white fs-13 fw-semibold">@(idx + 1). @itemText</span>
+                                            
+                                            <div class="d-flex gap-2">
+                                                <input type="radio" class="btn-check" name="golC_status_@idx" id="golC_good_@idx" value="GOOD" checked autocomplete="off" onchange="toggleDefectPhoto('golC', @idx, 'GOOD')">
+                                                <label class="btn btn-sm btn-outline-success px-3" for="golC_good_@idx" style="border-radius: 20px; font-size: 11px; font-weight: bold;">BAIK</label>
+
+                                                <input type="radio" class="btn-check" name="golC_status_@idx" id="golC_bad_@idx" value="NOT_GOOD" autocomplete="off" onchange="toggleDefectPhoto('golC', @idx, 'NOT_GOOD')">
+                                                <label class="btn btn-sm btn-outline-danger px-3" for="golC_bad_@idx" style="border-radius: 20px; font-size: 11px; font-weight: bold;">RUSAK</label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Photo upload wrapper shown if status is NOT_GOOD -->
+                                        <div class="defect-photo-wrapper mt-2 ps-3" id="photo_wrapper_golC_@idx" style="display: none; border-left: 2px solid var(--color-red);">
+                                            <label class="form-label-sap mb-1" style="font-size: 11px; color: var(--color-red); font-weight: 600;">
+                                                <i class="bi bi-camera-fill me-1"></i> Foto Kerusakan (Wajib)
+                                            </label>
+                                            <input type="file" name="golC_photo_@idx" id="photo_input_golC_@idx" class="input-sap py-1" accept="image/*" style="height: auto; border-color: rgba(244, 63, 94, 0.4);" />
+                                            <div id="photo_preview_wrapper_golC_@idx" class="mt-1 d-none">
+                                                <span class="text-muted" style="font-size: 10px;">Foto terunggah: </span>
+                                                <a id="photo_preview_link_golC_@idx" href="#" target="_blank" class="text-primary fw-semibold ms-1" style="font-size: 10px;">Lihat Foto</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                </div> <!-- close checklistLockOverlay -->
+
+                <button type="submit" class="btn btn-primary w-100 mt-4 mb-2 submit-btn-sap" id="btnSubmit">
+                    <i class="bi bi-send-fill me-2"></i>KIRIM LAPORAN P2H
+                </button>
+            </form>
+        </div>
+
+        <!-- History Column -->
+        <div>
+            <div class="history-header mb-3">
+                <h6 class="text-white" style="font-weight: 700;">
+                    <i class="bi bi-clock-history me-2" style="color: var(--color-primary);"></i>Histori P2H Anda
+                </h6>
+            </div>
+            
+            @if (Model == null || !Model.Any())
+            {
+                <div class="card-sap text-center py-4 text-muted">
+                    <i class="bi bi-inbox-fill d-block mb-2" style="font-size: 32px;"></i>
+                    Belum ada histori pemeriksaan P2H Anda.
+                </div>
+            }
+            else
+            {
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    @{ int loopIndex = 1; }
+                    @foreach (var item in Model)
+                    {
+                        var delayClass = "delay-" + (loopIndex > 6 ? 6 : loopIndex);
+                        
+                        // Parse JSONs to display defects count and checklist details
+                        var defectsA = new List<string>();
+                        var defectsB = new List<string>();
+                        var defectsC = new List<string>();
+                        
+                        try
+                        {
+                            if (!string.IsNullOrEmpty(item.GolA_Json))
+                            {
+                                var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolA_Json);
+                                if (list != null) defectsA.AddRange(list.Where(x => x.Status == "NOT_GOOD").Select(x => x.Name));
+                            }
+                            if (!string.IsNullOrEmpty(item.GolB_Json))
+                            {
+                                var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolB_Json);
+                                if (list != null) defectsB.AddRange(list.Where(x => x.Status == "NOT_GOOD").Select(x => x.Name));
+                            }
+                            if (!string.IsNullOrEmpty(item.GolC_Json))
+                            {
+                                var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolC_Json);
+                                if (list != null) defectsC.AddRange(list.Where(x => x.Status == "NOT_GOOD").Select(x => x.Name));
+                            }
+                        }
+                        catch {}
+
+                        var totalDefects = defectsA.Count + defectsB.Count + defectsC.Count;
+                        var isGood = totalDefects == 0;
+                        var borderClass = isGood ? "border-primary-accent" : "border-red-accent";
+                        var resultBadgeClass = isGood ? "bg-success" : "bg-danger";
+                        var statusText = isGood ? "AMAN (GOOD)" : $"{totalDefects} TEMUAN";
+
+                        <div class="card-sap animate-fade-in @delayClass @borderClass mb-0">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="history-badge bg-primary" style="width: 28px; height: 28px; font-size: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                        <i class="bi bi-truck"></i>
+                                    </div>
+                                    <span style="font-weight: 700; font-size: 13px;">@item.NoLambung</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge @resultBadgeClass rounded-pill px-2 py-1 fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">@statusText</span>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
+                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editP2h(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
+                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="shareP2h('@item.NoLambung', '@item.Tanggal.ToString("dd MMM yyyy")', '@item.Merek', '@item.JenisKendaraan', @totalDefects, '@item.Nama')"><i class="bi bi-share-fill me-2" style="color: #38bdf8;"></i>Bagikan Hasil</a></li>
+                                            <li><hr class="dropdown-divider border-secondary"></li>
+                                            <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteP2h(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus Laporan</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="font-size: 12px; color: var(--text-main); margin-bottom: 8px;">
+                                <strong>Jenis Unit:</strong> @item.JenisKendaraan (@item.Merek) <br/>
+                                <strong>Kilometer / Odometer:</strong> @item.Kilometer KM <br/>
+                                <strong>Kepatuhan SIMPER:</strong> @item.SimperKimper
+                            </div>
+
+                            <!-- List defects if exists -->
+                            @if (!isGood)
+                            {
+                                <div class="defect-list-box p-2 mb-2 rounded" style="background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.15);">
+                                    <span class="text-danger fw-bold d-block mb-1" style="font-size: 11px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Daftar Temuan Kerusakan:</span>
+                                    <ul class="mb-0 ps-3" style="font-size: 11px; color: var(--text-main); line-height: 1.4;">
+                                        @foreach (var def in defectsA) { <li><span class="badge bg-danger py-0 px-1 me-1 text-uppercase" style="font-size: 8px;">GOL. A</span> @def</li> }
+                                        @foreach (var def in defectsB) { <li><span class="badge bg-warning text-dark py-0 px-1 me-1 text-uppercase" style="font-size: 8px;">GOL. B</span> @def</li> }
+                                        @foreach (var def in defectsC) { <li><span class="badge bg-info text-dark py-0 px-1 me-1 text-uppercase" style="font-size: 8px;">GOL. C</span> @def</li> }
+                                    </ul>
+                                </div>
+                            }
+
+                            <!-- Speedometer thumbnail and defect photo thumbnails -->
+                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                @if (!string.IsNullOrEmpty(item.FotoSpeedometer))
+                                {
+                                    <div class="text-center">
+                                        <a href="@item.FotoSpeedometer" target="_blank" title="Foto Odometer Speedometer">
+                                            <img src="@item.FotoSpeedometer" alt="Speedometer" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color);" />
+                                        </a>
+                                        <div class="text-muted" style="font-size: 8px; margin-top: 2px;">Speedometer</div>
+                                    </div>
+                                }
+                                
+                                @* Dynamic rendering of defect photos *@
+                                @{
+                                    var defectPhotos = new List<string>();
+                                    try
+                                    {
+                                        if (!string.IsNullOrEmpty(item.GolA_Json)) {
+                                            var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolA_Json);
+                                            if (list != null) defectPhotos.AddRange(list.Where(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl)).Select(x => x.PhotoUrl!));
+                                        }
+                                        if (!string.IsNullOrEmpty(item.GolB_Json)) {
+                                            var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolB_Json);
+                                            if (list != null) defectPhotos.AddRange(list.Where(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl)).Select(x => x.PhotoUrl!));
+                                        }
+                                        if (!string.IsNullOrEmpty(item.GolC_Json)) {
+                                            var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolC_Json);
+                                            if (list != null) defectPhotos.AddRange(list.Where(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl)).Select(x => x.PhotoUrl!));
+                                        }
+                                    }
+                                    catch {}
+                                    int picIdx = 1;
+                                    foreach (var photo in defectPhotos)
+                                    {
+                                        <div class="text-center">
+                                            <a href="@photo" target="_blank" title="Foto Kerusakan #@picIdx">
+                                                <img src="@photo" alt="Kerusakan" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(244,63,94,0.3);" />
+                                            </a>
+                                            <div class="text-danger" style="font-size: 8px; margin-top: 2px;">Temuan #@picIdx</div>
+                                        </div>
+                                        picIdx++;
+                                    }
+                                }
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center pt-2" style="border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
+                                <span><i class="bi bi-person me-1"></i>@item.Nama</span>
+                                <span><i class="bi bi-calendar-event me-1"></i>@item.Tanggal.ToString("dd MMM yyyy") @item.Waktu.ToString(@"hh\:mm")</span>
+                            </div>
+                        </div>
+                        loopIndex++;
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Master list of vehicles from ViewBag for autocomplete search
+        const registeredVehicles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(vehiclesList));
+        const GOL_A_COUNT = @MBS_SAP.Controllers.P2hController.GolA.Length;
+        const GOL_B_COUNT = @MBS_SAP.Controllers.P2hController.GolB.Length;
+        const GOL_C_COUNT = @MBS_SAP.Controllers.P2hController.GolC.Length;
+
+        // ========= METADATA GATE LOGIC =========
+        function checkMetadataComplete() {
+            const noLambung = $('#noLambungInput').val().trim();
+            const merek = $('#merek').val().trim();
+            const jenis = $('#jenisKendaraan').val();
+            const km = $('#kilometer').val().trim();
+            const isEdit = $('#p2hId').val() !== '';
+            const hasSpeedo = isEdit 
+                ? (!$('#speedoPreviewWrapper').hasClass('d-none') || $('#fotoSpeedometer')[0].files.length > 0)
+                : ($('#fotoSpeedometer')[0].files.length > 0);
+
+            const isComplete = noLambung && merek && jenis && km && hasSpeedo;
+            const $lock = $('#lockMask');
+            const $quickBtns = $('#quickActionBtns');
+
+            if (isComplete) {
+                $lock.fadeOut(250);
+                $quickBtns.css({ opacity: 1, pointerEvents: 'auto' });
+            } else {
+                $lock.fadeIn(250);
+                $quickBtns.css({ opacity: 0.4, pointerEvents: 'none' });
+            }
+        }
+
+        // ========= AUTO FILL ALL =========
+        function autoFillAll(status) {
+            // Double check metadata is filled
+            const noLambung = $('#noLambungInput').val().trim();
+            const merek = $('#merek').val().trim();
+            const jenis = $('#jenisKendaraan').val();
+            const km = $('#kilometer').val().trim();
+            const isEdit = $('#p2hId').val() !== '';
+            const hasSpeedo = isEdit
+                ? (!$('#speedoPreviewWrapper').hasClass('d-none') || $('#fotoSpeedometer')[0].files.length > 0)
+                : ($('#fotoSpeedometer')[0].files.length > 0);
+
+            if (!noLambung || !merek || !jenis || !km || !hasSpeedo) {
+                alert('Harap lengkapi data kendaraan (No. Lambung, Merek, Jenis, Odometer, Foto Speedometer) terlebih dahulu.');
+                return;
+            }
+
+            const suffix = status === 'GOOD' ? 'good' : 'bad';
+            const categories = [
+                { prefix: 'golA', count: GOL_A_COUNT },
+                { prefix: 'golB', count: GOL_B_COUNT },
+                { prefix: 'golC', count: GOL_C_COUNT }
+            ];
+
+            categories.forEach(cat => {
+                for (let i = 0; i < cat.count; i++) {
+                    const radioId = `${cat.prefix}_${suffix}_${i}`;
+                    const radio = document.getElementById(radioId);
+                    if (radio) {
+                        radio.checked = true;
+                        toggleDefectPhoto(cat.prefix, i, status);
+                    }
+                }
+            });
+
+            // Expand all accordion panels to show results
+            ['collapseA', 'collapseB', 'collapseC'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && !$(el).hasClass('show')) {
+                    new bootstrap.Collapse(el, { toggle: true });
+                }
+            });
+
+            // Visual feedback toast
+            const label = status === 'GOOD' ? 'BAIK ✅' : 'RUSAK ❌';
+            showToast(`Semua item telah diatur ke <strong>${label}</strong>`, status === 'GOOD' ? '#22c55e' : '#f43f5e');
+        }
+
+        // Micro toast notification
+        function showToast(message, bgColor) {
+            const existing = document.getElementById('p2hToast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'p2hToast';
+            toast.innerHTML = message;
+            Object.assign(toast.style, {
+                position: 'fixed', bottom: '24px', right: '24px', zIndex: '9999',
+                background: bgColor, color: 'white', padding: '12px 20px',
+                borderRadius: '12px', fontWeight: '700', fontSize: '13px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.3)', opacity: '0',
+                transform: 'translateY(20px)', transition: 'all 0.3s ease'
+            });
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+            });
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(20px)';
+                setTimeout(() => toast.remove(), 350);
+            }, 2500);
+        }
+
+        // ========= SHARE FUNCTIONALITY =========
+        function shareP2h(noLambung, tanggal, merek, jenis, defects, nama) {
+            const statusLabel = defects === 0 ? '✅ AMAN (GOOD)' : `⚠️ ${defects} TEMUAN`;
+            const shareText = `📋 LAPORAN P2H KENDARAAN\n` +
+                              `━━━━━━━━━━━━━━━━━━━━\n` +
+                              `🚛 Unit: ${noLambung}\n` +
+                              `📅 Tanggal: ${tanggal}\n` +
+                              `🔧 Tipe: ${merek} (${jenis})\n` +
+                              `📊 Status: ${statusLabel}\n` +
+                              `👤 Pemeriksa: ${nama}\n` +
+                              `━━━━━━━━━━━━━━━━━━━━\n` +
+                              `INDEXIM Safety Accountability Program`;
+
+            if (navigator.share) {
+                navigator.share({
+                    title: `P2H - ${noLambung} (${tanggal})`,
+                    text: shareText
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(shareText).then(() => {
+                    showToast('<i class="bi bi-clipboard-check me-1"></i> Hasil P2H disalin ke clipboard!', '#6366f1');
+                }).catch(() => {
+                    // Fallback for older browsers
+                    const ta = document.createElement('textarea');
+                    ta.value = shareText;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    showToast('<i class="bi bi-clipboard-check me-1"></i> Hasil P2H disalin ke clipboard!', '#6366f1');
+                });
+            }
+        }
+
+        $(document).ready(function() {
+            // ========= METADATA GATE LISTENERS =========
+            $('#noLambungInput, #merek, #kilometer').on('input change', checkMetadataComplete);
+            $('#jenisKendaraan, #simperKimper').on('change', checkMetadataComplete);
+            $('#fotoSpeedometer').on('change', checkMetadataComplete);
+            // Initial check
+            checkMetadataComplete();
+
+            // Autocomplete Search-and-Select dropdown logic for No Lambung
+            const $input = $('#noLambungInput');
+            const $menu = $('#unitDropdownMenu');
+            const $toggle = $('#toggleUnitDropdown');
+            const $merek = $('#merek');
+            const $jenis = $('#jenisKendaraan');
+
+            // Render matching dropdown list
+            function renderDropdown(filterText = '') {
+                $menu.empty();
+                const cleanFilterText = filterText.trim().toLowerCase();
+                
+                const matches = registeredVehicles.filter(v => 
+                    v.NoLambung.toLowerCase().includes(cleanFilterText)
+                );
+
+                if (matches.length > 0) {
+                    matches.forEach(v => {
+                        const itemHtml = `<button type="button" class="dropdown-item text-white py-2 border-bottom border-secondary select-vehicle-btn" data-no="${v.NoLambung}" data-merek="${v.Merek}" data-jenis="${v.JenisKendaraan}" style="text-align: left; font-size: 13px; background: none; border-left: none; border-right: none;">
+                                            <i class="bi bi-truck me-2 text-primary"></i><strong>${v.NoLambung}</strong> - ${v.Merek} (${v.JenisKendaraan})
+                                          </button>`;
+                        $menu.append(itemHtml);
+                    });
+                }
+
+                // If typing and no exact match exists, offer to add as new unit
+                const exactMatch = registeredVehicles.some(v => v.NoLambung.toLowerCase() === cleanFilterText);
+                if (cleanFilterText.length > 0 && !exactMatch) {
+                    const addNewHtml = `<button type="button" class="dropdown-item text-warning py-2 select-new-vehicle-btn" data-no="${filterText.toUpperCase()}" style="text-align: left; font-size: 13px; font-weight: bold; background: rgba(255,193,7,0.05); border: none;">
+                                            <i class="bi bi-plus-lg me-2"></i>Tambah "${filterText.toUpperCase()}" Sebagai Unit Baru
+                                        </button>`;
+                    $menu.append(addNewHtml);
+                }
+
+                if ($menu.children().length > 0) {
+                    $menu.show();
+                } else {
+                    $menu.hide();
+                }
+            }
+
+            // Click listener for selecting unit from list
+            $menu.on('click', '.select-vehicle-btn', function() {
+                const noLambung = $(this).data('no');
+                const brand = $(this).data('merek');
+                const type = $(this).data('jenis');
+
+                $input.val(noLambung);
+                $merek.val(brand);
+                $jenis.val(type).change();
+                $menu.hide();
+            });
+
+            // Click listener for adding new unit
+            $menu.on('click', '.select-new-vehicle-btn', function() {
+                const newUnit = $(this).data('no');
+                
+                // Secondary check for duplicate
+                const exists = registeredVehicles.some(v => v.NoLambung.toLowerCase() === newUnit.toLowerCase());
+                if (exists) {
+                    alert(`Unit "${newUnit}" sudah ada di daftar. Silakan pilih dari daftar.`);
+                    const matchedUnit = registeredVehicles.find(v => v.NoLambung.toLowerCase() === newUnit.toLowerCase());
+                    $input.val(matchedUnit.NoLambung);
+                    $merek.val(matchedUnit.Merek);
+                    $jenis.val(matchedUnit.JenisKendaraan).change();
+                    $menu.hide();
+                    return;
+                }
+
+                $input.val(newUnit);
+                $merek.val('').focus();
+                $jenis.val('').change();
+                $menu.hide();
+            });
+
+            // Trigger dropdown render on typing
+            $input.on('input focus', function() {
+                renderDropdown($(this).val());
+            });
+
+            // Toggle dropdown arrow click
+            $toggle.on('click', function(e) {
+                e.stopPropagation();
+                if ($menu.is(':visible')) {
+                    $menu.hide();
+                } else {
+                    renderDropdown($input.val());
+                }
+            });
+
+            // Close dropdown if clicked outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#noLambungInput, #unitDropdownMenu, #toggleUnitDropdown').length) {
+                    $menu.hide();
+                }
+            });
+
+            // Prevent submitting form with duplicate unit check if typing new unit
+            $('#p2hForm').on('submit', function(e) {
+                const typedUnit = $input.val().trim().toUpperCase();
+                const isEdit = $('#p2hId').val() !== '';
+                
+                // Validate Odometer speedo photo: required on create
+                if (!isEdit && $('#fotoSpeedometer')[0].files.length === 0) {
+                    alert("Foto Speedometer wajib diunggah.");
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Check critical checklist items: if status is NOT_GOOD, photo must be uploaded
+                let photoMissing = false;
+                $('.btn-check[value="NOT_GOOD"]:checked').each(function() {
+                    const nameAttr = $(this).attr('name'); // e.g. golA_status_3
+                    const parts = nameAttr.split('_'); // ['golA', 'status', '3']
+                    const cat = parts[0];
+                    const idx = parts[2];
+                    
+                    const fileInput = document.getElementById(`photo_input_${cat}_${idx}`);
+                    const previewWrapper = document.getElementById(`photo_preview_wrapper_${cat}_${idx}`);
+                    const hasExistingPhoto = previewWrapper && !$(previewWrapper).hasClass('d-none');
+                    
+                    if (fileInput && fileInput.files.length === 0 && !hasExistingPhoto) {
+                        alert(`Harap unggah foto kondisi/kerusakan untuk item: ${cat === 'golA' ? 'Golongan A' : cat === 'golB' ? 'Golongan B' : 'Golongan C'} #${parseInt(idx)+1}`);
+                        $(fileInput).focus();
+                        photoMissing = true;
+                        
+                        // Expand the respective accordion item
+                        const collapseEl = document.getElementById(`collapse${cat.slice(-1).toUpperCase()}`);
+                        if (collapseEl && !$(collapseEl).hasClass('show')) {
+                            $(`button[data-bs-target="#collapse${cat.slice(-1).toUpperCase()}"]`).click();
+                        }
+                        
+                        return false; // Break loop
+                    }
+                });
+
+                if (photoMissing) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
+
+        // Toggle visibility of the defect photo input
+        function toggleDefectPhoto(category, index, status) {
+            const wrapper = document.getElementById(`photo_wrapper_${category}_${index}`);
+            const input = document.getElementById(`photo_input_${category}_${index}`);
+            
+            if (status === 'NOT_GOOD') {
+                $(wrapper).slideDown(150);
+            } else {
+                $(wrapper).slideUp(150);
+                if (input) input.value = ''; // Reset file input
+            }
+        }
+
+        // Cancel Edit report function
+        function cancelEditP2h() {
+            $('#p2hForm')[0].reset();
+            $('#p2hId').val('');
+            $('#formTitle').html('<i class="bi bi-shield-check me-2" style="color: var(--color-primary);"></i>Form Pemeriksaan P2H');
+            $('#btnCancelEdit').addClass('d-none');
+            
+            // Hide previews
+            $('#speedoPreviewWrapper').addClass('d-none');
+            $('#fotoSpeedometer').prop('required', true);
+            $('#speedoHelp').text("Wajib melampirkan foto speedometer terbaru.");
+
+            // Reset checklist photos wrappers
+            $('.defect-photo-wrapper').hide();
+            $('.defect-photo-wrapper input[type="file"]').val('');
+            $('.defect-photo-wrapper').each(function() {
+                const idAttr = $(this).attr('id');
+                const parts = idAttr.split('_'); // ['photo', 'wrapper', 'golA', '3']
+                const cat = parts[2];
+                const idx = parts[3];
+                $(`#photo_preview_wrapper_${cat}_${idx}`).addClass('d-none');
+            });
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            checkMetadataComplete();
+        }
+
+        // Edit report function
+        function editP2h(id) {
+            $.get('/P2h/GetData/' + id, function(data) {
+                if (data) {
+                    cancelEditP2h(); // Clear previous form state
+                    
+                    $('#p2hId').val(data.id);
+                    if (data.tanggal) $('#tanggal').val(data.tanggal);
+                    if (data.waktu) $('#waktuStr').val(data.waktu);
+                    
+                    // Metadata
+                    $('#noLambungInput').val(data.noLambung);
+                    $('#merek').val(data.merek);
+                    $('#jenisKendaraan').val(data.jenisKendaraan).change();
+                    $('#kilometer').val(data.kilometer);
+                    $('#simperKimper').val(data.simperKimper).change();
+
+                    // Speedometer photo preview
+                    if (data.fotoSpeedometer) {
+                        $('#speedoPreviewLink').attr('href', data.fotoSpeedometer);
+                        $('#speedoPreviewWrapper').removeClass('d-none');
+                        $('#fotoSpeedometer').prop('required', false);
+                        $('#speedoHelp').text("Biarkan kosong jika tidak ingin mengubah foto.");
+                    }
+
+                    // Populate Golongan A Checkpoints
+                    if (data.golA) {
+                        data.golA.forEach((item, index) => {
+                            const idx = index;
+                            if (item.status === 'NOT_GOOD') {
+                                $(`#golA_bad_${idx}`).prop('checked', true);
+                                toggleDefectPhoto('golA', idx, 'NOT_GOOD');
+                                
+                                if (item.photoUrl) {
+                                    $(`#photo_preview_link_golA_${idx}`).attr('href', item.photoUrl);
+                                    $(`#photo_preview_wrapper_golA_${idx}`).removeClass('d-none');
+                                }
+                            } else {
+                                $(`#golA_good_${idx}`).prop('checked', true);
+                            }
+                        });
+                    }
+
+                    // Populate Golongan B Checkpoints
+                    if (data.golB) {
+                        data.golB.forEach((item, index) => {
+                            const idx = index;
+                            if (item.status === 'NOT_GOOD') {
+                                $(`#golB_bad_${idx}`).prop('checked', true);
+                                toggleDefectPhoto('golB', idx, 'NOT_GOOD');
+                                
+                                if (item.photoUrl) {
+                                    $(`#photo_preview_link_golB_${idx}`).attr('href', item.photoUrl);
+                                    $(`#photo_preview_wrapper_golB_${idx}`).removeClass('d-none');
+                                }
+                            } else {
+                                $(`#golB_good_${idx}`).prop('checked', true);
+                            }
+                        });
+                    }
+
+                    // Populate Golongan C Checkpoints
+                    if (data.golC) {
+                        data.golC.forEach((item, index) => {
+                            const idx = index;
+                            if (item.status === 'NOT_GOOD') {
+                                $(`#golC_bad_${idx}`).prop('checked', true);
+                                toggleDefectPhoto('golC', idx, 'NOT_GOOD');
+                                
+                                if (item.photoUrl) {
+                                    $(`#photo_preview_link_golC_${idx}`).attr('href', item.photoUrl);
+                                    $(`#photo_preview_wrapper_golC_${idx}`).removeClass('d-none');
+                                }
+                            } else {
+                                $(`#golC_good_${idx}`).prop('checked', true);
+                            }
+                        });
+                    }
+
+                    // Toggle Cancel button and scroll to top
+                    $('#formTitle').html('<i class="bi bi-pencil-square me-2" style="color: var(--color-primary);"></i>Edit Laporan P2H');
+                    $('#btnCancelEdit').removeClass('d-none');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    checkMetadataComplete();
+                }
+            }).fail(function() {
+                alert("Gagal mengambil data P2H. Data mungkin sudah dihapus.");
+            });
+        }
+
+        // Delete report function
+        function deleteP2h(id) {
+            if (confirm("Apakah Anda yakin ingin menghapus laporan pemeriksaan P2H ini?")) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/P2h/Delete/' + id;
+                
+                const token = $('input[name="__RequestVerificationToken"]').val();
+                if (token) {
+                    const tokenInput = document.createElement('input');
+                    tokenInput.type = 'hidden';
+                    tokenInput.name = '__RequestVerificationToken';
+                    tokenInput.value = token;
+                    form.appendChild(tokenInput);
+                }
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+}

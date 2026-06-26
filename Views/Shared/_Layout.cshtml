@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>@ViewData["Title"] - INDEXIM Safety Accountability Program</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap & Icons -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/MBS_SAP.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <!-- Theme Initializer script to prevent theme flash -->
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('sap-theme') || 'dark';
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+            }
+        })();
+    </script>
+
+    <div class="app-container">
+        @if (ViewData["HideNav"] == null)
+        {
+            <!-- Left Sidebar Navigation (Desktop/Laptop only) -->
+            <aside class="sidebar d-none d-lg-flex">
+                <div class="sidebar-brand">
+                    <img src="~/images/logo_mbs.png" class="brand-logo-img" alt="INDEXIM MBS Logo" asp-append-version="true" />
+                    <span>INDEXIM SAP</span>
+                </div>
+                
+                <nav class="sidebar-menu">
+                    <a asp-controller="Home" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Home" ? "active" : "")">
+                        <i class="bi bi-grid-1x2-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a asp-controller="Timeline" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Timeline" ? "active" : "")">
+                        <i class="bi bi-rss-fill"></i>
+                        <span>SafeFeed</span>
+                    </a>
+                    <a asp-controller="Hazard" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Hazard" ? "active" : "")">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <span>Hazard</span>
+                    </a>
+                    <a asp-controller="Inspection" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Inspection" ? "active" : "")">
+                        <i class="bi bi-clipboard-check-fill"></i>
+                        <span>Inspection</span>
+                    </a>
+                    <a asp-controller="ActionPlan" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "ActionPlan" ? "active" : "")">
+                        <i class="bi bi-calendar-check-fill"></i>
+                        <span>Action Plan</span>
+                    </a>
+                    <a asp-controller="Observation" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Observation" ? "active" : "")">
+                        <i class="bi bi-eye-fill"></i>
+                        <span>Observation</span>
+                    </a>
+                    <a asp-controller="SafetyTalk" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "SafetyTalk" ? "active" : "")">
+                        <i class="bi bi-megaphone-fill"></i>
+                        <span>Safety Talk</span>
+                    </a>
+                    <a asp-controller="P5m" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "P5m" ? "active" : "")">
+                        <i class="bi bi-people-fill"></i>
+                        <span>P5M</span>
+                    </a>
+                    <a asp-controller="P2h" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "P2h" ? "active" : "")">
+                        <i class="bi bi-truck-front-fill"></i>
+                        <span>P2H</span>
+                    </a>
+                    @if (User.FindFirst("CompanyId")?.Value == "1")
+                    {
+                        <a asp-controller="Dpa" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Dpa" ? "active" : "")">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>DPA</span>
+                        </a>
+                    }
+                    <a asp-controller="Incident" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Incident" ? "active" : "")">
+                        <i class="bi bi-newspaper" style="color: #f43f5e;"></i>
+                        <span>Insiden</span>
+                    </a>
+                    <a asp-controller="Admin" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Admin" ? "active" : "")">
+                        <i class="bi bi-cloud-arrow-up-fill text-success"></i>
+                        <span>Upload Data (Admin)</span>
+                    </a>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <a asp-controller="UserManagement" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "UserMgmt" ? "active" : "")">
+                            <i class="bi bi-person-gear" style="color: #a855f7;"></i>
+                            <span>User Management</span>
+                        </a>
+                    }
+                </nav>
+
+                <div class="sidebar-footer">
+                    <a asp-controller="Account" asp-action="Profile"
+                       class="user-profile-sidebar text-decoration-none"
+                       title="Lihat Profil Saya"
+                       style="cursor: pointer; transition: opacity 0.2s; flex: 1;">
+                        <div class="user-avatar-mini" style="background: linear-gradient(135deg, #a855f7, #f43f5e);">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div class="user-info-sidebar">
+                            <span class="user-name">@(User.Identity?.IsAuthenticated == true ? User.Identity.Name : "Budi Santoso")</span>
+                            <span class="user-role" style="color: #a855f7;">@(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Administrator")</span>
+                        </div>
+                    </a>
+                    <a asp-controller="Account" asp-action="Logout" class="btn-logout-sidebar" title="Log Out">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </a>
+                </div>
+            </aside>
+        }
+
+        <div class="main-layout">
+            @if (ViewData["HideHeader"] == null)
+            {
+                <!-- Top Navbar (Desktop Title & Mobile Header Combined) -->
+                <header class="top-navbar">
+                    <div class="navbar-left">
+                        <a asp-controller="Home" asp-action="Index" class="btn-back-nav" title="Kembali ke Home">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+
+                        <h5 class="page-title">@ViewData["HeaderTitle"]</h5>
+                    </div>
+                    
+                    <div class="navbar-right">
+                        <!-- Theme Toggle Button -->
+                        <button id="themeToggle" class="btn-navbar-action" title="Ganti Tema">
+                            <i class="bi bi-moon-stars-fill" id="themeIcon"></i>
+                        </button>
+
+                        <!-- Notification Bell -->
+                        <a href="#" class="btn-navbar-action notification-bell" title="Notifikasi" data-bs-toggle="offcanvas" data-bs-target="#notificationSidebar" onclick="markAllNotificationsRead()">
+                            <i class="bi bi-bell-fill"></i>
+                            <span class="bell-badge d-none" id="notificationBadge"></span>
+                        </a>
+
+                        <!-- Back to MBS (Mobile only) -->
+                        <a href="https://mbs.indexim.id/" target="_blank" rel="noopener noreferrer" class="btn-navbar-action d-lg-none" title="Kembali ke MBS">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+
+                        <!-- User Profile Icon (Mobile & Desktop) -->
+                        <a asp-controller="Account" asp-action="Profile" class="user-avatar-top btn-navbar-action" title="Profil Saya" style="color: inherit; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-person-fill"></i>
+                        </a>
+                    </div>
+                </header>
+            }
+
+            <!-- Main Scrollable Content Area -->
+            <main class="page-content @(ViewData["HideHeader"] != null ? "no-header" : "") @(ViewData["HideNav"] != null ? "no-nav" : "")">
+                @RenderBody()
+                <div class="app-footer mt-5 mb-3 text-center" style="font-size: 11px; color: var(--text-muted); padding-bottom: 20px;">
+                    <div class="mb-1" style="font-family: 'Inter', sans-serif;">
+                        <i class="bi bi-shield-lock-fill" style="color: var(--color-primary);"></i>
+                        <span style="font-weight: 700; letter-spacing: 1px; color: var(--text-main);">SECURE ACCESS PLATFORM</span>
+                    </div>
+                    <p class="mb-0" style="letter-spacing: 0.2px;">&copy; @DateTime.Now.Year <strong>PT INDEXIM COALINDO</strong>. All Rights Reserved.</p>
+                    <p style="font-size: 10px; margin-top: 4px; opacity: 0.7;">Under Development by System Integration Department <span style="color: #f43f5e;">❤️</span></p>
+                </div>
+            </main>
+
+            @if (ViewData["HideNav"] == null)
+            {
+                <!-- Bottom Navigation Bar (Mobile only) -->
+                <nav class="bottom-nav d-flex d-lg-none">
+                    <a asp-controller="Home" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Home" ? "active" : "")">
+                        <i class="bi bi-grid-1x2-fill"></i>
+                        <span>Home</span>
+                    </a>
+                    <a asp-controller="Timeline" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Timeline" ? "active" : "")">
+                        <i class="bi bi-rss-fill"></i>
+                        <span>SafeFeed</span>
+                    </a>
+                    <a asp-controller="Hazard" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Hazard" ? "active" : "")">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <span>Hazard</span>
+                    </a>
+                    <a asp-controller="Inspection" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Inspection" ? "active" : "")">
+                        <i class="bi bi-clipboard-check-fill"></i>
+                        <span>Inspection</span>
+                    </a>
+                    <a asp-controller="ActionPlan" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "ActionPlan" ? "active" : "")">
+                        <i class="bi bi-calendar-check-fill"></i>
+                        <span>Action</span>
+                    </a>
+                    <a asp-controller="Incident" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Incident" ? "active" : "")">
+                        <i class="bi bi-newspaper"></i>
+                        <span>Insiden</span>
+                    </a>
+                    <a asp-controller="Account" asp-action="Profile" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Profile" ? "active" : "")">
+                        <i class="bi bi-person-badge-fill"></i>
+                        <span>Profil</span>
+                    </a>
+                </nav>
+            }
+        </div>
+    </div>
+
+    <!-- Incident Popup (rendered at body-level to avoid overflow:hidden clipping) -->
+    @await Component.InvokeAsync("IncidentPopup")
+
+    <!-- Notification Sidebar (Offcanvas) -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="notificationSidebar" aria-labelledby="notificationSidebarLabel" style="border-radius: 20px 0 0 20px; border-left: none; box-shadow: -4px 0 24px rgba(0,0,0,0.05);">
+        <div class="offcanvas-header" style="border-bottom: 1px solid var(--border-color); padding: 20px;">
+            <h5 class="offcanvas-title" id="notificationSidebarLabel" style="font-weight: 800; color: var(--text-main);">Notifikasi</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body" id="notificationBody" style="background-color: var(--bg-body); padding: 20px;">
+            <div class="text-center mt-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reassign PJA Modal -->
+    <div class="modal fade" id="reassignPjaModal" tabindex="-1" aria-labelledby="reassignPjaModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background-color: var(--bg-card); border: none; border-radius: 16px;">
+                <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                    <h6 class="modal-title text-white" id="reassignPjaModalLabel" style="font-weight: 700;"><i class="bi bi-person-lines-fill me-2" style="color: var(--color-primary);"></i>Alihkan PJA</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body position-relative">
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Silakan cari dan pilih PJA baru untuk laporan ini.</p>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span style="font-size: 11px; font-weight: 600; color: var(--text-main);">Pencarian</span>
+                        <div class="form-check form-switch" style="font-size: 11px;">
+                            <input class="form-check-input" type="checkbox" role="switch" id="reassignLintasPerusahaan">
+                            <label class="form-check-label text-white" for="reassignLintasPerusahaan" style="opacity: 0.8;">Lintas Perusahaan</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group-sap position-relative mb-0">
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-search input-sap-icon" style="top: 14px;"></i>
+                            <input type="text" id="reassignSearchInput" class="input-sap" style="padding-left: 42px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;" placeholder="Ketik NIK atau Nama PJA..." autocomplete="off" />
+                        </div>
+                        <div id="reassignSearchResults" class="dropdown-menu w-100" style="background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-height: 250px; overflow-y: auto;">
+                        </div>
+                    </div>
+
+                    <!-- Selected PJA Card -->
+                    <div id="reassignSelectedCard" class="d-none mt-3" style="background: var(--bg-body); border-radius: 12px; padding: 12px; border: 1px solid var(--border-color);">
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="width: 40px; height: 40px; min-width: 40px; border-radius: 50%; background: var(--color-primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px;" id="reassignInitial">
+                            </div>
+                            <div>
+                                <h6 id="reassignDisplayName" style="margin: 0; font-weight: 700; color: var(--text-main); font-size: 13px;"></h6>
+                                <p id="reassignDisplayRole" style="margin: 2px 0 0; font-size: 11px; color: var(--text-muted);"></p>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-link text-danger ms-auto" onclick="clearReassignSelection()" style="padding: 0;"><i class="bi bi-x-circle-fill fs-5"></i></button>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="reassignItemId" />
+                    <input type="hidden" id="reassignItemType" />
+                    <input type="hidden" id="reassignNik" />
+                    <input type="hidden" id="reassignNama" />
+                    <input type="hidden" id="reassignDept" />
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="font-size: 12px; border-radius: 8px;">Batal</button>
+                    <button type="button" class="btn btn-sap-primary" id="btnSaveReassign" style="font-size: 12px; border-radius: 8px;" disabled onclick="submitReassign()">Simpan Pengalihan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        $(document).ready(function() {
+            fetchNotifications();
+            // Polling notifications every 60s
+            setInterval(fetchNotifications, 60000);
+
+            // Reassign Search Logic
+            var reassignTimeout;
+            $('#reassignSearchInput').on('input', function() {
+                clearTimeout(reassignTimeout);
+                var query = $(this).val();
+                
+                if (query.length < 3) {
+                    $('#reassignSearchResults').removeClass('show');
+                    return;
+                }
+
+                reassignTimeout = setTimeout(function() {
+                    var lintas = $('#reassignLintasPerusahaan').is(':checked');
+                    $.get('/Api/SearchEmployee?query=' + encodeURIComponent(query) + '&lintasPerusahaan=' + lintas, function(data) {
+                        $('#reassignSearchResults').empty();
+                        if (data && data.length > 0) {
+                            data.forEach(function(emp) {
+                                var initials = emp.nama.charAt(0).toUpperCase();
+                                var html = `
+                                    <a class="dropdown-item pja-item" href="javascript:void(0)" onclick="selectReassign('${emp.nik}', '${emp.nama.replace(/'/g, "\\'")}', '${emp.departemen.replace(/'/g, "\\'")}')" style="padding: 10px 16px; border-bottom: 1px solid var(--border-color); white-space: normal;">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div style="width: 32px; height: 32px; min-width: 32px; border-radius: 50%; background: rgba(56, 189, 248, 0.1); display: flex; align-items: center; justify-content: center; color: var(--color-primary); font-weight: bold; font-size: 14px;">
+                                                ${initials}
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 700; font-size: 12px; color: var(--text-main);">${emp.nama} <span class="text-muted" style="font-weight:normal;">(${emp.nik})</span></div>
+                                                <div style="font-size: 10px; color: var(--text-muted);">${emp.jabatan} - ${emp.departemen}</div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                `;
+                                $('#reassignSearchResults').append(html);
+                            });
+                            $('#reassignSearchResults').addClass('show');
+                        } else {
+                            $('#reassignSearchResults').html('<div class="dropdown-item text-muted" style="font-size:12px;">Tidak ditemukan.</div>');
+                            $('#reassignSearchResults').addClass('show');
+                        }
+                    });
+                }, 400);
+            });
+        });
+
+        function openReassignModal(itemId, itemType) {
+            $('#reassignItemId').val(itemId);
+            $('#reassignItemType').val(itemType);
+            clearReassignSelection();
+            $('#reassignPjaModal').modal('show');
+        }
+
+        function selectReassign(nik, nama, dept) {
+            $('#reassignNik').val(nik);
+            $('#reassignNama').val(nama);
+            $('#reassignDept').val(dept);
+            
+            $('#reassignInitial').text(nama.charAt(0).toUpperCase());
+            $('#reassignDisplayName').text(nama + ' (' + nik + ')');
+            $('#reassignDisplayRole').text(dept);
+            
+            $('#reassignSearchInput').closest('.form-group-sap').hide();
+            $('#reassignSearchResults').removeClass('show');
+            $('#reassignSelectedCard').removeClass('d-none');
+            $('#btnSaveReassign').prop('disabled', false);
+        }
+
+        function clearReassignSelection() {
+            $('#reassignNik').val('');
+            $('#reassignNama').val('');
+            $('#reassignDept').val('');
+            
+            $('#reassignSelectedCard').addClass('d-none');
+            $('#reassignSearchInput').val('').closest('.form-group-sap').show();
+            $('#btnSaveReassign').prop('disabled', true);
+        }
+
+        function submitReassign() {
+            var req = {
+                itemId: parseInt($('#reassignItemId').val()),
+                itemType: $('#reassignItemType').val(),
+                newNik: $('#reassignNik').val(),
+                newNama: $('#reassignNama').val(),
+                newDepartemen: $('#reassignDept').val()
+            };
+
+            $('#btnSaveReassign').html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...').prop('disabled', true);
+
+            $.ajax({
+                url: '/Api/ReassignPja',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(req),
+                success: function() {
+                    $('#reassignPjaModal').modal('hide');
+                    alert('PJA berhasil dialihkan. Halaman akan dimuat ulang.');
+                    location.reload();
+                },
+                error: function() {
+                    alert('Terjadi kesalahan saat mengalihkan PJA.');
+                    $('#btnSaveReassign').text('Simpan Pengalihan').prop('disabled', false);
+                }
+            });
+        }
+
+        function fetchNotifications() {
+            $.get('/Api/GetNotifications', function(data) {
+                var unreadCount = data.filter(x => !x.isRead).length;
+                if(unreadCount > 0) {
+                    $('#notificationBadge').removeClass('d-none');
+                } else {
+                    $('#notificationBadge').addClass('d-none');
+                }
+
+                var html = '';
+                if(data.length === 0) {
+                    html = `
+                        <div class="text-center mt-5">
+                            <div style="background-color: rgba(56, 189, 248, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                                <i class="bi bi-bell-slash-fill" style="color: var(--color-primary); font-size: 28px;"></i>
+                            </div>
+                            <h6 style="font-weight: 700; color: var(--text-main);">Belum ada notifikasi</h6>
+                            <p class="text-muted" style="font-size: 13px;">Notifikasi Anda akan muncul di sini.</p>
+                        </div>
+                    `;
+                } else {
+                    html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+                    data.forEach(function(n) {
+                        var bgClass = n.isRead ? 'var(--bg-layout)' : 'rgba(56, 189, 248, 0.1)';
+                        var borderClass = n.isRead ? 'var(--border-color)' : 'var(--color-primary)';
+                        html += `
+                            <a href="${n.url || '#'}" style="text-decoration: none; color: inherit; display: block; background: ${bgClass}; border: 1px solid ${borderClass}; border-radius: 12px; padding: 12px;">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <span style="font-weight: 700; font-size: 13px; color: var(--text-main);">${n.title}</span>
+                                    ${!n.isRead ? '<span style="width: 8px; height: 8px; background-color: var(--color-red); border-radius: 50%; display: inline-block;"></span>' : ''}
+                                </div>
+                                <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4;">${n.message}</p>
+                                <div style="font-size: 10px; color: var(--text-muted); text-align: right;">${new Date(n.createdAt).toLocaleString('id-ID')}</div>
+                            </a>
+                        `;
+                    });
+                    html += '</div>';
+                }
+                $('#notificationBody').html(html);
+            });
+        }
+
+        function markAllNotificationsRead() {
+            $.post('/Api/MarkAllNotificationsRead', function() {
+                $('#notificationBadge').addClass('d-none');
+                // Re-fetch after a slight delay so visual state updates
+                setTimeout(fetchNotifications, 500);
+            });
+        }
+
+        $(document).ready(function() {
+            // Automatically assign professional elegant colors to form icons
+            const professionalColors = ['#0284c7', '#0369a1', '#0f766e', '#334155', '#475569', '#3b82f6', '#2563eb', '#1d4ed8'];
+            $('.input-sap-icon').each(function(index) {
+                // Only apply if there's no existing inline color
+                if (!$(this).attr('style') || !$(this).attr('style').includes('color')) {
+                    // Create deterministic color based on icon class name or index
+                    const iconClass = $(this).attr('class');
+                    let colorIndex = index;
+                    if(iconClass) {
+                        colorIndex = iconClass.length;
+                    }
+                    $(this).css('color', professionalColors[(index + colorIndex) % professionalColors.length]);
+                }
+            });
+
+            // Transform all native select.input-sap into elegant custom dropdowns (Mobile-like UI)
+            function initCustomSelect(selectElement) {
+                const select = $(selectElement);
+                const originalWrapper = select.closest('.input-sap-wrapper');
+                
+                // Remove existing custom select elements to prevent duplicate trigger and option elements
+                originalWrapper.find('.custom-select-trigger, .custom-select-options').remove();
+                
+                // Hide native select but keep it in DOM for form submission
+                select.hide();
+                
+                // Create custom trigger
+                const trigger = $('<div class="input-sap d-flex justify-content-between align-items-center custom-select-trigger" style="cursor: pointer; user-select: none;"></div>');
+                
+                let selectedText = select.find('option:selected').text();
+                if (!selectedText) selectedText = select.find('option:first').text();
+                
+                const triggerText = $('<span class="text-truncate"></span>').text(selectedText);
+                const chevron = $('<i class="bi bi-chevron-down ms-2" style="color: var(--text-muted); font-size: 14px; transition: transform 0.2s;"></i>');
+                
+                trigger.append(triggerText).append(chevron);
+                originalWrapper.append(trigger);
+                
+                // Create custom options container (Dropdown modal)
+                const optionsContainer = $('<div class="custom-select-options dropdown-menu w-100" style="background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; margin-top: 8px; max-height: 280px; overflow-y: auto; display: none; z-index: 1050; padding: 8px;"></div>');
+                
+                select.find('option').each(function() {
+                    const optionVal = $(this).val();
+                    const optionText = $(this).text();
+                    
+                    // Style dropdown item
+                    const opt = $('<div class="dropdown-item d-flex align-items-center" style="cursor: pointer; padding: 12px 16px; border-radius: 10px; margin-bottom: 4px; color: var(--text-main); font-weight: 600; font-size: 13px; transition: all 0.2s; white-space: normal;"></div>');
+                    opt.text(optionText);
+                    
+                    if(select.val() === optionVal) {
+                        opt.css({
+                            'background-color': 'rgba(56, 189, 248, 0.1)',
+                            'color': 'var(--color-primary)'
+                        });
+                    }
+                    
+                    opt.hover(
+                        function() { if(select.val() !== optionVal) $(this).css('background-color', 'var(--bg-layout)'); },
+                        function() { if(select.val() !== optionVal) $(this).css('background-color', 'transparent'); }
+                    );
+                    
+                    opt.on('click', function(e) {
+                        e.stopPropagation();
+                        // Update native select
+                        select.val(optionVal).trigger('change');
+                        // Update trigger text
+                        triggerText.text(optionText);
+                        
+                        // Close dropdown smoothly
+                        optionsContainer.slideUp(200);
+                        chevron.css('transform', 'rotate(0deg)');
+                        trigger.css('border-color', 'var(--border-color)');
+                        
+                        // Update active state styling
+                        optionsContainer.find('.dropdown-item').css({
+                            'background-color': 'transparent', 
+                            'color': 'var(--text-main)'
+                        });
+                        $(this).css({
+                            'background-color': 'rgba(56, 189, 248, 0.1)',
+                            'color': 'var(--color-primary)'
+                        });
+                    });
+                    
+                    optionsContainer.append(opt);
+                });
+                
+                originalWrapper.append(optionsContainer);
+                
+                // Toggle behavior
+                trigger.on('click', function(e) {
+                    e.stopPropagation();
+                    const isVisible = optionsContainer.is(':visible');
+                    
+                    // Close others
+                    $('.custom-select-options').slideUp(200);
+                    $('.custom-select-trigger i').css('transform', 'rotate(0deg)');
+                    $('.custom-select-trigger').css('border-color', 'var(--border-color)');
+                    
+                    if (!isVisible) {
+                        optionsContainer.slideDown(200);
+                        chevron.css('transform', 'rotate(180deg)');
+                        trigger.css('border-color', 'var(--color-primary)');
+                        // Smooth scroll to selected
+                        const selectedOpt = optionsContainer.find('.dropdown-item').filter(function() {
+                            return $(this).css('color') === $(':root').css('--color-primary');
+                        });
+                        if(selectedOpt.length) {
+                            optionsContainer.scrollTop(selectedOpt.position().top - optionsContainer.position().top);
+                        }
+                    }
+                });
+            }
+
+            $('select.input-sap').each(function() {
+                initCustomSelect(this);
+                
+                // Sync from native
+                $(this).on('change', function() {
+                    const newText = $(this).find('option:selected').text();
+                    $(this).closest('.input-sap-wrapper').find('.custom-select-trigger span').text(newText);
+                });
+
+                // Listen to a custom 'refresh' event on the native select
+                $(this).on('refresh', function() {
+                    initCustomSelect(this);
+                });
+            });
+            
+            // Close outside click
+            $(document).on('click', function() {
+                $('.custom-select-options').slideUp(200);
+                $('.custom-select-trigger i').css('transform', 'rotate(0deg)');
+                $('.custom-select-trigger').css('border-color', 'var(--border-color)');
+            });
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

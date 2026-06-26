@@ -1,0 +1,181 @@
+@{
+    ViewData["Title"] = "Safety Quiz - SAP";
+}
+
+<div class="animate-fade-in pb-4">
+    <!-- Header with Banner -->
+    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #eab308, #ca8a04); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
+            <!-- Decorative circle -->
+            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            
+            <i class="bi bi-patch-question-fill text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px; letter-spacing: 0.5px;">SAFETY QUIZ</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Hasil Kuis P5M Keselamatan Kerja Terbaru</p>
+        </div>
+    </div>
+
+    <!-- Feed Container -->
+    <div id="quizContainer">
+        <div class="text-center py-5" id="loadingIndicator">
+            <div class="spinner-border text-warning" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div class="mt-2 text-muted" style="font-size: 13px;" id="loadingText">Mencari data kuis hari ini...</div>
+        </div>
+        <div id="quizResults" class="d-flex flex-column gap-3"></div>
+        <div id="emptyState" class="card-sap text-center py-5 text-muted d-none">
+            <i class="bi bi-inbox-fill d-block mb-3" style="font-size: 40px; color: #cbd5e1;"></i>
+            Belum ada data kuis dalam seminggu terakhir.
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Start fetching data from today
+            var today = new Date();
+            var dateStr = formatDate(today);
+            fetchQuizData(dateStr, 7); // Fallback up to 7 days
+        });
+
+        function formatDate(date) {
+            var d = new Date(date),
+                month = '' + (d.getMonth() + 1),
+                day = '' + d.getDate(),
+                year = d.getFullYear();
+
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+
+            return [year, month, day].join('-');
+        }
+
+        async function fetchQuizData(dateStr, limitDays) {
+            $('#loadingText').text('Mencari data kuis tanggal ' + dateStr + '...');
+            
+            try {
+                // Fetch from our backend proxy which handles CORS and saves to our local DB
+                const response = await fetch(`/Api/Quiz/Sync?date=${dateStr}&limit=10`);
+                if (!response.ok) throw new Error('API Error');
+                
+                const json = await response.json();
+                
+                if (json.data && json.data.length > 0) {
+                    $('#loadingIndicator').hide();
+                    renderResults(json.data, dateStr);
+                } else {
+                    if (limitDays > 0) {
+                        // Subtract one day and retry
+                        var prevDate = new Date(dateStr);
+                        prevDate.setDate(prevDate.getDate() - 1);
+                        fetchQuizData(formatDate(prevDate), limitDays - 1);
+                    } else {
+                        // Limit reached, no data
+                        $('#loadingIndicator').hide();
+                        $('#emptyState').removeClass('d-none');
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+                $('#loadingIndicator').hide();
+                $('#emptyState').removeClass('d-none').html('<i class="bi bi-exclamation-triangle-fill text-danger d-block mb-3" style="font-size: 40px;"></i>Gagal memuat data dari server.');
+            }
+        }
+
+        function renderResults(dataArray, dateStr) {
+            var container = $('#quizResults');
+            container.empty();
+            
+            // Add date header
+            container.append(`
+                <div class="mb-1">
+                    <span class="badge" style="background-color: rgba(234, 179, 8, 0.15); color: #ca8a04; font-size: 12px; font-weight: 700; padding: 6px 12px;">
+                        <i class="bi bi-calendar-event me-2"></i> Kuis Tanggal: ${dateStr}
+                    </span>
+                </div>
+            `);
+
+            dataArray.forEach((item, index) => {
+                var isPerfect = item.score == 100;
+                var scoreColor = isPerfect ? '#10b981' : (item.score >= 70 ? '#f59e0b' : '#ef4444');
+                var scoreBadge = isPerfect ? 'Sempurna' : (item.score >= 70 ? 'Lulus' : 'Remedial');
+
+                var cardHtml = `
+                    <div class="card-sap" style="border-top: 4px solid ${scoreColor};">
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3" style="border-bottom: 1px solid var(--border-color);">
+                            <div class="d-flex align-items-center gap-3">
+                                <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--bg-layout); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; color: ${scoreColor}; border: 2px solid ${scoreColor}40;">
+                                    ${item.user_name.charAt(0)}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 800; font-size: 14px; color: var(--text-main);">${item.user_name}</div>
+                                    <div style="font-size: 11px; color: var(--text-muted);"><i class="bi bi-person-badge me-1"></i>${item.user_nik} &bull; ${item.created_at.split(' ')[1]}</div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div style="font-size: 24px; font-weight: 900; color: ${scoreColor}; line-height: 1;">${item.score}</div>
+                                <div style="font-size: 9px; font-weight: 700; color: white; background: ${scoreColor}; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px;">${scoreBadge}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="answers-container">
+                `;
+
+                if (item.answers && item.answers.length > 0) {
+                    item.answers.forEach((ans, aIdx) => {
+                        var isCorrect = ans.selected_answer === ans.correct_key;
+                        var iconClass = isCorrect ? 'bi-check-circle-fill text-success' : 'bi-x-circle-fill text-danger';
+                        var bgClass = isCorrect ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)';
+                        var borderClass = isCorrect ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)';
+
+                        cardHtml += `
+                            <div class="mb-3 p-3" style="background-color: ${bgClass}; border: 1px solid ${borderClass}; border-radius: 12px;">
+                                <div style="font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">
+                                    ${aIdx + 1}. ${ans.question}
+                                </div>
+                                
+                                <div class="d-flex align-items-start gap-2 mb-2">
+                                    <i class="bi ${iconClass}" style="margin-top: 2px;"></i>
+                                    <div>
+                                        <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Jawaban Peserta:</div>
+                                        <div style="font-size: 11px; font-weight: 600; color: ${isCorrect ? '#10b981' : '#ef4444'};">${ans.selected_answer}. ${ans.selected_answer_text}</div>
+                                    </div>
+                                </div>
+                        `;
+
+                        if (!isCorrect) {
+                            cardHtml += `
+                                <div class="d-flex align-items-start gap-2 mt-2 pt-2" style="border-top: 1px dashed ${borderClass};">
+                                    <i class="bi bi-info-circle-fill text-primary" style="margin-top: 2px;"></i>
+                                    <div>
+                                        <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Jawaban Benar:</div>
+                                        <div style="font-size: 11px; font-weight: 600; color: var(--text-main);">${ans.correct_key}. ${ans.correct_answer_text}</div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        cardHtml += `
+                                <div class="text-end mt-2">
+                                    <span style="font-size: 10px; font-weight: 700; color: ${isCorrect ? '#10b981' : '#ef4444'};">+${ans.points_earned} poin</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    cardHtml += `<div class="text-center text-muted" style="font-size: 12px;">Detail jawaban tidak tersedia.</div>`;
+                }
+
+                cardHtml += `
+                        </div>
+                    </div>
+                `;
+
+                container.append(cardHtml);
+            });
+        }
+    </script>
+}

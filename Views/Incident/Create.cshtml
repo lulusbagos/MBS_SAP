@@ -1,0 +1,74 @@
+@{
+    ViewData["Title"] = "Buat Berita Insiden";
+}
+
+<div class="animate-fade-in pb-4">
+
+    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #dc2626, #f43f5e); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <i class="bi bi-pencil-square text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px;">BUAT BERITA INSIDEN</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Publikasikan informasi insiden untuk awareness karyawan.</p>
+        </div>
+    </div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-3" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px; font-size: 13px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card-sap border-0 p-4" style="border-radius: 20px;">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+
+            <div class="form-group-sap">
+                <label class="form-label-sap">Judul Berita <span class="text-danger">*</span></label>
+                <input type="text" name="judul" class="input-sap" placeholder="Contoh: Insiden Kebakaran di Area Workshop" required />
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 form-group-sap">
+                    <label class="form-label-sap">Lokasi Kejadian</label>
+                    <input type="text" name="lokasi" class="input-sap" placeholder="Lokasi insiden" />
+                </div>
+                <div class="col-md-6 form-group-sap">
+                    <label class="form-label-sap">Tanggal Kejadian</label>
+                    <input type="date" name="tanggalKejadian" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                </div>
+            </div>
+
+            <div class="form-group-sap">
+                <label class="form-label-sap">Kategori Insiden</label>
+                <select name="kategori" class="input-sap" required>
+                    <option value="Ringan">🟢 Ringan (Near Miss / P3K)</option>
+                    <option value="Sedang" selected>🟡 Sedang (Rawat Jalan)</option>
+                    <option value="Berat">🔴 Berat (Rawat Inap)</option>
+                    <option value="Fatal">⚫ Fatal (Meninggal)</option>
+                </select>
+            </div>
+
+            <div class="form-group-sap">
+                <label class="form-label-sap">Konten / Deskripsi <span class="text-danger">*</span></label>
+                <textarea name="konten" class="input-sap" rows="6" style="font-size: 13px; line-height: 1.6;" placeholder="Tuliskan kronologi kejadian, dampak, dan tindak lanjut..." required></textarea>
+            </div>
+
+            <div class="form-group-sap">
+                <label class="form-label-sap">Foto / Gambar Insiden</label>
+                <input type="file" name="gambar" class="input-sap" accept="image/*" style="padding: 10px 12px; height: auto;" />
+            </div>
+
+            <div class="d-flex gap-2 mt-3">
+                <a asp-action="Index" class="btn btn-sap-outline flex-fill py-2" style="border-radius: 12px; font-weight: 600;">
+                    <i class="bi bi-arrow-left me-1"></i> Kembali
+                </a>
+                <button type="submit" class="btn btn-sap-primary flex-fill py-2" style="border-radius: 12px; font-weight: 700;">
+                    <i class="bi bi-send-fill me-1"></i> Publikasikan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

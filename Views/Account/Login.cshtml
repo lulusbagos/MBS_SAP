@@ -1,0 +1,147 @@
+@model dynamic
+@{
+    ViewData["Title"] = "Masuk - SAP";
+}
+
+<div class="login-wrapper">
+    <div class="login-container">
+        <div class="d-flex justify-content-end mb-3 animate-fade-in">
+            <button id="themeToggle" class="btn-navbar-action" title="Ganti Tema">
+                <i class="bi bi-moon-stars-fill" id="themeIcon"></i>
+            </button>
+        </div>
+        <div class="login-brand animate-fade-in">
+            <div class="login-logo-container">
+                <img src="~/images/logo_mbs.png" class="login-logo-img" alt="INDEXIM MBS Logo" asp-append-version="true" />
+            </div>
+            <h4>INDEXIM SAP</h4>
+            <p>Safety Accountability Program</p>
+        </div>
+
+        <div class="login-card animate-fade-up delay-1">
+            <h5 class="mb-4 text-center screen-title" style="font-size: 24px;">Masuk Aplikasi</h5>
+            
+            <form asp-controller="Account" asp-action="Login" method="post" autocomplete="off">
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="nrp">NRP / NIK</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-person-fill input-sap-icon"></i>
+                        <input type="text" id="nrp" name="nrp" class="input-sap" placeholder="Masukkan NRP Anda" required />
+                    </div>
+                    @if (ViewData.ModelState["Nrp"]?.Errors != null && ViewData.ModelState["Nrp"]!.Errors.Count > 0)
+                    {
+                        <span class="validation-sap"><i class="bi bi-exclamation-circle-fill me-1"></i> @ViewData.ModelState["Nrp"]!.Errors[0].ErrorMessage</span>
+                    }
+                </div>
+
+                <div class="form-group-sap mb-4">
+                    <label class="form-label-sap" for="password">Password</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-lock-fill input-sap-icon"></i>
+                        <input type="password" id="password" name="password" class="input-sap" placeholder="Masukkan Password" required />
+                    </div>
+                    @if (ViewData.ModelState["Password"]?.Errors != null && ViewData.ModelState["Password"]!.Errors.Count > 0)
+                    {
+                        <span class="validation-sap"><i class="bi bi-exclamation-circle-fill me-1"></i> @ViewData.ModelState["Password"]!.Errors[0].ErrorMessage</span>
+                    }
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4" style="font-size: 13px;">
+                    <label class="d-flex align-items-center" style="color: var(--text-muted); cursor: pointer; user-select: none;">
+                        <input type="checkbox" name="rememberMe" value="true" class="me-2 form-check-input" style="accent-color: var(--color-primary); cursor: pointer;" /> Ingat Saya
+                    </label>
+                    <a href="#" style="color: var(--color-primary); text-decoration: none; font-weight: 600;">Lupa Password?</a>
+                </div>
+
+                <button type="submit" class="btn btn-sap-primary w-100 py-3">
+                    <i class="bi bi-box-arrow-in-right me-2"></i> MASUK
+                </button>
+            </form>
+
+        </div>
+
+        <div class="login-footer mt-4" style="text-align: center; font-size: 11px; color: var(--text-muted); opacity: 0.9;">
+            <div class="mb-1" style="font-family: 'Inter', sans-serif;">
+                <i class="bi bi-shield-lock-fill" style="color: var(--color-primary);"></i>
+                <span style="font-weight: 700; letter-spacing: 1px; color: var(--text-main);">SECURE ACCESS PLATFORM</span>
+            </div>
+            <p class="mb-0" style="letter-spacing: 0.2px;">&copy; 2026 <strong>PT Indexim Coalindo</strong>. All Rights Reserved.</p>
+            <p style="font-size: 10px; margin-top: 4px; opacity: 0.7;">Developed & Maintained by System Integration Department.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Splash Screen Overlay -->
+<div id="loginSplash" class="splash-overlay d-none">
+    <div class="splash-content text-center">
+        <div class="spinner-border" role="status" style="width: 3.5rem; height: 3.5rem; color: #0ea5e9;">
+            <span class="visually-hidden">Loading...</span>
+
+        </div>
+        <h5 class="mt-4 text-white fw-bold">Memverifikasi Data...</h5>
+        <p class="text-white-50 small mb-0">Mohon tunggu, sedang menyiapkan ruang kerja Anda.</p>
+    </div>
+</div>
+
+<style>
+.login-logo-container {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.login-logo-img {
+    height: 200px;
+    max-width: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+    transition: transform 0.3s ease;
+}
+.login-logo-img:hover {
+    transform: scale(1.05);
+}
+.splash-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+.splash-overlay.show {
+    opacity: 1;
+}
+.splash-content {
+    animation: zoomInSplash 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@@keyframes zoomInSplash {
+    0% { transform: scale(0.7) translateY(20px); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+</style>
+
+<script>
+    document.querySelector('form').addEventListener('submit', function(e) {
+        // Prevent splash if form is invalid
+        if (!this.checkValidity()) {
+            return;
+        }
+        var splash = document.getElementById('loginSplash');
+        var btn = this.querySelector('button[type="submit"]');
+        
+        // Show splash screen
+        splash.classList.remove('d-none');
+        // trigger reflow for css transition
+        void splash.offsetWidth;
+        splash.classList.add('show');
+        
+        // Disable button to prevent double submit
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> MEMPROSES...';
+    });
+</script>

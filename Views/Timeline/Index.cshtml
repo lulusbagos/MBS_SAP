@@ -1,0 +1,272 @@
+@model IEnumerable<MBS_SAP.Models.TimelineViewModel>
+@{
+    ViewData["Title"] = "SafeFeed - Aktivitas Pelaporan";
+    ViewData["ActiveTab"] = "Timeline";
+}
+
+<div class="container-fluid py-4" style="max-width: 600px; margin: 0 auto;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0" style="color: var(--text-main);"><i class="bi bi-rss-fill me-2 text-primary"></i>SafeFeed</h4>
+    </div>
+
+    <div class="timeline-feed">
+        @if (!Model.Any())
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-inbox text-muted" style="font-size: 48px;"></i>
+                <p class="text-muted mt-3">Belum ada aktivitas pelaporan.</p>
+            </div>
+        }
+        else
+        {
+            int loopIndex = 1;
+            foreach (var item in Model)
+            {
+                var delayClass = "delay-" + (loopIndex > 6 ? 6 : loopIndex);
+                <div class="card mb-4 shadow-sm animate-fade-up @delayClass" style="border-radius: 12px; background-color: var(--bg-card); border: 1px solid var(--border-color); overflow: hidden;">
+                    <!-- Header Post -->
+                    <div class="pt-3 pb-2 px-3 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            @if (!string.IsNullOrEmpty(item.FotoDiriUrl))
+                            {
+                                <img src="@item.FotoDiriUrl" class="rounded-circle shadow-sm me-2" style="width: 36px; height: 36px; object-fit: cover; border: 2px solid var(--color-primary);" alt="Profile" />
+                            }
+                            else
+                            {
+                                <div class="rounded-circle d-flex justify-content-center align-items-center me-2 shadow-sm" style="width: 36px; height: 36px; background-color: var(--color-primary); color: white; font-weight: bold; font-size: 14px;">
+                                    @(string.IsNullOrEmpty(item.Nama) ? "?" : item.Nama.Substring(0, 1).ToUpper())
+                                </div>
+                            }
+                            <div style="line-height: 1.2;">
+                                <div class="fw-bold" style="font-size: 14px; color: var(--text-main);">@item.Nama</div>
+                                <div class="text-muted" style="font-size: 11px;">
+                                    @if (!string.IsNullOrEmpty(item.Area))
+                                    {
+                                        <span>@item.Area &bull; </span>
+                                    }
+                                    @item.Tanggal.ToString("dd MMM yyyy")
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-1">
+                            @if (!string.IsNullOrEmpty(item.Status))
+                            {
+                                if (item.ItemType == "Observation")
+                                {
+                                    if (item.Status.ToLower() == "violation")
+                                    {
+                                        <span class="badge bg-danger rounded-pill px-2 py-1 shadow-sm fw-bold" style="font-size: 11px; letter-spacing: 0.5px;"><i class="bi bi-x-circle-fill me-1"></i>VIOLATION</span>
+                                    }
+                                    else if (item.Status.ToLower() == "improvement")
+                                    {
+                                        <span class="badge bg-warning text-dark rounded-pill px-2 py-1 shadow-sm fw-bold" style="font-size: 11px; letter-spacing: 0.5px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>IMPROVEMENT</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success rounded-pill px-2 py-1 shadow-sm fw-bold" style="font-size: 11px; letter-spacing: 0.5px;"><i class="bi bi-check-circle-fill me-1"></i>POSITIVE</span>
+                                    }
+                                }
+                                else if (item.ItemType == "P2h")
+                                {
+                                    if (item.Status.ToLower() == "good")
+                                    {
+                                        <span class="badge bg-success rounded-pill px-2 py-1 shadow-sm fw-bold" style="font-size: 11px; letter-spacing: 0.5px;"><i class="bi bi-check-circle-fill me-1"></i>AMAN (GOOD)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger rounded-pill px-2 py-1 shadow-sm fw-bold" style="font-size: 11px; letter-spacing: 0.5px;"><i class="bi bi-exclamation-circle-fill me-1"></i>ADA TEMUAN (NOT GOOD)</span>
+                                    }
+                                }
+                                else
+                                {
+                                    if (item.Status.ToLower() == "open")
+                                    {
+                                        <span class="badge bg-danger rounded-pill px-2 py-1 shadow-sm fw-bold" style="font-size: 11px; letter-spacing: 0.5px;"><i class="bi bi-exclamation-circle-fill me-1"></i>OPEN</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success rounded-pill px-2 py-1 shadow-sm fw-bold" style="font-size: 11px; letter-spacing: 0.5px;"><i class="bi bi-check-circle-fill me-1"></i>CLOSED</span>
+                                    }
+                                }
+                            }
+                            <span class="badge bg-secondary rounded-pill" style="font-size: 10px; opacity: 0.8;">@item.ItemType</span>
+                        </div>
+                    </div>
+
+                    <!-- Image (Full Width) -->
+                    @if (!string.IsNullOrEmpty(item.FotoUrl))
+                    {
+                        <div style="width: 100%; max-height: 500px; overflow: hidden; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                            <img src="@item.FotoUrl" class="img-fluid w-100" style="object-fit: contain; max-height: 500px;" alt="Foto Laporan" />
+                        </div>
+                    }
+
+                    <!-- Action Bar (Instagram style) -->
+                    <div class="px-3 pt-2 pb-1 d-flex gap-3">
+                        <button class="btn btn-link p-0 text-decoration-none btn-like" 
+                                data-type="@item.ItemType" data-id="@item.OriginalId"
+                                style="color: @(item.IsLikedByCurrentUser ? "var(--color-primary)" : "var(--text-main)"); transition: transform 0.1s;">
+                            <i class="bi @(item.IsLikedByCurrentUser ? "bi-hand-thumbs-up-fill" : "bi-hand-thumbs-up")" style="font-size: 22px;"></i>
+                        </button>
+                        <button class="btn btn-link p-0 text-decoration-none btn-comment-toggle"
+                                onclick="$('#comment-input-@item.ItemType-@item.OriginalId').focus();"
+                                style="color: var(--text-main);">
+                            <i class="bi bi-chat" style="font-size: 22px;"></i>
+                        </button>
+                        <button class="btn btn-link p-0 text-decoration-none btn-share"
+                                onclick="shareTimelineItem('@item.ItemType', '@item.Title', '@item.Nama')"
+                                style="color: var(--text-main);">
+                            <i class="bi bi-send" style="font-size: 22px;"></i>
+                        </button>
+                    </div>
+
+                    <!-- Likes Count -->
+                    <div class="px-3 pb-1 fw-bold" style="font-size: 13px; color: var(--text-main);">
+                        <span id="like-count-@item.ItemType-@item.OriginalId">@item.LikesCount</span> suka
+                    </div>
+
+                    <!-- Caption / Content -->
+                    <div class="px-3 pb-2" style="font-size: 14px; color: var(--text-main);">
+                        <span class="fw-bold me-1">@item.Nama</span>
+                        @if (!string.IsNullOrEmpty(item.Title))
+                        {
+                            <span class="fw-semibold">@item.Title - </span>
+                        }
+                        <span>@item.Content</span>
+                        
+                        @if (!string.IsNullOrEmpty(item.Kategori))
+                        {
+                            <div class="mt-1"><span class="text-primary" style="font-size: 12px; font-weight: 500;">#@item.Kategori.Replace(" ", "")</span></div>
+                        }
+                    </div>
+
+                    <!-- Comments Section -->
+                    <div class="px-3 pb-2">
+                        @if (item.CommentsCount > 0)
+                        {
+                            <div class="text-muted mb-1 btn-comment-toggle" style="font-size: 13px; cursor: pointer;" onclick="$('#comments-list-@item.ItemType-@item.OriginalId').slideToggle(150);">
+                                Lihat semua <span id="comment-count-@item.ItemType-@item.OriginalId">@item.CommentsCount</span> komentar
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-muted mb-1" style="font-size: 13px; display: none;" id="comment-count-wrapper-@item.ItemType-@item.OriginalId">
+                                Lihat semua <span id="comment-count-@item.ItemType-@item.OriginalId">0</span> komentar
+                            </div>
+                        }
+                        
+                        <div class="comments-list" id="comments-list-@item.ItemType-@item.OriginalId" style="display: none;">
+                            @foreach (var c in item.Comments)
+                            {
+                                <div class="mb-1" style="font-size: 13px; color: var(--text-main);">
+                                    <span class="fw-bold me-1">@c.NamaPengguna</span>
+                                    <span>@c.CommentText</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Add Comment Input -->
+                    <div class="px-3 py-2 border-top d-flex align-items-center gap-2" style="border-color: var(--border-color) !important;">
+                        <input type="text" class="form-control border-0 px-0 shadow-none" id="comment-input-@item.ItemType-@item.OriginalId" placeholder="Tambahkan komentar..." style="font-size: 13px; background-color: transparent; color: var(--text-main);" />
+                        <button class="btn btn-link text-primary text-decoration-none fw-bold p-0 btn-send-comment" data-type="@item.ItemType" data-id="@item.OriginalId" style="font-size: 13px;">
+                            Kirim
+                        </button>
+                    </div>
+                </div>
+                loopIndex++;
+            }
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Like action
+            $('.btn-like').click(function() {
+                var btn = $(this);
+                var type = btn.data('type');
+                var id = btn.data('id');
+                var icon = btn.find('i');
+
+                $.post('/Timeline/ToggleLike', { itemType: type, itemId: id }, function(res) {
+                    if (res.success) {
+                        $('#like-count-' + type + '-' + id).text(res.totalLikes);
+                        if (res.isLiked) {
+                            btn.css('color', 'var(--color-primary)');
+                            icon.removeClass('bi-hand-thumbs-up').addClass('bi-hand-thumbs-up-fill');
+                        } else {
+                            btn.css('color', 'var(--text-muted)');
+                            icon.removeClass('bi-hand-thumbs-up-fill').addClass('bi-hand-thumbs-up');
+                        }
+                    } else {
+                        alert(res.message);
+                    }
+                });
+            });
+
+            // Send comment on button click
+            $('.btn-send-comment').click(function() {
+                sendComment($(this));
+            });
+
+            // Send comment on enter key
+            $('input[id^="comment-input-"]').keypress(function(e) {
+                if(e.which == 13) {
+                    var input = $(this);
+                    var type = input.attr('id').split('-')[2];
+                    var id = input.attr('id').split('-')[3];
+                    var btn = $('.btn-send-comment[data-type="'+type+'"][data-id="'+id+'"]');
+                    sendComment(btn);
+                }
+            });
+
+            function sendComment(btn) {
+                var type = btn.data('type');
+                var id = btn.data('id');
+                var input = $('#comment-input-' + type + '-' + id);
+                var text = input.val();
+
+                if (!text || text.trim() === '') return;
+
+                btn.prop('disabled', true);
+                $.post('/Timeline/AddComment', { itemType: type, itemId: id, text: text }, function(res) {
+                    if (res.success) {
+                        input.val('');
+                        $('#comment-count-' + type + '-' + id).text(res.totalComments);
+                        
+                        var newCommentHtml = `
+                            <div class="mb-1" style="font-size: 13px; color: var(--text-main);">
+                                <span class="fw-bold me-1">${res.nama}</span>
+                                <span>${res.text}</span>
+                            </div>
+                        `;
+                        $('#comments-list-' + type + '-' + id).append(newCommentHtml).show();
+                        $('#comment-count-wrapper-' + type + '-' + id).show();
+                    } else {
+                        alert(res.message);
+                    }
+                    btn.prop('disabled', false);
+                }).fail(function() {
+                    alert('Gagal mengirim komentar');
+                    btn.prop('disabled', false);
+                });
+            }
+        });
+
+        function shareTimelineItem(type, title, name) {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'INDEXIM SAP Laporan',
+                    text: 'Lihat laporan ' + type + ' dari ' + name + (title ? ' - ' + title : ''),
+                    url: window.location.href // Saat ini share URL timeline secara umum
+                }).catch(function(error) {
+                    console.log('Error sharing', error);
+                });
+            } else {
+                alert('Browser Anda tidak mendukung fitur share. Silakan copy URL secara manual.');
+            }
+        }
+    </script>
+}

@@ -1,0 +1,434 @@
+@model IEnumerable<MBS_SAP.Models.P5m>
+@{
+    ViewData["Title"] = "P5M - SAP";
+}
+
+<div class="animate-fade-in pb-4">
+    <!-- Header with Banner -->
+    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #7c3aed, #a855f7); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
+            <!-- Decorative circle -->
+            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            
+            <i class="bi bi-people-fill text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px; letter-spacing: 0.5px;">P5M & KELAYAKAN</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Pertemuan 5 Menit sebelum mulai bekerja.</p>
+        </div>
+    </div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Hybrid Grid Layout: Form and List side-by-side on laptop, stacked on mobile -->
+    <div class="form-responsive-row">
+        
+        <!-- Form Column -->
+        <div class="card-sap border-primary-accent" style="border-color: #a855f7 !important;">
+            <form asp-controller="P5m" asp-action="Submit" method="post" enctype="multipart/form-data" id="p5mForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="p5mId" name="id" value="" />
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 text-white" style="font-weight: 700;" id="formTitle"><i class="bi bi-people-fill me-2" style="color: #a855f7;"></i>Form Kesiapan Kerja (P5M)</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnCancelEdit" onclick="cancelEditP5m()">
+                        <i class="bi bi-x-circle me-1"></i> Batal Edit
+                    </button>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="tanggal">Tanggal P5M</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-calendar-event-fill input-sap-icon"></i>
+                            <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="waktuStr">Waktu Briefing</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-clock-fill input-sap-icon"></i>
+                            <input type="time" id="waktuStr" name="waktuStr" class="input-sap" value="@DateTime.Now.ToString("HH:mm")" onchange="validateTime(this)" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="area">Area Utama</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-pin-map-fill input-sap-icon"></i>
+                            <input type="text" id="area" name="area" class="input-sap" placeholder="MISAL: MINING" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();" required />
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="lokasi">Lokasi Spesifik / Koordinat GPS</label>
+                        <div class="input-sap-wrapper d-flex position-relative">
+                            <i class="bi bi-geo-alt-fill input-sap-icon"></i>
+                            <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Ketuk GPS di kanan untuk koordinat..." style="padding-right: 54px;" readonly required />
+                            <button type="button" class="btn btn-sm position-absolute end-0 top-0 h-100 d-flex align-items-center justify-content-center" style="border-radius: 0 14px 14px 0; width: 48px; border: none; border-left: 1px solid var(--border-color); background: rgba(56, 189, 248, 0.1); color: var(--color-primary); cursor: pointer;" onclick="getGPSLocation()" title="Dapatkan Koordinat GPS">
+                                <i class="bi bi-crosshair" style="font-size: 18px;"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="detilLokasi">Detail Lokasi</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-compass-fill input-sap-icon"></i>
+                        <input type="text" id="detilLokasi" name="detilLokasi" class="input-sap" placeholder="Misal: Pos Security Km 3" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="topik">Topik Briefing</label>
+                        <input type="text" id="topik" name="topik" class="input-sap" value="Pekerjaan Umum" required />
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="judul">Judul P5M</label>
+                        <input type="text" id="judul" name="judul" class="input-sap" value="Siap Bekerja" required />
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="keterangan">Keterangan Tambahan</label>
+                    <textarea id="keterangan" name="keterangan" class="input-sap" rows="1" required>.</textarea>
+                </div>
+
+                <!-- Fitness checklist questions -->
+                <div class="inspection-checklist-grid">
+                    <!-- Question 1 -->
+                    <div class="checkpoint-card mb-3">
+                        <div class="checkpoint-header d-flex justify-content-between">
+                            <span style="font-size: 12px; font-weight: 600;">1. Apakah Anda dalam keadaan sehat?</span>
+                        </div>
+                        <input type="hidden" name="questions[0]" value="Apakah Anda dalam keadaan sehat ?" />
+                        <input type="hidden" name="answers[0]" id="valP1" value="" required />
+                        <div class="checkpoint-options">
+                            <button type="button" class="btn-option safe" onclick="setAns(0, 'Yes', this)">YES</button>
+                            <button type="button" class="btn-option hazard" onclick="setAns(0, 'No', this)">NO</button>
+                        </div>
+                    </div>
+
+                    <!-- Question 2 -->
+                    <div class="checkpoint-card mb-3">
+                        <div class="checkpoint-header d-flex justify-content-between">
+                            <span style="font-size: 12px; font-weight: 600;">2. Apakah Anda saat ini bebas dari masalah & beban pikiran sebelum bekerja?</span>
+                        </div>
+                        <input type="hidden" name="questions[1]" value="Apakah Anda saat ini bebas dari masalah dan beban pikiran sebelum memulai aktivitas kerja ?" />
+                        <input type="hidden" name="answers[1]" id="valP2" value="" required />
+                        <div class="checkpoint-options">
+                            <button type="button" class="btn-option safe" onclick="setAns(1, 'Yes', this)">YES</button>
+                            <button type="button" class="btn-option hazard" onclick="setAns(1, 'No', this)">NO</button>
+                        </div>
+                    </div>
+
+                    <!-- Question 3 -->
+                    <div class="checkpoint-card mb-3">
+                        <div class="checkpoint-header d-flex justify-content-between">
+                            <span style="font-size: 12px; font-weight: 600;">3. Apakah Anda cukup tidur (minimal 6 jam) sebelum memulai shift?</span>
+                        </div>
+                        <input type="hidden" name="questions[2]" value="Apakah Anda cukup tidur (minimal 6 jam) sebelum memulai shift ?" />
+                        <input type="hidden" name="answers[2]" id="valP3" value="" required />
+                        <div class="checkpoint-options">
+                            <button type="button" class="btn-option safe" onclick="setAns(2, 'Yes', this)">YES</button>
+                            <button type="button" class="btn-option hazard" onclick="setAns(2, 'No', this)">NO</button>
+                        </div>
+                    </div>
+
+                    <!-- Question 4 -->
+                    <div class="checkpoint-card mb-3">
+                        <div class="checkpoint-header d-flex justify-content-between">
+                            <span style="font-size: 12px; font-weight: 600;">4. Apakah Anda memakai APD lengkap dan layak pakai?</span>
+                        </div>
+                        <input type="hidden" name="questions[3]" value="Apakah Anda memakai APD lengkap dan layak pakai?" />
+                        <input type="hidden" name="answers[3]" id="valP4" value="" required />
+                        <div class="checkpoint-options">
+                            <button type="button" class="btn-option safe" onclick="setAns(3, 'Yes', this)">YES</button>
+                            <button type="button" class="btn-option hazard" onclick="setAns(3, 'No', this)">NO</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group-sap mt-2">
+                    <label class="form-label-sap" for="catatan">Catatan / Tindakan Pencegahan Kecelakaan</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-chat-square-text-fill input-sap-icon" style="top: 14px;"></i>
+                        <textarea id="catatan" name="catatan" class="input-sap" rows="2" placeholder="Masukkan catatan kesimpulan briefing P5M jika ada..." style="padding-left: 42px;"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group-sap mb-4">
+                    <label class="form-label-sap">Foto Bukti Kegiatan P5M</label>
+                    <input type="file" id="photoInput" name="fotoKegiatan" accept="image/*" capture="environment" class="d-none" onchange="previewImage(this)" />
+                    <div class="upload-card" onclick="document.getElementById('photoInput').click()">
+                        <div id="uploadPlaceholder">
+                            <i class="bi bi-camera-fill"></i>
+                            <h6 class="mb-1 text-white" style="font-weight: 700; font-size: 14px;">Ambil Foto Briefing</h6>
+                            <span class="text-muted" style="font-size: 11px;">Grup crew bersama presenter</span>
+                        </div>
+                        <div id="imagePreviewContainer" class="d-none">
+                            <img id="imagePreview" src="" alt="Preview" style="max-width: 100%; max-height: 120px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-color);" />
+                            <div style="font-size: 12px; color: var(--color-primary); font-weight: 600;"><i class="bi bi-arrow-repeat me-1"></i>Ganti Gambar</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-sap-primary w-100 py-3" style="background-color: #a855f7; border-color: #7c3aed;">
+                    <i class="bi bi-check-circle-fill me-2"></i> SIMPAN BRIEFING P5M
+                </button>
+            </form>
+        </div>
+
+        <!-- History/List Column -->
+        <div>
+            <div class="history-header mb-3">
+                <h6 class="text-white" style="font-weight: 700;"><i class="bi bi-calendar3 me-2" style="color: var(--color-primary);"></i>Log Fit to Work / P5M Terakhir</h6>
+            </div>
+            
+            @if (Model == null || !Model.Any())
+            {
+                <div class="card-sap text-center py-4 text-muted">
+                    <i class="bi bi-inbox-fill d-block mb-2" style="font-size: 32px;"></i>
+                    Belum ada log P5M tercatat.
+                </div>
+            }
+            else
+            {
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    @foreach (var monthGroup in Model.GroupBy(m => new { m.Tanggal.Year, m.Tanggal.Month }).OrderByDescending(g => g.Key.Year).ThenByDescending(g => g.Key.Month))
+                    {
+                        var monthName = new DateTime(monthGroup.Key.Year, monthGroup.Key.Month, 1).ToString("MMMM yyyy", new System.Globalization.CultureInfo("id-ID"));
+                        
+                        <div class="month-group mb-2">
+                            <h6 style="font-weight: 800; color: var(--text-main); margin-bottom: 12px; border-bottom: 2px solid var(--border-color); padding-bottom: 4px;">
+                                <i class="bi bi-calendar-check-fill me-2 text-primary"></i>@monthName
+                            </h6>
+                            <div style="display: flex; flex-direction: column; gap: 12px;">
+                                @foreach (var group in monthGroup.GroupBy(p => new { p.Tanggal, p.Waktu, p.Nik, p.Nama, p.Lokasi, p.Topik, p.FotoKegiatan, p.Catatan, p.Id }))
+                                {
+                                    var hasUnfit = group.Any(q => q.Jawaban == "No");
+                                    <div class="card-sap @(hasUnfit ? "border-red-accent" : "border-green-accent") mb-0">
+                                        
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <span style="font-weight: 700; font-size: 14px; color: var(--text-main);">Topik: @group.Key.Topik</span>
+                                                <span class="d-block text-muted" style="font-size: 11px;"><i class="bi bi-geo-alt-fill me-1"></i>@(group.Key.Lokasi ?? "General")</span>
+                                            </div>
+                                            <span class="status-badge @(hasUnfit ? "pending" : "approved")" style="font-size: 9px; @(hasUnfit ? "" : "background-color: rgba(168, 85, 247, 0.15); color: #a855f7;")">
+                                                @(hasUnfit ? "Kru Unfit" : "Semua Fit")
+                                            </span>
+                                        </div>
+
+                                        <!-- List questions and answers -->
+                                        <div class="my-2" style="font-size: 11px;">
+                                            @foreach (var item in group)
+                                            {
+                                                <div class="d-flex justify-content-between py-1" style="border-bottom: 1px dashed var(--border-color);">
+                                                    <span class="text-muted" style="max-width: 80%;">@item.ListPertanyaan</span>
+                                                    <span style="font-weight: 700; color: @(item.Jawaban == "Yes" ? "var(--color-green)" : "var(--color-red)");">@item.Jawaban</span>
+                                                </div>
+                                            }
+                                        </div>
+
+                                        @if (!string.IsNullOrEmpty(group.Key.Catatan))
+                                        {
+                                            <p style="font-size: 11px; color: var(--text-muted); background-color: var(--bg-layout); padding: 8px; border-radius: 6px; margin: 8px 0 10px; border-left: 3px solid #a855f7;">
+                                                @group.Key.Catatan
+                                            </p>
+                                        }
+
+                                        @if (!string.IsNullOrEmpty(group.Key.FotoKegiatan))
+                                        {
+                                            <div class="my-2">
+                                                <a href="@group.Key.FotoKegiatan" target="_blank">
+                                                    <img src="@group.Key.FotoKegiatan" alt="P5M" style="max-height: 60px; border-radius: 4px; border: 1px solid var(--border-color);" />
+                                                </a>
+                                            </div>
+                                        }
+
+                                        <div class="d-flex justify-content-between align-items-center pt-2 mt-2" style="border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span><i class="bi bi-person me-1"></i>@group.Key.Nama</span>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        <i class="bi bi-three-dots-vertical"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
+                                                        <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editP5m(@group.Key.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
+                                                        <li><hr class="dropdown-divider border-secondary"></li>
+                                                        <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteP5m(@group.Key.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus Laporan</a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <span><i class="bi bi-clock me-1"></i>@group.Key.Tanggal.ToString("dd MMM yyyy") @group.Key.Waktu.ToString(@"hh\:mm")</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function setAns(qIdx, value, btn) {
+            document.getElementById('valP' + (qIdx + 1)).value = value;
+            
+            const parent = btn.parentElement;
+            const buttons = parent.querySelectorAll('.btn-option');
+            buttons.forEach(b => {
+                b.classList.remove('active');
+            });
+            
+            btn.classList.add('active');
+        }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#imagePreview').attr('src', e.target.result);
+                    $('#imagePreviewContainer').removeClass('d-none');
+                    $('#uploadPlaceholder').hide();
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function cancelEditP5m() {
+            $('#p5mForm')[0].reset();
+            $('#p5mId').val('');
+            $('#formTitle').html('<i class="bi bi-people-fill me-2" style="color: #a855f7;"></i>Form Kesiapan Kerja (P5M)');
+            $('#btnCancelEdit').addClass('d-none');
+            
+            // Reset checklist UI
+            $('.btn-option').removeClass('active');
+            $('input[name^="answers"]').val('');
+            $('#checklistSection').show();
+
+            // Reset images
+            $('#imagePreview').attr('src', '');
+            $('#imagePreviewContainer').addClass('d-none');
+            $('#uploadPlaceholder').show();
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function editP5m(id) {
+            $.get('/P5m/GetData/' + id, function(data) {
+                if (data) {
+                    $('#p5mId').val(data.id);
+                    
+                    // Format dates and times
+                    if (data.tanggal) $('#tanggal').val(data.tanggal.split('T')[0]);
+                    if (data.waktu) $('#waktuStr').val(data.waktu.substring(0, 5));
+                    
+                    // Inputs
+                    $('#area').val(data.area);
+                    $('#lokasi').val(data.lokasi);
+                    $('#detilLokasi').val(data.detilLokasi);
+                    $('#topik').val(data.topik);
+                    $('#judul').val(data.judul);
+                    $('#keterangan').val(data.keterangan);
+                    $('#catatan').val(data.catatan);
+
+                    // Hide checklist in edit mode since they are handled via group update
+                    $('#checklistSection').hide();
+
+                    $('#formTitle').html('<i class="bi bi-pencil-square me-2" style="color: var(--color-primary);"></i>Edit Laporan P5M');
+                    $('#btnCancelEdit').removeClass('d-none');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }).fail(function() {
+                alert("Gagal mengambil data laporan. Laporan mungkin sudah dihapus.");
+            });
+        }
+
+        function deleteP5m(id) {
+            if (confirm("Apakah Anda yakin ingin menghapus laporan ini beserta seluruh checklistnya? Data yang dihapus tidak dapat dikembalikan.")) {
+                var form = $('<form action="/P5m/Delete/' + id + '" method="post">' +
+                             '<input type="hidden" name="__RequestVerificationToken" value="' + $('input[name="__RequestVerificationToken"]').val() + '" />' +
+                             '</form>');
+                $('body').append(form);
+                form.submit();
+            }
+        }
+
+        function validateTime(input) {
+            const now = new Date();
+            const selectedTimeStr = input.value;
+            if (!selectedTimeStr) return;
+            
+            const [hours, minutes] = selectedTimeStr.split(':');
+            const selectedDate = new Date();
+            selectedDate.setHours(hours, minutes, 0, 0);
+            
+            if (selectedDate > now) {
+                alert("Anda tidak bisa memasukkan waktu di masa depan!");
+                const curHours = String(now.getHours()).padStart(2, '0');
+                const curMins = String(now.getMinutes()).padStart(2, '0');
+                input.value = `${curHours}:${curMins}`;
+            }
+        }
+
+        function getGPSLocation() {
+            const btn = document.querySelector('button[onclick="getGPSLocation()"]');
+            const icon = btn.querySelector('i');
+            icon.className = 'bi bi-hourglass-split spinner-border-sm';
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        document.getElementById('lokasi').value = `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`;
+                        icon.className = 'bi bi-crosshair';
+                    },
+                    (error) => {
+                        let msg = "Gagal mendapatkan lokasi GPS.";
+                        if (error.code === 1) msg = "Izin akses lokasi ditolak oleh browser Anda.";
+                        else if (error.code === 2) msg = "Posisi GPS tidak tersedia saat ini.";
+                        else if (error.code === 3) msg = "Waktu pencarian lokasi (timeout) habis.";
+                        console.warn(msg);
+                        icon.className = 'bi bi-crosshair';
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                console.warn("Perangkat atau browser Anda tidak mendukung fitur GPS.");
+                icon.className = 'bi bi-crosshair';
+            }
+        }
+
+        $(document).ready(function() {
+            // Auto fetch GPS if creating new P5M
+            if (!$('#p5mId').val() && typeof getGPSLocation === 'function') {
+                getGPSLocation();
+            }
+
+            // Prevent double submission
+            $('#p5mForm').on('submit', function() {
+                var btn = $(this).find('button[type="submit"]');
+                if (btn.prop('disabled')) {
+                    return false;
+                }
+                btn.prop('disabled', true);
+                var originalText = btn.html();
+                btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');
+                
+                // Allow form to submit normally
+                return true;
+            });
+        });
+    </script>
+}

@@ -1,0 +1,560 @@
+@model IEnumerable<MBS_SAP.Models.Observation>
+@{
+    ViewData["Title"] = "Observasi - SAP";
+    var editModel = ViewBag.EditModel as MBS_SAP.Models.Observation ?? new MBS_SAP.Models.Observation();
+}
+
+<div class="animate-fade-in">
+    <div class="screen-title">Observasi Lapangan</div>
+    <p class="screen-subtitle">Laporkan temuan observasi operasional di lingkungan kerja Anda.</p>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(34, 197, 94, 0.15); color: var(--color-primary); border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="form-responsive-row">
+        <!-- Form Column -->
+        <div class="card-sap border-primary-accent" style="overflow: visible;">
+            <form asp-controller="Observation" asp-action="Create" method="post" id="observationForm" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="observationId" name="id" value="" />
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 text-white" style="font-weight: 700;" id="formTitle"><i class="bi bi-eye-fill me-2" style="color: var(--color-primary);"></i>Form Observasi</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnCancelEdit" onclick="cancelEditObservation()">
+                        <i class="bi bi-x-circle me-1"></i> Batal Edit
+                    </button>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="tanggal">Tanggal Observasi</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-calendar-event-fill input-sap-icon"></i>
+                            <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="waktuStr">Waktu Observasi</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-clock-fill input-sap-icon"></i>
+                            <input type="time" id="waktuStr" name="waktuStr" class="input-sap" value="@DateTime.Now.ToString("HH:mm")" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="Area">Area Utama</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="input-sap-wrapper flex-grow-1 mb-0">
+                                <i class="bi bi-geo-alt-fill input-sap-icon"></i>
+                                <select id="Area" name="Area" class="input-sap" required>
+                                    <option value="" disabled selected>Pilih Area...</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-primary shadow-sm" style="height: 46px; border-radius: 12px; padding: 0 16px; background-color: var(--color-primary); border: none;" onclick="$('#addAreaModal').modal('show')" title="Tambah Area Baru">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="Lokasi">Lokasi Spesifik</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-geo-fill input-sap-icon"></i>
+                            <input type="text" id="Lokasi" name="Lokasi" class="input-sap" placeholder="Klik ikon target di kanan untuk mengambil lokasi GPS..." style="padding-right: 40px;" readonly required />
+                            <button type="button" class="btn btn-link p-0 position-absolute" id="btnGetLocation" style="right: 12px; top: 10px; color: var(--color-primary);" onclick="getLocation()" title="Ambil Lokasi GPS">
+                                <i class="bi bi-crosshair"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted" style="font-size: 10px;">GPS otomatis mengambil kordinat Anda</small>
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="DetilLokasi">Detail Lokasi</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-compass-fill input-sap-icon"></i>
+                        <input type="text" id="DetilLokasi" name="DetilLokasi" class="input-sap" placeholder="Misal: KM 12.500" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="KegiatanYangDiamati">Kegiatan Yang Diamati</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-activity input-sap-icon"></i>
+                            <input type="text" id="KegiatanYangDiamati" name="KegiatanYangDiamati" class="input-sap" placeholder="Misal: Pemasangan Reflektor" required />
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="DepartemenYangDiamati">Departemen Yang Diamati</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-people-fill input-sap-icon"></i>
+                            <select id="DepartemenYangDiamati" name="DepartemenYangDiamati" class="input-sap" required>
+                                <option value="" disabled selected>Pilih Departemen...</option>
+                                @if (ViewBag.DeptList != null)
+                                {
+                                    foreach (var dept in (List<string>)ViewBag.DeptList)
+                                    {
+                                        if (editModel != null && editModel.DepartemenYangDiamati == dept)
+                                        {
+                                            <option value="@dept" selected>@dept</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@dept">@dept</option>
+                                        }
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="DokumenPendukung">Dokumen Pendukung</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-file-earmark-text-fill input-sap-icon"></i>
+                            <select id="DokumenPendukung" name="DokumenPendukung" class="input-sap">
+                                <option value="" disabled selected>Pilih Dokumen...</option>
+                                <option value="Instruksi Kerja (IK)" selected="@(editModel != null && editModel.DokumenPendukung == "Instruksi Kerja (IK)")">Instruksi Kerja (IK)</option>
+                                <option value="Job Safety Analysis (JSA)" selected="@(editModel != null && editModel.DokumenPendukung == "Job Safety Analysis (JSA)")">Job Safety Analysis (JSA)</option>
+                                <option value="Prosedur Kerja (SOP)" selected="@(editModel != null && editModel.DokumenPendukung == "Prosedur Kerja (SOP)")">Prosedur Kerja (SOP)</option>
+                                <option value="Lain-lain" selected="@(editModel != null && editModel.DokumenPendukung == "Lain-lain")">Lain-lain</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="ResikoKritis">Resiko Kritis</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-exclamation-triangle-fill input-sap-icon"></i>
+                            <select id="ResikoKritis" name="ResikoKritis" class="input-sap">
+                                <option value="" disabled selected>Pilih Resiko...</option>
+                                <option value="Explosive" selected="@(editModel != null && editModel.ResikoKritis == "Explosive")">Explosive (Peledakan)</option>
+                                <option value="Geotechnical" selected="@(editModel != null && editModel.ResikoKritis == "Geotechnical")">Geotechnical (Geoteknik)</option>
+                                <option value="Working at Height" selected="@(editModel != null && editModel.ResikoKritis == "Working at Height")">Working at Height (Ketinggian)</option>
+                                <option value="Isolation" selected="@(editModel != null && editModel.ResikoKritis == "Isolation")">Isolation (Isolasi / LOTO)</option>
+                                <option value="Lifting" selected="@(editModel != null && editModel.ResikoKritis == "Lifting")">Lifting (Pengangkatan)</option>
+                                <option value="Traffic & Tyre" selected="@(editModel != null && editModel.ResikoKritis == "Traffic & Tyre")">Traffic & Tyre (Lalu Lintas & Ban)</option>
+                                <option value="Other" selected="@(editModel != null && editModel.ResikoKritis == "Other")">Other (Lain-lain)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 form-group-sap">
+                        <label class="form-label-sap" for="TingkatResiko">Tingkat Resiko</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-speedometer2 input-sap-icon"></i>
+                            <select id="TingkatResiko" name="TingkatResiko" class="input-sap" required>
+                                <option value="" disabled selected>Pilih Tingkat...</option>
+                                <option value="Rendah" selected="@(editModel != null && editModel.TingkatResiko == "Rendah")">Rendah (Low)</option>
+                                <option value="Sedang" selected="@(editModel != null && editModel.TingkatResiko == "Sedang")">Sedang (Medium)</option>
+                                <option value="Tinggi" selected="@(editModel != null && editModel.TingkatResiko == "Tinggi")">Tinggi (High)</option>
+                                <option value="Ekstrim" selected="@(editModel != null && editModel.TingkatResiko == "Ekstrim")">Ekstrim (Extreme)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4 form-group-sap">
+                        <label class="form-label-sap" for="PerihalYangDiamati">Perihal Yang Diamati</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-search input-sap-icon"></i>
+                            <select id="PerihalYangDiamati" name="PerihalYangDiamati" class="input-sap" required>
+                                <option value="" disabled selected>Pilih Perihal...</option>
+                                <option value="Alat Pelindung Diri" selected="@(editModel != null && editModel.PerihalYangDiamati == "Alat Pelindung Diri")">Alat Pelindung Diri (APD)</option>
+                                <option value="Peralatan" selected="@(editModel != null && editModel.PerihalYangDiamati == "Peralatan")">Peralatan (Equipment)</option>
+                                <option value="Posisi Seseorang" selected="@(editModel != null && editModel.PerihalYangDiamati == "Posisi Seseorang")">Posisi Seseorang (Position of People)</option>
+                                <option value="Prosedur Kerja" selected="@(editModel != null && editModel.PerihalYangDiamati == "Prosedur Kerja")">Prosedur Kerja (Work Procedure)</option>
+                                <option value="Reaksi Seseorang" selected="@(editModel != null && editModel.PerihalYangDiamati == "Reaksi Seseorang")">Reaksi Seseorang (Reaction of People)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4 form-group-sap">
+                        <label class="form-label-sap" for="HasilObservasi">Hasil Observasi</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-clipboard2-check-fill input-sap-icon"></i>
+                            <select id="HasilObservasi" name="HasilObservasi" class="input-sap" required>
+                                <option value="" disabled selected>Pilih Hasil...</option>
+                                <option value="Positive" selected="@(editModel != null && editModel.HasilObservasi == "Positive")">Positive (Tindakan/Kondisi Aman)</option>
+                                <option value="Improvement" selected="@(editModel != null && editModel.HasilObservasi == "Improvement")">Improvement (Saran Perbaikan)</option>
+                                <option value="Violation" selected="@(editModel != null && editModel.HasilObservasi == "Violation")">Violation (Pelanggaran/Kondisi Tidak Aman)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="Keterangan">Keterangan Observasi</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-chat-left-text-fill input-sap-icon" style="top: 14px;"></i>
+                        <textarea id="Keterangan" name="Keterangan" class="input-sap" rows="3" placeholder="Tuliskan keterangan detail hasil observasi..." style="padding-left: 42px;">@(editModel?.Keterangan)</textarea>
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="foto">Foto Lampiran Bukti</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-camera-fill input-sap-icon" style="top: 14px;"></i>
+                        <input type="file" id="foto" name="foto" class="input-sap" accept="image/*" style="height: auto; padding: 8px 12px; padding-left: 42px;" />
+                    </div>
+                    <small class="text-muted" style="font-size: 10px;">Pilih file gambar untuk melampirkan bukti observasi.</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 mt-3 mb-2 submit-btn-sap" id="btnSubmit">
+                    <i class="bi bi-send-fill me-2"></i>KIRIM LAPORAN
+                </button>
+            </form>
+        </div>
+
+        <!-- History Column -->
+        <div>
+            <div class="history-header mb-3">
+                <h6 class="text-white" style="font-weight: 700;"><i class="bi bi-clock-history me-2" style="color: var(--color-primary);"></i>Histori Observasi Anda</h6>
+            </div>
+            
+            @if (Model == null || !Model.Any())
+            {
+                <div class="card-sap text-center py-4 text-muted">
+                    <i class="bi bi-inbox-fill d-block mb-2" style="font-size: 32px;"></i>
+                    Belum ada data observasi tercatat.
+                </div>
+            }
+            else
+            {
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    @{ int loopIndex = 1; }
+                    @foreach (var item in Model)
+                    {
+                        var delayClass = "delay-" + (loopIndex > 6 ? 6 : loopIndex);
+                        var borderClass = item.TingkatResiko == "Ekstrim" || item.TingkatResiko == "Tinggi" ? "border-red-accent" 
+                                          : item.TingkatResiko == "Sedang" ? "border-orange-accent" 
+                                          : "border-primary-accent";
+                                          
+                        var resultBadgeClass = item.HasilObservasi == "Violation" ? "bg-danger" 
+                                               : item.HasilObservasi == "Improvement" ? "bg-warning text-dark" 
+                                               : "bg-success";
+
+                        <div class="card-sap animate-fade-in @delayClass @borderClass mb-0">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="history-badge bg-primary" style="width: 28px; height: 28px; font-size: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
+                                        <i class="bi bi-eye-fill"></i>
+                                    </div>
+                                    <span style="font-weight: 700; font-size: 13px;">@(item.Lokasi ?? item.Area ?? "General")</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge @resultBadgeClass rounded-pill px-2 py-1 fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">@item.HasilObservasi</span>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
+                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editObservation(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
+                                            <li><hr class="dropdown-divider border-secondary"></li>
+                                            <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteObservation(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus Laporan</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="font-size: 12px; color: var(--text-main); margin-bottom: 8px;">
+                                <strong>Kegiatan:</strong> @item.KegiatanYangDiamati <br/>
+                                <strong>Perihal:</strong> @item.PerihalYangDiamati <br/>
+                                <strong>Resiko Kritis:</strong> @item.ResikoKritis (@(item.TingkatResiko ?? "Rendah"))
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(item.Keterangan))
+                            {
+                                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px; text-align: justify; line-height: 1.4; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; border-left: 2px solid var(--color-primary);">
+                                    @item.Keterangan
+                                </p>
+                            }
+
+                            @if (!string.IsNullOrEmpty(item.FotoUrl))
+                            {
+                                <div class="mb-2">
+                                    <a href="@item.FotoUrl" target="_blank">
+                                        <img src="@item.FotoUrl" alt="Attachment" style="max-height: 80px; border-radius: 6px; border: 1px solid var(--border-color);" />
+                                    </a>
+                                </div>
+                            }
+
+                            <div class="d-flex justify-content-between align-items-center pt-2" style="border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
+                                <span><i class="bi bi-person me-1"></i>@item.Nama</span>
+                                <span><i class="bi bi-calendar-event me-1"></i>@item.Date.ToString("dd MMM yyyy HH:mm")</span>
+                            </div>
+                        </div>
+                        loopIndex++;
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Add Area -->
+<div class="modal fade" id="addAreaModal" tabindex="-1" aria-labelledby="addAreaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-white fw-bold" id="addAreaModalLabel"><i class="bi bi-plus-square-fill text-primary me-2"></i>Tambah Area Utama Baru</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-4">
+                <div class="alert alert-info py-2" style="font-size: 12px; border-radius: 8px;">
+                    <i class="bi bi-info-circle me-1"></i> Area yang Anda tambahkan hanya akan terlihat oleh karyawan di perusahaan Anda.
+                </div>
+                <div class="form-group-sap mb-3">
+                    <label class="form-label-sap">Nama Area</label>
+                    <input type="text" id="newAreaName" class="form-control input-sap text-uppercase" placeholder="Misal: PIT TEMPUDO" />
+                    <div id="addAreaError" class="text-danger mt-2" style="font-size: 12px; display: none;"></div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="text-white fw-bold mb-2" style="font-size: 13px;"><i class="bi bi-list-task me-1 text-primary"></i>Daftar Area Terdaftar</h6>
+                    <div id="existingAreasList" class="list-group" style="max-height: 180px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2);">
+                        <div class="p-3 text-center text-muted" style="font-size: 12px;">Memuat daftar area...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Tutup</button>
+                <button type="button" class="btn btn-primary" id="btnSaveArea" onclick="saveNewArea()" style="border-radius: 8px; font-weight: 600;">Simpan Area</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function getLocation() {
+            var btn = document.getElementById('btnGetLocation');
+            var input = document.getElementById('Lokasi');
+            
+            if (navigator.geolocation) {
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 14px; height: 14px;"></span>';
+                
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    var lat = position.coords.latitude.toFixed(6);
+                    var lon = position.coords.longitude.toFixed(6);
+                    if (!input.value || input.value.indexOf(',') !== -1 || input.value === '') {
+                        input.value = lat + ", " + lon;
+                    }
+                    btn.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+                }, function(error) {
+                    console.log('GPS error: ' + error.message);
+                    btn.innerHTML = '<i class="bi bi-crosshair text-danger"></i>';
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                });
+            }
+        }
+
+        let globalAreasList = [];
+
+        function renderAreasList() {
+            var container = $('#existingAreasList');
+            if (!container.length) return;
+            container.empty();
+            if (globalAreasList && globalAreasList.length > 0) {
+                globalAreasList.forEach(function(item) {
+                    var row = $(`
+                        <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 border-bottom text-white p-2" id="area-row-${item.id}" style="border-color: rgba(255,255,255,0.05) !important;">
+                            <span style="font-size: 13px; font-weight: 600;">${item.namaArea}</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger p-0" onclick="confirmDeleteArea(${item.id}, '${item.namaArea}')" style="border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    `);
+                    container.append(row);
+                });
+            } else {
+                container.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">Belum ada Area Utama</div>');
+            }
+        }
+
+        function confirmDeleteArea(id, namaArea) {
+            var row = $(`#area-row-${id}`);
+            row.html(`
+                <div class="d-flex align-items-center gap-2 w-100 py-1">
+                    <span class="text-danger fw-bold text-truncate" style="font-size: 11px; flex-grow: 1;">Hapus ${namaArea}?</span>
+                    <input type="password" placeholder="Passcode" class="form-control form-control-sm text-center bg-dark border-secondary text-white" style="width: 80px; font-size: 10px; height: 26px; border-radius: 6px; padding: 0 4px;" id="passcode-${id}" />
+                    <button type="button" class="btn btn-danger btn-sm p-0" onclick="executeDeleteArea(${id}, '${namaArea}')" style="font-size: 10px; height: 26px; width: 42px; border-radius: 6px; font-weight: 600;">Hapus</button>
+                    <button type="button" class="btn btn-secondary btn-sm p-0" onclick="renderAreasList()" style="font-size: 10px; height: 26px; width: 42px; border-radius: 6px; font-weight: 600; background: var(--bg-body); border-color: var(--border-color);">Batal</button>
+                </div>
+            `);
+            $(`#passcode-${id}`).focus();
+        }
+
+        function executeDeleteArea(id, namaArea) {
+            var passcode = $(`#passcode-${id}`).val();
+            if (!passcode) {
+                alert("Passcode wajib diisi!");
+                return;
+            }
+
+            $.ajax({
+                url: '/Api/DeleteArea',
+                type: 'POST',
+                data: { id: id, passcode: passcode },
+                success: function(response) {
+                    loadAreas();
+                },
+                error: function(xhr) {
+                    alert(xhr.responseText || "Gagal menghapus area.");
+                    renderAreasList();
+                }
+            });
+        }
+
+        function loadAreas(selectedValue) {
+            $.ajax({
+                url: '/Api/GetAreas',
+                type: 'GET',
+                cache: false,
+                dataType: 'json',
+                success: function(data) {
+                    globalAreasList = data;
+                    renderAreasList();
+                    
+                    var select = $('#Area');
+                    select.empty();
+                    select.append('<option value="" disabled selected>Pilih Area...</option>');
+                    if (data && data.length > 0) {
+                        data.forEach(function(item) {
+                            select.append('<option value="' + item.namaArea + '">' + item.namaArea + '</option>');
+                        });
+                    } else {
+                        select.append('<option value="" disabled>Belum ada Area Utama</option>');
+                    }
+                    
+                    if (selectedValue) {
+                        select.val(selectedValue);
+                    }
+                    
+                    select.trigger('refresh');
+                },
+                error: function(xhr, status, error) {
+                    console.error("Failed to load areas:", error);
+                    var select = $('#Area');
+                    select.empty();
+                    select.append('<option value="" disabled>Gagal memuat area</option>');
+                    select.trigger('refresh');
+                }
+            });
+        }
+
+        function saveNewArea() {
+            var btn = $('#btnSaveArea');
+            var errorDiv = $('#addAreaError');
+            var areaName = $('#newAreaName').val();
+
+            if (!areaName || areaName.trim() === '') {
+                errorDiv.text('Nama area tidak boleh kosong').show();
+                return;
+            }
+
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...');
+            errorDiv.hide();
+
+            $.ajax({
+                url: '/Api/AddArea',
+                type: 'POST',
+                dataType: 'json',
+                data: { namaArea: areaName },
+                success: function(response) {
+                    $('#addAreaModal').modal('hide');
+                    $('#newAreaName').val('');
+                    var areaToSelect = (response && response.data) ? response.data.namaArea : null;
+                    loadAreas(areaToSelect);
+                    btn.prop('disabled', false).text('Simpan Area');
+                },
+                error: function(xhr) {
+                    errorDiv.text(xhr.responseText || 'Terjadi kesalahan saat menyimpan area').show();
+                    btn.prop('disabled', false).text('Simpan Area');
+                }
+            });
+        }
+
+        function cancelEditObservation() {
+            $('#observationForm')[0].reset();
+            $('#observationId').val('');
+            $('#formTitle').html('<i class="bi bi-eye-fill me-2" style="color: var(--color-primary);"></i>Form Observasi');
+            $('#btnCancelEdit').addClass('d-none');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function editObservation(id) {
+            $.get('/Observation/GetData/' + id, function(data) {
+                if (data) {
+                    $('#observationId').val(data.id);
+                    
+                    // Format dates and times
+                    if (data.tanggal) $('#tanggal').val(data.tanggal);
+                    if (data.waktu) $('#waktuStr').val(data.waktu);
+                    
+                    // Selects
+                    $('#Area').val(data.area).change();
+                    $('#DepartemenYangDiamati').val(data.departemenYangDiamati).change();
+                    $('#DokumenPendukung').val(data.dokumenPendukung).change();
+                    $('#ResikoKritis').val(data.resikoKritis).change();
+                    $('#TingkatResiko').val(data.tingkatResiko).change();
+                    $('#PerihalYangDiamati').val(data.perihalYangDiamati).change();
+                    $('#HasilObservasi').val(data.hasilObservasi).change();
+
+                    // Inputs / Texts
+                    $('#Lokasi').val(data.lokasi);
+                    $('#DetilLokasi').val(data.detilLokasi);
+                    $('#KegiatanYangDiamati').val(data.kegiatanYangDiamati);
+                    $('#Keterangan').val(data.keterangan);
+
+                    $('#formTitle').html('<i class="bi bi-pencil-square me-2" style="color: var(--color-primary);"></i>Edit Observasi');
+                    $('#btnCancelEdit').removeClass('d-none');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }).fail(function() {
+                alert("Gagal mengambil data observasi. Data mungkin sudah dihapus.");
+            });
+        }
+
+        function deleteObservation(id) {
+            if (confirm("Apakah Anda yakin ingin menghapus laporan observasi ini? Data yang dihapus tidak dapat dikembalikan.")) {
+                var form = $('<form action="/Observation/Delete/' + id + '" method="post">' +
+                             '<input type="hidden" name="__RequestVerificationToken" value="' + $('input[name="__RequestVerificationToken"]').val() + '" />' +
+                             '</form>');
+                $('body').append(form);
+                form.submit();
+            }
+        }
+
+        $(document).ready(function() {
+            loadAreas();
+            getLocation();
+
+            // Prevent double submit
+            $('#observationForm').on('submit', function() {
+                var btn = $('#btnSubmit');
+                if (btn.prop('disabled')) return false;
+                btn.prop('disabled', true);
+                btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');
+                return true;
+            });
+        });
+    </script>
+}

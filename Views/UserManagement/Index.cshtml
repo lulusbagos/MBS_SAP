@@ -1,0 +1,224 @@
+@model IEnumerable<MBS_SAP.Models.AppUser>
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<style>
+    .user-mgmt-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+    }
+    .user-mgmt-table thead th {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--text-muted);
+        padding: 8px 12px;
+        border: none;
+    }
+    .user-mgmt-row {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        transition: background 0.15s ease;
+    }
+    .user-mgmt-row:hover { background: var(--bg-card-hover); }
+    .user-mgmt-row td {
+        padding: 12px;
+        vertical-align: middle;
+        font-size: 13px;
+        color: var(--text-main);
+        border: none;
+    }
+    .user-mgmt-row td:first-child { border-radius: 12px 0 0 12px; }
+    .user-mgmt-row td:last-child { border-radius: 0 12px 12px 0; }
+    .role-select {
+        background: var(--bg-layout);
+        border: 1.5px solid var(--border-color);
+        color: var(--text-main);
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        min-width: 110px;
+    }
+    .role-select:focus { border-color: var(--color-primary); outline: none; }
+    .role-badge-admin { background: rgba(168,85,247,0.15); color: #a855f7; }
+    .role-badge-operator { background: rgba(56,189,248,0.15); color: #38bdf8; }
+
+    /* Mobile cards */
+    .user-card-mobile {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="animate-fade-in pb-4">
+
+    <!-- Header -->
+    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #7c3aed, #a855f7); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <i class="bi bi-people-fill text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px;">USER MANAGEMENT</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Kelola role dan akses pengguna aplikasi.</p>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(16, 185, 129, 0.15); color: var(--color-green); border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Stats -->
+    <div class="d-flex gap-3 mb-4 flex-wrap">
+        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 100px;">
+            <div style="font-size: 24px; font-weight: 900; color: var(--color-primary);">@Model.Count()</div>
+            <div class="text-muted" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Total User</div>
+        </div>
+        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 100px;">
+            <div style="font-size: 24px; font-weight: 900; color: #a855f7;">@Model.Count(u => u.Role == "Admin")</div>
+            <div class="text-muted" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Admin</div>
+        </div>
+        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 100px;">
+            <div style="font-size: 24px; font-weight: 900; color: #38bdf8;">@Model.Count(u => u.Role != "Admin")</div>
+            <div class="text-muted" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Operator</div>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="mb-3">
+        <input type="text" id="searchUser" class="input-sap" placeholder="🔍 Cari nama atau NIK..." style="height: 40px; font-size: 13px;" />
+    </div>
+
+    <!-- Desktop Table -->
+    <div class="d-none d-md-block">
+        <table class="user-mgmt-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>NIK</th>
+                    <th>Departemen</th>
+                    <th>Role Saat Ini</th>
+                    <th>Last Login</th>
+                    <th>Ubah Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model)
+                {
+                    var currentRole = user.Role ?? "Operator";
+                    var initial = !string.IsNullOrEmpty(user.Nama) ? user.Nama[0].ToString().ToUpper() : "?";
+                    <tr class="user-mgmt-row user-item" data-search="@user.Nama?.ToLower() @user.Nik.ToLower()">
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div style="width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #a855f7, #f43f5e); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 13px; flex-shrink: 0;">
+                                    @initial
+                                </div>
+                                <div>
+                                    <div style="font-weight: 700; font-size: 13px;">@user.Nama</div>
+                                    <div style="font-size: 10px; color: var(--text-muted);">@user.Perusahaan</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="font-family: monospace; font-weight: 600; font-size: 12px;">@user.Nik</td>
+                        <td style="font-size: 12px;">@user.Departemen</td>
+                        <td>
+                            <span class="severity-badge @(currentRole == "Admin" ? "role-badge-admin" : "role-badge-operator")" style="font-size: 11px; padding: 4px 12px; border-radius: 8px; font-weight: 700;">
+                                @currentRole
+                            </span>
+                        </td>
+                        <td style="font-size: 11px; color: var(--text-muted);">@user.LastLogin.ToString("dd MMM yyyy HH:mm")</td>
+                        <td>
+                            <form asp-action="UpdateRole" method="post" class="d-flex gap-1 align-items-center">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="nik" value="@user.Nik" />
+                                <select name="role" class="role-select">
+                                    @if (currentRole != "Admin") {
+                                        <option value="Operator" selected>Operator</option>
+                                        <option value="Admin">Admin</option>
+                                    } else {
+                                        <option value="Operator">Operator</option>
+                                        <option value="Admin" selected>Admin</option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-sm px-2 py-1" style="background: var(--color-primary); color: white; border: none; border-radius: 8px; font-size: 11px; font-weight: 600;">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile Cards -->
+    <div class="d-md-none">
+        @foreach (var user in Model)
+        {
+            var currentRole = user.Role ?? "Operator";
+            var initial = !string.IsNullOrEmpty(user.Nama) ? user.Nama[0].ToString().ToUpper() : "?";
+            <div class="user-card-mobile user-item" data-search="@user.Nama?.ToLower() @user.Nik.ToLower()">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #a855f7, #f43f5e); display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 14px; flex-shrink: 0;">
+                        @initial
+                    </div>
+                    <div class="flex-grow-1">
+                        <div style="font-weight: 700; font-size: 14px; color: var(--text-main);">@user.Nama</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">@user.Nik &bull; @user.Departemen</div>
+                    </div>
+                    <span class="severity-badge @(currentRole == "Admin" ? "role-badge-admin" : "role-badge-operator")" style="font-size: 10px; padding: 4px 10px; border-radius: 8px; font-weight: 700;">
+                        @currentRole
+                    </span>
+                </div>
+                <form asp-action="UpdateRole" method="post" class="d-flex gap-2 align-items-center">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="nik" value="@user.Nik" />
+                    <select name="role" class="role-select flex-grow-1">
+                        @if (currentRole != "Admin") {
+                            <option value="Operator" selected>Operator</option>
+                            <option value="Admin">Admin</option>
+                        } else {
+                            <option value="Operator">Operator</option>
+                            <option value="Admin" selected>Admin</option>
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-sm px-3 py-1" style="background: var(--color-primary); color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 700;">
+                        Simpan
+                    </button>
+                </form>
+            </div>
+        }
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        $('#searchUser').on('input', function() {
+            var q = $(this).val().toLowerCase();
+            $('.user-item').each(function() {
+                var data = $(this).data('search') || '';
+                $(this).toggle(data.indexOf(q) !== -1);
+            });
+        });
+    </script>
+}

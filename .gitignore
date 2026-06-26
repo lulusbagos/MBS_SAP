@@ -1,0 +1,51 @@
+## Visual Studio Tooling
+.vs/
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Log]/
+[Ll]og/
+
+## Visual Studio Code
+.vscode/
+
+## User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Roslyn cache directories
+*.osgp
+
+## Mono Auto Generated Files
+mono_crash.*
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+_ReSharper*/
+*.[Re]Sharper.user
+*.[Re]Sharper.user.*
+
+## SQLite Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+## Uploads (User generated photos)
+wwwroot/uploads/
+wwwroot/uploads/**/*
+
+## Miscellaneous
+.DS_Store
+Thumbs.db
