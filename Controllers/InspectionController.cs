@@ -5,6 +5,7 @@ using MBS_SAP.Data;
 using MBS_SAP.Models;
 using MBS_SAP.Services;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -126,9 +127,26 @@ namespace MBS_SAP.Controllers
             inspection.Lokasi = lokasi?.ToUpper();
             inspection.DetilLokasi = detilLokasi?.ToUpper();
             inspection.JenisInspeksi = jenisInspeksi?.ToUpper() ?? "UMUM";
-            inspection.Pja = pja?.ToUpper();
-            inspection.NikPja = nikPja;
-            inspection.DepartemenPja = departemenPja?.ToUpper();
+            var pjaName = pja?.Trim().ToUpper();
+            var pjaDept = departemenPja?.Trim().ToUpper();
+            var pjaNik = nikPja?.Trim();
+
+            if (TryParseCompanyNikToken(pjaNik, out var selectedCompanyId))
+            {
+                inspection.Pja = pjaName;
+                inspection.NikPja = null;
+                inspection.DepartemenPja = "PERUSAHAAN";
+                if (selectedCompanyId > 0)
+                {
+                    inspection.PerusahaanId = selectedCompanyId;
+                }
+            }
+            else
+            {
+                inspection.Pja = pjaName;
+                inspection.NikPja = pjaNik;
+                inspection.DepartemenPja = pjaDept;
+            }
             
             inspection.Q1_1 = q1_1;
             inspection.Q1_2 = q1_2;
@@ -191,17 +209,28 @@ namespace MBS_SAP.Controllers
             await _context.SaveChangesAsync();
 
             // Notify PJA
-            if (isNew && !string.IsNullOrEmpty(inspection.NikPja))
+            if (isNew && !string.IsNullOrWhiteSpace(inspection.Pja))
             {
-                var notif = new Notification
+                if (!string.IsNullOrWhiteSpace(inspection.NikPja))
                 {
-                    RecipientNik = inspection.NikPja,
-                    Title = "Penugasan Inspeksi Baru",
-                    Message = $"Anda ditunjuk sebagai PJA untuk inspeksi {inspection.JenisInspeksi} di {inspection.Lokasi ?? inspection.Area} oleh {inspection.Nama}.",
-                    Url = "/Inspection/Index"
-                };
-                _context.Notifications.Add(notif);
-                await _context.SaveChangesAsync();
+                    var notif = new Notification
+                    {
+                        RecipientNik = inspection.NikPja,
+                        Title = "Penugasan Inspeksi Baru",
+                        Message = $"Anda ditunjuk sebagai PJA untuk inspeksi {inspection.JenisInspeksi} di {inspection.Lokasi ?? inspection.Area} oleh {inspection.Nama}.",
+                        Url = "/Inspection/Index"
+                    };
+                    _context.Notifications.Add(notif);
+                    await _context.SaveChangesAsync();
+                }
+                else if (inspection.PerusahaanId.HasValue)
+                {
+                    await CreateCompanyBroadcastNotificationAsync(
+                        inspection.PerusahaanId.Value,
+                        "Penugasan Inspeksi Baru",
+                        $"Inspeksi baru pada perusahaan {inspection.Pja ?? "-"} di {inspection.Lokasi ?? inspection.Area} membutuhkan tindak lanjut.",
+                        "/Inspection/Index");
+                }
             }
 
             // Append to Excel Sheet D:\SAP.xlsx
@@ -242,9 +271,10 @@ namespace MBS_SAP.Controllers
                         KategoriTemuan = check.Name,
                         DetilTemuan = $"Temuan ketidaksesuaian (skor 0) saat inspeksi '{inspection.JenisInspeksi}' pada {check.Name}. Catatan: {catatan}",
                         Status = "Open",
-                        Pja = pja,
-                        NikPja = nikPja,
-                        DepartemenPja = departemenPja,
+                        Pja = inspection.Pja,
+                        NikPja = inspection.NikPja,
+                        DepartemenPja = inspection.DepartemenPja,
+                        PerusahaanId = inspection.PerusahaanId,
                         CreatedAt = DateTime.Now
                     };
 
@@ -293,6 +323,65 @@ namespace MBS_SAP.Controllers
 
             TempData["SuccessMessage"] = "Inspeksi berhasil dihapus.";
             return RedirectToAction(nameof(Index));
+        }
+
+        private static bool TryParseCompanyNikToken(string? nikToken, out int perusahaanId)
+        {
+            perusahaanId = 0;
+            if (string.IsNullOrWhiteSpace(nikToken))
+            {
+                return false;
+            }
+
+            const string prefix = "COMPANY:";
+            if (!nikToken.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var raw = nikToken.Substring(prefix.Length).Trim();
+            return int.TryParse(raw, out perusahaanId) && perusahaanId > 0;
+        }
+
+        private async Task<int> CreateCompanyBroadcastNotificationAsync(int perusahaanId, string title, string message, string url)
+        {
+            // Prioritas: semua akun login perusahaan (tbl_t_app_user).
+            var recipientNiks = await _context.AppUsers
+                .Where(a => a.IdPerusahaan == perusahaanId && !string.IsNullOrEmpty(a.Nik))
+                .Select(a => a.Nik)
+                .Distinct()
+                .ToListAsync();
+
+            // Fallback: jika belum ada riwayat login, kirim ke seluruh karyawan aktif perusahaan.
+            if (recipientNiks.Count == 0)
+            {
+                recipientNiks = await _context.Karyawans
+                    .Where(k => k.StatusAktif && k.IdPerusahaan == perusahaanId)
+                    .Select(k => k.NoNik)
+                    .Distinct()
+                    .ToListAsync();
+            }
+
+            if (recipientNiks.Count == 0)
+            {
+                return 0;
+            }
+
+            var notifications = new List<Notification>();
+            foreach (var nik in recipientNiks)
+            {
+                notifications.Add(new Notification
+                {
+                    RecipientNik = nik,
+                    Title = title,
+                    Message = message,
+                    Url = url
+                });
+            }
+
+            _context.Notifications.AddRange(notifications);
+            await _context.SaveChangesAsync();
+            return notifications.Count;
         }
     }
 }

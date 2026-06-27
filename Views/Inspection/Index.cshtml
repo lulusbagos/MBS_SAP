@@ -730,39 +730,89 @@
             clearTimeout(pjaTimeout);
             const query = $(this).val();
             
-            if (query.length < 3) {
+            if (query.length < 1) {
                 $('#pjaSearchResults').hide();
                 return;
             }
 
-            pjaTimeout = setTimeout(searchPja, 500);
+            pjaTimeout = setTimeout(searchPja, 300);
         });
 
         function searchPja() {
             const query = $('#pjaSearchInput').val();
-            if (query.length < 3) return;
+            if (query.length < 1) return;
 
-            $.get('/Api/SearchEmployee', { 
-                query: query, 
-                lintasPerusahaan: pjaIsLintasPerusahaan 
-            }, function(data) {
+            $.when(
+                $.get('/Api/GetPjaReference', {
+                    lintasPerusahaan: pjaIsLintasPerusahaan
+                }),
+                $.get('/Api/SearchEmployee', {
+                    query: query,
+                    lintasPerusahaan: pjaIsLintasPerusahaan
+                })
+            ).done(function(pjaRefResp, employeeResp) {
+                const pjaRefs = pjaRefResp[0] || [];
+                const employees = employeeResp[0] || [];
+                const lowerQuery = query.toLowerCase();
+
+                const filteredPjaRefs = pjaRefs.filter(function(x) {
+                    return (x.nama || '').toLowerCase().includes(lowerQuery)
+                        || (x.perusahaan || '').toLowerCase().includes(lowerQuery)
+                        || (x.nik || '').toLowerCase().includes(lowerQuery)
+                        || (x.jabatan || '').toLowerCase().includes(lowerQuery);
+                });
+
+                const merged = [];
+                const seen = new Set();
+
+                filteredPjaRefs.forEach(function(item) {
+                    const key = (item.nik || '') + '|' + (item.perusahaan || '');
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        merged.push(item);
+                    }
+                });
+
+                employees.forEach(function(item) {
+                    const key = (item.nik || '') + '|' + (item.perusahaan || '');
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        item.companyOnly = false;
+                        item.source = item.source || 'employee';
+                        merged.push(item);
+                    }
+                });
+
                 const resultsContainer = $('#pjaSearchResults');
                 resultsContainer.empty();
                 
-                if (data.length === 0) {
+                if (merged.length === 0) {
                     resultsContainer.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">PJA tidak ditemukan.</div>');
                 } else {
-                    data.forEach(function(k) {
-                        const init = k.nama.charAt(0);
+                    merged.forEach(function(k) {
+                        const init = (k.nama || '-').charAt(0);
+                        const safeNik = (k.nik || '').replace(/'/g, "\\'");
+                        const safeNama = (k.nama || '').replace(/'/g, "\\'");
+                        const safeJabatan = (k.jabatan || '').replace(/'/g, "\\'");
+                        const safeDept = (k.departemen || '').replace(/'/g, "\\'");
+                        const safePerusahaan = (k.perusahaan || '').replace(/'/g, "\\'");
+                        const safeCompanyOnly = !!k.companyOnly;
+
+                        const badge = safeCompanyOnly
+                            ? '<span class="badge bg-warning text-dark" style="font-size:10px;">COMPANY ONLY</span>'
+                            : '<span class="badge bg-success" style="font-size:10px;">PJA/EMPLOYEE</span>';
+
                         const item = $(`
-                            <div class="dropdown-item p-3" style="cursor: pointer; border-bottom: 1px solid var(--border-color);" onclick="selectPja('${k.nik}', '${k.nama}', '${k.jabatan || ''}', '${k.departemen || ''}', '${k.perusahaan || ''}')">
+                            <div class="dropdown-item p-3" style="cursor: pointer; border-bottom: 1px solid var(--border-color);" onclick="selectPja('${safeNik}', '${safeNama}', '${safeJabatan}', '${safeDept}', '${safePerusahaan}', ${safeCompanyOnly})">
                                 <div class="d-flex align-items-center gap-3">
                                     <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-layout); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; color: var(--color-primary);">
                                         ${init}
                                     </div>
                                     <div>
-                                        <div style="font-weight: 700; font-size: 13px; color: var(--text-main);">${k.nama}</div>
-                                        <div style="font-size: 11px; color: var(--text-muted);"><i class="bi bi-person-badge me-1"></i>${k.nik} &bull; ${k.jabatan || '-'}</div>
+                                        <div class="d-flex align-items-center gap-2" style="font-weight: 700; font-size: 13px; color: var(--text-main);">
+                                            <span>${k.nama || '-'}</span>${badge}
+                                        </div>
+                                        <div style="font-size: 11px; color: var(--text-muted);"><i class="bi bi-person-badge me-1"></i>${k.nik || '-'} &bull; ${k.jabatan || '-'}</div>
                                         <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;"><i class="bi bi-building me-1"></i>${k.departemen || '-'} | ${k.perusahaan || '-'}</div>
                                     </div>
                                 </div>
@@ -775,7 +825,7 @@
             });
         }
 
-        function selectPja(nik, nama, jabatan, dept, perusahaan) {
+        function selectPja(nik, nama, jabatan, dept, perusahaan, companyOnly) {
             $('#nikPja').val(nik);
             $('#pja').val(nama);
             $('#departemenPja').val(dept);
@@ -784,7 +834,7 @@
             let initial = nama.charAt(0).toUpperCase();
             $('#pjaInitial').text(initial);
             $('#pjaDisplayNama').text(nama);
-            $('#pjaDisplayJabatan').text(jabatan || '-');
+            $('#pjaDisplayJabatan').text(companyOnly ? 'PENANGGUNG JAWAB PERUSAHAAN' : (jabatan || '-'));
             $('#pjaDisplayDept').text(dept || '-');
             $('#pjaDisplayPerusahaan').text(perusahaan || '-');
 
@@ -833,8 +883,9 @@
                     $('#detilLokasi').val(data.detilLokasi);
 
                     // PJA
-                    if (data.nikPja && data.pja) {
-                        selectPja(data.nikPja, data.pja, '', data.departemenPja, '');
+                    if (data.pja) {
+                        const targetNik = data.nikPja || ('COMPANY:' + (data.perusahaanId || ''));
+                        selectPja(targetNik, data.pja, '', data.departemenPja, '', !data.nikPja);
                     } else {
                         clearSelectedPja();
                     }

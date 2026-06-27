@@ -34,21 +34,65 @@ namespace MBS_SAP.Controllers
         public async Task<IActionResult> GetLatestFeed()
         {
             // Limit query size for performance, fetch top 20 of each
-            var p5ms = await _context.P5ms.OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
-            var hazards = await _context.HazardReports.OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
-            var inspections = await _context.Inspections.OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
-            var actions = await _context.ActionPlans.OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
-            var talks = await _context.SafetyTalks.OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
-            var observations = await _context.Observations.OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
-            var p2hReports = await _context.P2hReports.OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
+            var p5ms = await _context.P5ms.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
+            var hazards = await _context.HazardReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
+            var inspections = await _context.Inspections.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
+            var actions = await _context.ActionPlans.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
+            var talks = await _context.SafetyTalks.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
+            var observations = await _context.Observations.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
+            var p2hReports = await _context.P2hReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(20).ToListAsync();
 
             var feed = new List<TimelineItem>();
 
+            var hazardActionPlans = await _context.ActionPlans
+                .Where(ap => !ap.IsDeleted && ap.ItemSap != null && ap.ItemSap.StartsWith("hazard:"))
+                .ToListAsync();
+
             foreach(var p in p5ms)
-                feed.Add(new TimelineItem { Id = p.Id, Type = "P5m", Name = p.Nama, Nik = p.Nik, Department = p.Departemen, Location = p.Lokasi ?? p.Area, Title = $"P5M: {p.Topik}", Description = p.Catatan, Status = "Closed", ImageUrl = p.FotoKegiatan, CreatedAt = p.CreatedAt });
+                feed.Add(new TimelineItem {
+                    Id = p.Id,
+                    Type = "P5m",
+                    Name = p.Nama,
+                    Nik = p.Nik,
+                    Department = p.Departemen,
+                    Area = p.Area,
+                    Location = p.Lokasi,
+                    Category = p.Topik,
+                    Title = "Laporan P5M",
+                    Description = string.IsNullOrWhiteSpace(p.Keterangan) ? p.Catatan : p.Keterangan,
+                    Status = "Closed",
+                    ImageUrl = p.FotoKegiatan,
+                    CreatedAt = p.CreatedAt
+                });
             
             foreach(var h in hazards)
-                feed.Add(new TimelineItem { Id = h.Id, Type = "Hazard", Name = h.Nama, Nik = h.Nik, Department = h.Departemen, Location = h.Lokasi ?? h.Area, Title = $"Hazard: {h.KategoriBahaya}", Description = h.Temuan, Status = h.StatusTemuan, ImageUrl = h.FotoTemuan, CreatedAt = h.CreatedAt });
+            {
+                var linkedAp = hazardActionPlans.FirstOrDefault(ap => ap.ItemSap == $"hazard:{h.Id}");
+                var hazardStatus = h.StatusTemuan ?? "Open";
+                if (hazardStatus.Equals("Open", StringComparison.OrdinalIgnoreCase)
+                    && linkedAp != null
+                    && !string.IsNullOrEmpty(linkedAp.ReassignedFrom))
+                {
+                    hazardStatus = "Progres";
+                }
+
+                feed.Add(new TimelineItem {
+                    Id = h.Id,
+                    Type = "Hazard",
+                    Name = h.Nama,
+                    Nik = h.Nik,
+                    Department = h.Departemen,
+                    Area = h.Area,
+                    Location = h.Lokasi,
+                    Category = h.JenisBahaya,
+                    RiskLevel = h.TingkatResiko,
+                    Title = "Laporan Hazard",
+                    Description = h.Temuan,
+                    Status = hazardStatus,
+                    ImageUrl = h.FotoTemuan,
+                    CreatedAt = h.CreatedAt
+                });
+            }
             
             var inspectionActionPlans = await _context.ActionPlans
                 .Where(ap => !ap.IsDeleted && (ap.ItemSap == "inspection" || ap.ItemSap == "Inspection"))
@@ -56,23 +100,83 @@ namespace MBS_SAP.Controllers
 
             foreach(var i in inspections)
             {
-                var hasOpenActionPlan = inspectionActionPlans.Any(ap => 
+                var openAps = inspectionActionPlans.Where(ap =>
                     ap.Nik == i.Nik 
                     && ap.Tanggal.Date == i.Tanggal.Date 
                     && ap.Waktu == i.Waktu 
-                    && ap.Status.Equals("Open", System.StringComparison.OrdinalIgnoreCase));
+                    && ap.Status.Equals("Open", StringComparison.OrdinalIgnoreCase)).ToList();
 
-                feed.Add(new TimelineItem { Id = i.Id, Type = "Inspection", Name = i.Nama, Nik = i.Nik, Department = i.Departemen, Location = i.Lokasi ?? i.Area, Title = $"Inspeksi: {i.JenisInspeksi}", Description = "", Status = hasOpenActionPlan ? "Open" : "Closed", ImageUrl = null, CreatedAt = i.CreatedAt });
+                var hasOpenActionPlan = openAps.Any();
+                var hasReassigned = openAps.Any(ap => !string.IsNullOrEmpty(ap.ReassignedFrom));
+                var inspectionStatus = !hasOpenActionPlan ? "Closed" : hasReassigned ? "Progres" : "Open";
+
+                feed.Add(new TimelineItem {
+                    Id = i.Id,
+                    Type = "Inspection",
+                    Name = i.Nama,
+                    Nik = i.Nik,
+                    Department = i.Departemen,
+                    Area = i.Area,
+                    Location = i.Lokasi,
+                    Category = i.JenisInspeksi,
+                    Title = "Laporan Inspeksi",
+                    Description = $"Jenis inspeksi: {i.JenisInspeksi}",
+                    Status = inspectionStatus,
+                    ImageUrl = null,
+                    CreatedAt = i.CreatedAt
+                });
             }
             
             foreach(var a in actions)
-                feed.Add(new TimelineItem { Id = a.Id, Type = "ActionPlan", Name = a.Nama, Nik = a.Nik, Department = a.Departemen, Location = a.Lokasi ?? a.Area, Title = $"Action Plan: {a.KategoriTemuan}", Description = a.RencanaPerbaikan, Status = a.Status, ImageUrl = null, CreatedAt = a.CreatedAt });
+                feed.Add(new TimelineItem {
+                    Id = a.Id,
+                    Type = "ActionPlan",
+                    Name = a.Nama,
+                    Nik = a.Nik,
+                    Department = a.Departemen,
+                    Area = a.Area,
+                    Location = a.Lokasi,
+                    Category = a.KategoriTemuan,
+                    Title = "Action Plan",
+                    Description = string.IsNullOrWhiteSpace(a.Perbaikan) ? a.RencanaPerbaikan : a.Perbaikan,
+                    Status = a.Status,
+                    ImageUrl = a.FotoPerbaikan ?? a.FotoTemuan,
+                    CreatedAt = a.CreatedAt
+                });
             
             foreach(var s in talks)
-                feed.Add(new TimelineItem { Id = s.Id, Type = "SafetyTalk", Name = s.Nama, Nik = s.Nik, Department = s.Departemen, Location = s.Lokasi ?? s.Area, Title = $"Safety Talk: {s.Judul}", Description = s.Keterangan, Status = "Closed", ImageUrl = s.FotoKegiatan, CreatedAt = s.CreatedAt });
+                feed.Add(new TimelineItem {
+                    Id = s.Id,
+                    Type = "SafetyTalk",
+                    Name = s.Nama,
+                    Nik = s.Nik,
+                    Department = s.Departemen,
+                    Area = s.Area,
+                    Location = s.Lokasi,
+                    Category = s.Judul,
+                    Title = "Safety Talk",
+                    Description = s.Keterangan,
+                    Status = "Closed",
+                    ImageUrl = s.FotoKegiatan,
+                    CreatedAt = s.CreatedAt
+                });
 
             foreach(var o in observations)
-                feed.Add(new TimelineItem { Id = o.Id, Type = "Observation", Name = o.Nama, Nik = o.Nik, Department = o.Departemen, Location = o.Lokasi ?? o.Area, Title = $"Observasi: {o.PerihalYangDiamati}", Description = $"Kegiatan: {o.KegiatanYangDiamati}. Keterangan: {o.Keterangan}", Status = o.HasilObservasi ?? string.Empty, ImageUrl = o.FotoUrl, CreatedAt = o.CreatedAt });
+                feed.Add(new TimelineItem {
+                    Id = o.Id,
+                    Type = "Observation",
+                    Name = o.Nama,
+                    Nik = o.Nik,
+                    Department = o.Departemen,
+                    Area = o.Area,
+                    Location = o.Lokasi,
+                    Category = o.PerihalYangDiamati,
+                    Title = "Observasi Lapangan",
+                    Description = $"Kegiatan yang diamati: {o.KegiatanYangDiamati}. Keterangan: {o.Keterangan}",
+                    Status = o.HasilObservasi ?? string.Empty,
+                    ImageUrl = o.FotoUrl,
+                    CreatedAt = o.CreatedAt
+                });
 
             foreach(var r in p2hReports)
             {
@@ -123,8 +227,10 @@ namespace MBS_SAP.Controllers
                     Name = r.Nama, 
                     Nik = r.Nik, 
                     Department = "P2H", 
-                    Location = r.NoLambung, 
-                    Title = $"P2H: {r.JenisKendaraan} ({r.Merek})", 
+                    Area = r.NoLambung,
+                    Location = $"{r.Merek} (KM: {r.Kilometer})",
+                    Category = r.JenisKendaraan,
+                    Title = "Pemeriksaan Kendaraan Harian (P2H)", 
                     Description = descText, 
                     Status = defectCount == 0 ? "GOOD" : "NOT_GOOD", 
                     ImageUrl = r.FotoSpeedometer, 
@@ -194,7 +300,10 @@ namespace MBS_SAP.Controllers
         public string Name { get; set; } = string.Empty;
         public string Nik { get; set; } = string.Empty;
         public string? Department { get; set; }
+        public string? Area { get; set; }
         public string? Location { get; set; }
+        public string? Category { get; set; }
+        public string? RiskLevel { get; set; }
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string Status { get; set; } = string.Empty;

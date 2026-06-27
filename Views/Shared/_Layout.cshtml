@@ -110,7 +110,7 @@
                         </div>
                         <div class="user-info-sidebar">
                             <span class="user-name">@(User.Identity?.IsAuthenticated == true ? User.Identity.Name : "Budi Santoso")</span>
-                            <span class="user-role" style="color: #a855f7;">@(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Administrator")</span>
+                            <span class="user-role" style="color: #a855f7;">@(User.FindFirst("JobTitle")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Staff/Operator")</span>
                         </div>
                     </a>
                     <a asp-controller="Account" asp-action="Logout" class="btn-logout-sidebar" title="Log Out">
@@ -262,6 +262,7 @@
                             <div>
                                 <h6 id="reassignDisplayName" style="margin: 0; font-weight: 700; color: var(--text-main); font-size: 13px;"></h6>
                                 <p id="reassignDisplayRole" style="margin: 2px 0 0; font-size: 11px; color: var(--text-muted);"></p>
+                                <p id="reassignDisplayCompany" style="margin: 2px 0 0; font-size: 11px; color: var(--text-muted);"></p>
                             </div>
                             <button type="button" class="btn btn-sm btn-link text-danger ms-auto" onclick="clearReassignSelection()" style="padding: 0;"><i class="bi bi-x-circle-fill fs-5"></i></button>
                         </div>
@@ -285,10 +286,14 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script>
+        const isAuthenticatedUser = @(User.Identity?.IsAuthenticated == true ? "true" : "false");
+
         $(document).ready(function() {
-            fetchNotifications();
-            // Polling notifications every 60s
-            setInterval(fetchNotifications, 60000);
+            if (isAuthenticatedUser) {
+                fetchNotifications();
+                // Polling notifications every 60s
+                setInterval(fetchNotifications, 60000);
+            }
 
             // Reassign Search Logic
             var reassignTimeout;
@@ -296,27 +301,70 @@
                 clearTimeout(reassignTimeout);
                 var query = $(this).val();
                 
-                if (query.length < 3) {
+                if (query.length < 1) {
                     $('#reassignSearchResults').removeClass('show');
                     return;
                 }
 
                 reassignTimeout = setTimeout(function() {
                     var lintas = $('#reassignLintasPerusahaan').is(':checked');
-                    $.get('/Api/SearchEmployee?query=' + encodeURIComponent(query) + '&lintasPerusahaan=' + lintas, function(data) {
+
+                    $.when(
+                        $.get('/Api/GetPjaReference', { lintasPerusahaan: lintas }),
+                        $.get('/Api/SearchEmployee', { query: query, lintasPerusahaan: lintas })
+                    ).done(function(pjaResp, empResp) {
+                        var pjaRefs = pjaResp[0] || [];
+                        var employees = empResp[0] || [];
+                        var lower = String(query || '').toLowerCase();
+
+                        var filteredPja = pjaRefs.filter(function(x) {
+                            return String(x.nama || '').toLowerCase().includes(lower)
+                                || String(x.perusahaan || '').toLowerCase().includes(lower)
+                                || String(x.nik || '').toLowerCase().includes(lower)
+                                || String(x.jabatan || '').toLowerCase().includes(lower);
+                        });
+
+                        var merged = [];
+                        var seen = new Set();
+                        filteredPja.forEach(function(item) {
+                            var key = String(item.nik || '') + '|' + String(item.perusahaan || '');
+                            if (!seen.has(key)) {
+                                seen.add(key);
+                                merged.push(item);
+                            }
+                        });
+
+                        employees.forEach(function(item) {
+                            var key = String(item.nik || '') + '|' + String(item.perusahaan || '');
+                            if (!seen.has(key)) {
+                                seen.add(key);
+                                item.companyOnly = false;
+                                merged.push(item);
+                            }
+                        });
+
                         $('#reassignSearchResults').empty();
-                        if (data && data.length > 0) {
-                            data.forEach(function(emp) {
-                                var initials = emp.nama.charAt(0).toUpperCase();
+                        if (merged && merged.length > 0) {
+                            merged.forEach(function(emp) {
+                                var initials = (emp.nama || '-').charAt(0).toUpperCase();
+                                var safeNik = String(emp.nik || '').replace(/'/g, "\\'");
+                                var safeNama = String(emp.nama || '').replace(/'/g, "\\'");
+                                var safeDept = String(emp.departemen || '').replace(/'/g, "\\'");
+                                var safePerusahaan = String(emp.perusahaan || '').replace(/'/g, "\\'");
+                                var companyOnly = !!emp.companyOnly;
+                                var targetBadge = companyOnly
+                                    ? '<span class="badge bg-warning text-dark" style="font-size:9px;">PERUSAHAAN</span>'
+                                    : '<span class="badge bg-success" style="font-size:9px;">KARYAWAN</span>';
                                 var html = `
-                                    <a class="dropdown-item pja-item" href="javascript:void(0)" onclick="selectReassign('${emp.nik}', '${emp.nama.replace(/'/g, "\\'")}', '${emp.departemen.replace(/'/g, "\\'")}')" style="padding: 10px 16px; border-bottom: 1px solid var(--border-color); white-space: normal;">
+                                    <a class="dropdown-item pja-item" href="javascript:void(0)" onclick="selectReassign('${safeNik}', '${safeNama}', '${safeDept}', '${safePerusahaan}', ${companyOnly})" style="padding: 10px 16px; border-bottom: 1px solid var(--border-color); white-space: normal;">
                                         <div class="d-flex align-items-center gap-3">
                                             <div style="width: 32px; height: 32px; min-width: 32px; border-radius: 50%; background: rgba(56, 189, 248, 0.1); display: flex; align-items: center; justify-content: center; color: var(--color-primary); font-weight: bold; font-size: 14px;">
                                                 ${initials}
                                             </div>
                                             <div>
-                                                <div style="font-weight: 700; font-size: 12px; color: var(--text-main);">${emp.nama} <span class="text-muted" style="font-weight:normal;">(${emp.nik})</span></div>
-                                                <div style="font-size: 10px; color: var(--text-muted);">${emp.jabatan} - ${emp.departemen}</div>
+                                                <div style="font-weight: 700; font-size: 12px; color: var(--text-main);">${emp.nama || '-'} ${targetBadge} <span class="text-muted" style="font-weight:normal;">(${emp.nik || '-'})</span></div>
+                                                <div style="font-size: 10px; color: var(--text-muted);">${emp.jabatan || '-'} - ${emp.departemen || '-'}</div>
+                                                <div style="font-size: 10px; color: var(--text-muted);"><i class="bi bi-building me-1"></i>${emp.perusahaan || '-'}</div>
                                             </div>
                                         </div>
                                     </a>
@@ -340,14 +388,15 @@
             $('#reassignPjaModal').modal('show');
         }
 
-        function selectReassign(nik, nama, dept) {
+        function selectReassign(nik, nama, dept, perusahaan, companyOnly) {
             $('#reassignNik').val(nik);
             $('#reassignNama').val(nama);
             $('#reassignDept').val(dept);
             
             $('#reassignInitial').text(nama.charAt(0).toUpperCase());
             $('#reassignDisplayName').text(nama + ' (' + nik + ')');
-            $('#reassignDisplayRole').text(dept);
+            $('#reassignDisplayRole').text(companyOnly ? 'PENANGGUNG JAWAB PERUSAHAAN' : (dept || '-'));
+            $('#reassignDisplayCompany').text(perusahaan || '-');
             
             $('#reassignSearchInput').closest('.form-group-sap').hide();
             $('#reassignSearchResults').removeClass('show');
@@ -359,6 +408,9 @@
             $('#reassignNik').val('');
             $('#reassignNama').val('');
             $('#reassignDept').val('');
+            $('#reassignDisplayName').text('');
+            $('#reassignDisplayRole').text('');
+            $('#reassignDisplayCompany').text('');
             
             $('#reassignSelectedCard').addClass('d-none');
             $('#reassignSearchInput').val('').closest('.form-group-sap').show();
@@ -394,6 +446,10 @@
         }
 
         function fetchNotifications() {
+            if (!isAuthenticatedUser) {
+                return;
+            }
+
             $.get('/Api/GetNotifications', function(data) {
                 var unreadCount = data.filter(x => !x.isRead).length;
                 if(unreadCount > 0) {
@@ -436,6 +492,10 @@
         }
 
         function markAllNotificationsRead() {
+            if (!isAuthenticatedUser) {
+                return;
+            }
+
             $.post('/Api/MarkAllNotificationsRead', function() {
                 $('#notificationBadge').addClass('d-none');
                 // Re-fetch after a slight delay so visual state updates
@@ -578,6 +638,53 @@
                 $('.custom-select-options').slideUp(200);
                 $('.custom-select-trigger i').css('transform', 'rotate(0deg)');
                 $('.custom-select-trigger').css('border-color', 'var(--border-color)');
+            });
+
+            // Global guard: prevent accidental double-clicks on action controls.
+            const clickLockMs = 1200;
+
+            function shouldSkipClickLock(element) {
+                const $el = $(element);
+                return $el.is('[type="submit"], [data-allow-multi-click="true"], [data-bs-toggle], .dropdown-toggle, .btn-close, .menu-item, .nav-item-bottom, .custom-select-trigger');
+            }
+
+            $(document).on('click', 'button, a.btn, [data-prevent-double-click="true"]', function(e) {
+                const $el = $(this);
+                if (shouldSkipClickLock(this)) {
+                    return;
+                }
+
+                if ($el.data('clickLocked') === true) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+
+                $el.data('clickLocked', true);
+                if ($el.is('button')) {
+                    $el.prop('disabled', true);
+                }
+
+                setTimeout(function() {
+                    $el.data('clickLocked', false);
+                    if ($el.is('button') && !$el.closest('form').data('submitting')) {
+                        $el.prop('disabled', false);
+                    }
+                }, clickLockMs);
+            });
+
+            $(document).on('submit', 'form', function(e) {
+                const $form = $(this);
+                if ($form.data('submitting') === true) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                $form.data('submitting', true);
+                setTimeout(function() {
+                    $form.find('button[type="submit"], input[type="submit"]').prop('disabled', true);
+                }, 50);
+                return true;
             });
         });
     </script>

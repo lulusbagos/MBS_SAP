@@ -66,6 +66,8 @@
         <!-- Accountability Score Card -->
         @{
             var complianceScore = (int)(ViewData["ComplianceScore"] ?? 75);
+            var compliantWeeks = (int)(ViewData["CompliantWeeks"] ?? 0);
+            var targetWeeks = (int)(ViewData["TargetWeeks"] ?? 4);
             // Calculate stroke-dashoffset for circular progress bar (100 is full, 100 - score)
             var strokeOffset = 100 - complianceScore;
         }
@@ -74,7 +76,7 @@
                 <div>
                     <span class="form-label-sap mb-1">Accountability Score</span>
                     <h4 class="mb-1" style="font-weight: 800; color: var(--text-main);">@complianceScore% <span style="font-size: 13px; font-weight: 500; color: var(--color-green);">Kepatuhan</span></h4>
-                    <p class="mb-0" style="font-size: 12px; color: var(--text-muted);">Skor dihitung berdasarkan kontribusi laporan safety aktif.</p>
+                    <p class="mb-0" style="font-size: 12px; color: var(--text-muted);">Skor dihitung dari target minimal 1 aktivitas/minggu (4 minggu terakhir): @compliantWeeks/@targetWeeks minggu terpenuhi.</p>
                 </div>
                 <div class="stats-circle-container">
                     <img src="~/images/safety_badge.png" class="stats-circle-img" alt="Safety Badge" asp-append-version="true" style="position: static; width: 60px; height: 60px; object-fit: contain;" />

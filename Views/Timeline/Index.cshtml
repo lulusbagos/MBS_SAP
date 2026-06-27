@@ -83,6 +83,10 @@
                                     {
                                         <span class="badge bg-danger rounded-pill px-2 py-1 shadow-sm fw-bold" style="font-size: 11px; letter-spacing: 0.5px;"><i class="bi bi-exclamation-circle-fill me-1"></i>OPEN</span>
                                     }
+                                    else if (item.Status.ToLower() == "progres")
+                                    {
+                                        <span class="badge rounded-pill px-2 py-1 shadow-sm fw-bold" style="font-size: 11px; letter-spacing: 0.5px; background: #f59e0b; color: #fff;"><i class="bi bi-arrow-repeat me-1"></i>PROGRES</span>
+                                    }
                                     else
                                     {
                                         <span class="badge bg-success rounded-pill px-2 py-1 shadow-sm fw-bold" style="font-size: 11px; letter-spacing: 0.5px;"><i class="bi bi-check-circle-fill me-1"></i>CLOSED</span>
@@ -90,6 +94,18 @@
                                 }
                             }
                             <span class="badge bg-secondary rounded-pill" style="font-size: 10px; opacity: 0.8;">@item.ItemType</span>
+                            @if (!string.IsNullOrEmpty(item.TingkatResiko))
+                            {
+                                var riskBg = item.TingkatResiko.ToLower() switch {
+                                    "ekstrim" => "background:#b91c1c;",
+                                    "tinggi"  => "background:#f43f5e;",
+                                    "sedang"  => "background:#f97316;",
+                                    _         => "background:#22c55e;"
+                                };
+                                <span class="badge rounded-pill px-2 py-1 shadow-sm fw-bold" style="font-size: 10px; letter-spacing: 0.4px; color:#fff; @riskBg">
+                                    <i class="bi bi-shield-fill-exclamation me-1"></i>@item.TingkatResiko.ToUpper()
+                                </span>
+                            }
                         </div>
                     </div>
 

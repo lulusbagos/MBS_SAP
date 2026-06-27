@@ -7,6 +7,7 @@ using MBS_SAP.Services;
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -89,6 +90,8 @@ namespace MBS_SAP.Controllers
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
             var userName = User.Identity?.Name ?? "Anonymous";
             var userDept = User.FindFirst("Department")?.Value ?? "General";
+            var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
 
             HazardReport? report;
             bool isNew = true;
@@ -113,6 +116,7 @@ namespace MBS_SAP.Controllers
                     Nama = userName,
                     Nik = userNik,
                     Departemen = userDept,
+                    PerusahaanId = userCompanyId,
                     StatusTemuan = "Open",
                     CreatedAt = DateTime.Now
                 };
@@ -130,9 +134,51 @@ namespace MBS_SAP.Controllers
             report.TingkatResiko = tingkatResiko;
             report.Perbaikan = perbaikan;
             report.TindakanPerbaikan = tindakanPerbaikan;
-            report.Pja = pja;
-            report.NikPja = nikPja;
-            report.DepartemenPja = departemenPja;
+            var pjaName = pja?.Trim().ToUpper();
+            var pjaDept = departemenPja?.Trim().ToUpper();
+            var pjaNik = nikPja?.Trim();
+
+            // Guard backend terhadap submit ganda (double-click / request retry) dalam waktu sangat dekat.
+            if (isNew)
+            {
+                var now = DateTime.Now;
+                var duplicateWindowStart = now.AddSeconds(-20);
+                var normalizedTemuan = (temuan ?? string.Empty).Trim();
+                var normalizedArea = (area ?? string.Empty).Trim();
+                var normalizedLokasi = (lokasi ?? string.Empty).Trim();
+
+                var duplicatedReport = await _context.HazardReports
+                    .AsNoTracking()
+                    .Where(h => !h.IsDeleted
+                                && h.Nik == userNik
+                                && h.CreatedAt >= duplicateWindowStart)
+                    .FirstOrDefaultAsync(h => (h.Temuan ?? string.Empty).Trim() == normalizedTemuan
+                                           && (h.Area ?? string.Empty).Trim() == normalizedArea
+                                           && (h.Lokasi ?? string.Empty).Trim() == normalizedLokasi);
+
+                if (duplicatedReport != null)
+                {
+                    TempData["WarningMessage"] = "Data hazard yang sama terdeteksi terkirim dua kali. Sistem hanya menyimpan satu data.";
+                    return RedirectToAction(nameof(Index));
+                }
+            }
+
+            if (TryParseCompanyNikToken(pjaNik, out var selectedCompanyId))
+            {
+                report.Pja = pjaName;
+                report.NikPja = null;
+                report.DepartemenPja = "PERUSAHAAN";
+                if (selectedCompanyId > 0)
+                {
+                    report.PerusahaanId = selectedCompanyId;
+                }
+            }
+            else
+            {
+                report.Pja = pjaName;
+                report.NikPja = pjaNik;
+                report.DepartemenPja = pjaDept;
+            }
 
             // Handle Photo Upload
             if (fotoTemuan != null && fotoTemuan.Length > 0)
@@ -159,7 +205,7 @@ namespace MBS_SAP.Controllers
             await _context.SaveChangesAsync();
 
             // Sync with ActionPlan
-            if (!string.IsNullOrEmpty(report.NikPja))
+            if (!string.IsNullOrWhiteSpace(report.Pja))
             {
                 var actionPlanItemSap = $"hazard:{report.Id}";
                 var actionPlan = await _context.ActionPlans.FirstOrDefaultAsync(a => a.ItemSap == actionPlanItemSap && !a.IsDeleted);
@@ -185,6 +231,7 @@ namespace MBS_SAP.Controllers
                         DepartemenPja = report.DepartemenPja,
                         RencanaPerbaikan = report.TindakanPerbaikan,
                         FotoTemuan = report.FotoTemuan,
+                        PerusahaanId = report.PerusahaanId,
                         CreatedAt = DateTime.Now
                     };
                     _context.ActionPlans.Add(actionPlan);
@@ -222,14 +269,14 @@ namespace MBS_SAP.Controllers
 
             // Notify PJA if new or if PJA changed/assigned
             bool pjaAssignedOrChanged = false;
-            if (isNew && !string.IsNullOrEmpty(report.NikPja))
+            if (isNew && !string.IsNullOrWhiteSpace(report.Pja))
             {
                 pjaAssignedOrChanged = true;
             }
-            else if (!isNew && !string.IsNullOrEmpty(report.NikPja))
+            else if (!isNew && !string.IsNullOrWhiteSpace(report.Pja))
             {
                 var originalReport = await _context.HazardReports.AsNoTracking().FirstOrDefaultAsync(h => h.Id == report.Id);
-                if (originalReport != null && originalReport.NikPja != report.NikPja)
+                if (originalReport != null && (originalReport.NikPja != report.NikPja || originalReport.Pja != report.Pja))
                 {
                     pjaAssignedOrChanged = true;
                 }
@@ -237,15 +284,26 @@ namespace MBS_SAP.Controllers
 
             if (pjaAssignedOrChanged)
             {
-                var notif = new Notification
+                if (!string.IsNullOrWhiteSpace(report.NikPja))
                 {
-                    RecipientNik = report.NikPja!,
-                    Title = "Temuan Hazard Baru",
-                    Message = $"Anda ditunjuk sebagai PJA untuk temuan Hazard di {report.Lokasi ?? report.Area} oleh {report.Nama}.",
-                    Url = "/ActionPlan/Index"
-                };
-                _context.Notifications.Add(notif);
-                await _context.SaveChangesAsync();
+                    var notif = new Notification
+                    {
+                        RecipientNik = report.NikPja!,
+                        Title = "Temuan Hazard Baru",
+                        Message = $"Anda ditunjuk sebagai PJA untuk temuan Hazard di {report.Lokasi ?? report.Area} oleh {report.Nama}.",
+                        Url = "/ActionPlan/Index"
+                    };
+                    _context.Notifications.Add(notif);
+                    await _context.SaveChangesAsync();
+                }
+                else if (report.PerusahaanId.HasValue)
+                {
+                    await CreateCompanyBroadcastNotificationAsync(
+                        report.PerusahaanId.Value,
+                        "Temuan Hazard Baru",
+                        $"Temuan Hazard baru pada area perusahaan {report.Pja ?? "-"} di {report.Lokasi ?? report.Area} membutuhkan tindak lanjut.",
+                        "/Hazard/Index");
+                }
             }
 
             // Append to Excel D:\SAP.xlsx
@@ -330,7 +388,7 @@ namespace MBS_SAP.Controllers
 
             if (closeMode == "pja")
             {
-                if (string.IsNullOrWhiteSpace(report.NikPja) || string.IsNullOrWhiteSpace(report.Pja))
+                if (string.IsNullOrWhiteSpace(report.Pja))
                 {
                     TempData["ErrorMessage"] = "PJA belum ditentukan. Silakan edit laporan dan pilih PJA terlebih dahulu.";
                     return RedirectToAction(nameof(Index));
@@ -370,14 +428,25 @@ namespace MBS_SAP.Controllers
                     _context.ActionPlans.Update(actionPlan);
                 }
 
-                var notif = new Notification
+                if (!string.IsNullOrWhiteSpace(report.NikPja))
                 {
-                    RecipientNik = report.NikPja,
-                    Title = "Action Plan Hazard Baru",
-                    Message = $"Anda menerima tindak lanjut hazard dari {report.Nama} di {report.Lokasi ?? report.Area}.",
-                    Url = "/ActionPlan/Index"
-                };
-                _context.Notifications.Add(notif);
+                    var notif = new Notification
+                    {
+                        RecipientNik = report.NikPja,
+                        Title = "Action Plan Hazard Baru",
+                        Message = $"Anda menerima tindak lanjut hazard dari {report.Nama} di {report.Lokasi ?? report.Area}.",
+                        Url = "/ActionPlan/Index"
+                    };
+                    _context.Notifications.Add(notif);
+                }
+                else if (report.PerusahaanId.HasValue)
+                {
+                    await CreateCompanyBroadcastNotificationAsync(
+                        report.PerusahaanId.Value,
+                        "Action Plan Hazard Baru",
+                        $"Tindak lanjut hazard baru untuk perusahaan {report.Pja ?? "-"} di {report.Lokasi ?? report.Area}.",
+                        "/ActionPlan/Index");
+                }
 
                 try
                 {
@@ -417,6 +486,65 @@ namespace MBS_SAP.Controllers
                 : "Hazard berhasil di-close dengan penyelesaian sendiri.";
 
             return RedirectToAction(nameof(Index));
+        }
+
+        private static bool TryParseCompanyNikToken(string? nikToken, out int perusahaanId)
+        {
+            perusahaanId = 0;
+            if (string.IsNullOrWhiteSpace(nikToken))
+            {
+                return false;
+            }
+
+            const string prefix = "COMPANY:";
+            if (!nikToken.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var raw = nikToken.Substring(prefix.Length).Trim();
+            return int.TryParse(raw, out perusahaanId) && perusahaanId > 0;
+        }
+
+        private async Task<int> CreateCompanyBroadcastNotificationAsync(int perusahaanId, string title, string message, string url)
+        {
+            // Prioritas: semua akun login perusahaan (tbl_t_app_user).
+            var recipientNiks = await _context.AppUsers
+                .Where(a => a.IdPerusahaan == perusahaanId && !string.IsNullOrEmpty(a.Nik))
+                .Select(a => a.Nik)
+                .Distinct()
+                .ToListAsync();
+
+            // Fallback: jika belum ada riwayat login, kirim ke seluruh karyawan aktif perusahaan.
+            if (recipientNiks.Count == 0)
+            {
+                recipientNiks = await _context.Karyawans
+                    .Where(k => k.StatusAktif && k.IdPerusahaan == perusahaanId)
+                    .Select(k => k.NoNik)
+                    .Distinct()
+                    .ToListAsync();
+            }
+
+            if (recipientNiks.Count == 0)
+            {
+                return 0;
+            }
+
+            var notifications = new List<Notification>();
+            foreach (var nik in recipientNiks)
+            {
+                notifications.Add(new Notification
+                {
+                    RecipientNik = nik,
+                    Title = title,
+                    Message = message,
+                    Url = url
+                });
+            }
+
+            _context.Notifications.AddRange(notifications);
+            await _context.SaveChangesAsync();
+            return notifications.Count;
         }
     }
 }

@@ -34,13 +34,19 @@ namespace MBS_SAP.Controllers
             ViewData["ActiveTab"] = "ActionPlan";
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var compIdStr = User.FindFirst("CompanyId")?.Value;
+            int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
             var isAdmin = User.IsInRole("Admin");
 
             var query = _context.ActionPlans.Where(r => !r.IsDeleted);
 
-            if (!isAdmin && !string.IsNullOrEmpty(userNik))
+            if (companyId.HasValue)
             {
-                query = query.Where(r => r.NikPja == userNik || r.NikPic == userNik);
+                // Tampilkan semua record perusahaan yang sama ATAU data lama (PerusahaanId null = sebelum ada tracking company)
+                query = query.Where(r =>
+                    r.PerusahaanId == companyId.Value ||
+                    r.PerusahaanId == null
+                );
             }
 
             var reports = await query
@@ -70,6 +76,21 @@ namespace MBS_SAP.Controllers
             if (plan == null)
             {
                 TempData["ErrorMessage"] = "Rencana perbaikan tidak ditemukan!";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var compIdStr = User.FindFirst("CompanyId")?.Value;
+            int? userCompanyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
+
+            var canUpdate = User.IsInRole("Admin")
+                            || (!string.IsNullOrWhiteSpace(userNik) && plan.Nik == userNik)
+                            || (!string.IsNullOrWhiteSpace(userNik) && !string.IsNullOrWhiteSpace(plan.NikPja) && plan.NikPja == userNik)
+                            || (string.IsNullOrWhiteSpace(plan.NikPja) && plan.PerusahaanId.HasValue && userCompanyId.HasValue && plan.PerusahaanId == userCompanyId);
+
+            if (!canUpdate)
+            {
+                TempData["ErrorMessage"] = "Anda tidak memiliki akses untuk memperbarui action plan ini.";
                 return RedirectToAction(nameof(Index));
             }
 

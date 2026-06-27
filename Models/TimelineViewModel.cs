@@ -25,7 +25,9 @@ namespace MBS_SAP.Models
         public string? Title { get; set; } // Judul/Topik
         public string? Content { get; set; } // Temuan, Keterangan, RencanaPerbaikan
         
-        public string? Status { get; set; } // Open / Closed
+        public string? Status { get; set; } // Open / Closed / Progres
+        
+        public string? TingkatResiko { get; set; } // Rendah / Sedang / Tinggi / Ekstrim (Hazard only)
         
         public string? FotoUrl { get; set; }
         public string? FotoDiriUrl { get; set; } // For SafetyTalk

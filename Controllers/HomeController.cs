@@ -5,6 +5,7 @@ using MBS_SAP.Data;
 using MBS_SAP.Models;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -43,23 +44,81 @@ namespace MBS_SAP.Controllers
 
             ViewData["RunningTexts"] = runningTexts;
 
-            // Query dynamic dashboard statistics
-            var totalHazards = await _context.HazardReports.CountAsync();
-            var openHazards = await _context.HazardReports.CountAsync(h => h.StatusTemuan == "Open");
-            var closedHazards = await _context.HazardReports.CountAsync(h => h.StatusTemuan == "Closed");
-            
-            var totalInspections = await _context.Inspections.CountAsync();
-            var totalActionPlans = await _context.ActionPlans.CountAsync();
-            var totalSafetyTalks = await _context.SafetyTalks.CountAsync();
-            var totalP5ms = await _context.P5ms.CountAsync();
-            
-            // Dynamic Compliance score calculation based on submissions
-            int complianceScore = 80; // Baseline
-            int totalActivities = totalHazards + totalInspections + totalActionPlans + totalSafetyTalks + totalP5ms;
-            if (totalActivities > 0)
+            // Ambil CompanyId dari claim user
+            var compIdStr = User.FindFirst("CompanyId")?.Value;
+            int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
+
+            // Query dynamic dashboard statistics — difilter per perusahaan
+            var hazardQuery     = _context.HazardReports.Where(h => !h.IsDeleted && (companyId == null || h.PerusahaanId == companyId));
+            var inspectionQuery = _context.Inspections.Where(i => !i.IsDeleted && (companyId == null || i.PerusahaanId == companyId));
+            var actionPlanQuery = _context.ActionPlans.Where(a => !a.IsDeleted && (companyId == null || a.PerusahaanId == companyId || a.PerusahaanId == null));
+            var safetyTalkQuery = _context.SafetyTalks.Where(s => !s.IsDeleted && (companyId == null || s.PerusahaanId == companyId));
+            var p5mQuery        = _context.P5ms.Where(p => !p.IsDeleted && (companyId == null || p.PerusahaanId == companyId));
+
+            var totalHazards    = await hazardQuery.CountAsync();
+            var openHazards     = await hazardQuery.CountAsync(h => h.StatusTemuan == "Open");
+            var closedHazards   = await hazardQuery.CountAsync(h => h.StatusTemuan == "Closed");
+            var totalInspections  = await inspectionQuery.CountAsync();
+            var totalActionPlans  = await actionPlanQuery.CountAsync();
+            var totalSafetyTalks  = await safetyTalkQuery.CountAsync();
+            var totalP5ms         = await p5mQuery.CountAsync();
+
+            // Kepatuhan berbasis target mingguan:
+            // Minimal 1 aktivitas gabungan per minggu (rolling 4 minggu).
+            var startOfToday = DateTime.Today;
+            var startOfCurrentWeek = startOfToday.AddDays(-((int)startOfToday.DayOfWeek + 6) % 7); // Monday-based
+            var startOfWindow = startOfCurrentWeek.AddDays(-21); // 4 weeks window
+            var endOfWindowExclusive = startOfCurrentWeek.AddDays(7);
+
+            var hazardDates = await hazardQuery
+                .Where(h => h.CreatedAt >= startOfWindow && h.CreatedAt < endOfWindowExclusive)
+                .Select(h => h.CreatedAt)
+                .ToListAsync();
+
+            var inspectionDates = await inspectionQuery
+                .Where(i => i.CreatedAt >= startOfWindow && i.CreatedAt < endOfWindowExclusive)
+                .Select(i => i.CreatedAt)
+                .ToListAsync();
+
+            var actionPlanDates = await actionPlanQuery
+                .Where(a => a.CreatedAt >= startOfWindow && a.CreatedAt < endOfWindowExclusive)
+                .Select(a => a.CreatedAt)
+                .ToListAsync();
+
+            var safetyTalkDates = await safetyTalkQuery
+                .Where(s => s.CreatedAt >= startOfWindow && s.CreatedAt < endOfWindowExclusive)
+                .Select(s => s.CreatedAt)
+                .ToListAsync();
+
+            var p5mDates = await p5mQuery
+                .Where(p => p.CreatedAt >= startOfWindow && p.CreatedAt < endOfWindowExclusive)
+                .Select(p => p.CreatedAt)
+                .ToListAsync();
+
+            var allActivityDates = hazardDates
+                .Concat(inspectionDates)
+                .Concat(actionPlanDates)
+                .Concat(safetyTalkDates)
+                .Concat(p5mDates)
+                .ToList();
+
+            var weeklyCounts = allActivityDates
+                .GroupBy(d => $"{ISOWeek.GetYear(d)}-{ISOWeek.GetWeekOfYear(d)}")
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            int targetWeeks = 4;
+            int compliantWeeks = 0;
+            for (int i = 0; i < targetWeeks; i++)
             {
-                complianceScore = Math.Min(100, 70 + (totalActivities * 2));
+                var weekDate = startOfCurrentWeek.AddDays(-7 * i);
+                var weekKey = $"{ISOWeek.GetYear(weekDate)}-{ISOWeek.GetWeekOfYear(weekDate)}";
+                if (weeklyCounts.TryGetValue(weekKey, out var countInWeek) && countInWeek >= 1)
+                {
+                    compliantWeeks++;
+                }
             }
+
+            int complianceScore = (int)Math.Round((double)compliantWeeks / targetWeeks * 100.0, MidpointRounding.AwayFromZero);
 
             ViewData["TotalHazards"] = totalHazards;
             ViewData["OpenHazards"] = openHazards;
@@ -69,9 +128,11 @@ namespace MBS_SAP.Controllers
             ViewData["TotalSafetyTalks"] = totalSafetyTalks;
             ViewData["TotalP5ms"] = totalP5ms;
             ViewData["ComplianceScore"] = complianceScore;
+            ViewData["CompliantWeeks"] = compliantWeeks;
+            ViewData["TargetWeeks"] = targetWeeks;
 
-            // Load recent history items
-            var recentHazards = await _context.HazardReports
+            // Load recent history items — difilter per perusahaan
+            var recentHazards = await hazardQuery
                 .OrderByDescending(h => h.CreatedAt)
                 .Take(2)
                 .Select(h => new RecentActivityViewModel
@@ -84,7 +145,7 @@ namespace MBS_SAP.Controllers
                     User = h.Nama
                 }).ToListAsync();
 
-            var recentInspections = await _context.Inspections
+            var recentInspections = await inspectionQuery
                 .OrderByDescending(i => i.CreatedAt)
                 .Take(2)
                 .Select(i => new RecentActivityViewModel
@@ -97,7 +158,7 @@ namespace MBS_SAP.Controllers
                     User = i.Nama
                 }).ToListAsync();
 
-            var recentActionPlans = await _context.ActionPlans
+            var recentActionPlans = await actionPlanQuery
                 .OrderByDescending(a => a.CreatedAt)
                 .Take(2)
                 .Select(a => new RecentActivityViewModel
@@ -110,7 +171,7 @@ namespace MBS_SAP.Controllers
                     User = a.Nama
                 }).ToListAsync();
 
-            var recentSafetyTalks = await _context.SafetyTalks
+            var recentSafetyTalks = await safetyTalkQuery
                 .OrderByDescending(s => s.CreatedAt)
                 .Take(2)
                 .Select(s => new RecentActivityViewModel
@@ -123,7 +184,7 @@ namespace MBS_SAP.Controllers
                     User = s.Nama
                 }).ToListAsync();
 
-            var recentP5ms = await _context.P5ms
+            var recentP5ms = await p5mQuery
                 .OrderByDescending(p => p.CreatedAt)
                 .Take(2)
                 .Select(p => new RecentActivityViewModel

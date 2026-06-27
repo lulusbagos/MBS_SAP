@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MBS_SAP.Data;
 using MBS_SAP.Models;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace MBS_SAP.Controllers
 {
@@ -70,6 +72,140 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> GetPjaReference(bool lintasPerusahaan = false)
+        {
+            int? userCompanyId = null;
+            if (!lintasPerusahaan)
+            {
+                var compIdClaim = User.FindFirst("CompanyId")?.Value;
+                if (int.TryParse(compIdClaim, out int cid) && cid > 0)
+                {
+                    userCompanyId = cid;
+                }
+            }
+
+            var refs = new List<PjaCompanyRef>();
+
+            // Source list sesuai kebutuhan: tbl_m_perusahaan (status aktif + PJO)
+            using (var conn = _context.Database.GetDbConnection())
+            {
+                if (conn.State != System.Data.ConnectionState.Open)
+                {
+                    await conn.OpenAsync();
+                }
+
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"
+SELECT id, nama_perusahaan, pjo, id_pjo
+FROM [ONE_DB_MITRA].[dbo].[tbl_m_perusahaan]
+WHERE status_aktif = '1'
+    AND pjo IS NOT NULL
+" + (userCompanyId.HasValue ? " AND id = @companyId" : "") + @"
+ORDER BY nama_perusahaan";
+
+                if (userCompanyId.HasValue)
+                {
+                    var p = cmd.CreateParameter();
+                    p.ParameterName = "@companyId";
+                    p.Value = userCompanyId.Value;
+                    cmd.Parameters.Add(p);
+                }
+
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    refs.Add(new PjaCompanyRef
+                    {
+                        PerusahaanId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
+                        NamaPerusahaan = reader.IsDBNull(1) ? string.Empty : reader.GetString(1),
+                        Pjo = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        IdPjo = reader.IsDBNull(3) ? null : reader.GetInt32(3)
+                    });
+                }
+            }
+
+            var result = new List<object>();
+
+            foreach (var item in refs)
+            {
+                var pjoName = (item.Pjo ?? string.Empty).Trim();
+
+                if (item.IdPjo.HasValue && item.IdPjo.Value > 0)
+                {
+                    // Prioritas mapping: id_pjo dari tbl_m_perusahaan -> id_karyawan.
+                    var mappedById = await (from k in _context.Karyawans
+                                            join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                            join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
+                                            from d in dg.DefaultIfEmpty()
+                                            where k.StatusAktif == true
+                                                  && k.IdPerusahaan == item.PerusahaanId
+                                                  && k.IdKaryawan == item.IdPjo.Value
+                                            select new
+                                            {
+                                                nik = k.NoNik,
+                                                nama = p.NamaLengkap,
+                                                departemen = d != null ? d.NamaDepartemen : "GENERAL",
+                                                jabatan = "PJO",
+                                                perusahaan = item.NamaPerusahaan,
+                                                companyId = item.PerusahaanId,
+                                                companyOnly = false,
+                                                source = "tbl_m_perusahaan.id_pjo"
+                                            }).FirstOrDefaultAsync();
+
+                    if (mappedById != null)
+                    {
+                        result.Add(mappedById);
+                        continue;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(pjoName))
+                {
+                    // Fallback mapping by nama jika id_pjo belum match.
+                    var mapped = await (from k in _context.Karyawans
+                                        join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                        join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
+                                        from d in dg.DefaultIfEmpty()
+                                        where k.StatusAktif == true
+                                              && k.IdPerusahaan == item.PerusahaanId
+                                              && p.NamaLengkap.ToLower() == pjoName.ToLower()
+                                        select new
+                                        {
+                                            nik = k.NoNik,
+                                            nama = p.NamaLengkap,
+                                            departemen = d != null ? d.NamaDepartemen : "GENERAL",
+                                            jabatan = "PJO",
+                                            perusahaan = item.NamaPerusahaan,
+                                            companyId = item.PerusahaanId,
+                                            companyOnly = false,
+                                            source = "tbl_m_perusahaan.pjo"
+                                        }).FirstOrDefaultAsync();
+
+                    if (mapped != null)
+                    {
+                        result.Add(mapped);
+                        continue;
+                    }
+                }
+
+                // Fallback: perusahaan aktif belum terdaftar PJO (atau belum bisa dipetakan ke karyawan)
+                result.Add(new
+                {
+                    nik = $"COMPANY:{item.PerusahaanId}",
+                    nama = item.NamaPerusahaan,
+                    departemen = "PERUSAHAAN",
+                    jabatan = string.IsNullOrEmpty(pjoName) ? "PJO BELUM TERDAFTAR" : $"PJO: {pjoName}",
+                    perusahaan = item.NamaPerusahaan,
+                    companyId = item.PerusahaanId,
+                    companyOnly = true,
+                    source = "tbl_m_perusahaan"
+                });
+            }
+
+            return Json(result);
+        }
+
+        [HttpGet]
         public async Task<IActionResult> GetNotifications()
         {
             var nik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -125,55 +261,193 @@ namespace MBS_SAP.Controllers
             var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var userName = User.Identity?.Name ?? "Sistem";
 
-            if (req.ItemType == "Hazard")
+            if (req == null || req.ItemId <= 0 || string.IsNullOrWhiteSpace(req.ItemType) || string.IsNullOrWhiteSpace(req.NewNama))
+            {
+                return BadRequest("Data pengalihan tidak valid.");
+            }
+
+            var newNik = req.NewNik?.Trim();
+            var newNama = req.NewNama?.Trim().ToUpper();
+            var newDept = req.NewDepartemen?.Trim().ToUpper();
+            var itemType = req.ItemType.Trim();
+            var isCompanyTarget = TryParseCompanyNikToken(newNik, out var targetCompanyId);
+
+            if (itemType == "Hazard")
             {
                 var hazard = await _context.HazardReports.FirstOrDefaultAsync(h => h.Id == req.ItemId);
                 if (hazard != null)
                 {
-                    hazard.NikPja = req.NewNik;
-                    hazard.Pja = req.NewNama;
-                    hazard.DepartemenPja = req.NewDepartemen;
-                    
-                    var notif = new Notification
+                    if (isCompanyTarget)
                     {
-                        RecipientNik = req.NewNik,
-                        Title = "Pengalihan Hazard",
-                        Message = $"Laporan Hazard di {hazard.Lokasi ?? hazard.Area} telah dialihkan kepada Anda oleh {userName}.",
-                        Url = "/Hazard/Index"
-                    };
-                    _context.Notifications.Add(notif);
+                        hazard.NikPja = null;
+                        hazard.Pja = newNama;
+                        hazard.DepartemenPja = "PERUSAHAAN";
+                        hazard.PerusahaanId = targetCompanyId;
+                    }
+                    else
+                    {
+                        hazard.NikPja = newNik;
+                        hazard.Pja = newNama;
+                        hazard.DepartemenPja = newDept;
+                    }
+
+                    var actionPlanItemSap = $"hazard:{hazard.Id}";
+                    var relatedAction = await _context.ActionPlans.FirstOrDefaultAsync(a => a.ItemSap == actionPlanItemSap && !a.IsDeleted);
+                    if (relatedAction != null)
+                    {
+                        relatedAction.ReassignedFrom = relatedAction.Pja;
+                        relatedAction.ReassignedTo = newNama;
+                        relatedAction.ReassignedAt = DateTime.Now;
+
+                        relatedAction.Pja = hazard.Pja;
+                        relatedAction.NikPja = hazard.NikPja;
+                        relatedAction.DepartemenPja = hazard.DepartemenPja;
+                        relatedAction.PerusahaanId = hazard.PerusahaanId;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(hazard.NikPja))
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            RecipientNik = hazard.NikPja,
+                            Title = "Pengalihan Hazard",
+                            Message = $"Laporan Hazard di {hazard.Lokasi ?? hazard.Area} telah dialihkan kepada Anda oleh {userName}.",
+                            Url = "/Hazard/Index"
+                        });
+                    }
+                    else if (hazard.PerusahaanId.HasValue)
+                    {
+                        await CreateCompanyBroadcastNotificationAsync(
+                            hazard.PerusahaanId.Value,
+                            "Pengalihan Hazard",
+                            $"Laporan Hazard di {hazard.Lokasi ?? hazard.Area} dialihkan ke penanggung jawab perusahaan oleh {userName}.",
+                            "/Hazard/Index");
+                    }
+
                     await _context.SaveChangesAsync();
                     return Ok();
                 }
             }
-            else if (req.ItemType == "ActionPlan")
+            else if (itemType == "ActionPlan")
             {
                 var action = await _context.ActionPlans.FirstOrDefaultAsync(a => a.Id == req.ItemId);
                 if (action != null)
                 {
                     // Track reassignment history
                     action.ReassignedFrom = action.Pja; // nama PJA lama
-                    action.ReassignedTo = req.NewNama;   // nama PJA baru
+                    action.ReassignedTo = newNama;   // nama PJA baru
                     action.ReassignedAt = DateTime.Now;
 
-                    action.NikPja = req.NewNik;
-                    action.Pja = req.NewNama;
-                    action.DepartemenPja = req.NewDepartemen;
-                    
-                    var notif = new Notification
+                    if (isCompanyTarget)
                     {
-                        RecipientNik = req.NewNik,
-                        Title = "Pengalihan Action Plan",
-                        Message = $"Action Plan untuk {action.KategoriTemuan} di {action.Lokasi ?? action.Area} telah dialihkan kepada Anda oleh {userName}.",
-                        Url = "/ActionPlan/Index"
-                    };
-                    _context.Notifications.Add(notif);
+                        action.NikPja = null;
+                        action.Pja = newNama;
+                        action.DepartemenPja = "PERUSAHAAN";
+                        action.PerusahaanId = targetCompanyId;
+                    }
+                    else
+                    {
+                        action.NikPja = newNik;
+                        action.Pja = newNama;
+                        action.DepartemenPja = newDept;
+                    }
+
+                    if (action.ItemSap != null && action.ItemSap.StartsWith("hazard:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (int.TryParse(action.ItemSap.Substring("hazard:".Length), out int hazardId))
+                        {
+                            var hazard = await _context.HazardReports.FirstOrDefaultAsync(h => h.Id == hazardId && !h.IsDeleted);
+                            if (hazard != null)
+                            {
+                                hazard.NikPja = action.NikPja;
+                                hazard.Pja = action.Pja;
+                                hazard.DepartemenPja = action.DepartemenPja;
+                                hazard.PerusahaanId = action.PerusahaanId;
+                            }
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(action.NikPja))
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            RecipientNik = action.NikPja,
+                            Title = "Pengalihan Action Plan",
+                            Message = $"Action Plan untuk {action.KategoriTemuan} di {action.Lokasi ?? action.Area} telah dialihkan kepada Anda oleh {userName}.",
+                            Url = "/ActionPlan/Index"
+                        });
+                    }
+                    else if (action.PerusahaanId.HasValue)
+                    {
+                        await CreateCompanyBroadcastNotificationAsync(
+                            action.PerusahaanId.Value,
+                            "Pengalihan Action Plan",
+                            $"Action Plan untuk {action.KategoriTemuan} di {action.Lokasi ?? action.Area} dialihkan ke penanggung jawab perusahaan oleh {userName}.",
+                            "/ActionPlan/Index");
+                    }
+
                     await _context.SaveChangesAsync();
                     return Ok();
                 }
             }
 
             return BadRequest("Item not found");
+        }
+
+        private static bool TryParseCompanyNikToken(string? nikToken, out int perusahaanId)
+        {
+            perusahaanId = 0;
+            if (string.IsNullOrWhiteSpace(nikToken))
+            {
+                return false;
+            }
+
+            const string prefix = "COMPANY:";
+            if (!nikToken.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var raw = nikToken.Substring(prefix.Length).Trim();
+            return int.TryParse(raw, out perusahaanId) && perusahaanId > 0;
+        }
+
+        private async Task<int> CreateCompanyBroadcastNotificationAsync(int perusahaanId, string title, string message, string url)
+        {
+            var recipientNiks = await _context.AppUsers
+                .Where(a => a.IdPerusahaan == perusahaanId && !string.IsNullOrEmpty(a.Nik))
+                .Select(a => a.Nik)
+                .Distinct()
+                .ToListAsync();
+
+            if (recipientNiks.Count == 0)
+            {
+                recipientNiks = await _context.Karyawans
+                    .Where(k => k.StatusAktif && k.IdPerusahaan == perusahaanId)
+                    .Select(k => k.NoNik)
+                    .Distinct()
+                    .ToListAsync();
+            }
+
+            if (recipientNiks.Count == 0)
+            {
+                return 0;
+            }
+
+            var notifications = new List<Notification>();
+            foreach (var nik in recipientNiks)
+            {
+                notifications.Add(new Notification
+                {
+                    RecipientNik = nik,
+                    Title = title,
+                    Message = message,
+                    Url = url
+                });
+            }
+
+            _context.Notifications.AddRange(notifications);
+            return notifications.Count;
         }
 
         [HttpGet]
@@ -278,5 +552,13 @@ namespace MBS_SAP.Controllers
         public string NewNik { get; set; } = string.Empty;
         public string NewNama { get; set; } = string.Empty;
         public string NewDepartemen { get; set; } = string.Empty;
+    }
+
+    public class PjaCompanyRef
+    {
+        public int PerusahaanId { get; set; }
+        public string NamaPerusahaan { get; set; } = string.Empty;
+        public string? Pjo { get; set; }
+        public int? IdPjo { get; set; }
     }
 }

@@ -56,6 +56,13 @@
             transition: transform 0.3s ease;
             animation: fadeIn 0.5s ease-out;
         }
+        .post-card.new-arrival {
+            animation: fadeIn 0.5s ease-out, pulseNew 1.2s ease-out;
+        }
+        @@keyframes pulseNew {
+            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.45); }
+            100% { box-shadow: 0 0 0 16px rgba(59, 130, 246, 0); }
+        }
         @@keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -195,6 +202,18 @@
             color: #94a3b8;
             text-transform: uppercase;
         }
+        .meta-line {
+            font-size: 11px;
+            color: #64748b;
+        }
+        .risk-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 10px;
+            color: #fff;
+            text-transform: uppercase;
+        }
     </style>
 </head>
 <body>
@@ -228,6 +247,7 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentFeedData = "";
+        let currentTopItemKey = "";
         let pendingCommentAction = null;
         let isUserTyping = false;
 
@@ -266,11 +286,37 @@
             return 'status-neutral';
         }
 
-        function renderFeed(data) {
+        function getStatusLabel(item) {
+            const status = (item.status || '').toLowerCase();
+
+            if ((item.type || '').toLowerCase() === 'observation') {
+                if (status === 'violation') return 'VIOLATION';
+                if (status === 'improvement') return 'IMPROVEMENT';
+                return 'POSITIVE';
+            }
+
+            if ((item.type || '').toLowerCase() === 'p2h') {
+                return status === 'good' ? 'AMAN (GOOD)' : 'ADA TEMUAN (NOT GOOD)';
+            }
+
+            if (status === 'progres') return 'PROGRES';
+            if (status === 'open') return 'OPEN';
+            return 'CLOSED';
+        }
+
+        function getRiskBadgeStyle(riskLevel) {
+            const risk = (riskLevel || '').toLowerCase();
+            if (risk === 'ekstrim') return 'background:#b91c1c;';
+            if (risk === 'tinggi') return 'background:#f43f5e;';
+            if (risk === 'sedang') return 'background:#f97316;';
+            return 'background:#22c55e;';
+        }
+
+        function renderFeed(data, hasNewTopItem) {
             const container = document.getElementById('feedContainer');
             let html = '';
 
-            data.forEach(item => {
+            data.forEach((item, index) => {
                 // Determine if user has liked locally (for guest experience)
                 const isLikedLocally = localStorage.getItem(`liked_${item.type}_${item.id}`) === 'true';
                 
@@ -285,14 +331,19 @@
                 }
 
                 html += `
-                    <div class="post-card" id="post-${item.type}-${item.id}">
+                    <div class="post-card ${hasNewTopItem && index === 0 ? 'new-arrival' : ''}" id="post-${item.type}-${item.id}">
                         <div class="post-header">
                             <img src="${item.userProfilePic}" class="avatar" alt="Avatar">
                             <div class="user-info">
                                 <h6>${item.name}</h6>
-                                <span>${item.location || 'General Area'} • ${item.department || 'All Dept'}</span>
+                                <span>${item.area || item.location || 'General Area'} • ${item.department || 'All Dept'}</span>
+                                ${item.location ? `<div class="meta-line"><i class="bi bi-geo-alt-fill"></i> ${item.location}</div>` : ''}
                             </div>
-                            <span class="status-badge ${getStatusClass(item.status)}">${item.status}</span>
+                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                                <span class="status-badge ${getStatusClass(item.status)}">${getStatusLabel(item)}</span>
+                                <span class="status-badge status-neutral">${(item.type || '').toUpperCase()}</span>
+                                ${item.riskLevel ? `<span class="risk-badge" style="${getRiskBadgeStyle(item.riskLevel)}"><i class="bi bi-shield-fill-exclamation me-1"></i>${item.riskLevel}</span>` : ''}
+                            </div>
                         </div>
                         
                         ${item.imageUrl ? `<img src="${item.imageUrl}" class="post-media" alt="Post media">` : ''}
@@ -314,7 +365,10 @@
                         </div>
                         
                         <div class="post-caption">
-                            <span class="type-tag">${item.type.toUpperCase()}</span> <b>${item.title}</b>. ${item.description || ''}
+                            <span class="fw-bold me-1">${item.name}</span>
+                            ${item.title ? `<span class="fw-semibold">${item.title}${item.description ? ' - ' : ''}</span>` : ''}
+                            <span>${item.description || ''}</span>
+                            ${item.category ? `<div class="mt-1"><span class="text-primary" style="font-size: 12px; font-weight: 500;">#${String(item.category).replaceAll(' ', '')}</span></div>` : ''}
                         </div>
                         
                         <div class="post-comments" id="comments-${item.type}-${item.id}">
@@ -342,12 +396,19 @@
             try {
                 const response = await fetch('/Display/GetLatestFeed');
                 const data = await response.json();
+                const nextTopItemKey = data && data.length > 0 ? `${data[0].type}_${data[0].id}_${data[0].createdAt}` : '';
                 
                 // Compare to prevent annoying re-renders if nothing changed
                 const dataStr = JSON.stringify(data);
                 if (dataStr !== currentFeedData) {
+                    const hasNewTopItem = currentTopItemKey !== '' && nextTopItemKey !== '' && nextTopItemKey !== currentTopItemKey;
                     currentFeedData = dataStr;
-                    renderFeed(data);
+                    currentTopItemKey = nextTopItemKey;
+                    renderFeed(data, hasNewTopItem);
+
+                    if (hasNewTopItem) {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
                 }
             } catch (error) {
                 console.error("Error fetching feed:", error);

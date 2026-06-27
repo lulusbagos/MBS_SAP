@@ -43,6 +43,8 @@ namespace MBS_SAP.Controllers
             ViewData["HideHeader"] = true;
             ViewData["HideNav"] = true;
 
+            nrp = (nrp ?? string.Empty).Trim();
+
             if (string.IsNullOrEmpty(nrp))
             {
                 ModelState.AddModelError("Nrp", "NRP/NIK wajib diisi!");
@@ -61,6 +63,8 @@ namespace MBS_SAP.Controllers
             string role = "Operator";
             int? idPerusahaan = null;
             int? idDepartemen = null;
+            int? idJabatan = null;
+            var karyawanMaster = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == nrp);
 
             if (overridePwd != null)
             {
@@ -81,6 +85,7 @@ namespace MBS_SAP.Controllers
                         fullName = pengguna.NamaLengkap;
                         idPerusahaan = pengguna.PerusahaanId;
                         idDepartemen = pengguna.DepartemenId;
+                        idJabatan = pengguna.JabatanId;
                         role = pengguna.PeranId == 1 ? "Admin" : "Operator";
                     }
                     else if (password == "123456") // Fallback default password for active employees
@@ -92,6 +97,7 @@ namespace MBS_SAP.Controllers
                             fullName = pengguna.NamaLengkap;
                             idPerusahaan = karyawan.IdPerusahaan;
                             idDepartemen = karyawan.IdDepartemen;
+                            idJabatan = karyawan.IdJabatan;
                             role = "Operator";
                         }
                     }
@@ -105,6 +111,7 @@ namespace MBS_SAP.Controllers
                         isValid = true;
                         idPerusahaan = karyawan.IdPerusahaan;
                         idDepartemen = karyawan.IdDepartemen;
+                        idJabatan = karyawan.IdJabatan;
                         role = "Operator";
                     }
                 }
@@ -119,6 +126,7 @@ namespace MBS_SAP.Controllers
                     fullName = pg.NamaLengkap;
                     idPerusahaan ??= pg.PerusahaanId;
                     idDepartemen ??= pg.DepartemenId;
+                    idJabatan ??= pg.JabatanId;
                     role = pg.PeranId == 1 ? "Admin" : "Operator";
                 }
                 else
@@ -128,6 +136,7 @@ namespace MBS_SAP.Controllers
                     {
                         idPerusahaan ??= karyawan.IdPerusahaan;
                         idDepartemen ??= karyawan.IdDepartemen;
+                        idJabatan ??= karyawan.IdJabatan;
                         var personal = await _context.Personals.FirstOrDefaultAsync(p => p.IdPersonal == karyawan.IdPersonal);
                         if (personal != null)
                         {
@@ -141,6 +150,20 @@ namespace MBS_SAP.Controllers
             {
                 ModelState.AddModelError("Nrp", "NRP atau Password salah, atau akun dinonaktifkan!");
                 return View();
+            }
+
+            // Status karyawan di ONE DB MITRA menjadi acuan utama aktivasi akun login.
+            if (karyawanMaster != null)
+            {
+                if (!karyawanMaster.StatusAktif)
+                {
+                    ModelState.AddModelError("Nrp", "Akun tidak dapat digunakan karena status karyawan sudah non aktif di ONE DB MITRA.");
+                    return View();
+                }
+
+                idPerusahaan ??= karyawanMaster.IdPerusahaan;
+                idDepartemen ??= karyawanMaster.IdDepartemen;
+                idJabatan ??= karyawanMaster.IdJabatan;
             }
 
             if (string.IsNullOrEmpty(fullName))
@@ -162,6 +185,16 @@ namespace MBS_SAP.Controllers
                 if (d != null) deptName = d.NamaDepartemen ?? deptName;
             }
 
+            string jobTitle = "Staff/Operator";
+            if (idJabatan.HasValue)
+            {
+                var jab = await _context.Jabatans.FirstOrDefaultAsync(x => x.JabatanId == idJabatan.Value);
+                if (!string.IsNullOrWhiteSpace(jab?.NamaJabatan))
+                {
+                    jobTitle = jab.NamaJabatan;
+                }
+            }
+
             // Check for role override from AppUser (managed via User Management)
             var existingAppUser = await _context.AppUsers.FindAsync(nrp);
             if (existingAppUser != null && !string.IsNullOrEmpty(existingAppUser.Role))
@@ -177,6 +210,7 @@ namespace MBS_SAP.Controllers
                 new Claim(ClaimTypes.Role, role),
                 new Claim("Company", companyName),
                 new Claim("Department", deptName),
+                new Claim("JobTitle", jobTitle),
                 new Claim("CompanyId", idPerusahaan?.ToString() ?? "0")
             };
 

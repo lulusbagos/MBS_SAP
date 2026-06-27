@@ -21,6 +21,34 @@ namespace MBS_SAP.Controllers
         public async Task<IActionResult> Index()
         {
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+
+            static string Norm(string? value) => (value ?? string.Empty).Trim().ToUpperInvariant();
+
+            static List<T> DeduplicateRecent<T>(
+                IEnumerable<T> source,
+                Func<T, string> signatureSelector,
+                Func<T, DateTime> createdAtSelector,
+                int duplicateWindowSeconds = 120)
+            {
+                var deduped = new List<T>();
+
+                foreach (var item in source.OrderByDescending(createdAtSelector))
+                {
+                    var sig = signatureSelector(item);
+                    var createdAt = createdAtSelector(item);
+
+                    var isDuplicate = deduped.Any(existing =>
+                        signatureSelector(existing) == sig
+                        && Math.Abs((createdAtSelector(existing) - createdAt).TotalSeconds) <= duplicateWindowSeconds);
+
+                    if (!isDuplicate)
+                    {
+                        deduped.Add(item);
+                    }
+                }
+
+                return deduped;
+            }
             
             // Fetch top 30 from each to keep it lightweight
             var hazards = await _context.HazardReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync();
@@ -31,16 +59,57 @@ namespace MBS_SAP.Controllers
             var observations = await _context.Observations.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync();
             var p2hReports = await _context.P2hReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync();
 
+            // Filter duplicate posts caused by accidental double-click save (same content in near time window).
+            hazards = DeduplicateRecent(
+                hazards,
+                h => $"{Norm(h.Nik)}|{h.Tanggal:yyyyMMdd}|{h.Waktu}|{Norm(h.Temuan)}|{Norm(h.Area)}|{Norm(h.Lokasi)}",
+                h => h.CreatedAt);
+
+            inspections = DeduplicateRecent(
+                inspections,
+                i => $"{Norm(i.Nik)}|{i.Tanggal:yyyyMMdd}|{i.Waktu}|{Norm(i.JenisInspeksi)}|{Norm(i.Area)}|{Norm(i.Lokasi)}",
+                i => i.CreatedAt);
+
+            safetyTalks = DeduplicateRecent(
+                safetyTalks,
+                s => $"{Norm(s.Nik)}|{s.Tanggal:yyyyMMdd}|{s.Waktu}|{Norm(s.Judul)}|{Norm(s.Keterangan)}|{Norm(s.Area)}|{Norm(s.Lokasi)}",
+                s => s.CreatedAt);
+
+            p5ms = DeduplicateRecent(
+                p5ms,
+                p => $"{Norm(p.Nik)}|{p.Tanggal:yyyyMMdd}|{p.Waktu}|{Norm(p.Topik)}|{Norm(p.Keterangan)}|{Norm(p.Area)}|{Norm(p.Lokasi)}",
+                p => p.CreatedAt);
+
+            p2hReports = DeduplicateRecent(
+                p2hReports,
+                r => $"{Norm(r.Nik)}|{r.Tanggal:yyyyMMdd}|{r.Waktu}|{Norm(r.NoLambung)}|{Norm(r.JenisKendaraan)}|{Norm(r.Merek)}",
+                r => r.CreatedAt);
+
             var timelineList = new List<TimelineViewModel>();
+
+            // Muat action plan hazard untuk deteksi status Progres (sudah dialihkan ke PJA lain)
+            var hazardIds = hazards.Select(h => h.Id).ToList();
+            var hazardActionPlans = await _context.ActionPlans
+                .Where(ap => !ap.IsDeleted && ap.ItemSap != null && ap.ItemSap.StartsWith("hazard:"))
+                .ToListAsync();
 
             foreach (var h in hazards)
             {
+                var linkedAp = hazardActionPlans.FirstOrDefault(ap => ap.ItemSap == $"hazard:{h.Id}");
+                string hazardStatus = h.StatusTemuan ?? "Open";
+                if (hazardStatus.Equals("Open", System.StringComparison.OrdinalIgnoreCase)
+                    && linkedAp != null
+                    && !string.IsNullOrEmpty(linkedAp.ReassignedFrom))
+                {
+                    hazardStatus = "Progres";
+                }
                 timelineList.Add(new TimelineViewModel {
                     ItemType = "Hazard", OriginalId = h.Id,
                     Nama = h.Nama, Nik = h.Nik, Departemen = h.Departemen, PerusahaanId = h.PerusahaanId,
                     Tanggal = h.Tanggal, Waktu = h.Waktu, CreatedAt = h.CreatedAt,
                     Area = h.Area, Lokasi = h.Lokasi, Kategori = h.JenisBahaya,
-                    Content = h.Temuan, Status = h.StatusTemuan, FotoUrl = h.FotoTemuan
+                    Content = h.Temuan, Status = hazardStatus, FotoUrl = h.FotoTemuan,
+                    TingkatResiko = h.TingkatResiko
                 });
             }
             var inspectionActionPlans = await _context.ActionPlans
@@ -49,18 +118,23 @@ namespace MBS_SAP.Controllers
 
             foreach (var i in inspections)
             {
-                var hasOpenActionPlan = inspectionActionPlans.Any(ap => 
-                    ap.Nik == i.Nik 
-                    && ap.Tanggal.Date == i.Tanggal.Date 
-                    && ap.Waktu == i.Waktu 
-                    && ap.Status.Equals("Open", System.StringComparison.OrdinalIgnoreCase));
+                var openAps = inspectionActionPlans.Where(ap =>
+                    ap.Nik == i.Nik
+                    && ap.Tanggal.Date == i.Tanggal.Date
+                    && ap.Waktu == i.Waktu
+                    && ap.Status.Equals("Open", System.StringComparison.OrdinalIgnoreCase)).ToList();
+
+                var hasOpenActionPlan = openAps.Any();
+                var hasReassigned = openAps.Any(ap => !string.IsNullOrEmpty(ap.ReassignedFrom));
+
+                string inspectionStatus = !hasOpenActionPlan ? "Closed" : hasReassigned ? "Progres" : "Open";
 
                 timelineList.Add(new TimelineViewModel {
                     ItemType = "Inspection", OriginalId = i.Id,
                     Nama = i.Nama, Nik = i.Nik, Departemen = i.Departemen, PerusahaanId = i.PerusahaanId,
                     Tanggal = i.Tanggal, Waktu = i.Waktu, CreatedAt = i.CreatedAt,
                     Area = i.Area, Lokasi = i.Lokasi, Kategori = i.JenisInspeksi,
-                    Title = "Laporan Inspeksi", Status = hasOpenActionPlan ? "Open" : "Closed"
+                    Title = "Laporan Inspeksi", Status = inspectionStatus
                 });
             }
             foreach (var a in actionPlans)
