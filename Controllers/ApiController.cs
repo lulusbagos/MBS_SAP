@@ -527,12 +527,14 @@ ORDER BY nama_perusahaan";
             }
 
             _context.Notifications.AddRange(notifications);
+            await _context.SaveChangesAsync();
             return notifications.Count;
         }
 
         private async Task<List<string>> GetCompanyNotificationRecipientsAsync(int perusahaanId)
         {
             int? idPjo = null;
+            string? pjoName = null;
             using (var conn = _context.Database.GetDbConnection())
             {
                 if (conn.State != System.Data.ConnectionState.Open)
@@ -540,26 +542,50 @@ ORDER BY nama_perusahaan";
                     await conn.OpenAsync();
                 }
                 using var cmd = conn.CreateCommand();
-                cmd.CommandText = "SELECT id_pjo FROM [ONE_DB_MITRA].[dbo].[tbl_m_perusahaan] WHERE id = @companyId";
+                cmd.CommandText = "SELECT id_pjo, pjo FROM [ONE_DB_MITRA].[dbo].[tbl_m_perusahaan] WHERE id = @companyId";
                 var p = cmd.CreateParameter();
                 p.ParameterName = "@companyId";
                 p.Value = perusahaanId;
                 cmd.Parameters.Add(p);
                 
-                var val = await cmd.ExecuteScalarAsync();
-                if (val != null && val != DBNull.Value)
+                using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
                 {
-                    idPjo = Convert.ToInt32(val);
+                    if (!reader.IsDBNull(0)) idPjo = reader.GetInt32(0);
+                    if (!reader.IsDBNull(1)) pjoName = reader.GetString(1)?.Trim();
                 }
             }
 
             string? pjoNik = null;
+            
+            // 1. Coba cari berdasarkan ID PJO (Prioritas Utama)
             if (idPjo.HasValue && idPjo.Value > 0)
             {
                 pjoNik = await _context.Karyawans
                     .Where(k => k.StatusAktif && k.IdKaryawan == idPjo.Value)
                     .Select(k => k.NoNik)
                     .FirstOrDefaultAsync();
+            }
+
+            // 2. Jika ID PJO tidak menghasilkan/null, tapi nama PJO terisi, coba cari berdasarkan Nama (Pencarian Kasus Sensitif di Perusahaan yang Sama)
+            if (string.IsNullOrEmpty(pjoNik) && !string.IsNullOrEmpty(pjoName))
+            {
+                pjoNik = await (from k in _context.Karyawans
+                                join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                where k.StatusAktif == true 
+                                      && k.IdPerusahaan == perusahaanId 
+                                      && p.NamaLengkap.ToLower() == pjoName.ToLower()
+                                select k.NoNik).FirstOrDefaultAsync();
+
+                // 3. Fallback: Cari secara global di semua perusahaan jika nama unik
+                if (string.IsNullOrEmpty(pjoNik))
+                {
+                    pjoNik = await (from k in _context.Karyawans
+                                    join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                    where k.StatusAktif == true 
+                                          && p.NamaLengkap.ToLower() == pjoName.ToLower()
+                                    select k.NoNik).FirstOrDefaultAsync();
+                }
             }
 
             var recipientNiks = new List<string>();
