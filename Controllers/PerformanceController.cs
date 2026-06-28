@@ -454,6 +454,19 @@ namespace MBS_SAP.Controllers
             var safetyTalks = _context.SafetyTalks.Where(s => !s.IsDeleted && (companyId == null || s.PerusahaanId == companyId) && s.CreatedAt >= targetStart);
             var p5ms = _context.P5ms.Where(p => !p.IsDeleted && (companyId == null || p.PerusahaanId == companyId) && p.CreatedAt >= targetStart);
 
+            // Average closure days for this company
+            var closedActions = await _context.ActionPlans
+                .Where(a => !a.IsDeleted && a.Status == "Closed" && a.TanggalPerbaikan != null && (companyId == null || a.PerusahaanId == companyId.Value))
+                .Select(a => new { a.CreatedAt, a.TanggalPerbaikan })
+                .ToListAsync();
+
+            double avgClosureDays = 0;
+            if (closedActions.Count > 0)
+            {
+                var totalDays = closedActions.Sum(a => ((a.TanggalPerbaikan ?? a.CreatedAt) - a.CreatedAt).TotalDays);
+                avgClosureDays = Math.Round(totalDays / closedActions.Count, 1);
+            }
+
             var submitters = new Dictionary<string, int>();
             var hazNiks = await hazards.Select(h => h.Nik).ToListAsync();
             var insNiks = await inspections.Select(i => i.Nik).ToListAsync();
@@ -500,9 +513,96 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            // Generate ClosedXML Excel
+            // Retrieve full submission history details
+            var allHazards = await hazards.OrderByDescending(h => h.CreatedAt).Select(h => new PerformanceHistoryViewModel
+            {
+                Type = "Hazard",
+                Title = h.Lokasi ?? h.Area ?? "Umum",
+                Description = h.Temuan ?? "",
+                Date = h.CreatedAt,
+                Nik = h.Nik,
+                User = h.Nama
+            }).ToListAsync();
+
+            var allInspections = await inspections.OrderByDescending(i => i.CreatedAt).Select(i => new PerformanceHistoryViewModel
+            {
+                Type = "Inspection",
+                Title = i.JenisInspeksi ?? "Umum",
+                Description = "Area " + (i.Area ?? "umum"),
+                Date = i.CreatedAt,
+                Nik = i.Nik,
+                User = i.Nama
+            }).ToListAsync();
+
+            var allSafetyTalks = await safetyTalks.OrderByDescending(s => s.CreatedAt).Select(s => new PerformanceHistoryViewModel
+            {
+                Type = "SafetyTalk",
+                Title = s.Judul ?? "Talk",
+                Description = s.Keterangan ?? "",
+                Date = s.CreatedAt,
+                Nik = s.Nik,
+                User = s.Nama
+            }).ToListAsync();
+
+            var allP5ms = await p5ms.OrderByDescending(p => p.CreatedAt).Select(p => new PerformanceHistoryViewModel
+            {
+                Type = "P5m",
+                Title = p.Judul ?? "Pre-Start",
+                Description = p.Keterangan ?? "",
+                Date = p.CreatedAt,
+                Nik = p.Nik,
+                User = p.Nama
+            }).ToListAsync();
+
+            var fullHistory = allHazards.Concat(allInspections).Concat(allSafetyTalks).Concat(allP5ms)
+                .OrderByDescending(x => x.Date)
+                .ToList();
+
+            // Generate ClosedXML Excel with Multi-Sheet
             using (var workbook = new XLWorkbook())
             {
+                // ==================== SHEET 1: RINGKASAN ====================
+                var wsSummary = workbook.Worksheets.Add("Ringkasan Performa");
+                
+                wsSummary.Cell(1, 1).Value = "LAPORAN RINGKASAN PERFORMA SAP";
+                wsSummary.Cell(1, 1).Style.Font.Bold = true;
+                wsSummary.Cell(1, 1).Style.Font.FontSize = 14;
+                
+                wsSummary.Cell(2, 1).Value = $"Periode: {(range == "week" ? "Minggu Ini" : "Bulan Ini")}";
+                wsSummary.Cell(2, 1).Style.Font.Italic = true;
+                
+                wsSummary.Cell(3, 1).Value = $"Tanggal Export: {DateTime.Now.ToString("dd MMM yyyy HH:mm")}";
+                wsSummary.Cell(3, 1).Style.Font.Italic = true;
+
+                // Summary KPI Table
+                wsSummary.Cell(5, 1).Value = "METRIK KINERJA SAFETY (KPI)";
+                wsSummary.Cell(5, 2).Value = "NILAI";
+                var sumHeaderRange = wsSummary.Range(5, 1, 5, 2);
+                sumHeaderRange.Style.Font.Bold = true;
+                sumHeaderRange.Style.Fill.BackgroundColor = XLColor.AirForceBlue;
+                sumHeaderRange.Style.Font.FontColor = XLColor.White;
+
+                wsSummary.Cell(6, 1).Value = "Total Karyawan Aktif";
+                wsSummary.Cell(6, 2).Value = activeKaryawans.Count;
+
+                wsSummary.Cell(7, 1).Value = "Total Laporan SAP Masuk";
+                wsSummary.Cell(7, 2).Value = hazNiks.Count + insNiks.Count + safNiks.Count + p5mNiks.Count;
+
+                wsSummary.Cell(8, 1).Value = "Rata-rata Durasi Perbaikan Hazard (Hari)";
+                wsSummary.Cell(8, 2).Value = avgClosureDays;
+
+                wsSummary.Cell(9, 1).Value = "Kepatuhan Target SAP Perusahaan (%)";
+                double totalReal = hazNiks.Count + insNiks.Count + safNiks.Count + p5mNiks.Count;
+                double totalTar = range == "month" ? activeKaryawans.Count * 4 : activeKaryawans.Count * 1;
+                wsSummary.Cell(9, 2).Value = totalTar > 0 ? $"{Math.Round(totalReal / totalTar * 100.0, 1)}%" : "0%";
+
+                var tableBorderRange = wsSummary.Range(5, 1, 9, 2);
+                tableBorderRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                tableBorderRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+                wsSummary.Columns().AdjustToContents();
+
+                // ==================== SHEET 2: KEPATUHAN KARYAWAN ====================
                 var worksheet = workbook.Worksheets.Add("Belum Buat SAP");
                 
                 worksheet.Cell(1, 1).Value = "LAPORAN KARYAWAN BELUM MEMENUHI KEPATUHAN SAP";
@@ -511,23 +611,20 @@ namespace MBS_SAP.Controllers
                 
                 worksheet.Cell(2, 1).Value = $"Periode: {(range == "week" ? "Minggu Ini (Target: 1 Laporan)" : "Bulan Ini (Target: 4 Laporan)")}";
                 worksheet.Cell(2, 1).Style.Font.Italic = true;
-                
-                worksheet.Cell(3, 1).Value = $"Tanggal Export: {DateTime.Now.ToString("dd MMM yyyy HH:mm")}";
-                worksheet.Cell(3, 1).Style.Font.Italic = true;
 
-                worksheet.Cell(5, 1).Value = "No NIK";
-                worksheet.Cell(5, 2).Value = "Nama Lengkap";
-                worksheet.Cell(5, 3).Value = "Departemen";
-                worksheet.Cell(5, 4).Value = "Perusahaan";
-                worksheet.Cell(5, 5).Value = "Jumlah Laporan Masuk";
-                worksheet.Cell(5, 6).Value = "Status Target";
+                worksheet.Cell(4, 1).Value = "No NIK";
+                worksheet.Cell(4, 2).Value = "Nama Lengkap";
+                worksheet.Cell(4, 3).Value = "Departemen";
+                worksheet.Cell(4, 4).Value = "Perusahaan";
+                worksheet.Cell(4, 5).Value = "Jumlah Laporan Masuk";
+                worksheet.Cell(4, 6).Value = "Status Target";
 
-                var headerRange = worksheet.Range(5, 1, 5, 6);
+                var headerRange = worksheet.Range(4, 1, 4, 6);
                 headerRange.Style.Font.Bold = true;
                 headerRange.Style.Fill.BackgroundColor = XLColor.AirForceBlue;
                 headerRange.Style.Font.FontColor = XLColor.White;
 
-                int row = 6;
+                int row = 5;
                 foreach (var emp in uncompliantList)
                 {
                     worksheet.Cell(row, 1).Value = emp.Nik;
@@ -542,11 +639,48 @@ namespace MBS_SAP.Controllers
 
                 worksheet.Columns().AdjustToContents();
 
+                // ==================== SHEET 3: RIWAYAT AKTIVITAS ====================
+                var wsHistory = workbook.Worksheets.Add("Riwayat Aktivitas SAP");
+                
+                wsHistory.Cell(1, 1).Value = "DAFTAR INPUTAN AKTIVITAS SAP KARYAWAN";
+                wsHistory.Cell(1, 1).Style.Font.Bold = true;
+                wsHistory.Cell(1, 1).Style.Font.FontSize = 14;
+                
+                wsHistory.Cell(2, 1).Value = $"Periode: {(range == "week" ? "Minggu Ini" : "Bulan Ini")}";
+                wsHistory.Cell(2, 1).Style.Font.Italic = true;
+
+                wsHistory.Cell(4, 1).Value = "Tanggal & Waktu";
+                wsHistory.Cell(4, 2).Value = "NIK Pengirim";
+                wsHistory.Cell(4, 3).Value = "Nama Pengirim";
+                wsHistory.Cell(4, 4).Value = "Modul SAP";
+                wsHistory.Cell(4, 5).Value = "Lokasi/Judul";
+                wsHistory.Cell(4, 6).Value = "Deskripsi Temuan/Keterangan";
+
+                var histHeaderRange = wsHistory.Range(4, 1, 4, 6);
+                histHeaderRange.Style.Font.Bold = true;
+                histHeaderRange.Style.Fill.BackgroundColor = XLColor.AirForceBlue;
+                histHeaderRange.Style.Font.FontColor = XLColor.White;
+
+                int hRow = 5;
+                foreach (var hist in fullHistory)
+                {
+                    wsHistory.Cell(hRow, 1).Value = hist.Date.ToString("yyyy-MM-dd HH:mm");
+                    wsHistory.Cell(hRow, 2).Value = hist.Nik;
+                    wsHistory.Cell(hRow, 3).Value = hist.User;
+                    wsHistory.Cell(hRow, 4).Value = hist.Type;
+                    wsHistory.Cell(hRow, 5).Value = hist.Title;
+                    wsHistory.Cell(hRow, 6).Value = hist.Description;
+
+                    hRow++;
+                }
+
+                wsHistory.Columns().AdjustToContents();
+
                 using (var stream = new MemoryStream())
                 {
                     workbook.SaveAs(stream);
                     var content = stream.ToArray();
-                    string fileName = $"Belum_Buat_SAP_{range}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                    string fileName = $"Laporan_SAP_Safety_{range}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
                     return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                 }
             }
