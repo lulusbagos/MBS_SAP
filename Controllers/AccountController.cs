@@ -64,7 +64,11 @@ namespace MBS_SAP.Controllers
             int? idPerusahaan = null;
             int? idDepartemen = null;
             int? idJabatan = null;
-            var karyawanMaster = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == nrp);
+            // Jika ada duplikat NIK (rehire/pindah perusahaan), prioritaskan yang status_aktif = 1
+            var karyawanMaster = await _context.Karyawans
+                .Where(k => k.NoNik == nrp)
+                .OrderByDescending(k => k.StatusAktif)
+                .FirstOrDefaultAsync();
 
             if (overridePwd != null)
             {
