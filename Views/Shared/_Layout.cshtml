@@ -17,6 +17,94 @@
     <!-- Custom Style -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/MBS_SAP.styles.css" asp-append-version="true" />
+    <!-- Premium Notification CSS -->
+    <style>
+        .offcanvas {
+            background-color: var(--bg-body) !important;
+            color: var(--text-main) !important;
+            border-left: 1px solid var(--border-color) !important;
+        }
+        .offcanvas-header {
+            background-color: var(--bg-card);
+            border-bottom: 1.5px solid var(--border-color);
+        }
+        
+        /* Notification Tab Buttons styling */
+        .tab-btn-group {
+            background: var(--bg-body);
+            padding: 3px;
+            border-radius: 8px;
+            display: flex;
+            gap: 2px;
+        }
+        .tab-btn-group button {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .tab-btn-group button.active {
+            background: var(--color-primary) !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+        }
+        .tab-btn-group button:hover:not(.active) {
+            color: var(--text-main) !important;
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Premium Notification Card */
+        .notif-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px;
+            text-decoration: none;
+            color: inherit !important;
+            display: block;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .notif-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+            border-color: rgba(255,255,255,0.15);
+        }
+        .notif-card.unread {
+            background: rgba(56, 189, 248, 0.03);
+        }
+        
+        /* Badges */
+        .notif-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-bottom: 4px;
+        }
+        .notif-badge-important {
+            background: rgba(239, 68, 68, 0.15) !important;
+            color: #ef4444 !important;
+        }
+        .notif-badge-action {
+            background: rgba(168, 85, 247, 0.15) !important;
+            color: #a855f7 !important;
+        }
+        .notif-badge-general {
+            background: rgba(59, 130, 246, 0.15) !important;
+            color: #3b82f6 !important;
+        }
+    </style>
 </head>
 <body>
     <!-- Theme Initializer script to prevent theme flash -->
@@ -220,12 +308,28 @@
     @await Component.InvokeAsync("IncidentPopup")
 
     <!-- Notification Sidebar (Offcanvas) -->
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="notificationSidebar" aria-labelledby="notificationSidebarLabel" style="border-radius: 20px 0 0 20px; border-left: none; box-shadow: -4px 0 24px rgba(0,0,0,0.05);">
-        <div class="offcanvas-header" style="border-bottom: 1px solid var(--border-color); padding: 20px;">
-            <h5 class="offcanvas-title" id="notificationSidebarLabel" style="font-weight: 800; color: var(--text-main);">Notifikasi</h5>
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="notificationSidebar" aria-labelledby="notificationSidebarLabel" style="border-radius: 20px 0 0 20px; border-left: none; box-shadow: -4px 0 24px rgba(0,0,0,0.2); width: 380px; max-width: 100%;">
+        <div class="offcanvas-header d-flex align-items-center justify-content-between" style="border-bottom: 1px solid var(--border-color); padding: 20px 16px;">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-bell-fill text-warning" style="font-size: 20px;"></i>
+                <h5 class="offcanvas-title" id="notificationSidebarLabel" style="font-weight: 800; color: var(--text-main); font-size: 16px; margin: 0;">Notifikasi</h5>
+            </div>
             <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
-        <div class="offcanvas-body" id="notificationBody" style="background-color: var(--bg-body); padding: 20px;">
+        
+        <!-- Tab categories header -->
+        <div style="background-color: var(--bg-card); border-bottom: 1.5px solid var(--border-color); padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+            <div class="tab-btn-group" style="background: var(--bg-body); border-radius: 8px; padding: 2px; display: flex; gap: 2px;">
+                <button onclick="changeNotificationFilter('all')" id="notifTab-all" class="btn btn-sm py-1 px-2 border-0 active" style="font-size: 10px; font-weight: 700; border-radius: 6px; transition: all 0.2s;">Semua</button>
+                <button onclick="changeNotificationFilter('important')" id="notifTab-important" class="btn btn-sm py-1 px-2 border-0 text-muted" style="font-size: 10px; font-weight: 700; border-radius: 6px; transition: all 0.2s;">Penting</button>
+                <button onclick="changeNotificationFilter('unread')" id="notifTab-unread" class="btn btn-sm py-1 px-2 border-0 text-muted" style="font-size: 10px; font-weight: 700; border-radius: 6px; transition: all 0.2s;">Belum Dibaca</button>
+            </div>
+            <button onclick="markAllNotificationsRead()" class="btn btn-link p-0 text-decoration-none" style="font-size: 11px; font-weight: 700; color: var(--color-primary);">
+                <i class="bi bi-check-all me-1"></i> Baca Semua
+            </button>
+        </div>
+
+        <div class="offcanvas-body" id="notificationBody" style="background-color: var(--bg-body); padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto;">
             <div class="text-center mt-5">
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
@@ -453,12 +557,17 @@
             });
         }
 
+        var allNotifications = [];
+        var activeNotificationFilter = 'all';
+
         function fetchNotifications() {
             if (!isAuthenticatedUser) {
                 return;
             }
 
             $.get('/Api/GetNotifications', function(data) {
+                allNotifications = data;
+                
                 var unreadCount = data.filter(x => !x.isRead).length;
                 if(unreadCount > 0) {
                     $('#notificationBadge').removeClass('d-none');
@@ -466,37 +575,91 @@
                     $('#notificationBadge').addClass('d-none');
                 }
 
-                var html = '';
-                if(data.length === 0) {
-                    html = `
-                        <div class="text-center mt-5">
-                            <div style="background-color: rgba(56, 189, 248, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-                                <i class="bi bi-bell-slash-fill" style="color: var(--color-primary); font-size: 28px;"></i>
-                            </div>
-                            <h6 style="font-weight: 700; color: var(--text-main);">Belum ada notifikasi</h6>
-                            <p class="text-muted" style="font-size: 13px;">Notifikasi Anda akan muncul di sini.</p>
-                        </div>
-                    `;
-                } else {
-                    html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
-                    data.forEach(function(n) {
-                        var bgClass = n.isRead ? 'var(--bg-layout)' : 'rgba(56, 189, 248, 0.1)';
-                        var borderClass = n.isRead ? 'var(--border-color)' : 'var(--color-primary)';
-                        html += `
-                            <a href="${n.url || '#'}" style="text-decoration: none; color: inherit; display: block; background: ${bgClass}; border: 1px solid ${borderClass}; border-radius: 12px; padding: 12px;">
-                                <div class="d-flex justify-content-between align-items-start mb-1">
-                                    <span style="font-weight: 700; font-size: 13px; color: var(--text-main);">${n.title}</span>
-                                    ${!n.isRead ? '<span style="width: 8px; height: 8px; background-color: var(--color-red); border-radius: 50%; display: inline-block;"></span>' : ''}
-                                </div>
-                                <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4;">${n.message}</p>
-                                <div style="font-size: 10px; color: var(--text-muted); text-align: right;">${new Date(n.createdAt).toLocaleString('id-ID')}</div>
-                            </a>
-                        `;
-                    });
-                    html += '</div>';
-                }
-                $('#notificationBody').html(html);
+                renderNotifications();
             });
+        }
+
+        function isImportantNotif(n) {
+            const txt = ((n.title || '') + ' ' + (n.message || '')).toLowerCase();
+            const keywords = ['overdue', 'penting', 'critical', 'urgente', 'action plan', 'pja', 'dialihkan', 'perlu tindakan', 'belum diselesaikan', 'mendesak', 'bahaya', 'insiden', 'safety', 'kepatuhan'];
+            return keywords.some(kw => txt.includes(kw));
+        }
+
+        function changeNotificationFilter(filter) {
+            activeNotificationFilter = filter;
+            $('.tab-btn-group button').removeClass('active').addClass('text-muted');
+            $('#notifTab-' + filter).addClass('active').removeClass('text-muted');
+            renderNotifications();
+        }
+
+        function renderNotifications() {
+            var filtered = allNotifications;
+            if (activeNotificationFilter === 'unread') {
+                filtered = allNotifications.filter(x => !x.isRead);
+            } else if (activeNotificationFilter === 'important') {
+                filtered = allNotifications.filter(isImportantNotif);
+            }
+
+            var html = '';
+            if (filtered.length === 0) {
+                var message = 'Belum ada notifikasi';
+                var icon = 'bi-bell-slash-fill';
+                if (activeNotificationFilter === 'important') {
+                    message = 'Tidak ada notifikasi penting';
+                    icon = 'bi-shield-check';
+                } else if (activeNotificationFilter === 'unread') {
+                    message = 'Tidak ada notifikasi belum dibaca';
+                    icon = 'bi-check2-all';
+                }
+                
+                html = `
+                    <div class="text-center mt-5">
+                        <div style="background-color: rgba(56, 189, 248, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+                            <i class="bi ${icon}" style="color: var(--color-primary); font-size: 28px;"></i>
+                        </div>
+                        <h6 style="font-weight: 700; color: var(--text-main);">${message}</h6>
+                        <p class="text-muted" style="font-size: 11px;">Aktivitas baru akan muncul di sini.</p>
+                    </div>
+                `;
+            } else {
+                html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+                filtered.forEach(function(n) {
+                    var isImportant = isImportantNotif(n);
+                    var isActionPlan = ((n.title || '') + ' ' + (n.message || '')).toLowerCase().includes('action plan');
+                    
+                    var accentColor = 'var(--border-color)';
+                    var badgeHtml = '';
+                    
+                    if (isImportant) {
+                        accentColor = '#ef4444';
+                        badgeHtml = '<span class="notif-badge notif-badge-important"><i class="bi bi-exclamation-octagon-fill"></i> Penting</span>';
+                    } else if (isActionPlan) {
+                        accentColor = '#a855f7';
+                        badgeHtml = '<span class="notif-badge notif-badge-action"><i class="bi bi-clipboard-check-fill"></i> Action Plan</span>';
+                    } else {
+                        badgeHtml = '<span class="notif-badge notif-badge-general"><i class="bi bi-info-circle-fill"></i> Info</span>';
+                    }
+
+                    var unreadIndicator = !n.isRead ? '<span style="width: 8px; height: 8px; background-color: var(--color-orange); border-radius: 50%; display: inline-block; box-shadow: 0 0 6px var(--color-orange);"></span>' : '';
+                    var cardOpacity = n.isRead ? 'opacity: 0.7;' : '';
+
+                    html += `
+                        <a href="${n.url || '#'}" class="notif-card ${!n.isRead ? 'unread' : ''}" style="border-left-color: ${accentColor}; ${cardOpacity}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                ${badgeHtml}
+                                ${unreadIndicator}
+                            </div>
+                            <div style="font-weight: 800; font-size: 13px; color: var(--text-main); margin-bottom: 2px;">${n.title}</div>
+                            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.4;">${n.message}</p>
+                            <div style="font-size: 9px; color: var(--text-muted); text-align: right; font-weight: 600;">
+                                <i class="bi bi-clock me-1"></i>${new Date(n.createdAt).toLocaleString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                        </a>
+                    `;
+                });
+                html += '</div>';
+            }
+            $('#notificationBody').html(html);
         }
 
         function markAllNotificationsRead() {
@@ -506,8 +669,7 @@
 
             $.post('/Api/MarkAllNotificationsRead', function() {
                 $('#notificationBadge').addClass('d-none');
-                // Re-fetch after a slight delay so visual state updates
-                setTimeout(fetchNotifications, 500);
+                fetchNotifications();
             });
         }
 
