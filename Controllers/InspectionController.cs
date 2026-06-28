@@ -373,12 +373,14 @@ namespace MBS_SAP.Controllers
         {
             int? idPjo = null;
             string? pjoName = null;
-            using (var conn = _context.Database.GetDbConnection())
+            var conn = _context.Database.GetDbConnection();
+            bool wasClosed = conn.State == System.Data.ConnectionState.Closed;
+            if (wasClosed)
             {
-                if (conn.State != System.Data.ConnectionState.Open)
-                {
-                    await conn.OpenAsync();
-                }
+                await conn.OpenAsync();
+            }
+            try
+            {
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = "SELECT id_pjo, pjo FROM [ONE_DB_MITRA].[dbo].[tbl_m_perusahaan] WHERE id = @companyId";
                 var p = cmd.CreateParameter();
@@ -391,6 +393,13 @@ namespace MBS_SAP.Controllers
                 {
                     if (!reader.IsDBNull(0)) idPjo = reader.GetInt32(0);
                     if (!reader.IsDBNull(1)) pjoName = reader.GetString(1)?.Trim();
+                }
+            }
+            finally
+            {
+                if (wasClosed)
+                {
+                    await conn.CloseAsync();
                 }
             }
 

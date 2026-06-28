@@ -90,13 +90,14 @@ namespace MBS_SAP.Controllers
             var refs = new List<PjaCompanyRef>();
 
             // Source list sesuai kebutuhan: tbl_m_perusahaan (status aktif + PJO)
-            using (var conn = _context.Database.GetDbConnection())
+            var conn = _context.Database.GetDbConnection();
+            bool wasClosed = conn.State == System.Data.ConnectionState.Closed;
+            if (wasClosed)
             {
-                if (conn.State != System.Data.ConnectionState.Open)
-                {
-                    await conn.OpenAsync();
-                }
-
+                await conn.OpenAsync();
+            }
+            try
+            {
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = @"
 SELECT id, nama_perusahaan, pjo, id_pjo
@@ -123,6 +124,13 @@ ORDER BY nama_perusahaan";
                         Pjo = reader.IsDBNull(2) ? null : reader.GetString(2),
                         IdPjo = reader.IsDBNull(3) ? null : reader.GetInt32(3)
                     });
+                }
+            }
+            finally
+            {
+                if (wasClosed)
+                {
+                    await conn.CloseAsync();
                 }
             }
 
@@ -535,12 +543,14 @@ ORDER BY nama_perusahaan";
         {
             int? idPjo = null;
             string? pjoName = null;
-            using (var conn = _context.Database.GetDbConnection())
+            var conn = _context.Database.GetDbConnection();
+            bool wasClosed = conn.State == System.Data.ConnectionState.Closed;
+            if (wasClosed)
             {
-                if (conn.State != System.Data.ConnectionState.Open)
-                {
-                    await conn.OpenAsync();
-                }
+                await conn.OpenAsync();
+            }
+            try
+            {
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = "SELECT id_pjo, pjo FROM [ONE_DB_MITRA].[dbo].[tbl_m_perusahaan] WHERE id = @companyId";
                 var p = cmd.CreateParameter();
@@ -553,6 +563,13 @@ ORDER BY nama_perusahaan";
                 {
                     if (!reader.IsDBNull(0)) idPjo = reader.GetInt32(0);
                     if (!reader.IsDBNull(1)) pjoName = reader.GetString(1)?.Trim();
+                }
+            }
+            finally
+            {
+                if (wasClosed)
+                {
+                    await conn.CloseAsync();
                 }
             }
 
