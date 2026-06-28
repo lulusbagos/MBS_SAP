@@ -109,13 +109,24 @@
                         </div>
                     </div>
 
-                    <!-- Image (Full Width) -->
+                    <!-- Image (Full Width) - hanya Admin yang bisa melihat foto -->
                     @if (!string.IsNullOrEmpty(item.FotoUrl))
                     {
-                        <div style="width: 100%; max-height: 500px; overflow: hidden; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
-                            <img src="@item.FotoUrl" class="img-fluid w-100" style="object-fit: contain; max-height: 500px;" alt="Foto Laporan" />
-                        </div>
+                        if (User.IsInRole("Admin"))
+                        {
+                            <div style="width: 100%; max-height: 500px; overflow: hidden; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center;">
+                                <img src="@item.FotoUrl" class="img-fluid w-100" style="object-fit: contain; max-height: 500px;" alt="Foto Laporan" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="px-3 py-2 d-flex align-items-center gap-2" style="background: var(--bg-card); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+                                <i class="bi bi-image-fill text-muted" style="font-size: 20px;"></i>
+                                <span class="text-muted" style="font-size: 13px;">📷 Foto tersedia — hanya dapat dilihat oleh Administrator</span>
+                            </div>
+                        }
                     }
+
 
                     <!-- Action Bar (Instagram style) -->
                     <div class="px-3 pt-2 pb-1 d-flex gap-3">
