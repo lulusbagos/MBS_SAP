@@ -407,6 +407,80 @@ namespace MBS_SAP.Controllers
                 ViewBag.CompanyHistory = companyHistory;
             }
 
+            if (isAdmin)
+            {
+                var nodeMap = new Dictionary<int, CompanyHierarchyNode>();
+                foreach (var c in allCompanies)
+                {
+                    int empCount = allKaryawans.Count(k => k.IdPerusahaan == c.PerusahaanId);
+                    
+                    int subCount = (compHazards.FirstOrDefault(h => h.CompId == c.PerusahaanId)?.Count ?? 0)
+                                 + (compInspections.FirstOrDefault(i => i.CompId == c.PerusahaanId)?.Count ?? 0)
+                                 + (compSafetyTalks.FirstOrDefault(s => s.CompId == c.PerusahaanId)?.Count ?? 0)
+                                 + (compP5ms.FirstOrDefault(p => p.CompId == c.PerusahaanId)?.Count ?? 0);
+
+                    int target = empCount * 4;
+                    double rate = target > 0 ? (double)subCount / target * 100.0 : 0.0;
+
+                    var node = new CompanyHierarchyNode
+                    {
+                        CompanyId = c.PerusahaanId,
+                        CompanyName = c.NamaPerusahaan ?? "Unknown",
+                        ParentCompanyId = c.PerusahaanIndukId,
+                        OwnEmployees = empCount,
+                        OwnSubmissions = subCount,
+                        OwnTarget = target,
+                        OwnAchievementRate = Math.Round(rate, 1)
+                    };
+                    nodeMap[c.PerusahaanId] = node;
+                }
+
+                var rootNodes = new List<CompanyHierarchyNode>();
+                foreach (var kvp in nodeMap)
+                {
+                    var node = kvp.Value;
+                    if (node.ParentCompanyId.HasValue && nodeMap.ContainsKey(node.ParentCompanyId.Value))
+                    {
+                        var parentNode = nodeMap[node.ParentCompanyId.Value];
+                        parentNode.Children.Add(node);
+                    }
+                    else
+                    {
+                        rootNodes.Add(node);
+                    }
+                }
+
+                // Recursive cumulative logic local function
+                void CalculateCumulative(CompanyHierarchyNode node)
+                {
+                    node.CumulativeEmployees = node.OwnEmployees;
+                    node.CumulativeSubmissions = node.OwnSubmissions;
+                    node.CumulativeTarget = node.OwnTarget;
+
+                    foreach (var child in node.Children)
+                    {
+                        CalculateCumulative(child);
+                        node.CumulativeEmployees += child.CumulativeEmployees;
+                        node.CumulativeSubmissions += child.CumulativeSubmissions;
+                        node.CumulativeTarget += child.CumulativeTarget;
+                    }
+
+                    node.CumulativeAchievementRate = node.CumulativeTarget > 0 
+                        ? Math.Round((double)node.CumulativeSubmissions / node.CumulativeTarget * 100.0, 1) 
+                        : 0.0;
+
+                    node.Children = node.Children.OrderBy(c => c.CompanyName).ToList();
+                }
+
+                foreach (var root in rootNodes)
+                {
+                    CalculateCumulative(root);
+                }
+
+                rootNodes = rootNodes.OrderBy(r => r.CompanyName).ToList();
+                ViewBag.CompanyHierarchy = rootNodes;
+            }
+
             return View();
         }
 
@@ -723,5 +797,26 @@ namespace MBS_SAP.Controllers
         public DateTime Date { get; set; }
         public string Nik { get; set; } = string.Empty;
         public string User { get; set; } = string.Empty;
+    }
+
+    public class CompanyHierarchyNode
+    {
+        public int CompanyId { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+        public int? ParentCompanyId { get; set; }
+        
+        // Own stats
+        public int OwnEmployees { get; set; }
+        public int OwnSubmissions { get; set; }
+        public int OwnTarget { get; set; }
+        public double OwnAchievementRate { get; set; }
+
+        // Cumulative (Group) stats
+        public int CumulativeEmployees { get; set; }
+        public int CumulativeSubmissions { get; set; }
+        public int CumulativeTarget { get; set; }
+        public double CumulativeAchievementRate { get; set; }
+
+        public List<CompanyHierarchyNode> Children { get; set; } = new List<CompanyHierarchyNode>();
     }
 }

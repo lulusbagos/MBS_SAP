@@ -135,6 +135,16 @@
         border-color: rgba(239, 68, 68, 0.2);
         color: #ef4444;
     }
+    .hierarchy-item .card-sap {
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent !important;
+    }
+    .hierarchy-item .card-sap:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 15px rgba(3, 105, 161, 0.15);
+        border-left: 3px solid var(--color-primary) !important;
+        background: var(--bg-card-hover) !important;
+    }
 </style>
 
 <!-- Chart.js CDN -->
@@ -166,6 +176,12 @@
             {
                 <button class="tab-btn px-4 py-2 tab-inactive" id="tabMonitoring" onclick="switchTab('monitoring')">
                     <i class="bi bi-shield-fill-exclamation me-1"></i> Pemantauan Safety
+                </button>
+            }
+            @if (ViewBag.IsAdmin == true)
+            {
+                <button class="tab-btn px-4 py-2 tab-inactive" id="tabHierarchy" onclick="switchTab('hierarchy')">
+                    <i class="bi bi-diagram-3-fill me-1"></i> Hierarki Perusahaan
                 </button>
             }
         </div>
@@ -678,6 +694,128 @@
         </div>
     }
 
+    @if (ViewBag.IsAdmin == true)
+    {
+        var hierarchy = ViewBag.CompanyHierarchy as List<MBS_SAP.Controllers.CompanyHierarchyNode> ?? new List<MBS_SAP.Controllers.CompanyHierarchyNode>();
+
+        void RenderNode(MBS_SAP.Controllers.CompanyHierarchyNode node, int level = 0)
+        {
+            var hasChildren = node.Children != null && node.Children.Count > 0;
+            var paddingLeft = level * 24;
+            var collapseId = $"collapse_comp_{node.CompanyId}";
+            var progressColor = node.CumulativeAchievementRate >= 100 ? "bg-success" : (node.CumulativeAchievementRate >= 50 ? "bg-warning" : "bg-danger");
+            var ownProgressColor = node.OwnAchievementRate >= 100 ? "bg-success" : (node.OwnAchievementRate >= 50 ? "bg-warning" : "bg-danger");
+
+            <div class="hierarchy-item mb-2" style="padding-left: @(paddingLeft)px;">
+                <div class="card-sap p-3 border-0 position-relative animate-fade-in" style="border-radius: 14px; background: var(--bg-card);">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        
+                        <!-- Left: Collapse toggle + Name -->
+                        <div class="d-flex align-items-center gap-2" style="min-width: 250px; flex-grow: 1;">
+                            @if (hasChildren)
+                            {
+                                <button class="btn btn-sm p-0 border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="true" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                                    <i class="bi bi-chevron-down toggle-icon" style="transition: transform 0.2s;"></i>
+                                </button>
+                            }
+                            else
+                            {
+                                <div style="width: 24px;"></div>
+                            }
+                            <div>
+                                <div style="font-weight: 800; font-size: 13px; color: var(--text-main);">
+                                    @node.CompanyName
+                                </div>
+                                <span class="text-muted" style="font-size: 10px;">ID Perusahaan: @node.CompanyId</span>
+                            </div>
+                        </div>
+
+                        <!-- Right Stats Grid: Own vs Cumulative -->
+                        <div class="d-flex align-items-center gap-4 flex-wrap text-end">
+                            
+                            <!-- Own Stats -->
+                            <div style="min-width: 130px; border-right: 1px solid var(--border-color); padding-right: 16px;">
+                                <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Direct (Mandiri)</div>
+                                <div style="font-size: 11px; font-weight: 600;">
+                                    <i class="bi bi-people me-1"></i>@node.OwnEmployees Karyawan
+                                </div>
+                                <div style="font-size: 11px; font-weight: 600; color: var(--color-primary);">
+                                    <i class="bi bi-file-earmark-text me-1"></i>@node.OwnSubmissions/@node.OwnTarget SAP
+                                </div>
+                                <div class="d-flex align-items-center justify-content-end gap-2 mt-1">
+                                    <div class="progress-achievement" style="width: 60px; height: 6px;">
+                                        <div class="progress-bar @ownProgressColor" style="width: @Math.Min(node.OwnAchievementRate, 100.0)%;"></div>
+                                    </div>
+                                    <span style="font-size: 10px; font-weight: 800;" class="text-white">@node.OwnAchievementRate%</span>
+                                </div>
+                            </div>
+
+                            <!-- Cumulative (Group) Stats -->
+                            <div style="min-width: 140px;">
+                                <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Group (Kumulatif)</div>
+                                <div style="font-size: 11px; font-weight: 600;">
+                                    <i class="bi bi-people-fill me-1"></i>@node.CumulativeEmployees Karyawan
+                                </div>
+                                <div style="font-size: 11px; font-weight: 600; color: var(--color-primary);">
+                                    <i class="bi bi-file-earmark-bar-graph-fill me-1"></i>@node.CumulativeSubmissions/@node.CumulativeTarget SAP
+                                </div>
+                                <div class="d-flex align-items-center justify-content-end gap-2 mt-1">
+                                    <div class="progress-achievement" style="width: 60px; height: 6px;">
+                                        <div class="progress-bar @progressColor" style="width: @Math.Min(node.CumulativeAchievementRate, 100.0)%;"></div>
+                                    </div>
+                                    <span style="font-size: 10px; font-weight: 800;" class="text-white">@node.CumulativeAchievementRate%</span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (hasChildren)
+            {
+                <div class="collapse show" id="@collapseId">
+                    @foreach (var child in node.Children!)
+                    {
+                        RenderNode(child, level + 1);
+                    }
+                </div>
+            }
+        }
+
+        <div id="sectionHierarchy" style="display: none;" class="animate-fade-in">
+            <!-- Header Card -->
+            <div class="card-sap p-4 mb-4 border-0" style="border-radius: 16px;">
+                <h5 class="mb-1" style="font-weight: 800;"><i class="bi bi-diagram-3 me-2 text-primary"></i>Struktur Hierarki & Pencapaian SAP Perusahaan</h5>
+                <p class="text-muted mb-0" style="font-size: 12px;">Berikut adalah pemetaan kepatuhan SAP berdasarkan bagan hierarki parent-child (kontraktor utama & sub-kontraktor). Statistik kumulatif menggabungkan data perusahaan tersebut beserta seluruh sub-kontraktor di bawahnya.</p>
+                
+                <div class="d-flex gap-2 mt-3 flex-wrap">
+                    <button class="btn btn-sm btn-outline-light" onclick="expandAllHierarchy()" style="border-radius: 8px; font-weight: 600; font-size: 11px; padding: 6px 12px;">
+                        <i class="bi bi-plus-lg me-1"></i>Expand Semua
+                    </button>
+                    <button class="btn btn-sm btn-outline-light" onclick="collapseAllHierarchy()" style="border-radius: 8px; font-weight: 600; font-size: 11px; padding: 6px 12px;">
+                        <i class="bi bi-dash-lg me-1"></i>Collapse Semua
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tree Roots Container -->
+            <div class="hierarchy-tree-container">
+                @foreach (var root in hierarchy)
+                {
+                    RenderNode(root, 0);
+                }
+                
+                @if (hierarchy.Count == 0)
+                {
+                    <div class="text-center text-muted py-5 card-sap border-0" style="border-radius: 16px;">
+                        <i class="bi bi-info-circle" style="font-size: 32px;"></i>
+                        <p class="mt-2 mb-0" style="font-size: 13px;">Tidak ada data hierarki perusahaan yang terdaftar.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 </div>
 
 <!-- Charts & Tabs Handling Script -->
@@ -691,12 +829,22 @@
             monitorSec.style.display = tab === 'monitoring' ? 'block' : 'none';
         }
 
+        const hierarchySec = document.getElementById('sectionHierarchy');
+        if (hierarchySec) {
+            hierarchySec.style.display = tab === 'hierarchy' ? 'block' : 'none';
+        }
+
         document.getElementById('tabMy').className = 'tab-btn px-4 py-2 ' + (tab === 'my' ? 'tab-active' : 'tab-inactive');
         document.getElementById('tabCompany').className = 'tab-btn px-4 py-2 ' + (tab === 'company' ? 'tab-active' : 'tab-inactive');
         
         const tabMon = document.getElementById('tabMonitoring');
         if (tabMon) {
             tabMon.className = 'tab-btn px-4 py-2 ' + (tab === 'monitoring' ? 'tab-active' : 'tab-inactive');
+        }
+
+        const tabHier = document.getElementById('tabHierarchy');
+        if (tabHier) {
+            tabHier.className = 'tab-btn px-4 py-2 ' + (tab === 'hierarchy' ? 'tab-active' : 'tab-inactive');
         }
     }
 
@@ -950,6 +1098,27 @@
                     }
                 }
             }
+        });
+    });
+
+    function expandAllHierarchy() {
+        $('#sectionHierarchy .collapse').addClass('show');
+        $('#sectionHierarchy .toggle-icon').removeClass('bi-chevron-right').addClass('bi-chevron-down');
+    }
+
+    function collapseAllHierarchy() {
+        $('#sectionHierarchy .collapse').removeClass('show');
+        $('#sectionHierarchy .toggle-icon').removeClass('bi-chevron-down').addClass('bi-chevron-right');
+    }
+
+    $(document).ready(function() {
+        $('#sectionHierarchy').on('show.bs.collapse', '.collapse', function(e) {
+            e.stopPropagation();
+            $(this).prev().find('.toggle-icon').removeClass('bi-chevron-right').addClass('bi-chevron-down');
+        });
+        $('#sectionHierarchy').on('hide.bs.collapse', '.collapse', function(e) {
+            e.stopPropagation();
+            $(this).prev().find('.toggle-icon').removeClass('bi-chevron-down').addClass('bi-chevron-right');
         });
     });
 </script>
