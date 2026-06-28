@@ -50,7 +50,10 @@ namespace MBS_SAP.Controllers
                                  join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
                                  from c in cg.DefaultIfEmpty()
                                  where k.StatusAktif == true &&
-                                       (p.NamaLengkap.ToLower().Contains(query) || k.NoNik.ToLower().Contains(query))
+                                       (p.NamaLengkap.ToLower().Contains(query) || 
+                                        k.NoNik.ToLower().Contains(query) || 
+                                        (c != null && c.NamaPerusahaan != null && c.NamaPerusahaan.ToLower().Contains(query)) ||
+                                        (c != null && c.KodePerusahaan != null && c.KodePerusahaan.ToLower().Contains(query)))
                                  select new
                                  {
                                      Nik = k.NoNik,
