@@ -165,6 +165,20 @@ namespace MBS_SAP.Controllers
             int myTotalWeek = myHazardsWeek + myInspectionsWeek + mySafetyTalksWeek + myP5msWeek;
             int myTotalMonth = myHazardsMonth + myInspectionsMonth + mySafetyTalksMonth + myP5msMonth;
 
+            // 7. Average Closure Days for Action Plans
+            var closedActions = await _context.ActionPlans
+                .Where(a => !a.IsDeleted && a.Status == "Closed" && a.TanggalPerbaikan != null && (companyId == null || a.PerusahaanId == companyId.Value))
+                .Select(a => new { a.CreatedAt, a.TanggalPerbaikan })
+                .ToListAsync();
+
+            double avgClosureDays = 0;
+            if (closedActions.Count > 0)
+            {
+                var totalDays = closedActions.Sum(a => ((a.TanggalPerbaikan ?? a.CreatedAt) - a.CreatedAt).TotalDays);
+                avgClosureDays = Math.Round(totalDays / closedActions.Count, 1);
+            }
+            ViewBag.AvgClosureDays = avgClosureDays;
+
             ViewBag.TotalKaryawan = totalKaryawan;
             ViewBag.WeeklyTarget = weeklyTarget;
             ViewBag.WeeklyRealization = weekTotal;
@@ -204,6 +218,38 @@ namespace MBS_SAP.Controllers
             ViewBag.MySafetyTalksMonth = mySafetyTalksMonth;
             ViewBag.MyP5msMonth = myP5msMonth;
             ViewBag.MyTotalMonth = myTotalMonth;
+
+            // Individual Gamification Rank
+            string myBadgeName = "Safety Novice";
+            string myBadgeIcon = "bi-shield-slash";
+            string myBadgeColor = "#9ca3af"; // Gray
+            
+            if (myTotalMonth >= 5)
+            {
+                myBadgeName = "Safety Hero (Gold)";
+                myBadgeIcon = "bi-shield-fill-check";
+                myBadgeColor = "#fbbf24"; // Gold
+            }
+            else if (myTotalMonth >= 3)
+            {
+                myBadgeName = "Safety Champion (Silver)";
+                myBadgeIcon = "bi-shield-fill-star";
+                myBadgeColor = "#cbd5e1"; // Silver
+            }
+            else if (myTotalMonth >= 1)
+            {
+                myBadgeName = "Safety Aware (Bronze)";
+                myBadgeIcon = "bi-shield-fill";
+                myBadgeColor = "#b45309"; // Bronze
+            }
+
+            ViewBag.MyBadgeName = myBadgeName;
+            ViewBag.MyBadgeIcon = myBadgeIcon;
+            ViewBag.MyBadgeColor = myBadgeColor;
+
+            // My Contribution Share
+            double myContributionShare = monthTotal > 0 ? (double)myTotalMonth / monthTotal * 100.0 : 0.0;
+            ViewBag.MyContributionShare = Math.Round(myContributionShare, 1);
 
             return View();
         }
