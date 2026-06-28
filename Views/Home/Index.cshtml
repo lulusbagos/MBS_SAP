@@ -13,12 +13,23 @@
             
             <div class="d-flex justify-content-between align-items-center position-relative" style="z-index: 1;">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2);">
-                        <i class="bi bi-person-badge-fill text-white" style="font-size: 24px;"></i>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center position-relative overflow-hidden" style="width: 54px; height: 54px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.25); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                        @if (!string.IsNullOrEmpty(ViewData["UserPathFoto"]?.ToString()))
+                        {
+                            <img src="@ViewData["UserPathFoto"]" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; document.getElementById('home-avatar-fallback').style.display='flex';" />
+                        }
+                        <div id="home-avatar-fallback" class="w-100 h-100 align-items-center justify-content-center" style="display: @(string.IsNullOrEmpty(ViewData["UserPathFoto"]?.ToString()) ? "flex" : "none"); background: linear-gradient(135deg, #0284c7, #3b82f6); color: white; font-weight: 800; font-size: 20px;">
+                            @(!string.IsNullOrEmpty(ViewData["UserNama"]?.ToString()) ? ViewData["UserNama"]?.ToString()?.Substring(0, 1).ToUpper() : "K")
+                        </div>
                     </div>
                     <div>
-                        <div style="color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 500;">Selamat Bekerja,</div>
-                        <h5 style="color: white; font-weight: 800; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">@User.Identity?.Name</h5>
+                        <div style="color: rgba(255,255,255,0.6); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Selamat Bekerja,</div>
+                        <h5 style="color: white; font-weight: 900; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2); font-size: 16px;">@ViewData["UserNama"]</h5>
+                        <div class="d-flex align-items-center gap-2 mt-1" style="font-size: 11px; color: rgba(255,255,255,0.75);">
+                            <span style="background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 4px; font-weight: 700;">@ViewData["UserPerusahaan"]</span>
+                            <span style="opacity: 0.6;">|</span>
+                            <span style="font-weight: 600;">@ViewData["UserJabatan"]</span>
+                        </div>
                     </div>
                 </div>
                 

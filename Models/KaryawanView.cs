@@ -27,5 +27,7 @@ namespace MBS_SAP.Models
         public bool StatusAktif { get; set; }
 
         public int? PerusahaanNodeId { get; set; }
+
+        public string? PathFoto { get; set; }
     }
 }
