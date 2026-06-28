@@ -44,6 +44,10 @@
                         <i class="bi bi-grid-1x2-fill"></i>
                         <span>Dashboard</span>
                     </a>
+                    <a asp-controller="Performance" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Performance" ? "active" : "")">
+                        <i class="bi bi-bar-chart-line-fill"></i>
+                        <span>Pencapaian</span>
+                    </a>
                     <a asp-controller="Timeline" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Timeline" ? "active" : "")">
                         <i class="bi bi-rss-fill"></i>
                         <span>SafeFeed</span>
@@ -178,6 +182,10 @@
                     <a asp-controller="Home" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Home" ? "active" : "")">
                         <i class="bi bi-grid-1x2-fill"></i>
                         <span>Home</span>
+                    </a>
+                    <a asp-controller="Performance" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Performance" ? "active" : "")">
+                        <i class="bi bi-bar-chart-line-fill"></i>
+                        <span>Pencapaian</span>
                     </a>
                     <a asp-controller="Timeline" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Timeline" ? "active" : "")">
                         <i class="bi bi-rss-fill"></i>

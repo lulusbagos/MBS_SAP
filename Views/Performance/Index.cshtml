@@ -1,0 +1,409 @@
+@{
+    ViewData["Title"] = "Pencapaian SAP";
+    var leaderboard = ViewBag.Leaderboard as List<MBS_SAP.Controllers.CompanyLeaderboardViewModel> ?? new List<MBS_SAP.Controllers.CompanyLeaderboardViewModel>();
+    var trend = ViewBag.MonthlyTrend as List<MBS_SAP.Controllers.MonthlyTrendViewModel> ?? new List<MBS_SAP.Controllers.MonthlyTrendViewModel>();
+
+    // Calculate overall weekly and monthly achievement percentage
+    double weeklyProgress = ViewBag.WeeklyTarget > 0 ? (double)ViewBag.WeeklyRealization / ViewBag.WeeklyTarget * 100.0 : 0.0;
+    double monthlyProgress = ViewBag.MonthlyTarget > 0 ? (double)ViewBag.MonthlyRealization / ViewBag.MonthlyTarget * 100.0 : 0.0;
+    weeklyProgress = Math.Min(weeklyProgress, 100.0);
+    monthlyProgress = Math.Min(monthlyProgress, 100.0);
+}
+
+<style>
+    .kpi-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .kpi-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+    .kpi-icon-bg {
+        position: absolute;
+        right: -10px;
+        bottom: -15px;
+        font-size: 80px;
+        color: rgba(255,255,255,0.03);
+        pointer-events: none;
+    }
+    .chart-container {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 24px;
+        height: 100%;
+    }
+    .leaderboard-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+    }
+    .leaderboard-table thead th {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        padding: 10px 14px;
+        border: none;
+    }
+    .leaderboard-row {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        transition: background 0.15s ease;
+    }
+    .leaderboard-row:hover {
+        background: var(--bg-card-hover);
+    }
+    .leaderboard-row td {
+        padding: 14px;
+        vertical-align: middle;
+        font-size: 13px;
+        color: var(--text-main);
+        border: none;
+    }
+    .leaderboard-row td:first-child { border-radius: 12px 0 0 12px; }
+    .leaderboard-row td:last-child { border-radius: 0 12px 12px 0; }
+    .progress-achievement {
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(255,255,255,0.1);
+        overflow: hidden;
+    }
+    .badge-rank {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 12px;
+    }
+    .rank-1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #000; }
+    .rank-2 { background: linear-gradient(135deg, #cbd5e1, #94a3b8); color: #000; }
+    .rank-3 { background: linear-gradient(135deg, #b45309, #78350f); color: #fff; }
+    .rank-default { background: rgba(255,255,255,0.1); color: var(--text-muted); }
+</style>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="animate-fade-in pb-5">
+
+    <!-- Header Banner -->
+    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #0284c7, #0369a1); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <i class="bi bi-bar-chart-line-fill text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px;">PENCAPAIAN KINERJA SAP</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Pantau kepatuhan target mingguan dan statistik bahaya perusahaan secara real-time.</p>
+        </div>
+    </div>
+
+    <!-- KPI Summary Grid -->
+    <div class="row g-3 mb-4">
+        <!-- Total Karyawan -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card">
+                <i class="bi bi-people-fill kpi-icon-bg"></i>
+                <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Total Karyawan</div>
+                <div style="font-size: 28px; font-weight: 900; color: #38bdf8;">@ViewBag.TotalKaryawan</div>
+                <div class="text-muted" style="font-size: 11px;">Karyawan aktif terdaftar</div>
+            </div>
+        </div>
+
+        <!-- Target vs Realisasi Minggu Ini -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card">
+                <i class="bi bi-calendar-event-fill kpi-icon-bg"></i>
+                <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Minggu Ini</div>
+                <div style="font-size: 28px; font-weight: 900; color: #10b981;">@ViewBag.WeeklyRealization <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">/ @ViewBag.WeeklyTarget</span></div>
+                <div class="mt-2">
+                    <div class="progress-achievement">
+                        <div class="progress-bar bg-success" style="width: @(weeklyProgress)%; height: 100%;"></div>
+                    </div>
+                    <span class="text-muted" style="font-size: 10px;">Pencapaian: @Math.Round(weeklyProgress)%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Target vs Realisasi Bulan Ini -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card">
+                <i class="bi bi-calendar-month-fill kpi-icon-bg"></i>
+                <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Bulan Ini</div>
+                <div style="font-size: 28px; font-weight: 900; color: #f59e0b;">@ViewBag.MonthlyRealization <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">/ @ViewBag.MonthlyTarget</span></div>
+                <div class="mt-2">
+                    <div class="progress-achievement">
+                        <div class="progress-bar bg-warning" style="width: @(monthlyProgress)%; height: 100%;"></div>
+                    </div>
+                    <span class="text-muted" style="font-size: 10px;">Pencapaian: @Math.Round(monthlyProgress)%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hazard Aktif (Open) -->
+        <div class="col-6 col-md-3">
+            <div class="kpi-card">
+                <i class="bi bi-exclamation-triangle-fill kpi-icon-bg"></i>
+                <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Hazard Open</div>
+                <div style="font-size: 28px; font-weight: 900; color: #f43f5e;">@ViewBag.TotalOpenHazards <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">Open</span></div>
+                <div class="text-muted" style="font-size: 11px;">@ViewBag.TotalClosedHazards diselesaikan</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-3 mb-4">
+        <!-- Doughnut 1: Proporsi Aktivitas -->
+        <div class="col-12 col-md-6">
+            <div class="chart-container">
+                <h6 class="mb-3" style="font-weight: 700;">Proporsi Aktivitas SAP (Bulan Ini)</h6>
+                <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
+                    <canvas id="proporsiChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Doughnut 2: Hazard Open by Risk -->
+        <div class="col-12 col-md-6">
+            <div class="chart-container">
+                <h6 class="mb-3" style="font-weight: 700;">Hazard Aktif (Open) Berdasarkan Risiko</h6>
+                <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
+                    <canvas id="risikoChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Line Chart: Tren Bulanan -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <h6 class="mb-3" style="font-weight: 700;">Tren Aktivitas SAP (6 Bulan Terakhir)</h6>
+                <div style="height: 300px; position: relative;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-container">
+                <h6 class="mb-3" style="font-weight: 700;">Leaderboard Kepatuhan Perusahaan (Bulan Ini)</h6>
+                <div class="table-responsive">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">Rank</th>
+                                <th>Perusahaan</th>
+                                <th style="width: 120px;" class="text-center">Karyawan Aktif</th>
+                                <th style="width: 140px;" class="text-center">Aktivitas Dilaporkan</th>
+                                <th style="width: 140px;" class="text-center">Target Kepatuhan</th>
+                                <th class="text-end" style="width: 200px;">Pencapaian (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                int rank = 1;
+                                foreach (var comp in leaderboard)
+                                {
+                                    string rankClass = rank switch
+                                    {
+                                        1 => "rank-1",
+                                        2 => "rank-2",
+                                        3 => "rank-3",
+                                        _ => "rank-default"
+                                    };
+                                    <tr class="leaderboard-row">
+                                        <td>
+                                            <div class="badge-rank @rankClass">@rank</div>
+                                        </td>
+                                        <td style="font-weight: 700;">@comp.CompanyName</td>
+                                        <td class="text-center" style="font-family: monospace; font-weight: 600;">@comp.ActiveEmployees</td>
+                                        <td class="text-center" style="font-family: monospace; font-weight: 600; color: #38bdf8;">@comp.TotalSubmissions</td>
+                                        <td class="text-center" style="font-family: monospace; font-weight: 600; color: var(--text-muted);">@comp.TargetSubmissions</td>
+                                        <td>
+                                            <div class="d-flex align-items-center justify-content-end gap-2">
+                                                <div class="flex-grow-1" style="max-width: 100px;">
+                                                    <div class="progress-achievement">
+                                                        @{
+                                                            string barColor = "bg-danger";
+                                                            if (comp.AchievementRate >= 100) barColor = "bg-success";
+                                                            else if (comp.AchievementRate >= 50) barColor = "bg-warning";
+                                                        }
+                                                        <div class="progress-bar @barColor" style="width: @Math.Min(comp.AchievementRate, 100.0)%; height: 100%;"></div>
+                                                    </div>
+                                                </div>
+                                                <span style="font-family: monospace; font-weight: 800; font-size: 13px; color: @(comp.AchievementRate >= 100 ? "#10b981" : comp.AchievementRate >= 50 ? "#f59e0b" : "#f43f5e")">
+                                                    @comp.AchievementRate%
+                                                </span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    rank++;
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Charts Rendering Script -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                       (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        
+        const textColor = isDark ? '#cbd5e1' : '#334155';
+        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+
+        // 1. Chart Proporsi Aktivitas
+        const ctxProp = document.getElementById('proporsiChart').getContext('2d');
+        new Chart(ctxProp, {
+            type: 'doughnut',
+            data: {
+                labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'P5M'],
+                datasets: [{
+                    data: [@ViewBag.MonthHazards, @ViewBag.MonthInspections, @ViewBag.MonthSafetyTalks, @ViewBag.MonthP5ms],
+                    backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#10b981'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: textColor, font: { weight: 'bold', size: 11 } }
+                    }
+                }
+            }
+        });
+
+        // 2. Chart Risiko Hazard Open
+        const ctxRisiko = document.getElementById('risikoChart').getContext('2d');
+        new Chart(ctxRisiko, {
+            type: 'pie',
+            data: {
+                labels: ['Ringan (Low)', 'Sedang (Medium)', 'Berat (High)', 'Sangat Berat (Extreme)'],
+                datasets: [{
+                    data: [@ViewBag.OpenLow, @ViewBag.OpenMedium, @ViewBag.OpenHigh, @ViewBag.OpenExtreme],
+                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#7f1d1d'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: textColor, font: { weight: 'bold', size: 11 } }
+                    }
+                }
+            }
+        });
+
+        // 3. Chart Tren Bulanan
+        const ctxTrend = document.getElementById('trendChart').getContext('2d');
+        
+        const labels = [];
+        const hazardData = [];
+        const inspectData = [];
+        const talkData = [];
+        const p5mData = [];
+
+        @foreach (var item in trend)
+        {
+            <text>
+                labels.push('@item.MonthLabel');
+                hazardData.push(@item.Hazards);
+                inspectData.push(@item.Inspections);
+                talkData.push(@item.SafetyTalks);
+                p5mData.push(@item.P5ms);
+            </text>
+        }
+
+        new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Hazard',
+                        data: hazardData,
+                        borderColor: '#f43f5e',
+                        backgroundColor: 'rgba(244,63,94,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 3
+                    },
+                    {
+                        label: 'Inspeksi',
+                        data: inspectData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59,130,246,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 3
+                    },
+                    {
+                        label: 'Safety Talk',
+                        data: talkData,
+                        borderColor: '#a855f7',
+                        backgroundColor: 'rgba(168,85,247,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 3
+                    },
+                    {
+                        label: 'P5M',
+                        data: p5mData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16,185,129,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { color: textColor, font: { weight: 'bold' } }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: gridColor },
+                        ticks: { color: textColor, font: { weight: 'bold' } }
+                    },
+                    y: {
+                        grid: { color: gridColor },
+                        ticks: { color: textColor, font: { weight: 'bold' } }
+                    }
+                }
+            }
+        });
+    });
+</script>
