@@ -456,20 +456,7 @@ ORDER BY nama_perusahaan";
 
         private async Task<int> CreateCompanyBroadcastNotificationAsync(int perusahaanId, string title, string message, string url)
         {
-            var recipientNiks = await _context.AppUsers
-                .Where(a => a.IdPerusahaan == perusahaanId && !string.IsNullOrEmpty(a.Nik))
-                .Select(a => a.Nik)
-                .Distinct()
-                .ToListAsync();
-
-            if (recipientNiks.Count == 0)
-            {
-                recipientNiks = await _context.Karyawans
-                    .Where(k => k.StatusAktif && k.IdPerusahaan == perusahaanId)
-                    .Select(k => k.NoNik)
-                    .Distinct()
-                    .ToListAsync();
-            }
+            var recipientNiks = await GetCompanyNotificationRecipientsAsync(perusahaanId);
 
             if (recipientNiks.Count == 0)
             {
@@ -490,6 +477,65 @@ ORDER BY nama_perusahaan";
 
             _context.Notifications.AddRange(notifications);
             return notifications.Count;
+        }
+
+        private async Task<List<string>> GetCompanyNotificationRecipientsAsync(int perusahaanId)
+        {
+            int? idPjo = null;
+            using (var conn = _context.Database.GetDbConnection())
+            {
+                if (conn.State != System.Data.ConnectionState.Open)
+                {
+                    await conn.OpenAsync();
+                }
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT id_pjo FROM [ONE_DB_MITRA].[dbo].[tbl_m_perusahaan] WHERE id = @companyId";
+                var p = cmd.CreateParameter();
+                p.ParameterName = "@companyId";
+                p.Value = perusahaanId;
+                cmd.Parameters.Add(p);
+                
+                var val = await cmd.ExecuteScalarAsync();
+                if (val != null && val != DBNull.Value)
+                {
+                    idPjo = Convert.ToInt32(val);
+                }
+            }
+
+            string? pjoNik = null;
+            if (idPjo.HasValue && idPjo.Value > 0)
+            {
+                pjoNik = await _context.Karyawans
+                    .Where(k => k.StatusAktif && k.IdKaryawan == idPjo.Value)
+                    .Select(k => k.NoNik)
+                    .FirstOrDefaultAsync();
+            }
+
+            var recipientNiks = new List<string>();
+
+            if (!string.IsNullOrEmpty(pjoNik))
+            {
+                recipientNiks.Add(pjoNik);
+            }
+            else
+            {
+                recipientNiks = await _context.AppUsers
+                    .Where(a => a.IdPerusahaan == perusahaanId && !string.IsNullOrEmpty(a.Nik))
+                    .Select(a => a.Nik)
+                    .Distinct()
+                    .ToListAsync();
+
+                if (recipientNiks.Count == 0)
+                {
+                    recipientNiks = await _context.Karyawans
+                        .Where(k => k.StatusAktif && k.IdPerusahaan == perusahaanId)
+                        .Select(k => k.NoNik)
+                        .Distinct()
+                        .ToListAsync();
+                }
+            }
+
+            return recipientNiks;
         }
 
         [HttpGet]
