@@ -789,7 +789,32 @@
                 if (merged.length === 0) {
                     resultsContainer.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">PJA tidak ditemukan.</div>');
                 } else {
-                    merged.forEach(function(k) {
+                    const companies = merged.filter(x => !!x.companyOnly);
+                    const employees = merged.filter(x => !x.companyOnly);
+
+                    if (companies.length > 0) {
+                        resultsContainer.append(`
+                            <div class="dropdown-header text-primary fw-bold px-3 py-2 bg-dark-card border-bottom" style="font-size: 11px; letter-spacing: 0.5px; opacity: 0.9; cursor: default;">
+                                <i class="bi bi-building me-1"></i> PILIH PERUSAHAAN (COMPANY ONLY)
+                            </div>
+                        `);
+                        companies.forEach(function(k) {
+                            appendItem(k);
+                        });
+                    }
+
+                    if (employees.length > 0) {
+                        resultsContainer.append(`
+                            <div class="dropdown-header text-success fw-bold px-3 py-2 bg-dark-card border-bottom border-top" style="font-size: 11px; letter-spacing: 0.5px; opacity: 0.9; cursor: default; margin-top: 5px;">
+                                <i class="bi bi-person-badge me-1"></i> PILIH KARYAWAN / PJO (INDIVIDU)
+                            </div>
+                        `);
+                        employees.forEach(function(k) {
+                            appendItem(k);
+                        });
+                    }
+
+                    function appendItem(k) {
                         const init = (k.nama || '-').charAt(0);
                         const safeNik = (k.nik || '').replace(/'/g, "\\'");
                         const safeNama = (k.nama || '').replace(/'/g, "\\'");
@@ -819,7 +844,7 @@
                             </div>
                         `);
                         resultsContainer.append(item);
-                    });
+                    }
                 }
                 resultsContainer.show();
             });
