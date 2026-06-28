@@ -99,7 +99,6 @@ namespace MBS_SAP.Controllers
 SELECT id, nama_perusahaan, pjo, id_pjo
 FROM [ONE_DB_MITRA].[dbo].[tbl_m_perusahaan]
 WHERE status_aktif = '1'
-    AND pjo IS NOT NULL
 " + (userCompanyId.HasValue ? " AND id = @companyId" : "") + @"
 ORDER BY nama_perusahaan";
 
@@ -133,12 +132,12 @@ ORDER BY nama_perusahaan";
                 if (item.IdPjo.HasValue && item.IdPjo.Value > 0)
                 {
                     // Prioritas mapping: id_pjo dari tbl_m_perusahaan -> id_karyawan.
+                    // Hapus filter k.IdPerusahaan agar bisa memetakan karyawan yang dipinjamkan/berbeda entitas perusahaan (misal Induk & Anak Perusahaan)
                     var mappedById = await (from k in _context.Karyawans
                                             join p in _context.Personals on k.IdPersonal equals p.IdPersonal
                                             join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
                                             from d in dg.DefaultIfEmpty()
                                             where k.StatusAktif == true
-                                                  && k.IdPerusahaan == item.PerusahaanId
                                                   && k.IdKaryawan == item.IdPjo.Value
                                             select new
                                             {
@@ -162,6 +161,7 @@ ORDER BY nama_perusahaan";
                 if (!string.IsNullOrEmpty(pjoName))
                 {
                     // Fallback mapping by nama jika id_pjo belum match.
+                    // Coba match dengan perusahaan yang sama dulu
                     var mapped = await (from k in _context.Karyawans
                                         join p in _context.Personals on k.IdPersonal equals p.IdPersonal
                                         join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
@@ -181,6 +181,28 @@ ORDER BY nama_perusahaan";
                                             source = "tbl_m_perusahaan.pjo"
                                         }).FirstOrDefaultAsync();
 
+                    if (mapped == null)
+                    {
+                        // Fallback: match by nama secara global lintas perusahaan
+                        mapped = await (from k in _context.Karyawans
+                                        join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                        join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
+                                        from d in dg.DefaultIfEmpty()
+                                        where k.StatusAktif == true
+                                              && p.NamaLengkap.ToLower() == pjoName.ToLower()
+                                        select new
+                                        {
+                                            nik = k.NoNik,
+                                            nama = p.NamaLengkap,
+                                            departemen = d != null ? d.NamaDepartemen : "GENERAL",
+                                            jabatan = "PJO",
+                                            perusahaan = item.NamaPerusahaan,
+                                            companyId = item.PerusahaanId,
+                                            companyOnly = false,
+                                            source = "tbl_m_perusahaan.pjo.global"
+                                        }).FirstOrDefaultAsync();
+                    }
+
                     if (mapped != null)
                     {
                         result.Add(mapped);
@@ -188,18 +210,35 @@ ORDER BY nama_perusahaan";
                     }
                 }
 
-                // Fallback: perusahaan aktif belum terdaftar PJO (atau belum bisa dipetakan ke karyawan)
-                result.Add(new
+                // Fallback: perusahaan aktif belum terdaftar PJO atau tidak ketemu di database karyawan.
+                if (!string.IsNullOrEmpty(pjoName))
                 {
-                    nik = $"COMPANY:{item.PerusahaanId}",
-                    nama = item.NamaPerusahaan,
-                    departemen = "PERUSAHAAN",
-                    jabatan = string.IsNullOrEmpty(pjoName) ? "PJO BELUM TERDAFTAR" : $"PJO: {pjoName}",
-                    perusahaan = item.NamaPerusahaan,
-                    companyId = item.PerusahaanId,
-                    companyOnly = true,
-                    source = "tbl_m_perusahaan"
-                });
+                    result.Add(new
+                    {
+                        nik = $"COMPANY:{item.PerusahaanId}",
+                        nama = pjoName, // Tampilkan nama PJO
+                        departemen = "PERUSAHAAN",
+                        jabatan = "PJO",
+                        perusahaan = item.NamaPerusahaan,
+                        companyId = item.PerusahaanId,
+                        companyOnly = true,
+                        source = "tbl_m_perusahaan (PJO Nama)"
+                    });
+                }
+                else
+                {
+                    result.Add(new
+                    {
+                        nik = $"COMPANY:{item.PerusahaanId}",
+                        nama = item.NamaPerusahaan, // Nama PJO kosong, tampilkan nama perusahaan
+                        departemen = "PERUSAHAAN",
+                        jabatan = "PJO BELUM TERDAFTAR",
+                        perusahaan = item.NamaPerusahaan,
+                        companyId = item.PerusahaanId,
+                        companyOnly = true,
+                        source = "tbl_m_perusahaan (No PJO)"
+                    });
+                }
             }
 
             return Json(result);

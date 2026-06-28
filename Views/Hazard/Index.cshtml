@@ -561,7 +561,7 @@
             let initial = nama.charAt(0).toUpperCase();
             $('#pjaInitial').text(initial);
             $('#pjaDisplayNama').text(nama);
-            $('#pjaDisplayJabatan').text(companyOnly ? 'PENANGGUNG JAWAB PERUSAHAAN' : (jabatan || '-'));
+            $('#pjaDisplayJabatan').text(companyOnly ? (jabatan || 'PENANGGUNG JAWAB PERUSAHAAN') : (jabatan || '-'));
             $('#pjaDisplayDept').text(dept || '-');
             $('#pjaDisplayPerusahaan').text(perusahaan || '-');
 
