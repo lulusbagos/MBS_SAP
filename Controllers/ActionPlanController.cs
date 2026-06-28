@@ -40,13 +40,28 @@ namespace MBS_SAP.Controllers
 
             var query = _context.ActionPlans.Where(r => !r.IsDeleted);
 
-            if (companyId.HasValue)
+            if (!isAdmin && !string.IsNullOrEmpty(userNik))
             {
-                // Tampilkan semua record perusahaan yang sama ATAU data lama (PerusahaanId null = sebelum ada tracking company)
-                query = query.Where(r =>
-                    r.PerusahaanId == companyId.Value ||
-                    r.PerusahaanId == null
-                );
+                if (companyId.HasValue)
+                {
+                    // Hanya tampilkan data dari perusahaan yang sama DAN yang diarahkan kepadanya (PJA/PIC/Pembuat/Umum Perusahaan)
+                    query = query.Where(r =>
+                        r.PerusahaanId == companyId.Value &&
+                        (r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik || string.IsNullOrEmpty(r.NikPja))
+                    );
+                }
+                else
+                {
+                    // Jika user tidak memiliki ID perusahaan, tampilkan yang terkait dengannya langsung
+                    query = query.Where(r =>
+                        r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik
+                    );
+                }
+            }
+            else if (isAdmin && companyId.HasValue)
+            {
+                // Admin masih bisa melihat data perusahaan lain atau kosong (opsional)
+                // Jika ingin admin tetap melihat seluruh data tanpa filter, biarkan kosong.
             }
 
             var reports = await query
