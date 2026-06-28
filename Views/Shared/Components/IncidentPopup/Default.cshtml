@@ -5,7 +5,8 @@
     {
         return;
     }
-    var excerpt = (Model.Konten ?? "").Length > 200 ? (Model.Konten.Substring(0, 200) + "…") : Model.Konten;
+    var konten = Model.Konten ?? "";
+    var excerpt = konten.Length > 200 ? (konten.Substring(0, 200) + "…") : konten;
 
     // Kategori badge color mapping
     var kategoriColor = (Model.Kategori ?? "").ToLower() switch
