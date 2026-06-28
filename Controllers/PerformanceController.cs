@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MBS_SAP.Data;
 using MBS_SAP.Models;
+using ClosedXML.Excel;
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,6 +31,7 @@ namespace MBS_SAP.Controllers
             var compIdStr = User.FindFirst("CompanyId")?.Value;
             int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
             var isAdmin = User.IsInRole("Admin");
+            var jobTitle = User.FindFirst("JobTitle")?.Value;
 
             // 1. Total Karyawan Aktif
             var totalKaryawan = await _context.Karyawans
@@ -165,7 +168,7 @@ namespace MBS_SAP.Controllers
             int myTotalWeek = myHazardsWeek + myInspectionsWeek + mySafetyTalksWeek + myP5msWeek;
             int myTotalMonth = myHazardsMonth + myInspectionsMonth + mySafetyTalksMonth + myP5msMonth;
 
-            // 7. Average Closure Days for Action Plans
+            // 9. Average Closure Days for Action Plans
             var closedActions = await _context.ActionPlans
                 .Where(a => !a.IsDeleted && a.Status == "Closed" && a.TanggalPerbaikan != null && (companyId == null || a.PerusahaanId == companyId.Value))
                 .Select(a => new { a.CreatedAt, a.TanggalPerbaikan })
@@ -222,25 +225,25 @@ namespace MBS_SAP.Controllers
             // Individual Gamification Rank
             string myBadgeName = "Safety Novice";
             string myBadgeIcon = "bi-shield-slash";
-            string myBadgeColor = "#9ca3af"; // Gray
+            string myBadgeColor = "#9ca3af";
             
             if (myTotalMonth >= 5)
             {
                 myBadgeName = "Safety Hero (Gold)";
                 myBadgeIcon = "bi-shield-fill-check";
-                myBadgeColor = "#fbbf24"; // Gold
+                myBadgeColor = "#fbbf24";
             }
             else if (myTotalMonth >= 3)
             {
                 myBadgeName = "Safety Champion (Silver)";
                 myBadgeIcon = "bi-shield-fill-star";
-                myBadgeColor = "#cbd5e1"; // Silver
+                myBadgeColor = "#cbd5e1";
             }
             else if (myTotalMonth >= 1)
             {
                 myBadgeName = "Safety Aware (Bronze)";
                 myBadgeIcon = "bi-shield-fill";
-                myBadgeColor = "#b45309"; // Bronze
+                myBadgeColor = "#b45309";
             }
 
             ViewBag.MyBadgeName = myBadgeName;
@@ -251,7 +254,302 @@ namespace MBS_SAP.Controllers
             double myContributionShare = monthTotal > 0 ? (double)myTotalMonth / monthTotal * 100.0 : 0.0;
             ViewBag.MyContributionShare = Math.Round(myContributionShare, 1);
 
+            // ==================== 10. Safety Role & Monitoring Queries ====================
+            bool isSafetyRole = (jobTitle != null && jobTitle.Contains("safety", StringComparison.OrdinalIgnoreCase)) || isAdmin;
+            ViewBag.IsSafetyRole = isSafetyRole;
+
+            if (isSafetyRole)
+            {
+                // Query active employees of this company
+                var allKaryawansQuery = from k in _context.Karyawans
+                                        join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                        join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
+                                        from d in dg.DefaultIfEmpty()
+                                        join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
+                                        from c in cg.DefaultIfEmpty()
+                                        where k.StatusAktif == true && (companyId == null || k.IdPerusahaan == companyId.Value)
+                                        select new
+                                        {
+                                            k.NoNik,
+                                            p.NamaLengkap,
+                                            NamaDepartemen = d != null ? d.NamaDepartemen : "General",
+                                            NamaPerusahaan = c != null ? c.NamaPerusahaan : "Unknown"
+                                        };
+                var activeKaryawans = await allKaryawansQuery.ToListAsync();
+
+                // Get submitters for current week
+                var weekSubmitters = new HashSet<string>();
+                var weekHazNiks = await hazards.Where(h => h.CreatedAt >= startOfWeek).Select(h => h.Nik).Distinct().ToListAsync();
+                var weekInsNiks = await inspections.Where(i => i.CreatedAt >= startOfWeek).Select(i => i.Nik).Distinct().ToListAsync();
+                var weekSafNiks = await safetyTalks.Where(s => s.CreatedAt >= startOfWeek).Select(s => s.Nik).Distinct().ToListAsync();
+                var weekP5mNiks = await p5ms.Where(p => p.CreatedAt >= startOfWeek).Select(p => p.Nik).Distinct().ToListAsync();
+                
+                foreach (var n in weekHazNiks.Concat(weekInsNiks).Concat(weekSafNiks).Concat(weekP5mNiks))
+                {
+                    if (!string.IsNullOrEmpty(n)) weekSubmitters.Add(n.Trim());
+                }
+
+                // Get submitters for current month
+                var monthSubmitters = new Dictionary<string, int>();
+                var monthHazNiks = await hazards.Where(h => h.CreatedAt >= startOfMonth).Select(h => new { h.Nik }).ToListAsync();
+                var monthInsNiks = await inspections.Where(i => i.CreatedAt >= startOfMonth).Select(i => new { i.Nik }).ToListAsync();
+                var monthSafNiks = await safetyTalks.Where(s => s.CreatedAt >= startOfMonth).Select(s => new { s.Nik }).ToListAsync();
+                var monthP5mNiks = await p5ms.Where(p => p.CreatedAt >= startOfMonth).Select(p => new { p.Nik }).ToListAsync();
+
+                foreach (var item in monthHazNiks.Concat(monthInsNiks).Concat(monthSafNiks).Concat(monthP5mNiks))
+                {
+                    if (string.IsNullOrEmpty(item.Nik)) continue;
+                    var cleanNik = item.Nik.Trim();
+                    if (monthSubmitters.ContainsKey(cleanNik))
+                        monthSubmitters[cleanNik]++;
+                    else
+                        monthSubmitters[cleanNik] = 1;
+                }
+
+                var uncompliantWeekList = new List<UncompliantEmployeeViewModel>();
+                var uncompliantMonthList = new List<UncompliantEmployeeViewModel>();
+
+                foreach (var k in activeKaryawans)
+                {
+                    var cleanNik = k.NoNik.Trim();
+                    int monthCount = monthSubmitters.ContainsKey(cleanNik) ? monthSubmitters[cleanNik] : 0;
+                    bool hasWeekSub = weekSubmitters.Contains(cleanNik);
+
+                    if (!hasWeekSub)
+                    {
+                        uncompliantWeekList.Add(new UncompliantEmployeeViewModel
+                        {
+                            Nik = k.NoNik,
+                            Nama = k.NamaLengkap,
+                            Departemen = k.NamaDepartemen,
+                            Perusahaan = k.NamaPerusahaan,
+                            SubmissionCount = 0
+                        });
+                    }
+
+                    if (monthCount < 4)
+                    {
+                        uncompliantMonthList.Add(new UncompliantEmployeeViewModel
+                        {
+                            Nik = k.NoNik,
+                            Nama = k.NamaLengkap,
+                            Departemen = k.NamaDepartemen,
+                            Perusahaan = k.NamaPerusahaan,
+                            SubmissionCount = monthCount
+                        });
+                    }
+                }
+
+                ViewBag.UncompliantWeek = uncompliantWeekList;
+                ViewBag.UncompliantMonth = uncompliantMonthList;
+
+                // 11. Company Activity History
+                var histHazards = await hazards
+                    .OrderByDescending(h => h.CreatedAt)
+                    .Take(25)
+                    .Select(h => new PerformanceHistoryViewModel
+                    {
+                        Type = "Hazard",
+                        Title = "Hazard: " + (h.Lokasi ?? h.Area ?? "Umum"),
+                        Description = h.Temuan ?? "",
+                        Date = h.CreatedAt,
+                        Nik = h.Nik,
+                        User = h.Nama
+                    }).ToListAsync();
+
+                var histInspections = await inspections
+                    .OrderByDescending(i => i.CreatedAt)
+                    .Take(25)
+                    .Select(i => new PerformanceHistoryViewModel
+                    {
+                        Type = "Inspection",
+                        Title = "Inspeksi: " + (i.JenisInspeksi ?? "Umum"),
+                        Description = "Area " + (i.Area ?? "umum"),
+                        Date = i.CreatedAt,
+                        Nik = i.Nik,
+                        User = i.Nama
+                    }).ToListAsync();
+
+                var histSafetyTalks = await safetyTalks
+                    .OrderByDescending(s => s.CreatedAt)
+                    .Take(25)
+                    .Select(s => new PerformanceHistoryViewModel
+                    {
+                        Type = "SafetyTalk",
+                        Title = "Safety Talk: " + (s.Judul ?? "Talk"),
+                        Description = s.Keterangan ?? "",
+                        Date = s.CreatedAt,
+                        Nik = s.Nik,
+                        User = s.Nama
+                    }).ToListAsync();
+
+                var histP5ms = await p5ms
+                    .OrderByDescending(p => p.CreatedAt)
+                    .Take(25)
+                    .Select(p => new PerformanceHistoryViewModel
+                    {
+                        Type = "P5m",
+                        Title = "P5M: " + (p.Judul ?? "Pre-Start"),
+                        Description = p.Keterangan ?? "",
+                        Date = p.CreatedAt,
+                        Nik = p.Nik,
+                        User = p.Nama
+                    }).ToListAsync();
+
+                var companyHistory = histHazards
+                    .Concat(histInspections)
+                    .Concat(histSafetyTalks)
+                    .Concat(histP5ms)
+                    .OrderByDescending(x => x.Date)
+                    .Take(50)
+                    .ToList();
+
+                ViewBag.CompanyHistory = companyHistory;
+            }
+
             return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadUncompliantReport(string range = "week")
+        {
+            var jobTitle = User.FindFirst("JobTitle")?.Value;
+            var isAdmin = User.IsInRole("Admin");
+            bool isSafetyRole = (jobTitle != null && jobTitle.Contains("safety", StringComparison.OrdinalIgnoreCase)) || isAdmin;
+
+            if (!isSafetyRole)
+            {
+                return Forbid();
+            }
+
+            var compIdStr = User.FindFirst("CompanyId")?.Value;
+            int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
+
+            // Date ranges
+            var now = DateTime.Now;
+            var startOfWeek = DateTime.Today.AddDays(-((int)DateTime.Today.DayOfWeek + 6) % 7); // Monday
+            var startOfMonth = new DateTime(now.Year, now.Month, 1);
+            var targetStart = range == "month" ? startOfMonth : startOfWeek;
+
+            // Query active employees
+            var allKaryawansQuery = from k in _context.Karyawans
+                                    join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                    join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
+                                    from d in dg.DefaultIfEmpty()
+                                    join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
+                                    from c in cg.DefaultIfEmpty()
+                                    where k.StatusAktif == true && (companyId == null || k.IdPerusahaan == companyId.Value)
+                                    select new
+                                    {
+                                        k.NoNik,
+                                        p.NamaLengkap,
+                                        NamaDepartemen = d != null ? d.NamaDepartemen : "General",
+                                        NamaPerusahaan = c != null ? c.NamaPerusahaan : "Unknown"
+                                    };
+            var activeKaryawans = await allKaryawansQuery.ToListAsync();
+
+            // Submissions query
+            var hazards = _context.HazardReports.Where(h => !h.IsDeleted && (companyId == null || h.PerusahaanId == companyId) && h.CreatedAt >= targetStart);
+            var inspections = _context.Inspections.Where(i => !i.IsDeleted && (companyId == null || i.PerusahaanId == companyId) && i.CreatedAt >= targetStart);
+            var safetyTalks = _context.SafetyTalks.Where(s => !s.IsDeleted && (companyId == null || s.PerusahaanId == companyId) && s.CreatedAt >= targetStart);
+            var p5ms = _context.P5ms.Where(p => !p.IsDeleted && (companyId == null || p.PerusahaanId == companyId) && p.CreatedAt >= targetStart);
+
+            var submitters = new Dictionary<string, int>();
+            var hazNiks = await hazards.Select(h => h.Nik).ToListAsync();
+            var insNiks = await inspections.Select(i => i.Nik).ToListAsync();
+            var safNiks = await safetyTalks.Select(s => s.Nik).ToListAsync();
+            var p5mNiks = await p5ms.Select(p => p.Nik).ToListAsync();
+
+            foreach (var nik in hazNiks.Concat(insNiks).Concat(safNiks).Concat(p5mNiks))
+            {
+                if (string.IsNullOrEmpty(nik)) continue;
+                var cleanNik = nik.Trim();
+                if (submitters.ContainsKey(cleanNik))
+                    submitters[cleanNik]++;
+                else
+                    submitters[cleanNik] = 1;
+            }
+
+            var uncompliantList = new List<UncompliantEmployeeViewModel>();
+            foreach (var k in activeKaryawans)
+            {
+                var cleanNik = k.NoNik.Trim();
+                int count = submitters.ContainsKey(cleanNik) ? submitters[cleanNik] : 0;
+
+                if (range == "week" && count == 0)
+                {
+                    uncompliantList.Add(new UncompliantEmployeeViewModel
+                    {
+                        Nik = k.NoNik,
+                        Nama = k.NamaLengkap,
+                        Departemen = k.NamaDepartemen,
+                        Perusahaan = k.NamaPerusahaan,
+                        SubmissionCount = 0
+                    });
+                }
+                else if (range == "month" && count < 4)
+                {
+                    uncompliantList.Add(new UncompliantEmployeeViewModel
+                    {
+                        Nik = k.NoNik,
+                        Nama = k.NamaLengkap,
+                        Departemen = k.NamaDepartemen,
+                        Perusahaan = k.NamaPerusahaan,
+                        SubmissionCount = count
+                    });
+                }
+            }
+
+            // Generate ClosedXML Excel
+            using (var workbook = new XLWorkbook())
+            {
+                var worksheet = workbook.Worksheets.Add("Belum Buat SAP");
+                
+                worksheet.Cell(1, 1).Value = "LAPORAN KARYAWAN BELUM MEMENUHI KEPATUHAN SAP";
+                worksheet.Cell(1, 1).Style.Font.Bold = true;
+                worksheet.Cell(1, 1).Style.Font.FontSize = 14;
+                
+                worksheet.Cell(2, 1).Value = $"Periode: {(range == "week" ? "Minggu Ini (Target: 1 Laporan)" : "Bulan Ini (Target: 4 Laporan)")}";
+                worksheet.Cell(2, 1).Style.Font.Italic = true;
+                
+                worksheet.Cell(3, 1).Value = $"Tanggal Export: {DateTime.Now.ToString("dd MMM yyyy HH:mm")}";
+                worksheet.Cell(3, 1).Style.Font.Italic = true;
+
+                worksheet.Cell(5, 1).Value = "No NIK";
+                worksheet.Cell(5, 2).Value = "Nama Lengkap";
+                worksheet.Cell(5, 3).Value = "Departemen";
+                worksheet.Cell(5, 4).Value = "Perusahaan";
+                worksheet.Cell(5, 5).Value = "Jumlah Laporan Masuk";
+                worksheet.Cell(5, 6).Value = "Status Target";
+
+                var headerRange = worksheet.Range(5, 1, 5, 6);
+                headerRange.Style.Font.Bold = true;
+                headerRange.Style.Fill.BackgroundColor = XLColor.AirForceBlue;
+                headerRange.Style.Font.FontColor = XLColor.White;
+
+                int row = 6;
+                foreach (var emp in uncompliantList)
+                {
+                    worksheet.Cell(row, 1).Value = emp.Nik;
+                    worksheet.Cell(row, 2).Value = emp.Nama;
+                    worksheet.Cell(row, 3).Value = emp.Departemen;
+                    worksheet.Cell(row, 4).Value = emp.Perusahaan;
+                    worksheet.Cell(row, 5).Value = emp.SubmissionCount;
+                    worksheet.Cell(row, 6).Value = range == "week" ? "Belum Membuat SAP (0/1)" : $"Kurang Laporan ({emp.SubmissionCount}/4)";
+
+                    row++;
+                }
+
+                worksheet.Columns().AdjustToContents();
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    var content = stream.ToArray();
+                    string fileName = $"Belum_Buat_SAP_{range}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+                }
+            }
         }
     }
 
@@ -272,5 +570,24 @@ namespace MBS_SAP.Controllers
         public int Inspections { get; set; }
         public int SafetyTalks { get; set; }
         public int P5ms { get; set; }
+    }
+
+    public class UncompliantEmployeeViewModel
+    {
+        public string Nik { get; set; } = string.Empty;
+        public string Nama { get; set; } = string.Empty;
+        public string Departemen { get; set; } = string.Empty;
+        public string Perusahaan { get; set; } = string.Empty;
+        public int SubmissionCount { get; set; }
+    }
+
+    public class PerformanceHistoryViewModel
+    {
+        public string Type { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
+        public string Nik { get; set; } = string.Empty;
+        public string User { get; set; } = string.Empty;
     }
 }
