@@ -48,6 +48,10 @@
     .role-select:focus { border-color: var(--color-primary); outline: none; }
     .role-badge-admin { background: rgba(168,85,247,0.15); color: #a855f7; }
     .role-badge-operator { background: rgba(56,189,248,0.15); color: #38bdf8; }
+    .role-badge-owner { background: rgba(16,185,129,0.15); color: #10b981; }
+    .role-badge-maincon { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .role-badge-subcon { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .role-badge-vendor { background: rgba(107,114,128,0.15); color: #9ca3af; }
 
     /* Mobile cards */
     .user-card-mobile {
@@ -89,17 +93,33 @@
 
     <!-- Stats -->
     <div class="d-flex gap-3 mb-4 flex-wrap">
-        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 100px;">
-            <div style="font-size: 24px; font-weight: 900; color: var(--color-primary);">@Model.Count()</div>
-            <div class="text-muted" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Total User</div>
+        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
+            <div style="font-size: 20px; font-weight: 900; color: var(--color-primary);">@Model.Count()</div>
+            <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Total User</div>
         </div>
-        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 100px;">
-            <div style="font-size: 24px; font-weight: 900; color: #a855f7;">@Model.Count(u => u.Role == "Admin")</div>
-            <div class="text-muted" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Admin</div>
+        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
+            <div style="font-size: 20px; font-weight: 900; color: #a855f7;">@Model.Count(u => u.Role == "Admin")</div>
+            <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Admin</div>
         </div>
-        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 100px;">
-            <div style="font-size: 24px; font-weight: 900; color: #38bdf8;">@Model.Count(u => u.Role != "Admin")</div>
-            <div class="text-muted" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Operator</div>
+        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
+            <div style="font-size: 20px; font-weight: 900; color: #10b981;">@Model.Count(u => u.Role == "Owner")</div>
+            <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Owner</div>
+        </div>
+        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
+            <div style="font-size: 20px; font-weight: 900; color: #f59e0b;">@Model.Count(u => u.Role == "Maincon")</div>
+            <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Maincon</div>
+        </div>
+        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
+            <div style="font-size: 20px; font-weight: 900; color: #3b82f6;">@Model.Count(u => u.Role == "Subcon")</div>
+            <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Subcon</div>
+        </div>
+        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
+            <div style="font-size: 20px; font-weight: 900; color: #9ca3af;">@Model.Count(u => u.Role == "Vendor")</div>
+            <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Vendor</div>
+        </div>
+        <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
+            <div style="font-size: 20px; font-weight: 900; color: #38bdf8;">@Model.Count(u => u.Role == "Operator" || (u.Role != "Admin" && u.Role != "Owner" && u.Role != "Maincon" && u.Role != "Subcon" && u.Role != "Vendor"))</div>
+            <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Operator</div>
         </div>
     </div>
 
@@ -141,7 +161,18 @@
                         <td style="font-family: monospace; font-weight: 600; font-size: 12px;">@user.Nik</td>
                         <td style="font-size: 12px;">@user.Departemen</td>
                         <td>
-                            <span class="severity-badge @(currentRole == "Admin" ? "role-badge-admin" : "role-badge-operator")" style="font-size: 11px; padding: 4px 12px; border-radius: 8px; font-weight: 700;">
+                            @{
+                                var badgeClass = currentRole switch
+                                {
+                                    "Admin" => "role-badge-admin",
+                                    "Owner" => "role-badge-owner",
+                                    "Maincon" => "role-badge-maincon",
+                                    "Subcon" => "role-badge-subcon",
+                                    "Vendor" => "role-badge-vendor",
+                                    _ => "role-badge-operator"
+                                };
+                            }
+                            <span class="severity-badge @badgeClass" style="font-size: 11px; padding: 4px 12px; border-radius: 8px; font-weight: 700;">
                                 @currentRole
                             </span>
                         </td>
@@ -151,13 +182,12 @@
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="nik" value="@user.Nik" />
                                 <select name="role" class="role-select">
-                                    @if (currentRole != "Admin") {
-                                        <option value="Operator" selected>Operator</option>
-                                        <option value="Admin">Admin</option>
-                                    } else {
-                                        <option value="Operator">Operator</option>
-                                        <option value="Admin" selected>Admin</option>
-                                    }
+                                    <option value="Operator" selected="@(currentRole == "Operator")">Operator</option>
+                                    <option value="Admin" selected="@(currentRole == "Admin")">Admin</option>
+                                    <option value="Owner" selected="@(currentRole == "Owner")">Owner</option>
+                                    <option value="Maincon" selected="@(currentRole == "Maincon")">Maincon</option>
+                                    <option value="Subcon" selected="@(currentRole == "Subcon")">Subcon</option>
+                                    <option value="Vendor" selected="@(currentRole == "Vendor")">Vendor</option>
                                 </select>
                                 <button type="submit" class="btn btn-sm px-2 py-1" style="background: var(--color-primary); color: white; border: none; border-radius: 8px; font-size: 11px; font-weight: 600;">
                                     <i class="bi bi-check-lg"></i>
@@ -185,7 +215,18 @@
                         <div style="font-weight: 700; font-size: 14px; color: var(--text-main);">@user.Nama</div>
                         <div style="font-size: 11px; color: var(--text-muted);">@user.Nik &bull; @user.Departemen</div>
                     </div>
-                    <span class="severity-badge @(currentRole == "Admin" ? "role-badge-admin" : "role-badge-operator")" style="font-size: 10px; padding: 4px 10px; border-radius: 8px; font-weight: 700;">
+                    @{
+                        var badgeClassMobile = currentRole switch
+                        {
+                            "Admin" => "role-badge-admin",
+                            "Owner" => "role-badge-owner",
+                            "Maincon" => "role-badge-maincon",
+                            "Subcon" => "role-badge-subcon",
+                            "Vendor" => "role-badge-vendor",
+                            _ => "role-badge-operator"
+                        };
+                    }
+                    <span class="severity-badge @badgeClassMobile" style="font-size: 10px; padding: 4px 10px; border-radius: 8px; font-weight: 700;">
                         @currentRole
                     </span>
                 </div>
@@ -193,13 +234,12 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="nik" value="@user.Nik" />
                     <select name="role" class="role-select flex-grow-1">
-                        @if (currentRole != "Admin") {
-                            <option value="Operator" selected>Operator</option>
-                            <option value="Admin">Admin</option>
-                        } else {
-                            <option value="Operator">Operator</option>
-                            <option value="Admin" selected>Admin</option>
-                        }
+                        <option value="Operator" selected="@(currentRole == "Operator")">Operator</option>
+                        <option value="Admin" selected="@(currentRole == "Admin")">Admin</option>
+                        <option value="Owner" selected="@(currentRole == "Owner")">Owner</option>
+                        <option value="Maincon" selected="@(currentRole == "Maincon")">Maincon</option>
+                        <option value="Subcon" selected="@(currentRole == "Subcon")">Subcon</option>
+                        <option value="Vendor" selected="@(currentRole == "Vendor")">Vendor</option>
                     </select>
                     <button type="submit" class="btn btn-sm px-3 py-1" style="background: var(--color-primary); color: white; border: none; border-radius: 8px; font-size: 12px; font-weight: 700;">
                         Simpan

@@ -175,13 +175,25 @@ namespace MBS_SAP.Controllers
                 fullName = nrp;
             }
 
-            // Resolve names
+            // Resolve names and company type role
             string companyName = "PT INDEXIM COALINDO";
             string deptName = "General";
+            string mappedRole = "Operator";
             if (idPerusahaan.HasValue)
             {
                 var p = await _context.Perusahaans.FirstOrDefaultAsync(x => x.PerusahaanId == idPerusahaan.Value);
-                if (p != null) companyName = p.NamaPerusahaan ?? companyName;
+                if (p != null)
+                {
+                    companyName = p.NamaPerusahaan ?? companyName;
+                    mappedRole = p.TipePerusahaanId switch
+                    {
+                        1 => "Owner",
+                        2 => "Maincon",
+                        3 => "Subcon",
+                        4 => "Vendor",
+                        _ => "Operator"
+                    };
+                }
             }
             if (idDepartemen.HasValue)
             {
@@ -204,6 +216,14 @@ namespace MBS_SAP.Controllers
             if (existingAppUser != null && !string.IsNullOrEmpty(existingAppUser.Role))
             {
                 role = existingAppUser.Role;
+            }
+            else
+            {
+                // Jika tidak ada override manual, dan bukan Admin, gunakan role dari tipe perusahaan
+                if (role != "Admin")
+                {
+                    role = mappedRole;
+                }
             }
 
             // Sign in claims
@@ -241,6 +261,7 @@ namespace MBS_SAP.Controllers
                     Departemen = deptName,
                     Perusahaan = companyName,
                     IdPerusahaan = idPerusahaan,
+                    Role = role,
                     LastLogin = DateTime.Now
                 };
                 _context.AppUsers.Add(appUser);
@@ -251,6 +272,10 @@ namespace MBS_SAP.Controllers
                 appUser.Departemen = deptName;
                 appUser.Perusahaan = companyName;
                 appUser.IdPerusahaan = idPerusahaan;
+                if (string.IsNullOrEmpty(appUser.Role))
+                {
+                    appUser.Role = role;
+                }
                 appUser.LastLogin = DateTime.Now;
                 _context.AppUsers.Update(appUser);
             }
