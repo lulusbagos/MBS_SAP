@@ -8,6 +8,11 @@
     double monthlyProgress = ViewBag.MonthlyTarget > 0 ? (double)ViewBag.MonthlyRealization / ViewBag.MonthlyTarget * 100.0 : 0.0;
     weeklyProgress = Math.Min(weeklyProgress, 100.0);
     monthlyProgress = Math.Min(monthlyProgress, 100.0);
+
+    // Individual progress calculations
+    double myMonthlyProgress = (double)ViewBag.MyTotalMonth / 4.0 * 100.0;
+    myMonthlyProgress = Math.Min(myMonthlyProgress, 100.0);
+    bool isMyWeekCompliant = ViewBag.MyTotalWeek >= 1;
 }
 
 <style>
@@ -19,6 +24,7 @@
         position: relative;
         overflow: hidden;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        height: 100%;
     }
     .kpi-card:hover {
         transform: translateY(-4px);
@@ -91,6 +97,44 @@
     .rank-2 { background: linear-gradient(135deg, #cbd5e1, #94a3b8); color: #000; }
     .rank-3 { background: linear-gradient(135deg, #b45309, #78350f); color: #fff; }
     .rank-default { background: rgba(255,255,255,0.1); color: var(--text-muted); }
+
+    .tab-btn {
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        outline: none;
+    }
+    .tab-active {
+        background: var(--color-primary) !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+    }
+    .tab-inactive {
+        background: transparent !important;
+        color: var(--text-muted) !important;
+    }
+    .motivation-alert {
+        border-radius: 16px;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+        border: 1px solid transparent;
+    }
+    .motivation-compliant {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: rgba(16, 185, 129, 0.2);
+        color: #10b981;
+    }
+    .motivation-noncompliant {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+    }
 </style>
 
 <!-- Chart.js CDN -->
@@ -109,160 +153,308 @@
         </div>
     </div>
 
-    <!-- KPI Summary Grid -->
-    <div class="row g-3 mb-4">
-        <!-- Total Karyawan -->
-        <div class="col-6 col-md-3">
-            <div class="kpi-card">
-                <i class="bi bi-people-fill kpi-icon-bg"></i>
-                <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Total Karyawan</div>
-                <div style="font-size: 28px; font-weight: 900; color: #38bdf8;">@ViewBag.TotalKaryawan</div>
-                <div class="text-muted" style="font-size: 11px;">Karyawan aktif terdaftar</div>
-            </div>
+    <!-- Tabs Toggle -->
+    <div class="d-flex justify-content-center mb-4">
+        <div style="background: var(--bg-card); border: 1.5px solid var(--border-color); padding: 4px; border-radius: 12px; display: inline-flex; gap: 4px;">
+            <button class="tab-btn px-4 py-2 tab-active" id="tabMy" onclick="switchTab('my')">
+                <i class="bi bi-person-badge-fill me-1"></i> Pencapaian Saya
+            </button>
+            <button class="tab-btn px-4 py-2 tab-inactive" id="tabCompany" onclick="switchTab('company')">
+                <i class="bi bi-building-fill me-1"></i> Kinerja Perusahaan
+            </button>
         </div>
+    </div>
 
-        <!-- Target vs Realisasi Minggu Ini -->
-        <div class="col-6 col-md-3">
-            <div class="kpi-card">
-                <i class="bi bi-calendar-event-fill kpi-icon-bg"></i>
-                <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Minggu Ini</div>
-                <div style="font-size: 28px; font-weight: 900; color: #10b981;">@ViewBag.WeeklyRealization <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">/ @ViewBag.WeeklyTarget</span></div>
-                <div class="mt-2">
-                    <div class="progress-achievement">
-                        <div class="progress-bar bg-success" style="width: @(weeklyProgress)%; height: 100%;"></div>
+    <!-- ==================== SECTION 1: PENCAPAIAN SAYA ==================== -->
+    <div id="sectionMy">
+        <!-- Motivation Alert -->
+        @if (isMyWeekCompliant)
+        {
+            <div class="motivation-alert motivation-compliant animate-fade-in">
+                <i class="bi bi-trophy-fill" style="font-size: 28px;"></i>
+                <div>
+                    <h6 class="mb-1" style="font-weight: 800;">Target Minggu Ini Tercapai!</h6>
+                    <p class="mb-0" style="font-size: 12px; opacity: 0.9;">Luar biasa! Anda telah mengunggah laporan SAP untuk minggu ini. Terima kasih atas komitmen Anda dalam menjaga keselamatan kerja.</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="motivation-alert motivation-noncompliant animate-fade-in">
+                <i class="bi bi-bell-fill" style="font-size: 28px; animation: pulse 2s infinite;"></i>
+                <div>
+                    <h6 class="mb-1" style="font-weight: 800;">Belum Memenuhi Target Kepatuhan!</h6>
+                    <p class="mb-0" style="font-size: 12px; opacity: 0.9;">Ayo! Anda belum mengirimkan minimal 1 laporan SAP untuk minggu ini. Segera buat laporan Hazard atau Inspeksi demi keselamatan area kerja Anda.</p>
+                </div>
+            </div>
+        }
+
+        <!-- My KPI Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <i class="bi bi-calendar-check-fill kpi-icon-bg"></i>
+                    <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Status Minggu Ini</div>
+                    <div style="font-size: 22px; font-weight: 900; color: @(isMyWeekCompliant ? "#10b981" : "#ef4444");">
+                        @(isMyWeekCompliant ? "PATUH (OK)" : "BELUM PATUH")
                     </div>
-                    <span class="text-muted" style="font-size: 10px;">Pencapaian: @Math.Round(weeklyProgress)%</span>
+                    <div class="text-muted mt-1" style="font-size: 11px;">Target: Minimal 1 laporan/minggu</div>
                 </div>
             </div>
-        </div>
 
-        <!-- Target vs Realisasi Bulan Ini -->
-        <div class="col-6 col-md-3">
-            <div class="kpi-card">
-                <i class="bi bi-calendar-month-fill kpi-icon-bg"></i>
-                <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Bulan Ini</div>
-                <div style="font-size: 28px; font-weight: 900; color: #f59e0b;">@ViewBag.MonthlyRealization <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">/ @ViewBag.MonthlyTarget</span></div>
-                <div class="mt-2">
-                    <div class="progress-achievement">
-                        <div class="progress-bar bg-warning" style="width: @(monthlyProgress)%; height: 100%;"></div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <i class="bi bi-award-fill kpi-icon-bg"></i>
+                    <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Pencapaian Bulan Ini</div>
+                    <div style="font-size: 28px; font-weight: 900; color: #f59e0b;">@ViewBag.MyTotalMonth <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">/ 4 Target</span></div>
+                    <div class="mt-2">
+                        <div class="progress-achievement">
+                            <div class="progress-bar bg-warning" style="width: @(myMonthlyProgress)%; height: 100%;"></div>
+                        </div>
+                        <span class="text-muted" style="font-size: 10px;">Progress: @Math.Round(myMonthlyProgress)%</span>
                     </div>
-                    <span class="text-muted" style="font-size: 10px;">Pencapaian: @Math.Round(monthlyProgress)%</span>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <i class="bi bi-exclamation-triangle-fill kpi-icon-bg"></i>
+                    <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Hazard Dilaporkan</div>
+                    <div style="font-size: 28px; font-weight: 900; color: #f43f5e;">@ViewBag.MyHazardsMonth</div>
+                    <div class="text-muted" style="font-size: 11px;">Bahaya yang Anda temukan (Bulan Ini)</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <i class="bi bi-shield-fill-check kpi-icon-bg"></i>
+                    <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Lainnya (Bulan Ini)</div>
+                    <div style="font-size: 13px; font-weight: 700; color: var(--text-main); line-height: 1.6;">
+                        📋 Inspeksi: <strong>@ViewBag.MyInspectionsMonth</strong> <br />
+                        📢 Safety Talk: <strong>@ViewBag.MySafetyTalksMonth</strong> <br />
+                        👥 P5M: <strong>@ViewBag.MyP5msMonth</strong>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Hazard Aktif (Open) -->
-        <div class="col-6 col-md-3">
-            <div class="kpi-card">
-                <i class="bi bi-exclamation-triangle-fill kpi-icon-bg"></i>
-                <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Hazard Open</div>
-                <div style="font-size: 28px; font-weight: 900; color: #f43f5e;">@ViewBag.TotalOpenHazards <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">Open</span></div>
-                <div class="text-muted" style="font-size: 11px;">@ViewBag.TotalClosedHazards diselesaikan</div>
+        <!-- My Activity Distribution -->
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-6">
+                <div class="chart-container">
+                    <h6 class="mb-3" style="font-weight: 700;">Proporsi Laporan Saya (Bulan Ini)</h6>
+                    <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="myProporsiChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-6">
+                <div class="chart-container">
+                    <h6 class="mb-3" style="font-weight: 700;">Target Kepatuhan Detail Saya</h6>
+                    <div class="d-flex flex-column gap-3 mt-3">
+                        <div>
+                            <div class="d-flex justify-content-between mb-1" style="font-size: 12px; font-weight: 700;">
+                                <span>Hazard Report</span>
+                                <span>@ViewBag.MyHazardsMonth Laporan</span>
+                            </div>
+                            <div class="progress-achievement" style="height: 10px;">
+                                <div class="progress-bar bg-danger" style="width: @(Math.Min((double)ViewBag.MyHazardsMonth / 2.0 * 100.0, 100.0))%;"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="d-flex justify-content-between mb-1" style="font-size: 12px; font-weight: 700;">
+                                <span>Safety Inspection</span>
+                                <span>@ViewBag.MyInspectionsMonth Laporan</span>
+                            </div>
+                            <div class="progress-achievement" style="height: 10px;">
+                                <div class="progress-bar bg-primary" style="width: @(Math.Min((double)ViewBag.MyInspectionsMonth / 1.0 * 100.0, 100.0))%;"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="d-flex justify-content-between mb-1" style="font-size: 12px; font-weight: 700;">
+                                <span>Safety Talk</span>
+                                <span>@ViewBag.MySafetyTalksMonth Kali</span>
+                            </div>
+                            <div class="progress-achievement" style="height: 10px;">
+                                <div class="progress-bar bg-warning" style="width: @(Math.Min((double)ViewBag.MySafetyTalksMonth / 1.0 * 100.0, 100.0))%;"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="d-flex justify-content-between mb-1" style="font-size: 12px; font-weight: 700;">
+                                <span>P5M Pre-Start</span>
+                                <span>@ViewBag.MyP5msMonth Kali</span>
+                            </div>
+                            <div class="progress-achievement" style="height: 10px;">
+                                <div class="progress-bar bg-success" style="width: @(Math.Min((double)ViewBag.MyP5msMonth / 1.0 * 100.0, 100.0))%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Charts Row -->
-    <div class="row g-3 mb-4">
-        <!-- Doughnut 1: Proporsi Aktivitas -->
-        <div class="col-12 col-md-6">
-            <div class="chart-container">
-                <h6 class="mb-3" style="font-weight: 700;">Proporsi Aktivitas SAP (Bulan Ini)</h6>
-                <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
-                    <canvas id="proporsiChart"></canvas>
+    <!-- ==================== SECTION 2: PENCAPAIAN PERUSAHAAN ==================== -->
+    <div id="sectionCompany" style="display: none;">
+        <!-- KPI Summary Grid -->
+        <div class="row g-3 mb-4 animate-fade-in">
+            <!-- Total Karyawan -->
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <i class="bi bi-people-fill kpi-icon-bg"></i>
+                    <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Total Karyawan</div>
+                    <div style="font-size: 28px; font-weight: 900; color: #38bdf8;">@ViewBag.TotalKaryawan</div>
+                    <div class="text-muted" style="font-size: 11px;">Karyawan aktif terdaftar</div>
+                </div>
+            </div>
+
+            <!-- Target vs Realisasi Minggu Ini -->
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <i class="bi bi-calendar-event-fill kpi-icon-bg"></i>
+                    <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Minggu Ini</div>
+                    <div style="font-size: 28px; font-weight: 900; color: #10b981;">@ViewBag.WeeklyRealization <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">/ @ViewBag.WeeklyTarget</span></div>
+                    <div class="mt-2">
+                        <div class="progress-achievement">
+                            <div class="progress-bar bg-success" style="width: @(weeklyProgress)%; height: 100%;"></div>
+                        </div>
+                        <span class="text-muted" style="font-size: 10px;">Pencapaian: @Math.Round(weeklyProgress)%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Target vs Realisasi Bulan Ini -->
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <i class="bi bi-calendar-month-fill kpi-icon-bg"></i>
+                    <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Bulan Ini</div>
+                    <div style="font-size: 28px; font-weight: 900; color: #f59e0b;">@ViewBag.MonthlyRealization <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">/ @ViewBag.MonthlyTarget</span></div>
+                    <div class="mt-2">
+                        <div class="progress-achievement">
+                            <div class="progress-bar bg-warning" style="width: @(monthlyProgress)%; height: 100%;"></div>
+                        </div>
+                        <span class="text-muted" style="font-size: 10px;">Pencapaian: @Math.Round(monthlyProgress)%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hazard Aktif (Open) -->
+            <div class="col-6 col-md-3">
+                <div class="kpi-card">
+                    <i class="bi bi-exclamation-triangle-fill kpi-icon-bg"></i>
+                    <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Hazard Open</div>
+                    <div style="font-size: 28px; font-weight: 900; color: #f43f5e;">@ViewBag.TotalOpenHazards <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">Open</span></div>
+                    <div class="text-muted" style="font-size: 11px;">@ViewBag.TotalClosedHazards diselesaikan</div>
                 </div>
             </div>
         </div>
 
-        <!-- Doughnut 2: Hazard Open by Risk -->
-        <div class="col-12 col-md-6">
-            <div class="chart-container">
-                <h6 class="mb-3" style="font-weight: 700;">Hazard Aktif (Open) Berdasarkan Risiko</h6>
-                <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
-                    <canvas id="risikoChart"></canvas>
+        <!-- Charts Row -->
+        <div class="row g-3 mb-4 animate-fade-in">
+            <!-- Doughnut 1: Proporsi Aktivitas -->
+            <div class="col-12 col-md-6">
+                <div class="chart-container">
+                    <h6 class="mb-3" style="font-weight: 700;">Proporsi Aktivitas SAP (Bulan Ini)</h6>
+                    <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="proporsiChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Doughnut 2: Hazard Open by Risk -->
+            <div class="col-12 col-md-6">
+                <div class="chart-container">
+                    <h6 class="mb-3" style="font-weight: 700;">Hazard Aktif (Open) Berdasarkan Risiko</h6>
+                    <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="risikoChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Line Chart: Tren Bulanan -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="chart-container">
-                <h6 class="mb-3" style="font-weight: 700;">Tren Aktivitas SAP (6 Bulan Terakhir)</h6>
-                <div style="height: 300px; position: relative;">
-                    <canvas id="trendChart"></canvas>
+        <!-- Line Chart: Tren Bulanan -->
+        <div class="row mb-4 animate-fade-in">
+            <div class="col-12">
+                <div class="chart-container">
+                    <h6 class="mb-3" style="font-weight: 700;">Tren Aktivitas SAP (6 Bulan Terakhir)</h6>
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="trendChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Leaderboard Table -->
-    <div class="row">
-        <div class="col-12">
-            <div class="chart-container">
-                <h6 class="mb-3" style="font-weight: 700;">@(ViewBag.IsAdmin == true ? "Leaderboard Kepatuhan Perusahaan (Bulan Ini)" : "Pencapaian Kepatuhan Perusahaan (Bulan Ini)")</h6>
-                <div class="table-responsive">
-                    <table class="leaderboard-table">
-                        <thead>
-                            <tr>
-                                @if (ViewBag.IsAdmin == true)
-                                {
-                                    <th style="width: 60px;">Rank</th>
-                                }
-                                <th>Perusahaan</th>
-                                <th style="width: 120px;" class="text-center">Karyawan Aktif</th>
-                                <th style="width: 140px;" class="text-center">Aktivitas Dilaporkan</th>
-                                <th style="width: 140px;" class="text-center">Target Kepatuhan</th>
-                                <th class="text-end" style="width: 200px;">Pencapaian (%)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @{
-                                int rank = 1;
-                                foreach (var comp in leaderboard)
-                                {
-                                    string rankClass = rank switch
+        <!-- Leaderboard Table -->
+        <div class="row animate-fade-in">
+            <div class="col-12">
+                <div class="chart-container">
+                    <h6 class="mb-3" style="font-weight: 700;">@(ViewBag.IsAdmin == true ? "Leaderboard Kepatuhan Perusahaan (Bulan Ini)" : "Pencapaian Kepatuhan Perusahaan (Bulan Ini)")</h6>
+                    <div class="table-responsive">
+                        <table class="leaderboard-table">
+                            <thead>
+                                <tr>
+                                    @if (ViewBag.IsAdmin == true)
                                     {
-                                        1 => "rank-1",
-                                        2 => "rank-2",
-                                        3 => "rank-3",
-                                        _ => "rank-default"
-                                    };
-                                    <tr class="leaderboard-row">
-                                        @if (ViewBag.IsAdmin == true)
+                                        <th style="width: 60px;">Rank</th>
+                                    }
+                                    <th>Perusahaan</th>
+                                    <th style="width: 120px;" class="text-center">Karyawan Aktif</th>
+                                    <th style="width: 140px;" class="text-center">Aktivitas Dilaporkan</th>
+                                    <th style="width: 140px;" class="text-center">Target Kepatuhan</th>
+                                    <th class="text-end" style="width: 200px;">Pencapaian (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    int rank = 1;
+                                    foreach (var comp in leaderboard)
+                                    {
+                                        string rankClass = rank switch
                                         {
+                                            1 => "rank-1",
+                                            2 => "rank-2",
+                                            3 => "rank-3",
+                                            _ => "rank-default"
+                                        };
+                                        <tr class="leaderboard-row">
+                                            @if (ViewBag.IsAdmin == true)
+                                            {
+                                                <td>
+                                                    <div class="badge-rank @rankClass">@rank</div>
+                                                </td>
+                                            }
+                                            <td style="font-weight: 700;">@comp.CompanyName</td>
+                                            <td class="text-center" style="font-family: monospace; font-weight: 600;">@comp.ActiveEmployees</td>
+                                            <td class="text-center" style="font-family: monospace; font-weight: 600; color: #38bdf8;">@comp.TotalSubmissions</td>
+                                            <td class="text-center" style="font-family: monospace; font-weight: 600; color: var(--text-muted);">@comp.TargetSubmissions</td>
                                             <td>
-                                                <div class="badge-rank @rankClass">@rank</div>
-                                            </td>
-                                        }
-                                        <td style="font-weight: 700;">@comp.CompanyName</td>
-                                        <td class="text-center" style="font-family: monospace; font-weight: 600;">@comp.ActiveEmployees</td>
-                                        <td class="text-center" style="font-family: monospace; font-weight: 600; color: #38bdf8;">@comp.TotalSubmissions</td>
-                                        <td class="text-center" style="font-family: monospace; font-weight: 600; color: var(--text-muted);">@comp.TargetSubmissions</td>
-                                        <td>
-                                            <div class="d-flex align-items-center justify-content-end gap-2">
-                                                <div class="flex-grow-1" style="max-width: 100px;">
-                                                    <div class="progress-achievement">
-                                                        @{
-                                                            string barColor = "bg-danger";
-                                                            if (comp.AchievementRate >= 100) barColor = "bg-success";
-                                                            else if (comp.AchievementRate >= 50) barColor = "bg-warning";
-                                                        }
-                                                        <div class="progress-bar @barColor" style="width: @Math.Min(comp.AchievementRate, 100.0)%; height: 100%;"></div>
+                                                <div class="d-flex align-items-center justify-content-end gap-2">
+                                                    <div class="flex-grow-1" style="max-width: 100px;">
+                                                        <div class="progress-achievement">
+                                                            @{
+                                                                string barColor = "bg-danger";
+                                                                if (comp.AchievementRate >= 100) barColor = "bg-success";
+                                                                else if (comp.AchievementRate >= 50) barColor = "bg-warning";
+                                                            }
+                                                            <div class="progress-bar @barColor" style="width: @Math.Min(comp.AchievementRate, 100.0)%; height: 100%;"></div>
+                                                        </div>
                                                     </div>
+                                                    <span style="font-family: monospace; font-weight: 800; font-size: 13px; color: @(comp.AchievementRate >= 100 ? "#10b981" : comp.AchievementRate >= 50 ? "#f59e0b" : "#f43f5e")">
+                                                        @comp.AchievementRate%
+                                                    </span>
                                                 </div>
-                                                <span style="font-family: monospace; font-weight: 800; font-size: 13px; color: @(comp.AchievementRate >= 100 ? "#10b981" : comp.AchievementRate >= 50 ? "#f59e0b" : "#f43f5e")">
-                                                    @comp.AchievementRate%
-                                                </span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    rank++;
+                                            </td>
+                                        </tr>
+                                        rank++;
+                                    }
                                 }
-                            }
-                        </tbody>
-                    </table>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -270,8 +462,22 @@
 
 </div>
 
-<!-- Charts Rendering Script -->
+<!-- Charts & Tabs Handling Script -->
 <script>
+    function switchTab(tab) {
+        if (tab === 'my') {
+            document.getElementById('sectionMy').style.display = 'block';
+            document.getElementById('sectionCompany').style.display = 'none';
+            document.getElementById('tabMy').className = 'tab-btn px-4 py-2 tab-active';
+            document.getElementById('tabCompany').className = 'tab-btn px-4 py-2 tab-inactive';
+        } else {
+            document.getElementById('sectionMy').style.display = 'none';
+            document.getElementById('sectionCompany').style.display = 'block';
+            document.getElementById('tabMy').className = 'tab-btn px-4 py-2 tab-inactive';
+            document.getElementById('tabCompany').className = 'tab-btn px-4 py-2 tab-active';
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
                        (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -279,7 +485,31 @@
         const textColor = isDark ? '#cbd5e1' : '#334155';
         const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
 
-        // 1. Chart Proporsi Aktivitas
+        // 1. Chart Proporsi Aktivitas Saya
+        const ctxMyProp = document.getElementById('myProporsiChart').getContext('2d');
+        new Chart(ctxMyProp, {
+            type: 'doughnut',
+            data: {
+                labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'P5M'],
+                datasets: [{
+                    data: [@ViewBag.MyHazardsMonth, @ViewBag.MyInspectionsMonth, @ViewBag.MySafetyTalksMonth, @ViewBag.MyP5msMonth],
+                    backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#10b981'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: textColor, font: { weight: 'bold', size: 11 } }
+                    }
+                }
+            }
+        });
+
+        // 2. Chart Proporsi Aktivitas Perusahaan
         const ctxProp = document.getElementById('proporsiChart').getContext('2d');
         new Chart(ctxProp, {
             type: 'doughnut',
@@ -303,7 +533,7 @@
             }
         });
 
-        // 2. Chart Risiko Hazard Open
+        // 3. Chart Risiko Hazard Open
         const ctxRisiko = document.getElementById('risikoChart').getContext('2d');
         new Chart(ctxRisiko, {
             type: 'pie',
@@ -327,7 +557,7 @@
             }
         });
 
-        // 3. Chart Tren Bulanan
+        // 4. Chart Tren Bulanan
         const ctxTrend = document.getElementById('trendChart').getContext('2d');
         
         const labels = [];

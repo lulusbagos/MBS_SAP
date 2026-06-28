@@ -138,6 +138,33 @@ namespace MBS_SAP.Controllers
                 });
             }
 
+            // 8. Individual (My) Achievement Stats
+            int myHazardsWeek = 0;
+            int myInspectionsWeek = 0;
+            int mySafetyTalksWeek = 0;
+            int myP5msWeek = 0;
+
+            int myHazardsMonth = 0;
+            int myInspectionsMonth = 0;
+            int mySafetyTalksMonth = 0;
+            int myP5msMonth = 0;
+
+            if (!string.IsNullOrEmpty(userNik))
+            {
+                myHazardsWeek = await _context.HazardReports.CountAsync(h => !h.IsDeleted && h.Nik == userNik && h.CreatedAt >= startOfWeek);
+                myInspectionsWeek = await _context.Inspections.CountAsync(i => !i.IsDeleted && i.Nik == userNik && i.CreatedAt >= startOfWeek);
+                mySafetyTalksWeek = await _context.SafetyTalks.CountAsync(s => !s.IsDeleted && s.Nik == userNik && s.CreatedAt >= startOfWeek);
+                myP5msWeek = await _context.P5ms.CountAsync(p => !p.IsDeleted && p.Nik == userNik && p.CreatedAt >= startOfWeek);
+
+                myHazardsMonth = await _context.HazardReports.CountAsync(h => !h.IsDeleted && h.Nik == userNik && h.CreatedAt >= startOfMonth);
+                myInspectionsMonth = await _context.Inspections.CountAsync(i => !i.IsDeleted && i.Nik == userNik && i.CreatedAt >= startOfMonth);
+                mySafetyTalksMonth = await _context.SafetyTalks.CountAsync(s => !s.IsDeleted && s.Nik == userNik && s.CreatedAt >= startOfMonth);
+                myP5msMonth = await _context.P5ms.CountAsync(p => !p.IsDeleted && p.Nik == userNik && p.CreatedAt >= startOfMonth);
+            }
+
+            int myTotalWeek = myHazardsWeek + myInspectionsWeek + mySafetyTalksWeek + myP5msWeek;
+            int myTotalMonth = myHazardsMonth + myInspectionsMonth + mySafetyTalksMonth + myP5msMonth;
+
             ViewBag.TotalKaryawan = totalKaryawan;
             ViewBag.WeeklyTarget = weeklyTarget;
             ViewBag.WeeklyRealization = weekTotal;
@@ -164,6 +191,19 @@ namespace MBS_SAP.Controllers
 
             ViewBag.Leaderboard = leaderboard;
             ViewBag.MonthlyTrend = monthlyTrend;
+
+            // Individual ViewBag properties
+            ViewBag.MyHazardsWeek = myHazardsWeek;
+            ViewBag.MyInspectionsWeek = myInspectionsWeek;
+            ViewBag.MySafetyTalksWeek = mySafetyTalksWeek;
+            ViewBag.MyP5msWeek = myP5msWeek;
+            ViewBag.MyTotalWeek = myTotalWeek;
+
+            ViewBag.MyHazardsMonth = myHazardsMonth;
+            ViewBag.MyInspectionsMonth = myInspectionsMonth;
+            ViewBag.MySafetyTalksMonth = mySafetyTalksMonth;
+            ViewBag.MyP5msMonth = myP5msMonth;
+            ViewBag.MyTotalMonth = myTotalMonth;
 
             return View();
         }
