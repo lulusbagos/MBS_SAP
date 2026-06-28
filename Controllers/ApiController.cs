@@ -408,6 +408,20 @@ ORDER BY nama_perusahaan";
                             }
                         }
                     }
+                    else if (action.ItemSap != null && action.ItemSap.StartsWith("inspection:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (int.TryParse(action.ItemSap.Substring("inspection:".Length), out int inspectionId))
+                        {
+                            var inspection = await _context.Inspections.FirstOrDefaultAsync(i => i.Id == inspectionId && !i.IsDeleted);
+                            if (inspection != null)
+                            {
+                                inspection.NikPja = action.NikPja;
+                                inspection.Pja = action.Pja;
+                                inspection.DepartemenPja = action.DepartemenPja;
+                                inspection.PerusahaanId = action.PerusahaanId;
+                            }
+                        }
+                    }
 
                     if (!string.IsNullOrWhiteSpace(action.NikPja))
                     {
@@ -426,6 +440,66 @@ ORDER BY nama_perusahaan";
                             "Pengalihan Action Plan",
                             $"Action Plan untuk {action.KategoriTemuan} di {action.Lokasi ?? action.Area} dialihkan ke penanggung jawab perusahaan oleh {userName}.",
                             "/ActionPlan/Index");
+                    }
+
+                    await _context.SaveChangesAsync();
+                    return Ok();
+                }
+            }
+            else if (itemType == "Inspection")
+            {
+                var inspection = await _context.Inspections.FirstOrDefaultAsync(i => i.Id == req.ItemId);
+                if (inspection != null)
+                {
+                    if (isCompanyTarget)
+                    {
+                        inspection.NikPja = null;
+                        inspection.Pja = newNama;
+                        inspection.DepartemenPja = "PERUSAHAAN";
+                        inspection.PerusahaanId = targetCompanyId;
+                    }
+                    else
+                    {
+                        inspection.NikPja = newNik;
+                        inspection.Pja = newNama;
+                        inspection.DepartemenPja = newDept;
+                    }
+
+                    // Sync related ActionPlans
+                    var actionPlanItemSap = $"inspection:{inspection.Id}";
+                    var relatedActions = await _context.ActionPlans
+                        .Where(a => a.ItemSap == actionPlanItemSap && !a.IsDeleted)
+                        .ToListAsync();
+                    
+                    foreach (var action in relatedActions)
+                    {
+                        action.ReassignedFrom = action.Pja;
+                        action.ReassignedTo = newNama;
+                        action.ReassignedAt = DateTime.Now;
+
+                        action.Pja = inspection.Pja;
+                        action.NikPja = inspection.NikPja;
+                        action.DepartemenPja = inspection.DepartemenPja;
+                        action.PerusahaanId = inspection.PerusahaanId;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(inspection.NikPja))
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            RecipientNik = inspection.NikPja,
+                            Title = "Pengalihan Inspeksi",
+                            Message = $"Penugasan Inspeksi di {inspection.Lokasi ?? inspection.Area} telah dialihkan kepada Anda oleh {userName}.",
+                            Url = "/Inspection/Index"
+                        });
+                    }
+                    else if (inspection.PerusahaanId.HasValue)
+                    {
+                        await CreateCompanyBroadcastNotificationAsync(
+                            inspection.PerusahaanId.Value,
+                            "Pengalihan Inspeksi",
+                            $"Penugasan Inspeksi di {inspection.Lokasi ?? inspection.Area} dialihkan ke penanggung jawab perusahaan oleh {userName}.",
+                            "/Inspection/Index");
                     }
 
                     await _context.SaveChangesAsync();
