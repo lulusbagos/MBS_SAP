@@ -86,6 +86,11 @@ namespace MBS_SAP.Controllers
             var leaderboard = new List<CompanyLeaderboardViewModel>();
             foreach (var c in allCompanies)
             {
+                if (!isAdmin && companyId.HasValue && c.PerusahaanId != companyId.Value)
+                {
+                    continue;
+                }
+
                 int empCount = allKaryawans.Count(k => k.IdPerusahaan == c.PerusahaanId);
                 if (empCount == 0) continue;
 
@@ -109,6 +114,7 @@ namespace MBS_SAP.Controllers
             }
 
             leaderboard = leaderboard.OrderByDescending(l => l.AchievementRate).ToList();
+            ViewBag.IsAdmin = isAdmin;
 
             // 7. Data Trend Bulanan (6 Bulan Terakhir)
             var monthlyTrend = new List<MonthlyTrendViewModel>();
