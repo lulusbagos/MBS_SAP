@@ -29,22 +29,40 @@
                         <div class="d-flex align-items-center">
                             @if (!string.IsNullOrEmpty(item.FotoDiriUrl))
                             {
-                                <img src="@item.FotoDiriUrl" class="rounded-circle shadow-sm me-2" style="width: 36px; height: 36px; object-fit: cover; border: 2px solid var(--color-primary);" alt="Profile" />
+                                <img src="@item.FotoDiriUrl" class="rounded-circle shadow-sm me-2" style="width: 38px; height: 38px; object-fit: cover; border: 2px solid var(--color-primary);" alt="Profile" />
                             }
                             else
                             {
-                                <div class="rounded-circle d-flex justify-content-center align-items-center me-2 shadow-sm" style="width: 36px; height: 36px; background-color: var(--color-primary); color: white; font-weight: bold; font-size: 14px;">
+                                <div class="rounded-circle d-flex justify-content-center align-items-center me-2 shadow-sm" style="width: 38px; height: 38px; background-color: var(--color-primary); color: white; font-weight: bold; font-size: 14px;">
                                     @(string.IsNullOrEmpty(item.Nama) ? "?" : item.Nama.Substring(0, 1).ToUpper())
                                 </div>
                             }
-                            <div style="line-height: 1.2;">
+                            <div style="line-height: 1.25;">
                                 <div class="fw-bold" style="font-size: 14px; color: var(--text-main);">@item.Nama</div>
-                                <div class="text-muted" style="font-size: 11px;">
+                                @if (!string.IsNullOrEmpty(item.Jabatan) || !string.IsNullOrEmpty(item.Perusahaan) || !string.IsNullOrEmpty(item.Departemen))
+                                {
+                                    <div class="text-muted d-flex flex-wrap align-items-center gap-1 my-0.5" style="font-size: 10px;">
+                                        @if (!string.IsNullOrEmpty(item.Jabatan))
+                                        {
+                                            <span class="badge bg-light text-dark border px-1.5 py-0.5" style="font-size: 9px; font-weight: 600; line-height: 1;">@item.Jabatan</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(item.Departemen))
+                                        {
+                                            <span>@item.Departemen</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(item.Perusahaan))
+                                        {
+                                            <span class="text-secondary fw-semibold">| @item.Perusahaan</span>
+                                        }
+                                    </div>
+                                }
+                                <div class="text-muted" style="font-size: 10px; margin-top: 1px; display: flex; align-items: center; gap: 4px;">
                                     @if (!string.IsNullOrEmpty(item.Area))
                                     {
-                                        <span>@item.Area &bull; </span>
+                                        <span><i class="bi bi-geo-alt-fill text-primary" style="font-size: 9px;"></i> @item.Area</span>
+                                        <span>&bull;</span>
                                     }
-                                    @item.Tanggal.ToString("dd MMM yyyy")
+                                    <span><i class="bi bi-clock" style="font-size: 9px;"></i> @item.Tanggal.ToString("dd MMM yyyy") @item.Waktu.ToString(@"hh\:mm")</span>
                                 </div>
                             </div>
                         </div>
@@ -93,7 +111,29 @@
                                     }
                                 }
                             }
-                            <span class="badge bg-secondary rounded-pill" style="font-size: 10px; opacity: 0.8;">@item.ItemType</span>
+                            @{
+                                var itemTypeBadgeClass = item.ItemType.ToLower() switch {
+                                    "hazard" => "bg-danger text-white",
+                                    "inspection" => "bg-primary text-white",
+                                    "actionplan" => "bg-success text-white",
+                                    "safetytalk" => "bg-info text-dark",
+                                    "p5m" => "bg-secondary text-white",
+                                    "observation" => "bg-warning text-dark",
+                                    "p2h" => "bg-dark text-white",
+                                    _ => "bg-secondary text-white"
+                                };
+                                var itemTypeDisplay = item.ItemType.ToLower() switch {
+                                    "hazard" => "Hazard Report",
+                                    "inspection" => "Inspeksi",
+                                    "actionplan" => "Action Plan",
+                                    "safetytalk" => "Safety Talk",
+                                    "p5m" => "P5M",
+                                    "observation" => "Observasi",
+                                    "p2h" => "P2H",
+                                    _ => item.ItemType
+                                };
+                            }
+                            <span class="badge @itemTypeBadgeClass rounded-pill" style="font-size: 10px; opacity: 0.95; font-weight: 600;">@itemTypeDisplay</span>
                             @if (!string.IsNullOrEmpty(item.TingkatResiko))
                             {
                                 var riskBg = item.TingkatResiko.ToLower() switch {

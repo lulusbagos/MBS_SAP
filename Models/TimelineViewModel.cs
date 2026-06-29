@@ -13,6 +13,8 @@ namespace MBS_SAP.Models
         public string Nik { get; set; } = string.Empty;
         public string? Departemen { get; set; }
         public int? PerusahaanId { get; set; }
+        public string? Jabatan { get; set; }
+        public string? Perusahaan { get; set; }
         
         public DateTime Tanggal { get; set; }
         public TimeSpan Waktu { get; set; }

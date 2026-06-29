@@ -233,6 +233,57 @@ namespace MBS_SAP.Controllers
                 });
             }
 
+            // Ambil detail karyawan (Nama, Jabatan, Perusahaan, PathFoto) untuk timeline secara efisien
+            var distinctNiks = timelineList.Select(x => x.Nik).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
+            var employeeDetails = await (from k in _context.Karyawans
+                                         join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                         join j in _context.Jabatans on k.IdJabatan equals j.JabatanId into jg
+                                         from j in jg.DefaultIfEmpty()
+                                         join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
+                                         from c in cg.DefaultIfEmpty()
+                                         where distinctNiks.Contains(k.NoNik)
+                                         select new {
+                                             Nik = k.NoNik,
+                                             Nama = p.NamaLengkap,
+                                             Jabatan = j != null ? j.NamaJabatan : "Karyawan",
+                                             Perusahaan = c != null ? c.NamaPerusahaan : "Mitra MBS",
+                                             PathFoto = k.PathFoto,
+                                             StatusAktif = k.StatusAktif
+                                         }).ToListAsync();
+
+            var employeeMap = employeeDetails
+                .OrderByDescending(e => e.StatusAktif)
+                .GroupBy(e => e.Nik)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            foreach (var item in timelineList)
+            {
+                if (!string.IsNullOrEmpty(item.Nik) && employeeMap.TryGetValue(item.Nik, out var emp))
+                {
+                    if (string.IsNullOrEmpty(item.Nama) || item.Nama == item.Nik)
+                    {
+                        item.Nama = emp.Nama;
+                    }
+                    item.Jabatan = emp.Jabatan;
+                    item.Perusahaan = emp.Perusahaan;
+
+                    if (string.IsNullOrEmpty(item.FotoDiriUrl) && !string.IsNullOrEmpty(emp.PathFoto))
+                    {
+                        var formattedFoto = emp.PathFoto;
+                        if (!formattedFoto.StartsWith("/") && !formattedFoto.StartsWith("http"))
+                        {
+                            formattedFoto = "/uploads/karyawan/" + formattedFoto;
+                        }
+                        item.FotoDiriUrl = formattedFoto;
+                    }
+                }
+                else
+                {
+                    item.Jabatan = "Karyawan";
+                    item.Perusahaan = "Mitra MBS";
+                }
+            }
+
             // Get all likes and comments for these items
             var itemKeys = timelineList.Select(x => x.ItemType + "_" + x.OriginalId).ToList();
             

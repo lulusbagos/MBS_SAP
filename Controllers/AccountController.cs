@@ -436,6 +436,41 @@ namespace MBS_SAP.Controllers
             var comp = compId.HasValue ? await _context.Perusahaans.FirstOrDefaultAsync(c => c.PerusahaanId == compId) : null;
             var jab = jabId.HasValue ? await _context.Jabatans.FirstOrDefaultAsync(j => j.JabatanId == jabId) : null;
 
+            // Hitung pencapaian safety bulan ini
+            var now = DateTime.Now;
+            var startOfMonth = new DateTime(now.Year, now.Month, 1);
+
+            int myHazards = await _context.HazardReports.CountAsync(h => !h.IsDeleted && h.Nik == nrp && h.CreatedAt >= startOfMonth);
+            int myInspections = await _context.Inspections.CountAsync(i => !i.IsDeleted && i.Nik == nrp && i.CreatedAt >= startOfMonth);
+            int mySafetyTalks = await _context.SafetyTalks.CountAsync(s => !s.IsDeleted && s.Nik == nrp && s.CreatedAt >= startOfMonth);
+            int myP5ms = await _context.P5ms.CountAsync(p => !p.IsDeleted && p.Nik == nrp && p.CreatedAt >= startOfMonth);
+
+            int totalSubmissions = myHazards + myInspections + mySafetyTalks + myP5ms;
+            double complianceRate = Math.Min((totalSubmissions / 4.0) * 100.0, 100.0);
+
+            string badgeName = "Safety Novice";
+            string badgeIcon = "bi-shield-slash";
+            string badgeColor = "#9ca3af";
+
+            if (totalSubmissions >= 5)
+            {
+                badgeName = "Safety Hero (Gold)";
+                badgeIcon = "bi-shield-fill-check";
+                badgeColor = "#fbbf24";
+            }
+            else if (totalSubmissions >= 3)
+            {
+                badgeName = "Safety Champion (Silver)";
+                badgeIcon = "bi-shield-fill-star";
+                badgeColor = "#cbd5e1";
+            }
+            else if (totalSubmissions >= 1)
+            {
+                badgeName = "Safety Aware (Bronze)";
+                badgeIcon = "bi-shield-fill";
+                badgeColor = "#b45309";
+            }
+
             ViewData["ProfilePic"] = overridePwd?.ProfilePicture;
             ViewData["HasAgreed"] = overridePwd?.HasAgreedToTerms ?? false;
             ViewData["Department"] = dept?.NamaDepartemen ?? User.FindFirst("Department")?.Value ?? "-";
@@ -445,6 +480,17 @@ namespace MBS_SAP.Controllers
             ViewData["Nrp"] = nrp;
             ViewData["Email"] = pengguna?.Email ?? personal?.EmailPribadi ?? "-";
             ViewData["Phone"] = personal?.Hp1 ?? "-";
+
+            // Safety stats
+            ViewData["MyHazards"] = myHazards;
+            ViewData["MyInspections"] = myInspections;
+            ViewData["MySafetyTalks"] = mySafetyTalks;
+            ViewData["MyP5ms"] = myP5ms;
+            ViewData["TotalSubmissions"] = totalSubmissions;
+            ViewData["ComplianceRate"] = Math.Round(complianceRate, 0);
+            ViewData["BadgeName"] = badgeName;
+            ViewData["BadgeIcon"] = badgeIcon;
+            ViewData["BadgeColor"] = badgeColor;
 
             ViewData["ActiveTab"] = "Profile";
             return View();
