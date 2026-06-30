@@ -20,13 +20,15 @@ namespace MBS_SAP.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ExcelService _excelService;
         private readonly MBS_SAP.Services.ImageUploadService _imageUploadService;
+        private readonly CompanyHierarchyService _companyHierarchyService;
 
-        public HazardController(AppDbContext context, IWebHostEnvironment webHostEnvironment, ExcelService excelService, MBS_SAP.Services.ImageUploadService imageUploadService)
+        public HazardController(AppDbContext context, IWebHostEnvironment webHostEnvironment, ExcelService excelService, MBS_SAP.Services.ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
             _excelService = excelService;
             _imageUploadService = imageUploadService;
+            _companyHierarchyService = companyHierarchyService;
         }
 
         // GET: Hazard
@@ -37,12 +39,21 @@ namespace MBS_SAP.Controllers
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var isAdmin = User.IsInRole("Admin");
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
 
             var query = _context.HazardReports.Where(r => !r.IsDeleted);
 
+            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin)
+            if (companyId.HasValue)
+            {
+                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
+                query = query.Where(r => r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value));
+            }
+
+            // Non-Admin hanya melihat miliknya sendiri atau yang ditugaskan kepadanya
             if (!isAdmin && !string.IsNullOrEmpty(userNik))
             {
-                // Only show hazards created by this user or assigned to this user (PJA)
                 query = query.Where(r => r.Nik == userNik || r.NikPja == userNik);
             }
 
@@ -291,7 +302,8 @@ namespace MBS_SAP.Controllers
                         RecipientNik = report.NikPja!,
                         Title = "Temuan Hazard Baru",
                         Message = $"Anda ditunjuk sebagai PJA untuk temuan Hazard di {report.Lokasi ?? report.Area} oleh {report.Nama}.",
-                        Url = "/ActionPlan/Index"
+                        Url = "/ActionPlan/Index",
+                        NotifType = "hazard_new"
                     };
                     _context.Notifications.Add(notif);
                     await _context.SaveChangesAsync();
@@ -302,7 +314,8 @@ namespace MBS_SAP.Controllers
                         report.PerusahaanId.Value,
                         "Temuan Hazard Baru",
                         $"Temuan Hazard baru pada area perusahaan {report.Pja ?? "-"} di {report.Lokasi ?? report.Area} membutuhkan tindak lanjut.",
-                        "/Hazard/Index");
+                        "/Hazard/Index",
+                        "hazard_new");
                 }
             }
 
@@ -324,6 +337,17 @@ namespace MBS_SAP.Controllers
         {
             var report = await _context.HazardReports.FindAsync(id);
             if (report == null || report.IsDeleted) return NotFound();
+
+            // Pastikan user hanya bisa akses data milik perusahaannya
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+            if (userCompanyId.HasValue && report.PerusahaanId.HasValue)
+            {
+                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
+                if (!allowedIds.Contains(report.PerusahaanId.Value))
+                    return Unauthorized();
+            }
+
             return Json(report);
         }
 
@@ -506,7 +530,7 @@ namespace MBS_SAP.Controllers
             return int.TryParse(raw, out perusahaanId) && perusahaanId > 0;
         }
 
-        private async Task<int> CreateCompanyBroadcastNotificationAsync(int perusahaanId, string title, string message, string url)
+        private async Task<int> CreateCompanyBroadcastNotificationAsync(int perusahaanId, string title, string message, string url, string notifType = "general")
         {
             var recipientNiks = await GetCompanyNotificationRecipientsAsync(perusahaanId);
 
@@ -523,7 +547,8 @@ namespace MBS_SAP.Controllers
                     RecipientNik = nik,
                     Title = title,
                     Message = message,
-                    Url = url
+                    Url = url,
+                    NotifType = notifType
                 });
             }
 

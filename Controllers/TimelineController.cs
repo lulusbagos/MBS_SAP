@@ -312,6 +312,7 @@ namespace MBS_SAP.Controllers
         public async Task<IActionResult> ToggleLike(string itemType, int itemId)
         {
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+            var userName = User.Identity?.Name ?? "Seseorang";
             if (string.IsNullOrEmpty(userNik)) return Json(new { success = false, message = "Belum login" });
 
             var existingLike = await _context.TimelineLikes
@@ -331,6 +332,20 @@ namespace MBS_SAP.Controllers
                     CreatedAt = System.DateTime.Now
                 });
                 isLiked = true;
+
+                // Kirim notifikasi ke pemilik postingan (jika bukan diri sendiri)
+                var ownerNik = await GetItemOwnerNikAsync(itemType, itemId);
+                if (!string.IsNullOrEmpty(ownerNik) && ownerNik != userNik)
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        RecipientNik = ownerNik,
+                        Title = $"{userName} menyukai postingan Anda",
+                        Message = $"{userName} memberikan ❤️ pada laporan {itemType} Anda.",
+                        Url = "/Timeline/Index",
+                        NotifType = "timeline_like"
+                    });
+                }
             }
 
             await _context.SaveChangesAsync();
@@ -357,6 +372,24 @@ namespace MBS_SAP.Controllers
             };
 
             _context.TimelineComments.Add(comment);
+
+            // Kirim notifikasi ke pemilik postingan (jika bukan diri sendiri)
+            if (!string.IsNullOrEmpty(userNik))
+            {
+                var ownerNik = await GetItemOwnerNikAsync(itemType, itemId);
+                if (!string.IsNullOrEmpty(ownerNik) && ownerNik != userNik)
+                {
+                    _context.Notifications.Add(new Notification
+                    {
+                        RecipientNik = ownerNik,
+                        Title = $"{userName} mengomentari postingan Anda",
+                        Message = $"{userName} berkomentar: \"{(text.Length > 80 ? text.Substring(0, 80) + "..." : text)}\"",
+                        Url = "/Timeline/Index",
+                        NotifType = "timeline_comment"
+                    });
+                }
+            }
+
             await _context.SaveChangesAsync();
 
             var totalComments = await _context.TimelineComments.CountAsync(c => c.ItemType == itemType && c.ItemId == itemId);
@@ -367,6 +400,19 @@ namespace MBS_SAP.Controllers
                 time = comment.CreatedAt.ToString("dd MMM, HH:mm"),
                 totalComments = totalComments 
             });
+        }
+
+        /// <summary>Ambil NIK pemilik item berdasarkan ItemType dan ItemId</summary>
+        private async Task<string?> GetItemOwnerNikAsync(string itemType, int itemId)
+        {
+            return itemType switch
+            {
+                "Hazard"     => (await _context.HazardReports.Where(h => h.Id == itemId && !h.IsDeleted).Select(h => h.Nik).FirstOrDefaultAsync()),
+                "Inspection" => (await _context.Inspections.Where(i => i.Id == itemId && !i.IsDeleted).Select(i => i.Nik).FirstOrDefaultAsync()),
+                "P5m"        => (await _context.P5ms.Where(p => p.Id == itemId && !p.IsDeleted).Select(p => p.Nik).FirstOrDefaultAsync()),
+                "SafetyTalk" => (await _context.SafetyTalks.Where(s => s.Id == itemId && !s.IsDeleted).Select(s => s.Nik).FirstOrDefaultAsync()),
+                _            => null
+            };
         }
     }
 }

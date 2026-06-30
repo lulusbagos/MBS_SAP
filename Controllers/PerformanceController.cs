@@ -95,14 +95,70 @@ namespace MBS_SAP.Controllers
 
             // 4. Open Hazards breakdown by Risk Level (Low/Medium/High/Extreme)
             var openHazardsList = await hazards.Where(h => h.StatusTemuan == "Open" && h.TingkatResiko != null).Select(h => h.TingkatResiko).ToListAsync();
-            int openLow = openHazardsList.Count(r => string.Equals(r, "Low", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ringan", StringComparison.OrdinalIgnoreCase));
+            int openInsiden = openHazardsList.Count(r => string.Equals(r, "Insiden", StringComparison.OrdinalIgnoreCase));
+            int openKritis = openHazardsList.Count(r => string.Equals(r, "Kritis", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Critical", StringComparison.OrdinalIgnoreCase));
+            int openExtreme = openHazardsList.Count(r => string.Equals(r, "Extreme", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Sangat Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ekstrim", StringComparison.OrdinalIgnoreCase));
+            int openHigh = openHazardsList.Count(r => string.Equals(r, "High", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Tinggi", StringComparison.OrdinalIgnoreCase));
             int openMedium = openHazardsList.Count(r => string.Equals(r, "Medium", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Sedang", StringComparison.OrdinalIgnoreCase));
-            int openHigh = openHazardsList.Count(r => string.Equals(r, "High", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Berat", StringComparison.OrdinalIgnoreCase));
-            int openExtreme = openHazardsList.Count(r => string.Equals(r, "Extreme", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Sangat Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Critical", StringComparison.OrdinalIgnoreCase));
+            int openLow = openHazardsList.Count(r => string.Equals(r, "Low", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ringan", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Rendah", StringComparison.OrdinalIgnoreCase));
 
             // 5. Total Open vs Closed Hazards
             int totalOpenHazards = await hazards.CountAsync(h => h.StatusTemuan == "Open");
             int totalClosedHazards = await hazards.CountAsync(h => h.StatusTemuan == "Closed");
+
+            // 5a. Monitoring Metrics
+            int totalHazards = totalOpenHazards + totalClosedHazards;
+            double complianceClose = totalHazards > 0 ? (double)totalClosedHazards / totalHazards * 100 : 0;
+
+            var overdueDate = DateTime.Now.AddDays(-14);
+            int overdueHazards = await hazards.CountAsync(h => h.StatusTemuan == "Open" && h.Tanggal < overdueDate);
+            double overdueRate = totalOpenHazards > 0 ? (double)overdueHazards / totalOpenHazards * 100 : 0;
+
+            int highRiskOpen = openKritis + openExtreme + openHigh;
+            double complianceRisk = totalOpenHazards > 0 ? (double)highRiskOpen / totalOpenHazards * 100 : 0;
+
+            var allHazardRisks = await hazards.Select(h => new { h.StatusTemuan, h.TingkatResiko }).ToListAsync();
+            int GetRiskWeight(string r) {
+                if (string.IsNullOrEmpty(r)) return 0;
+                if (r.Contains("Insiden", StringComparison.OrdinalIgnoreCase)) return 6;
+                if (r.Contains("Kritis", StringComparison.OrdinalIgnoreCase) || r.Contains("Critical", StringComparison.OrdinalIgnoreCase)) return 5;
+                if (r.Contains("Extreme", StringComparison.OrdinalIgnoreCase) || r.Contains("Ekstrim", StringComparison.OrdinalIgnoreCase) || r.Contains("Sangat Berat", StringComparison.OrdinalIgnoreCase)) return 4;
+                if (r.Contains("High", StringComparison.OrdinalIgnoreCase) || r.Contains("Tinggi", StringComparison.OrdinalIgnoreCase) || r.Contains("Berat", StringComparison.OrdinalIgnoreCase)) return 3;
+                if (r.Contains("Medium", StringComparison.OrdinalIgnoreCase) || r.Contains("Sedang", StringComparison.OrdinalIgnoreCase)) return 2;
+                if (r.Contains("Low", StringComparison.OrdinalIgnoreCase) || r.Contains("Rendah", StringComparison.OrdinalIgnoreCase) || r.Contains("Ringan", StringComparison.OrdinalIgnoreCase)) return 1;
+                return 0;
+            }
+            int totalRiskWeight = allHazardRisks.Sum(h => GetRiskWeight(h.TingkatResiko));
+            int closedRiskWeight = allHazardRisks.Where(h => h.StatusTemuan == "Closed").Sum(h => GetRiskWeight(h.TingkatResiko));
+            double rri = totalRiskWeight > 0 ? (double)closedRiskWeight / totalRiskWeight * 100 : 0;
+
+            var hazardSigs = await hazards.Where(h => h.JenisBahaya != null && h.Area != null)
+                .Select(h => new { h.JenisBahaya, h.Area, h.Lokasi, h.Pja })
+                .ToListAsync();
+            var groupedSigs = hazardSigs.GroupBy(h => $"{h.JenisBahaya}|{h.Area}|{h.Lokasi}|{h.Pja}").ToList();
+            int repeatSignatures = groupedSigs.Count(g => g.Count() > 1);
+            int totalSignatures = groupedSigs.Count;
+            double rhr = totalSignatures > 0 ? (double)repeatSignatures / totalSignatures * 100 : 0;
+
+            var closedHazardsList = await hazards.Where(h => h.StatusTemuan == "Closed" && h.TingkatResiko != null).Select(h => h.TingkatResiko).ToListAsync();
+            int closedKritis = closedHazardsList.Count(r => string.Equals(r, "Kritis", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Critical", StringComparison.OrdinalIgnoreCase));
+            int closedExtreme = closedHazardsList.Count(r => string.Equals(r, "Extreme", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Sangat Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ekstrim", StringComparison.OrdinalIgnoreCase));
+            int closedHigh = closedHazardsList.Count(r => string.Equals(r, "High", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Tinggi", StringComparison.OrdinalIgnoreCase));
+            int highRiskClosed = closedKritis + closedExtreme + closedHigh;
+            int totalHighRisk = highRiskOpen + highRiskClosed;
+            double highRiskResolution = totalHighRisk > 0 ? (double)highRiskClosed / totalHighRisk * 100 : 0;
+
+            // 5b. Extra Professional Graphs Data
+            var allKategori = await hazards.Where(h => h.StatusTemuan == "Open" && h.KategoriBahaya != null).Select(h => h.KategoriBahaya).ToListAsync();
+            int unsafeActCount = allKategori.Count(k => k.Contains("Tindakan", StringComparison.OrdinalIgnoreCase) || k.Contains("Act", StringComparison.OrdinalIgnoreCase) || k.Contains("KTA", StringComparison.OrdinalIgnoreCase));
+            int unsafeConditionCount = allKategori.Count(k => k.Contains("Kondisi", StringComparison.OrdinalIgnoreCase) || k.Contains("Condition", StringComparison.OrdinalIgnoreCase) || k.Contains("KTC", StringComparison.OrdinalIgnoreCase));
+            
+            var topAreas = await hazards.Where(h => h.StatusTemuan == "Open" && !string.IsNullOrEmpty(h.Area))
+                                        .GroupBy(h => h.Area)
+                                        .Select(g => new { Area = g.Key, Count = g.Count() })
+                                        .OrderByDescending(x => x.Count)
+                                        .Take(5)
+                                        .ToListAsync();
 
             // 6. Leaderboard Perusahaan
             var allKaryawans = await _context.Karyawans.Where(k => k.StatusAktif).ToListAsync();
@@ -224,16 +280,33 @@ namespace MBS_SAP.Controllers
             ViewBag.MonthSafetyTalks = monthSafetyTalks;
             ViewBag.MonthP5ms = monthP5ms;
 
-            ViewBag.OpenLow = openLow;
-            ViewBag.OpenMedium = openMedium;
-            ViewBag.OpenHigh = openHigh;
+            ViewBag.OpenInsiden = openInsiden;
+            ViewBag.OpenKritis = openKritis;
             ViewBag.OpenExtreme = openExtreme;
+            ViewBag.OpenHigh = openHigh;
+            ViewBag.OpenMedium = openMedium;
+            ViewBag.OpenLow = openLow;
 
             ViewBag.TotalOpenHazards = totalOpenHazards;
             ViewBag.TotalClosedHazards = totalClosedHazards;
 
             ViewBag.Leaderboard = leaderboard;
             ViewBag.MonthlyTrend = monthlyTrend;
+
+            // 8. Monitoring Metrics ViewBags
+            ViewBag.ComplianceClose = Math.Round(complianceClose, 1);
+            ViewBag.OverdueRate = Math.Round(overdueRate, 1);
+            ViewBag.ComplianceRisk = Math.Round(complianceRisk, 1);
+            ViewBag.RRI = Math.Round(rri, 1);
+            ViewBag.RHR = Math.Round(rhr, 1);
+            ViewBag.RepeatHazards = repeatSignatures;
+            ViewBag.TotalSignatures = totalSignatures;
+            ViewBag.HighRiskResolution = Math.Round(highRiskResolution, 1);
+
+            ViewBag.UnsafeActCount = unsafeActCount;
+            ViewBag.UnsafeConditionCount = unsafeConditionCount;
+            ViewBag.TopAreasLabels = topAreas.Select(a => a.Area).ToList();
+            ViewBag.TopAreasData = topAreas.Select(a => a.Count).ToList();
 
             // Individual ViewBag properties
             ViewBag.MyHazardsWeek = myHazardsWeek;

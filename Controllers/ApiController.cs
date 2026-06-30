@@ -241,13 +241,14 @@ ORDER BY nama_perusahaan";
             var notifs = await _context.Notifications
                 .Where(n => n.RecipientNik == nik)
                 .OrderByDescending(n => n.CreatedAt)
-                .Take(20)
+                .Take(30)
                 .Select(n => new {
                     id = n.Id,
                     title = n.Title,
                     message = n.Message,
                     url = n.Url,
                     isRead = n.IsRead,
+                    notifType = n.NotifType ?? "general",
                     createdAt = n.CreatedAt.ToString("o")
                 })
                 .ToListAsync();
@@ -339,7 +340,8 @@ ORDER BY nama_perusahaan";
                             RecipientNik = hazard.NikPja,
                             Title = "Pengalihan Hazard",
                             Message = $"Laporan Hazard di {hazard.Lokasi ?? hazard.Area} telah dialihkan kepada Anda oleh {userName}.",
-                            Url = "/Hazard/Index"
+                            Url = "/Hazard/Index",
+                            NotifType = "hazard_reassign"
                         });
                     }
                     else if (hazard.PerusahaanId.HasValue)
@@ -348,7 +350,8 @@ ORDER BY nama_perusahaan";
                             hazard.PerusahaanId.Value,
                             "Pengalihan Hazard",
                             $"Laporan Hazard di {hazard.Lokasi ?? hazard.Area} dialihkan ke penanggung jawab perusahaan oleh {userName}.",
-                            "/Hazard/Index");
+                            "/Hazard/Index",
+                            "hazard_reassign");
                     }
 
                     await _context.SaveChangesAsync();
@@ -415,7 +418,8 @@ ORDER BY nama_perusahaan";
                             RecipientNik = action.NikPja,
                             Title = "Pengalihan Action Plan",
                             Message = $"Action Plan untuk {action.KategoriTemuan} di {action.Lokasi ?? action.Area} telah dialihkan kepada Anda oleh {userName}.",
-                            Url = "/ActionPlan/Index"
+                            Url = "/ActionPlan/Index",
+                            NotifType = "actionplan_reassign"
                         });
                     }
                     else if (action.PerusahaanId.HasValue)
@@ -424,7 +428,8 @@ ORDER BY nama_perusahaan";
                             action.PerusahaanId.Value,
                             "Pengalihan Action Plan",
                             $"Action Plan untuk {action.KategoriTemuan} di {action.Lokasi ?? action.Area} dialihkan ke penanggung jawab perusahaan oleh {userName}.",
-                            "/ActionPlan/Index");
+                            "/ActionPlan/Index",
+                            "actionplan_reassign");
                     }
 
                     await _context.SaveChangesAsync();
@@ -475,7 +480,8 @@ ORDER BY nama_perusahaan";
                             RecipientNik = inspection.NikPja,
                             Title = "Pengalihan Inspeksi",
                             Message = $"Penugasan Inspeksi di {inspection.Lokasi ?? inspection.Area} telah dialihkan kepada Anda oleh {userName}.",
-                            Url = "/Inspection/Index"
+                            Url = "/Inspection/Index",
+                            NotifType = "inspection_reassign"
                         });
                     }
                     else if (inspection.PerusahaanId.HasValue)
@@ -484,7 +490,8 @@ ORDER BY nama_perusahaan";
                             inspection.PerusahaanId.Value,
                             "Pengalihan Inspeksi",
                             $"Penugasan Inspeksi di {inspection.Lokasi ?? inspection.Area} dialihkan ke penanggung jawab perusahaan oleh {userName}.",
-                            "/Inspection/Index");
+                            "/Inspection/Index",
+                            "inspection_reassign");
                     }
 
                     await _context.SaveChangesAsync();
@@ -513,7 +520,7 @@ ORDER BY nama_perusahaan";
             return int.TryParse(raw, out perusahaanId) && perusahaanId > 0;
         }
 
-        private async Task<int> CreateCompanyBroadcastNotificationAsync(int perusahaanId, string title, string message, string url)
+        private async Task<int> CreateCompanyBroadcastNotificationAsync(int perusahaanId, string title, string message, string url, string notifType = "general")
         {
             var recipientNiks = await GetCompanyNotificationRecipientsAsync(perusahaanId);
 
@@ -530,7 +537,8 @@ ORDER BY nama_perusahaan";
                     RecipientNik = nik,
                     Title = title,
                     Message = message,
-                    Url = url
+                    Url = url,
+                    NotifType = notifType
                 });
             }
 

@@ -19,13 +19,15 @@ namespace MBS_SAP.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ExcelService _excelService;
         private readonly MBS_SAP.Services.ImageUploadService _imageUploadService;
+        private readonly CompanyHierarchyService _companyHierarchyService;
 
-        public SafetyTalkController(AppDbContext context, IWebHostEnvironment webHostEnvironment, ExcelService excelService, MBS_SAP.Services.ImageUploadService imageUploadService)
+        public SafetyTalkController(AppDbContext context, IWebHostEnvironment webHostEnvironment, ExcelService excelService, MBS_SAP.Services.ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
             _excelService = excelService;
             _imageUploadService = imageUploadService;
+            _companyHierarchyService = companyHierarchyService;
         }
 
         // GET: SafetyTalk
@@ -34,8 +36,19 @@ namespace MBS_SAP.Controllers
             ViewData["HeaderTitle"] = "Safety Talk & Briefing";
             ViewData["ActiveTab"] = "SafetyTalk";
 
-            var reports = await _context.SafetyTalks
-                .Where(s => !s.IsDeleted)
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+
+            var query = _context.SafetyTalks.Where(s => !s.IsDeleted);
+
+            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin)
+            if (companyId.HasValue)
+            {
+                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
+                query = query.Where(s => s.PerusahaanId.HasValue && allowedIds.Contains(s.PerusahaanId.Value));
+            }
+
+            var reports = await query
                 .OrderByDescending(s => s.CreatedAt)
                 .ToListAsync();
             return View(reports);

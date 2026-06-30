@@ -843,6 +843,10 @@ namespace MBS_SAP.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("no_nik");
 
+                    b.Property<string>("PathFoto")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("path_foto");
+
                     b.Property<int?>("PerusahaanNodeId")
                         .HasColumnType("int")
                         .HasColumnName("perusahaan_node_id");
@@ -924,6 +928,12 @@ namespace MBS_SAP.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)")
                         .HasColumnName("message");
+
+                    b.Property<string>("NotifType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasColumnName("notif_type");
 
                     b.Property<string>("RecipientNik")
                         .IsRequired()

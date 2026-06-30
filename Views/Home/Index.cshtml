@@ -13,23 +13,12 @@
             
             <div class="d-flex justify-content-between align-items-center position-relative" style="z-index: 1;">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-circle d-flex align-items-center justify-content-center position-relative overflow-hidden" style="width: 54px; height: 54px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.25); box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-                        @if (!string.IsNullOrEmpty(ViewData["UserPathFoto"]?.ToString()))
-                        {
-                            <img src="@ViewData["UserPathFoto"]" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; document.getElementById('home-avatar-fallback').style.display='flex';" />
-                        }
-                        <div id="home-avatar-fallback" class="w-100 h-100 align-items-center justify-content-center" style="display: @(string.IsNullOrEmpty(ViewData["UserPathFoto"]?.ToString()) ? "flex" : "none"); background: linear-gradient(135deg, #0284c7, #3b82f6); color: white; font-weight: 800; font-size: 20px;">
-                            @(!string.IsNullOrEmpty(ViewData["UserNama"]?.ToString()) ? ViewData["UserNama"]?.ToString()?.Substring(0, 1).ToUpper() : "K")
-                        </div>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2);">
+                        <i class="bi bi-person-badge-fill text-white" style="font-size: 24px;"></i>
                     </div>
                     <div>
-                        <div style="color: rgba(255,255,255,0.6); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Selamat Bekerja,</div>
-                        <h5 style="color: white; font-weight: 900; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2); font-size: 16px;">@ViewData["UserNama"]</h5>
-                        <div class="d-flex flex-wrap align-items-center gap-2 mt-1" style="font-size: 11px; color: rgba(255,255,255,0.7); font-weight: 600;">
-                            <span><i class="bi bi-building me-1" style="color: #38bdf8;"></i>@ViewData["UserPerusahaan"]</span>
-                            <span style="opacity: 0.4;">•</span>
-                            <span><i class="bi bi-briefcase me-1" style="color: #38bdf8;"></i>@ViewData["UserJabatan"]</span>
-                        </div>
+                        <div style="color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 500;">Selamat Bekerja,</div>
+                        <h5 style="color: white; font-weight: 800; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">@User.Identity?.Name</h5>
                     </div>
                 </div>
                 
@@ -97,6 +86,14 @@
 
         <!-- Quick Action Menu Cards -->
         <div class="action-grid">
+            <a asp-controller="Performance" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0284c7, #0369a1); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
+                    <i class="bi bi-bar-chart-line-fill" style="font-size: 20px; color: white;"></i>
+                </div>
+                <span style="font-weight: 700; font-size: 13px;">Pencapaian</span>
+                <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">KPI Kinerja</span>
+            </a>
+
             <a asp-controller="Timeline" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
                 <img src="~/images/menu_timeline.png" class="menu-action-icon" alt="SafeFeed" asp-append-version="true" />
                 <span style="font-weight: 700; font-size: 13px;">SafeFeed</span>
@@ -160,13 +157,6 @@
                 </div>
                 <span style="font-weight: 700; font-size: 13px;">Insiden</span>
                 <span class="badge" style="background-color: rgba(244, 63, 94, 0.1); color: #f43f5e; font-size: 10px; font-weight: 600;">Berita K3</span>
-            </a>
-            <a asp-controller="Performance" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
-                    <i class="bi bi-bar-chart-line-fill" style="font-size: 20px; color: white;"></i>
-                </div>
-                <span style="font-weight: 700; font-size: 13px;">Pencapaian SAP</span>
-                <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">Grafik & Target</span>
             </a>
         </div>
     </div>

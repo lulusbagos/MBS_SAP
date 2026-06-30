@@ -18,13 +18,15 @@ namespace MBS_SAP.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ExcelService _excelService;
         private readonly MBS_SAP.Services.ImageUploadService _imageUploadService;
+        private readonly CompanyHierarchyService _companyHierarchyService;
 
-        public ActionPlanController(AppDbContext context, IWebHostEnvironment webHostEnvironment, ExcelService excelService, MBS_SAP.Services.ImageUploadService imageUploadService)
+        public ActionPlanController(AppDbContext context, IWebHostEnvironment webHostEnvironment, ExcelService excelService, MBS_SAP.Services.ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
             _excelService = excelService;
             _imageUploadService = imageUploadService;
+            _companyHierarchyService = companyHierarchyService;
         }
 
         // GET: ActionPlan
@@ -40,28 +42,19 @@ namespace MBS_SAP.Controllers
 
             var query = _context.ActionPlans.Where(r => !r.IsDeleted);
 
+            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin)
+            if (companyId.HasValue)
+            {
+                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
+                query = query.Where(r => r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value));
+            }
+
+            // Non-Admin hanya melihat yang terkait dengannya langsung
             if (!isAdmin && !string.IsNullOrEmpty(userNik))
             {
-                if (companyId.HasValue)
-                {
-                    // Hanya tampilkan data dari perusahaan yang sama DAN yang diarahkan kepadanya (PJA/PIC/Pembuat/Umum Perusahaan)
-                    query = query.Where(r =>
-                        r.PerusahaanId == companyId.Value &&
-                        (r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik || string.IsNullOrEmpty(r.NikPja))
-                    );
-                }
-                else
-                {
-                    // Jika user tidak memiliki ID perusahaan, tampilkan yang terkait dengannya langsung
-                    query = query.Where(r =>
-                        r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik
-                    );
-                }
-            }
-            else if (isAdmin && companyId.HasValue)
-            {
-                // Admin masih bisa melihat data perusahaan lain atau kosong (opsional)
-                // Jika ingin admin tetap melihat seluruh data tanpa filter, biarkan kosong.
+                query = query.Where(r =>
+                    r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik || string.IsNullOrEmpty(r.NikPja)
+                );
             }
 
             var reports = await query

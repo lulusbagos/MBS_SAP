@@ -33,6 +33,12 @@ namespace MBS_SAP.Models
         [Column("is_read")]
         public bool IsRead { get; set; } = false;
 
+        /// <summary>Jenis notifikasi: hazard_new, hazard_reassign, inspection_new, inspection_reassign,
+        /// actionplan_new, actionplan_reassign, timeline_like, timeline_comment, general</summary>
+        [MaxLength(50)]
+        [Column("notif_type")]
+        public string? NotifType { get; set; } = "general";
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }

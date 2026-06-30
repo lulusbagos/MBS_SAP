@@ -18,12 +18,14 @@ namespace MBS_SAP.Controllers
         private readonly AppDbContext _context;
         private readonly ExcelService _excelService;
         private readonly ImageUploadService _imageUploadService;
+        private readonly CompanyHierarchyService _companyHierarchyService;
 
-        public InspectionController(AppDbContext context, ExcelService excelService, ImageUploadService imageUploadService)
+        public InspectionController(AppDbContext context, ExcelService excelService, ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
             _excelService = excelService;
             _imageUploadService = imageUploadService;
+            _companyHierarchyService = companyHierarchyService;
         }
 
         // GET: Inspection
@@ -36,9 +38,12 @@ namespace MBS_SAP.Controllers
             int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
 
             IQueryable<Inspection> query = _context.Inspections.Where(i => !i.IsDeleted);
-            if (!User.IsInRole("Admin") && userCompanyId.HasValue)
+
+            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin)
+            if (userCompanyId.HasValue)
             {
-                query = query.Where(i => i.PerusahaanId == userCompanyId.Value);
+                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
+                query = query.Where(i => i.PerusahaanId.HasValue && allowedIds.Contains(i.PerusahaanId.Value));
             }
 
             ViewBag.JenisInspeksiList = await query
@@ -218,7 +223,8 @@ namespace MBS_SAP.Controllers
                         RecipientNik = inspection.NikPja,
                         Title = "Penugasan Inspeksi Baru",
                         Message = $"Anda ditunjuk sebagai PJA untuk inspeksi {inspection.JenisInspeksi} di {inspection.Lokasi ?? inspection.Area} oleh {inspection.Nama}.",
-                        Url = "/Inspection/Index"
+                        Url = "/Inspection/Index",
+                        NotifType = "inspection_new"
                     };
                     _context.Notifications.Add(notif);
                     await _context.SaveChangesAsync();
@@ -229,7 +235,8 @@ namespace MBS_SAP.Controllers
                         inspection.PerusahaanId.Value,
                         "Penugasan Inspeksi Baru",
                         $"Inspeksi baru pada perusahaan {inspection.Pja ?? "-"} di {inspection.Lokasi ?? inspection.Area} membutuhkan tindak lanjut.",
-                        "/Inspection/Index");
+                        "/Inspection/Index",
+                        "inspection_new");
                 }
             }
 
@@ -301,6 +308,17 @@ namespace MBS_SAP.Controllers
         {
             var inspection = await _context.Inspections.FindAsync(id);
             if (inspection == null || inspection.IsDeleted) return NotFound();
+
+            // Pastikan user hanya bisa akses data milik perusahaannya
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+            if (userCompanyId.HasValue && inspection.PerusahaanId.HasValue)
+            {
+                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
+                if (!allowedIds.Contains(inspection.PerusahaanId.Value))
+                    return Unauthorized();
+            }
+
             return Json(inspection);
         }
 
@@ -343,7 +361,7 @@ namespace MBS_SAP.Controllers
             return int.TryParse(raw, out perusahaanId) && perusahaanId > 0;
         }
 
-        private async Task<int> CreateCompanyBroadcastNotificationAsync(int perusahaanId, string title, string message, string url)
+        private async Task<int> CreateCompanyBroadcastNotificationAsync(int perusahaanId, string title, string message, string url, string notifType = "general")
         {
             var recipientNiks = await GetCompanyNotificationRecipientsAsync(perusahaanId);
 
@@ -360,7 +378,8 @@ namespace MBS_SAP.Controllers
                     RecipientNik = nik,
                     Title = title,
                     Message = message,
-                    Url = url
+                    Url = url,
+                    NotifType = notifType
                 });
             }
 

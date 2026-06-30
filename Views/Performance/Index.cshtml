@@ -208,6 +208,84 @@
             justify-content: flex-start !important;
         }
     }
+
+    /* Safety Pyramid Styles */
+    .pyramid-graphic {
+        background: #ffffff !important; /* Force light background to match aesthetic in dark mode */
+        border: 1.5px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 24px 16px;
+        box-shadow: inset 0 2px 8px rgba(0,0,0,0.02);
+    }
+    .pyramid-row {
+        margin: 0 auto;
+        display: flex;
+        justify-content: center;
+    }
+    .pyramid-bar {
+        width: 100%;
+        position: relative;
+        height: 44px;
+        border-radius: 8px;
+        border: 1.5px solid #94a3b8;
+        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .pyramid-bar:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        z-index: 5;
+    }
+    .pyramid-label {
+        position: relative;
+        z-index: 2;
+        font-weight: 800;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+        color: #0f172a;
+    }
+    .pyramid-value {
+        position: relative;
+        z-index: 2;
+        font-weight: 900;
+        font-size: 16px;
+        color: #0f172a;
+    }
+    .pyramid-progress {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 1;
+        transition: width 1.2s cubic-bezier(0.1, 0.8, 0.2, 1);
+        border-right: 1.5px solid #94a3b8;
+    }
+    
+    /* Progress bar backgrounds with sleek gradients */
+    .bar-insiden .pyramid-progress {
+        background: linear-gradient(90deg, #f1f5f9, #cbd5e1);
+    }
+    .bar-kritis .pyramid-progress {
+        background: linear-gradient(90deg, #f87171, #991b1b);
+    }
+    .bar-ekstrim .pyramid-progress {
+        background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+    .bar-tinggi .pyramid-progress {
+        background: linear-gradient(90deg, #f97316, #ea580c);
+    }
+    .bar-sedang .pyramid-progress {
+        background: linear-gradient(90deg, #facc15, #eab308);
+    }
+    .bar-rendah .pyramid-progress {
+        background: linear-gradient(90deg, #4ade80, #22c55e);
+    }
 </style>
 
 <!-- Chart.js CDN -->
@@ -497,12 +575,132 @@
                 </div>
             </div>
 
-            <!-- Doughnut 2: Hazard Open by Risk -->
+            <!-- Safety Pyramid Block -->
             <div class="col-12 col-md-6">
                 <div class="chart-container">
-                    <h6 class="mb-3" style="font-weight: 700;">Hazard Aktif (Open) Berdasarkan Risiko</h6>
-                    <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
-                        <canvas id="risikoChart"></canvas>
+                    <h6 class="mb-3" style="font-weight: 700;">Piramida Keselamatan Berdasarkan Tingkat Risiko</h6>
+                    <div class="pyramid-graphic">
+                        <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            Sumber data asli: hazard_danger_name (status Open), kritis ditempatkan paling atas
+                        </div>
+                        
+                        <!-- True Triangle Pyramid Graphic Elements -->
+                        <div class="pyramid-triangle-container" style="position: relative; width: 100%; max-width: 360px; margin: 0 auto; padding-top: 85%; /* Slightly flatter than 1:1 Aspect Ratio */ filter: drop-shadow(0 8px 16px rgba(0,0,0,0.1));">
+                            <div class="pyramid-triangle-wrapper" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; clip-path: polygon(50% 0%, 100% 100%, 0% 100%); display: flex; flex-direction: column;">
+                                <!-- INSIDEN Row -->
+                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #f1f5f9, #cbd5e1); border-bottom: 2px solid #fff; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px;" title="Insiden: @ViewBag.OpenInsiden">
+                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
+                                        <div style="font-size: 11px; font-weight: 800; color: #334155;">INSIDEN</div>
+                                        <div style="font-size: 14px; font-weight: 900; color: #0f172a;">@ViewBag.OpenInsiden</div>
+                                    </div>
+                                </div>
+                                <!-- KRITIS Row -->
+                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #f87171, #991b1b); border-bottom: 2px solid #fff; display: flex; align-items: center; justify-content: center;" title="Kritis: @ViewBag.OpenKritis">
+                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
+                                        <div style="font-size: 11px; font-weight: 800; color: #fff;">KRITIS</div>
+                                        <div style="font-size: 16px; font-weight: 900; color: #fff;">@ViewBag.OpenKritis</div>
+                                    </div>
+                                </div>
+                                <!-- EKSTRIM Row -->
+                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #ef4444, #dc2626); border-bottom: 2px solid #fff; display: flex; align-items: center; justify-content: center;" title="Ekstrim: @ViewBag.OpenExtreme">
+                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
+                                        <div style="font-size: 12px; font-weight: 800; color: #fff;">EKSTRIM</div>
+                                        <div style="font-size: 18px; font-weight: 900; color: #fff;">@ViewBag.OpenExtreme</div>
+                                    </div>
+                                </div>
+                                <!-- TINGGI Row -->
+                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #f97316, #ea580c); border-bottom: 2px solid #fff; display: flex; align-items: center; justify-content: center;" title="Tinggi: @ViewBag.OpenHigh">
+                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
+                                        <div style="font-size: 12px; font-weight: 800; color: #fff;">TINGGI</div>
+                                        <div style="font-size: 18px; font-weight: 900; color: #fff;">@ViewBag.OpenHigh</div>
+                                    </div>
+                                </div>
+                                <!-- SEDANG Row -->
+                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #facc15, #eab308); border-bottom: 2px solid #fff; display: flex; align-items: center; justify-content: center;" title="Sedang: @ViewBag.OpenMedium">
+                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
+                                        <div style="font-size: 13px; font-weight: 800; color: #451a03;">SEDANG</div>
+                                        <div style="font-size: 20px; font-weight: 900; color: #451a03;">@ViewBag.OpenMedium</div>
+                                    </div>
+                                </div>
+                                <!-- RENDAH Row -->
+                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #4ade80, #22c55e); display: flex; align-items: center; justify-content: center;" title="Rendah: @ViewBag.OpenLow">
+                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
+                                        <div style="font-size: 13px; font-weight: 800; color: #064e3b;">RENDAH</div>
+                                        <div style="font-size: 22px; font-weight: 900; color: #064e3b;">@ViewBag.OpenLow</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Open Badge -->
+                        @{
+                            int totalOpenAll = ViewBag.OpenInsiden + ViewBag.OpenKritis + ViewBag.OpenExtreme + ViewBag.OpenHigh + ViewBag.OpenMedium + ViewBag.OpenLow;
+                        }
+                        <div class="mt-3 p-2.5 text-center" style="background: #f0f9ff; border: 1.5px solid #e0f2fe; border-radius: 8px; font-weight: 700; color: #0369a1; font-size: 13px;">
+                            Total Open (semua level): <span style="font-weight: 900; font-size: 14px;">@totalOpenAll</span>
+                        </div>
+
+                        <!-- Warning under-reporting -->
+                        @if (ViewBag.OpenLow < ViewBag.OpenMedium)
+                        {
+                            <div class="mt-3 p-3" style="background: #fffbeb; border: 1.5px solid #fde047; border-radius: 8px; font-weight: 600; color: #b45309; font-size: 11px; line-height: 1.5; text-align: left;">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                <strong>Catatan:</strong> level Rendah lebih sedikit daripada Sedang. Ini biasanya menandakan under-reporting near miss ringan, bukan berarti kondisi pasti lebih aman.
+                            </div>
+                        }
+
+                        <!-- Composition Table -->
+                        <div class="table-responsive mt-3" style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff;">
+                            <table class="table table-sm align-middle text-start mb-0" style="color: #0f172a; font-size: 12px; border-collapse: collapse;">
+                                <thead style="background: #f1f5f9; font-weight: 700; color: #475569;">
+                                    <tr>
+                                        <th class="ps-3 py-2" style="border-bottom: 1.5px solid #cbd5e1;">Level Risiko</th>
+                                        <th class="text-center py-2" style="border-bottom: 1.5px solid #cbd5e1;">Jumlah</th>
+                                        <th class="text-end pe-3 py-2" style="border-bottom: 1.5px solid #cbd5e1;">Komposisi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        double pInsiden = totalOpenAll > 0 ? (double)ViewBag.OpenInsiden / totalOpenAll * 100.0 : 0.0;
+                                        double pKritis = totalOpenAll > 0 ? (double)ViewBag.OpenKritis / totalOpenAll * 100.0 : 0.0;
+                                        double pExtreme = totalOpenAll > 0 ? (double)ViewBag.OpenExtreme / totalOpenAll * 100.0 : 0.0;
+                                        double pHigh = totalOpenAll > 0 ? (double)ViewBag.OpenHigh / totalOpenAll * 100.0 : 0.0;
+                                        double pMedium = totalOpenAll > 0 ? (double)ViewBag.OpenMedium / totalOpenAll * 100.0 : 0.0;
+                                        double pLow = totalOpenAll > 0 ? (double)ViewBag.OpenLow / totalOpenAll * 100.0 : 0.0;
+                                    }
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td class="ps-3 py-2" style="font-weight: 600;">Insiden</td>
+                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenInsiden</td>
+                                        <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pInsiden, 1)%</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td class="ps-3 py-2" style="font-weight: 600;">Kritis</td>
+                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenKritis</td>
+                                        <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pKritis, 1)%</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td class="ps-3 py-2" style="font-weight: 600;">Ekstrim</td>
+                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenExtreme</td>
+                                        <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pExtreme, 1)%</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td class="ps-3 py-2" style="font-weight: 600;">Tinggi</td>
+                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenHigh</td>
+                                        <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pHigh, 1)%</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td class="ps-3 py-2" style="font-weight: 600;">Sedang</td>
+                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenMedium</td>
+                                        <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pMedium, 1)%</td>
+                                    </tr>
+                                    <tr style="border-bottom: none;">
+                                        <td class="ps-3 py-2" style="font-weight: 600;">Rendah</td>
+                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenLow</td>
+                                        <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pLow, 1)%</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -608,147 +806,6 @@
         var companyHistory = ViewBag.CompanyHistory as List<MBS_SAP.Controllers.PerformanceHistoryViewModel> ?? new List<MBS_SAP.Controllers.PerformanceHistoryViewModel>();
     }
 
-        <div id="sectionMonitoring" style="display: none;" class="animate-fade-in">
-            <!-- Monitoring Options -->
-            <div class="card-sap p-3 mb-4 border-0" style="border-radius: 16px;">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                    <div>
-                        <h6 class="mb-1" style="font-weight: 800;">Safety Officer Monitoring Panel</h6>
-                        <p class="mb-0 text-muted" style="font-size: 11px;">Pantau kepatuhan pengisian SAP karyawan dan unduh laporan yang tidak patuh.</p>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a asp-action="DownloadUncompliantReport" asp-route-range="week" class="btn btn-sm px-3 py-2 text-white" style="background: var(--color-primary); border-radius: 8px; font-weight: 700; font-size: 12px; text-decoration: none;">
-                            <i class="bi bi-file-earmark-excel-fill me-1"></i> Download Belum SAP (Minggu Ini)
-                        </a>
-                        <a asp-action="DownloadUncompliantReport" asp-route-range="month" class="btn btn-sm px-3 py-2 text-white" style="background: var(--color-primary); border-radius: 8px; font-weight: 700; font-size: 12px; text-decoration: none;">
-                            <i class="bi bi-file-earmark-excel-fill me-1"></i> Download Belum SAP (Bulan Ini)
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Monitoring Grid -->
-            <div class="row g-3">
-                <!-- Panel Left: Uncompliant Employees List -->
-                <div class="col-12 col-lg-6">
-                    <div class="chart-container" style="max-height: 550px; display: flex; flex-direction: column;">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <h6 style="font-weight: 700; margin: 0;">Karyawan Belum Mengisi SAP</h6>
-                            <select id="uncompliantPeriodSelect" class="form-select-sm" style="background: var(--bg-layout); border: 1.5px solid var(--border-color); color: var(--text-main); border-radius: 6px; font-weight: 600;" onchange="toggleUncompliantPeriod(this.value)">
-                                <option value="week">Minggu Ini (@uncompliantWeek.Count Orang)</option>
-                                <option value="month">Bulan Ini (@uncompliantMonth.Count Orang)</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Search Box for Uncompliant -->
-                        <div class="mb-3">
-                            <input type="text" id="searchUncompliant" class="input-sap" placeholder="🔍 Cari nama atau NIK..." style="height: 36px; font-size: 12px;" oninput="filterUncompliant(this.value)" />
-                        </div>
-
-                        <!-- Uncompliant List Wrapper -->
-                        <div class="table-responsive flex-grow-1" style="overflow-y: auto; max-height: 380px;">
-                            <table class="table table-sm text-start align-middle" style="color: var(--text-main); font-size: 12px;">
-                                <thead>
-                                    <tr style="border-bottom: 2px solid var(--border-color);">
-                                        <th>NIK</th>
-                                        <th>Nama Lengkap</th>
-                                        <th>Departemen</th>
-                                        <th class="text-end">Jumlah</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="uncompliantTableBody">
-                                    <!-- Week Items -->
-                                    @foreach (var emp in uncompliantWeek)
-                                    {
-                                        <tr class="uncompliant-item item-week" data-search="@emp.Nama.ToLower() @emp.Nik.ToLower()">
-                                            <td style="font-family: monospace; font-weight: 600;">@emp.Nik</td>
-                                            <td style="font-weight: 700;">@emp.Nama</td>
-                                            <td>@emp.Departemen</td>
-                                            <td class="text-end text-danger" style="font-weight: 700;">0/1</td>
-                                        </tr>
-                                    }
-                                    <!-- Month Items -->
-                                    @foreach (var emp in uncompliantMonth)
-                                    {
-                                        <tr class="uncompliant-item item-month" data-search="@emp.Nama.ToLower() @emp.Nik.ToLower()" style="display: none;">
-                                            <td style="font-family: monospace; font-weight: 600;">@emp.Nik</td>
-                                            <td style="font-weight: 700;">@emp.Nama</td>
-                                            <td>@emp.Departemen</td>
-                                            <td class="text-end text-warning" style="font-weight: 700;">@emp.SubmissionCount/4</td>
-                                        </tr>
-                                    }
-                                    @if (uncompliantWeek.Count == 0 && uncompliantMonth.Count == 0)
-                                    {
-                                        <tr>
-                                            <td colspan="4" class="text-center text-muted py-4">Semua karyawan sudah mematuhi kepatuhan SAP.</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Panel Right: Company History Activity -->
-                <div class="col-12 col-lg-6">
-                    <div class="chart-container" style="max-height: 550px; display: flex; flex-direction: column;">
-                        <h6 style="font-weight: 700;" class="mb-3">History Input SAP Perusahaan</h6>
-                        
-                        <!-- Search Box for History -->
-                        <div class="mb-3">
-                            <input type="text" id="searchHistory" class="input-sap" placeholder="🔍 Cari aktivitas, nama, atau NIK..." style="height: 36px; font-size: 12px;" oninput="filterHistory(this.value)" />
-                        </div>
-
-                        <!-- History List Wrapper -->
-                        <div class="table-responsive flex-grow-1" style="overflow-y: auto; max-height: 430px;">
-                            <table class="table table-sm text-start align-middle" style="color: var(--text-main); font-size: 12px;">
-                                <thead>
-                                    <tr style="border-bottom: 2px solid var(--border-color);">
-                                        <th style="width: 90px;">Tanggal</th>
-                                        <th>Pengirim</th>
-                                        <th>Modul</th>
-                                        <th>Detail/Lokasi</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="historyTableBody">
-                                    @foreach (var item in companyHistory)
-                                    {
-                                        string badgeClass = item.Type switch
-                                        {
-                                            "Hazard" => "bg-danger",
-                                            "Inspection" => "bg-primary",
-                                            "SafetyTalk" => "bg-warning text-dark",
-                                            "P5m" => "bg-success",
-                                            _ => "bg-secondary"
-                                        };
-                                        <tr class="history-item" data-search="@item.User.ToLower() @item.Nik.ToLower() @item.Title.ToLower() @item.Description.ToLower()">
-                                            <td style="font-size: 10px; color: var(--text-muted);">@item.Date.ToString("dd MMM HH:mm")</td>
-                                            <td>
-                                                <div style="font-weight: 700;">@item.User</div>
-                                                <div style="font-size: 10px; font-family: monospace; color: var(--text-muted);">@item.Nik</div>
-                                            </td>
-                                            <td>
-                                                <span class="badge @badgeClass" style="font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 4px 6px;">@item.Type</span>
-                                            </td>
-                                            <td>
-                                                <div style="font-weight: 600;">@item.Title</div>
-                                                <div style="font-size: 10px; color: var(--text-muted); max-width: 250px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="@item.Description">@item.Description</div>
-                                            </td>
-                                        </tr>
-                                    }
-                                    @if (companyHistory.Count == 0)
-                                    {
-                                        <tr>
-                                            <td colspan="4" class="text-center text-muted py-4">Belum ada riwayat aktivitas yang terekam.</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
     @{
         var hierarchy = ViewBag.CompanyHierarchy as List<MBS_SAP.Controllers.CompanyHierarchyNode> ?? new List<MBS_SAP.Controllers.CompanyHierarchyNode>();
@@ -842,7 +899,294 @@
         }
     }
 
-        <div id="sectionHierarchy" style="display: none;" class="animate-fade-in">
+    <!-- ==================== SECTION 3: PEMANTAUAN SAFETY ==================== -->
+    <div id="sectionMonitoring" style="display: none;" class="animate-fade-in">
+        <div class="card-sap p-4 mb-4 border-0" style="border-radius: 16px;">
+            <h5 class="mb-1" style="font-weight: 800;"><i class="bi bi-speedometer2 me-2 text-primary"></i>Compliance Risk & Monitoring</h5>
+            <p class="text-muted mb-0" style="font-size: 12px;">Indikator kinerja kualitas pelaporan dan penyelesaian hazard berdasarkan bobot dan risiko.</p>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <!-- 1. Compliance Close -->
+            <div class="col-6 col-lg-2">
+                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
+                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Compliance Close</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.ComplianceClose%</div>
+                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">Semakin tinggi semakin sehat</div>
+                    <div style="position: relative; height: 80px; width: 100%;">
+                        <canvas id="gaugeComplianceClose"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Overdue -->
+            <div class="col-6 col-lg-2">
+                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
+                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Overdue</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.OverdueRate%</div>
+                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">Proporsi overdue dari total open</div>
+                    <div style="position: relative; height: 80px; width: 100%;">
+                        <canvas id="gaugeOverdue"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Compliance Risk -->
+            <div class="col-6 col-lg-2">
+                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
+                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Compliance Risk</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.ComplianceRisk%</div>
+                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">Proporsi high-risk dari total open</div>
+                    <div style="position: relative; height: 80px; width: 100%;">
+                        <canvas id="gaugeComplianceRisk"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. RRI -->
+            <div class="col-6 col-lg-2">
+                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
+                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Risk Reduction (RRI)</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.RRI%</div>
+                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">Risiko berbobot yang ditutup</div>
+                    <div style="position: relative; height: 80px; width: 100%;">
+                        <canvas id="gaugeRRI"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. RHR -->
+            <div class="col-6 col-lg-2">
+                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
+                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Repeat Hazard (RHR)</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.RHR%</div>
+                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">@ViewBag.RepeatHazards repeat dari @ViewBag.TotalSignatures signature</div>
+                    <div style="position: relative; height: 80px; width: 100%;">
+                        <canvas id="gaugeRHR"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. High-Risk Resolution -->
+            <div class="col-6 col-lg-2">
+                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
+                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">High-Risk Resolution</div>
+                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.HighRiskResolution%</div>
+                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">Close high-risk / total high-risk</div>
+                    <div style="position: relative; height: 80px; width: 100%;">
+                        <canvas id="gaugeHighRisk"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-sap p-4 mb-4 border-0" style="border-radius: 12px; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2) !important;">
+            <div class="d-flex gap-4 flex-wrap">
+                <div class="flex-fill" style="min-width: 250px;">
+                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main);"><strong>Compliance Close:</strong> persentase temuan yang sudah status <strong class="text-success">Closed</strong> dari total Open+Closed.</div>
+                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 6px;"><strong>RRI:</strong> bobot risiko yang berhasil ditutup (Rendah=1 s/d Kritis=5). Lebih tinggi lebih baik.</div>
+                </div>
+                <div class="flex-fill" style="min-width: 250px;">
+                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main);"><strong>Overdue:</strong> proporsi temuan Open yang melewati SLA >14 hari. Lebih rendah lebih baik.</div>
+                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 6px;"><strong>RHR:</strong> persentase signature hazard yang berulang (type+area+lokasi+PJA). Lebih rendah lebih sehat.</div>
+                </div>
+                <div class="flex-fill" style="min-width: 250px;">
+                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main);"><strong>Compliance Risk:</strong> proporsi Open dengan risiko <strong>Kritis/Ekstrim/Tinggi</strong>. Lebih rendah lebih baik.</div>
+                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 6px;"><strong>High-Risk Resolution:</strong> persentase temuan risiko tinggi yang berhasil ditutup.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Professional Summary -->
+        <div class="card-sap p-4 border-0 mb-4" style="border-radius: 16px; border-left: 4px solid #3b82f6 !important;">
+            <h6 style="font-weight: 800; color: #3b82f6;" class="mb-2"><i class="bi bi-robot me-2"></i>Executive Summary Analysis</h6>
+            <div style="font-size: 13px; color: var(--text-main); line-height: 1.6;">
+                @{
+                    string summary = "";
+                    if (ViewBag.ComplianceClose >= 80) summary += "Performa penutupan bahaya secara keseluruhan <strong>sangat baik</strong> (" + ViewBag.ComplianceClose + "%). ";
+                    else if (ViewBag.ComplianceClose >= 50) summary += "Performa penutupan bahaya <strong>cukup</strong> (" + ViewBag.ComplianceClose + "%), namun perlu percepatan penyelesaian. ";
+                    else summary += "Terdapat <strong>penumpukan hazard terbuka</strong> yang signifikan (" + (100 - ViewBag.ComplianceClose) + "%). ";
+
+                    if (ViewBag.OverdueRate > 20) summary += "Perhatian khusus diperlukan pada <strong>angka Overdue yang tinggi (" + ViewBag.OverdueRate + "%)</strong>, menunjukkan banyaknya SLA yang terlewat >14 hari. ";
+                    else summary += "Tingkat ketepatan waktu penyelesaian (Overdue) terpantau <strong>terkendali</strong>. ";
+
+                    if (ViewBag.ComplianceRisk > 30) summary += "Proporsi <strong>risiko tinggi yang belum diselesaikan sangat mengkhawatirkan (" + ViewBag.ComplianceRisk + "%)</strong>. Segera prioritaskan hazard Kritis & Ekstrim. ";
+                    else summary += "Risiko tinggi yang tersisa berhasil ditekan ke angka yang minim. ";
+
+                    if (ViewBag.HighRiskResolution >= 75) summary += "Resolusi terhadap bahaya berisiko tinggi (High-Risk Resolution) <strong>sangat responsif</strong> (" + ViewBag.HighRiskResolution + "%). ";
+                    
+                    if (ViewBag.RHR > 40) summary += "Peringatan: <strong>Repeat Hazard Rate sangat tinggi (" + ViewBag.RHR + "%)</strong>. Banyak temuan berulang pada area dan tipe yang sama, menandakan akar masalah (root cause) belum tertangani dengan tuntas.";
+                    else summary += "Tingkat repetisi bahaya (RHR) tergolong rendah, menandakan perbaikan yang dilakukan bersifat permanen.";
+                }
+                @Html.Raw(summary)
+            </div>
+        </div>
+
+        <!-- Extra Professional Graphs -->
+        <div class="row g-4 mb-4">
+            <!-- Doughnut Chart: Unsafe Act vs Unsafe Condition -->
+            <div class="col-12 col-lg-6">
+                <div class="card-sap p-4 h-100 border-0" style="border-radius: 16px;">
+                    <h6 class="mb-3" style="font-weight: 800; color: var(--text-main);">
+                        <i class="bi bi-pie-chart-fill me-2 text-warning"></i>Kategori Bahaya (KTA vs KTC)
+                    </h6>
+                    <div style="position: relative; height: 250px; width: 100%;">
+                        <canvas id="chartKategoriBahaya"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Horizontal Bar: Top 5 Areas -->
+            <div class="col-12 col-lg-6">
+                <div class="card-sap p-4 h-100 border-0" style="border-radius: 16px;">
+                    <h6 class="mb-3" style="font-weight: 800; color: var(--text-main);">
+                        <i class="bi bi-geo-alt-fill me-2 text-danger"></i>Top 5 Area Rawan Hazard
+                    </h6>
+                    <div style="position: relative; height: 250px; width: 100%;">
+                        <canvas id="chartTopAreas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Safety Officer Monitoring Panel -->
+        <div class="card-sap p-3 mb-4 border-0" style="border-radius: 16px;">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h6 class="mb-1" style="font-weight: 800;">Safety Officer Monitoring Panel</h6>
+                    <p class="mb-0 text-muted" style="font-size: 11px;">Pantau kepatuhan pengisian SAP karyawan dan unduh laporan yang tidak patuh.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a asp-action="DownloadUncompliantReport" asp-route-range="week" class="btn btn-sm px-3 py-2 text-white" style="background: var(--color-primary); border-radius: 8px; font-weight: 700; font-size: 12px; text-decoration: none;">
+                        <i class="bi bi-file-earmark-excel-fill me-1"></i> Download Belum SAP (Minggu Ini)
+                    </a>
+                    <a asp-action="DownloadUncompliantReport" asp-route-range="month" class="btn btn-sm px-3 py-2 text-white" style="background: var(--color-primary); border-radius: 8px; font-weight: 700; font-size: 12px; text-decoration: none;">
+                        <i class="bi bi-file-earmark-excel-fill me-1"></i> Download Belum SAP (Bulan Ini)
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monitoring Grid -->
+        <div class="row g-3">
+            <!-- Panel Left: Uncompliant Employees List -->
+            <div class="col-12 col-lg-6">
+                <div class="chart-container" style="max-height: 550px; display: flex; flex-direction: column;">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 style="font-weight: 700; margin: 0;">Karyawan Belum Mengisi SAP</h6>
+                        <select id="uncompliantPeriodSelect" class="form-select-sm" style="background: var(--bg-layout); border: 1.5px solid var(--border-color); color: var(--text-main); border-radius: 6px; font-weight: 600;" onchange="toggleUncompliantPeriod(this.value)">
+                            <option value="week">Minggu Ini (@uncompliantWeek.Count Orang)</option>
+                            <option value="month">Bulan Ini (@uncompliantMonth.Count Orang)</option>
+                        </select>
+                    </div>
+                    <!-- Search Box for Uncompliant -->
+                    <div class="mb-3">
+                        <input type="text" id="searchUncompliant" class="input-sap" placeholder="🔍 Cari nama atau NIK..." style="height: 36px; font-size: 12px;" oninput="filterUncompliant(this.value)" />
+                    </div>
+                    <!-- Uncompliant List Wrapper -->
+                    <div class="table-responsive flex-grow-1" style="overflow-y: auto; max-height: 380px;">
+                        <table class="table table-sm text-start align-middle" style="color: var(--text-main); font-size: 12px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--border-color);">
+                                    <th>NIK</th>
+                                    <th>Nama Lengkap</th>
+                                    <th>Departemen</th>
+                                    <th class="text-end">Jumlah</th>
+                                </tr>
+                            </thead>
+                            <tbody id="uncompliantTableBody">
+                                <!-- Week Items -->
+                                @foreach (var emp in uncompliantWeek)
+                                {
+                                    <tr class="uncompliant-item item-week" data-search="@emp.Nama.ToLower() @emp.Nik.ToLower()">
+                                        <td style="font-family: monospace; font-weight: 600;">@emp.Nik</td>
+                                        <td style="font-weight: 700;">@emp.Nama</td>
+                                        <td>@emp.Departemen</td>
+                                        <td class="text-end text-danger" style="font-weight: 700;">0/1</td>
+                                    </tr>
+                                }
+                                <!-- Month Items -->
+                                @foreach (var emp in uncompliantMonth)
+                                {
+                                    <tr class="uncompliant-item item-month" data-search="@emp.Nama.ToLower() @emp.Nik.ToLower()" style="display: none;">
+                                        <td style="font-family: monospace; font-weight: 600;">@emp.Nik</td>
+                                        <td style="font-weight: 700;">@emp.Nama</td>
+                                        <td>@emp.Departemen</td>
+                                        <td class="text-end text-warning" style="font-weight: 700;">@emp.SubmissionCount/4</td>
+                                    </tr>
+                                }
+                                @if (uncompliantWeek.Count == 0 && uncompliantMonth.Count == 0)
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">Semua karyawan sudah mematuhi kepatuhan SAP.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel Right: Company History Activity -->
+            <div class="col-12 col-lg-6">
+                <div class="chart-container" style="max-height: 550px; display: flex; flex-direction: column;">
+                    <h6 style="font-weight: 700;" class="mb-3">History Input SAP Perusahaan</h6>
+                    <!-- Search Box for History -->
+                    <div class="mb-3">
+                        <input type="text" id="searchHistory" class="input-sap" placeholder="🔍 Cari aktivitas, nama, atau NIK..." style="height: 36px; font-size: 12px;" oninput="filterHistory(this.value)" />
+                    </div>
+                    <!-- History List Wrapper -->
+                    <div class="table-responsive flex-grow-1" style="overflow-y: auto; max-height: 430px;">
+                        <table class="table table-sm text-start align-middle" style="color: var(--text-main); font-size: 12px;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid var(--border-color);">
+                                    <th style="width: 90px;">Tanggal</th>
+                                    <th>Pengirim</th>
+                                    <th>Modul</th>
+                                    <th>Detail/Lokasi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                @foreach (var item in companyHistory)
+                                {
+                                    string badgeClass = item.Type switch
+                                    {
+                                        "Hazard" => "bg-danger",
+                                        "Inspection" => "bg-primary",
+                                        "SafetyTalk" => "bg-warning text-dark",
+                                        "P5m" => "bg-success",
+                                        _ => "bg-secondary"
+                                    };
+                                    <tr class="history-item" data-search="@item.User.ToLower() @item.Nik.ToLower() @item.Title.ToLower() @item.Description.ToLower()">
+                                        <td style="font-size: 10px; color: var(--text-muted);">@item.Date.ToString("dd MMM HH:mm")</td>
+                                        <td>
+                                            <div style="font-weight: 700;">@item.User</div>
+                                            <div style="font-size: 10px; font-family: monospace; color: var(--text-muted);">@item.Nik</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge @badgeClass" style="font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 4px 6px;">@item.Type</span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight: 600;">@item.Title</div>
+                                            <div style="font-size: 10px; color: var(--text-muted); max-width: 250px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="@item.Description">@item.Description</div>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (companyHistory.Count == 0)
+                                {
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted py-4">Belum ada riwayat aktivitas yang terekam.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sectionHierarchy" style="display: none;" class="animate-fade-in">
             <!-- Header Card -->
             <div class="card-sap p-4 mb-4 border-0" style="border-radius: 16px;">
                 <h5 class="mb-1" style="font-weight: 800;"><i class="bi bi-diagram-3 me-2 text-primary"></i>Struktur Hierarki & Pencapaian SAP Perusahaan</h5>
@@ -886,7 +1230,7 @@
     function switchTab(tab) {
         document.getElementById('sectionMy').style.display = tab === 'my' ? 'block' : 'none';
         document.getElementById('sectionCompany').style.display = tab === 'company' ? 'block' : 'none';
-        
+
         const monitorSec = document.getElementById('sectionMonitoring');
         if (monitorSec) {
             monitorSec.style.display = tab === 'monitoring' ? 'block' : 'none';
@@ -999,27 +1343,25 @@
             }
         });
 
-        // 3. Chart Risiko Hazard Open
-        const ctxRisiko = document.getElementById('risikoChart').getContext('2d');
-        new Chart(ctxRisiko, {
-            type: 'pie',
-            data: {
-                labels: ['Ringan (Low)', 'Sedang (Medium)', 'Berat (High)', 'Sangat Berat (Extreme)'],
-                datasets: [{
-                    data: [@ViewBag.OpenLow, @ViewBag.OpenMedium, @ViewBag.OpenHigh, @ViewBag.OpenExtreme],
-                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#7f1d1d'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { color: textColor, font: { weight: 'bold', size: 11 } }
-                    }
-                }
+        // 3. Initialize Safety Pyramid progress bar widths
+        const pyramidVals = [
+            @ViewBag.OpenInsiden,
+            @ViewBag.OpenKritis,
+            @ViewBag.OpenExtreme,
+            @ViewBag.OpenHigh,
+            @ViewBag.OpenMedium,
+            @ViewBag.OpenLow
+        ];
+        const maxPyramidVal = Math.max(...pyramidVals);
+        const pyramidBars = document.querySelectorAll('.pyramid-bar');
+        pyramidBars.forEach(bar => {
+            const val = parseInt(bar.getAttribute('data-val')) || 0;
+            const progress = bar.querySelector('.pyramid-progress');
+            if (maxPyramidVal > 0) {
+                const pct = (val / maxPyramidVal) * 100;
+                progress.style.width = pct + '%';
+            } else {
+                progress.style.width = '0%';
             }
         });
 
@@ -1163,6 +1505,164 @@
                 }
             }
         });
+
+        // 6. Gauge Charts Initialization
+        function createGauge(ctxId, value, isHigherBetter) {
+            const canvas = document.getElementById(ctxId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            // Create a pseudo-gradient using 3 colors for the track background
+            const trackColors = isHigherBetter 
+                ? ['#ef4444', '#f59e0b', '#10b981'] // Red -> Yellow -> Green
+                : ['#10b981', '#f59e0b', '#ef4444']; // Green -> Yellow -> Red
+            
+            // To achieve a gradient effect, we can use a canvas gradient
+            const gradient = ctx.createLinearGradient(0, 0, canvas.parentElement.clientWidth, 0);
+            gradient.addColorStop(0, trackColors[0]);
+            gradient.addColorStop(0.5, trackColors[1]);
+            gradient.addColorStop(1, trackColors[2]);
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Value', 'Rest'],
+                    datasets: [{
+                        data: [value, Math.max(100 - value, 0)],
+                        backgroundColor: [gradient, isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9'],
+                        borderWidth: 0,
+                        needleValue: value
+                    }]
+                },
+                options: {
+                    rotation: -90,
+                    circumference: 180,
+                    cutout: '75%',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                },
+                plugins: [{
+                    id: 'gaugeNeedle',
+                    afterDatasetDraw(chart) {
+                        const { ctx, width, chartArea: { top, bottom, left, right } } = chart;
+                        ctx.save();
+                        const value = chart.data.datasets[0].needleValue;
+                        const clampedValue = Math.max(0, Math.min(value, 100)); // Clamp between 0-100
+                        const angle = Math.PI + (clampedValue / 100 * Math.PI);
+                        
+                        const metaset = chart.getDatasetMeta(0);
+                        const arc = metaset.data[0];
+                        if (!arc) return;
+                        const cx = arc.x;
+                        const cy = arc.y;
+                        const radius = arc.outerRadius - (arc.outerRadius - arc.innerRadius)/2;
+
+                        ctx.translate(cx, cy);
+                        ctx.rotate(angle);
+                        
+                        // Draw needle
+                        ctx.beginPath();
+                        ctx.moveTo(0, -3);
+                        ctx.lineTo(radius, 0);
+                        ctx.lineTo(0, 3);
+                        ctx.fillStyle = isDark ? '#f8fafc' : '#1e293b';
+                        ctx.fill();
+                        
+                        // Center dot
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                        ctx.fillStyle = isDark ? '#f8fafc' : '#1e293b';
+                        ctx.fill();
+                        
+                        ctx.restore();
+                    }
+                }]
+            });
+        }
+
+        createGauge('gaugeComplianceClose', @ViewBag.ComplianceClose, true);
+        createGauge('gaugeOverdue', @ViewBag.OverdueRate, false);
+        createGauge('gaugeComplianceRisk', @ViewBag.ComplianceRisk, false);
+        createGauge('gaugeRRI', @ViewBag.RRI, true);
+        createGauge('gaugeRHR', @ViewBag.RHR, false);
+        createGauge('gaugeHighRisk', @ViewBag.HighRiskResolution, true);
+
+        // 7. Kategori Bahaya Chart (KTA vs KTC)
+        const ctxKategori = document.getElementById('chartKategoriBahaya');
+        if (ctxKategori) {
+            new Chart(ctxKategori.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Tindakan Tidak Aman (KTA)', 'Kondisi Tidak Aman (KTC)'],
+                    datasets: [{
+                        data: [@ViewBag.UnsafeActCount, @ViewBag.UnsafeConditionCount],
+                        backgroundColor: ['rgba(245, 158, 11, 0.85)', 'rgba(59, 130, 246, 0.85)'],
+                        borderWidth: 2,
+                        borderColor: isDark ? '#1e293b' : '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: textColor } }
+                    }
+                }
+            });
+        }
+
+        // 8. Top 5 Areas Chart
+        const ctxTopAreas = document.getElementById('chartTopAreas');
+        if (ctxTopAreas) {
+            const areaLabels = [];
+            const areaData = [];
+            @if (ViewBag.TopAreasLabels != null) {
+                foreach (var area in ViewBag.TopAreasLabels)
+                {
+                    <text>areaLabels.push('@Html.Raw(area)');</text>
+                }
+                foreach (var count in ViewBag.TopAreasData)
+                {
+                    <text>areaData.push(@count);</text>
+                }
+            }
+
+            new Chart(ctxTopAreas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: areaLabels,
+                    datasets: [{
+                        label: 'Jumlah Hazard Terbuka',
+                        data: areaData,
+                        backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, precision: 0 }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: textColor }
+                        }
+                    }
+                }
+            });
+        }
+
     });
 
     function expandAllHierarchy() {

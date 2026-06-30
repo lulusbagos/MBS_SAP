@@ -33,54 +33,6 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            // Ambil Info Karyawan Login (Nama, Jabatan, Perusahaan, Foto)
-            if (!string.IsNullOrEmpty(nrp))
-            {
-                var employeeInfo = await (from k in _context.Karyawans
-                                          join p in _context.Personals on k.IdPersonal equals p.IdPersonal
-                                          join j in _context.Jabatans on k.IdJabatan equals j.JabatanId into jg
-                                          from j in jg.DefaultIfEmpty()
-                                          join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
-                                          from c in cg.DefaultIfEmpty()
-                                          where k.NoNik == nrp && k.StatusAktif == true
-                                          select new {
-                                              Nama = p.NamaLengkap,
-                                              Jabatan = j != null ? j.NamaJabatan : "Karyawan",
-                                              Perusahaan = c != null ? c.NamaPerusahaan : "Mitra MBS",
-                                              PathFoto = k.PathFoto
-                                          }).FirstOrDefaultAsync();
-
-                if (employeeInfo != null)
-                {
-                    var formattedFoto = employeeInfo.PathFoto;
-                    if (!string.IsNullOrEmpty(formattedFoto))
-                    {
-                        if (!formattedFoto.StartsWith("/") && !formattedFoto.StartsWith("http"))
-                        {
-                            formattedFoto = "/uploads/karyawan/" + formattedFoto;
-                        }
-                    }
-                    ViewData["UserNama"] = employeeInfo.Nama;
-                    ViewData["UserJabatan"] = employeeInfo.Jabatan;
-                    ViewData["UserPerusahaan"] = employeeInfo.Perusahaan;
-                    ViewData["UserPathFoto"] = formattedFoto;
-                }
-                else
-                {
-                    ViewData["UserNama"] = User.Identity?.Name ?? "Karyawan";
-                    ViewData["UserJabatan"] = "Karyawan";
-                    ViewData["UserPerusahaan"] = "Mitra MBS";
-                    ViewData["UserPathFoto"] = "";
-                }
-            }
-            else
-            {
-                ViewData["UserNama"] = User.Identity?.Name ?? "Karyawan";
-                ViewData["UserJabatan"] = "Karyawan";
-                ViewData["UserPerusahaan"] = "Mitra MBS";
-                ViewData["UserPathFoto"] = "";
-            }
-
             ViewData["HeaderTitle"] = "Portal K3 MBS";
             ViewData["ActiveTab"] = "Home";
 

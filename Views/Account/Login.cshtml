@@ -140,9 +140,9 @@
         void splash.offsetWidth;
         splash.classList.add('show');
         
-        // Disable button to prevent double submit (delayed to allow form submission to proceed)
+        // Make button unclickable to prevent double submit (delayed to allow form submission to proceed)
         setTimeout(function() {
-            btn.disabled = true;
+            btn.style.pointerEvents = 'none';
         }, 50);
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> MEMPROSES...';
     });

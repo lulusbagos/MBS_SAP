@@ -20,12 +20,14 @@ namespace MBS_SAP.Controllers
         private readonly AppDbContext _context;
         private readonly ILogger<P2hController> _logger;
         private readonly ImageUploadService _imageUploadService;
+        private readonly CompanyHierarchyService _companyHierarchyService;
 
-        public P2hController(AppDbContext context, ILogger<P2hController> logger, ImageUploadService imageUploadService)
+        public P2hController(AppDbContext context, ILogger<P2hController> logger, ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
             _logger = logger;
             _imageUploadService = imageUploadService;
+            _companyHierarchyService = companyHierarchyService;
         }
 
         // Define checklist questions
@@ -93,8 +95,20 @@ namespace MBS_SAP.Controllers
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var isAdmin = User.IsInRole("Admin");
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
 
             var query = _context.P2hReports.Where(r => !r.IsDeleted);
+
+            // Filter hierarki perusahaan mutlak untuk semua role (admin & non-admin)
+            if (companyId.HasValue)
+            {
+                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
+                var allowedNiks = _context.AppUsers
+                    .Where(u => u.IdPerusahaan.HasValue && allowedIds.Contains(u.IdPerusahaan.Value))
+                    .Select(u => u.Nik);
+                query = query.Where(r => allowedNiks.Contains(r.Nik));
+            }
 
             if (!isAdmin && !string.IsNullOrEmpty(userNik))
             {
