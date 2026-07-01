@@ -142,7 +142,7 @@ namespace MBS_SAP.Controllers
                 };
             }
 
-            inspection.Tanggal = tanggal == default ? DateTime.Today : tanggal;
+            inspection.Tanggal = DateTime.Today;
             inspection.Waktu = waktu;
             inspection.Area = area?.ToUpper();
             inspection.Lokasi = lokasi?.ToUpper();

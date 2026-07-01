@@ -44,11 +44,10 @@ namespace MBS_SAP.Controllers
 
             var query = _context.HazardReports.Where(r => !r.IsDeleted);
 
-            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin)
+            // Tampilkan data berdasarkan perusahaan user saat ini (strict per company)
             if (companyId.HasValue)
             {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
-                query = query.Where(r => r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value));
+                query = query.Where(r => r.PerusahaanId == companyId.Value);
             }
 
             // Non-Admin hanya melihat miliknya sendiri atau yang ditugaskan kepadanya
@@ -133,7 +132,7 @@ namespace MBS_SAP.Controllers
                 };
             }
 
-            report.Tanggal = tanggal == default ? DateTime.Today : tanggal;
+            report.Tanggal = DateTime.Today;
             report.Waktu = waktu;
             report.Area = area;
             report.Lokasi = lokasi;
@@ -341,10 +340,9 @@ namespace MBS_SAP.Controllers
             // Pastikan user hanya bisa akses data milik perusahaannya
             var companyIdStr = User.FindFirst("CompanyId")?.Value;
             int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
-            if (userCompanyId.HasValue && report.PerusahaanId.HasValue)
+            if (userCompanyId.HasValue)
             {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
-                if (!allowedIds.Contains(report.PerusahaanId.Value))
+                if (report.PerusahaanId != userCompanyId.Value)
                     return Unauthorized();
             }
 

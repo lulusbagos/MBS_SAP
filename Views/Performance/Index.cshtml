@@ -25,6 +25,12 @@
 <style>
     #hitsafeLeafletMap {
         background: var(--bg-body);
+        height: calc(100vh - 230px);
+        min-height: 560px;
+        border-radius: 12px;
+        border: 2px solid #1e293b;
+        overflow: hidden;
+        position: relative;
     }
 
     .leaflet-popup-content-wrapper,
@@ -105,6 +111,18 @@
         background: rgba(59, 130, 246, 0.22);
         color: #bfdbfe;
         border-color: rgba(59, 130, 246, 0.55);
+    }
+
+    .hitsafe-popup-badge-p5m {
+        background: rgba(16, 185, 129, 0.22);
+        color: #a7f3d0;
+        border-color: rgba(16, 185, 129, 0.55);
+    }
+
+    .hitsafe-popup-badge-safetytalk {
+        background: rgba(245, 158, 11, 0.22);
+        color: #fde68a;
+        border-color: rgba(245, 158, 11, 0.55);
     }
 
     .hitsafe-popup-grid {
@@ -194,6 +212,11 @@
     @@media (max-width: 992px) {
         .hitsafe-toolbar {
             grid-template-columns: repeat(2, minmax(120px, 1fr));
+        }
+
+        #hitsafeLeafletMap {
+            height: 560px;
+            min-height: 560px;
         }
     }
 
@@ -552,7 +575,7 @@
                             <h6 class="mb-1" style="font-weight: 800;">Target Minggu Ini Tercapai!</h6>
                             <p class="mb-2" style="font-size: 12px; opacity: 0.9;">Luar biasa! Anda telah mengunggah laporan SAP untuk minggu ini. Terima kasih atas komitmen Anda dalam menjaga keselamatan kerja.</p>
                             <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="bi bi-graph-up-arrow"></i> Laporan Anda menyumbang @ViewBag.MyContributionShare% dari seluruh aktivitas perusahaan bulan ini!
+                                <i class="bi bi-person-check-fill"></i> Total laporan akun Anda bulan ini: @ViewBag.MyTotalMonth dari target 4.
                             </span>
                         </div>
                     </div>
@@ -565,7 +588,7 @@
                             <h6 class="mb-1" style="font-weight: 800;">Belum Memenuhi Target Kepatuhan!</h6>
                             <p class="mb-2" style="font-size: 12px; opacity: 0.9;">Ayo! Anda belum mengirimkan minimal 1 laporan SAP untuk minggu ini. Segera buat laporan Hazard atau Inspeksi demi keselamatan area kerja Anda.</p>
                             <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="bi bi-graph-up-arrow"></i> Laporan Anda menyumbang @ViewBag.MyContributionShare% dari seluruh aktivitas perusahaan bulan ini!
+                                <i class="bi bi-person-check-fill"></i> Total laporan akun Anda bulan ini: @ViewBag.MyTotalMonth dari target 4.
                             </span>
                         </div>
                     </div>
@@ -723,7 +746,7 @@
             </div>
             <div class="premium-body" style="padding: 20px;">
                 <div class="mb-3" style="font-size: 12px; color: var(--text-muted);">
-                    Peta laporan Hazard & Inspection dengan filter cepat dan daftar sinkron.
+                    Peta laporan Hazard, Inspection, P5M, dan Safety Talk dengan filter cepat.
                 </div>
 
                 <div class="hitsafe-toolbar">
@@ -731,6 +754,8 @@
                         <option value="all">Semua Jenis</option>
                         <option value="hazard">Hazard</option>
                         <option value="inspection">Inspection</option>
+                        <option value="p5m">P5M</option>
+                        <option value="safetytalk">Safety Talk</option>
                     </select>
                     <select id="hitsafeFilterStatus" class="hitsafe-filter">
                         <option value="all">Semua Status</option>
@@ -748,7 +773,7 @@
                     <button id="hitsafeFilterReset" type="button" class="hitsafe-filter" style="background: #0f172a; color: #f8fafc; border-color: #1e293b;">Reset Filter</button>
                 </div>
 
-                <div id="hitsafeLeafletMap" style="height: 560px; border-radius: 12px; border: 2px solid #1e293b; overflow: hidden; position: relative;"></div>
+                <div id="hitsafeLeafletMap"></div>
             </div>
         </div>
     </div>
@@ -1508,6 +1533,8 @@
         const _trendP5m     = @Html.Raw(Json.Serialize(trend.Select(x => x.P5ms).ToList()));
         const _hitSafeHazardPointsRaw = @Html.Raw(Json.Serialize(ViewBag.HazardPoints ?? new List<object>()));
         const _hitSafeInspectionPointsRaw = @Html.Raw(Json.Serialize(ViewBag.InspectionPoints ?? new List<object>()));
+        const _hitSafeP5mPointsRaw = @Html.Raw(Json.Serialize(ViewBag.P5mPoints ?? new List<object>()));
+        const _hitSafeSafetyTalkPointsRaw = @Html.Raw(Json.Serialize(ViewBag.SafetyTalkPoints ?? new List<object>()));
         const _hitSafeCanViewPhoto = @(canViewGeoPhoto ? "true" : "false");
 
         window._initCompanyCharts = function() {
@@ -1688,6 +1715,8 @@
         const kaliorangLon = 117.9006;
         const hitSafeHazardPoints = Array.isArray(_hitSafeHazardPointsRaw) ? _hitSafeHazardPointsRaw : [];
         const hitSafeInspectionPoints = Array.isArray(_hitSafeInspectionPointsRaw) ? _hitSafeInspectionPointsRaw : [];
+        const hitSafeP5mPoints = Array.isArray(_hitSafeP5mPointsRaw) ? _hitSafeP5mPointsRaw : [];
+        const hitSafeSafetyTalkPoints = Array.isArray(_hitSafeSafetyTalkPointsRaw) ? _hitSafeSafetyTalkPointsRaw : [];
 
         function escapeHtml(text) {
             return String(text ?? '')
@@ -1749,6 +1778,34 @@
                 points.push({
                     key: 'inspection-' + String(normalized.id ?? sequence) + '-' + String(sequence),
                     type: 'inspection',
+                    ...normalized
+                });
+                sequence += 1;
+            });
+
+            hitSafeP5mPoints.forEach(function(raw) {
+                const normalized = normalizePoint(raw);
+                if (!normalized) {
+                    return;
+                }
+
+                points.push({
+                    key: 'p5m-' + String(normalized.id ?? sequence) + '-' + String(sequence),
+                    type: 'p5m',
+                    ...normalized
+                });
+                sequence += 1;
+            });
+
+            hitSafeSafetyTalkPoints.forEach(function(raw) {
+                const normalized = normalizePoint(raw);
+                if (!normalized) {
+                    return;
+                }
+
+                points.push({
+                    key: 'safetytalk-' + String(normalized.id ?? sequence) + '-' + String(sequence),
+                    type: 'safetytalk',
                     ...normalized
                 });
                 sequence += 1;
@@ -1861,9 +1918,14 @@
         }
 
         function buildPointPopup(type, point) {
+            const badgeMap = {
+                hazard: { text: 'Hazard', className: 'hitsafe-popup-badge-hazard', detailLabel: 'Detail Temuan' },
+                inspection: { text: 'Inspection', className: 'hitsafe-popup-badge-inspection', detailLabel: 'Jenis Inspeksi' },
+                p5m: { text: 'P5M', className: 'hitsafe-popup-badge-p5m', detailLabel: 'Topik P5M' },
+                safetytalk: { text: 'Safety Talk', className: 'hitsafe-popup-badge-safetytalk', detailLabel: 'Judul / Materi' }
+            };
+            const meta = badgeMap[type] || badgeMap.inspection;
             const isHazard = type === 'hazard';
-            const badgeText = isHazard ? 'Hazard' : 'Inspection';
-            const badgeClass = isHazard ? 'hitsafe-popup-badge-hazard' : 'hitsafe-popup-badge-inspection';
 
             const rows = [];
             if (point.area) {
@@ -1882,9 +1944,8 @@
                 rows.push('<div class="hitsafe-popup-label">Status</div><div class="hitsafe-popup-value">' + escapeHtml(point.status) + '</div>');
             }
 
-            const detailLabel = isHazard ? 'Detail Temuan' : 'Jenis Inspeksi';
             const detailBlock = point.detail
-                ? '<div class="hitsafe-popup-detail"><strong>' + detailLabel + ':</strong><br>' + escapeHtml(point.detail) + '</div>'
+                ? '<div class="hitsafe-popup-detail"><strong>' + meta.detailLabel + ':</strong><br>' + escapeHtml(point.detail) + '</div>'
                 : '';
 
             const photoBlock = (_hitSafeCanViewPhoto && point.photoUrl)
@@ -1895,7 +1956,7 @@
                 '<div class="hitsafe-popup">',
                 '<div class="hitsafe-popup-header">',
                 '<div class="hitsafe-popup-title">Laporan Area</div>',
-                '<span class="hitsafe-popup-badge ' + badgeClass + '">' + badgeText + '</span>',
+                '<span class="hitsafe-popup-badge ' + meta.className + '">' + meta.text + '</span>',
                 '</div>',
                 '<div class="hitsafe-popup-grid">',
                 rows.join(''),
@@ -1922,7 +1983,13 @@
 
             hitSafeFilteredPoints.forEach(function(point) {
                 const popup = buildPointPopup(point.type, point);
-                const markerColor = point.type === 'hazard' ? '#f43f5e' : '#3b82f6';
+                const markerColors = {
+                    hazard: '#f43f5e',
+                    inspection: '#3b82f6',
+                    p5m: '#10b981',
+                    safetytalk: '#f59e0b'
+                };
+                const markerColor = markerColors[point.type] || '#3b82f6';
                 const marker = L.marker([point.lat, point.lon], {
                     icon: L.divIcon({
                         className: 'hitsafe-map-pin-wrapper',

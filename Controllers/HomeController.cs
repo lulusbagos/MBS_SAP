@@ -24,6 +24,8 @@ namespace MBS_SAP.Controllers
         public async Task<IActionResult> Index()
         {
             var nrp = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userNik = nrp?.Trim();
+            bool hasUserNik = !string.IsNullOrWhiteSpace(userNik);
             if (!string.IsNullOrEmpty(nrp))
             {
                 var overridePwd = await _context.PasswordOverrides.FirstOrDefaultAsync(p => p.Nrp == nrp);
@@ -44,16 +46,17 @@ namespace MBS_SAP.Controllers
 
             ViewData["RunningTexts"] = runningTexts;
 
-            // Ambil CompanyId dari claim user
-            var compIdStr = User.FindFirst("CompanyId")?.Value;
-            int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
-
-            // Query dynamic dashboard statistics — difilter per perusahaan
-            var hazardQuery     = _context.HazardReports.Where(h => !h.IsDeleted && (companyId == null || h.PerusahaanId == companyId));
-            var inspectionQuery = _context.Inspections.Where(i => !i.IsDeleted && (companyId == null || i.PerusahaanId == companyId));
-            var actionPlanQuery = _context.ActionPlans.Where(a => !a.IsDeleted && (companyId == null || a.PerusahaanId == companyId || a.PerusahaanId == null));
-            var safetyTalkQuery = _context.SafetyTalks.Where(s => !s.IsDeleted && (companyId == null || s.PerusahaanId == companyId));
-            var p5mQuery        = _context.P5ms.Where(p => !p.IsDeleted && (companyId == null || p.PerusahaanId == companyId));
+            // Query dashboard berbasis akun login (NIK), bukan agregasi perusahaan.
+            var hazardQuery = _context.HazardReports
+                .Where(h => !h.IsDeleted && hasUserNik && h.Nik == userNik);
+            var inspectionQuery = _context.Inspections
+                .Where(i => !i.IsDeleted && hasUserNik && i.Nik == userNik);
+            var actionPlanQuery = _context.ActionPlans
+                .Where(a => !a.IsDeleted && hasUserNik && (a.Nik == userNik || a.NikPja == userNik));
+            var safetyTalkQuery = _context.SafetyTalks
+                .Where(s => !s.IsDeleted && hasUserNik && s.Nik == userNik);
+            var p5mQuery = _context.P5ms
+                .Where(p => !p.IsDeleted && hasUserNik && p.Nik == userNik);
 
             var totalHazards    = await hazardQuery.CountAsync();
             var openHazards     = await hazardQuery.CountAsync(h => h.StatusTemuan == "Open");
@@ -131,7 +134,7 @@ namespace MBS_SAP.Controllers
             ViewData["CompliantWeeks"] = compliantWeeks;
             ViewData["TargetWeeks"] = targetWeeks;
 
-            // Load recent history items — difilter per perusahaan
+            // Load recent history items — difilter akun login
             var recentHazards = await hazardQuery
                 .OrderByDescending(h => h.CreatedAt)
                 .Take(2)

@@ -256,15 +256,73 @@
         function getLocation() {
             var btn = document.getElementById('btnGetLocation');
             var input = document.getElementById('lokasi');
+            var detailInput = document.getElementById('detilLokasi');
+
+            function buildSpecificLocationLabel(payload) {
+                if (!payload) return '';
+
+                const addr = payload.address || {};
+                const candidates = [
+                    addr.road,
+                    addr.path,
+                    addr.neighbourhood,
+                    addr.suburb,
+                    addr.village,
+                    addr.hamlet,
+                    addr.city_district,
+                    addr.city,
+                    addr.county,
+                    addr.state
+                ];
+
+                const compact = candidates
+                    .filter(function(x) { return typeof x === 'string' && x.trim().length > 0; })
+                    .slice(0, 4)
+                    .join(', ');
+
+                if (compact) {
+                    return compact;
+                }
+
+                return typeof payload.display_name === 'string' ? payload.display_name : '';
+            }
+
+            async function fillSpecificLocation(lat, lon) {
+                if (!detailInput) {
+                    return;
+                }
+
+                try {
+                    const endpoint = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon) + '&zoom=18&addressdetails=1';
+                    const response = await fetch(endpoint, {
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const json = await response.json();
+                    const resolved = buildSpecificLocationLabel(json);
+                    if (resolved) {
+                        detailInput.value = resolved;
+                    }
+                } catch (e) {
+                    // Keep silent when reverse geocoding fails; GPS coordinates are still captured.
+                }
+            }
             
             if (navigator.geolocation) {
                 // Show loading spinner
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 14px; height: 14px;"></span>';
                 
-                navigator.geolocation.getCurrentPosition(function(position) {
+                navigator.geolocation.getCurrentPosition(async function(position) {
                     var lat = position.coords.latitude.toFixed(6);
                     var lon = position.coords.longitude.toFixed(6);
                     input.value = lat + ", " + lon;
+                    await fillSpecificLocation(lat, lon);
                     btn.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
                 }, function(error) {
                     alert('Gagal mendapatkan lokasi GPS: ' + error.message);

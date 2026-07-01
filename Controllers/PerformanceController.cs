@@ -66,6 +66,8 @@ namespace MBS_SAP.Controllers
         {
             var hazardPoints = new List<GeoSafetyPointViewModel>();
             var inspectionPoints = new List<GeoSafetyPointViewModel>();
+            var p5mPoints = new List<GeoSafetyPointViewModel>();
+            var safetyTalkPoints = new List<GeoSafetyPointViewModel>();
 
             var dbHazards = await _context.HazardReports
                 .Where(h => !h.IsDeleted && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))) && h.Lokasi != null && h.Lokasi.Contains(","))
@@ -115,8 +117,58 @@ namespace MBS_SAP.Controllers
                 }
             }
 
+            var dbP5ms = await _context.P5ms
+                .Where(p => !p.IsDeleted && (companyId == null || (p.PerusahaanId.HasValue && allowedCompanyIds.Contains(p.PerusahaanId.Value))) && p.Lokasi != null && p.Lokasi.Contains(","))
+                .Select(p => new { p.Id, p.Tanggal, p.Nama, p.Area, p.Lokasi, p.Topik, p.Judul, p.Keterangan, p.FotoKegiatan })
+                .ToListAsync();
+
+            foreach (var p in dbP5ms)
+            {
+                if (TryParseCoordinates(p.Lokasi, out double lat, out double lon))
+                {
+                    p5mPoints.Add(new GeoSafetyPointViewModel
+                    {
+                        Id = p.Id,
+                        Lat = lat,
+                        Lon = lon,
+                        Tanggal = p.Tanggal.ToString("dd MMM yyyy"),
+                        Nama = p.Nama,
+                        Area = p.Area,
+                        Detail = !string.IsNullOrWhiteSpace(p.Topik)
+                            ? p.Topik
+                            : (!string.IsNullOrWhiteSpace(p.Judul) ? p.Judul : p.Keterangan),
+                        PhotoUrl = includePhotos ? NormalizeImagePath(p.FotoKegiatan) : null
+                    });
+                }
+            }
+
+            var dbSafetyTalks = await _context.SafetyTalks
+                .Where(s => !s.IsDeleted && (companyId == null || (s.PerusahaanId.HasValue && allowedCompanyIds.Contains(s.PerusahaanId.Value))) && s.Lokasi != null && s.Lokasi.Contains(","))
+                .Select(s => new { s.Id, s.Tanggal, s.Nama, s.Area, s.Lokasi, s.Judul, s.Keterangan, s.FotoKegiatan })
+                .ToListAsync();
+
+            foreach (var s in dbSafetyTalks)
+            {
+                if (TryParseCoordinates(s.Lokasi, out double lat, out double lon))
+                {
+                    safetyTalkPoints.Add(new GeoSafetyPointViewModel
+                    {
+                        Id = s.Id,
+                        Lat = lat,
+                        Lon = lon,
+                        Tanggal = s.Tanggal.ToString("dd MMM yyyy"),
+                        Nama = s.Nama,
+                        Area = s.Area,
+                        Detail = !string.IsNullOrWhiteSpace(s.Judul) ? s.Judul : s.Keterangan,
+                        PhotoUrl = includePhotos ? NormalizeImagePath(s.FotoKegiatan) : null
+                    });
+                }
+            }
+
             var geoAreaOptions = hazardPoints.Select(h => h.Area)
                 .Concat(inspectionPoints.Select(i => i.Area))
+                .Concat(p5mPoints.Select(p => p.Area))
+                .Concat(safetyTalkPoints.Select(s => s.Area))
                 .Where(area => !string.IsNullOrWhiteSpace(area))
                 .Select(area => area!.Trim())
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -132,6 +184,8 @@ namespace MBS_SAP.Controllers
             {
                 HazardPoints = hazardPoints,
                 InspectionPoints = inspectionPoints,
+                P5mPoints = p5mPoints,
+                SafetyTalkPoints = safetyTalkPoints,
                 GeoAreaOptions = geoAreaOptions,
                 SelectedGeoArea = selectedGeoArea
             };
@@ -340,15 +394,21 @@ namespace MBS_SAP.Controllers
 
             if (!string.IsNullOrEmpty(userNik))
             {
-                myHazardsWeek = await _context.HazardReports.CountAsync(h => !h.IsDeleted && h.Nik == userNik && h.CreatedAt >= startOfWeek);
-                myInspectionsWeek = await _context.Inspections.CountAsync(i => !i.IsDeleted && i.Nik == userNik && i.CreatedAt >= startOfWeek);
-                mySafetyTalksWeek = await _context.SafetyTalks.CountAsync(s => !s.IsDeleted && s.Nik == userNik && s.CreatedAt >= startOfWeek);
-                myP5msWeek = await _context.P5ms.CountAsync(p => !p.IsDeleted && p.Nik == userNik && p.CreatedAt >= startOfWeek);
+                // Personal metrics must always follow logged-in user identity (NIK), not company aggregation.
+                var myHazardsQuery = _context.HazardReports.Where(h => !h.IsDeleted && h.Nik == userNik);
+                var myInspectionsQuery = _context.Inspections.Where(i => !i.IsDeleted && i.Nik == userNik);
+                var mySafetyTalksQuery = _context.SafetyTalks.Where(s => !s.IsDeleted && s.Nik == userNik);
+                var myP5msQuery = _context.P5ms.Where(p => !p.IsDeleted && p.Nik == userNik);
 
-                myHazardsMonth = await _context.HazardReports.CountAsync(h => !h.IsDeleted && h.Nik == userNik && h.CreatedAt >= startOfMonth);
-                myInspectionsMonth = await _context.Inspections.CountAsync(i => !i.IsDeleted && i.Nik == userNik && i.CreatedAt >= startOfMonth);
-                mySafetyTalksMonth = await _context.SafetyTalks.CountAsync(s => !s.IsDeleted && s.Nik == userNik && s.CreatedAt >= startOfMonth);
-                myP5msMonth = await _context.P5ms.CountAsync(p => !p.IsDeleted && p.Nik == userNik && p.CreatedAt >= startOfMonth);
+                myHazardsWeek = await myHazardsQuery.CountAsync(h => h.CreatedAt >= startOfWeek);
+                myInspectionsWeek = await myInspectionsQuery.CountAsync(i => i.CreatedAt >= startOfWeek);
+                mySafetyTalksWeek = await mySafetyTalksQuery.CountAsync(s => s.CreatedAt >= startOfWeek);
+                myP5msWeek = await myP5msQuery.CountAsync(p => p.CreatedAt >= startOfWeek);
+
+                myHazardsMonth = await myHazardsQuery.CountAsync(h => h.CreatedAt >= startOfMonth);
+                myInspectionsMonth = await myInspectionsQuery.CountAsync(i => i.CreatedAt >= startOfMonth);
+                mySafetyTalksMonth = await mySafetyTalksQuery.CountAsync(s => s.CreatedAt >= startOfMonth);
+                myP5msMonth = await myP5msQuery.CountAsync(p => p.CreatedAt >= startOfMonth);
             }
 
             int myTotalWeek = myHazardsWeek + myInspectionsWeek + mySafetyTalksWeek + myP5msWeek;
@@ -705,6 +765,8 @@ namespace MBS_SAP.Controllers
 
             ViewBag.HazardPoints = geoSafetyData.HazardPoints;
             ViewBag.InspectionPoints = geoSafetyData.InspectionPoints;
+            ViewBag.P5mPoints = geoSafetyData.P5mPoints;
+            ViewBag.SafetyTalkPoints = geoSafetyData.SafetyTalkPoints;
             ViewBag.GeoAreaOptions = geoSafetyData.GeoAreaOptions;
             ViewBag.SelectedGeoArea = geoSafetyData.SelectedGeoArea;
 
@@ -723,6 +785,8 @@ namespace MBS_SAP.Controllers
             {
                 hazardPoints = geoSafetyData.HazardPoints,
                 inspectionPoints = geoSafetyData.InspectionPoints,
+                p5mPoints = geoSafetyData.P5mPoints,
+                safetyTalkPoints = geoSafetyData.SafetyTalkPoints,
                 geoAreaOptions = geoSafetyData.GeoAreaOptions,
                 selectedGeoArea = geoSafetyData.SelectedGeoArea
             });
@@ -1154,6 +1218,8 @@ namespace MBS_SAP.Controllers
     {
         public List<GeoSafetyPointViewModel> HazardPoints { get; set; } = new List<GeoSafetyPointViewModel>();
         public List<GeoSafetyPointViewModel> InspectionPoints { get; set; } = new List<GeoSafetyPointViewModel>();
+        public List<GeoSafetyPointViewModel> P5mPoints { get; set; } = new List<GeoSafetyPointViewModel>();
+        public List<GeoSafetyPointViewModel> SafetyTalkPoints { get; set; } = new List<GeoSafetyPointViewModel>();
         public List<string> GeoAreaOptions { get; set; } = new List<string>();
         public string? SelectedGeoArea { get; set; }
     }

@@ -95,19 +95,18 @@ namespace MBS_SAP.Controllers
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var isAdmin = User.IsInRole("Admin");
-            var companyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+            var companyScopedNiks = await GetCurrentCompanyNiksAsync();
 
             var query = _context.P2hReports.Where(r => !r.IsDeleted);
 
-            // Filter hierarki perusahaan mutlak untuk semua role (admin & non-admin)
-            if (companyId.HasValue)
+            // Batasi histori berdasarkan perusahaan user aktif (strict company scope).
+            if (companyScopedNiks.Count == 0)
             {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
-                var allowedNiks = _context.AppUsers
-                    .Where(u => u.IdPerusahaan.HasValue && allowedIds.Contains(u.IdPerusahaan.Value))
-                    .Select(u => u.Nik);
-                query = query.Where(r => allowedNiks.Contains(r.Nik));
+                query = query.Where(r => false);
+            }
+            else
+            {
+                query = query.Where(r => companyScopedNiks.Contains(r.Nik));
             }
 
             if (!isAdmin && !string.IsNullOrEmpty(userNik))
@@ -196,6 +195,13 @@ namespace MBS_SAP.Controllers
                 {
                     report = await _context.P2hReports.FindAsync(id.Value);
                     if (report == null || report.IsDeleted) return NotFound();
+
+                    var companyScopedNiks = await GetCurrentCompanyNiksAsync();
+                    if (companyScopedNiks.Count == 0 || !companyScopedNiks.Contains(report.Nik))
+                    {
+                        TempData["ErrorMessage"] = "Anda tidak memiliki akses ke laporan perusahaan lain.";
+                        return RedirectToAction(nameof(Index));
+                    }
 
                     if (report.Nik != userNik && !User.IsInRole("Admin"))
                     {
@@ -369,6 +375,20 @@ namespace MBS_SAP.Controllers
             var report = await _context.P2hReports.FindAsync(id);
             if (report == null || report.IsDeleted) return NotFound();
 
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isAdmin = User.IsInRole("Admin");
+            var companyScopedNiks = await GetCurrentCompanyNiksAsync();
+
+            if (companyScopedNiks.Count == 0 || !companyScopedNiks.Contains(report.Nik))
+            {
+                return Unauthorized();
+            }
+
+            if (!isAdmin && !string.Equals(report.Nik, userNik, StringComparison.OrdinalIgnoreCase))
+            {
+                return Unauthorized();
+            }
+
             return Json(new
             {
                 id = report.Id,
@@ -396,6 +416,13 @@ namespace MBS_SAP.Controllers
             if (report == null || report.IsDeleted) return NotFound();
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
+            var companyScopedNiks = await GetCurrentCompanyNiksAsync();
+
+            if (companyScopedNiks.Count == 0 || !companyScopedNiks.Contains(report.Nik))
+            {
+                return Unauthorized();
+            }
+
             if (report.Nik != userNik && !User.IsInRole("Admin"))
             {
                 return Unauthorized();
@@ -418,6 +445,23 @@ namespace MBS_SAP.Controllers
                 .AnyAsync(v => v.NoLambung.ToLower() == noLambung.Trim().ToLower() && !v.IsDeleted);
 
             return Json(exists);
+        }
+
+        private async Task<HashSet<string>> GetCurrentCompanyNiksAsync()
+        {
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            if (!int.TryParse(companyIdStr, out var companyId) || companyId <= 0)
+            {
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var niks = await _context.AppUsers
+                .Where(u => u.IdPerusahaan == companyId && !string.IsNullOrEmpty(u.Nik))
+                .Select(u => u.Nik!)
+                .Distinct()
+                .ToListAsync();
+
+            return new HashSet<string>(niks.Select(n => n.Trim()), StringComparer.OrdinalIgnoreCase);
         }
     }
 }
