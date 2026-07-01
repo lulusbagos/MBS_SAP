@@ -196,7 +196,9 @@ namespace MBS_SAP.Controllers
             ViewData["HeaderTitle"] = "Pencapaian SAP";
             ViewData["ActiveTab"] = "Performance";
 
-            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Trim();
+            var userCompanyIdClaim = User.FindFirst("CompanyId")?.Value;
+            int? userCompanyId = int.TryParse(userCompanyIdClaim, out int userCid) && userCid > 0 ? userCid : (int?)null;
             var (companyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
             var isAdmin = User.IsInRole("Admin");
             var jobTitle = User.FindFirst("JobTitle")?.Value;
@@ -395,10 +397,18 @@ namespace MBS_SAP.Controllers
             if (!string.IsNullOrEmpty(userNik))
             {
                 // Personal metrics must always follow logged-in user identity (NIK), not company aggregation.
-                var myHazardsQuery = _context.HazardReports.Where(h => !h.IsDeleted && h.Nik == userNik);
-                var myInspectionsQuery = _context.Inspections.Where(i => !i.IsDeleted && i.Nik == userNik);
-                var mySafetyTalksQuery = _context.SafetyTalks.Where(s => !s.IsDeleted && s.Nik == userNik);
-                var myP5msQuery = _context.P5ms.Where(p => !p.IsDeleted && p.Nik == userNik);
+                var myHazardsQuery = _context.HazardReports.Where(h => !h.IsDeleted && h.Nik != null && h.Nik.Trim() == userNik);
+                var myInspectionsQuery = _context.Inspections.Where(i => !i.IsDeleted && i.Nik != null && i.Nik.Trim() == userNik);
+                var mySafetyTalksQuery = _context.SafetyTalks.Where(s => !s.IsDeleted && s.Nik != null && s.Nik.Trim() == userNik);
+                var myP5msQuery = _context.P5ms.Where(p => !p.IsDeleted && p.Nik != null && p.Nik.Trim() == userNik);
+
+                if (userCompanyId.HasValue)
+                {
+                    myHazardsQuery = myHazardsQuery.Where(h => h.PerusahaanId.HasValue && h.PerusahaanId.Value == userCompanyId.Value);
+                    myInspectionsQuery = myInspectionsQuery.Where(i => i.PerusahaanId.HasValue && i.PerusahaanId.Value == userCompanyId.Value);
+                    mySafetyTalksQuery = mySafetyTalksQuery.Where(s => s.PerusahaanId.HasValue && s.PerusahaanId.Value == userCompanyId.Value);
+                    myP5msQuery = myP5msQuery.Where(p => p.PerusahaanId.HasValue && p.PerusahaanId.Value == userCompanyId.Value);
+                }
 
                 myHazardsWeek = await myHazardsQuery.CountAsync(h => h.CreatedAt >= startOfWeek);
                 myInspectionsWeek = await myInspectionsQuery.CountAsync(i => i.CreatedAt >= startOfWeek);
