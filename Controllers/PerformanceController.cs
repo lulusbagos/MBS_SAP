@@ -119,10 +119,28 @@ namespace MBS_SAP.Controllers
 
             var dbP5ms = await _context.P5ms
                 .Where(p => !p.IsDeleted && (companyId == null || (p.PerusahaanId.HasValue && allowedCompanyIds.Contains(p.PerusahaanId.Value))) && p.Lokasi != null && p.Lokasi.Contains(","))
-                .Select(p => new { p.Id, p.Tanggal, p.Nama, p.Area, p.Lokasi, p.Topik, p.Judul, p.Keterangan, p.FotoKegiatan })
+                .Select(p => new { p.Id, p.Tanggal, p.Waktu, p.Nik, p.Nama, p.Area, p.Lokasi, p.Topik, p.Judul, p.Keterangan, p.FotoKegiatan })
                 .ToListAsync();
 
-            foreach (var p in dbP5ms)
+            // P5M is stored per checklist item; group by one submission session to avoid duplicate map markers.
+            var groupedP5ms = dbP5ms
+                .GroupBy(p => new
+                {
+                    Date = p.Tanggal.Date,
+                    p.Waktu,
+                    p.Nik,
+                    p.Nama,
+                    p.Area,
+                    p.Lokasi,
+                    p.Topik,
+                    p.Judul,
+                    p.Keterangan,
+                    p.FotoKegiatan
+                })
+                .Select(g => g.OrderByDescending(x => x.Id).First())
+                .ToList();
+
+            foreach (var p in groupedP5ms)
             {
                 if (TryParseCoordinates(p.Lokasi, out double lat, out double lon))
                 {

@@ -119,6 +119,30 @@ namespace MBS_SAP.Controllers
             talk.Judul = judul;
             talk.Keterangan = keterangan;
 
+            // Guard backend against near-duplicate submit (double-click / retry) for new records.
+            if (isNew)
+            {
+                var duplicateWindowStart = DateTime.Now.AddSeconds(-20);
+                var normalizedArea = (talk.Area ?? string.Empty).Trim();
+                var normalizedLokasi = (talk.Lokasi ?? string.Empty).Trim();
+                var normalizedJudul = (talk.Judul ?? string.Empty).Trim();
+
+                var duplicatedTalk = await _context.SafetyTalks
+                    .AsNoTracking()
+                    .Where(s => !s.IsDeleted
+                                && s.Nik == userNik
+                                && s.CreatedAt >= duplicateWindowStart)
+                    .FirstOrDefaultAsync(s => (s.Area ?? string.Empty).Trim() == normalizedArea
+                                           && (s.Lokasi ?? string.Empty).Trim() == normalizedLokasi
+                                           && (s.Judul ?? string.Empty).Trim() == normalizedJudul);
+
+                if (duplicatedTalk != null)
+                {
+                    TempData["WarningMessage"] = "Data Safety Talk yang sama terdeteksi terkirim dua kali. Sistem hanya menyimpan satu data.";
+                    return RedirectToAction(nameof(Index));
+                }
+            }
+
             // Handle Foto Diri Upload
             if (fotoDiri != null && fotoDiri.Length > 0)
             {

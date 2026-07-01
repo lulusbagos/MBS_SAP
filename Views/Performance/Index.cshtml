@@ -1754,19 +1754,38 @@
         function buildHitSafeSourcePoints() {
             const points = [];
             let sequence = 0;
+            const seenSignatures = new Set();
+
+            function registerPoint(type, normalized) {
+                const signature = [
+                    type,
+                    String(normalized.lat ?? ''),
+                    String(normalized.lon ?? ''),
+                    String(normalized.tanggal ?? ''),
+                    String(normalized.nama ?? ''),
+                    String(normalized.detail ?? ''),
+                    String(normalized.area ?? '')
+                ].join('|');
+
+                if (seenSignatures.has(signature)) {
+                    return;
+                }
+                seenSignatures.add(signature);
+
+                points.push({
+                    key: type + '-' + String(normalized.id ?? sequence) + '-' + String(sequence),
+                    type: type,
+                    ...normalized
+                });
+                sequence += 1;
+            }
 
             hitSafeHazardPoints.forEach(function(raw) {
                 const normalized = normalizePoint(raw);
                 if (!normalized) {
                     return;
                 }
-
-                points.push({
-                    key: 'hazard-' + String(normalized.id ?? sequence) + '-' + String(sequence),
-                    type: 'hazard',
-                    ...normalized
-                });
-                sequence += 1;
+                registerPoint('hazard', normalized);
             });
 
             hitSafeInspectionPoints.forEach(function(raw) {
@@ -1774,13 +1793,7 @@
                 if (!normalized) {
                     return;
                 }
-
-                points.push({
-                    key: 'inspection-' + String(normalized.id ?? sequence) + '-' + String(sequence),
-                    type: 'inspection',
-                    ...normalized
-                });
-                sequence += 1;
+                registerPoint('inspection', normalized);
             });
 
             hitSafeP5mPoints.forEach(function(raw) {
@@ -1788,13 +1801,7 @@
                 if (!normalized) {
                     return;
                 }
-
-                points.push({
-                    key: 'p5m-' + String(normalized.id ?? sequence) + '-' + String(sequence),
-                    type: 'p5m',
-                    ...normalized
-                });
-                sequence += 1;
+                registerPoint('p5m', normalized);
             });
 
             hitSafeSafetyTalkPoints.forEach(function(raw) {
@@ -1802,13 +1809,7 @@
                 if (!normalized) {
                     return;
                 }
-
-                points.push({
-                    key: 'safetytalk-' + String(normalized.id ?? sequence) + '-' + String(sequence),
-                    type: 'safetytalk',
-                    ...normalized
-                });
-                sequence += 1;
+                registerPoint('safetytalk', normalized);
             });
 
             return points;

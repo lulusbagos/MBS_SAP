@@ -162,6 +162,32 @@ namespace MBS_SAP.Controllers
             }
             else
             {
+                var normalizedArea = (area ?? string.Empty).Trim();
+                var normalizedLokasi = (lokasi ?? string.Empty).Trim();
+                var normalizedTopik = (topik ?? "Pekerjaan Umum").Trim();
+                var normalizedJudul = (judul ?? "Siap Bekerja").Trim();
+                var normalizedTanggal = tanggal == default ? DateTime.Today : tanggal;
+
+                // Guard backend against near-duplicate submit (double-click / retry) for new session.
+                var duplicateWindowStart = DateTime.Now.AddSeconds(-20);
+                var duplicatedP5m = await _context.P5ms
+                    .AsNoTracking()
+                    .Where(p => !p.IsDeleted
+                                && p.Nik == userNik
+                                && p.CreatedAt >= duplicateWindowStart)
+                    .FirstOrDefaultAsync(p => p.Tanggal.Date == normalizedTanggal.Date
+                                           && p.Waktu == waktu
+                                           && (p.Area ?? string.Empty).Trim() == normalizedArea
+                                           && (p.Lokasi ?? string.Empty).Trim() == normalizedLokasi
+                                           && (p.Topik ?? string.Empty).Trim() == normalizedTopik
+                                           && (p.Judul ?? string.Empty).Trim() == normalizedJudul);
+
+                if (duplicatedP5m != null)
+                {
+                    TempData["WarningMessage"] = "Data P5M yang sama terdeteksi terkirim dua kali. Sistem hanya menyimpan satu data.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 // Loop and save each question response
                 for (int i = 0; i < questions.Count; i++)
                 {
@@ -174,7 +200,7 @@ namespace MBS_SAP.Controllers
                     var p5mRecord = new P5m
                     {
                         FotoKegiatan = photoPath,
-                        Tanggal = tanggal == default ? DateTime.Today : tanggal,
+                        Tanggal = normalizedTanggal,
                         Waktu = waktu,
                         Nama = userName,
                         Nik = userNik,

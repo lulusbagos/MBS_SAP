@@ -168,6 +168,30 @@ namespace MBS_SAP.Controllers
                 inspection.NikPja = pjaNik;
                 inspection.DepartemenPja = pjaDept;
             }
+
+            // Guard backend against near-duplicate submit (double-click / retry) for new records.
+            if (isNew)
+            {
+                var duplicateWindowStart = DateTime.Now.AddSeconds(-20);
+                var normalizedArea = (inspection.Area ?? string.Empty).Trim();
+                var normalizedLokasi = (inspection.Lokasi ?? string.Empty).Trim();
+                var normalizedJenis = (inspection.JenisInspeksi ?? string.Empty).Trim();
+
+                var duplicatedInspection = await _context.Inspections
+                    .AsNoTracking()
+                    .Where(i => !i.IsDeleted
+                                && i.Nik == userNik
+                                && i.CreatedAt >= duplicateWindowStart)
+                    .FirstOrDefaultAsync(i => (i.Area ?? string.Empty).Trim() == normalizedArea
+                                           && (i.Lokasi ?? string.Empty).Trim() == normalizedLokasi
+                                           && (i.JenisInspeksi ?? string.Empty).Trim() == normalizedJenis);
+
+                if (duplicatedInspection != null)
+                {
+                    TempData["WarningMessage"] = "Data inspeksi yang sama terdeteksi terkirim dua kali. Sistem hanya menyimpan satu data.";
+                    return RedirectToAction(nameof(Index));
+                }
+            }
             
             inspection.Q1_1 = q1_1;
             inspection.Q1_2 = q1_2;
