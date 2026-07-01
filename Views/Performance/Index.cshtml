@@ -2,6 +2,8 @@
     ViewData["Title"] = "Pencapaian SAP";
     var leaderboard = ViewBag.Leaderboard as List<MBS_SAP.Controllers.CompanyLeaderboardViewModel> ?? new List<MBS_SAP.Controllers.CompanyLeaderboardViewModel>();
     var trend = ViewBag.MonthlyTrend as List<MBS_SAP.Controllers.MonthlyTrendViewModel> ?? new List<MBS_SAP.Controllers.MonthlyTrendViewModel>();
+    var geoAreaOptions = ViewBag.GeoAreaOptions as List<string> ?? new List<string>();
+    var selectedGeoArea = ViewBag.SelectedGeoArea as string ?? string.Empty;
 
     // Calculate overall weekly and monthly achievement percentage
     double weeklyProgress = ViewBag.WeeklyTarget > 0 ? (double)ViewBag.WeeklyRealization / ViewBag.WeeklyTarget * 100.0 : 0.0;
@@ -1131,7 +1133,30 @@
             <div class="premium-body" style="padding: 20px;">
                 <div class="alert alert-info py-2" style="font-size: 12px; border-radius: 8px; background: rgba(56, 189, 248, 0.08); border: 1.5px solid rgba(56, 189, 248, 0.2); color: #38bdf8; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
                     <i class="bi bi-info-circle-fill fs-6"></i>
-                    <span>Peta memetakan koordinat GPS riil: <strong>Hazard Report</strong> (marker <span class="badge bg-danger" style="font-size: 9px;">Merah</span>) dan <strong>Safety Inspeksi</strong> (marker <span class="badge bg-primary" style="font-size: 9px;">Biru</span>) perusahaan Anda.</span>
+                    <span>Peta memetakan koordinat GPS riil: <strong>Hazard Report</strong> dan <strong>Safety Inspeksi</strong> perusahaan Anda. Pilih area untuk memusatkan tampilan titik.</span>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3" style="padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(255,255,255,0.02);">
+                    <div>
+                        <div style="font-size: 11px; text-transform: uppercase; font-weight: 800; color: var(--text-muted); letter-spacing: 0.5px;">Fokus Area</div>
+                        <div style="font-size: 12px; color: var(--text-main);">Map akan diarahkan ke area yang Anda pilih atau area pertama yang tersedia.</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <select id="geoAreaSelect" class="form-select form-select-sm" style="min-width: 220px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main);">
+                            <option value="">Semua Area</option>
+                            @foreach (var areaName in geoAreaOptions)
+                            {
+                                if (string.Equals(areaName, selectedGeoArea, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <option value="@areaName" selected>@areaName</option>
+                                }
+                                else
+                                {
+                                    <option value="@areaName">@areaName</option>
+                                }
+                            }
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Leaflet Map Container -->
@@ -1488,58 +1513,78 @@
         // ==================== 14. Geospatial Leaflet Map Initializer ====================
         const hazardPoints = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.HazardPoints));
         const inspectionPoints = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.InspectionPoints));
+        const selectedGeoArea = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(selectedGeoArea));
         let mapInstance = null;
+        let markersLayer = null;
+
+        function normalizeAreaName(value) {
+            return (value || '').toString().trim().toLowerCase();
+        }
+
+        function getActiveGeoArea() {
+            const dropdown = document.getElementById('geoAreaSelect');
+            return dropdown ? dropdown.value : selectedGeoArea || '';
+        }
+
+        function getFilteredPoints(points, activeArea) {
+            if (!activeArea) {
+                return points || [];
+            }
+
+            const normalizedArea = normalizeAreaName(activeArea);
+            return (points || []).filter(point => normalizeAreaName(point.area) === normalizedArea);
+        }
 
         window._initHazardMap = function() {
+            const activeArea = getActiveGeoArea();
+            const filteredHazards = getFilteredPoints(hazardPoints, activeArea);
+            const filteredInspections = getFilteredPoints(inspectionPoints, activeArea);
+
             if (mapInstance) {
-                setTimeout(() => {
-                    mapInstance.invalidateSize();
-                }, 100);
-                return;
+                if (markersLayer) {
+                    markersLayer.clearLayers();
+                }
+            } else {
+                // Default fallback coordinate (MBS area)
+                let centerLat = -1.234;
+                let centerLon = 116.123;
+
+                const initialPoint = filteredHazards[0] || filteredInspections[0] || hazardPoints?.[0] || inspectionPoints?.[0];
+                if (initialPoint) {
+                    centerLat = initialPoint.lat;
+                    centerLon = initialPoint.lon;
+                }
+
+                mapInstance = L.map('hazardLeafletMap').setView([centerLat, centerLon], 14);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(mapInstance);
+
+                markersLayer = L.featureGroup().addTo(mapInstance);
             }
 
-            // Default fallback coordinate (MBS area)
-            let centerLat = -1.234;
-            let centerLon = 116.123;
-            let hasPoints = false;
+            const hazardIconStyle = {
+                radius: 7,
+                color: '#ffffff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.95,
+                fillColor: '#ef4444'
+            };
 
-            if (hazardPoints && hazardPoints.length > 0) {
-                centerLat = hazardPoints[0].lat;
-                centerLon = hazardPoints[0].lon;
-                hasPoints = true;
-            } else if (inspectionPoints && inspectionPoints.length > 0) {
-                centerLat = inspectionPoints[0].lat;
-                centerLon = inspectionPoints[0].lon;
-                hasPoints = true;
-            }
+            const inspectionIconStyle = {
+                radius: 7,
+                color: '#ffffff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.95,
+                fillColor: '#3b82f6'
+            };
 
-            // Init Leaflet
-            mapInstance = L.map('hazardLeafletMap').setView([centerLat, centerLon], 14);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(mapInstance);
-
-            // Custom DIV icons for maximum aesthetic appeal
-            const hazardIcon = L.divIcon({
-                html: '<div style="background-color: #ef4444; width: 14px; height: 14px; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 8px rgba(239,68,68,0.7); animation: mapPulse 2s infinite;"></div>',
-                className: 'custom-map-icon-hazard',
-                iconSize: [14, 14],
-                iconAnchor: [7, 7]
-            });
-
-            const inspectionIcon = L.divIcon({
-                html: '<div style="background-color: #3b82f6; width: 14px; height: 14px; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 8px rgba(59,130,246,0.7);"></div>',
-                className: 'custom-map-icon-inspection',
-                iconSize: [14, 14],
-                iconAnchor: [7, 7]
-            });
-
-            const markersGroup = L.featureGroup();
-
-            if (hazardPoints && hazardPoints.length > 0) {
-                hazardPoints.forEach(h => {
+            if (filteredHazards && filteredHazards.length > 0) {
+                filteredHazards.forEach(h => {
                     const badgeColor = h.resiko === 'High' || h.resiko === 'Kritis' || h.resiko === 'Extreme' ? 'bg-danger' : (h.resiko === 'Medium' ? 'bg-warning' : 'bg-success');
                     const statusBadge = h.status === 'Open' ? '<span class="badge bg-danger">Open</span>' : '<span class="badge bg-success">Closed</span>';
                     
@@ -1560,12 +1605,12 @@
                             </div>
                         </div>
                     `;
-                    L.marker([h.lat, h.lon], { icon: hazardIcon }).bindPopup(popupContent).addTo(markersGroup);
+                    L.circleMarker([h.lat, h.lon], hazardIconStyle).bindPopup(popupContent).addTo(markersLayer);
                 });
             }
 
-            if (inspectionPoints && inspectionPoints.length > 0) {
-                inspectionPoints.forEach(i => {
+        if (filteredInspections && filteredInspections.length > 0) {
+            filteredInspections.forEach(i => {
                     const popupContent = `
                         <div style="font-family: 'Plus Jakarta Sans', sans-serif; min-width: 220px; color: var(--text-main);">
                             <div class="d-flex justify-content-between align-items-center mb-2" style="border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">
@@ -1580,20 +1625,30 @@
                             </div>
                         </div>
                     `;
-                    L.marker([i.lat, i.lon], { icon: inspectionIcon }).bindPopup(popupContent).addTo(markersGroup);
+                    L.circleMarker([i.lat, i.lon], inspectionIconStyle).bindPopup(popupContent).addTo(markersLayer);
                 });
             }
 
-            markersGroup.addTo(mapInstance);
-
-            if (hasPoints) {
-                mapInstance.fitBounds(markersGroup.getBounds(), { padding: [40, 40] });
+        const markerCount = markersLayer ? markersLayer.getLayers().length : 0;
+        if (markerCount > 0) {
+            mapInstance.fitBounds(markersLayer.getBounds(), { padding: [40, 40] });
+        } else {
+            mapInstance.setView([-1.234, 116.123], 13);
             }
 
             setTimeout(() => {
                 mapInstance.invalidateSize();
             }, 300);
         };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const geoAreaSelect = document.getElementById('geoAreaSelect');
+        if (geoAreaSelect) {
+            geoAreaSelect.addEventListener('change', function() {
+                window._initHazardMap();
+            });
+        }
+    });
 
         // Add a style block for the pulsing marker animation
         const style = document.createElement('style');

@@ -662,8 +662,24 @@ namespace MBS_SAP.Controllers
                 }
             }
 
+            var geoAreaOptions = dbHazards.Select(h => h.Area)
+                .Concat(dbInspections.Select(i => i.Area))
+                .Where(area => !string.IsNullOrWhiteSpace(area))
+                .Select(area => area!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(area => area)
+                .ToList();
+
+            var requestedGeoArea = Request.Query["area"].FirstOrDefault()?.Trim();
+            var selectedGeoArea = !string.IsNullOrWhiteSpace(requestedGeoArea) &&
+                                  geoAreaOptions.Any(area => string.Equals(area, requestedGeoArea, StringComparison.OrdinalIgnoreCase))
+                ? geoAreaOptions.First(area => string.Equals(area, requestedGeoArea, StringComparison.OrdinalIgnoreCase))
+                : geoAreaOptions.FirstOrDefault();
+
             ViewBag.HazardPoints = hazardPoints;
             ViewBag.InspectionPoints = inspectionPoints;
+            ViewBag.GeoAreaOptions = geoAreaOptions;
+            ViewBag.SelectedGeoArea = selectedGeoArea;
 
             return View();
         }
