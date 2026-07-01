@@ -34,16 +34,31 @@ namespace MBS_SAP.Controllers
             ViewData["HeaderTitle"] = "Safety Inspeksi";
             ViewData["ActiveTab"] = "Inspection";
 
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isAdmin = User.IsInRole("Admin");
             var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
             int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
 
             IQueryable<Inspection> query = _context.Inspections.Where(i => !i.IsDeleted);
 
-            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin)
+            // Filter berdasarkan perusahaan (berlaku untuk Admin maupun non-Admin)
             if (userCompanyId.HasValue)
             {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
-                query = query.Where(i => i.PerusahaanId.HasValue && allowedIds.Contains(i.PerusahaanId.Value));
+                if (isAdmin)
+                {
+                    // Admin melihat semua inspeksi milik perusahaannya
+                    query = query.Where(i => i.PerusahaanId.HasValue && i.PerusahaanId.Value == userCompanyId.Value);
+                }
+                else
+                {
+                    // Non-Admin hanya melihat miliknya sendiri atau yang ditugaskan kepadanya (baik sebagai pembuat maupun PJA)
+                    query = query.Where(i => i.Nik == userNik || i.NikPja == userNik);
+                }
+            }
+            else
+            {
+                // Jika user tidak punya CompanyId claim, tampilkan kosong (jangan bocor semua data)
+                query = query.Where(i => false);
             }
 
             ViewBag.JenisInspeksiList = await query
@@ -64,6 +79,7 @@ namespace MBS_SAP.Controllers
 
             return View(inspections);
         }
+
 
         // POST: Inspection/Submit
         [HttpPost]
@@ -312,10 +328,22 @@ namespace MBS_SAP.Controllers
             // Pastikan user hanya bisa akses data milik perusahaannya
             var companyIdStr = User.FindFirst("CompanyId")?.Value;
             int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
-            if (userCompanyId.HasValue && inspection.PerusahaanId.HasValue)
+
+            // Jika user tidak punya CompanyId, tolak akses
+            if (!userCompanyId.HasValue && !User.IsInRole("Admin"))
+                return Unauthorized();
+
+            // Jika user punya CompanyId, validasi akses perusahaan
+            if (userCompanyId.HasValue)
             {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
-                if (!allowedIds.Contains(inspection.PerusahaanId.Value))
+                // Jika inspection tidak punya PerusahaanId, tolak akses (data tidak jelas milik siapa)
+                if (!inspection.PerusahaanId.HasValue)
+                    return Unauthorized();
+
+                var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                bool isUserInvolved = (inspection.Nik == userNik || inspection.NikPja == userNik);
+
+                if (!isUserInvolved && inspection.PerusahaanId.Value != userCompanyId.Value)
                     return Unauthorized();
             }
 

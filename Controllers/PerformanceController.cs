@@ -140,6 +140,20 @@ namespace MBS_SAP.Controllers
             int totalSignatures = groupedSigs.Count;
             double rhr = totalSignatures > 0 ? (double)repeatSignatures / totalSignatures * 100 : 0;
 
+            var topRepeated = groupedSigs
+                .Where(g => g.Count() > 1)
+                .OrderByDescending(g => g.Count())
+                .Take(5)
+                .Select(g => new {
+                    Label = $"{g.First().JenisBahaya} - {g.First().Area}",
+                    Count = g.Count()
+                })
+                .ToList();
+            
+            ViewBag.TopRepeatedLabels = topRepeated.Select(x => x.Label).ToList();
+            ViewBag.TopRepeatedData = topRepeated.Select(x => x.Count).ToList();
+
+
             var closedHazardsList = await hazards.Where(h => h.StatusTemuan == "Closed" && h.TingkatResiko != null).Select(h => h.TingkatResiko).ToListAsync();
             int closedKritis = closedHazardsList.Count(r => string.Equals(r, "Kritis", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Critical", StringComparison.OrdinalIgnoreCase));
             int closedExtreme = closedHazardsList.Count(r => string.Equals(r, "Extreme", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Sangat Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ekstrim", StringComparison.OrdinalIgnoreCase));
@@ -198,7 +212,7 @@ namespace MBS_SAP.Controllers
                 });
             }
 
-            leaderboard = leaderboard.OrderByDescending(l => l.AchievementRate).ToList();
+            leaderboard = leaderboard.OrderByDescending(l => l.AchievementRate).Take(10).ToList();
             ViewBag.IsAdmin = isAdmin;
 
             // 7. Data Trend Bulanan (6 Bulan Terakhir)
@@ -596,7 +610,75 @@ namespace MBS_SAP.Controllers
             rootNodes = rootNodes.OrderBy(r => r.CompanyName).ToList();
             ViewBag.CompanyHierarchy = rootNodes;
 
+            // ==================== 13. Map Coordinate Points ====================
+            var hazardPoints = new List<object>();
+            var inspectionPoints = new List<object>();
+
+            // Fetch hazards with coordinates
+            var dbHazards = await _context.HazardReports
+                .Where(h => !h.IsDeleted && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))) && h.Lokasi != null && h.Lokasi.Contains(","))
+                .Select(h => new { h.Id, h.Tanggal, h.Nama, h.Area, h.Lokasi, h.Temuan, h.TingkatResiko, h.StatusTemuan })
+                .ToListAsync();
+
+            foreach (var h in dbHazards)
+            {
+                if (TryParseCoordinates(h.Lokasi, out double lat, out double lon))
+                {
+                    hazardPoints.Add(new
+                    {
+                        id = h.Id,
+                        lat = lat,
+                        lon = lon,
+                        tanggal = h.Tanggal.ToString("dd MMM yyyy"),
+                        nama = h.Nama,
+                        area = h.Area,
+                        detail = h.Temuan,
+                        resiko = h.TingkatResiko ?? "Medium",
+                        status = h.StatusTemuan
+                    });
+                }
+            }
+
+            // Fetch inspections with coordinates
+            var dbInspections = await _context.Inspections
+                .Where(i => !i.IsDeleted && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))) && i.Lokasi != null && i.Lokasi.Contains(","))
+                .Select(i => new { i.Id, i.Tanggal, i.Nama, i.Area, i.Lokasi, i.JenisInspeksi })
+                .ToListAsync();
+
+            foreach (var i in dbInspections)
+            {
+                if (TryParseCoordinates(i.Lokasi, out double lat, out double lon))
+                {
+                    inspectionPoints.Add(new
+                    {
+                        id = i.Id,
+                        lat = lat,
+                        lon = lon,
+                        tanggal = i.Tanggal.ToString("dd MMM yyyy"),
+                        nama = i.Nama,
+                        area = i.Area,
+                        detail = i.JenisInspeksi
+                    });
+                }
+            }
+
+            ViewBag.HazardPoints = hazardPoints;
+            ViewBag.InspectionPoints = inspectionPoints;
+
             return View();
+        }
+
+        private static bool TryParseCoordinates(string? lokasi, out double lat, out double lon)
+        {
+            lat = 0;
+            lon = 0;
+            if (string.IsNullOrWhiteSpace(lokasi)) return false;
+
+            var parts = lokasi.Split(',');
+            if (parts.Length != 2) return false;
+
+            return double.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out lat) &&
+                   double.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out lon);
         }
 
         [HttpGet]

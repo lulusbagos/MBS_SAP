@@ -307,7 +307,7 @@
                                 @if (!string.IsNullOrEmpty(item.FotoDiriUrl))
                                 {
                                     <img src="@item.FotoDiriUrl" class="rounded-circle shadow-sm" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid var(--color-primary);" alt="Profile" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                                    <div class="rounded-circle d-flex justify-content-center align-items-center shadow-sm" style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--color-primary, #3b82f6), #1d4ed8); color: white; font-weight: bold; font-size: 14px; display: none;">
+                                    <div class="rounded-circle shadow-sm" style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--color-primary, #3b82f6), #1d4ed8); color: white; font-weight: bold; font-size: 14px; display: none; align-items: center; justify-content: center;">
                                         @(string.IsNullOrEmpty(item.Nama) ? "?" : item.Nama.Substring(0, 1).ToUpper())
                                     </div>
                                 }

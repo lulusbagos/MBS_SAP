@@ -37,19 +37,34 @@ namespace MBS_SAP.Controllers
             ViewData["HeaderTitle"] = "P5M & Kelayakan Kerja";
             ViewData["ActiveTab"] = "P5m";
 
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isAdmin = User.IsInRole("Admin");
             var companyIdStr = User.FindFirst("CompanyId")?.Value;
             int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
 
-            IQueryable<P5m> query = _context.P5ms;
+            IQueryable<P5m> query = _context.P5ms.Where(p => !p.IsDeleted);
 
+            // Filter berdasarkan perusahaan (berlaku untuk Admin maupun non-Admin)
             if (companyId.HasValue)
             {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
-                query = query.Where(p => p.PerusahaanId.HasValue && allowedIds.Contains(p.PerusahaanId.Value));
+                if (isAdmin)
+                {
+                    // Admin melihat semua P5M milik perusahaannya
+                    query = query.Where(p => p.PerusahaanId.HasValue && p.PerusahaanId.Value == companyId.Value);
+                }
+                else
+                {
+                    // Non-Admin hanya melihat miliknya sendiri
+                    query = query.Where(p => p.Nik == userNik);
+                }
+            }
+            else
+            {
+                // Jika user tidak punya CompanyId claim, tampilkan kosong
+                query = query.Where(p => false);
             }
 
             var reports = await query
-                .Where(p => !p.IsDeleted)
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
             return View(reports);
@@ -201,6 +216,27 @@ namespace MBS_SAP.Controllers
         {
             var p5m = await _context.P5ms.FindAsync(id);
             if (p5m == null || p5m.IsDeleted) return NotFound();
+
+            // Validasi akses company
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+
+            if (!userCompanyId.HasValue && !User.IsInRole("Admin"))
+                return Unauthorized();
+
+            // Jika user punya CompanyId, validasi akses perusahaan
+            if (userCompanyId.HasValue)
+            {
+                if (!p5m.PerusahaanId.HasValue)
+                    return Unauthorized();
+
+                var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                bool isUserInvolved = p5m.Nik == userNik;
+
+                if (!isUserInvolved && p5m.PerusahaanId.Value != userCompanyId.Value)
+                    return Unauthorized();
+            }
+
             return Json(p5m);
         }
 

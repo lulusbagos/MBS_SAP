@@ -15,20 +15,48 @@
     bool isMyWeekCompliant = ViewBag.MyTotalWeek >= 1;
 }
 
+<!-- Leaflet CSS & JS Assets -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
 <style>
+    /* Leaflet customization to match premium design */
+    #hazardLeafletMap {
+        background-color: var(--bg-body) !important;
+        z-index: 1;
+    }
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+        background: var(--bg-card) !important;
+        color: var(--text-main) !important;
+        border: 1.5px solid var(--border-color) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    }
+    .leaflet-popup-content {
+        margin: 12px 16px !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-size: 12px !important;
+        line-height: 1.5 !important;
+    }
+    .leaflet-container a.leaflet-popup-close-button {
+        color: var(--text-muted) !important;
+        padding: 4px 4px 0 0 !important;
+    }
+
     .kpi-card {
         background: var(--bg-card);
-        border: 1px solid var(--border-color);
+        border: 2px solid #1e293b;
         border-radius: 16px;
         padding: 20px;
         position: relative;
         overflow: hidden;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 4px 4px 0px #1e293b;
         height: 100%;
     }
     .kpi-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+        box-shadow: 5px 5px 0px #1e293b;
     }
     .kpi-icon-bg {
         position: absolute;
@@ -45,6 +73,44 @@
         padding: 20px;
         margin-bottom: 24px;
         height: 100%;
+    }
+    .premium-card {
+        background: var(--bg-card, #ffffff) !important;
+        border: 2px solid #1e293b !important;
+        border-radius: 16px !important;
+        box-shadow: 5px 5px 0px #1e293b !important;
+        overflow: hidden !important;
+        margin-bottom: 24px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .premium-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 6px 6px 0px #1e293b !important;
+    }
+    .premium-header {
+        background: var(--bg-card, #ffffff) !important;
+        padding: 16px 20px !important;
+        border-bottom: 2px solid #1e293b !important;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .premium-title {
+        color: var(--text-main, #0f172a) !important;
+        font-weight: 800 !important;
+        font-size: 13px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        margin: 0 !important;
+    }
+    .premium-body {
+        padding: 20px !important;
+        background: var(--bg-card, #ffffff) !important;
+        color: var(--text-main, #0f172a) !important;
+        flex-grow: 1;
     }
     .leaderboard-table {
         width: 100%;
@@ -225,28 +291,28 @@
     .pyramid-bar {
         width: 100%;
         position: relative;
-        height: 44px;
-        border-radius: 8px;
-        border: 1.5px solid #94a3b8;
-        background: #f8fafc;
+        height: 46px;
+        border-radius: 12px;
+        border: 2px solid #1e293b;
+        background: var(--bg-card, #ffffff);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 16px;
+        padding: 0 20px;
         overflow: hidden;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        box-shadow: 4px 4px 0px #1e293b;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .pyramid-bar:hover {
-        transform: scale(1.02);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: scale(1.01);
+        box-shadow: 5px 5px 0px #1e293b;
         z-index: 5;
     }
     .pyramid-label {
         position: relative;
         z-index: 2;
         font-weight: 800;
-        font-size: 11px;
+        font-size: 12px;
         letter-spacing: 0.5px;
         color: #0f172a;
     }
@@ -254,7 +320,7 @@
         position: relative;
         z-index: 2;
         font-weight: 900;
-        font-size: 16px;
+        font-size: 20px;
         color: #0f172a;
     }
     .pyramid-progress {
@@ -264,7 +330,7 @@
         bottom: 0;
         z-index: 1;
         transition: width 1.2s cubic-bezier(0.1, 0.8, 0.2, 1);
-        border-right: 1.5px solid #94a3b8;
+        border-right: 2px solid #1e293b;
     }
     
     /* Progress bar backgrounds with sleek gradients */
@@ -272,19 +338,19 @@
         background: linear-gradient(90deg, #f1f5f9, #cbd5e1);
     }
     .bar-kritis .pyramid-progress {
-        background: linear-gradient(90deg, #f87171, #991b1b);
+        background: linear-gradient(90deg, #fca5a5, #ef4444);
     }
     .bar-ekstrim .pyramid-progress {
-        background: linear-gradient(90deg, #ef4444, #dc2626);
+        background: linear-gradient(90deg, #f87171, #dc2626);
     }
     .bar-tinggi .pyramid-progress {
-        background: linear-gradient(90deg, #f97316, #ea580c);
+        background: linear-gradient(90deg, #c2410c, #ea580c, #f97316);
     }
     .bar-sedang .pyramid-progress {
-        background: linear-gradient(90deg, #facc15, #eab308);
+        background: linear-gradient(90deg, #854d0e, #d97706, #fbbf24);
     }
     .bar-rendah .pyramid-progress {
-        background: linear-gradient(90deg, #4ade80, #22c55e);
+        background: linear-gradient(90deg, #86efac, #22c55e);
     }
 </style>
 
@@ -313,11 +379,8 @@
             <button class="tab-btn px-4 py-2 tab-inactive" id="tabCompany" onclick="switchTab('company')">
                 <i class="bi bi-building-fill me-1"></i> Kinerja Perusahaan
             </button>
-            <button class="tab-btn px-4 py-2 tab-inactive" id="tabMonitoring" onclick="switchTab('monitoring')">
-                <i class="bi bi-shield-fill-exclamation me-1"></i> Pemantauan Safety
-            </button>
-            <button class="tab-btn px-4 py-2 tab-inactive" id="tabHierarchy" onclick="switchTab('hierarchy')">
-                <i class="bi bi-diagram-3-fill me-1"></i> Hierarki Perusahaan
+            <button class="tab-btn px-4 py-2 tab-inactive" id="tabMap" onclick="switchTab('map')">
+                <i class="bi bi-compass-fill me-1"></i> GeoSafety Radar Spasial
             </button>
         </div>
     </div>
@@ -500,6 +563,104 @@
 
     <!-- ==================== SECTION 2: PENCAPAIAN PERUSAHAAN ==================== -->
     <div id="sectionCompany" style="display: none;">
+        <!-- Compliance Risk Panel -->
+        <div class="premium-card animate-fade-in">
+            <div class="premium-header">
+                <i class="bi bi-speedometer2 text-primary" style="font-size: 16px; color: #38bdf8 !important;"></i>
+                <h6 class="premium-title">Compliance Risk Monitoring</h6>
+            </div>
+            <div class="premium-body">
+                <div class="row g-3 mb-4">
+                <!-- 1. Compliance Close -->
+                <div class="col-6 col-lg-2">
+                    <div class="kpi-card text-center d-flex flex-column" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card);">
+                        <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Compliance Close</div>
+                        <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.ComplianceClose%</div>
+                        <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px; min-height: 24px;">Semakin tinggi semakin sehat</div>
+                        <div style="position: relative; height: 80px; width: 100%;">
+                            <canvas id="gaugeComplianceClose"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Overdue -->
+                <div class="col-6 col-lg-2">
+                    <div class="kpi-card text-center d-flex flex-column" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card);">
+                        <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Overdue</div>
+                        <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.OverdueRate%</div>
+                        <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px; min-height: 24px;">Proporsi overdue dari total open</div>
+                        <div style="position: relative; height: 80px; width: 100%;">
+                            <canvas id="gaugeOverdue"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Compliance Risk -->
+                <div class="col-6 col-lg-2">
+                    <div class="kpi-card text-center d-flex flex-column" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card);">
+                        <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Compliance Risk</div>
+                        <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.ComplianceRisk%</div>
+                        <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px; min-height: 24px;">Proporsi high-risk dari total open</div>
+                        <div style="position: relative; height: 80px; width: 100%;">
+                            <canvas id="gaugeComplianceRisk"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. RRI -->
+                <div class="col-6 col-lg-2">
+                    <div class="kpi-card text-center d-flex flex-column" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card);">
+                        <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Risk Reduction Index (RRI)</div>
+                        <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.RRI%</div>
+                        <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px; min-height: 24px;">Risiko berbobot yang berhasil ditutup</div>
+                        <div style="position: relative; height: 80px; width: 100%;">
+                            <canvas id="gaugeRRI"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. RHR -->
+                <div class="col-6 col-lg-2">
+                    <div class="kpi-card text-center d-flex flex-column" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card);">
+                        <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Repeat Hazard Rate (RHR)</div>
+                        <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.RHR%</div>
+                        <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px; min-height: 24px;">@ViewBag.RepeatHazards repeat dari @ViewBag.TotalSignatures signature</div>
+                        <div style="position: relative; height: 80px; width: 100%;">
+                            <canvas id="gaugeRHR"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. High-Risk Resolution -->
+                <div class="col-6 col-lg-2">
+                    <div class="kpi-card text-center d-flex flex-column" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card);">
+                        <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">High-Risk Resolution</div>
+                        <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.HighRiskResolution%</div>
+                        <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px; min-height: 24px;">Close high-risk dibanding total high-risk</div>
+                        <div style="position: relative; height: 80px; width: 100%;">
+                            <canvas id="gaugeHighRisk"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legend/Guidelines -->
+            <div class="row mt-2 g-2 text-start" style="font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 12px; line-height: 1.5;">
+                <div class="col-12 col-md-4">
+                    <p class="mb-1"><strong>Compliance Close:</strong> persentase temuan yang sudah status <strong>Close</strong> dari total Open+Close.</p>
+                    <p class="mb-0"><strong>RRI:</strong> bobot risiko yang berhasil ditutup (Rendah=1 s/d Kritis=5). Lebih tinggi lebih baik.</p>
+                </div>
+                <div class="col-12 col-md-4">
+                    <p class="mb-1"><strong>Overdue:</strong> proporsi temuan Open yang melewati SLA <strong>&gt;14 hari</strong>. Lebih rendah lebih baik.</p>
+                    <p class="mb-0"><strong>RHR:</strong> persentase signature hazard yang berulang (type+area+lokasi+PJA). Lebih rendah lebih sehat.</p>
+                </div>
+                <div class="col-12 col-md-4">
+                    <p class="mb-1"><strong>Compliance Risk:</strong> proporsi Open dengan risiko <strong>Kritis/Ekstrim/Tinggi</strong>. Lebih rendah lebih baik.</p>
+                    <p class="mb-0"><strong>High-Risk Resolution:</strong> persentase temuan risiko tinggi yang berhasil ditutup.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- KPI Summary Grid (5 Columns Layout) -->
         <div class="row g-3 mb-4 row-cols-2 row-cols-md-3 row-cols-lg-5 justify-content-center animate-fade-in">
             <!-- Total Karyawan -->
@@ -567,67 +728,80 @@
         <div class="row g-3 mb-4 animate-fade-in">
             <!-- Doughnut 1: Proporsi Aktivitas -->
             <div class="col-12 col-md-6">
-                <div class="chart-container">
-                    <h6 class="mb-3" style="font-weight: 700;">Proporsi Aktivitas SAP (Bulan Ini)</h6>
-                    <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
-                        <canvas id="proporsiChart"></canvas>
+                <div class="premium-card">
+                    <div class="premium-header">
+                        <i class="bi bi-pie-chart-fill text-info" style="font-size: 16px; color: #38bdf8 !important;"></i>
+                        <h6 class="premium-title">Proporsi Aktivitas SAP (Bulan Ini)</h6>
+                    </div>
+                    <div class="premium-body">
+                        <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="proporsiChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Safety Pyramid Block -->
             <div class="col-12 col-md-6">
-                <div class="chart-container">
-                    <h6 class="mb-3" style="font-weight: 700;">Piramida Keselamatan Berdasarkan Tingkat Risiko</h6>
-                    <div class="pyramid-graphic">
-                        <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
+                <div class="premium-card">
+                    <div class="premium-header">
+                        <i class="bi bi-triangle-half text-warning" style="font-size: 16px; color: #fbbf24 !important;"></i>
+                        <h6 class="premium-title">Piramida Keselamatan Berdasarkan Tingkat Risiko</h6>
+                    </div>
+                    <div class="premium-body">
+                        <div class="w-100">
+                            <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
                             Sumber data asli: hazard_danger_name (status Open), kritis ditempatkan paling atas
                         </div>
                         
-                        <!-- True Triangle Pyramid Graphic Elements -->
-                        <div class="pyramid-triangle-container" style="position: relative; width: 100%; max-width: 360px; margin: 0 auto; padding-top: 85%; /* Slightly flatter than 1:1 Aspect Ratio */ filter: drop-shadow(0 8px 16px rgba(0,0,0,0.1));">
-                            <div class="pyramid-triangle-wrapper" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; clip-path: polygon(50% 0%, 100% 100%, 0% 100%); display: flex; flex-direction: column;">
-                                <!-- INSIDEN Row -->
-                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #f1f5f9, #cbd5e1); border-bottom: 2px solid #fff; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px;" title="Insiden: @ViewBag.OpenInsiden">
-                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
-                                        <div style="font-size: 11px; font-weight: 800; color: #334155;">INSIDEN</div>
-                                        <div style="font-size: 14px; font-weight: 900; color: #0f172a;">@ViewBag.OpenInsiden</div>
-                                    </div>
+                        <!-- Stacked Bar Pyramid Graphic Elements -->
+                        <div class="d-flex flex-column gap-2 align-items-center w-100 py-2" style="margin: 0 auto; max-width: 480px;">
+                            <!-- INSIDEN Row -->
+                            <div class="pyramid-row" style="width: 35%;">
+                                <div class="pyramid-bar bar-insiden" data-val="@ViewBag.OpenInsiden" title="Insiden: @ViewBag.OpenInsiden">
+                                    <div class="pyramid-progress"></div>
+                                    <span class="pyramid-label">INSIDEN</span>
+                                    <span class="pyramid-value">@ViewBag.OpenInsiden</span>
                                 </div>
-                                <!-- KRITIS Row -->
-                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #f87171, #991b1b); border-bottom: 2px solid #fff; display: flex; align-items: center; justify-content: center;" title="Kritis: @ViewBag.OpenKritis">
-                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
-                                        <div style="font-size: 11px; font-weight: 800; color: #fff;">KRITIS</div>
-                                        <div style="font-size: 16px; font-weight: 900; color: #fff;">@ViewBag.OpenKritis</div>
-                                    </div>
+                            </div>
+                            <!-- KRITIS Row -->
+                            <div class="pyramid-row" style="width: 48%;">
+                                <div class="pyramid-bar bar-kritis" data-val="@ViewBag.OpenKritis" title="Kritis: @ViewBag.OpenKritis">
+                                    <div class="pyramid-progress"></div>
+                                    <span class="pyramid-label">KRITIS</span>
+                                    <span class="pyramid-value">@ViewBag.OpenKritis</span>
                                 </div>
-                                <!-- EKSTRIM Row -->
-                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #ef4444, #dc2626); border-bottom: 2px solid #fff; display: flex; align-items: center; justify-content: center;" title="Ekstrim: @ViewBag.OpenExtreme">
-                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
-                                        <div style="font-size: 12px; font-weight: 800; color: #fff;">EKSTRIM</div>
-                                        <div style="font-size: 18px; font-weight: 900; color: #fff;">@ViewBag.OpenExtreme</div>
-                                    </div>
+                            </div>
+                            <!-- EKSTRIM Row -->
+                            <div class="pyramid-row" style="width: 61%;">
+                                <div class="pyramid-bar bar-ekstrim" data-val="@ViewBag.OpenExtreme" title="Ekstrim: @ViewBag.OpenExtreme">
+                                    <div class="pyramid-progress"></div>
+                                    <span class="pyramid-label">EKSTRIM</span>
+                                    <span class="pyramid-value">@ViewBag.OpenExtreme</span>
                                 </div>
-                                <!-- TINGGI Row -->
-                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #f97316, #ea580c); border-bottom: 2px solid #fff; display: flex; align-items: center; justify-content: center;" title="Tinggi: @ViewBag.OpenHigh">
-                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
-                                        <div style="font-size: 12px; font-weight: 800; color: #fff;">TINGGI</div>
-                                        <div style="font-size: 18px; font-weight: 900; color: #fff;">@ViewBag.OpenHigh</div>
-                                    </div>
+                            </div>
+                            <!-- TINGGI Row -->
+                            <div class="pyramid-row" style="width: 74%;">
+                                <div class="pyramid-bar bar-tinggi" data-val="@ViewBag.OpenHigh" title="Tinggi: @ViewBag.OpenHigh">
+                                    <div class="pyramid-progress"></div>
+                                    <span class="pyramid-label">TINGGI</span>
+                                    <span class="pyramid-value">@ViewBag.OpenHigh</span>
                                 </div>
-                                <!-- SEDANG Row -->
-                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #facc15, #eab308); border-bottom: 2px solid #fff; display: flex; align-items: center; justify-content: center;" title="Sedang: @ViewBag.OpenMedium">
-                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
-                                        <div style="font-size: 13px; font-weight: 800; color: #451a03;">SEDANG</div>
-                                        <div style="font-size: 20px; font-weight: 900; color: #451a03;">@ViewBag.OpenMedium</div>
-                                    </div>
+                            </div>
+                            <!-- SEDANG Row -->
+                            <div class="pyramid-row" style="width: 87%;">
+                                <div class="pyramid-bar bar-sedang" data-val="@ViewBag.OpenMedium" title="Sedang: @ViewBag.OpenMedium">
+                                    <div class="pyramid-progress"></div>
+                                    <span class="pyramid-label">SEDANG</span>
+                                    <span class="pyramid-value">@ViewBag.OpenMedium</span>
                                 </div>
-                                <!-- RENDAH Row -->
-                                <div class="pyramid-triangle-row" style="flex: 1; background: linear-gradient(90deg, #4ade80, #22c55e); display: flex; align-items: center; justify-content: center;" title="Rendah: @ViewBag.OpenLow">
-                                    <div class="pyramid-triangle-content text-center d-flex align-items-center gap-2">
-                                        <div style="font-size: 13px; font-weight: 800; color: #064e3b;">RENDAH</div>
-                                        <div style="font-size: 22px; font-weight: 900; color: #064e3b;">@ViewBag.OpenLow</div>
-                                    </div>
+                            </div>
+                            <!-- RENDAH Row -->
+                            <div class="pyramid-row" style="width: 100%;">
+                                <div class="pyramid-bar bar-rendah" data-val="@ViewBag.OpenLow" title="Rendah: @ViewBag.OpenLow">
+                                    <div class="pyramid-progress"></div>
+                                    <span class="pyramid-label">RENDAH</span>
+                                    <span class="pyramid-value">@ViewBag.OpenLow</span>
                                 </div>
                             </div>
                         </div>
@@ -706,13 +880,51 @@
             </div>
         </div>
 
+        <!-- Second Charts Row: Repeated Hazards & Kategori Bahaya -->
+        <div class="row g-3 mb-4 animate-fade-in">
+            <!-- Top Repeated Hazards Chart -->
+            <div class="col-12 col-md-6">
+                <div class="premium-card">
+                    <div class="premium-header">
+                        <i class="bi bi-arrow-repeat text-danger" style="font-size: 16px; color: #f43f5e !important;"></i>
+                        <h6 class="premium-title">Top 5 Hazard Berulang Terbanyak (Bulan Ini)</h6>
+                    </div>
+                    <div class="premium-body">
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="repeatedHazardsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kategori Bahaya (KTA vs KTC) -->
+            <div class="col-12 col-md-6">
+                <div class="premium-card">
+                    <div class="premium-header">
+                        <i class="bi bi-exclamation-circle-fill text-warning" style="font-size: 16px; color: #fbbf24 !important;"></i>
+                        <h6 class="premium-title">Kategori Temuan Hazard (KTA vs KTC)</h6>
+                    </div>
+                    <div class="premium-body">
+                        <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="chartKategoriBahaya"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Line Chart: Tren Bulanan -->
         <div class="row mb-4 animate-fade-in">
             <div class="col-12">
-                <div class="chart-container">
-                    <h6 class="mb-3" style="font-weight: 700;">Tren Aktivitas SAP (6 Bulan Terakhir)</h6>
-                    <div style="height: 300px; position: relative;">
-                        <canvas id="trendChart"></canvas>
+                <div class="premium-card">
+                    <div class="premium-header">
+                        <i class="bi bi-graph-up text-success" style="font-size: 16px; color: #10b981 !important;"></i>
+                        <h6 class="premium-title">Tren Aktivitas SAP (6 Bulan Terakhir)</h6>
+                    </div>
+                    <div class="premium-body">
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="trendChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -721,10 +933,15 @@
         <!-- Leaderboard Chart -->
         <div class="row mb-4 animate-fade-in">
             <div class="col-12">
-                <div class="chart-container">
-                    <h6 class="mb-3" style="font-weight: 700;">Grafik Perbandingan Kepatuhan Perusahaan (%)</h6>
-                    <div style="height: 300px; position: relative;">
-                        <canvas id="leaderboardChart"></canvas>
+                <div class="premium-card">
+                    <div class="premium-header">
+                        <i class="bi bi-bar-chart-line-fill text-info" style="font-size: 16px; color: #38bdf8 !important;"></i>
+                        <h6 class="premium-title">Grafik Perbandingan Kepatuhan Perusahaan (%)</h6>
+                    </div>
+                    <div class="premium-body">
+                        <div style="height: 400px; position: relative;">
+                            <canvas id="leaderboardChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -733,9 +950,13 @@
         <!-- Leaderboard Table -->
         <div class="row animate-fade-in">
             <div class="col-12">
-                <div class="chart-container">
-                    <h6 class="mb-3" style="font-weight: 700;">@(ViewBag.IsAdmin == true ? "Leaderboard Kepatuhan Perusahaan (Bulan Ini)" : "Pencapaian Kepatuhan Perusahaan (Bulan Ini)")</h6>
-                    <div class="table-responsive">
+                <div class="premium-card">
+                    <div class="premium-header">
+                        <i class="bi bi-trophy-fill text-warning" style="font-size: 16px; color: #f59e0b !important;"></i>
+                        <h6 class="premium-title">@(ViewBag.IsAdmin == true ? "Leaderboard Kepatuhan Perusahaan (Bulan Ini)" : "Pencapaian Kepatuhan Perusahaan (Bulan Ini)")</h6>
+                    </div>
+                    <div class="premium-body">
+                        <div class="table-responsive">
                         <table class="leaderboard-table">
                             <thead>
                                 <tr>
@@ -898,331 +1119,26 @@
             </div>
         }
     }
+    </div> <!-- Closing sectionCompany -->
 
-    <!-- ==================== SECTION 3: PEMANTAUAN SAFETY ==================== -->
-    <div id="sectionMonitoring" style="display: none;" class="animate-fade-in">
-        <div class="card-sap p-4 mb-4 border-0" style="border-radius: 16px;">
-            <h5 class="mb-1" style="font-weight: 800;"><i class="bi bi-speedometer2 me-2 text-primary"></i>Compliance Risk & Monitoring</h5>
-            <p class="text-muted mb-0" style="font-size: 12px;">Indikator kinerja kualitas pelaporan dan penyelesaian hazard berdasarkan bobot dan risiko.</p>
-        </div>
-
-        <div class="row g-3 mb-4">
-            <!-- 1. Compliance Close -->
-            <div class="col-6 col-lg-2">
-                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
-                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Compliance Close</div>
-                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.ComplianceClose%</div>
-                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">Semakin tinggi semakin sehat</div>
-                    <div style="position: relative; height: 80px; width: 100%;">
-                        <canvas id="gaugeComplianceClose"></canvas>
-                    </div>
-                </div>
+    <!-- ==================== SECTION 3: GEOSAFETY RADAR SPASIAL ==================== -->
+    <div id="sectionMap" style="display: none;">
+        <div class="premium-card animate-fade-in" style="border: 2px solid #1e293b; box-shadow: 4px 4px 0px #1e293b; background: var(--bg-card); border-radius: 16px; margin-bottom: 24px;">
+            <div class="premium-header" style="background: var(--bg-card); border-bottom: 2px solid #1e293b; padding: 16px 20px; display: flex; align-items: center; border-top-left-radius: 14px; border-top-right-radius: 14px;">
+                <i class="bi bi-compass text-primary me-2" style="font-size: 18px; color: #38bdf8 !important;"></i>
+                <h6 class="premium-title mb-0" style="font-weight: 800; font-size: 14px; color: var(--text-main);">Radar Geospatial Bahaya & Inspeksi (Leaflet Map)</h6>
             </div>
-
-            <!-- 2. Overdue -->
-            <div class="col-6 col-lg-2">
-                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
-                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Overdue</div>
-                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.OverdueRate%</div>
-                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">Proporsi overdue dari total open</div>
-                    <div style="position: relative; height: 80px; width: 100%;">
-                        <canvas id="gaugeOverdue"></canvas>
-                    </div>
+            <div class="premium-body" style="padding: 20px;">
+                <div class="alert alert-info py-2" style="font-size: 12px; border-radius: 8px; background: rgba(56, 189, 248, 0.08); border: 1.5px solid rgba(56, 189, 248, 0.2); color: #38bdf8; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    <i class="bi bi-info-circle-fill fs-6"></i>
+                    <span>Peta memetakan koordinat GPS riil: <strong>Hazard Report</strong> (marker <span class="badge bg-danger" style="font-size: 9px;">Merah</span>) dan <strong>Safety Inspeksi</strong> (marker <span class="badge bg-primary" style="font-size: 9px;">Biru</span>) perusahaan Anda.</span>
                 </div>
-            </div>
 
-            <!-- 3. Compliance Risk -->
-            <div class="col-6 col-lg-2">
-                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
-                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Compliance Risk</div>
-                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.ComplianceRisk%</div>
-                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">Proporsi high-risk dari total open</div>
-                    <div style="position: relative; height: 80px; width: 100%;">
-                        <canvas id="gaugeComplianceRisk"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. RRI -->
-            <div class="col-6 col-lg-2">
-                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
-                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Risk Reduction (RRI)</div>
-                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.RRI%</div>
-                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">Risiko berbobot yang ditutup</div>
-                    <div style="position: relative; height: 80px; width: 100%;">
-                        <canvas id="gaugeRRI"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 5. RHR -->
-            <div class="col-6 col-lg-2">
-                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
-                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Repeat Hazard (RHR)</div>
-                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.RHR%</div>
-                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">@ViewBag.RepeatHazards repeat dari @ViewBag.TotalSignatures signature</div>
-                    <div style="position: relative; height: 80px; width: 100%;">
-                        <canvas id="gaugeRHR"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 6. High-Risk Resolution -->
-            <div class="col-6 col-lg-2">
-                <div class="kpi-card text-center d-flex flex-column" style="padding: 16px;">
-                    <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">High-Risk Resolution</div>
-                    <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.HighRiskResolution%</div>
-                    <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px;">Close high-risk / total high-risk</div>
-                    <div style="position: relative; height: 80px; width: 100%;">
-                        <canvas id="gaugeHighRisk"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card-sap p-4 mb-4 border-0" style="border-radius: 12px; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2) !important;">
-            <div class="d-flex gap-4 flex-wrap">
-                <div class="flex-fill" style="min-width: 250px;">
-                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main);"><strong>Compliance Close:</strong> persentase temuan yang sudah status <strong class="text-success">Closed</strong> dari total Open+Closed.</div>
-                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 6px;"><strong>RRI:</strong> bobot risiko yang berhasil ditutup (Rendah=1 s/d Kritis=5). Lebih tinggi lebih baik.</div>
-                </div>
-                <div class="flex-fill" style="min-width: 250px;">
-                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main);"><strong>Overdue:</strong> proporsi temuan Open yang melewati SLA >14 hari. Lebih rendah lebih baik.</div>
-                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 6px;"><strong>RHR:</strong> persentase signature hazard yang berulang (type+area+lokasi+PJA). Lebih rendah lebih sehat.</div>
-                </div>
-                <div class="flex-fill" style="min-width: 250px;">
-                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main);"><strong>Compliance Risk:</strong> proporsi Open dengan risiko <strong>Kritis/Ekstrim/Tinggi</strong>. Lebih rendah lebih baik.</div>
-                    <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 6px;"><strong>High-Risk Resolution:</strong> persentase temuan risiko tinggi yang berhasil ditutup.</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Professional Summary -->
-        <div class="card-sap p-4 border-0 mb-4" style="border-radius: 16px; border-left: 4px solid #3b82f6 !important;">
-            <h6 style="font-weight: 800; color: #3b82f6;" class="mb-2"><i class="bi bi-robot me-2"></i>Executive Summary Analysis</h6>
-            <div style="font-size: 13px; color: var(--text-main); line-height: 1.6;">
-                @{
-                    string summary = "";
-                    if (ViewBag.ComplianceClose >= 80) summary += "Performa penutupan bahaya secara keseluruhan <strong>sangat baik</strong> (" + ViewBag.ComplianceClose + "%). ";
-                    else if (ViewBag.ComplianceClose >= 50) summary += "Performa penutupan bahaya <strong>cukup</strong> (" + ViewBag.ComplianceClose + "%), namun perlu percepatan penyelesaian. ";
-                    else summary += "Terdapat <strong>penumpukan hazard terbuka</strong> yang signifikan (" + (100 - ViewBag.ComplianceClose) + "%). ";
-
-                    if (ViewBag.OverdueRate > 20) summary += "Perhatian khusus diperlukan pada <strong>angka Overdue yang tinggi (" + ViewBag.OverdueRate + "%)</strong>, menunjukkan banyaknya SLA yang terlewat >14 hari. ";
-                    else summary += "Tingkat ketepatan waktu penyelesaian (Overdue) terpantau <strong>terkendali</strong>. ";
-
-                    if (ViewBag.ComplianceRisk > 30) summary += "Proporsi <strong>risiko tinggi yang belum diselesaikan sangat mengkhawatirkan (" + ViewBag.ComplianceRisk + "%)</strong>. Segera prioritaskan hazard Kritis & Ekstrim. ";
-                    else summary += "Risiko tinggi yang tersisa berhasil ditekan ke angka yang minim. ";
-
-                    if (ViewBag.HighRiskResolution >= 75) summary += "Resolusi terhadap bahaya berisiko tinggi (High-Risk Resolution) <strong>sangat responsif</strong> (" + ViewBag.HighRiskResolution + "%). ";
-                    
-                    if (ViewBag.RHR > 40) summary += "Peringatan: <strong>Repeat Hazard Rate sangat tinggi (" + ViewBag.RHR + "%)</strong>. Banyak temuan berulang pada area dan tipe yang sama, menandakan akar masalah (root cause) belum tertangani dengan tuntas.";
-                    else summary += "Tingkat repetisi bahaya (RHR) tergolong rendah, menandakan perbaikan yang dilakukan bersifat permanen.";
-                }
-                @Html.Raw(summary)
-            </div>
-        </div>
-
-        <!-- Extra Professional Graphs -->
-        <div class="row g-4 mb-4">
-            <!-- Doughnut Chart: Unsafe Act vs Unsafe Condition -->
-            <div class="col-12 col-lg-6">
-                <div class="card-sap p-4 h-100 border-0" style="border-radius: 16px;">
-                    <h6 class="mb-3" style="font-weight: 800; color: var(--text-main);">
-                        <i class="bi bi-pie-chart-fill me-2 text-warning"></i>Kategori Bahaya (KTA vs KTC)
-                    </h6>
-                    <div style="position: relative; height: 250px; width: 100%;">
-                        <canvas id="chartKategoriBahaya"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Horizontal Bar: Top 5 Areas -->
-            <div class="col-12 col-lg-6">
-                <div class="card-sap p-4 h-100 border-0" style="border-radius: 16px;">
-                    <h6 class="mb-3" style="font-weight: 800; color: var(--text-main);">
-                        <i class="bi bi-geo-alt-fill me-2 text-danger"></i>Top 5 Area Rawan Hazard
-                    </h6>
-                    <div style="position: relative; height: 250px; width: 100%;">
-                        <canvas id="chartTopAreas"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Safety Officer Monitoring Panel -->
-        <div class="card-sap p-3 mb-4 border-0" style="border-radius: 16px;">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                <div>
-                    <h6 class="mb-1" style="font-weight: 800;">Safety Officer Monitoring Panel</h6>
-                    <p class="mb-0 text-muted" style="font-size: 11px;">Pantau kepatuhan pengisian SAP karyawan dan unduh laporan yang tidak patuh.</p>
-                </div>
-                <div class="d-flex gap-2">
-                    <a asp-action="DownloadUncompliantReport" asp-route-range="week" class="btn btn-sm px-3 py-2 text-white" style="background: var(--color-primary); border-radius: 8px; font-weight: 700; font-size: 12px; text-decoration: none;">
-                        <i class="bi bi-file-earmark-excel-fill me-1"></i> Download Belum SAP (Minggu Ini)
-                    </a>
-                    <a asp-action="DownloadUncompliantReport" asp-route-range="month" class="btn btn-sm px-3 py-2 text-white" style="background: var(--color-primary); border-radius: 8px; font-weight: 700; font-size: 12px; text-decoration: none;">
-                        <i class="bi bi-file-earmark-excel-fill me-1"></i> Download Belum SAP (Bulan Ini)
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Monitoring Grid -->
-        <div class="row g-3">
-            <!-- Panel Left: Uncompliant Employees List -->
-            <div class="col-12 col-lg-6">
-                <div class="chart-container" style="max-height: 550px; display: flex; flex-direction: column;">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
-                        <h6 style="font-weight: 700; margin: 0;">Karyawan Belum Mengisi SAP</h6>
-                        <select id="uncompliantPeriodSelect" class="form-select-sm" style="background: var(--bg-layout); border: 1.5px solid var(--border-color); color: var(--text-main); border-radius: 6px; font-weight: 600;" onchange="toggleUncompliantPeriod(this.value)">
-                            <option value="week">Minggu Ini (@uncompliantWeek.Count Orang)</option>
-                            <option value="month">Bulan Ini (@uncompliantMonth.Count Orang)</option>
-                        </select>
-                    </div>
-                    <!-- Search Box for Uncompliant -->
-                    <div class="mb-3">
-                        <input type="text" id="searchUncompliant" class="input-sap" placeholder="🔍 Cari nama atau NIK..." style="height: 36px; font-size: 12px;" oninput="filterUncompliant(this.value)" />
-                    </div>
-                    <!-- Uncompliant List Wrapper -->
-                    <div class="table-responsive flex-grow-1" style="overflow-y: auto; max-height: 380px;">
-                        <table class="table table-sm text-start align-middle" style="color: var(--text-main); font-size: 12px;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid var(--border-color);">
-                                    <th>NIK</th>
-                                    <th>Nama Lengkap</th>
-                                    <th>Departemen</th>
-                                    <th class="text-end">Jumlah</th>
-                                </tr>
-                            </thead>
-                            <tbody id="uncompliantTableBody">
-                                <!-- Week Items -->
-                                @foreach (var emp in uncompliantWeek)
-                                {
-                                    <tr class="uncompliant-item item-week" data-search="@emp.Nama.ToLower() @emp.Nik.ToLower()">
-                                        <td style="font-family: monospace; font-weight: 600;">@emp.Nik</td>
-                                        <td style="font-weight: 700;">@emp.Nama</td>
-                                        <td>@emp.Departemen</td>
-                                        <td class="text-end text-danger" style="font-weight: 700;">0/1</td>
-                                    </tr>
-                                }
-                                <!-- Month Items -->
-                                @foreach (var emp in uncompliantMonth)
-                                {
-                                    <tr class="uncompliant-item item-month" data-search="@emp.Nama.ToLower() @emp.Nik.ToLower()" style="display: none;">
-                                        <td style="font-family: monospace; font-weight: 600;">@emp.Nik</td>
-                                        <td style="font-weight: 700;">@emp.Nama</td>
-                                        <td>@emp.Departemen</td>
-                                        <td class="text-end text-warning" style="font-weight: 700;">@emp.SubmissionCount/4</td>
-                                    </tr>
-                                }
-                                @if (uncompliantWeek.Count == 0 && uncompliantMonth.Count == 0)
-                                {
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">Semua karyawan sudah mematuhi kepatuhan SAP.</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Panel Right: Company History Activity -->
-            <div class="col-12 col-lg-6">
-                <div class="chart-container" style="max-height: 550px; display: flex; flex-direction: column;">
-                    <h6 style="font-weight: 700;" class="mb-3">History Input SAP Perusahaan</h6>
-                    <!-- Search Box for History -->
-                    <div class="mb-3">
-                        <input type="text" id="searchHistory" class="input-sap" placeholder="🔍 Cari aktivitas, nama, atau NIK..." style="height: 36px; font-size: 12px;" oninput="filterHistory(this.value)" />
-                    </div>
-                    <!-- History List Wrapper -->
-                    <div class="table-responsive flex-grow-1" style="overflow-y: auto; max-height: 430px;">
-                        <table class="table table-sm text-start align-middle" style="color: var(--text-main); font-size: 12px;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid var(--border-color);">
-                                    <th style="width: 90px;">Tanggal</th>
-                                    <th>Pengirim</th>
-                                    <th>Modul</th>
-                                    <th>Detail/Lokasi</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyTableBody">
-                                @foreach (var item in companyHistory)
-                                {
-                                    string badgeClass = item.Type switch
-                                    {
-                                        "Hazard" => "bg-danger",
-                                        "Inspection" => "bg-primary",
-                                        "SafetyTalk" => "bg-warning text-dark",
-                                        "P5m" => "bg-success",
-                                        _ => "bg-secondary"
-                                    };
-                                    <tr class="history-item" data-search="@item.User.ToLower() @item.Nik.ToLower() @item.Title.ToLower() @item.Description.ToLower()">
-                                        <td style="font-size: 10px; color: var(--text-muted);">@item.Date.ToString("dd MMM HH:mm")</td>
-                                        <td>
-                                            <div style="font-weight: 700;">@item.User</div>
-                                            <div style="font-size: 10px; font-family: monospace; color: var(--text-muted);">@item.Nik</div>
-                                        </td>
-                                        <td>
-                                            <span class="badge @badgeClass" style="font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 4px 6px;">@item.Type</span>
-                                        </td>
-                                        <td>
-                                            <div style="font-weight: 600;">@item.Title</div>
-                                            <div style="font-size: 10px; color: var(--text-muted); max-width: 250px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="@item.Description">@item.Description</div>
-                                        </td>
-                                    </tr>
-                                }
-                                @if (companyHistory.Count == 0)
-                                {
-                                    <tr>
-                                        <td colspan="4" class="text-center text-muted py-4">Belum ada riwayat aktivitas yang terekam.</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <!-- Leaflet Map Container -->
+                <div style="height: 550px; border-radius: 12px; border: 2px solid #1e293b; overflow: hidden; position: relative; box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);" id="hazardLeafletMap"></div>
             </div>
         </div>
     </div>
-
-    <div id="sectionHierarchy" style="display: none;" class="animate-fade-in">
-            <!-- Header Card -->
-            <div class="card-sap p-4 mb-4 border-0" style="border-radius: 16px;">
-                <h5 class="mb-1" style="font-weight: 800;"><i class="bi bi-diagram-3 me-2 text-primary"></i>Struktur Hierarki & Pencapaian SAP Perusahaan</h5>
-                <p class="text-muted mb-0" style="font-size: 12px;">Berikut adalah pemetaan kepatuhan SAP berdasarkan bagan hierarki parent-child (kontraktor utama & sub-kontraktor). Statistik kumulatif menggabungkan data perusahaan tersebut beserta seluruh sub-kontraktor di bawahnya.</p>
-                <div class="mt-3 position-relative">
-                    <i class="bi bi-search position-absolute text-muted" style="left: 14px; top: 12px; font-size: 14px;"></i>
-                    <input type="text" id="hierarchySearchInput" class="form-control ps-5" placeholder="Cari nama perusahaan atau ID..." style="background: rgba(255,255,255,0.03); border: 1.5px solid var(--border-color); border-radius: 10px; color: var(--text-main); font-size: 13px; height: 42px;" onkeyup="filterHierarchyTree()">
-                </div>
-
-                <div class="d-flex gap-2 mt-3 flex-wrap">
-                    <button class="btn btn-sm btn-outline-light" onclick="expandAllHierarchy()" style="border-radius: 8px; font-weight: 600; font-size: 11px; padding: 6px 12px;">
-                        <i class="bi bi-plus-lg me-1"></i>Expand Semua
-                    </button>
-                    <button class="btn btn-sm btn-outline-light" onclick="collapseAllHierarchy()" style="border-radius: 8px; font-weight: 600; font-size: 11px; padding: 6px 12px;">
-                        <i class="bi bi-dash-lg me-1"></i>Collapse Semua
-                    </button>
-                </div>
-            </div>
-
-            <!-- Tree Roots Container -->
-            <div class="hierarchy-tree-container">
-                @foreach (var root in hierarchy)
-                {
-                    RenderNode(root, 0);
-                }
-                
-                @if (hierarchy.Count == 0)
-                {
-                    <div class="text-center text-muted py-5 card-sap border-0" style="border-radius: 16px;">
-                        <i class="bi bi-info-circle" style="font-size: 32px;"></i>
-                        <p class="mt-2 mb-0" style="font-size: 13px;">Tidak ada data hierarki perusahaan yang terdaftar.</p>
-                    </div>
-                }
-            </div>
-        </div>
-</div>
 
 <!-- Charts & Tabs Handling Script -->
 @section Scripts {
@@ -1230,118 +1146,152 @@
     function switchTab(tab) {
         document.getElementById('sectionMy').style.display = tab === 'my' ? 'block' : 'none';
         document.getElementById('sectionCompany').style.display = tab === 'company' ? 'block' : 'none';
-
-        const monitorSec = document.getElementById('sectionMonitoring');
-        if (monitorSec) {
-            monitorSec.style.display = tab === 'monitoring' ? 'block' : 'none';
-        }
-
-        const hierarchySec = document.getElementById('sectionHierarchy');
-        if (hierarchySec) {
-            hierarchySec.style.display = tab === 'hierarchy' ? 'block' : 'none';
-        }
+        document.getElementById('sectionMap').style.display = tab === 'map' ? 'block' : 'none';
 
         document.getElementById('tabMy').className = 'tab-btn px-4 py-2 ' + (tab === 'my' ? 'tab-active' : 'tab-inactive');
         document.getElementById('tabCompany').className = 'tab-btn px-4 py-2 ' + (tab === 'company' ? 'tab-active' : 'tab-inactive');
-        
-        const tabMon = document.getElementById('tabMonitoring');
-        if (tabMon) {
-            tabMon.className = 'tab-btn px-4 py-2 ' + (tab === 'monitoring' ? 'tab-active' : 'tab-inactive');
+        document.getElementById('tabMap').className = 'tab-btn px-4 py-2 ' + (tab === 'map' ? 'tab-active' : 'tab-inactive');
+
+        if (tab === 'company' && typeof window._initCompanyCharts === 'function') {
+            window._initCompanyCharts();
         }
-
-        const tabHier = document.getElementById('tabHierarchy');
-        if (tabHier) {
-            tabHier.className = 'tab-btn px-4 py-2 ' + (tab === 'hierarchy' ? 'tab-active' : 'tab-inactive');
+        if (tab === 'map' && typeof window._initHazardMap === 'function') {
+            window._initHazardMap();
         }
-    }
-
-    function toggleUncompliantPeriod(period) {
-        const query = document.getElementById('searchUncompliant').value.toLowerCase();
-        if (period === 'week') {
-            $('.item-week').show();
-            $('.item-month').hide();
-        } else {
-            $('.item-week').hide();
-            $('.item-month').show();
-        }
-        if (query) {
-            filterUncompliant(query);
-        }
-    }
-
-    function filterUncompliant(query) {
-        const q = query.toLowerCase();
-        const activePeriod = document.getElementById('uncompliantPeriodSelect').value;
-        const selector = activePeriod === 'week' ? '.item-week' : '.item-month';
-
-        $(selector).each(function() {
-            const data = $(this).data('search') || '';
-            $(this).toggle(data.indexOf(q) !== -1);
-        });
-    }
-
-    function filterHistory(query) {
-        const q = query.toLowerCase();
-        $('.history-item').each(function() {
-            const data = $(this).data('search') || '';
-            $(this).toggle(data.indexOf(q) !== -1);
-        });
     }
 
     document.addEventListener("DOMContentLoaded", function () {
+        // Safe high-contrast theme detection
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
-                       (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                       document.body.classList.contains('dark') || 
+                       document.body.classList.contains('dark-theme');
         
-        const textColor = isDark ? '#cbd5e1' : '#334155';
+        const textColor = isDark ? '#f8fafc' : '#0f172a';
         const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
 
-        // 1. Chart Proporsi Aktivitas Saya
-        const ctxMyProp = document.getElementById('myProporsiChart').getContext('2d');
-        new Chart(ctxMyProp, {
-            type: 'doughnut',
-            data: {
-                labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'P5M'],
-                datasets: [{
-                    data: [@ViewBag.MyHazardsMonth, @ViewBag.MyInspectionsMonth, @ViewBag.MySafetyTalksMonth, @ViewBag.MyP5msMonth],
-                    backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#10b981'],
-                    borderWidth: 0
+        // Helper untuk membuat Gauge Chart
+        function createGauge(id, value, isGreenHigh) {
+            const ctx = document.getElementById(id);
+            if (!ctx) return;
+            
+            const gradColor = isGreenHigh 
+                ? ['#ef4444', '#facc15', '#22c55e'] 
+                : ['#22c55e', '#facc15', '#ef4444'];
+
+            new Chart(ctx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [value, 100 - value],
+                        backgroundColor: [
+                            value > 66 ? gradColor[2] : (value > 33 ? gradColor[1] : gradColor[0]),
+                            isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9'
+                        ],
+                        borderWidth: 0,
+                        circumference: 180,
+                        rotation: 270,
+                        cutout: '80%',
+                        needleValue: value
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                },
+                plugins: [{
+                    id: 'gaugeNeedle',
+                    afterDatasetDraw(chart) {
+                        const { ctx, width, chartArea: { top, bottom, left, right } } = chart;
+                        ctx.save();
+                        const value = chart.data.datasets[0].needleValue;
+                        const clampedValue = Math.max(0, Math.min(value, 100));
+                        const angle = Math.PI + (clampedValue / 100 * Math.PI);
+                        
+                        const metaset = chart.getDatasetMeta(0);
+                        const arc = metaset.data[0];
+                        if (!arc) return;
+                        const cx = arc.x;
+                        const cy = arc.y;
+                        const radius = arc.outerRadius - (arc.outerRadius - arc.innerRadius)/2;
+
+                        ctx.translate(cx, cy);
+                        ctx.rotate(angle);
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(0, -3);
+                        ctx.lineTo(radius, 0);
+                        ctx.lineTo(0, 3);
+                        ctx.fillStyle = isDark ? '#f8fafc' : '#1e293b';
+                        ctx.fill();
+                        
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                        ctx.fillStyle = isDark ? '#f8fafc' : '#1e293b';
+                        ctx.fill();
+                        
+                        ctx.restore();
+                    }
                 }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { color: textColor, font: { weight: 'bold', size: 11 } }
+            });
+        }
+
+        // 1. Chart Proporsi Aktivitas Saya
+        const myProporsiEl = document.getElementById('myProporsiChart');
+        if (myProporsiEl) {
+            const ctxMyProp = myProporsiEl.getContext('2d');
+            new Chart(ctxMyProp, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'P5M'],
+                    datasets: [{
+                        data: [@ViewBag.MyHazardsMonth, @ViewBag.MyInspectionsMonth, @ViewBag.MySafetyTalksMonth, @ViewBag.MyP5msMonth],
+                        backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#10b981'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: textColor, font: { weight: 'bold', size: 11 } }
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
         // 2. Chart Proporsi Aktivitas Perusahaan
-        const ctxProp = document.getElementById('proporsiChart').getContext('2d');
-        new Chart(ctxProp, {
-            type: 'doughnut',
-            data: {
-                labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'P5M'],
-                datasets: [{
-                    data: [@ViewBag.MonthHazards, @ViewBag.MonthInspections, @ViewBag.MonthSafetyTalks, @ViewBag.MonthP5ms],
-                    backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#10b981'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { color: textColor, font: { weight: 'bold', size: 11 } }
+        const proporsiEl = document.getElementById('proporsiChart');
+        if (proporsiEl) {
+            const ctxProp = proporsiEl.getContext('2d');
+            new Chart(ctxProp, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'P5M'],
+                    datasets: [{
+                        data: [@ViewBag.MonthHazards, @ViewBag.MonthInspections, @ViewBag.MonthSafetyTalks, @ViewBag.MonthP5ms],
+                        backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#10b981'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: textColor, font: { weight: 'bold', size: 11 } }
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
         // 3. Initialize Safety Pyramid progress bar widths
         const pyramidVals = [
@@ -1365,348 +1315,298 @@
             }
         });
 
-        // 4. Chart Tren Bulanan
-        const ctxTrend = document.getElementById('trendChart').getContext('2d');
-        
-        const labels = [];
-        const hazardData = [];
-        const inspectData = [];
-        const talkData = [];
-        const p5mData = [];
+        // 4. Chart Tren Bulanan & 5. Leaderboard Chart
+        // --> Diinisialisasi saat tab "Kinerja Perusahaan" diklik (lazy init)
+        //     agar tidak crash karena canvas dalam display:none
 
-        @foreach (var item in trend)
-        {
-            <text>
-                labels.push('@item.MonthLabel');
-                hazardData.push(@item.Hazards);
-                inspectData.push(@item.Inspections);
-                talkData.push(@item.SafetyTalks);
-                p5mData.push(@item.P5ms);
-            </text>
-        }
+        // Track whether company charts are already initialized
+        window._companyChartsInitialized = false;
 
-        new Chart(ctxTrend, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Hazard',
-                        data: hazardData,
-                        borderColor: '#f43f5e',
-                        backgroundColor: 'rgba(244,63,94,0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 3
+        // Pre-populate trend data at load time (Razor server-side as JSON)
+        const _trendLabels  = @Html.Raw(Json.Serialize(trend.Select(x => x.MonthLabel).ToList()));
+        const _trendHazard  = @Html.Raw(Json.Serialize(trend.Select(x => x.Hazards).ToList()));
+        const _trendInspect = @Html.Raw(Json.Serialize(trend.Select(x => x.Inspections).ToList()));
+        const _trendTalk    = @Html.Raw(Json.Serialize(trend.Select(x => x.SafetyTalks).ToList()));
+        const _trendP5m     = @Html.Raw(Json.Serialize(trend.Select(x => x.P5ms).ToList()));
+
+        window._initCompanyCharts = function() {
+            if (window._companyChartsInitialized) return;
+            window._companyChartsInitialized = true;
+
+            const trendEl = document.getElementById('trendChart');
+            if (trendEl) {
+                new Chart(trendEl.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: _trendLabels,
+                        datasets: [
+                            { label: 'Hazard',      data: _trendHazard,  borderColor: '#f43f5e', backgroundColor: 'rgba(244,63,94,0.1)',   fill: true, tension: 0.3, borderWidth: 3 },
+                            { label: 'Inspeksi',    data: _trendInspect, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)',  fill: true, tension: 0.3, borderWidth: 3 },
+                            { label: 'Safety Talk', data: _trendTalk,    borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.1)', fill: true, tension: 0.3, borderWidth: 3 },
+                            { label: 'P5M',         data: _trendP5m,     borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.3, borderWidth: 3 }
+                        ]
                     },
-                    {
-                        label: 'Inspeksi',
-                        data: inspectData,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59,130,246,0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 3
-                    },
-                    {
-                        label: 'Safety Talk',
-                        data: talkData,
-                        borderColor: '#a855f7',
-                        backgroundColor: 'rgba(168,85,247,0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 3
-                    },
-                    {
-                        label: 'P5M',
-                        data: p5mData,
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16,185,129,0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 3
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: { color: textColor, font: { weight: 'bold' } }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { color: gridColor },
-                        ticks: { color: textColor, font: { weight: 'bold' } }
-                    },
-                    y: {
-                        grid: { color: gridColor },
-                        ticks: { color: textColor, font: { weight: 'bold' } }
-                    }
-                }
-            }
-        });
-
-        // 5. Chart Perbandingan Kepatuhan Perusahaan (Leaderboard Chart)
-        const ctxLeaderboard = document.getElementById('leaderboardChart').getContext('2d');
-        
-        const compNames = [];
-        const compRates = [];
-        const barColors = [];
-
-        @foreach (var comp in leaderboard)
-        {
-            <text>
-                compNames.push('@comp.CompanyName');
-                compRates.push(@comp.AchievementRate);
-                
-                if (@comp.AchievementRate >= 100) {
-                    barColors.push('rgba(16, 185, 129, 0.85)'); // Green
-                } else if (@comp.AchievementRate >= 50) {
-                    barColors.push('rgba(245, 158, 11, 0.85)'); // Yellow
-                } else {
-                    barColors.push('rgba(239, 68, 68, 0.85)'); // Red
-                }
-            </text>
-        }
-
-        new Chart(ctxLeaderboard, {
-            type: 'bar',
-            data: {
-                labels: compNames,
-                datasets: [{
-                    label: 'Pencapaian (%)',
-                    data: compRates,
-                    backgroundColor: barColors,
-                    borderWidth: 0,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    x: {
-                        grid: { color: gridColor },
-                        ticks: { color: textColor, font: { weight: 'bold' } },
-                        max: 100
-                    },
-                    y: {
-                        grid: { display: false },
-                        ticks: { color: textColor, font: { weight: 'bold' } }
-                    }
-                }
-            }
-        });
-
-        // 6. Gauge Charts Initialization
-        function createGauge(ctxId, value, isHigherBetter) {
-            const canvas = document.getElementById(ctxId);
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            
-            // Create a pseudo-gradient using 3 colors for the track background
-            const trackColors = isHigherBetter 
-                ? ['#ef4444', '#f59e0b', '#10b981'] // Red -> Yellow -> Green
-                : ['#10b981', '#f59e0b', '#ef4444']; // Green -> Yellow -> Red
-            
-            // To achieve a gradient effect, we can use a canvas gradient
-            const gradient = ctx.createLinearGradient(0, 0, canvas.parentElement.clientWidth, 0);
-            gradient.addColorStop(0, trackColors[0]);
-            gradient.addColorStop(0.5, trackColors[1]);
-            gradient.addColorStop(1, trackColors[2]);
-
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Value', 'Rest'],
-                    datasets: [{
-                        data: [value, Math.max(100 - value, 0)],
-                        backgroundColor: [gradient, isDark ? 'rgba(255,255,255,0.05)' : '#f1f5f9'],
-                        borderWidth: 0,
-                        needleValue: value
-                    }]
-                },
-                options: {
-                    rotation: -90,
-                    circumference: 180,
-                    cutout: '75%',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: false }
-                    }
-                },
-                plugins: [{
-                    id: 'gaugeNeedle',
-                    afterDatasetDraw(chart) {
-                        const { ctx, width, chartArea: { top, bottom, left, right } } = chart;
-                        ctx.save();
-                        const value = chart.data.datasets[0].needleValue;
-                        const clampedValue = Math.max(0, Math.min(value, 100)); // Clamp between 0-100
-                        const angle = Math.PI + (clampedValue / 100 * Math.PI);
-                        
-                        const metaset = chart.getDatasetMeta(0);
-                        const arc = metaset.data[0];
-                        if (!arc) return;
-                        const cx = arc.x;
-                        const cy = arc.y;
-                        const radius = arc.outerRadius - (arc.outerRadius - arc.innerRadius)/2;
-
-                        ctx.translate(cx, cy);
-                        ctx.rotate(angle);
-                        
-                        // Draw needle
-                        ctx.beginPath();
-                        ctx.moveTo(0, -3);
-                        ctx.lineTo(radius, 0);
-                        ctx.lineTo(0, 3);
-                        ctx.fillStyle = isDark ? '#f8fafc' : '#1e293b';
-                        ctx.fill();
-                        
-                        // Center dot
-                        ctx.beginPath();
-                        ctx.arc(0, 0, 6, 0, Math.PI * 2);
-                        ctx.fillStyle = isDark ? '#f8fafc' : '#1e293b';
-                        ctx.fill();
-                        
-                        ctx.restore();
-                    }
-                }]
-            });
-        }
-
-        createGauge('gaugeComplianceClose', @ViewBag.ComplianceClose, true);
-        createGauge('gaugeOverdue', @ViewBag.OverdueRate, false);
-        createGauge('gaugeComplianceRisk', @ViewBag.ComplianceRisk, false);
-        createGauge('gaugeRRI', @ViewBag.RRI, true);
-        createGauge('gaugeRHR', @ViewBag.RHR, false);
-        createGauge('gaugeHighRisk', @ViewBag.HighRiskResolution, true);
-
-        // 7. Kategori Bahaya Chart (KTA vs KTC)
-        const ctxKategori = document.getElementById('chartKategoriBahaya');
-        if (ctxKategori) {
-            new Chart(ctxKategori.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['Tindakan Tidak Aman (KTA)', 'Kondisi Tidak Aman (KTC)'],
-                    datasets: [{
-                        data: [@ViewBag.UnsafeActCount, @ViewBag.UnsafeConditionCount],
-                        backgroundColor: ['rgba(245, 158, 11, 0.85)', 'rgba(59, 130, 246, 0.85)'],
-                        borderWidth: 2,
-                        borderColor: isDark ? '#1e293b' : '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: textColor } }
-                    }
-                }
-            });
-        }
-
-        // 8. Top 5 Areas Chart
-        const ctxTopAreas = document.getElementById('chartTopAreas');
-        if (ctxTopAreas) {
-            const areaLabels = [];
-            const areaData = [];
-            @if (ViewBag.TopAreasLabels != null) {
-                foreach (var area in ViewBag.TopAreasLabels)
-                {
-                    <text>areaLabels.push('@Html.Raw(area)');</text>
-                }
-                foreach (var count in ViewBag.TopAreasData)
-                {
-                    <text>areaData.push(@count);</text>
-                }
-            }
-
-            new Chart(ctxTopAreas.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: areaLabels,
-                    datasets: [{
-                        label: 'Jumlah Hazard Terbuka',
-                        data: areaData,
-                        backgroundColor: 'rgba(239, 68, 68, 0.85)',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: {
-                            grid: { color: gridColor },
-                            ticks: { color: textColor, precision: 0 }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { color: textColor, font: { weight: 'bold' } } }
                         },
-                        y: {
-                            grid: { display: false },
-                            ticks: { color: textColor }
+                        scales: {
+                            x: { grid: { color: gridColor }, ticks: { color: textColor, font: { weight: 'bold' } } },
+                            y: { grid: { color: gridColor }, ticks: { color: textColor, font: { weight: 'bold' } } }
                         }
                     }
-                }
-            });
-        }
-
-    });
-
-    function expandAllHierarchy() {
-        $('#sectionHierarchy .collapse').addClass('show');
-        $('#sectionHierarchy .toggle-icon').removeClass('bi-chevron-right').addClass('bi-chevron-down');
-    }
-
-    function collapseAllHierarchy() {
-        $('#sectionHierarchy .collapse').removeClass('show');
-        $('#sectionHierarchy .toggle-icon').removeClass('bi-chevron-down').addClass('bi-chevron-right');
-    }
-
-    function filterHierarchyTree() {
-        const q = document.getElementById('hierarchySearchInput').value.toLowerCase().trim();
-        if (!q) {
-            $('#sectionHierarchy .hierarchy-node').show();
-            return;
-        }
-        
-        $('#sectionHierarchy .hierarchy-node').hide();
-        
-        $('#sectionHierarchy .hierarchy-node').each(function() {
-            const compName = $(this).find('> .hierarchy-item .card-sap [style*="font-weight: 800"]').text().toLowerCase();
-            const compIdStr = $(this).find('> .hierarchy-item .card-sap .text-muted').text().toLowerCase();
-            
-            if (compName.includes(q) || compIdStr.includes(q)) {
-                $(this).show();
-                $(this).parents('.hierarchy-node').show();
-                $(this).find('.hierarchy-node').show();
-                $(this).parents('.collapse').addClass('show');
-                $(this).parents('.hierarchy-node').find('> .hierarchy-item .toggle-icon').removeClass('bi-chevron-right').addClass('bi-chevron-down');
+                });
             }
-        });
-    }
+            createGauge('gaugeComplianceClose', @((ViewBag.ComplianceClose as double? ?? 0.0).ToString(System.Globalization.CultureInfo.InvariantCulture)), true);
+            createGauge('gaugeOverdue', @((ViewBag.OverdueRate as double? ?? 0.0).ToString(System.Globalization.CultureInfo.InvariantCulture)), false);
+            createGauge('gaugeComplianceRisk', @((ViewBag.ComplianceRisk as double? ?? 0.0).ToString(System.Globalization.CultureInfo.InvariantCulture)), false);
+            createGauge('gaugeRRI', @((ViewBag.RRI as double? ?? 0.0).ToString(System.Globalization.CultureInfo.InvariantCulture)), true);
+            createGauge('gaugeRHR', @((ViewBag.RHR as double? ?? 0.0).ToString(System.Globalization.CultureInfo.InvariantCulture)), false);
+            createGauge('gaugeHighRisk', @((ViewBag.HighRiskResolution as double? ?? 0.0).ToString(System.Globalization.CultureInfo.InvariantCulture)), true);
 
-    $(document).ready(function() {
-        $('#sectionHierarchy').on('show.bs.collapse', '.collapse', function(e) {
-            e.stopPropagation();
-            $(this).prev().find('.toggle-icon').removeClass('bi-chevron-right').addClass('bi-chevron-down');
-        });
-        $('#sectionHierarchy').on('hide.bs.collapse', '.collapse', function(e) {
-            e.stopPropagation();
-            $(this).prev().find('.toggle-icon').removeClass('bi-chevron-down').addClass('bi-chevron-right');
-        });
+            // Inisialisasi Chart Top 5 Repeated Hazards secara lazy
+            const repeatedEl = document.getElementById('repeatedHazardsChart');
+            if (repeatedEl) {
+                const repeatedLabels = [];
+                const repeatedData = [];
+                @if (ViewBag.TopRepeatedLabels != null) {
+                    foreach (var label in ViewBag.TopRepeatedLabels)
+                    {
+                        <text>repeatedLabels.push('@Html.Raw(label)');</text>
+                    }
+                    foreach (var count in ViewBag.TopRepeatedData)
+                    {
+                        <text>repeatedData.push(@count);</text>
+                    }
+                }
+
+                new Chart(repeatedEl.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: repeatedLabels,
+                        datasets: [{
+                            label: 'Jumlah Temuan Berulang',
+                            data: repeatedData,
+                            backgroundColor: 'rgba(168, 85, 247, 0.85)',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: gridColor },
+                                ticks: { color: textColor, precision: 0 }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { color: textColor, font: { size: 10, weight: 'bold' } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Inisialisasi Kategori Bahaya (KTA vs KTC) secara lazy
+            const ctxKategori = document.getElementById('chartKategoriBahaya');
+            if (ctxKategori) {
+                new Chart(ctxKategori.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Tindakan Tidak Aman (KTA)', 'Kondisi Tidak Aman (KTC)'],
+                        datasets: [{
+                            data: [@ViewBag.UnsafeActCount, @ViewBag.UnsafeConditionCount],
+                            backgroundColor: ['rgba(245, 158, 11, 0.85)', 'rgba(59, 130, 246, 0.85)'],
+                            borderWidth: 2,
+                            borderColor: isDark ? '#1e293b' : '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: textColor } }
+                        }
+                    }
+                });
+            }
+
+            // Inisialisasi Chart Perbandingan Kepatuhan Perusahaan secara lazy
+            const leaderboardEl = document.getElementById('leaderboardChart');
+            if (leaderboardEl) {
+                const leaderboardLabels = [];
+                const leaderboardData = [];
+                @if (ViewBag.Leaderboard != null) {
+                    foreach (var comp in ViewBag.Leaderboard)
+                    {
+                        <text>leaderboardLabels.push('@Html.Raw(comp.CompanyName)');</text>
+                        <text>leaderboardData.push(@comp.AchievementRate.ToString(System.Globalization.CultureInfo.InvariantCulture));</text>
+                    }
+                }
+
+                new Chart(leaderboardEl.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: leaderboardLabels,
+                        datasets: [{
+                            label: 'Pencapaian Kepatuhan (%)',
+                            data: leaderboardData,
+                            backgroundColor: 'rgba(56, 189, 248, 0.85)',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: gridColor },
+                                ticks: { color: textColor },
+                                suggestedMax: 100 // Safe suggested max value for scale
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { color: textColor, font: { weight: 'bold', size: 10 } }
+                            }
+                        }
+                    }
+                });
+            }
+        }; // end window._initCompanyCharts
+
+        // ==================== 14. Geospatial Leaflet Map Initializer ====================
+        const hazardPoints = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.HazardPoints));
+        const inspectionPoints = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.InspectionPoints));
+        let mapInstance = null;
+
+        window._initHazardMap = function() {
+            if (mapInstance) {
+                setTimeout(() => {
+                    mapInstance.invalidateSize();
+                }, 100);
+                return;
+            }
+
+            // Default fallback coordinate (MBS area)
+            let centerLat = -1.234;
+            let centerLon = 116.123;
+            let hasPoints = false;
+
+            if (hazardPoints && hazardPoints.length > 0) {
+                centerLat = hazardPoints[0].lat;
+                centerLon = hazardPoints[0].lon;
+                hasPoints = true;
+            } else if (inspectionPoints && inspectionPoints.length > 0) {
+                centerLat = inspectionPoints[0].lat;
+                centerLon = inspectionPoints[0].lon;
+                hasPoints = true;
+            }
+
+            // Init Leaflet
+            mapInstance = L.map('hazardLeafletMap').setView([centerLat, centerLon], 14);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(mapInstance);
+
+            // Custom DIV icons for maximum aesthetic appeal
+            const hazardIcon = L.divIcon({
+                html: '<div style="background-color: #ef4444; width: 14px; height: 14px; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 8px rgba(239,68,68,0.7); animation: mapPulse 2s infinite;"></div>',
+                className: 'custom-map-icon-hazard',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            });
+
+            const inspectionIcon = L.divIcon({
+                html: '<div style="background-color: #3b82f6; width: 14px; height: 14px; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 8px rgba(59,130,246,0.7);"></div>',
+                className: 'custom-map-icon-inspection',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            });
+
+            const markersGroup = L.featureGroup();
+
+            if (hazardPoints && hazardPoints.length > 0) {
+                hazardPoints.forEach(h => {
+                    const badgeColor = h.resiko === 'High' || h.resiko === 'Kritis' || h.resiko === 'Extreme' ? 'bg-danger' : (h.resiko === 'Medium' ? 'bg-warning' : 'bg-success');
+                    const statusBadge = h.status === 'Open' ? '<span class="badge bg-danger">Open</span>' : '<span class="badge bg-success">Closed</span>';
+                    
+                    const popupContent = `
+                        <div style="font-family: 'Plus Jakarta Sans', sans-serif; min-width: 220px; color: var(--text-main);">
+                            <div class="d-flex justify-content-between align-items-center mb-2" style="border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">
+                                <strong style="color: #ef4444; font-size: 11px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>HAZARD REPORT</strong>
+                                ${statusBadge}
+                            </div>
+                            <div style="font-size: 11px;">
+                                <div class="mb-1"><strong>Area:</strong> ${h.area || 'Umum'}</div>
+                                <div class="mb-1"><strong>Tanggal:</strong> ${h.tanggal}</div>
+                                <div class="mb-1"><strong>Resiko:</strong> <span class="badge ${badgeColor}" style="font-size: 9px;">${h.resiko}</span></div>
+                                <div class="mb-2"><strong>Pelapor:</strong> ${h.nama}</div>
+                                <div style="background: rgba(255,255,255,0.05); border-radius: 6px; padding: 6px; border: 1px solid var(--border-color); font-size: 10px; max-height: 80px; overflow-y: auto; color: var(--text-main);">
+                                    <strong>Temuan:</strong> ${h.detail}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    L.marker([h.lat, h.lon], { icon: hazardIcon }).bindPopup(popupContent).addTo(markersGroup);
+                });
+            }
+
+            if (inspectionPoints && inspectionPoints.length > 0) {
+                inspectionPoints.forEach(i => {
+                    const popupContent = `
+                        <div style="font-family: 'Plus Jakarta Sans', sans-serif; min-width: 220px; color: var(--text-main);">
+                            <div class="d-flex justify-content-between align-items-center mb-2" style="border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">
+                                <strong style="color: #3b82f6; font-size: 11px;"><i class="bi bi-clipboard-check-fill me-1"></i>SAFETY INSPEKSI</strong>
+                                <span class="badge bg-success" style="font-size: 9px;">Selesai</span>
+                            </div>
+                            <div style="font-size: 11px;">
+                                <div class="mb-1"><strong>Area:</strong> ${i.area || 'Umum'}</div>
+                                <div class="mb-1"><strong>Tanggal:</strong> ${i.tanggal}</div>
+                                <div class="mb-1"><strong>Jenis:</strong> ${i.detail}</div>
+                                <div><strong>Inspektor:</strong> ${i.nama}</div>
+                            </div>
+                        </div>
+                    `;
+                    L.marker([i.lat, i.lon], { icon: inspectionIcon }).bindPopup(popupContent).addTo(markersGroup);
+                });
+            }
+
+            markersGroup.addTo(mapInstance);
+
+            if (hasPoints) {
+                mapInstance.fitBounds(markersGroup.getBounds(), { padding: [40, 40] });
+            }
+
+            setTimeout(() => {
+                mapInstance.invalidateSize();
+            }, 300);
+        };
+
+        // Add a style block for the pulsing marker animation
+        const style = document.createElement('style');
+        style.type = 'text/css';
+        style.innerHTML = `
+            @@keyframes mapPulse {
+                0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+                70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+            }
+        `;
+        document.getElementsByTagName('head')[0].appendChild(style);
+
     });
 </script>
 }
