@@ -557,7 +557,7 @@
                 <i class="bi bi-building-fill me-1"></i> Kinerja Perusahaan
             </button>
             <button class="tab-btn px-4 py-2 tab-inactive" id="tabHitSafe" onclick="switchTab('hitsafe')">
-                <i class="bi bi-geo-alt-fill me-1"></i> Hitsafe Map
+                <i class="bi bi-geo-alt-fill me-1"></i> Safe Map
             </button>
         </div>
     </div>
@@ -742,7 +742,7 @@
         <div class="premium-card animate-fade-in" style="border: 2px solid #1e293b; box-shadow: 4px 4px 0px #1e293b; background: var(--bg-card); border-radius: 16px; margin-bottom: 24px;">
             <div class="premium-header" style="background: var(--bg-card); border-bottom: 2px solid #1e293b; padding: 16px 20px; display: flex; align-items: center; border-top-left-radius: 14px; border-top-right-radius: 14px;">
                 <i class="bi bi-geo-alt-fill text-primary me-2" style="font-size: 18px;"></i>
-                <h6 class="premium-title mb-0" style="font-weight: 800; font-size: 14px; color: var(--text-main);">Hitsafe Map</h6>
+                <h6 class="premium-title mb-0" style="font-weight: 800; font-size: 14px; color: var(--text-main);">Safe Map</h6>
             </div>
             <div class="premium-body" style="padding: 20px;">
                 <div class="mb-3" style="font-size: 12px; color: var(--text-muted);">
@@ -2027,7 +2027,7 @@
 
             hitSafeAnchorLayer.clearLayers();
             L.marker([kaliorangLat, kaliorangLon])
-                .bindPopup('<strong>Kaliorang, Kalimantan Timur</strong><br>Area fokus Hitsafe Map.')
+                .bindPopup('<strong>Kaliorang, Kalimantan Timur</strong><br>Area fokus Safe Map.')
                 .addTo(hitSafeAnchorLayer);
 
             L.circle([kaliorangLat, kaliorangLon], {
