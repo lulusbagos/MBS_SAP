@@ -84,13 +84,15 @@ namespace MBS_SAP.Controllers
             ViewData["ActiveTab"] = "Dpa";
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
-
             var query = _context.DpaReports.Where(r => !r.IsDeleted && r.PerusahaanId == 1);
 
-            if (!isAdmin && !string.IsNullOrEmpty(userNik))
+            if (!string.IsNullOrEmpty(userNik))
             {
                 query = query.Where(r => r.AssessorNik == userNik);
+            }
+            else
+            {
+                query = query.Where(r => false);
             }
 
             var reports = await query

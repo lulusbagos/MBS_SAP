@@ -2,9 +2,6 @@
     ViewData["Title"] = "Pencapaian SAP";
     var leaderboard = ViewBag.Leaderboard as List<MBS_SAP.Controllers.CompanyLeaderboardViewModel> ?? new List<MBS_SAP.Controllers.CompanyLeaderboardViewModel>();
     var trend = ViewBag.MonthlyTrend as List<MBS_SAP.Controllers.MonthlyTrendViewModel> ?? new List<MBS_SAP.Controllers.MonthlyTrendViewModel>();
-    var geoAreaOptions = ViewBag.GeoAreaOptions as List<string> ?? new List<string>();
-    var selectedGeoArea = ViewBag.SelectedGeoArea as string ?? string.Empty;
-
     // Calculate overall weekly and monthly achievement percentage
     double weeklyProgress = ViewBag.WeeklyTarget > 0 ? (double)ViewBag.WeeklyRealization / ViewBag.WeeklyTarget * 100.0 : 0.0;
     double monthlyProgress = ViewBag.MonthlyTarget > 0 ? (double)ViewBag.MonthlyRealization / ViewBag.MonthlyTarget * 100.0 : 0.0;
@@ -15,34 +12,189 @@
     double myMonthlyProgress = (double)ViewBag.MyTotalMonth / 4.0 * 100.0;
     myMonthlyProgress = Math.Min(myMonthlyProgress, 100.0);
     bool isMyWeekCompliant = ViewBag.MyTotalWeek >= 1;
+    bool canViewGeoPhoto = User.IsInRole("Admin");
 }
 
-<!-- Leaflet CSS & JS Assets -->
+<!-- Leaflet CSS & JS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
 <style>
-    /* Leaflet customization to match premium design */
-    #hazardLeafletMap {
-        background-color: var(--bg-body) !important;
-        z-index: 1;
+    #hitsafeLeafletMap {
+        background: var(--bg-body);
     }
-    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-        background: var(--bg-card) !important;
-        color: var(--text-main) !important;
-        border: 1.5px solid var(--border-color) !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+        background: var(--bg-card);
+        color: var(--text-main);
+        border: 1px solid var(--border-color);
     }
+
     .leaflet-popup-content {
-        margin: 12px 16px !important;
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
-        font-size: 12px !important;
-        line-height: 1.5 !important;
+        margin: 10px 12px;
     }
-    .leaflet-container a.leaflet-popup-close-button {
-        color: var(--text-muted) !important;
-        padding: 4px 4px 0 0 !important;
+
+    .hitsafe-popup-shell .leaflet-popup-content-wrapper {
+        background: #0f172a;
+        color: #f8fafc;
+        border: 1px solid #334155;
+        box-shadow: 0 14px 28px rgba(2, 6, 23, 0.45);
+        border-radius: 14px;
+    }
+
+    .hitsafe-popup-shell .leaflet-popup-tip {
+        background: #0f172a;
+        border: 1px solid #334155;
+    }
+
+    .hitsafe-popup-shell .leaflet-popup-close-button {
+        color: #94a3b8 !important;
+        font-size: 18px !important;
+        font-weight: 700;
+    }
+
+    .hitsafe-popup-shell .leaflet-popup-close-button:hover {
+        color: #f8fafc !important;
+    }
+
+    .hitsafe-popup {
+        min-width: 230px;
+        max-width: 300px;
+        color: #f8fafc;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .hitsafe-popup-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #334155;
+    }
+
+    .hitsafe-popup-title {
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: #f8fafc;
+    }
+
+    .hitsafe-popup-badge {
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+        padding: 4px 7px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+    }
+
+    .hitsafe-popup-badge-hazard {
+        background: rgba(244, 63, 94, 0.2);
+        color: #fecdd3;
+        border-color: rgba(244, 63, 94, 0.6);
+    }
+
+    .hitsafe-popup-badge-inspection {
+        background: rgba(59, 130, 246, 0.22);
+        color: #bfdbfe;
+        border-color: rgba(59, 130, 246, 0.55);
+    }
+
+    .hitsafe-popup-grid {
+        display: grid;
+        grid-template-columns: 76px 1fr;
+        gap: 6px 8px;
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+
+    .hitsafe-popup-label {
+        color: #93c5fd;
+        font-weight: 700;
+    }
+
+    .hitsafe-popup-value {
+        color: #f8fafc;
+        font-weight: 700;
+        word-break: break-word;
+    }
+
+    .hitsafe-popup-detail {
+        margin-top: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: rgba(51, 65, 85, 0.55);
+        font-size: 12px;
+        color: #f8fafc;
+        line-height: 1.4;
+    }
+
+    .hitsafe-popup-photo-wrap {
+        margin-top: 8px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #334155;
+        background: rgba(15, 23, 42, 0.35);
+    }
+
+    .hitsafe-popup-photo {
+        display: block;
+        width: 100%;
+        max-height: 170px;
+        object-fit: cover;
+    }
+
+    .hitsafe-user-marker-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #16a34a;
+        border: 2px solid #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.55);
+        color: #ffffff;
+        font-size: 15px;
+        line-height: 1;
+    }
+
+    .hitsafe-toolbar {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(120px, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    .hitsafe-filter {
+        width: 100%;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--bg-card);
+        color: var(--text-main);
+        font-size: 12px;
+        padding: 8px 10px;
+        font-weight: 600;
+    }
+
+    .hitsafe-filter:focus {
+        outline: none;
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+
+    @@media (max-width: 992px) {
+        .hitsafe-toolbar {
+            grid-template-columns: repeat(2, minmax(120px, 1fr));
+        }
     }
 
     .kpi-card {
@@ -381,8 +533,8 @@
             <button class="tab-btn px-4 py-2 tab-inactive" id="tabCompany" onclick="switchTab('company')">
                 <i class="bi bi-building-fill me-1"></i> Kinerja Perusahaan
             </button>
-            <button class="tab-btn px-4 py-2 tab-inactive" id="tabMap" onclick="switchTab('map')">
-                <i class="bi bi-compass-fill me-1"></i> GeoSafety Radar Spasial
+            <button class="tab-btn px-4 py-2 tab-inactive" id="tabHitSafe" onclick="switchTab('hitsafe')">
+                <i class="bi bi-geo-alt-fill me-1"></i> Hitsafe Map
             </button>
         </div>
     </div>
@@ -559,6 +711,44 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sectionHitSafe" style="display: none;">
+        <div class="premium-card animate-fade-in" style="border: 2px solid #1e293b; box-shadow: 4px 4px 0px #1e293b; background: var(--bg-card); border-radius: 16px; margin-bottom: 24px;">
+            <div class="premium-header" style="background: var(--bg-card); border-bottom: 2px solid #1e293b; padding: 16px 20px; display: flex; align-items: center; border-top-left-radius: 14px; border-top-right-radius: 14px;">
+                <i class="bi bi-geo-alt-fill text-primary me-2" style="font-size: 18px;"></i>
+                <h6 class="premium-title mb-0" style="font-weight: 800; font-size: 14px; color: var(--text-main);">Hitsafe Map</h6>
+            </div>
+            <div class="premium-body" style="padding: 20px;">
+                <div class="mb-3" style="font-size: 12px; color: var(--text-muted);">
+                    Peta laporan Hazard & Inspection dengan filter cepat dan daftar sinkron.
+                </div>
+
+                <div class="hitsafe-toolbar">
+                    <select id="hitsafeFilterType" class="hitsafe-filter">
+                        <option value="all">Semua Jenis</option>
+                        <option value="hazard">Hazard</option>
+                        <option value="inspection">Inspection</option>
+                    </select>
+                    <select id="hitsafeFilterStatus" class="hitsafe-filter">
+                        <option value="all">Semua Status</option>
+                        <option value="open">Open</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                    <select id="hitsafeFilterRisk" class="hitsafe-filter">
+                        <option value="all">Semua Risiko</option>
+                        <option value="low">Rendah / Low</option>
+                        <option value="medium">Sedang / Medium</option>
+                        <option value="high">Tinggi / High</option>
+                        <option value="extreme">Ekstrem / Extreme</option>
+                    </select>
+                    <input id="hitsafeFilterKeyword" class="hitsafe-filter" type="text" placeholder="Cari area/nama/detail..." />
+                    <button id="hitsafeFilterReset" type="button" class="hitsafe-filter" style="background: #0f172a; color: #f8fafc; border-color: #1e293b;">Reset Filter</button>
+                </div>
+
+                <div id="hitsafeLeafletMap" style="height: 560px; border-radius: 12px; border: 2px solid #1e293b; overflow: hidden; position: relative;"></div>
             </div>
         </div>
     </div>
@@ -1023,6 +1213,7 @@
                 </div>
             </div>
         </div>
+    </div>
     @{
         var uncompliantWeek = ViewBag.UncompliantWeek as List<MBS_SAP.Controllers.UncompliantEmployeeViewModel> ?? new List<MBS_SAP.Controllers.UncompliantEmployeeViewModel>();
         var uncompliantMonth = ViewBag.UncompliantMonth as List<MBS_SAP.Controllers.UncompliantEmployeeViewModel> ?? new List<MBS_SAP.Controllers.UncompliantEmployeeViewModel>();
@@ -1123,65 +1314,27 @@
     }
     </div> <!-- Closing sectionCompany -->
 
-    <!-- ==================== SECTION 3: GEOSAFETY RADAR SPASIAL ==================== -->
-    <div id="sectionMap" style="display: none;">
-        <div class="premium-card animate-fade-in" style="border: 2px solid #1e293b; box-shadow: 4px 4px 0px #1e293b; background: var(--bg-card); border-radius: 16px; margin-bottom: 24px;">
-            <div class="premium-header" style="background: var(--bg-card); border-bottom: 2px solid #1e293b; padding: 16px 20px; display: flex; align-items: center; border-top-left-radius: 14px; border-top-right-radius: 14px;">
-                <i class="bi bi-compass text-primary me-2" style="font-size: 18px; color: #38bdf8 !important;"></i>
-                <h6 class="premium-title mb-0" style="font-weight: 800; font-size: 14px; color: var(--text-main);">Radar Geospatial Bahaya & Inspeksi (Leaflet Map)</h6>
-            </div>
-            <div class="premium-body" style="padding: 20px;">
-                <div class="alert alert-info py-2" style="font-size: 12px; border-radius: 8px; background: rgba(56, 189, 248, 0.08); border: 1.5px solid rgba(56, 189, 248, 0.2); color: #38bdf8; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                    <i class="bi bi-info-circle-fill fs-6"></i>
-                    <span>Peta memetakan koordinat GPS riil: <strong>Hazard Report</strong> dan <strong>Safety Inspeksi</strong> perusahaan Anda. Pilih area untuk memusatkan tampilan titik.</span>
-                </div>
-
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3" style="padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(255,255,255,0.02);">
-                    <div>
-                        <div style="font-size: 11px; text-transform: uppercase; font-weight: 800; color: var(--text-muted); letter-spacing: 0.5px;">Fokus Area</div>
-                        <div style="font-size: 12px; color: var(--text-main);">Map akan diarahkan ke area yang Anda pilih atau area pertama yang tersedia.</div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <select id="geoAreaSelect" class="form-select form-select-sm" style="min-width: 220px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main);">
-                            <option value="">Semua Area</option>
-                            @foreach (var areaName in geoAreaOptions)
-                            {
-                                if (string.Equals(areaName, selectedGeoArea, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    <option value="@areaName" selected>@areaName</option>
-                                }
-                                else
-                                {
-                                    <option value="@areaName">@areaName</option>
-                                }
-                            }
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Leaflet Map Container -->
-                <div style="height: 550px; border-radius: 12px; border: 2px solid #1e293b; overflow: hidden; position: relative; box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);" id="hazardLeafletMap"></div>
-            </div>
-        </div>
-    </div>
-
 <!-- Charts & Tabs Handling Script -->
 @section Scripts {
 <script>
     function switchTab(tab) {
         document.getElementById('sectionMy').style.display = tab === 'my' ? 'block' : 'none';
         document.getElementById('sectionCompany').style.display = tab === 'company' ? 'block' : 'none';
-        document.getElementById('sectionMap').style.display = tab === 'map' ? 'block' : 'none';
+        document.getElementById('sectionHitSafe').style.display = tab === 'hitsafe' ? 'block' : 'none';
 
         document.getElementById('tabMy').className = 'tab-btn px-4 py-2 ' + (tab === 'my' ? 'tab-active' : 'tab-inactive');
         document.getElementById('tabCompany').className = 'tab-btn px-4 py-2 ' + (tab === 'company' ? 'tab-active' : 'tab-inactive');
-        document.getElementById('tabMap').className = 'tab-btn px-4 py-2 ' + (tab === 'map' ? 'tab-active' : 'tab-inactive');
+        document.getElementById('tabHitSafe').className = 'tab-btn px-4 py-2 ' + (tab === 'hitsafe' ? 'tab-active' : 'tab-inactive');
 
         if (tab === 'company' && typeof window._initCompanyCharts === 'function') {
             window._initCompanyCharts();
         }
-        if (tab === 'map' && typeof window._initHazardMap === 'function') {
-            window._initHazardMap();
+        if (tab === 'hitsafe' && typeof window.initHitSafeMap === 'function') {
+            window.requestAnimationFrame(function () {
+                window.initHitSafeMap(20);
+            });
+        } else if (typeof window.stopHitSafeLocationTracking === 'function') {
+            window.stopHitSafeLocationTracking();
         }
     }
 
@@ -1353,6 +1506,9 @@
         const _trendInspect = @Html.Raw(Json.Serialize(trend.Select(x => x.Inspections).ToList()));
         const _trendTalk    = @Html.Raw(Json.Serialize(trend.Select(x => x.SafetyTalks).ToList()));
         const _trendP5m     = @Html.Raw(Json.Serialize(trend.Select(x => x.P5ms).ToList()));
+        const _hitSafeHazardPointsRaw = @Html.Raw(Json.Serialize(ViewBag.HazardPoints ?? new List<object>()));
+        const _hitSafeInspectionPointsRaw = @Html.Raw(Json.Serialize(ViewBag.InspectionPoints ?? new List<object>()));
+        const _hitSafeCanViewPhoto = @(canViewGeoPhoto ? "true" : "false");
 
         window._initCompanyCharts = function() {
             if (window._companyChartsInitialized) return;
@@ -1510,157 +1666,484 @@
             }
         }; // end window._initCompanyCharts
 
-        // ==================== 14. Geospatial Leaflet Map Initializer ====================
-        const hazardPoints = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.HazardPoints));
-        const inspectionPoints = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.InspectionPoints));
-        const selectedGeoArea = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(selectedGeoArea));
-        let mapInstance = null;
-        let markersLayer = null;
+        let hitSafeMap = null;
+        let hitSafeAnchorLayer = null;
+        let hitSafeReportLayer = null;
+        let hitSafeClusterLayer = null;
+        let hitSafeUserMarker = null;
+        let hitSafeUserAccuracyCircle = null;
+        let hitSafeGeolocAttempted = false;
+        let hitSafeWatchId = null;
+        let hitSafeAllPoints = [];
+        let hitSafeFilteredPoints = [];
+        let hitSafeMarkerByKey = new Map();
+        let hitSafeFiltersInitialized = false;
+        const hitSafeUserIcon = L.divIcon({
+            className: 'hitsafe-user-marker-wrap',
+            html: '<div class="hitsafe-user-marker-icon"><i class="bi bi-person-fill"></i></div>',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+        });
+        const kaliorangLat = -0.9907;
+        const kaliorangLon = 117.9006;
+        const hitSafeHazardPoints = Array.isArray(_hitSafeHazardPointsRaw) ? _hitSafeHazardPointsRaw : [];
+        const hitSafeInspectionPoints = Array.isArray(_hitSafeInspectionPointsRaw) ? _hitSafeInspectionPointsRaw : [];
 
-        function normalizeAreaName(value) {
-            return (value || '').toString().trim().toLowerCase();
+        function escapeHtml(text) {
+            return String(text ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
         }
 
-        function getActiveGeoArea() {
-            const dropdown = document.getElementById('geoAreaSelect');
-            return dropdown ? dropdown.value : selectedGeoArea || '';
-        }
-
-        function getFilteredPoints(points, activeArea) {
-            if (!activeArea) {
-                return points || [];
+        function normalizePoint(point) {
+            const lat = Number(point.lat ?? point.Lat);
+            const lon = Number(point.lon ?? point.Lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+                return null;
             }
-
-            const normalizedArea = normalizeAreaName(activeArea);
-            return (points || []).filter(point => normalizeAreaName(point.area) === normalizedArea);
-        }
-
-        window._initHazardMap = function() {
-            const activeArea = getActiveGeoArea();
-            const filteredHazards = getFilteredPoints(hazardPoints, activeArea);
-            const filteredInspections = getFilteredPoints(inspectionPoints, activeArea);
-
-            if (mapInstance) {
-                if (markersLayer) {
-                    markersLayer.clearLayers();
-                }
-            } else {
-                // Default fallback coordinate (MBS area)
-                let centerLat = -1.234;
-                let centerLon = 116.123;
-
-                const initialPoint = filteredHazards[0] || filteredInspections[0] || hazardPoints?.[0] || inspectionPoints?.[0];
-                if (initialPoint) {
-                    centerLat = initialPoint.lat;
-                    centerLon = initialPoint.lon;
-                }
-
-                mapInstance = L.map('hazardLeafletMap').setView([centerLat, centerLon], 14);
-
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                }).addTo(mapInstance);
-
-                markersLayer = L.featureGroup().addTo(mapInstance);
-            }
-
-            const hazardIconStyle = {
-                radius: 7,
-                color: '#ffffff',
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.95,
-                fillColor: '#ef4444'
+            return {
+                id: point.id ?? point.Id,
+                lat: lat,
+                lon: lon,
+                tanggal: point.tanggal ?? point.Tanggal,
+                nama: point.nama ?? point.Nama,
+                area: point.area ?? point.Area,
+                detail: point.detail ?? point.Detail,
+                resiko: point.resiko ?? point.Resiko,
+                status: point.status ?? point.Status,
+                photoUrl: point.photoUrl ?? point.PhotoUrl
             };
+        }
 
-            const inspectionIconStyle = {
-                radius: 7,
-                color: '#ffffff',
-                weight: 2,
-                opacity: 1,
-                fillOpacity: 0.95,
-                fillColor: '#3b82f6'
+        function normalizeText(value) {
+            return String(value ?? '').trim().toLowerCase();
+        }
+
+        function buildHitSafeSourcePoints() {
+            const points = [];
+            let sequence = 0;
+
+            hitSafeHazardPoints.forEach(function(raw) {
+                const normalized = normalizePoint(raw);
+                if (!normalized) {
+                    return;
+                }
+
+                points.push({
+                    key: 'hazard-' + String(normalized.id ?? sequence) + '-' + String(sequence),
+                    type: 'hazard',
+                    ...normalized
+                });
+                sequence += 1;
+            });
+
+            hitSafeInspectionPoints.forEach(function(raw) {
+                const normalized = normalizePoint(raw);
+                if (!normalized) {
+                    return;
+                }
+
+                points.push({
+                    key: 'inspection-' + String(normalized.id ?? sequence) + '-' + String(sequence),
+                    type: 'inspection',
+                    ...normalized
+                });
+                sequence += 1;
+            });
+
+            return points;
+        }
+
+        function getHitSafeFilterValues() {
+            const typeEl = document.getElementById('hitsafeFilterType');
+            const statusEl = document.getElementById('hitsafeFilterStatus');
+            const riskEl = document.getElementById('hitsafeFilterRisk');
+            const keywordEl = document.getElementById('hitsafeFilterKeyword');
+
+            return {
+                type: typeEl ? typeEl.value : 'all',
+                status: statusEl ? statusEl.value : 'all',
+                risk: riskEl ? riskEl.value : 'all',
+                keyword: normalizeText(keywordEl ? keywordEl.value : '')
             };
+        }
 
-            if (filteredHazards && filteredHazards.length > 0) {
-                filteredHazards.forEach(h => {
-                    const badgeColor = h.resiko === 'High' || h.resiko === 'Kritis' || h.resiko === 'Extreme' ? 'bg-danger' : (h.resiko === 'Medium' ? 'bg-warning' : 'bg-success');
-                    const statusBadge = h.status === 'Open' ? '<span class="badge bg-danger">Open</span>' : '<span class="badge bg-success">Closed</span>';
-                    
-                    const popupContent = `
-                        <div style="font-family: 'Plus Jakarta Sans', sans-serif; min-width: 220px; color: var(--text-main);">
-                            <div class="d-flex justify-content-between align-items-center mb-2" style="border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">
-                                <strong style="color: #ef4444; font-size: 11px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>HAZARD REPORT</strong>
-                                ${statusBadge}
-                            </div>
-                            <div style="font-size: 11px;">
-                                <div class="mb-1"><strong>Area:</strong> ${h.area || 'Umum'}</div>
-                                <div class="mb-1"><strong>Tanggal:</strong> ${h.tanggal}</div>
-                                <div class="mb-1"><strong>Resiko:</strong> <span class="badge ${badgeColor}" style="font-size: 9px;">${h.resiko}</span></div>
-                                <div class="mb-2"><strong>Pelapor:</strong> ${h.nama}</div>
-                                <div style="background: rgba(255,255,255,0.05); border-radius: 6px; padding: 6px; border: 1px solid var(--border-color); font-size: 10px; max-height: 80px; overflow-y: auto; color: var(--text-main);">
-                                    <strong>Temuan:</strong> ${h.detail}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    L.circleMarker([h.lat, h.lon], hazardIconStyle).bindPopup(popupContent).addTo(markersLayer);
-                });
-            }
+        function filterHitSafePoints() {
+            const filters = getHitSafeFilterValues();
 
-        if (filteredInspections && filteredInspections.length > 0) {
-            filteredInspections.forEach(i => {
-                    const popupContent = `
-                        <div style="font-family: 'Plus Jakarta Sans', sans-serif; min-width: 220px; color: var(--text-main);">
-                            <div class="d-flex justify-content-between align-items-center mb-2" style="border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">
-                                <strong style="color: #3b82f6; font-size: 11px;"><i class="bi bi-clipboard-check-fill me-1"></i>SAFETY INSPEKSI</strong>
-                                <span class="badge bg-success" style="font-size: 9px;">Selesai</span>
-                            </div>
-                            <div style="font-size: 11px;">
-                                <div class="mb-1"><strong>Area:</strong> ${i.area || 'Umum'}</div>
-                                <div class="mb-1"><strong>Tanggal:</strong> ${i.tanggal}</div>
-                                <div class="mb-1"><strong>Jenis:</strong> ${i.detail}</div>
-                                <div><strong>Inspektor:</strong> ${i.nama}</div>
-                            </div>
-                        </div>
-                    `;
-                    L.circleMarker([i.lat, i.lon], inspectionIconStyle).bindPopup(popupContent).addTo(markersLayer);
-                });
-            }
+            return hitSafeAllPoints.filter(function(point) {
+                if (filters.type !== 'all' && point.type !== filters.type) {
+                    return false;
+                }
 
-        const markerCount = markersLayer ? markersLayer.getLayers().length : 0;
-        if (markerCount > 0) {
-            mapInstance.fitBounds(markersLayer.getBounds(), { padding: [40, 40] });
-        } else {
-            mapInstance.setView([-1.234, 116.123], 13);
-            }
+                if (filters.status !== 'all') {
+                    const status = normalizeText(point.status);
+                    if (status !== filters.status) {
+                        return false;
+                    }
+                }
 
-            setTimeout(() => {
-                mapInstance.invalidateSize();
-            }, 300);
-        };
+                if (filters.risk !== 'all') {
+                    const risk = normalizeText(point.resiko);
+                    if (filters.risk === 'low' && !(risk.includes('rendah') || risk.includes('low'))) {
+                        return false;
+                    }
+                    if (filters.risk === 'medium' && !(risk.includes('sedang') || risk.includes('medium'))) {
+                        return false;
+                    }
+                    if (filters.risk === 'high' && !(risk.includes('tinggi') || risk.includes('high'))) {
+                        return false;
+                    }
+                    if (filters.risk === 'extreme' && !(risk.includes('ekstrem') || risk.includes('extreme'))) {
+                        return false;
+                    }
+                }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        const geoAreaSelect = document.getElementById('geoAreaSelect');
-        if (geoAreaSelect) {
-            geoAreaSelect.addEventListener('change', function() {
-                window._initHazardMap();
+                if (filters.keyword) {
+                    const corpus = [point.area, point.nama, point.detail, point.status, point.resiko].map(normalizeText).join(' ');
+                    if (!corpus.includes(filters.keyword)) {
+                        return false;
+                    }
+                }
+
+                return true;
             });
         }
-    });
 
-        // Add a style block for the pulsing marker animation
-        const style = document.createElement('style');
-        style.type = 'text/css';
-        style.innerHTML = `
-            @@keyframes mapPulse {
-                0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-                70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-                100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        function applyHitSafeFiltersAndRender(shouldFit) {
+            const summary = renderHitSafeReportPoints();
+
+            if (shouldFit && hitSafeMap) {
+                if (summary.bounds) {
+                    hitSafeMap.fitBounds(summary.bounds.pad(0.2));
+                } else {
+                    hitSafeMap.setView([kaliorangLat, kaliorangLon], 11);
+                }
             }
-        `;
-        document.getElementsByTagName('head')[0].appendChild(style);
+        }
+
+        function initHitSafeFilters() {
+            if (hitSafeFiltersInitialized) {
+                return;
+            }
+
+            const ids = ['hitsafeFilterType', 'hitsafeFilterStatus', 'hitsafeFilterRisk', 'hitsafeFilterKeyword'];
+            ids.forEach(function(id) {
+                const element = document.getElementById(id);
+                if (!element) {
+                    return;
+                }
+                const eventName = id === 'hitsafeFilterKeyword' ? 'input' : 'change';
+                element.addEventListener(eventName, function() {
+                    applyHitSafeFiltersAndRender(true);
+                });
+            });
+
+            const resetButton = document.getElementById('hitsafeFilterReset');
+            if (resetButton) {
+                resetButton.addEventListener('click', function() {
+                    const typeEl = document.getElementById('hitsafeFilterType');
+                    const statusEl = document.getElementById('hitsafeFilterStatus');
+                    const riskEl = document.getElementById('hitsafeFilterRisk');
+                    const keywordEl = document.getElementById('hitsafeFilterKeyword');
+                    if (typeEl) typeEl.value = 'all';
+                    if (statusEl) statusEl.value = 'all';
+                    if (riskEl) riskEl.value = 'all';
+                    if (keywordEl) keywordEl.value = '';
+                    applyHitSafeFiltersAndRender(true);
+                });
+            }
+
+            hitSafeFiltersInitialized = true;
+        }
+
+        function buildPointPopup(type, point) {
+            const isHazard = type === 'hazard';
+            const badgeText = isHazard ? 'Hazard' : 'Inspection';
+            const badgeClass = isHazard ? 'hitsafe-popup-badge-hazard' : 'hitsafe-popup-badge-inspection';
+
+            const rows = [];
+            if (point.area) {
+                rows.push('<div class="hitsafe-popup-label">Area</div><div class="hitsafe-popup-value">' + escapeHtml(point.area) + '</div>');
+            }
+            if (point.tanggal) {
+                rows.push('<div class="hitsafe-popup-label">Tanggal</div><div class="hitsafe-popup-value">' + escapeHtml(point.tanggal) + '</div>');
+            }
+            if (point.nama) {
+                rows.push('<div class="hitsafe-popup-label">Pelapor</div><div class="hitsafe-popup-value">' + escapeHtml(point.nama) + '</div>');
+            }
+            if (isHazard && point.resiko) {
+                rows.push('<div class="hitsafe-popup-label">Risiko</div><div class="hitsafe-popup-value">' + escapeHtml(point.resiko) + '</div>');
+            }
+            if (isHazard && point.status) {
+                rows.push('<div class="hitsafe-popup-label">Status</div><div class="hitsafe-popup-value">' + escapeHtml(point.status) + '</div>');
+            }
+
+            const detailLabel = isHazard ? 'Detail Temuan' : 'Jenis Inspeksi';
+            const detailBlock = point.detail
+                ? '<div class="hitsafe-popup-detail"><strong>' + detailLabel + ':</strong><br>' + escapeHtml(point.detail) + '</div>'
+                : '';
+
+            const photoBlock = (_hitSafeCanViewPhoto && point.photoUrl)
+                ? '<div class="hitsafe-popup-photo-wrap"><img class="hitsafe-popup-photo" src="' + escapeHtml(point.photoUrl) + '" alt="Foto laporan" loading="lazy" /></div>'
+                : '';
+
+            return [
+                '<div class="hitsafe-popup">',
+                '<div class="hitsafe-popup-header">',
+                '<div class="hitsafe-popup-title">Laporan Area</div>',
+                '<span class="hitsafe-popup-badge ' + badgeClass + '">' + badgeText + '</span>',
+                '</div>',
+                '<div class="hitsafe-popup-grid">',
+                rows.join(''),
+                '</div>',
+                photoBlock,
+                detailBlock,
+                '</div>'
+            ].join('');
+        }
+
+        function renderHitSafeReportPoints() {
+            if (!hitSafeReportLayer) {
+                return { count: 0, bounds: null };
+            }
+
+            hitSafeReportLayer.clearLayers();
+            hitSafeMarkerByKey.clear();
+            if (hitSafeClusterLayer) {
+                hitSafeClusterLayer.clearLayers();
+            }
+
+            hitSafeFilteredPoints = filterHitSafePoints();
+            const bounds = [];
+
+            hitSafeFilteredPoints.forEach(function(point) {
+                const popup = buildPointPopup(point.type, point);
+                const markerColor = point.type === 'hazard' ? '#f43f5e' : '#3b82f6';
+                const marker = L.marker([point.lat, point.lon], {
+                    icon: L.divIcon({
+                        className: 'hitsafe-map-pin-wrapper',
+                        html: '<span style="display:block;width:14px;height:14px;border-radius:50%;border:2px solid #ffffff;background:' + markerColor + ';box-shadow:0 0 0 1px rgba(15,23,42,0.7);"></span>',
+                        iconSize: [14, 14],
+                        iconAnchor: [7, 7]
+                    })
+                }).bindPopup(popup, {
+                    maxWidth: 320,
+                    className: 'hitsafe-popup-shell'
+                });
+
+                hitSafeMarkerByKey.set(point.key, marker);
+
+                if (hitSafeClusterLayer) {
+                    hitSafeClusterLayer.addLayer(marker);
+                } else {
+                    marker.addTo(hitSafeReportLayer);
+                }
+
+                bounds.push([point.lat, point.lon]);
+            });
+
+            return {
+                count: bounds.length,
+                bounds: bounds.length > 0 ? L.latLngBounds(bounds) : null
+            };
+        }
+
+        function renderKaliorangFallback() {
+            if (!hitSafeAnchorLayer) {
+                return;
+            }
+
+            hitSafeAnchorLayer.clearLayers();
+            L.marker([kaliorangLat, kaliorangLon])
+                .bindPopup('<strong>Kaliorang, Kalimantan Timur</strong><br>Area fokus Hitsafe Map.')
+                .addTo(hitSafeAnchorLayer);
+
+            L.circle([kaliorangLat, kaliorangLon], {
+                radius: 1800,
+                color: '#0ea5e9',
+                weight: 2,
+                fillColor: '#38bdf8',
+                fillOpacity: 0.15
+            }).addTo(hitSafeAnchorLayer);
+        }
+
+        function applyUserLocation(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const accuracy = Math.max(25, Math.round(position.coords.accuracy || 25));
+
+            if (hitSafeUserMarker) {
+                hitSafeMap.removeLayer(hitSafeUserMarker);
+                hitSafeUserMarker = null;
+            }
+            if (hitSafeUserAccuracyCircle) {
+                hitSafeMap.removeLayer(hitSafeUserAccuracyCircle);
+                hitSafeUserAccuracyCircle = null;
+            }
+
+            hitSafeUserMarker = L.marker([lat, lon], {
+                icon: hitSafeUserIcon
+            }).addTo(hitSafeMap)
+                .bindPopup('<strong>Lokasi Anda Saat Ini</strong><br>Map diposisikan ke GPS browser.');
+            hitSafeUserAccuracyCircle = L.circle([lat, lon], {
+                radius: accuracy,
+                color: '#16a34a',
+                weight: 2,
+                fillColor: '#4ade80',
+                fillOpacity: 0.18
+            }).addTo(hitSafeMap);
+
+            hitSafeMap.setView([lat, lon], 15);
+            window.setTimeout(function() {
+                if (hitSafeMap) {
+                    hitSafeMap.invalidateSize();
+                }
+            }, 120);
+        }
+
+        function fallbackToKaliorang() {
+            if (!hitSafeMap) {
+                return;
+            }
+
+            if (hitSafeUserMarker) {
+                hitSafeMap.removeLayer(hitSafeUserMarker);
+                hitSafeUserMarker = null;
+            }
+            if (hitSafeUserAccuracyCircle) {
+                hitSafeMap.removeLayer(hitSafeUserAccuracyCircle);
+                hitSafeUserAccuracyCircle = null;
+            }
+
+            const reportSummary = renderHitSafeReportPoints();
+            if (reportSummary.bounds) {
+                hitSafeMap.fitBounds(reportSummary.bounds.pad(0.2));
+            } else {
+                renderKaliorangFallback();
+                hitSafeMap.setView([kaliorangLat, kaliorangLon], 11);
+            }
+        }
+
+        function updateHitSafeToUserLocation() {
+            if (!hitSafeMap || typeof navigator === 'undefined' || !navigator.geolocation) {
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(function(position) {
+                applyUserLocation(position);
+            }, function() {
+                fallbackToKaliorang();
+            }, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 15000
+            });
+        }
+
+        window.stopHitSafeLocationTracking = function() {
+            if (typeof navigator !== 'undefined' && navigator.geolocation && hitSafeWatchId !== null) {
+                navigator.geolocation.clearWatch(hitSafeWatchId);
+            }
+            hitSafeWatchId = null;
+        };
+
+        function startHitSafeLocationTracking() {
+            if (!hitSafeMap || typeof navigator === 'undefined' || !navigator.geolocation || hitSafeWatchId !== null) {
+                return;
+            }
+
+            hitSafeWatchId = navigator.geolocation.watchPosition(function(position) {
+                applyUserLocation(position);
+            }, function() {
+                fallbackToKaliorang();
+                window.stopHitSafeLocationTracking();
+            }, {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 10000
+            });
+        }
+
+        window.initHitSafeMap = function(retryCount) {
+            const container = document.getElementById('hitsafeLeafletMap');
+            if (!container) {
+                return;
+            }
+
+            if (typeof L === 'undefined') {
+                container.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text-muted);">Leaflet belum termuat.</div>';
+                return;
+            }
+
+            const rect = container.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) {
+                const attemptsLeft = typeof retryCount === 'number' ? retryCount : 15;
+                if (attemptsLeft > 0) {
+                    window.setTimeout(function() {
+                        window.initHitSafeMap(attemptsLeft - 1);
+                    }, 120);
+                }
+                return;
+            }
+
+            if (!hitSafeMap) {
+                hitSafeMap = L.map('hitsafeLeafletMap', {
+                    attributionControl: false
+                }).setView([kaliorangLat, kaliorangLon], 11);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(hitSafeMap);
+                hitSafeAnchorLayer = L.layerGroup().addTo(hitSafeMap);
+                hitSafeReportLayer = L.layerGroup().addTo(hitSafeMap);
+                if (typeof L.markerClusterGroup === 'function') {
+                    hitSafeClusterLayer = L.markerClusterGroup({
+                        showCoverageOnHover: false,
+                        spiderfyOnMaxZoom: true,
+                        maxClusterRadius: 40
+                    }).addTo(hitSafeMap);
+                }
+
+                hitSafeAllPoints = buildHitSafeSourcePoints();
+                initHitSafeFilters();
+                applyHitSafeFiltersAndRender(true);
+
+                if (hitSafeFilteredPoints.length === 0) {
+                    renderKaliorangFallback();
+                } else {
+                    hitSafeAnchorLayer.clearLayers();
+                }
+            }
+
+            if (!hitSafeGeolocAttempted) {
+                hitSafeGeolocAttempted = true;
+                updateHitSafeToUserLocation();
+                startHitSafeLocationTracking();
+            } else if (hitSafeUserMarker) {
+                const userPoint = hitSafeUserMarker.getLatLng();
+                hitSafeMap.setView([userPoint.lat, userPoint.lng], 15);
+                startHitSafeLocationTracking();
+            } else {
+                updateHitSafeToUserLocation();
+                startHitSafeLocationTracking();
+            }
+
+            window.setTimeout(function() {
+                if (hitSafeMap) {
+                    hitSafeMap.invalidateSize();
+                }
+            }, 120);
+        };
+
+        if (document.getElementById('sectionHitSafe') && document.getElementById('sectionHitSafe').style.display === 'block') {
+            window.requestAnimationFrame(function() {
+                window.initHitSafeMap(20);
+            });
+        }
 
     });
 </script>

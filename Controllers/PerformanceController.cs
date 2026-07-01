@@ -9,6 +9,8 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Security.Claims;
+using System.Text.Json;
 
 namespace MBS_SAP.Controllers
 {
@@ -22,12 +24,8 @@ namespace MBS_SAP.Controllers
             _context = context;
         }
 
-        public async Task<IActionResult> Index()
+        private async Task<(int? companyId, HashSet<int> allowedCompanyIds)> ResolveCompanyScopeAsync()
         {
-            ViewData["HeaderTitle"] = "Pencapaian SAP";
-            ViewData["ActiveTab"] = "Performance";
-
-            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var compIdStr = User.FindFirst("CompanyId")?.Value;
             int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
             var isAdmin = User.IsInRole("Admin");
@@ -45,7 +43,7 @@ namespace MBS_SAP.Controllers
             if (companyId.HasValue)
             {
                 allowedCompanyIds.Add(companyId.Value);
-                // Local helper function to find all children recursively
+
                 void GetDescendants(int parentId)
                 {
                     var children = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
@@ -57,8 +55,100 @@ namespace MBS_SAP.Controllers
                         }
                     }
                 }
+
                 GetDescendants(companyId.Value);
             }
+
+            return (companyId, allowedCompanyIds);
+        }
+
+        private async Task<GeoSafetyRadarViewModel> BuildGeoSafetyRadarDataAsync(int? companyId, HashSet<int> allowedCompanyIds, string? requestedGeoArea, bool includePhotos = false)
+        {
+            var hazardPoints = new List<GeoSafetyPointViewModel>();
+            var inspectionPoints = new List<GeoSafetyPointViewModel>();
+
+            var dbHazards = await _context.HazardReports
+                .Where(h => !h.IsDeleted && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))) && h.Lokasi != null && h.Lokasi.Contains(","))
+            .Select(h => new { h.Id, h.Tanggal, h.Nama, h.Area, h.Lokasi, h.Temuan, h.TingkatResiko, h.StatusTemuan, h.FotoTemuan })
+                .ToListAsync();
+
+            foreach (var h in dbHazards)
+            {
+                if (TryParseCoordinates(h.Lokasi, out double lat, out double lon))
+                {
+                    hazardPoints.Add(new GeoSafetyPointViewModel
+                    {
+                        Id = h.Id,
+                        Lat = lat,
+                        Lon = lon,
+                        Tanggal = h.Tanggal.ToString("dd MMM yyyy"),
+                        Nama = h.Nama,
+                        Area = h.Area,
+                        Detail = h.Temuan,
+                        Resiko = h.TingkatResiko ?? "Medium",
+                        Status = h.StatusTemuan,
+                        PhotoUrl = includePhotos ? NormalizeImagePath(h.FotoTemuan) : null
+                    });
+                }
+            }
+
+            var dbInspections = await _context.Inspections
+                .Where(i => !i.IsDeleted && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))) && i.Lokasi != null && i.Lokasi.Contains(","))
+                .Select(i => new { i.Id, i.Tanggal, i.Nama, i.Area, i.Lokasi, i.JenisInspeksi, i.LampiranJson })
+                .ToListAsync();
+
+            foreach (var i in dbInspections)
+            {
+                if (TryParseCoordinates(i.Lokasi, out double lat, out double lon))
+                {
+                    inspectionPoints.Add(new GeoSafetyPointViewModel
+                    {
+                        Id = i.Id,
+                        Lat = lat,
+                        Lon = lon,
+                        Tanggal = i.Tanggal.ToString("dd MMM yyyy"),
+                        Nama = i.Nama,
+                        Area = i.Area,
+                        Detail = i.JenisInspeksi,
+                        PhotoUrl = includePhotos ? ExtractFirstInspectionImageUrl(i.LampiranJson) : null
+                    });
+                }
+            }
+
+            var geoAreaOptions = hazardPoints.Select(h => h.Area)
+                .Concat(inspectionPoints.Select(i => i.Area))
+                .Where(area => !string.IsNullOrWhiteSpace(area))
+                .Select(area => area!.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(area => area)
+                .ToList();
+
+            var selectedGeoArea = !string.IsNullOrWhiteSpace(requestedGeoArea) &&
+                                  geoAreaOptions.Any(area => string.Equals(area, requestedGeoArea, StringComparison.OrdinalIgnoreCase))
+                ? geoAreaOptions.First(area => string.Equals(area, requestedGeoArea, StringComparison.OrdinalIgnoreCase))
+                : geoAreaOptions.FirstOrDefault();
+
+            return new GeoSafetyRadarViewModel
+            {
+                HazardPoints = hazardPoints,
+                InspectionPoints = inspectionPoints,
+                GeoAreaOptions = geoAreaOptions,
+                SelectedGeoArea = selectedGeoArea
+            };
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            ViewData["HeaderTitle"] = "Pencapaian SAP";
+            ViewData["ActiveTab"] = "Performance";
+
+            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var (companyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
+            var isAdmin = User.IsInRole("Admin");
+            var jobTitle = User.FindFirst("JobTitle")?.Value;
+            var department = User.FindFirst("Department")?.Value;
+            bool isSafetyRole = CheckIsSafetyRole(jobTitle, department, isAdmin);
+            var allCompanies = await _context.Perusahaans.Where(p => p.StatusAktif).ToListAsync();
 
             // 1. Total Karyawan Aktif
             var totalKaryawan = await _context.Karyawans
@@ -610,78 +700,32 @@ namespace MBS_SAP.Controllers
             rootNodes = rootNodes.OrderBy(r => r.CompanyName).ToList();
             ViewBag.CompanyHierarchy = rootNodes;
 
-            // ==================== 13. Map Coordinate Points ====================
-            var hazardPoints = new List<object>();
-            var inspectionPoints = new List<object>();
+            var canViewGeoPhotos = User.IsInRole("Admin");
+            var geoSafetyData = await BuildGeoSafetyRadarDataAsync(companyId, allowedCompanyIds, Request.Query["area"].FirstOrDefault()?.Trim(), canViewGeoPhotos);
 
-            // Fetch hazards with coordinates
-            var dbHazards = await _context.HazardReports
-                .Where(h => !h.IsDeleted && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))) && h.Lokasi != null && h.Lokasi.Contains(","))
-                .Select(h => new { h.Id, h.Tanggal, h.Nama, h.Area, h.Lokasi, h.Temuan, h.TingkatResiko, h.StatusTemuan })
-                .ToListAsync();
-
-            foreach (var h in dbHazards)
-            {
-                if (TryParseCoordinates(h.Lokasi, out double lat, out double lon))
-                {
-                    hazardPoints.Add(new
-                    {
-                        id = h.Id,
-                        lat = lat,
-                        lon = lon,
-                        tanggal = h.Tanggal.ToString("dd MMM yyyy"),
-                        nama = h.Nama,
-                        area = h.Area,
-                        detail = h.Temuan,
-                        resiko = h.TingkatResiko ?? "Medium",
-                        status = h.StatusTemuan
-                    });
-                }
-            }
-
-            // Fetch inspections with coordinates
-            var dbInspections = await _context.Inspections
-                .Where(i => !i.IsDeleted && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))) && i.Lokasi != null && i.Lokasi.Contains(","))
-                .Select(i => new { i.Id, i.Tanggal, i.Nama, i.Area, i.Lokasi, i.JenisInspeksi })
-                .ToListAsync();
-
-            foreach (var i in dbInspections)
-            {
-                if (TryParseCoordinates(i.Lokasi, out double lat, out double lon))
-                {
-                    inspectionPoints.Add(new
-                    {
-                        id = i.Id,
-                        lat = lat,
-                        lon = lon,
-                        tanggal = i.Tanggal.ToString("dd MMM yyyy"),
-                        nama = i.Nama,
-                        area = i.Area,
-                        detail = i.JenisInspeksi
-                    });
-                }
-            }
-
-            var geoAreaOptions = dbHazards.Select(h => h.Area)
-                .Concat(dbInspections.Select(i => i.Area))
-                .Where(area => !string.IsNullOrWhiteSpace(area))
-                .Select(area => area!.Trim())
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(area => area)
-                .ToList();
-
-            var requestedGeoArea = Request.Query["area"].FirstOrDefault()?.Trim();
-            var selectedGeoArea = !string.IsNullOrWhiteSpace(requestedGeoArea) &&
-                                  geoAreaOptions.Any(area => string.Equals(area, requestedGeoArea, StringComparison.OrdinalIgnoreCase))
-                ? geoAreaOptions.First(area => string.Equals(area, requestedGeoArea, StringComparison.OrdinalIgnoreCase))
-                : geoAreaOptions.FirstOrDefault();
-
-            ViewBag.HazardPoints = hazardPoints;
-            ViewBag.InspectionPoints = inspectionPoints;
-            ViewBag.GeoAreaOptions = geoAreaOptions;
-            ViewBag.SelectedGeoArea = selectedGeoArea;
+            ViewBag.HazardPoints = geoSafetyData.HazardPoints;
+            ViewBag.InspectionPoints = geoSafetyData.InspectionPoints;
+            ViewBag.GeoAreaOptions = geoSafetyData.GeoAreaOptions;
+            ViewBag.SelectedGeoArea = geoSafetyData.SelectedGeoArea;
 
             return View();
+        }
+
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> GetGeoSafetyRadar(string? area = null)
+        {
+            var (companyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
+            var canViewGeoPhotos = User.IsInRole("Admin");
+            var geoSafetyData = await BuildGeoSafetyRadarDataAsync(companyId, allowedCompanyIds, area?.Trim(), canViewGeoPhotos);
+
+            return Json(new
+            {
+                hazardPoints = geoSafetyData.HazardPoints,
+                inspectionPoints = geoSafetyData.InspectionPoints,
+                geoAreaOptions = geoSafetyData.GeoAreaOptions,
+                selectedGeoArea = geoSafetyData.SelectedGeoArea
+            });
         }
 
         private static bool TryParseCoordinates(string? lokasi, out double lat, out double lon)
@@ -695,6 +739,44 @@ namespace MBS_SAP.Controllers
 
             return double.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out lat) &&
                    double.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out lon);
+        }
+
+        private static string? NormalizeImagePath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return null;
+            var normalized = path.Trim();
+            if (normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                normalized.StartsWith("/", StringComparison.Ordinal))
+            {
+                return normalized;
+            }
+
+            return "/" + normalized.TrimStart('/');
+        }
+
+        private static string? ExtractFirstInspectionImageUrl(string? lampiranJson)
+        {
+            if (string.IsNullOrWhiteSpace(lampiranJson)) return null;
+            try
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(lampiranJson);
+                if (dict == null || dict.Count == 0) return null;
+
+                foreach (var value in dict.Values)
+                {
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        return NormalizeImagePath(value);
+                    }
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
         }
 
         [HttpGet]
@@ -1052,6 +1134,28 @@ namespace MBS_SAP.Controllers
         public DateTime Date { get; set; }
         public string Nik { get; set; } = string.Empty;
         public string User { get; set; } = string.Empty;
+    }
+
+    public class GeoSafetyPointViewModel
+    {
+        public int Id { get; set; }
+        public double Lat { get; set; }
+        public double Lon { get; set; }
+        public string Tanggal { get; set; } = string.Empty;
+        public string Nama { get; set; } = string.Empty;
+        public string? Area { get; set; }
+        public string? Detail { get; set; }
+        public string? Resiko { get; set; }
+        public string? Status { get; set; }
+        public string? PhotoUrl { get; set; }
+    }
+
+    public class GeoSafetyRadarViewModel
+    {
+        public List<GeoSafetyPointViewModel> HazardPoints { get; set; } = new List<GeoSafetyPointViewModel>();
+        public List<GeoSafetyPointViewModel> InspectionPoints { get; set; } = new List<GeoSafetyPointViewModel>();
+        public List<string> GeoAreaOptions { get; set; } = new List<string>();
+        public string? SelectedGeoArea { get; set; }
     }
 
     public class CompanyHierarchyNode
