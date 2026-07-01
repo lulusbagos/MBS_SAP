@@ -30,19 +30,18 @@ namespace MBS_SAP.Controllers
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var isAdmin = User.IsInRole("Admin");
-            var companyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+            var companyScopedNiks = await GetCurrentCompanyNiksAsync();
 
             var query = _context.Observations.Where(r => !r.IsDeleted);
 
-            // Filter hierarki perusahaan mutlak untuk semua role (admin & non-admin)
-            if (companyId.HasValue)
+            // Batasi data observasi berdasarkan perusahaan user aktif (strict company scope).
+            if (companyScopedNiks.Count == 0)
             {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
-                var allowedNiks = _context.AppUsers
-                    .Where(u => u.IdPerusahaan.HasValue && allowedIds.Contains(u.IdPerusahaan.Value))
-                    .Select(u => u.Nik);
-                query = query.Where(r => allowedNiks.Contains(r.Nik));
+                query = query.Where(r => false);
+            }
+            else
+            {
+                query = query.Where(r => companyScopedNiks.Contains(r.Nik));
             }
 
             if (!isAdmin && !string.IsNullOrEmpty(userNik))
@@ -150,6 +149,16 @@ namespace MBS_SAP.Controllers
             
             var query = _context.Observations.Where(r => !r.IsDeleted);
             var userNikForError = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var companyScopedNiks = await GetCurrentCompanyNiksAsync();
+            if (companyScopedNiks.Count == 0)
+            {
+                query = query.Where(r => false);
+            }
+            else
+            {
+                query = query.Where(r => companyScopedNiks.Contains(r.Nik));
+            }
+
             if (!User.IsInRole("Admin") && !string.IsNullOrEmpty(userNikForError))
             {
                 query = query.Where(r => r.Nik == userNikForError);
@@ -163,6 +172,21 @@ namespace MBS_SAP.Controllers
         {
             var report = await _context.Observations.FindAsync(id);
             if (report == null || report.IsDeleted) return NotFound();
+
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isAdmin = User.IsInRole("Admin");
+            var companyScopedNiks = await GetCurrentCompanyNiksAsync();
+
+            if (companyScopedNiks.Count == 0 || !companyScopedNiks.Contains(report.Nik))
+            {
+                return Unauthorized();
+            }
+
+            if (!isAdmin && !string.Equals(report.Nik, userNik, StringComparison.OrdinalIgnoreCase))
+            {
+                return Unauthorized();
+            }
+
             return Json(new {
                 id = report.Id,
                 tanggal = report.Date.ToString("yyyy-MM-dd"),
@@ -189,6 +213,12 @@ namespace MBS_SAP.Controllers
             var report = await _context.Observations.FindAsync(id);
             if (report == null || report.IsDeleted) return NotFound();
 
+            var companyScopedNiks = await GetCurrentCompanyNiksAsync();
+            if (companyScopedNiks.Count == 0 || !companyScopedNiks.Contains(report.Nik))
+            {
+                return Unauthorized();
+            }
+
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
             if (report.Nik != userNik && !User.IsInRole("Admin"))
             {
@@ -205,7 +235,20 @@ namespace MBS_SAP.Controllers
 
         private async Task PopulateViewBagAsync()
         {
-            var areaList = await _context.MasterAreas
+            var compIdClaim = User.FindFirst("CompanyId")?.Value;
+            int? userCompanyId = int.TryParse(compIdClaim, out int cid) && cid > 0 ? cid : null;
+
+            var areaQuery = _context.MasterAreas.AsQueryable();
+            if (userCompanyId.HasValue)
+            {
+                areaQuery = areaQuery.Where(a => a.PerusahaanId == userCompanyId.Value);
+            }
+            else
+            {
+                areaQuery = areaQuery.Where(a => false);
+            }
+
+            var areaList = await areaQuery
                 .OrderBy(a => a.NamaArea)
                 .Select(a => a.NamaArea)
                 .ToListAsync();
@@ -217,9 +260,6 @@ namespace MBS_SAP.Controllers
             ViewBag.UserDept = User.FindFirst("Department")?.Value ?? "General";
 
             // Load departments from dynamic partner DB view matching current user's company
-            var compIdClaim = User.FindFirst("CompanyId")?.Value;
-            int? userCompanyId = int.TryParse(compIdClaim, out int cid) && cid > 0 ? cid : null;
-
             List<string> deptList = new List<string>();
             if (userCompanyId.HasValue)
             {
@@ -248,6 +288,23 @@ namespace MBS_SAP.Controllers
             }
 
             ViewBag.DeptList = deptList;
+        }
+
+        private async Task<HashSet<string>> GetCurrentCompanyNiksAsync()
+        {
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            if (!int.TryParse(companyIdStr, out var companyId) || companyId <= 0)
+            {
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            var niks = await _context.AppUsers
+                .Where(u => u.IdPerusahaan == companyId && !string.IsNullOrEmpty(u.Nik))
+                .Select(u => u.Nik!)
+                .Distinct()
+                .ToListAsync();
+
+            return new HashSet<string>(niks.Select(n => n.Trim()), StringComparer.OrdinalIgnoreCase);
         }
     }
 }
