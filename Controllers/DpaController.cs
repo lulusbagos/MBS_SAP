@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ClosedXML.Excel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -84,13 +85,14 @@ namespace MBS_SAP.Controllers
             ViewData["ActiveTab"] = "Dpa";
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isAdmin = User.IsInRole("Admin");
             var query = _context.DpaReports.Where(r => !r.IsDeleted && r.PerusahaanId == 1);
 
-            if (!string.IsNullOrEmpty(userNik))
+            if (!isAdmin && !string.IsNullOrEmpty(userNik))
             {
                 query = query.Where(r => r.AssessorNik == userNik);
             }
-            else
+            else if (!isAdmin)
             {
                 query = query.Where(r => false);
             }
@@ -104,8 +106,48 @@ namespace MBS_SAP.Controllers
             ViewBag.UserNik = userNik ?? "00000";
             ViewBag.UserDept = User.FindFirst("Department")?.Value ?? "General";
             ViewBag.CompanyId = companyId;
+            ViewBag.IsAdmin = isAdmin;
+
+            if (isAdmin)
+            {
+                var summaryQuery = _context.DpaReports
+                    .Where(r => !r.IsDeleted && r.PerusahaanId == 1)
+                    .GroupBy(r => new { r.DriverNik, r.DriverNama, r.DriverDepartemen })
+                    .Select(g => new DriverAssessmentSummaryViewModel
+                    {
+                        DriverNik = g.Key.DriverNik,
+                        DriverNama = g.Key.DriverNama,
+                        DriverDepartemen = g.Key.DriverDepartemen,
+                        TotalAssessments = g.Count(),
+                        AvgScore = Math.Round(g.Average(x => x.ScoreFinal), 1),
+                        LastScore = g.OrderByDescending(x => x.TanggalPenilaian).ThenByDescending(x => x.CreatedAt).Select(x => x.ScoreFinal).FirstOrDefault(),
+                        LastAssessmentDate = g.OrderByDescending(x => x.TanggalPenilaian).ThenByDescending(x => x.CreatedAt).Select(x => x.TanggalPenilaian).FirstOrDefault(),
+                        LastCategory = g.OrderByDescending(x => x.TanggalPenilaian).ThenByDescending(x => x.CreatedAt).Select(x => x.Kategori).FirstOrDefault() ?? "-"
+                    });
+
+                var adminSummaries = await summaryQuery
+                    .OrderByDescending(x => x.AvgScore)
+                    .ThenByDescending(x => x.TotalAssessments)
+                    .ThenBy(x => x.DriverNama)
+                    .Take(100)
+                    .ToListAsync();
+
+                ViewBag.AdminDriverSummaries = adminSummaries;
+            }
 
             return View(reports);
+        }
+
+        public class DriverAssessmentSummaryViewModel
+        {
+            public string DriverNik { get; set; } = string.Empty;
+            public string DriverNama { get; set; } = string.Empty;
+            public string? DriverDepartemen { get; set; }
+            public int TotalAssessments { get; set; }
+            public double AvgScore { get; set; }
+            public double LastScore { get; set; }
+            public DateTime LastAssessmentDate { get; set; }
+            public string LastCategory { get; set; } = string.Empty;
         }
 
         [HttpPost]
@@ -284,6 +326,79 @@ namespace MBS_SAP.Controllers
                 });
             }
             return list;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadSummaryExcel()
+        {
+            var companyId = GetCompanyId();
+            if (companyId == null || companyId != 1 || !User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            var summaries = await _context.DpaReports
+                .Where(r => !r.IsDeleted && r.PerusahaanId == 1)
+                .GroupBy(r => new { r.DriverNik, r.DriverNama, r.DriverDepartemen })
+                .Select(g => new DriverAssessmentSummaryViewModel
+                {
+                    DriverNik = g.Key.DriverNik,
+                    DriverNama = g.Key.DriverNama,
+                    DriverDepartemen = g.Key.DriverDepartemen,
+                    TotalAssessments = g.Count(),
+                    AvgScore = Math.Round(g.Average(x => x.ScoreFinal), 1),
+                    LastScore = g.OrderByDescending(x => x.TanggalPenilaian).ThenByDescending(x => x.CreatedAt).Select(x => x.ScoreFinal).FirstOrDefault(),
+                    LastAssessmentDate = g.OrderByDescending(x => x.TanggalPenilaian).ThenByDescending(x => x.CreatedAt).Select(x => x.TanggalPenilaian).FirstOrDefault(),
+                    LastCategory = g.OrderByDescending(x => x.TanggalPenilaian).ThenByDescending(x => x.CreatedAt).Select(x => x.Kategori).FirstOrDefault() ?? "-"
+                })
+                .OrderByDescending(x => x.AvgScore)
+                .ThenByDescending(x => x.TotalAssessments)
+                .ThenBy(x => x.DriverNama)
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("DPA Driver Summary");
+
+            worksheet.Cell(1, 1).Value = "No";
+            worksheet.Cell(1, 2).Value = "NIK Driver";
+            worksheet.Cell(1, 3).Value = "Nama Driver";
+            worksheet.Cell(1, 4).Value = "Departemen";
+            worksheet.Cell(1, 5).Value = "Rata-rata Nilai";
+            worksheet.Cell(1, 6).Value = "Nilai Terakhir";
+            worksheet.Cell(1, 7).Value = "Kategori Terakhir";
+            worksheet.Cell(1, 8).Value = "Total Penilaian";
+            worksheet.Cell(1, 9).Value = "Tanggal Penilaian Terakhir";
+
+            var headerRange = worksheet.Range(1, 1, 1, 9);
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#E2F3FB");
+
+            int row = 2;
+            int no = 1;
+            foreach (var item in summaries)
+            {
+                worksheet.Cell(row, 1).Value = no++;
+                worksheet.Cell(row, 2).Value = item.DriverNik;
+                worksheet.Cell(row, 3).Value = item.DriverNama;
+                worksheet.Cell(row, 4).Value = item.DriverDepartemen ?? "";
+                worksheet.Cell(row, 5).Value = item.AvgScore;
+                worksheet.Cell(row, 6).Value = item.LastScore;
+                worksheet.Cell(row, 7).Value = item.LastCategory;
+                worksheet.Cell(row, 8).Value = item.TotalAssessments;
+                worksheet.Cell(row, 9).Value = item.LastAssessmentDate;
+
+                worksheet.Cell(row, 5).Style.NumberFormat.Format = "0.0";
+                worksheet.Cell(row, 6).Style.NumberFormat.Format = "0.0";
+                worksheet.Cell(row, 9).Style.DateFormat.Format = "yyyy-MM-dd";
+                row++;
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var fileName = $"DPA_Driver_Summary_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
         [HttpGet]

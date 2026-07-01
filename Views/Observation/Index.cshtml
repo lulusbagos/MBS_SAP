@@ -157,7 +157,7 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-4 form-group-sap">
+                    <div class="col-md-6 form-group-sap">
                         <label class="form-label-sap" for="TingkatResiko">Tingkat Resiko</label>
                         <div class="input-sap-wrapper">
                             <i class="bi bi-speedometer2 input-sap-icon"></i>
@@ -170,7 +170,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-4 form-group-sap">
+                    <div class="col-md-6 form-group-sap">
                         <label class="form-label-sap" for="PerihalYangDiamati">Perihal Yang Diamati</label>
                         <div class="input-sap-wrapper">
                             <i class="bi bi-search input-sap-icon"></i>
@@ -184,36 +184,58 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-4 form-group-sap">
-                        <label class="form-label-sap" for="HasilObservasi">Hasil Observasi</label>
-                        <div class="input-sap-wrapper">
-                            <i class="bi bi-clipboard2-check-fill input-sap-icon"></i>
-                            <select id="HasilObservasi" name="HasilObservasi" class="input-sap" required>
-                                <option value="" disabled selected>Pilih Hasil...</option>
-                                <option value="Positive" selected="@(editModel != null && editModel.HasilObservasi == "Positive")">Positive (Tindakan/Kondisi Aman)</option>
-                                <option value="Improvement" selected="@(editModel != null && editModel.HasilObservasi == "Improvement")">Improvement (Saran Perbaikan)</option>
-                                <option value="Violation" selected="@(editModel != null && editModel.HasilObservasi == "Violation")">Violation (Pelanggaran/Kondisi Tidak Aman)</option>
-                            </select>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-2 mb-2">
+                    <label class="form-label-sap mb-0">Hasil Observasi (Bisa Lebih Dari 1)</label>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddObservationResult">
+                        <i class="bi bi-plus-circle me-1"></i>Tambah Hasil
+                    </button>
+                </div>
+
+                <div id="observationResultsContainer" class="d-flex flex-column gap-2 mb-2">
+                    <div class="observation-result-item p-2 rounded" style="border: 1px solid var(--border-color); background: rgba(255,255,255,0.02);">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="text-white" style="font-size: 12px; font-weight: 700;">Hasil #1</div>
+                            <button type="button" class="btn btn-sm btn-outline-danger d-none remove-result-btn" title="Hapus hasil ini">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 form-group-sap mb-2">
+                                <label class="form-label-sap">Hasil Observasi</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-clipboard2-check-fill input-sap-icon"></i>
+                                    <select name="hasilObservasiList" class="input-sap hasil-observasi-select" required>
+                                        <option value="" disabled selected>Pilih Hasil...</option>
+                                        <option value="Positive">Positive (Tindakan/Kondisi Aman)</option>
+                                        <option value="Improvement">Improvement (Saran Perbaikan)</option>
+                                        <option value="Violation">Violation (Pelanggaran/Kondisi Tidak Aman)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4 form-group-sap mb-2">
+                                <label class="form-label-sap">Keterangan Observasi</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-chat-left-text-fill input-sap-icon" style="top: 14px;"></i>
+                                    <textarea name="keteranganList" class="input-sap hasil-keterangan" rows="2" placeholder="Tuliskan keterangan detail..." style="padding-left: 42px;"></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-4 form-group-sap mb-2">
+                                <label class="form-label-sap">Foto Lampiran Bukti</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-camera-fill input-sap-icon" style="top: 14px;"></i>
+                                    <input type="file" name="fotoList" class="input-sap hasil-foto" accept="image/*" style="height: auto; padding: 8px 12px; padding-left: 42px;" />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <small class="text-muted" style="font-size: 10px;">Anda bisa menambahkan beberapa hasil observasi dalam satu kali kirim.</small>
 
-                <div class="form-group-sap">
-                    <label class="form-label-sap" for="Keterangan">Keterangan Observasi</label>
-                    <div class="input-sap-wrapper">
-                        <i class="bi bi-chat-left-text-fill input-sap-icon" style="top: 14px;"></i>
-                        <textarea id="Keterangan" name="Keterangan" class="input-sap" rows="3" placeholder="Tuliskan keterangan detail hasil observasi..." style="padding-left: 42px;">@(editModel?.Keterangan)</textarea>
-                    </div>
-                </div>
-
-                <div class="form-group-sap">
-                    <label class="form-label-sap" for="foto">Foto Lampiran Bukti</label>
-                    <div class="input-sap-wrapper">
-                        <i class="bi bi-camera-fill input-sap-icon" style="top: 14px;"></i>
-                        <input type="file" id="foto" name="foto" class="input-sap" accept="image/*" style="height: auto; padding: 8px 12px; padding-left: 42px;" />
-                    </div>
-                    <small class="text-muted" style="font-size: 10px;">Pilih file gambar untuk melampirkan bukti observasi.</small>
-                </div>
+                @* Backward-compatible hidden fields for edit mode payload *@
+                <input type="hidden" id="HasilObservasi" name="HasilObservasi" value="" />
+                <input type="hidden" id="Keterangan" name="Keterangan" value="" />
 
                 <button type="submit" class="btn btn-primary w-100 mt-3 mb-2 submit-btn-sap" id="btnSubmit">
                     <i class="bi bi-send-fill me-2"></i>KIRIM LAPORAN
@@ -341,6 +363,78 @@
 
 @section Scripts {
     <script>
+        function updateResultItemLabels() {
+            const items = document.querySelectorAll('.observation-result-item');
+            items.forEach(function(item, idx) {
+                const titleEl = item.querySelector('.text-white');
+                if (titleEl) {
+                    titleEl.textContent = 'Hasil #' + (idx + 1);
+                }
+
+                const removeBtn = item.querySelector('.remove-result-btn');
+                if (removeBtn) {
+                    if (items.length > 1) {
+                        removeBtn.classList.remove('d-none');
+                    } else {
+                        removeBtn.classList.add('d-none');
+                    }
+                }
+            });
+        }
+
+        function createResultItem(initial) {
+            const selected = (initial && initial.hasil) ? initial.hasil : '';
+            const note = (initial && initial.keterangan) ? initial.keterangan : '';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'observation-result-item p-2 rounded';
+            wrapper.style.border = '1px solid var(--border-color)';
+            wrapper.style.background = 'rgba(255,255,255,0.02)';
+            wrapper.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="text-white" style="font-size: 12px; font-weight: 700;">Hasil</div>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-result-btn" title="Hapus hasil ini">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 form-group-sap mb-2">
+                        <label class="form-label-sap">Hasil Observasi</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-clipboard2-check-fill input-sap-icon"></i>
+                            <select name="hasilObservasiList" class="input-sap hasil-observasi-select" required>
+                                <option value="" disabled ${selected ? '' : 'selected'}>Pilih Hasil...</option>
+                                <option value="Positive" ${selected === 'Positive' ? 'selected' : ''}>Positive (Tindakan/Kondisi Aman)</option>
+                                <option value="Improvement" ${selected === 'Improvement' ? 'selected' : ''}>Improvement (Saran Perbaikan)</option>
+                                <option value="Violation" ${selected === 'Violation' ? 'selected' : ''}>Violation (Pelanggaran/Kondisi Tidak Aman)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4 form-group-sap mb-2">
+                        <label class="form-label-sap">Keterangan Observasi</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-chat-left-text-fill input-sap-icon" style="top: 14px;"></i>
+                            <textarea name="keteranganList" class="input-sap hasil-keterangan" rows="2" placeholder="Tuliskan keterangan detail..." style="padding-left: 42px;">${note}</textarea>
+                        </div>
+                    </div>
+                    <div class="col-md-4 form-group-sap mb-2">
+                        <label class="form-label-sap">Foto Lampiran Bukti</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-camera-fill input-sap-icon" style="top: 14px;"></i>
+                            <input type="file" name="fotoList" class="input-sap hasil-foto" accept="image/*" style="height: auto; padding: 8px 12px; padding-left: 42px;" />
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            wrapper.querySelector('.remove-result-btn').addEventListener('click', function() {
+                wrapper.remove();
+                updateResultItemLabels();
+            });
+
+            return wrapper;
+        }
+
         function getLocation() {
             var btn = document.getElementById('btnGetLocation');
             var input = document.getElementById('Lokasi');
@@ -495,6 +589,17 @@
         function cancelEditObservation() {
             $('#observationForm')[0].reset();
             $('#observationId').val('');
+            $('#btnAddObservationResult').prop('disabled', false);
+
+            const container = document.getElementById('observationResultsContainer');
+            if (container) {
+                container.innerHTML = '';
+                container.appendChild(createResultItem());
+                updateResultItemLabels();
+            }
+
+            $('#HasilObservasi').val('');
+            $('#Keterangan').val('');
             $('#formTitle').html('<i class="bi bi-eye-fill me-2" style="color: var(--color-primary);"></i>Form Observasi');
             $('#btnCancelEdit').addClass('d-none');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -516,13 +621,22 @@
                     $('#ResikoKritis').val(data.resikoKritis).change();
                     $('#TingkatResiko').val(data.tingkatResiko).change();
                     $('#PerihalYangDiamati').val(data.perihalYangDiamati).change();
-                    $('#HasilObservasi').val(data.hasilObservasi).change();
+                    $('#HasilObservasi').val(data.hasilObservasi || '');
+                    $('#Keterangan').val(data.keterangan || '');
 
                     // Inputs / Texts
                     $('#Lokasi').val(data.lokasi);
                     $('#DetilLokasi').val(data.detilLokasi);
                     $('#KegiatanYangDiamati').val(data.kegiatanYangDiamati);
-                    $('#Keterangan').val(data.keterangan);
+
+                    // Edit mode keeps one result block mapped to existing single-record structure
+                    const container = document.getElementById('observationResultsContainer');
+                    if (container) {
+                        container.innerHTML = '';
+                        container.appendChild(createResultItem({ hasil: data.hasilObservasi || '', keterangan: data.keterangan || '' }));
+                        updateResultItemLabels();
+                    }
+                    $('#btnAddObservationResult').prop('disabled', true);
 
                     $('#formTitle').html('<i class="bi bi-pencil-square me-2" style="color: var(--color-primary);"></i>Edit Observasi');
                     $('#btnCancelEdit').removeClass('d-none');
@@ -547,8 +661,30 @@
             loadAreas();
             getLocation();
 
+            updateResultItemLabels();
+            $(document).on('click', '.remove-result-btn', function() {
+                $(this).closest('.observation-result-item').remove();
+                updateResultItemLabels();
+            });
+
+            $('#btnAddObservationResult').on('click', function() {
+                const container = document.getElementById('observationResultsContainer');
+                if (!container) return;
+                container.appendChild(createResultItem());
+                updateResultItemLabels();
+            });
+
             // Prevent double submit
             $('#observationForm').on('submit', function() {
+                const firstResult = document.querySelector('.hasil-observasi-select');
+                const firstNote = document.querySelector('.hasil-keterangan');
+                if (firstResult) {
+                    $('#HasilObservasi').val(firstResult.value || '');
+                }
+                if (firstNote) {
+                    $('#Keterangan').val(firstNote.value || '');
+                }
+
                 var btn = $('#btnSubmit');
                 if (btn.prop('disabled')) return false;
                 btn.prop('disabled', true);

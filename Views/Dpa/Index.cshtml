@@ -1,6 +1,10 @@
 @model IEnumerable<MBS_SAP.Models.DpaReport>
 @{
     ViewData["Title"] = "Driver Performance Assessment";
+    var isAdmin = ViewBag.IsAdmin as bool? ?? User.IsInRole("Admin");
+    var currentUserNik = ViewBag.UserNik as string ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+    var adminSummaries = ViewBag.AdminDriverSummaries as List<MBS_SAP.Controllers.DpaController.DriverAssessmentSummaryViewModel>
+        ?? new List<MBS_SAP.Controllers.DpaController.DriverAssessmentSummaryViewModel>();
 }
 
 <div class="animate-fade-in">
@@ -18,6 +22,29 @@
         <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(34, 197, 94, 0.15); color: var(--color-primary); border-radius: 12px;">
             <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (isAdmin)
+    {
+        var avgAllDrivers = adminSummaries.Any() ? Math.Round(adminSummaries.Average(x => x.AvgScore), 1) : 0.0;
+        <div class="card-sap border-primary-accent mb-4 animate-fade-in d-flex justify-content-between align-items-center flex-wrap gap-3" style="padding: 14px 16px;">
+            <div>
+                <div class="text-white" style="font-size: 14px; font-weight: 800;">
+                    <i class="bi bi-shield-check me-2 text-primary"></i>Dashboard Hasil Penilaian Driver
+                </div>
+                <div class="text-muted" style="font-size: 11px;">Khusus Admin. Buka dashboard terpisah agar form dan histori utama tetap fokus.</div>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="badge" style="background: rgba(56, 189, 248, 0.16); color: #38bdf8; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 999px;">@adminSummaries.Count Driver</span>
+                <span class="badge" style="background: rgba(34, 197, 94, 0.16); color: #22c55e; font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 999px;">Rata-rata @avgAllDrivers.ToString("0.0")</span>
+                <a asp-controller="Dpa" asp-action="DownloadSummaryExcel" class="btn btn-sm btn-outline-success" style="border-radius: 999px; font-weight: 700;">
+                    <i class="bi bi-file-earmark-excel-fill me-1"></i>Download Excel
+                </a>
+                <button type="button" class="btn btn-sm btn-primary" style="border-radius: 999px; font-weight: 700;" data-bs-toggle="modal" data-bs-target="#adminDpaDashboardModal">
+                    <i class="bi bi-bar-chart-line-fill me-1"></i>Lihat Dashboard
+                </button>
+            </div>
         </div>
     }
 
@@ -254,7 +281,10 @@
                                     <div class="dropdown">
                                         <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
-                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editDpa(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit</a></li>
+                                            @if (isAdmin || string.Equals(item.AssessorNik, currentUserNik, StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editDpa(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit</a></li>
+                                            }
                                             <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="shareDpa('@item.DriverNama', '@item.TanggalPenilaian.ToString("dd MMM yyyy")', @item.ScoreFinal.ToString("0"), '@item.Kategori', '@item.AssessorNama')"><i class="bi bi-share-fill me-2" style="color: #38bdf8;"></i>Bagikan</a></li>
                                             <li><hr class="dropdown-divider border-secondary"></li>
                                             <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteDpa(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus</a></li>
@@ -314,6 +344,90 @@
         </div>
     </div>
 </div>
+
+@if (isAdmin)
+{
+    var topDriver = adminSummaries.FirstOrDefault();
+    <div class="modal fade" id="adminDpaDashboardModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+            <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title text-white fw-bold"><i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Dashboard Hasil Penilaian Driver</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <a asp-controller="Dpa" asp-action="DownloadSummaryExcel" class="btn btn-sm btn-outline-success" style="border-radius: 999px; font-weight: 700;">
+                            <i class="bi bi-download me-1"></i>Excel
+                        </a>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                <div class="modal-body pt-2">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6 col-lg-3">
+                            <div class="p-2 rounded" style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.22);">
+                                <div class="text-muted" style="font-size: 10px;">Total Driver Dinilai</div>
+                                <div style="font-size: 20px; font-weight: 900; color: #38bdf8; line-height: 1.1;">@adminSummaries.Count</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="p-2 rounded" style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.22);">
+                                <div class="text-muted" style="font-size: 10px;">Rata-rata Nilai Driver</div>
+                                <div style="font-size: 20px; font-weight: 900; color: #22c55e; line-height: 1.1;">@(adminSummaries.Any() ? Math.Round(adminSummaries.Average(x => x.AvgScore), 1).ToString("0.0") : "0.0")</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-lg-6">
+                            <div class="p-2 rounded" style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.22);">
+                                <div class="text-muted" style="font-size: 10px;">Driver Tertinggi Saat Ini</div>
+                                <div style="font-size: 14px; font-weight: 800; color: #a78bfa; line-height: 1.2;">
+                                    @(topDriver != null ? $"{topDriver.DriverNama} ({topDriver.AvgScore:0.0})" : "-")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="max-height: 52vh; overflow: auto; border: 1px solid var(--border-color); border-radius: 10px;">
+                        <table class="table table-sm mb-0" style="color: var(--text-main); font-size: 12px;">
+                            <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 1;">
+                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                    <th style="padding: 10px; min-width: 220px;">Driver</th>
+                                    <th style="padding: 10px; min-width: 95px;">NIK</th>
+                                    <th style="padding: 10px; min-width: 95px;">Rata-rata</th>
+                                    <th style="padding: 10px; min-width: 85px;">Terakhir</th>
+                                    <th style="padding: 10px; min-width: 160px;">Kategori Terakhir</th>
+                                    <th style="padding: 10px; min-width: 70px;">Jumlah</th>
+                                    <th style="padding: 10px; min-width: 120px;">Update</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!adminSummaries.Any())
+                                {
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted" style="padding: 14px;">Belum ada data penilaian driver.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    foreach (var row in adminSummaries)
+                                    {
+                                        var avgColor = row.AvgScore >= 90 ? "#22c55e" : row.AvgScore >= 80 ? "#38bdf8" : row.AvgScore >= 70 ? "#f59e0b" : row.AvgScore >= 60 ? "#f97316" : "#f43f5e";
+                                        <tr style="border-bottom: 1px dashed var(--border-color);">
+                                            <td style="padding: 10px; font-weight: 700;">@row.DriverNama <div class="text-muted" style="font-size: 10px;">@row.DriverDepartemen</div></td>
+                                            <td style="padding: 10px;">@row.DriverNik</td>
+                                            <td style="padding: 10px;"><span class="fw-bold" style="color: @avgColor;">@row.AvgScore.ToString("0.0")</span></td>
+                                            <td style="padding: 10px;">@row.LastScore.ToString("0")</td>
+                                            <td style="padding: 10px;">@row.LastCategory</td>
+                                            <td style="padding: 10px;">@row.TotalAssessments</td>
+                                            <td style="padding: 10px;" class="text-muted">@row.LastAssessmentDate.ToString("dd MMM yyyy")</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 <div class="modal fade" id="addDriverModal" tabindex="-1" aria-labelledby="addDriverModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

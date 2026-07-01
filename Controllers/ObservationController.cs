@@ -59,7 +59,15 @@ namespace MBS_SAP.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(int? id, Observation observation, DateTime tanggal, string waktuStr, IFormFile? foto)
+        public async Task<IActionResult> Create(
+            int? id,
+            Observation observation,
+            DateTime tanggal,
+            string waktuStr,
+            IFormFile? foto,
+            List<string>? hasilObservasiList,
+            List<string>? keteranganList,
+            List<IFormFile>? fotoList)
         {
             try
             {
@@ -67,31 +75,7 @@ namespace MBS_SAP.Controllers
                 var userName = User.Identity?.Name ?? "Anonymous";
                 var userDept = User.FindFirst("Department")?.Value ?? "General";
 
-                Observation? report;
-                bool isNew = true;
-
-                if (id.HasValue && id.Value > 0)
-                {
-                    report = await _context.Observations.FindAsync(id.Value);
-                    if (report == null || report.IsDeleted) return NotFound();
-
-                    if (report.Nik != userNik && !User.IsInRole("Admin"))
-                    {
-                        TempData["ErrorMessage"] = "Anda tidak memiliki akses untuk mengubah laporan ini.";
-                        return RedirectToAction(nameof(Index));
-                    }
-                    isNew = false;
-                }
-                else
-                {
-                    report = new Observation
-                    {
-                        Nama = userName,
-                        Nik = userNik,
-                        Departemen = userDept,
-                        CreatedAt = DateTime.Now
-                    };
-                }
+                var isNew = !(id.HasValue && id.Value > 0);
 
                 TimeSpan waktu = DateTime.Now.TimeOfDay;
                 if (!string.IsNullOrEmpty(waktuStr) && TimeSpan.TryParse(waktuStr, out var parsedWaktu))
@@ -99,44 +83,135 @@ namespace MBS_SAP.Controllers
                     waktu = parsedWaktu;
                 }
 
-                report.Date = tanggal.Date.Add(waktu);
-                report.Area = observation.Area;
-                report.Lokasi = observation.Lokasi;
-                report.DetilLokasi = observation.DetilLokasi;
-                report.KegiatanYangDiamati = observation.KegiatanYangDiamati;
-                report.DepartemenYangDiamati = observation.DepartemenYangDiamati;
-                report.DokumenPendukung = observation.DokumenPendukung;
-                report.ResikoKritis = observation.ResikoKritis;
-                report.TingkatResiko = observation.TingkatResiko;
-                report.PerihalYangDiamati = observation.PerihalYangDiamati;
-                report.HasilObservasi = observation.HasilObservasi;
-                report.Keterangan = observation.Keterangan;
+                var baseDate = tanggal.Date.Add(waktu);
 
-                // Handle Photo Upload
-                if (foto != null && foto.Length > 0)
+                if (!isNew)
                 {
-                    try
-                    {
-                        report.FotoUrl = await _imageUploadService.UploadAndCompressImageAsync(foto, "observations");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error uploading observation photo");
-                    }
-                }
+                    var report = await _context.Observations.FindAsync(id!.Value);
+                    if (report == null || report.IsDeleted) return NotFound();
 
-                if (isNew)
-                {
-                    _context.Observations.Add(report);
-                }
-                else
-                {
+                    if (report.Nik != userNik && !User.IsInRole("Admin"))
+                    {
+                        TempData["ErrorMessage"] = "Anda tidak memiliki akses untuk mengubah laporan ini.";
+                        return RedirectToAction(nameof(Index));
+                    }
+
+                    report.Date = baseDate;
+                    report.Area = observation.Area;
+                    report.Lokasi = observation.Lokasi;
+                    report.DetilLokasi = observation.DetilLokasi;
+                    report.KegiatanYangDiamati = observation.KegiatanYangDiamati;
+                    report.DepartemenYangDiamati = observation.DepartemenYangDiamati;
+                    report.DokumenPendukung = observation.DokumenPendukung;
+                    report.ResikoKritis = observation.ResikoKritis;
+                    report.TingkatResiko = observation.TingkatResiko;
+                    report.PerihalYangDiamati = observation.PerihalYangDiamati;
+                    report.HasilObservasi = observation.HasilObservasi;
+                    report.Keterangan = observation.Keterangan;
+
+                    if (foto != null && foto.Length > 0)
+                    {
+                        try
+                        {
+                            report.FotoUrl = await _imageUploadService.UploadAndCompressImageAsync(foto, "observations");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error uploading observation photo");
+                        }
+                    }
+
                     _context.Observations.Update(report);
+                    await _context.SaveChangesAsync();
+
+                    TempData["SuccessMessage"] = "Data Observasi berhasil diperbarui!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var normalizedResults = (hasilObservasiList ?? new List<string>())
+                    .Select(x => x?.Trim() ?? string.Empty)
+                    .ToList();
+                var normalizedNotes = (keteranganList ?? new List<string>())
+                    .Select(x => x?.Trim())
+                    .ToList();
+
+                // Backward compatibility for old form payload.
+                if (!normalizedResults.Any() && !string.IsNullOrWhiteSpace(observation.HasilObservasi))
+                {
+                    normalizedResults.Add(observation.HasilObservasi.Trim());
+                    normalizedNotes.Add(observation.Keterangan?.Trim());
+                }
+
+                if (!normalizedResults.Any(x => !string.IsNullOrWhiteSpace(x)))
+                {
+                    TempData["ErrorMessage"] = "Minimal 1 hasil observasi wajib diisi.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                int createdCount = 0;
+                for (int i = 0; i < normalizedResults.Count; i++)
+                {
+                    var hasil = normalizedResults[i];
+                    if (string.IsNullOrWhiteSpace(hasil))
+                    {
+                        continue;
+                    }
+
+                    string? fotoUrl = null;
+                    if (fotoList != null && i < fotoList.Count && fotoList[i] != null && fotoList[i].Length > 0)
+                    {
+                        try
+                        {
+                            fotoUrl = await _imageUploadService.UploadAndCompressImageAsync(fotoList[i], "observations");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error uploading observation photo list");
+                        }
+                    }
+                    else if (i == 0 && foto != null && foto.Length > 0)
+                    {
+                        // Backward compatibility for old single photo input.
+                        try
+                        {
+                            fotoUrl = await _imageUploadService.UploadAndCompressImageAsync(foto, "observations");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error uploading observation photo");
+                        }
+                    }
+
+                    var report = new Observation
+                    {
+                        Nama = userName,
+                        Nik = userNik,
+                        Departemen = userDept,
+                        CreatedAt = DateTime.Now,
+                        Date = baseDate,
+                        Area = observation.Area,
+                        Lokasi = observation.Lokasi,
+                        DetilLokasi = observation.DetilLokasi,
+                        KegiatanYangDiamati = observation.KegiatanYangDiamati,
+                        DepartemenYangDiamati = observation.DepartemenYangDiamati,
+                        DokumenPendukung = observation.DokumenPendukung,
+                        ResikoKritis = observation.ResikoKritis,
+                        TingkatResiko = observation.TingkatResiko,
+                        PerihalYangDiamati = observation.PerihalYangDiamati,
+                        HasilObservasi = hasil,
+                        Keterangan = i < normalizedNotes.Count ? normalizedNotes[i] : null,
+                        FotoUrl = fotoUrl
+                    };
+
+                    _context.Observations.Add(report);
+                    createdCount++;
                 }
 
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = isNew ? "Data Observasi berhasil disimpan!" : "Data Observasi berhasil diperbarui!";
+                TempData["SuccessMessage"] = createdCount > 1
+                    ? $"{createdCount} data observasi berhasil disimpan!"
+                    : "Data Observasi berhasil disimpan!";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
