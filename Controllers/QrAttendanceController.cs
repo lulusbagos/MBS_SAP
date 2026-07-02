@@ -67,6 +67,8 @@ namespace MBS_SAP.Controllers
             }
 
             var now = DateTime.Now;
+            bool isLate = false;
+
             if (now < ev.StartAt)
             {
                 model.Status = "toosoon";
@@ -76,9 +78,16 @@ namespace MBS_SAP.Controllers
 
             if (now > ev.EndAt)
             {
-                model.Status = "closed";
-                model.Message = "Absensi sudah ditutup karena melewati waktu acara.";
-                return View(model);
+                if (now <= ev.EndAt.AddHours(12))
+                {
+                    isLate = true;
+                }
+                else
+                {
+                    model.Status = "closed";
+                    model.Message = "Absensi sudah ditutup (batas toleransi terlambat adalah 12 jam setelah waktu selesai).";
+                    return View(model);
+                }
             }
 
             var nik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
@@ -103,14 +112,19 @@ namespace MBS_SAP.Controllers
 
             if (existing != null)
             {
+                bool wasExistingLate = existing.Source == "late";
                 model.Status = "duplicate";
-                model.Message = $"Absensi sudah terekam pada {existing.ScanAt:dd MMM yyyy HH:mm}.";
+                model.Message = wasExistingLate
+                    ? $"Absensi (Terlambat) sudah terekam pada {existing.ScanAt:dd MMM yyyy HH:mm}."
+                    : $"Absensi sudah terekam pada {existing.ScanAt:dd MMM yyyy HH:mm}.";
                 model.AttendeeName = nama;
                 model.AttendeeNik = nik;
                 model.RecordedAt = existing.ScanAt;
                 model.ShowPopup = true;
                 model.PopupTitle = "Sudah Terekam";
-                model.PopupBody = $"Anda sudah absen jam {existing.ScanAt:HH:mm}. Terima kasih :)";
+                model.PopupBody = wasExistingLate
+                    ? $"Anda sudah absen (Terlambat) jam {existing.ScanAt:HH:mm}. Terima kasih :)"
+                    : $"Anda sudah absen jam {existing.ScanAt:HH:mm}. Terima kasih :)";
                 return View(model);
             }
 
@@ -122,7 +136,7 @@ namespace MBS_SAP.Controllers
                 Jabatan = jabatan,
                 Perusahaan = perusahaan,
                 ScanAt = DateTime.Now,
-                Source = "qr"
+                Source = isLate ? "late" : "qr"
             };
 
             _context.AttendanceRecords.Add(record);
@@ -139,9 +153,10 @@ namespace MBS_SAP.Controllers
                     .OrderByDescending(r => r.ScanAt)
                     .FirstOrDefaultAsync();
 
+                bool isLatestLate = latest?.Source == "late";
                 model.Status = "duplicate";
                 model.Message = latest != null
-                    ? $"Absensi sudah terekam pada {latest.ScanAt:dd MMM yyyy HH:mm}."
+                    ? (isLatestLate ? $"Absensi (Terlambat) sudah terekam pada {latest.ScanAt:dd MMM yyyy HH:mm}." : $"Absensi sudah terekam pada {latest.ScanAt:dd MMM yyyy HH:mm}.")
                     : "Absensi sudah pernah terekam untuk event ini.";
                 model.AttendeeName = nama;
                 model.AttendeeNik = nik;
@@ -149,7 +164,7 @@ namespace MBS_SAP.Controllers
                 model.ShowPopup = true;
                 model.PopupTitle = "Sudah Terekam";
                 model.PopupBody = latest != null
-                    ? $"Anda sudah absen jam {latest.ScanAt:HH:mm}. Terima kasih :)"
+                    ? (isLatestLate ? $"Anda sudah absen (Terlambat) jam {latest.ScanAt:HH:mm}. Terima kasih :)" : $"Anda sudah absen jam {latest.ScanAt:HH:mm}. Terima kasih :)")
                     : "Absensi Anda sudah tercatat. Terima kasih :)";
                 return View(model);
             }
@@ -158,10 +173,14 @@ namespace MBS_SAP.Controllers
             model.AttendeeName = nama;
             model.AttendeeNik = nik;
             model.RecordedAt = record.ScanAt;
-            model.Message = "Terima kasih, kehadiran Anda sudah terekam.";
+            model.Message = isLate 
+                ? "Terima kasih, kehadiran Anda sudah terekam (Terlambat)." 
+                : "Terima kasih, kehadiran Anda sudah terekam.";
             model.ShowPopup = true;
-            model.PopupTitle = "Absensi Berhasil";
-            model.PopupBody = $"Anda sudah absen jam {record.ScanAt:HH:mm}. Terima kasih :)";
+            model.PopupTitle = isLate ? "Absensi Terlambat" : "Absensi Berhasil";
+            model.PopupBody = isLate 
+                ? $"Anda absen jam {record.ScanAt:HH:mm} (Terlambat). Terima kasih :)" 
+                : $"Anda sudah absen jam {record.ScanAt:HH:mm}. Terima kasih :)";
 
             return View(model);
         }

@@ -7,179 +7,237 @@
 <style>
     .eventqr-shell {
         border: 1px solid var(--border-color);
-        border-radius: 18px;
-        padding: 18px;
+        border-radius: 20px;
+        padding: 24px;
         background:
-            radial-gradient(circle at 8% 5%, rgba(56, 189, 248, 0.18), transparent 30%),
-            radial-gradient(circle at 92% 10%, rgba(34, 197, 94, 0.14), transparent 32%),
-            var(--bg-body);
+            radial-gradient(circle at 8% 5%, rgba(56, 189, 248, 0.1), transparent 30%),
+            radial-gradient(circle at 92% 10%, rgba(16, 185, 129, 0.08), transparent 32%),
+            linear-gradient(180deg, rgba(17, 24, 39, 0.2) 0%, rgba(3, 7, 18, 0.2) 100%);
     }
     .eventqr-grid {
         display: grid;
-        grid-template-columns: 360px 1fr;
-        gap: 14px;
+        grid-template-columns: 380px 1fr;
+        gap: 20px;
     }
     .eventqr-card {
         border: 1px solid var(--border-color);
-        border-radius: 14px;
+        border-radius: 18px;
         background: var(--bg-card);
-        box-shadow: 0 5px 16px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
     }
     .eventqr-card-head {
-        padding: 14px 16px;
+        padding: 16px 20px;
         border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 10px;
+        background: rgba(255, 255, 255, 0.01);
     }
     .eventqr-title {
         margin: 0;
-        font-size: 14px;
+        font-family: 'Outfit', sans-serif;
+        font-size: 15px;
         font-weight: 800;
         color: var(--text-main);
-        letter-spacing: 0.3px;
+        letter-spacing: 0.5px;
         text-transform: uppercase;
     }
     .eventqr-card-body {
-        padding: 14px;
+        padding: 20px;
     }
     .eventqr-form {
-        display: grid;
-        gap: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
     }
     .eventqr-form label {
         font-size: 11px;
-        font-weight: 700;
-        color: var(--text-main);
-        margin-bottom: 4px;
+        font-weight: 800;
+        color: var(--text-muted);
+        margin-bottom: 6px;
         display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
     .eventqr-form input,
     .eventqr-form textarea {
         width: 100%;
         border: 1px solid var(--border-color);
-        border-radius: 10px;
-        background: var(--bg-body);
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.2);
         color: var(--text-main);
-        font-size: 12px;
-        padding: 9px 10px;
+        font-size: 13px;
+        padding: 11px 14px;
+        transition: all 0.2s ease;
     }
     .eventqr-form textarea {
-        min-height: 72px;
+        min-height: 80px;
         resize: vertical;
     }
     .eventqr-form input:focus,
     .eventqr-form textarea:focus {
         outline: none;
-        border-color: #38bdf8;
-        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.18);
+        border-color: var(--color-primary);
+        box-shadow: var(--glow-primary);
+        background: rgba(0, 0, 0, 0.3);
     }
     .eventqr-form .invalid {
-        color: #ef4444;
+        color: var(--color-red);
         font-size: 11px;
-        margin-top: 3px;
+        margin-top: 5px;
+        font-weight: 600;
+        display: block;
     }
     .eventqr-submit {
         border: 0;
-        border-radius: 10px;
+        border-radius: 12px;
         background: linear-gradient(135deg, #0284c7, #0ea5e9);
         color: #ffffff;
-        font-size: 12px;
+        font-family: 'Outfit', sans-serif;
+        font-size: 13px;
         font-weight: 800;
-        padding: 10px 12px;
+        padding: 12px;
         cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+    .eventqr-submit:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
     }
     .eventqr-list {
-        display: grid;
-        gap: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
     }
     .event-row {
         border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 12px;
-        background: var(--bg-body);
+        border-radius: 16px;
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.01);
         display: grid;
         grid-template-columns: 1fr auto;
-        gap: 12px;
+        gap: 20px;
         align-items: center;
+        transition: all 0.2s ease;
+    }
+    .event-row:hover {
+        border-color: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.02);
     }
     .event-meta h4 {
-        margin: 0;
-        font-size: 14px;
+        margin: 0 0 6px;
+        font-family: 'Outfit', sans-serif;
+        font-size: 16px;
         font-weight: 800;
         color: var(--text-main);
     }
     .event-meta p {
         margin: 4px 0 0;
         color: var(--text-muted);
-        font-size: 11px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .event-meta p i {
+        color: var(--color-primary);
     }
     .event-badges {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 8px;
+        gap: 8px;
+        margin-top: 12px;
     }
     .event-badge {
-        border: 1px solid;
+        border: 1px solid transparent;
         border-radius: 999px;
         font-size: 10px;
-        font-weight: 700;
-        padding: 3px 8px;
+        font-weight: 800;
+        padding: 3px 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
     }
     .event-badge.active {
-        color: #166534;
-        background: #dcfce7;
-        border-color: #86efac;
+        color: var(--color-green);
+        background: rgba(16, 185, 129, 0.12);
+        border-color: rgba(16, 185, 129, 0.25);
     }
     .event-badge.inactive {
-        color: #b91c1c;
-        background: #fee2e2;
-        border-color: #fca5a5;
+        color: var(--color-red);
+        background: rgba(244, 63, 94, 0.12);
+        border-color: rgba(244, 63, 94, 0.25);
     }
     .event-badge.count {
-        color: #0c4a6e;
-        background: #e0f2fe;
-        border-color: #7dd3fc;
+        color: var(--color-primary);
+        background: rgba(56, 189, 248, 0.12);
+        border-color: rgba(56, 189, 248, 0.25);
     }
     .event-actions {
         display: grid;
-        gap: 6px;
-        min-width: 210px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        min-width: 320px;
     }
     .event-btn,
     .event-actions form button {
         border: 1px solid var(--border-color);
-        border-radius: 9px;
+        border-radius: 10px;
         font-size: 11px;
         font-weight: 700;
         color: var(--text-main);
-        background: #ffffff;
-        padding: 7px 10px;
+        background: rgba(255, 255, 255, 0.02);
+        padding: 8px 12px;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 6px;
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.2s ease;
     }
     .event-btn:hover,
     .event-actions form button:hover {
-        border-color: #38bdf8;
-        color: #0284c7;
+        border-color: var(--color-primary);
+        color: #ffffff;
+        background: rgba(56, 189, 248, 0.1);
     }
     .event-btn-success {
-        background: rgba(34, 197, 94, 0.12);
-        border-color: rgba(34, 197, 94, 0.3);
-        color: #166534;
+        background: rgba(16, 185, 129, 0.08) !important;
+        border-color: rgba(16, 185, 129, 0.25) !important;
+        color: var(--color-green) !important;
+    }
+    .event-btn-success:hover {
+        background: rgba(16, 185, 129, 0.15) !important;
+        color: #ffffff !important;
+        border-color: var(--color-green) !important;
+    }
+    .event-btn-info {
+        background: rgba(56, 189, 248, 0.08) !important;
+        border-color: rgba(56, 189, 248, 0.25) !important;
+        color: var(--color-primary) !important;
+    }
+    .event-btn-info:hover {
+        background: rgba(56, 189, 248, 0.15) !important;
+        color: #ffffff !important;
     }
     .event-empty {
         text-align: center;
         border: 1px dashed var(--border-color);
-        border-radius: 12px;
-        padding: 22px 14px;
+        border-radius: 16px;
+        padding: 40px 20px;
         color: var(--text-muted);
-        font-size: 12px;
+        font-size: 13px;
+        background: rgba(255, 255, 255, 0.01);
     }
     .qr-modal-canvas {
         width: 100%;
@@ -188,18 +246,31 @@
         align-items: center;
         justify-content: center;
         border: 1px dashed var(--border-color);
-        border-radius: 12px;
-        background: rgba(148, 163, 184, 0.06);
-        margin-bottom: 10px;
-        padding: 10px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.02);
+        margin-bottom: 14px;
+        padding: 12px;
     }
     .qr-modal-canvas img,
     .qr-modal-canvas canvas {
-        background: #fff;
-        padding: 8px;
-        border-radius: 8px;
+        background: #ffffff;
+        padding: 10px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
-    @@media (max-width: 1024px) {
+    
+    .event-btn-danger {
+        background: rgba(244, 63, 94, 0.08) !important;
+        border-color: rgba(244, 63, 94, 0.25) !important;
+        color: var(--color-red) !important;
+    }
+    .event-btn-danger:hover {
+        background: rgba(244, 63, 94, 0.15) !important;
+        color: #ffffff !important;
+        border-color: var(--color-red) !important;
+    }
+
+    @@media (max-width: 1200px) {
         .eventqr-grid {
             grid-template-columns: 1fr;
         }
@@ -207,9 +278,11 @@
     @@media (max-width: 768px) {
         .event-row {
             grid-template-columns: 1fr;
+            padding: 16px;
         }
         .event-actions {
             min-width: 0;
+            grid-template-columns: 1fr;
         }
     }
 </style>
@@ -217,18 +290,23 @@
 <div class="eventqr-shell">
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-success" role="alert">@TempData["SuccessMessage"]</div>
+        <div class="alert alert-success" role="alert" style="border-radius: 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.2); color: var(--color-green); font-weight: 700; margin-bottom: 20px;">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessMessage"]
+        </div>
     }
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="alert alert-danger" role="alert">@TempData["ErrorMessage"]</div>
+        <div class="alert alert-danger" role="alert" style="border-radius: 12px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.2); color: var(--color-red); font-weight: 700; margin-bottom: 20px;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["ErrorMessage"]
+        </div>
     }
 
     <div class="eventqr-grid">
-        <section class="eventqr-card">
+        <!-- Form Buat Event -->
+        <section class="eventqr-card" style="height: fit-content;">
             <header class="eventqr-card-head">
-                <h3 class="eventqr-title"><i class="bi bi-calendar2-plus-fill me-2"></i>Buat Acara</h3>
-                <span class="badge text-bg-info">Admin</span>
+                <h3 class="eventqr-title"><i class="bi bi-calendar2-plus-fill me-2 text-primary"></i>Buat Acara</h3>
+                <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: var(--color-primary); font-size: 10px; text-transform: uppercase;">Admin</span>
             </header>
             <div class="eventqr-card-body">
                 <form asp-action="Create" method="post" class="eventqr-form">
@@ -236,13 +314,13 @@
 
                     <div>
                         <label asp-for="Form.EventName">Nama Acara</label>
-                        <input asp-for="Form.EventName" placeholder="Contoh: Safety Briefing Shift Pagi" />
+                        <input asp-for="Form.EventName" placeholder="Briefing Shift Pagi, Safety Talk, dll." autocomplete="off" />
                         <span asp-validation-for="Form.EventName" class="invalid"></span>
                     </div>
 
                     <div>
                         <label asp-for="Form.EventLocation">Lokasi</label>
-                        <input asp-for="Form.EventLocation" placeholder="Contoh: Pit A - Hall Utama" />
+                        <input asp-for="Form.EventLocation" placeholder="Pit A, Hall Utama, Ruang Meeting, dll." autocomplete="off" />
                         <span asp-validation-for="Form.EventLocation" class="invalid"></span>
                     </div>
 
@@ -259,32 +337,34 @@
                     </div>
 
                     <div>
-                        <label asp-for="Form.EventDescription">Deskripsi</label>
-                        <textarea asp-for="Form.EventDescription" placeholder="Keterangan acara, catatan, atau instruksi scan."></textarea>
+                        <label asp-for="Form.EventDescription">Deskripsi / Keterangan</label>
+                        <textarea asp-for="Form.EventDescription" placeholder="Catatan singkat terkait acara..."></textarea>
                         <span asp-validation-for="Form.EventDescription" class="invalid"></span>
                     </div>
 
-                    <div class="form-check mt-1">
-                        <input class="form-check-input" asp-for="Form.IsActive" />
-                        <label class="form-check-label" asp-for="Form.IsActive">Aktifkan event setelah dibuat</label>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                        <input class="form-check-input" type="checkbox" asp-for="Form.IsActive" id="isActiveCheck" style="width: 18px; height: 18px; margin: 0; cursor: pointer;" />
+                        <label class="form-check-label" for="isActiveCheck" style="margin: 0; cursor: pointer; text-transform: none; font-size: 12px; font-weight: 600;">Aktifkan event setelah dibuat</label>
                     </div>
 
-                    <button class="eventqr-submit" type="submit"><i class="bi bi-check2-circle me-1"></i>Simpan Event & Generate QR</button>
+                    <button class="eventqr-submit" type="submit"><i class="bi bi-check2-circle"></i>Simpan & Buat QR</button>
                 </form>
             </div>
         </section>
 
+        <!-- Daftar Event -->
         <section class="eventqr-card">
             <header class="eventqr-card-head">
-                <h3 class="eventqr-title"><i class="bi bi-list-check me-2"></i>Daftar Event</h3>
-                <span class="badge text-bg-secondary">@Model.Events.Count event</span>
+                <h3 class="eventqr-title"><i class="bi bi-list-check me-2 text-success"></i>Daftar Event</h3>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--color-green); font-size: 10px;">@Model.Events.Count Event</span>
             </header>
             <div class="eventqr-card-body">
                 <div class="eventqr-list">
                     @if (Model.Events.Count == 0)
                     {
                         <div class="event-empty">
-                            Belum ada event absensi. Buat event baru untuk menghasilkan QR scan non-admin.
+                            <i class="bi bi-calendar-x d-block mb-2" style="font-size: 32px; color: var(--text-muted);"></i>
+                            Belum ada event absensi. Buat event baru melalui formulir di sebelah kiri.
                         </div>
                     }
                     else
@@ -295,33 +375,45 @@
                             <article class="event-row">
                                 <div class="event-meta">
                                     <h4>@ev.EventName</h4>
-                                    <p><i class="bi bi-geo-alt me-1"></i>@(string.IsNullOrWhiteSpace(ev.EventLocation) ? "Lokasi belum diisi" : ev.EventLocation)</p>
-                                    <p><i class="bi bi-clock me-1"></i>@ev.StartAt.ToString("dd MMM yyyy HH:mm") - @ev.EndAt.ToString("HH:mm")</p>
+                                    <p><i class="bi bi-geo-alt-fill"></i>@(string.IsNullOrWhiteSpace(ev.EventLocation) ? "Lokasi belum diisi" : ev.EventLocation)</p>
+                                    <p><i class="bi bi-clock-fill"></i>@ev.StartAt.ToString("dd MMM yyyy hh:mm tt") - @ev.EndAt.ToString("hh:mm tt") WITA</p>
                                     @if (!string.IsNullOrWhiteSpace(ev.EventDescription))
                                     {
-                                        <p><i class="bi bi-chat-left-text me-1"></i>@ev.EventDescription</p>
+                                        <p><i class="bi bi-chat-left-text-fill"></i>@ev.EventDescription</p>
                                     }
                                     <div class="event-badges">
-                                        <span class="event-badge @(ev.IsActive ? "active" : "inactive")">@(ev.IsActive ? "ACTIVE" : "INACTIVE")</span>
-                                        <span class="event-badge count">@ev.TotalAttendees hadir</span>
+                                        <span class="event-badge @(ev.IsActive ? "active" : "inactive")">@(ev.IsActive ? "Aktif" : "Nonaktif")</span>
+                                        <span class="event-badge count">@ev.TotalAttendees Karyawan Hadir</span>
                                     </div>
                                 </div>
+                                
                                 <div class="event-actions">
                                     <button type="button" class="event-btn event-btn-success" data-bs-toggle="modal" data-bs-target="#qrModal" data-name="@ev.EventName" data-url="@qrUrl">
                                         <i class="bi bi-qr-code-scan"></i>Lihat QR
                                     </button>
-                                    <a class="event-btn" asp-action="Attendance" asp-route-id="@ev.Id"><i class="bi bi-people-fill"></i>Lihat Kehadiran</a>
+                                    
+                                    <a class="event-btn event-btn-info" asp-action="Attendance" asp-route-id="@ev.Id"><i class="bi bi-tv"></i>Monitor Layar</a>
+                                    
+                                    <a class="event-btn" asp-action="ExportAttendance" asp-route-id="@ev.Id" style="color: var(--color-green); border-color: rgba(16, 185, 129, 0.25); background: rgba(16, 185, 129, 0.05);"><i class="bi-file-earmark-excel-fill"></i>Unduh Excel</a>
+                                    
+                                    <a class="event-btn" asp-action="Edit" asp-route-id="@ev.Id"><i class="bi bi-pencil-square"></i>Edit Event</a>
 
-                                    <form asp-action="ToggleActive" method="post">
+                                    <form asp-action="ToggleActive" method="post" style="grid-column: span 1; width:100%;">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@ev.Id" />
-                                        <button type="submit"><i class="bi bi-power"></i>@(ev.IsActive ? "Nonaktifkan" : "Aktifkan")</button>
+                                        <button type="submit" style="width: 100%;"><i class="bi bi-power"></i>@(ev.IsActive ? "Nonaktifkan" : "Aktifkan")</button>
                                     </form>
 
-                                    <form asp-action="RegenerateQr" method="post">
+                                    <form asp-action="RegenerateQr" method="post" style="grid-column: span 1; width:100%;">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@ev.Id" />
-                                        <button type="submit"><i class="bi bi-arrow-repeat"></i>Regenerate QR</button>
+                                        <button type="submit" style="width: 100%;"><i class="bi bi-arrow-repeat"></i>Reset QR</button>
+                                    </form>
+
+                                    <form asp-action="Delete" method="post" style="grid-column: span 2; width: 100%;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus event ini beserta seluruh catatan kehadiran? Tindakan ini tidak dapat dibatalkan.');">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@ev.Id" />
+                                        <button type="submit" class="event-btn-danger" style="width: 100%;"><i class="bi bi-trash-fill"></i>Hapus Event</button>
                                     </form>
                                 </div>
                             </article>
@@ -333,20 +425,21 @@
     </div>
 </div>
 
+<!-- Modal QR Code -->
 <div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 16px; border: 1px solid var(--border-color); background: var(--bg-card);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
-                <h5 class="modal-title" id="qrModalTitle" style="font-weight: 800; color: var(--text-main);">QR Event</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-content" style="border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-card); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 20px;">
+                <h5 class="modal-title" id="qrModalTitle" style="font-weight: 800; color: var(--text-main); font-family: 'Outfit', sans-serif;">QR Event</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="padding: 20px;">
                 <div id="eventQrCanvas" class="qr-modal-canvas"></div>
                 <div class="input-group">
-                    <input id="eventQrUrl" type="text" class="form-control" readonly />
-                    <button class="btn btn-outline-info" id="copyQrUrlBtn" type="button"><i class="bi bi-copy"></i></button>
+                    <input id="eventQrUrl" type="text" class="form-control" readonly style="background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); color: var(--text-main); font-size: 12px; border-radius: 10px 0 0 10px;" />
+                    <button class="btn btn-info" id="copyQrUrlBtn" type="button" style="border-radius: 0 10px 10px 0; font-weight: 700; color: white;"><i class="bi bi-copy me-1"></i>Copy</button>
                 </div>
-                <small class="text-muted d-block mt-2">Bagikan QR ini ke non-admin. Saat di-scan, sistem langsung merekam kehadiran.</small>
+                <small class="text-muted d-block mt-3" style="font-size: 11px;"><i class="bi bi-info-circle me-1"></i>Bagikan link atau QR Code di atas. Anggota/peserta yang melakukan pemindaian otomatis terabsen masuk ke sistem.</small>
             </div>
         </div>
     </div>
@@ -379,7 +472,7 @@
                         text: url,
                         width: 220,
                         height: 220,
-                        colorDark: '#0f172a',
+                        colorDark: '#030712',
                         colorLight: '#ffffff',
                         correctLevel: QRCode.CorrectLevel.M
                     });
@@ -391,9 +484,13 @@
                 if (!val) return;
                 try {
                     await navigator.clipboard.writeText(val);
-                    copyBtn.innerHTML = '<i class="bi bi-check2"></i>';
+                    copyBtn.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied!';
+                    copyBtn.classList.remove('btn-info');
+                    copyBtn.classList.add('btn-success');
                     setTimeout(function () {
-                        copyBtn.innerHTML = '<i class="bi bi-copy"></i>';
+                        copyBtn.innerHTML = '<i class="bi bi-copy me-1"></i>Copy';
+                        copyBtn.classList.remove('btn-success');
+                        copyBtn.classList.add('btn-info');
                     }, 1200);
                 } catch {
                     alert('Gagal copy link QR.');
