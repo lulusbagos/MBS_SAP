@@ -160,7 +160,7 @@
         /* Layout Grid */
         .monitor-layout {
             display: grid;
-            grid-template-columns: 360px 1.2fr 1fr;
+            grid-template-columns: 360px 1fr;
             gap: 20px;
             align-items: start;
         }
@@ -374,78 +374,15 @@
             box-shadow: var(--glow-primary);
         }
 
-        /* Company grid status */
-        .company-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 12px;
-            max-height: 45vh;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-
-        .company-card {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            transition: all 0.2s ease;
-        }
-
-        .company-card:hover {
-            border-color: rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.03);
-        }
-
-        .company-card.is-present {
-            border-color: rgba(16, 185, 129, 0.25);
-            background: rgba(16, 185, 129, 0.06);
-        }
-
-        .company-card-name {
-            font-size: 13px;
-            font-weight: 700;
-            margin: 0;
-            color: var(--text-main);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .badge-status {
-            font-size: 9px;
-            font-weight: 800;
-            padding: 3px 8px;
-            border-radius: 999px;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            border: 1px solid transparent;
-        }
-
-        .badge-status.present {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--color-green);
-            border-color: rgba(16, 185, 129, 0.2);
-        }
-
-        .badge-status.pending {
-            background: rgba(226, 232, 240, 0.05);
-            color: var(--text-muted);
-            border-color: var(--border-color);
-        }
-
         /* Pending list column */
         .pending-list {
             display: flex;
             flex-direction: column;
             gap: 8px;
-            max-height: 45vh;
+            max-height: 48vh;
             overflow-y: auto;
             padding-right: 4px;
+            scroll-behavior: smooth;
         }
 
         .pending-item {
@@ -473,12 +410,8 @@
         }
 
         /* Live Table section */
-        .live-table-section {
-            grid-column: span 2;
-        }
-
         .live-table-wrap {
-            max-height: 380px;
+            max-height: 48vh;
             overflow-y: auto;
             border: 1px solid var(--border-color);
             border-radius: 16px;
@@ -636,35 +569,7 @@
             to { width: 0%; }
         }
 
-        /* Scrollbars */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.01);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
         /* Responsive Layouts */
-        @@media (max-width: 1399px) {
-            .monitor-layout {
-                grid-template-columns: 340px 1fr;
-            }
-            .live-table-section {
-                grid-column: span 1;
-            }
-            .stats-strip {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-
         @@media (max-width: 1099px) {
             .monitor-layout {
                 grid-template-columns: 1fr;
@@ -759,8 +664,8 @@
             </div>
         </section>
 
-        <!-- Column 2: Stats & Company Status Grid -->
-        <div style="display: flex; flex-direction: column; gap: 20px; grid-column: span 2;">
+        <!-- Column 2: Stats & Details (Live Feed & Pending List) -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
             <!-- Stats strip -->
             <section class="stats-strip">
                 <div class="stat-card-glow active">
@@ -789,23 +694,48 @@
                 </div>
             </section>
 
-            <!-- Bottom Sub-Grid: Company Grid & Pending List -->
+            <!-- Bottom Sub-Grid: Live Feed & Pending List -->
             <div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px;">
-                <!-- Company Status Card -->
+                <!-- Live Attendance Feed Card -->
                 <section class="glass-card">
                     <div class="panel-header">
-                        <h3 class="panel-title"><i class="bi bi-grid-3x3-gap-fill text-success"></i>Status Kehadiran Perusahaan</h3>
+                        <h3 class="panel-title"><i class="bi bi-rss-fill text-primary"></i>Live Attendance Feed</h3>
+                        <span class="badge-status present" style="background: rgba(56, 189, 248, 0.15); color: var(--color-primary); border-color: rgba(56, 189, 248, 0.2);" id="totalAttendeesBadge">
+                            @Model.TotalPresentEmployees Peserta Hadir
+                        </span>
                     </div>
-                    <div class="company-grid" id="companyGrid">
-                        @foreach (var company in Model.CompanyStatuses)
-                        {
-                            <article class="company-card @(company.HasAttendance ? "is-present" : "is-pending")">
-                                <h4 class="company-card-name" title="@company.CompanyName">@company.CompanyName</h4>
-                                <span class="badge-status @(company.HasAttendance ? "present" : "pending")">
-                                    @(company.HasAttendance ? "Hadir" : "Belum")
-                                </span>
-                            </article>
-                        }
+                    <div class="live-table-wrap">
+                        <table class="live-table">
+                            <thead>
+                                <tr>
+                                    <th>Waktu</th>
+                                    <th>Nama / NIK</th>
+                                    <th>Jabatan</th>
+                                    <th>Perusahaan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendeeFeedTableBody">
+                                @if (Model.Attendees.Count == 0)
+                                {
+                                    <tr><td colspan="4" class="text-center" style="text-align:center; padding: 24px; color: var(--text-muted);">Belum ada absensi masuk untuk event ini.</td></tr>
+                                }
+                                else
+                                {
+                                    @foreach (var attendee in Model.Attendees)
+                                    {
+                                        <tr>
+                                            <td>@attendee.ScanAt.ToString("HH:mm:ss")</td>
+                                            <td>
+                                                <strong>@attendee.Nama</strong>
+                                                <div style="font-size: 10px; color: var(--text-muted);">@attendee.Nik</div>
+                                            </td>
+                                            <td>@attendee.Jabatan</td>
+                                            <td>@attendee.CompanyName</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
                     </div>
                 </section>
 
@@ -832,50 +762,6 @@
                     </div>
                 </section>
             </div>
-
-            <!-- Live Table Card (Grid Expansion) -->
-            <section class="glass-card live-table-section">
-                <div class="panel-header">
-                    <h3 class="panel-title"><i class="bi bi-rss-fill text-primary"></i>Live Attendance Feed</h3>
-                    <span class="badge-status present" style="background: rgba(56, 189, 248, 0.15); color: var(--color-primary); border-color: rgba(56, 189, 248, 0.2);" id="totalAttendeesBadge">
-                        @Model.TotalPresentEmployees Peserta Hadir
-                    </span>
-                </div>
-                <div class="live-table-wrap">
-                    <table class="live-table">
-                        <thead>
-                            <tr>
-                                <th>Waktu Scan</th>
-                                <th>NIK</th>
-                                <th>Nama Lengkap</th>
-                                <th>Jabatan</th>
-                                <th>Departemen</th>
-                                <th>Perusahaan</th>
-                            </tr>
-                        </thead>
-                        <tbody id="attendeeFeedTableBody">
-                            @if (Model.Attendees.Count == 0)
-                            {
-                                <tr><td colspan="6" class="text-center" style="text-align:center; padding: 24px; color: var(--text-muted);">Belum ada absensi masuk untuk event ini.</td></tr>
-                            }
-                            else
-                            {
-                                @foreach (var attendee in Model.Attendees)
-                                {
-                                    <tr>
-                                        <td>@attendee.ScanAt.ToString("dd MMM yyyy HH:mm:ss")</td>
-                                        <td>@attendee.Nik</td>
-                                        <td><strong>@attendee.Nama</strong></td>
-                                        <td>@attendee.Jabatan</td>
-                                        <td>@attendee.Departemen</td>
-                                        <td>@attendee.CompanyName</td>
-                                    </tr>
-                                }
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </section>
         </div>
     </main>
 </div>
@@ -891,7 +777,6 @@
         const snapshotUrl = '@snapshotUrl';
         const clockEl = document.querySelector('#liveClock span');
         const fullscreenBtn = document.getElementById('fullscreenToggleBtn');
-        const companyGridEl = document.getElementById('companyGrid');
         const pendingCompaniesListEl = document.getElementById('pendingCompaniesList');
         const attendeeFeedBodyEl = document.getElementById('attendeeFeedTableBody');
         
@@ -941,12 +826,10 @@
                 .replace(/'/g, '&#39;');
         }
 
-        function formatDateTime(value) {
+        function formatTimeOnly(value) {
             const date = new Date(value);
-            if (Number.isNaN(date.getTime())) return '-';
-            return date.toLocaleString('id-ID', {
-                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
-            });
+            if (Number.isNaN(date.getTime())) return '--:--';
+            return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
 
         function syncFullscreenLabel() {
@@ -1056,18 +939,6 @@
             setTimeout(processQueue, 150);
         }
 
-        function renderCompanyStatuses(companies) {
-            if (!companyGridEl) return;
-            companyGridEl.innerHTML = (companies || []).length === 0
-                ? '<div class="empty-state">Belum ada perusahaan aktif yang dapat ditampilkan.</div>'
-                : companies.map(function (company) {
-                    const statusClass = company.hasAttendance ? 'is-present' : 'is-pending';
-                    const badgeClass = company.hasAttendance ? 'present' : 'pending';
-                    const badgeText = company.hasAttendance ? 'Hadir' : 'Belum';
-                    return `<article class="company-card ${statusClass}"><h4 class="company-card-name" title="${escapeHtml(company.companyName)}">${escapeHtml(company.companyName)}</h4><span class="badge-status ${badgeClass}">${badgeText}</span></article>`;
-                }).join('');
-        }
-
         function renderPendingCompanies(companies) {
             if (!pendingCompaniesListEl) return;
             pendingCompaniesListEl.innerHTML = (companies || []).length === 0
@@ -1080,9 +951,9 @@
         function renderAttendees(attendees) {
             if (!attendeeFeedBodyEl) return;
             attendeeFeedBodyEl.innerHTML = (attendees || []).length === 0
-                ? '<tr><td colspan="6" class="text-center" style="text-align:center; padding: 24px; color: var(--text-muted);">Belum ada absensi masuk untuk event ini.</td></tr>'
+                ? '<tr><td colspan="4" class="text-center" style="text-align:center; padding: 24px; color: var(--text-muted);">Belum ada absensi masuk untuk event ini.</td></tr>'
                 : attendees.map(function (attendee) {
-                    return `<tr><td>${escapeHtml(formatDateTime(attendee.scanAt))}</td><td>${escapeHtml(attendee.nik)}</td><td><strong>${escapeHtml(attendee.nama)}</strong></td><td>${escapeHtml(attendee.jabatan)}</td><td>${escapeHtml(attendee.departemen)}</td><td>${escapeHtml(attendee.companyName)}</td></tr>`;
+                    return `<tr><td>${escapeHtml(formatTimeOnly(attendee.scanAt))}</td><td><strong>${escapeHtml(attendee.nama)}</strong><div style="font-size: 10px; color: var(--text-muted);">${escapeHtml(attendee.nik)}</div></td><td>${escapeHtml(attendee.jabatan)}</td><td>${escapeHtml(attendee.companyName)}</td></tr>`;
                 }).join('');
         }
 
@@ -1099,6 +970,32 @@
             }
         }
 
+        // Automatic scrolling up and down loop
+        function initAutoScroll(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            
+            let scrollDirection = 1; // 1 = down, -1 = up
+            const speed = 0.4; // Pixels per frame
+            let lastTimestamp = 0;
+            
+            function step(timestamp) {
+                if (el.scrollHeight > el.clientHeight) {
+                    el.scrollTop += scrollDirection * speed;
+                    
+                    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1) {
+                        scrollDirection = -1;
+                    } else if (el.scrollTop <= 0) {
+                        scrollDirection = 1;
+                    }
+                } else {
+                    el.scrollTop = 0;
+                }
+                requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+
         async function refreshAttendanceSnapshot() {
             if (!snapshotUrl) return;
             try {
@@ -1107,7 +1004,6 @@
                 const data = await response.json();
                 
                 // Render view lists first
-                renderCompanyStatuses(data.companyStatuses || []);
                 renderPendingCompanies(data.pendingCompanies || []);
                 renderAttendees(data.attendees || []);
                 updateSummary(data.totals || {});
@@ -1184,6 +1080,9 @@
         syncFullscreenLabel();
         setInterval(updateClock, 1000);
         setInterval(refreshAttendanceSnapshot, REFRESH_MS);
+        
+        // Initialize Auto Scroll for Pending Companies
+        initAutoScroll('pendingCompaniesList');
     })();
 </script>
 </body>
