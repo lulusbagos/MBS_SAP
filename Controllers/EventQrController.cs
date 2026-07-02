@@ -157,8 +157,10 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> Attendance(int id)
         {
-            ViewData["HeaderTitle"] = "Daftar Kehadiran Event";
+            ViewData["HeaderTitle"] = "Display Kehadiran Event";
             ViewData["ActiveTab"] = "EventQrAdmin";
+            ViewData["HideNav"] = true;
+            ViewData["HideHeader"] = true;
 
             var ev = await _context.AttendanceEvents
                 .AsNoTracking()
@@ -175,10 +177,102 @@ namespace MBS_SAP.Controllers
                 .OrderByDescending(r => r.ScanAt)
                 .ToListAsync();
 
+            var activeEmployees = await (
+                from k in _context.Karyawans
+                join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                join company in _context.Perusahaans on k.IdPerusahaan equals company.PerusahaanId
+                join job in _context.Jabatans on k.IdJabatan equals job.JabatanId into jobGroup
+                from job in jobGroup.DefaultIfEmpty()
+                join dept in _context.Departemens on k.IdDepartemen equals dept.DepartemenId into deptGroup
+                from dept in deptGroup.DefaultIfEmpty()
+                where k.StatusAktif && company.StatusAktif
+                select new EventAttendanceEmployeeViewModel
+                {
+                    Nik = k.NoNik,
+                    Nama = p.NamaLengkap,
+                    Jabatan = job != null ? (job.NamaJabatan ?? "-") : "-",
+                    Departemen = dept != null ? (dept.NamaDepartemen ?? "-") : "-",
+                    CompanyId = company.PerusahaanId,
+                    CompanyName = company.NamaPerusahaan ?? $"Company {company.PerusahaanId}"
+                })
+                .ToListAsync();
+
+            var employeeByNik = activeEmployees
+                .Where(e => !string.IsNullOrWhiteSpace(e.Nik))
+                .GroupBy(e => e.Nik.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+            var attendeeRows = records
+                .Select(r =>
+                {
+                    employeeByNik.TryGetValue((r.Nik ?? string.Empty).Trim(), out var emp);
+                    return new EventAttendanceAttendeeViewModel
+                    {
+                        Nik = r.Nik,
+                        Nama = !string.IsNullOrWhiteSpace(r.Nama) ? r.Nama! : emp?.Nama ?? "-",
+                        Jabatan = !string.IsNullOrWhiteSpace(r.Jabatan) ? r.Jabatan! : emp?.Jabatan ?? "-",
+                        Departemen = emp?.Departemen ?? "-",
+                        CompanyId = emp?.CompanyId,
+                        CompanyName = !string.IsNullOrWhiteSpace(r.Perusahaan) ? r.Perusahaan! : emp?.CompanyName ?? "Tanpa Perusahaan",
+                        ScanAt = r.ScanAt
+                    };
+                })
+                .OrderByDescending(x => x.ScanAt)
+                .ToList();
+
+            var activeCompanyRows = activeEmployees
+                .GroupBy(e => new { e.CompanyId, e.CompanyName })
+                .Select(g =>
+                {
+                    var companyNiks = g.Select(x => x.Nik.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    var attendees = attendeeRows
+                        .Where(a => !string.IsNullOrWhiteSpace(a.Nik) && companyNiks.Contains(a.Nik.Trim()))
+                        .OrderByDescending(a => a.ScanAt)
+                        .ToList();
+
+                    var attendedCount = attendees
+                        .Select(a => a.Nik.Trim())
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .Count();
+
+                    var activeCount = companyNiks.Count;
+                    var pendingCount = Math.Max(0, activeCount - attendedCount);
+                    var hasAttendance = attendedCount > 0;
+
+                    return new EventAttendanceCompanyStatusViewModel
+                    {
+                        CompanyId = g.Key.CompanyId,
+                        CompanyName = g.Key.CompanyName,
+                        ActiveEmployees = activeCount,
+                        AttendedEmployees = attendedCount,
+                        PendingEmployees = pendingCount,
+                        HasAttendance = hasAttendance,
+                        AttendanceRate = activeCount > 0 ? Math.Round((double)attendedCount / activeCount * 100.0, 1) : 0.0,
+                        RecentAttendees = attendees.Take(6).ToList()
+                    };
+                })
+                .OrderByDescending(c => c.HasAttendance)
+                .ThenByDescending(c => c.AttendedEmployees)
+                .ThenBy(c => c.CompanyName)
+                .ToList();
+
+            var pendingCompanies = activeCompanyRows
+                .Where(c => !c.HasAttendance)
+                .OrderByDescending(c => c.ActiveEmployees)
+                .ThenBy(c => c.CompanyName)
+                .ToList();
+
             return View(new EventQrAttendanceViewModel
             {
                 Event = ev,
-                Records = records
+                Records = records,
+                CompanyStatuses = activeCompanyRows,
+                PendingCompanies = pendingCompanies,
+                Attendees = attendeeRows,
+                TotalActiveCompanies = activeCompanyRows.Count,
+                TotalPresentCompanies = activeCompanyRows.Count(c => c.HasAttendance),
+                TotalActiveEmployees = activeEmployees.Select(e => e.Nik.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+                TotalPresentEmployees = attendeeRows.Select(a => a.Nik.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count()
             });
         }
     }
@@ -228,5 +322,45 @@ namespace MBS_SAP.Controllers
     {
         public AttendanceEvent Event { get; set; } = new AttendanceEvent();
         public List<AttendanceRecord> Records { get; set; } = new List<AttendanceRecord>();
+        public List<EventAttendanceCompanyStatusViewModel> CompanyStatuses { get; set; } = new List<EventAttendanceCompanyStatusViewModel>();
+        public List<EventAttendanceCompanyStatusViewModel> PendingCompanies { get; set; } = new List<EventAttendanceCompanyStatusViewModel>();
+        public List<EventAttendanceAttendeeViewModel> Attendees { get; set; } = new List<EventAttendanceAttendeeViewModel>();
+        public int TotalActiveCompanies { get; set; }
+        public int TotalPresentCompanies { get; set; }
+        public int TotalActiveEmployees { get; set; }
+        public int TotalPresentEmployees { get; set; }
+    }
+
+    public class EventAttendanceEmployeeViewModel
+    {
+        public string Nik { get; set; } = string.Empty;
+        public string Nama { get; set; } = string.Empty;
+        public string Jabatan { get; set; } = string.Empty;
+        public string Departemen { get; set; } = string.Empty;
+        public int CompanyId { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+    }
+
+    public class EventAttendanceAttendeeViewModel
+    {
+        public string Nik { get; set; } = string.Empty;
+        public string Nama { get; set; } = string.Empty;
+        public string Jabatan { get; set; } = string.Empty;
+        public string Departemen { get; set; } = string.Empty;
+        public int? CompanyId { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+        public DateTime ScanAt { get; set; }
+    }
+
+    public class EventAttendanceCompanyStatusViewModel
+    {
+        public int CompanyId { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+        public int ActiveEmployees { get; set; }
+        public int AttendedEmployees { get; set; }
+        public int PendingEmployees { get; set; }
+        public bool HasAttendance { get; set; }
+        public double AttendanceRate { get; set; }
+        public List<EventAttendanceAttendeeViewModel> RecentAttendees { get; set; } = new List<EventAttendanceAttendeeViewModel>();
     }
 }
