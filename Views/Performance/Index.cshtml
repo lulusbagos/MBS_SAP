@@ -568,7 +568,59 @@
         flex-direction: column;
         align-items: center;
     }
-    /* ── Maincon row: combined primary + secondary in one row ── */\n    .org-maincon-combined-row {\n        gap: var(--oc-gap-h);\n    }\n    .org-maincon-separator {\n        width: 3px;\n        min-height: 100px;\n        background: linear-gradient(180deg, transparent, #cbd5e1 25%, #cbd5e1 75%, transparent);\n        align-self: stretch;\n        flex-shrink: 0;\n        border-radius: 999px;\n        padding: 0 !important;\n        margin: 0 4px;\n    }\n    .org-maincon-separator::before,\n    .org-maincon-separator::after {\n        display: none !important;\n    }\n    .org-chart-tree ul.org-secondary-maincon-row > li {
+    /* Maincon row: primary branch + right-side secondary 5x5 grid */
+    .org-maincon-combined-row {
+        gap: var(--oc-gap-h);
+        align-items: flex-start;
+    }
+    .org-maincon-separator {
+        width: 3px;
+        min-height: 108px;
+        background: linear-gradient(180deg, transparent, #cbd5e1 25%, #cbd5e1 75%, transparent);
+        align-self: stretch;
+        flex-shrink: 0;
+        border-radius: 999px;
+        padding: 0 !important;
+        margin: 0 4px;
+    }
+    .org-maincon-separator::before,
+    .org-maincon-separator::after {
+        display: none !important;
+    }
+    .org-secondary-maincon-cell {
+        min-width: 820px;
+        width: 820px;
+        padding: 0 !important;
+        position: relative;
+    }
+    .org-secondary-maincon-cell::before,
+    .org-secondary-maincon-cell::after {
+        display: none !important;
+    }
+    .org-secondary-maincon-cell > .org-secondary-caption {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 8px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.45px;
+        text-transform: uppercase;
+        color: #64748b;
+        background: #e2e8f0;
+        border-radius: 999px;
+        padding: 4px 10px;
+    }
+    .org-chart-tree ul.org-secondary-maincon-row {
+        margin: 0;
+        padding-top: 8px;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(145px, 1fr));
+        grid-auto-rows: minmax(90px, auto);
+        gap: 10px;
+        min-width: 820px;
+    }
+    .org-chart-tree ul.org-secondary-maincon-row > li {
         width: 100%;
         padding: 0;
     }
@@ -837,6 +889,33 @@
         border: 1px solid #bae6fd;
         border-radius: 6px;
         padding: 2px 6px;
+    }
+    /* Achievement state: merah -> coklat -> hijau */
+    .org-node[data-ach-band="none"] .org-node-tag {
+        color: #b91c1c;
+        background: #fee2e2;
+        border-color: #fca5a5;
+    }
+    .org-node[data-ach-band="low"] .org-node-tag {
+        color: #92400e;
+        background: #fef3c7;
+        border-color: #fcd34d;
+    }
+    .org-node[data-ach-band="mid"] .org-node-tag {
+        color: #3f6212;
+        background: #fef9c3;
+        border-color: #bef264;
+    }
+    .org-node[data-ach-band="good"] .org-node-tag {
+        color: #166534;
+        background: #dcfce7;
+        border-color: #86efac;
+    }
+    .org-node[data-ach-band="full"] .org-node-tag {
+        color: #14532d;
+        background: #bbf7d0;
+        border-color: #4ade80;
+        box-shadow: 0 0 0 1px rgba(34,197,94,0.25) inset;
     }
     .org-level-pill {
         display: inline-flex;
@@ -2153,12 +2232,23 @@
             return "org-children";
         }
 
+        string GetAchievementBand(double achievementRate)
+        {
+            var normalized = Math.Max(0d, Math.Min(achievementRate, 100d));
+            if (normalized <= 0d) return "none";
+            if (normalized < 35d) return "low";
+            if (normalized < 70d) return "mid";
+            if (normalized < 100d) return "good";
+            return "full";
+        }
+
         void RenderMatrixNode(MBS_SAP.Controllers.CompanyHierarchyNode node, int level, string mainconGroup)
         {
             var tierName = GetTierName(level);
             var tierKey = GetTierKey(level);
+            var achievementBand = GetAchievementBand(node.CumulativeAchievementRate);
 
-            <li class="org-node org-node-matrix" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup">
+            <li class="org-node org-node-matrix" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup" data-ach-band="@achievementBand">
                 <div class="org-node-card">
                     <div class="org-node-card-inner">
                         <div class="org-avatar"><i class="bi bi-building"></i></div>
@@ -2166,6 +2256,7 @@
                             <div class="org-node-title">@node.CompanyName</div>
                             <div class="org-node-meta">@node.CumulativeSubmissions/@node.CumulativeTarget SAP</div>
                             <div class="org-node-badges">
+                                <span class="org-node-tag">@($"{node.CumulativeAchievementRate:0.#}%")</span>
                                 <span class="org-level-pill">@tierName</span>
                             </div>
                         </div>
@@ -2179,8 +2270,9 @@
             var hasChildren = mainconNode.Children != null && mainconNode.Children.Count > 0;
             var tierKey = GetTierKey(level);
             var tierLabel = "MAINCON L2";
+            var achievementBand = GetAchievementBand(mainconNode.CumulativeAchievementRate);
 
-            <li class="org-node org-node-matrix org-secondary-branch @(hasChildren ? "has-children" : string.Empty)" data-company-name="@mainconNode.CompanyName" data-company-id="@mainconNode.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="secondary">
+            <li class="org-node org-node-matrix org-secondary-branch @(hasChildren ? "has-children" : string.Empty)" data-company-name="@mainconNode.CompanyName" data-company-id="@mainconNode.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="secondary" data-ach-band="@achievementBand">
                 <div class="org-node-card">
                     <div class="org-node-card-inner">
                         <div class="org-avatar"><i class="bi bi-building"></i></div>
@@ -2188,6 +2280,7 @@
                             <div class="org-node-title">@mainconNode.CompanyName</div>
                             <div class="org-node-meta">@mainconNode.CumulativeSubmissions/@mainconNode.CumulativeTarget SAP</div>
                             <div class="org-node-badges">
+                                <span class="org-node-tag">@($"{mainconNode.CumulativeAchievementRate:0.#}%")</span>
                                 <span class="org-level-pill">@tierLabel</span>
                             </div>
                         </div>
@@ -2218,8 +2311,9 @@
             var isPrimaryMaincon = isMainconLevel && primaryChildSet.Contains(companyNameKey);
             var mainconGroup = isMainconLevel ? (isPrimaryMaincon ? "primary" : "secondary") : inheritedMainconGroup;
             var childContainerClass = GetChildContainerClass(childCount);
+            var achievementBand = GetAchievementBand(node.CumulativeAchievementRate);
 
-            <li class="org-node @(hasChildren ? "has-children" : string.Empty)" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup">
+            <li class="org-node @(hasChildren ? "has-children" : string.Empty)" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup" data-ach-band="@achievementBand">
                 <div class="org-node-card">
                     <div class="org-node-card-inner">
                         <div class="org-avatar"><i class="bi @(level == 0 ? "bi-building-fill" : (hasChildren ? "bi-building" : "bi-building"))"></i></div>
@@ -2227,7 +2321,7 @@
                             <div class="org-node-title">@node.CompanyName</div>
                             <div class="org-node-meta">@node.CumulativeSubmissions/@node.CumulativeTarget SAP</div>
                             <div class="org-node-badges">
-                                <span class="org-node-tag">@node.CumulativeAchievementRate%</span>
+                                <span class="org-node-tag">@($"{node.CumulativeAchievementRate:0.#}%")</span>
                                 <span class="org-level-pill">@tierName</span>
                             </div>
                         </div>
@@ -2252,9 +2346,17 @@
                             {
                                 <li class="org-maincon-separator" aria-hidden="true"></li>
                             }
-                            @foreach (var child in otherChildren)
+                            @if (otherChildren.Any())
                             {
-                                RenderSecondaryBranch(child, level + 1);
+                                <li class="org-secondary-maincon-cell">
+                                    <div class="org-secondary-caption">Maincon Non Utama 5x5</div>
+                                    <ul class="org-secondary-maincon-row org-secondary-maincon-row-5x5" data-child-count="@otherChildren.Count">
+                                        @foreach (var child in otherChildren)
+                                        {
+                                            RenderSecondaryBranch(child, level + 1);
+                                        }
+                                    </ul>
+                                </li>
                             }
                         </ul>
                     }
