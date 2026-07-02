@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using MBS_SAP.Data;
+using Microsoft.Extensions.Hosting;
 
 namespace MBS_SAP.Services
 {
@@ -8,17 +9,31 @@ namespace MBS_SAP.Services
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<PostgresReplicationScheduler> _logger;
+        private readonly IHostApplicationLifetime _appLifetime;
 
         public PostgresReplicationScheduler(
             IServiceScopeFactory scopeFactory,
+            IHostApplicationLifetime appLifetime,
             ILogger<PostgresReplicationScheduler> logger)
         {
             _scopeFactory = scopeFactory;
+            _appLifetime = appLifetime;
             _logger = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // Wait until host startup completes. If startup fails (e.g., port conflict),
+            // stoppingToken will cancel and we exit cleanly without touching disposed services.
+            try
+            {
+                await WaitUntilApplicationStartedAsync(stoppingToken);
+            }
+            catch (TaskCanceledException)
+            {
+                return;
+            }
+
             await RunInitialSyncAsync(stoppingToken);
 
             while (!stoppingToken.IsCancellationRequested)
@@ -52,6 +67,18 @@ namespace MBS_SAP.Services
             }
         }
 
+        private async Task WaitUntilApplicationStartedAsync(CancellationToken cancellationToken)
+        {
+            if (_appLifetime.ApplicationStarted.IsCancellationRequested)
+            {
+                return;
+            }
+
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var registration = _appLifetime.ApplicationStarted.Register(() => tcs.TrySetResult());
+            await tcs.Task.WaitAsync(cancellationToken);
+        }
+
         private async Task RunInitialSyncAsync(CancellationToken cancellationToken)
         {
             var startOfYear = new DateTime(DateTime.Now.Year, 1, 1);
@@ -72,6 +99,11 @@ namespace MBS_SAP.Services
         {
             try
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 using var scope = _scopeFactory.CreateScope();
                 var replicationService = scope.ServiceProvider.GetRequiredService<PostgresReplicationService>();
                 var result = await replicationService.ReplicateAsync(lookbackDays, cancellationToken);
@@ -93,6 +125,14 @@ namespace MBS_SAP.Services
                     result.InspectionSkippedCompany,
                     dedupResult,
                     result.LookbackDays);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Postgres replication {Mode} canceled.", mode);
+            }
+            catch (ObjectDisposedException)
+            {
+                _logger.LogInformation("Postgres replication {Mode} skipped because host is shutting down.", mode);
             }
             catch (Exception ex)
             {

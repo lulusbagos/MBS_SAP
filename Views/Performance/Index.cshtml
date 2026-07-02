@@ -378,20 +378,557 @@
         border-color: rgba(239, 68, 68, 0.2);
         color: #ef4444;
     }
-    .hierarchy-node {
+    /* ═══════════════════════════════════════════════════
+       ORG CHART – PREMIUM REDESIGN
+       Design tokens defined on .org-chart-wrapper root
+    ═══════════════════════════════════════════════════ */
+    .org-chart-wrapper {
+        /* tokens */
+        --oc-line:         #b0bec5;
+        --oc-line-w:       2px;
+        --oc-radius:       12px;
+        --oc-gap-h:        28px;
+        --oc-conn-v:       28px;
+        /* colours per tier */
+        --oc-owner-border: #1e40af;
+        --oc-owner-bar:    linear-gradient(135deg,#1e40af,#2563eb);
+        --oc-owner-bg:     #ffffff;
+        --oc-main-border:  #0284c7;
+        --oc-main-bar:     linear-gradient(135deg,#0369a1,#0ea5e9);
+        --oc-main-bg:      #ffffff;
+        --oc-sub-border:   #0d9488;
+        --oc-sub-bar:      linear-gradient(135deg,#0f766e,#14b8a6);
+        --oc-sub-bg:       #ffffff;
+        --oc-vend-border:  #b45309;
+        --oc-vend-bar:     linear-gradient(135deg,#b45309,#f59e0b);
+        --oc-vend-bg:      #ffffff;
+        /* layout */
+        overflow: auto;
+        max-height: min(74vh, 940px);
+        padding: 24px 20px 20px;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        background-color: #f0f4f8;
+        background-image:
+            radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+        background-size: 22px 22px;
+        scroll-behavior: smooth;
+        box-shadow: inset 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .org-chart-tree,
+    .org-chart-tree ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+    .org-chart-tree {
+        text-align: center;
+        min-width: max-content;
+        padding: 4px 8px 8px;
+    }
+    .org-chart-tree ul {
+        position: relative;
+        padding-top: var(--oc-conn-v);
+        display: flex;
+        justify-content: center;
+        gap: var(--oc-gap-h);
+    }
+    .org-chart-tree ul.org-children-compact {
+        gap: 16px;
+    }
+    .org-chart-tree ul.org-children-dense {
+        gap: 10px;
+        padding-top: 20px;
+    }
+    .org-chart-tree ul.org-children-dense::before {
+        height: 20px;
+    }
+    .org-chart-tree ul.org-secondary-matrix {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(145px, 1fr));
+        gap: 10px;
+        padding-top: 34px;
+        justify-content: stretch;
+        min-width: 820px;
+    }
+    .org-chart-tree ul.org-secondary-matrix::before {
+        display: none;
+    }
+    .org-chart-tree ul.org-secondary-matrix > li {
+        width: 100%;
+        padding: 0;
+    }
+    .org-chart-tree ul.org-secondary-matrix > li::before,
+    .org-chart-tree ul.org-secondary-matrix > li::after {
+        display: none;
+    }
+    .org-chart-outer {
         position: relative;
     }
-    .hierarchy-children {
-        position: relative;
-        padding-left: 28px;
-        margin-left: 12px;
-        border-left: 1.5px dashed rgba(255, 255, 255, 0.15);
+    .org-scroll-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        gap: 8px;
     }
-    body.light-theme .hierarchy-children {
-        border-left: 1.5px dashed rgba(0, 0, 0, 0.15);
+    .org-scroll-btn {
+        flex-shrink: 0;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        border: 1.5px solid #e2e8f0;
+        background: #ffffff;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        box-shadow: 0 1px 4px rgba(15,23,42,0.07);
     }
-    .hierarchy-item {
+    .org-scroll-btn:hover {
+        border-color: #0284c7;
+        color: #0284c7;
+        background: #f0f9ff;
+        box-shadow: 0 2px 8px rgba(14,165,233,0.18);
+    }
+    .org-scroll-btn:active {
+        transform: scale(0.93);
+    }
+    .org-scroll-track {
+        flex: 1;
+        height: 4px;
+        background: #e2e8f0;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+    .org-scroll-thumb {
+        height: 100%;
+        background: linear-gradient(90deg,#0369a1,#0ea5e9);
+        border-radius: 999px;
+        transition: width 0.2s, left 0.2s;
         position: relative;
+        min-width: 30px;
+    }
+    .org-chart-wrapper {
+        cursor: grab;
+    }
+    .org-chart-wrapper.is-dragging {
+        cursor: grabbing;
+        user-select: none;
+    }
+    /* secondary maincon aligned at the edge, same top level as primary row */
+    .org-level1-flex {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .org-secondary-block {
+        margin-top: 16px;
+        padding-top: 20px;
+        border-top: 1px solid #e2e8f0;
+        position: relative;
+        min-width: 820px;
+        width: 100%;
+    }
+    .org-secondary-block::after {
+        content: "Maincon Non Utama";
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: #94a3b8;
+        background: #f0f4f8;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 3px 12px;
+        white-space: nowrap;
+    }
+    .org-chart-tree ul.org-secondary-maincon-row {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(145px, 1fr));
+        gap: 10px;
+        padding-top: 2px;
+        min-width: 820px;
+        align-items: start;
+    }
+    .org-chart-tree ul.org-secondary-maincon-row::before {
+        display: none;
+    }
+    .org-chart-tree ul.org-secondary-maincon-row > li.org-secondary-branch {
+        width: 100%;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    /* ── Maincon row: combined primary + secondary in one row ── */\n    .org-maincon-combined-row {\n        gap: var(--oc-gap-h);\n    }\n    .org-maincon-separator {\n        width: 3px;\n        min-height: 100px;\n        background: linear-gradient(180deg, transparent, #cbd5e1 25%, #cbd5e1 75%, transparent);\n        align-self: stretch;\n        flex-shrink: 0;\n        border-radius: 999px;\n        padding: 0 !important;\n        margin: 0 4px;\n    }\n    .org-maincon-separator::before,\n    .org-maincon-separator::after {\n        display: none !important;\n    }\n    .org-chart-tree ul.org-secondary-maincon-row > li {
+        width: 100%;
+        padding: 0;
+    }
+    .org-chart-tree ul.org-secondary-maincon-row > li.org-secondary-branch::before,
+    .org-chart-tree ul.org-secondary-maincon-row > li.org-secondary-branch::after {
+        display: none;
+    }
+    .org-chart-tree ul.org-secondary-maincon-row > li::before,
+    .org-chart-tree ul.org-secondary-maincon-row > li::after {
+        display: none;
+    }
+    .org-chart-tree ul.org-secondary-maincon-row > li.org-secondary-branch > .org-node-card {
+        width: 100%;
+    }
+    .org-secondary-branch-subcons {
+        width: 100%;
+        margin-top: 10px;
+        padding-top: 12px;
+        display: grid;
+        gap: 8px;
+        position: relative;
+    }
+    .org-secondary-branch-subcons::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 0;
+        transform: translateX(-50%);
+        height: 12px;
+        border-left: var(--org-line-width) solid var(--org-line-color);
+    }
+    .org-secondary-branch-subcons > li {
+        width: 100%;
+        padding: 0;
+    }
+    .org-secondary-branch-subcons > li::before,
+    .org-secondary-branch-subcons > li::after {
+        display: none;
+    }
+    .org-secondary-branch-subcons > li > .org-node-card {
+        width: 100%;
+    }
+    .org-chart-tree ul.org-subcon-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(150px, 1fr));
+        gap: 10px;
+        min-width: 820px;
+        padding-top: 22px;
+        align-items: start;
+        justify-content: stretch;
+    }
+    .org-chart-tree ul.org-subcon-grid::before {
+        display: none;
+    }
+    .org-chart-tree ul.org-subcon-grid > li {
+        width: 100%;
+        padding: 0;
+    }
+    .org-chart-tree ul.org-subcon-grid > li::before,
+    .org-chart-tree ul.org-subcon-grid > li::after {
+        display: none;
+    }
+    .org-chart-tree ul.org-subcon-grid > li > .org-node-card {
+        width: 100%;
+        min-height: 74px;
+        border-radius: var(--oc-radius);
+        box-shadow: 0 1px 4px rgba(15,23,42,0.07);
+    }
+    .org-chart-tree ul.org-subcon-grid > li > .org-node-card .org-node-card-inner {
+        padding: 7px 8px 8px;
+    }
+    .org-chart-tree ul.org-subcon-grid > li > .org-node-card .org-avatar {
+        width: 26px;
+        height: 26px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+    .org-chart-tree ul.org-subcon-grid > li > .org-node-card .org-node-title {
+        font-size: 10px;
+    }
+    .org-chart-tree ul.org-subcon-grid > li > .org-node-card .org-node-meta {
+        font-size: 9px;
+        line-height: 1.2;
+    }
+    .org-chart-tree ul.org-subcon-grid > li > .org-node-card .org-node-tag,
+    .org-chart-tree ul.org-subcon-grid > li > .org-node-card .org-level-pill {
+        font-size: 8px;
+    }
+    .org-chart-tree ul.org-subcon-grid > li.has-children > .org-node-card::after {
+        display: none;
+    }
+    .org-chart-tree li {
+        position: relative;
+        padding: 0 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .org-chart-tree li::before,
+    .org-chart-tree li::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        width: 50%;
+        height: 18px;
+        border-top: var(--oc-line-w) solid var(--oc-line);
+    }
+    .org-chart-tree li::before {
+        right: 50%;
+        border-right: var(--oc-line-w) solid var(--oc-line);
+        border-radius: 0 0 0 0;
+    }
+    .org-chart-tree li::after {
+        left: 50%;
+        border-left: var(--oc-line-w) solid var(--oc-line);
+    }
+    .org-chart-tree li:only-child::before,
+    .org-chart-tree li:only-child::after {
+        display: none;
+    }
+    .org-chart-tree li:only-child {
+        padding-top: 0;
+    }
+    .org-chart-tree li:first-child::before,
+    .org-chart-tree li:last-child::after {
+        border: 0;
+    }
+    .org-chart-tree li:last-child::before {
+        border-right: 0;
+        border-radius: 0 8px 0 0;
+    }
+    .org-chart-tree li:first-child::after {
+        border-radius: 8px 0 0 0;
+    }
+    .org-chart-tree ul::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: var(--oc-conn-v);
+        border-left: var(--oc-line-w) solid var(--oc-line);
+    }
+    .org-node-card {
+        width: 200px;
+        min-height: 88px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--oc-radius);
+        box-shadow: 0 2px 8px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04);
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        text-align: left;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+        overflow: hidden;
+    }
+    .org-node-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px rgba(15,23,42,0.12), 0 2px 4px rgba(15,23,42,0.06);
+    }
+    /* Top accent bar */
+    .org-node-card::before {
+        content: "";
+        display: block;
+        height: 4px;
+        width: 100%;
+        background: #94a3b8;
+        border-radius: var(--oc-radius) var(--oc-radius) 0 0;
+        flex-shrink: 0;
+    }
+    .org-node-card-inner {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 9px 10px 10px;
+        flex: 1;
+    }
+    .org-node.has-children > .org-node-card::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        top: calc(100% + 1px);
+        height: 14px;
+        border-left: var(--oc-line-w) solid var(--oc-line);
+    }
+    .org-node[data-level="0"] > .org-node-card {
+        width: 230px;
+    }
+    .org-node[data-level="1"] > .org-node-card {
+        width: 206px;
+    }
+    .org-node[data-level="2"] > .org-node-card {
+        width: 192px;
+    }
+    .org-node[data-level="3"] > .org-node-card,
+    .org-node[data-level="4"] > .org-node-card,
+    .org-node[data-level="5"] > .org-node-card {
+        width: 178px;
+        min-height: 82px;
+    }
+    .org-chart-tree ul.org-children-compact > .org-node > .org-node-card {
+        width: 178px;
+        min-height: 82px;
+    }
+    .org-chart-tree ul.org-children-dense > .org-node > .org-node-card {
+        width: 158px;
+        min-height: 78px;
+    }
+    .org-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: #f1f5f9;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+        border: 1px solid #e2e8f0;
+    }
+    .org-chart-tree ul.org-children-dense > .org-node > .org-node-card .org-avatar {
+        width: 26px;
+        height: 26px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+    .org-node-text { flex: 1; min-width: 0; }
+    .org-node-title {
+        font-size: 11px;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+    .org-chart-tree ul.org-children-dense > .org-node > .org-node-card .org-node-title {
+        font-size: 10px;
+    }
+    .org-node-meta {
+        font-size: 9.5px;
+        color: #64748b;
+        line-height: 1.4;
+        margin-top: 3px;
+    }
+    .org-chart-tree ul.org-children-dense > .org-node > .org-node-card .org-node-meta {
+        font-size: 9px;
+        line-height: 1.3;
+    }
+    .org-node-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 5px;
+    }
+    .org-node-tag {
+        display: inline-flex;
+        align-items: center;
+        font-size: 9px;
+        font-weight: 700;
+        color: #0369a1;
+        background: #e0f2fe;
+        border: 1px solid #bae6fd;
+        border-radius: 6px;
+        padding: 2px 6px;
+    }
+    .org-level-pill {
+        display: inline-flex;
+        align-items: center;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        border-radius: 6px;
+        padding: 2px 6px;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        background: #f8fafc;
+    }
+    /* ── Tier accent bars ── */
+    .org-node[data-tier="owner"] > .org-node-card::before  { background: var(--oc-owner-bar); }
+    .org-node[data-tier="maincon"] > .org-node-card::before { background: var(--oc-main-bar);  }
+    .org-node[data-tier="subcon"] > .org-node-card::before  { background: var(--oc-sub-bar);   }
+    .org-node[data-tier="vendor"] > .org-node-card::before  { background: var(--oc-vend-bar);  }
+    /* ── Tier borders & backgrounds ── */
+    .org-node[data-tier="owner"] > .org-node-card  { border-color: #c7d7fc; }
+    .org-node[data-tier="maincon"] > .org-node-card { border-color: #bae6fd; }
+    .org-node[data-tier="subcon"] > .org-node-card  { border-color: #99f6e4; }
+    .org-node[data-tier="vendor"] > .org-node-card  { border-color: #fed7aa; }
+    /* ── Tier level pills ── */
+    .org-node[data-tier="owner"] .org-level-pill {
+        color: #1e40af; background: #dbeafe; border-color: #93c5fd;
+    }
+    .org-node[data-tier="maincon"] .org-level-pill {
+        color: #0c4a6e; background: #e0f2fe; border-color: #7dd3fc;
+    }
+    .org-node[data-tier="subcon"] .org-level-pill {
+        color: #065f46; background: #d1fae5; border-color: #6ee7b7;
+    }
+    .org-node[data-tier="vendor"] .org-level-pill {
+        color: #7c2d12; background: #fef3c7; border-color: #fcd34d;
+    }
+    /* ── Primary maincon: bolder accent ── */
+    .org-node[data-maincon-group="primary"] > .org-node-card {
+        border-color: #7dd3fc;
+        box-shadow: 0 4px 16px rgba(14,165,233,0.15), 0 1px 3px rgba(14,165,233,0.1);
+    }
+    .org-node[data-maincon-group="primary"] .org-level-pill {
+        color: #0c4a6e; background: #bae6fd; border-color: #38bdf8;
+    }
+    /* ── Secondary maincon: neutral ── */
+    .org-node[data-maincon-group="secondary"] > .org-node-card {
+        border-color: #e2e8f0;
+    }
+    .org-node[data-maincon-group="secondary"] .org-level-pill {
+        color: #475569; background: #f1f5f9; border-color: #cbd5e1;
+    }
+    .org-node.org-node-matrix > .org-node-card {
+        width: 100%;
+        min-height: 74px;
+        border-radius: var(--oc-radius);
+        box-shadow: 0 1px 4px rgba(15,23,42,0.07);
+    }
+    .org-node.org-node-matrix > .org-node-card .org-node-card-inner {
+        padding: 7px 8px 8px;
+    }
+    .org-node.org-node-matrix > .org-node-card .org-avatar {
+        width: 26px;
+        height: 26px;
+        font-size: 13px;
+        border-radius: 6px;
+    }
+    .org-node.org-node-matrix > .org-node-card .org-node-title {
+        font-size: 10px;
+    }
+    .org-node.org-node-matrix > .org-node-card .org-node-meta {
+        font-size: 9px;
+        line-height: 1.2;
+    }
+    .org-node.org-node-matrix > .org-node-card .org-level-pill,
+    .org-node.org-node-matrix > .org-node-card .org-node-tag {
+        font-size: 8px;
+    }
+    .org-chart-tree ul.org-children-dense > .org-node > .org-node-card .org-node-tag {
+        font-size: 8px;
+        padding: 1px 5px;
+    }
+    /* ── Level 0 (OWNER) extra prominence ── */
+    .org-node[data-level="0"] > .org-node-card {
+        box-shadow: 0 6px 24px rgba(30,64,175,0.15), 0 2px 6px rgba(30,64,175,0.08);
+    }
+    .org-node[data-level="0"] > .org-node-card::before {
+        height: 5px;
+    }
+    /* ── Primary maincon prominence ── */
+    .org-node[data-maincon-group="primary"][data-level="1"] > .org-node-card::before {
+        height: 5px;
     }
     .hierarchy-toolbar {
         display: flex;
@@ -399,6 +936,34 @@
         gap: 8px;
         align-items: center;
         margin-bottom: 12px;
+    }
+    .hierarchy-toggle-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .hierarchy-mode-btn {
+        border: 1.5px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        color: #475569;
+        background: #ffffff;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .hierarchy-mode-btn:hover {
+        border-color: #7dd3fc;
+        color: #0284c7;
+        background: #f0f9ff;
+    }
+    .hierarchy-mode-btn.is-active {
+        border-color: #0284c7;
+        background: linear-gradient(135deg,#0369a1,#0ea5e9);
+        color: #ffffff;
+        box-shadow: 0 2px 8px rgba(14,165,233,0.3);
     }
     .hierarchy-search {
         flex: 1 1 280px;
@@ -415,25 +980,47 @@
         border-color: #38bdf8;
         box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
     }
-    .hierarchy-btn {
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        background: var(--bg-card);
-        color: var(--text-main);
-        padding: 8px 10px;
-        font-size: 11px;
-        font-weight: 700;
-        transition: all 0.15s ease;
-    }
-    .hierarchy-btn:hover {
-        border-color: #38bdf8;
-        color: #38bdf8;
-    }
     .hierarchy-summary {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 12px;
+    }
+    .hierarchy-lead {
+        font-size: 12px;
+        color: #cbd5e1;
+        margin-bottom: 8px;
+    }
+    .hierarchy-source {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-bottom: 12px;
+    }
+    .hierarchy-hint {
+        font-size: 10px;
+        color: #64748b;
+        margin-top: 6px;
+        margin-bottom: 0;
+    }
+    .hierarchy-empty {
+        border: 1px dashed #334155;
+        background: rgba(15, 23, 42, 0.45);
+        color: #cbd5e1;
+        border-radius: 10px;
+    }
+    body.light-theme .hierarchy-lead {
+        color: #334155;
+    }
+    body.light-theme .hierarchy-source {
+        color: #475569;
+    }
+    body.light-theme .hierarchy-hint {
+        color: #64748b;
+    }
+    body.light-theme .hierarchy-empty {
+        border-color: #cbd5e1;
+        background: #ffffff;
+        color: #334155;
     }
     .hierarchy-summary-chip {
         border: 1px solid var(--border-color);
@@ -444,44 +1031,30 @@
         font-weight: 700;
         color: var(--text-main);
     }
-    .hierarchy-meta-badge {
-        font-size: 9px;
+    .hierarchy-level-guide {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 6px 0 14px;
+    }
+    .hierarchy-level-guide span {
+        font-size: 9.5px;
         font-weight: 700;
+        letter-spacing: 0.5px;
         text-transform: uppercase;
-        letter-spacing: 0.3px;
-        border-radius: 999px;
-        border: 1px solid var(--border-color);
-        padding: 2px 6px;
-        color: var(--text-muted);
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        padding: 4px 10px;
+        color: #475569;
+        background: #ffffff;
     }
-    .hierarchy-item .card-sap {
-        transition: all 0.2s ease;
-        border-left: 3px solid transparent !important;
-    }
-    .hierarchy-item .card-sap:hover {
-        transform: translateX(4px);
-        box-shadow: 0 4px 15px rgba(3, 105, 161, 0.15);
-        border-left: 3px solid var(--color-primary) !important;
-        background: var(--bg-card-hover) !important;
-    }
-    .hierarchy-children > .hierarchy-node > .hierarchy-item::before {
-        content: "";
-        position: absolute;
-        top: 28px;
-        left: -16px;
-        width: 16px;
-        height: 1.5px;
-        border-top: 1.5px dashed rgba(255, 255, 255, 0.15);
-        z-index: 1;
-    }
-    body.light-theme .hierarchy-children > .hierarchy-node > .hierarchy-item::before {
-        border-top: 1.5px dashed rgba(0, 0, 0, 0.15);
-    }
-    .hierarchy-item .toggle-icon {
-        transition: transform 0.2s ease;
-    }
-    .hierarchy-item .toggle-icon.is-collapsed {
-        transform: rotate(-90deg);
+    .hierarchy-level-guide .role-owner        { border-color: #93c5fd; background: #dbeafe; color: #1e40af; }
+    .hierarchy-level-guide .role-maincon      { border-color: #7dd3fc; background: #e0f2fe; color: #0c4a6e; }
+    .hierarchy-level-guide .role-maincon-primary { border-color: #38bdf8; background: #bae6fd; color: #0c4a6e; font-weight: 800; }
+    .hierarchy-level-guide .role-subcon       { border-color: #6ee7b7; background: #d1fae5; color: #065f46; }
+    .hierarchy-level-guide .role-vendor       { border-color: #fcd34d; background: #fef3c7; color: #7c2d12; }
+    .org-node-hidden {
+        display: none !important;
     }
 
     @@media (max-width: 767.98px) {
@@ -489,40 +1062,91 @@
             flex-direction: column;
             align-items: stretch;
         }
-        .hierarchy-btn {
+        .hierarchy-toggle-group {
             width: 100%;
         }
-        .hierarchy-children {
-            padding-left: 16px;
-            margin-left: 6px;
+        .hierarchy-mode-btn {
+            flex: 1 1 calc(50% - 3px);
+            text-align: center;
         }
-        .hierarchy-children > .hierarchy-node > .hierarchy-item::before {
-            left: -10px;
-            width: 10px;
+        .org-chart-wrapper {
+            max-height: 68vh;
+            padding: 8px;
+            background-size: 14px 14px;
         }
-        .hierarchy-item .card-sap > div {
-            flex-direction: column !important;
-            align-items: flex-start !important;
+        .org-chart-tree ul {
+            gap: 10px;
+            padding-top: 22px;
         }
-        .hierarchy-item .card-sap .text-end {
-            text-align: left !important;
-            margin-top: 12px;
+        .org-chart-tree ul.org-secondary-matrix {
+            grid-template-columns: repeat(3, minmax(140px, 1fr));
+            min-width: 540px;
+            padding-top: 28px;
+        }
+        .org-secondary-block {
+            margin-top: 10px;
+            padding-top: 14px;
+            min-width: 540px;
+        }
+        .org-secondary-block::after {
+            font-size: 9px;
+            top: 2px;
+            padding: 1px 7px;
+        }
+        .org-chart-tree ul.org-secondary-maincon-row {
+            grid-template-columns: repeat(3, minmax(140px, 1fr));
+            min-width: 540px;
+        }
+        .org-secondary-branch-subcons {
+            margin-top: 8px;
+            padding-top: 10px;
+            gap: 6px;
+        }
+        .org-secondary-branch-subcons::before {
+            height: 10px;
+        }
+        .org-chart-tree ul.org-subcon-grid {
+            grid-template-columns: repeat(3, minmax(140px, 1fr));
+            min-width: 540px;
+            padding-top: 18px;
+        }
+        .org-chart-tree ul::before {
+            height: 22px;
+        }
+        .org-chart-tree li {
+            padding: 0 3px;
+        }
+        .org-chart-tree li::before,
+        .org-chart-tree li::after {
+            height: 12px;
+        }
+        .org-node.has-children > .org-node-card::after {
+            height: 10px;
+        }
+        .org-node-card {
+            width: 164px;
+            min-height: 84px;
+            padding: 8px;
+        }
+        .org-node[data-level="0"] > .org-node-card {
+            width: 182px;
+        }
+        .org-node[data-level="1"] > .org-node-card,
+        .org-node[data-level="2"] > .org-node-card,
+        .org-node[data-level="3"] > .org-node-card,
+        .org-node[data-level="4"] > .org-node-card,
+        .org-node[data-level="5"] > .org-node-card {
+            width: 160px;
+        }
+        .org-node.org-node-matrix > .org-node-card {
             width: 100%;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px !important;
-            justify-content: flex-start !important;
-            border-top: 1px solid var(--border-color);
-            padding-top: 12px;
         }
-        .hierarchy-item .card-sap .text-end > div {
-            border-right: none !important;
-            padding-right: 0 !important;
-            min-width: 100% !important;
-            margin-bottom: 0 !important;
+        .org-chart-tree ul.org-subcon-grid > li > .org-node-card {
+            width: 100%;
         }
-        .hierarchy-item .card-sap .text-end .d-flex {
-            justify-content: flex-start !important;
+        .org-chart-tree ul.org-children-compact > .org-node > .org-node-card,
+        .org-chart-tree ul.org-children-dense > .org-node > .org-node-card {
+            width: 148px;
         }
     }
 
@@ -1470,6 +2094,13 @@
 
     @{
         var hierarchy = ViewBag.CompanyHierarchy as List<MBS_SAP.Controllers.CompanyHierarchyNode> ?? new List<MBS_SAP.Controllers.CompanyHierarchyNode>();
+        var primaryChildren = ViewBag.CompanyHierarchyPrimaryChildren as List<string> ?? new List<string>();
+        var primaryChildSet = new HashSet<string>(
+            primaryChildren
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Select(c => c.Trim()),
+            StringComparer.OrdinalIgnoreCase
+        );
 
         int CountNodes(IEnumerable<MBS_SAP.Controllers.CompanyHierarchyNode> nodes)
         {
@@ -1494,84 +2125,70 @@
             return node.Children.Max(c => MaxDepth(c, currentLevel + 1));
         }
 
-        var totalHierarchyNodes = CountNodes(hierarchy);
+        var countedHierarchyNodes = CountNodes(hierarchy);
+        var totalHierarchyNodes = (int?)ViewBag.CompanyHierarchyActualActiveCount ?? countedHierarchyNodes;
+        var renderedHierarchyNodes = (int?)ViewBag.CompanyHierarchyRenderedCount ?? countedHierarchyNodes;
         var hierarchyDepth = hierarchy.Any() ? hierarchy.Max(n => MaxDepth(n)) : 0;
 
-        void RenderNode(MBS_SAP.Controllers.CompanyHierarchyNode node, int level = 0)
+        string GetTierName(int level)
         {
-            var hasChildren = node.Children != null && node.Children.Count > 0;
-            var collapseId = $"collapse_comp_{node.CompanyId}";
-            var progressColor = node.CumulativeAchievementRate >= 100 ? "bg-success" : (node.CumulativeAchievementRate >= 50 ? "bg-warning" : "bg-danger");
-            var ownProgressColor = node.OwnAchievementRate >= 100 ? "bg-success" : (node.OwnAchievementRate >= 50 ? "bg-warning" : "bg-danger");
-            var leftIndent = level * 18;
+            if (level <= 0) return "OWNER";
+            if (level == 1) return "MAINCON";
+            if (level == 2) return "SUBCON";
+            return "VENDOR";
+        }
 
-            <div class="hierarchy-node" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@(level + 1)" style="margin-left:@(leftIndent)px;">
-                <div class="hierarchy-item mb-2">
-                    <div class="card-sap p-3 border-0 position-relative animate-fade-in" style="border-radius: 14px; background: var(--bg-card);">
-                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                            
-                            <!-- Left: Collapse toggle + Name -->
-                            <div class="d-flex align-items-center gap-2" style="min-width: 250px; flex-grow: 1;">
-                                @if (hasChildren)
-                                {
-                                    <button class="btn btn-sm p-0 border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#@collapseId" aria-expanded="true" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 6px; z-index: 2;">
-                                        <i class="bi bi-chevron-down toggle-icon" style="transition: transform 0.2s;"></i>
-                                    </button>
-                                }
-                                else
-                                {
-                                    <div style="width: 24px;"></div>
-                                }
-                                <div>
-                                    <div class="d-flex align-items-center gap-2 flex-wrap" style="font-weight: 800; font-size: 13px; color: var(--text-main);">
-                                        <span>@node.CompanyName</span>
-                                        <span class="hierarchy-meta-badge">Level @(level + 1)</span>
-                                        @if (hasChildren)
-                                        {
-                                            <span class="hierarchy-meta-badge">@(node.Children?.Count ?? 0) Anak</span>
-                                        }
-                                    </div>
-                                    <span class="text-muted" style="font-size: 10px;">ID Perusahaan: @node.CompanyId</span>
-                                </div>
+        string GetTierKey(int level)
+        {
+            if (level <= 0) return "owner";
+            if (level == 1) return "maincon";
+            if (level == 2) return "subcon";
+            return "vendor";
+        }
+
+        string GetChildContainerClass(int childCount)
+        {
+            if (childCount >= 12) return "org-children org-children-dense";
+            if (childCount >= 7) return "org-children org-children-compact";
+            return "org-children";
+        }
+
+        void RenderMatrixNode(MBS_SAP.Controllers.CompanyHierarchyNode node, int level, string mainconGroup)
+        {
+            var tierName = GetTierName(level);
+            var tierKey = GetTierKey(level);
+
+            <li class="org-node org-node-matrix" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup">
+                <div class="org-node-card">
+                    <div class="org-node-card-inner">
+                        <div class="org-avatar"><i class="bi bi-building"></i></div>
+                        <div class="org-node-text">
+                            <div class="org-node-title">@node.CompanyName</div>
+                            <div class="org-node-meta">@node.CumulativeSubmissions/@node.CumulativeTarget SAP</div>
+                            <div class="org-node-badges">
+                                <span class="org-level-pill">@tierName</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
 
-                            <!-- Right Stats Grid: Own vs Cumulative -->
-                            <div class="d-flex align-items-center gap-4 flex-wrap text-end">
-                                
-                                <!-- Own Stats -->
-                                <div style="min-width: 130px; border-right: 1px solid var(--border-color); padding-right: 16px;">
-                                    <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Direct (Mandiri)</div>
-                                    <div style="font-size: 11px; font-weight: 600;">
-                                        <i class="bi bi-people me-1"></i>@node.OwnEmployees Karyawan
-                                    </div>
-                                    <div style="font-size: 11px; font-weight: 600; color: var(--color-primary);">
-                                        <i class="bi bi-file-earmark-text me-1"></i>@node.OwnSubmissions/@node.OwnTarget SAP
-                                    </div>
-                                    <div class="d-flex align-items-center justify-content-end gap-2 mt-1">
-                                        <div class="progress-achievement" style="width: 60px; height: 6px;">
-                                            <div class="progress-bar @ownProgressColor" style="width: @Math.Min(node.OwnAchievementRate, 100.0)%;"></div>
-                                        </div>
-                                        <span style="font-size: 10px; font-weight: 800;" class="text-white">@node.OwnAchievementRate%</span>
-                                    </div>
-                                </div>
+        void RenderSecondaryBranch(MBS_SAP.Controllers.CompanyHierarchyNode mainconNode, int level)
+        {
+            var hasChildren = mainconNode.Children != null && mainconNode.Children.Count > 0;
+            var tierKey = GetTierKey(level);
+            var tierLabel = "MAINCON L2";
 
-                                <!-- Cumulative (Group) Stats -->
-                                <div style="min-width: 140px;">
-                                    <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Group (Kumulatif)</div>
-                                    <div style="font-size: 11px; font-weight: 600;">
-                                        <i class="bi bi-people-fill me-1"></i>@node.CumulativeEmployees Karyawan
-                                    </div>
-                                    <div style="font-size: 11px; font-weight: 600; color: var(--color-primary);">
-                                        <i class="bi bi-file-earmark-bar-graph-fill me-1"></i>@node.CumulativeSubmissions/@node.CumulativeTarget SAP
-                                    </div>
-                                    <div class="d-flex align-items-center justify-content-end gap-2 mt-1">
-                                        <div class="progress-achievement" style="width: 60px; height: 6px;">
-                                            <div class="progress-bar @progressColor" style="width: @Math.Min(node.CumulativeAchievementRate, 100.0)%;"></div>
-                                        </div>
-                                        <span style="font-size: 10px; font-weight: 800;" class="text-white">@node.CumulativeAchievementRate%</span>
-                                    </div>
-                                </div>
-
+            <li class="org-node org-node-matrix org-secondary-branch @(hasChildren ? "has-children" : string.Empty)" data-company-name="@mainconNode.CompanyName" data-company-id="@mainconNode.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="secondary">
+                <div class="org-node-card">
+                    <div class="org-node-card-inner">
+                        <div class="org-avatar"><i class="bi bi-building"></i></div>
+                        <div class="org-node-text">
+                            <div class="org-node-title">@mainconNode.CompanyName</div>
+                            <div class="org-node-meta">@mainconNode.CumulativeSubmissions/@mainconNode.CumulativeTarget SAP</div>
+                            <div class="org-node-badges">
+                                <span class="org-level-pill">@tierLabel</span>
                             </div>
                         </div>
                     </div>
@@ -1579,16 +2196,84 @@
 
                 @if (hasChildren)
                 {
-                    <div class="collapse show" id="@collapseId">
-                        <div class="hierarchy-children">
-                            @foreach (var child in node.Children!)
-                            {
-                                RenderNode(child, level + 1);
-                            }
+                    <ul class="org-children org-secondary-branch-subcons" data-child-count="@mainconNode.Children!.Count">
+                        @foreach (var sub in mainconNode.Children!)
+                        {
+                            RenderMatrixNode(sub, level + 1, "secondary");
+                        }
+                    </ul>
+                }
+            </li>
+        }
+
+        void RenderOrgNode(MBS_SAP.Controllers.CompanyHierarchyNode node, int level = 0, string inheritedMainconGroup = "none")
+        {
+            var hasChildren = node.Children != null && node.Children.Count > 0;
+            var childCount = node.Children?.Count ?? 0;
+            var isPrimaryBranchMainconL2 = level == 2 && string.Equals(inheritedMainconGroup, "primary", StringComparison.OrdinalIgnoreCase);
+            var tierName = isPrimaryBranchMainconL2 ? "MAINCON L2" : GetTierName(level);
+            var tierKey = isPrimaryBranchMainconL2 ? "maincon" : GetTierKey(level);
+            var isMainconLevel = level == 1;
+            var companyNameKey = (node.CompanyName ?? string.Empty).Trim();
+            var isPrimaryMaincon = isMainconLevel && primaryChildSet.Contains(companyNameKey);
+            var mainconGroup = isMainconLevel ? (isPrimaryMaincon ? "primary" : "secondary") : inheritedMainconGroup;
+            var childContainerClass = GetChildContainerClass(childCount);
+
+            <li class="org-node @(hasChildren ? "has-children" : string.Empty)" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup">
+                <div class="org-node-card">
+                    <div class="org-node-card-inner">
+                        <div class="org-avatar"><i class="bi @(level == 0 ? "bi-building-fill" : (hasChildren ? "bi-building" : "bi-building"))"></i></div>
+                        <div class="org-node-text">
+                            <div class="org-node-title">@node.CompanyName</div>
+                            <div class="org-node-meta">@node.CumulativeSubmissions/@node.CumulativeTarget SAP</div>
+                            <div class="org-node-badges">
+                                <span class="org-node-tag">@node.CumulativeAchievementRate%</span>
+                                <span class="org-level-pill">@tierName</span>
+                            </div>
                         </div>
                     </div>
+                </div>
+                @if (hasChildren)
+                {
+                    if (level == 0)
+                    {
+                        var orderedChildren = node.Children!;
+                        var primaryMaincons = orderedChildren.Where(c => primaryChildSet.Contains((c.CompanyName ?? string.Empty).Trim())).ToList();
+                        var otherChildren = orderedChildren.Where(c => !primaryChildSet.Contains((c.CompanyName ?? string.Empty).Trim())).ToList();
+                        var totalMaincons = primaryMaincons.Count + otherChildren.Count;
+                        var combinedClass = GetChildContainerClass(totalMaincons);
+
+                        <ul class="@combinedClass org-maincon-combined-row" data-child-count="@totalMaincons">
+                            @foreach (var child in primaryMaincons)
+                            {
+                                RenderOrgNode(child, level + 1, "primary");
+                            }
+                            @if (otherChildren.Any() && primaryMaincons.Any())
+                            {
+                                <li class="org-maincon-separator" aria-hidden="true"></li>
+                            }
+                            @foreach (var child in otherChildren)
+                            {
+                                RenderSecondaryBranch(child, level + 1);
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        var nextChildClass = level == 1
+                            ? (string.Equals(mainconGroup, "primary", StringComparison.OrdinalIgnoreCase)
+                                ? $"{childContainerClass} org-secondary-maincon-row"
+                                : $"{childContainerClass} org-subcon-grid")
+                            : childContainerClass;
+                        <ul class="@nextChildClass" data-child-count="@childCount">
+                            @foreach (var child in node.Children!)
+                            {
+                                RenderOrgNode(child, level + 1, mainconGroup);
+                            }
+                        </ul>
+                    }
                 }
-            </div>
+            </li>
         }
     }
 
@@ -1600,19 +2285,24 @@
                 <h6 class="premium-title">Hirarki Perusahaan</h6>
             </div>
             <div class="premium-body">
-                <p class="text-muted mb-3" style="font-size: 12px;">
+                <p class="hierarchy-lead">
                     Struktur parent-child perusahaan ditampilkan berjenjang dari INDEXIM sampai level terbawah.
                 </p>
-                <p class="text-muted mb-3" style="font-size: 11px;">
+                <p class="hierarchy-source">
                     Sumber data hirarki: @((ViewBag.CompanyHierarchySource as string) ?? "ONE_DB_MITRA.vw_perusahaan")
                 </p>
                 <div class="hierarchy-summary">
                     <span class="hierarchy-summary-chip"><i class="bi bi-diagram-3 me-1"></i>Total Node: @totalHierarchyNodes</span>
+                    <span class="hierarchy-summary-chip"><i class="bi bi-check2-circle me-1"></i>Rendered: @renderedHierarchyNodes</span>
                     <span class="hierarchy-summary-chip"><i class="bi bi-layers me-1"></i>Level Maksimum: @hierarchyDepth</span>
                 </div>
-                @{
-                    var primaryChildren = ViewBag.CompanyHierarchyPrimaryChildren as List<string> ?? new List<string>();
-                }
+                <div class="hierarchy-level-guide">
+                    <span class="role-owner">OWNER</span>
+                    <span class="role-maincon">MAINCON</span>
+                    <span class="role-maincon-primary">MAINCON UTAMA</span>
+                    <span class="role-subcon">SUBCON</span>
+                    <span class="role-vendor">VENDOR</span>
+                </div>
                 @if (primaryChildren.Any())
                 {
                     <div class="card-sap mb-3" style="padding: 12px; border: 1px dashed var(--border-color);">
@@ -1630,7 +2320,7 @@
 
                 @if (hierarchy == null || !hierarchy.Any())
                 {
-                    <div class="card-sap text-center py-4 text-muted">
+                    <div class="card-sap text-center py-4 hierarchy-empty">
                         <i class="bi bi-diagram-3-fill d-block mb-2" style="font-size: 28px;"></i>
                         Data hirarki perusahaan belum tersedia.
                     </div>
@@ -1640,20 +2330,33 @@
                     var indeximRoot = hierarchy.FirstOrDefault(h => (h.CompanyName ?? string.Empty).Contains("INDEXIM", StringComparison.OrdinalIgnoreCase));
                     var rootsToRender = indeximRoot != null
                         ? new List<MBS_SAP.Controllers.CompanyHierarchyNode> { indeximRoot }
-                        : hierarchy;
+                            .Concat(hierarchy.Where(h => h.CompanyId != indeximRoot.CompanyId).OrderBy(h => h.CompanyName))
+                            .ToList()
+                        : hierarchy.OrderBy(h => h.CompanyName).ToList();
 
                     <div class="hierarchy-toolbar">
                         <input id="hierarchySearchInput" type="text" class="hierarchy-search" placeholder="Cari perusahaan / ID perusahaan..." autocomplete="off" />
-                        <button type="button" class="hierarchy-btn" id="btnExpandAllHierarchy"><i class="bi bi-arrows-expand me-1"></i>Buka Semua</button>
-                        <button type="button" class="hierarchy-btn" id="btnCollapseAllHierarchy"><i class="bi bi-arrows-collapse me-1"></i>Tutup Semua</button>
-                        <button type="button" class="hierarchy-btn" id="btnResetHierarchy"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
+                        <div class="hierarchy-toggle-group" id="hierarchyModeToggle">
+                            <button type="button" class="hierarchy-mode-btn is-active" data-mode="all">Semua Child</button>
+                            <button type="button" class="hierarchy-mode-btn" data-mode="primary">Maincon Utama Saja</button>
+                        </div>
                     </div>
+                    <p class="hierarchy-hint">Tip: pilih mode Maincon Utama Saja untuk fokus cabang inti INDEXIM.</p>
 
-                    <div class="d-flex flex-column gap-2" id="hierarchyTreeRoot">
-                        @foreach (var root in rootsToRender)
-                        {
-                            RenderNode(root);
-                        }
+                    <div class="org-chart-outer">
+                        <div class="org-scroll-nav" id="orgScrollNav">
+                            <button type="button" class="org-scroll-btn" id="orgScrollLeft" title="Geser kiri"><i class="bi bi-chevron-left"></i></button>
+                            <div class="org-scroll-track"><div class="org-scroll-thumb" id="orgScrollThumb"></div></div>
+                            <button type="button" class="org-scroll-btn" id="orgScrollRight" title="Geser kanan"><i class="bi bi-chevron-right"></i></button>
+                        </div>
+                        <div class="org-chart-wrapper" id="orgChartWrapper">
+                            <ul class="org-chart-tree" id="hierarchyOrgTree">
+                                @foreach (var root in rootsToRender)
+                                {
+                                    RenderOrgNode(root);
+                                }
+                            </ul>
+                        </div>
                     </div>
                 }
             </div>
@@ -1663,7 +2366,24 @@
 <!-- Charts & Tabs Handling Script -->
 @section Scripts {
 <script>
+    function ensureHierarchySectionDetached() {
+        const hierarchySection = document.getElementById('sectionHierarchy');
+        const companySection = document.getElementById('sectionCompany');
+        if (!hierarchySection || !companySection) {
+            return;
+        }
+
+        if (companySection.contains(hierarchySection)) {
+            const rootContainer = document.getElementById('sectionMy')?.parentElement;
+            if (rootContainer) {
+                rootContainer.appendChild(hierarchySection);
+            }
+        }
+    }
+
     function switchTab(tab) {
+        ensureHierarchySectionDetached();
+
         document.getElementById('sectionMy').style.display = tab === 'my' ? 'block' : 'none';
         document.getElementById('sectionCompany').style.display = tab === 'company' ? 'block' : 'none';
         document.getElementById('sectionHitSafe').style.display = tab === 'hitsafe' ? 'block' : 'none';
@@ -1691,109 +2411,131 @@
     }
 
     function initHierarchyUI() {
-        const treeRoot = document.getElementById('hierarchyTreeRoot');
+        const treeRoot = document.getElementById('hierarchyOrgTree');
         if (!treeRoot || treeRoot.dataset.initialized === '1') {
             return;
         }
 
         const searchInput = document.getElementById('hierarchySearchInput');
-        const expandBtn = document.getElementById('btnExpandAllHierarchy');
-        const collapseBtn = document.getElementById('btnCollapseAllHierarchy');
-        const resetBtn = document.getElementById('btnResetHierarchy');
+        const modeButtons = Array.from(document.querySelectorAll('#hierarchyModeToggle .hierarchy-mode-btn'));
+        let currentMode = 'all';
 
-        function updateToggleIcons() {
-            treeRoot.querySelectorAll('.hierarchy-item').forEach(function (item) {
-                const icon = item.querySelector('.toggle-icon');
-                const collapse = item.parentElement ? item.parentElement.querySelector(':scope > .collapse') : null;
-                if (!icon || !collapse) {
-                    return;
-                }
-                icon.classList.toggle('is-collapsed', !collapse.classList.contains('show'));
-            });
+        function passesMode(nodeEl) {
+            if (currentMode !== 'primary') {
+                return true;
+            }
+
+            return (nodeEl.dataset.mainconGroup || '') !== 'secondary';
         }
 
-        function setAllCollapse(show) {
-            treeRoot.querySelectorAll('.hierarchy-node > .collapse').forEach(function (el) {
-                if (show) {
-                    el.classList.add('show');
-                } else {
-                    el.classList.remove('show');
-                }
-            });
-            updateToggleIcons();
-        }
-
-        function applyFilter(keyword) {
+        function updateHierarchyView(keyword) {
             const normalized = (keyword || '').trim().toLowerCase();
 
-            function evaluate(nodeEl) {
+            function evaluateNode(nodeEl) {
                 const selfName = (nodeEl.dataset.companyName || '').toLowerCase();
                 const selfId = (nodeEl.dataset.companyId || '').toLowerCase();
-                const children = Array.from(nodeEl.querySelectorAll(':scope > .collapse > .hierarchy-children > .hierarchy-node'));
-                let childVisible = false;
+                const selfMatch = normalized.length === 0 || selfName.includes(normalized) || selfId.includes(normalized);
+                const childNodes = Array.from(nodeEl.querySelectorAll(':scope > ul > li.org-node'));
+                let childMatch = false;
 
-                children.forEach(function (child) {
-                    if (evaluate(child)) {
-                        childVisible = true;
+                childNodes.forEach(function (child) {
+                    if (evaluateNode(child)) {
+                        childMatch = true;
                     }
                 });
 
-                const selfMatch = normalized.length === 0 || selfName.includes(normalized) || selfId.includes(normalized);
-                const visible = selfMatch || childVisible;
-                nodeEl.style.display = visible ? '' : 'none';
-
-                const collapse = nodeEl.querySelector(':scope > .collapse');
-                if (collapse) {
-                    if (normalized.length > 0 && visible && childVisible) {
-                        collapse.classList.add('show');
-                    }
-                }
+                const searchMatch = normalized.length === 0 ? true : (selfMatch || childMatch);
+                const modeMatch = passesMode(nodeEl);
+                const visible = modeMatch && searchMatch;
+                nodeEl.classList.toggle('org-node-hidden', !visible);
 
                 return visible;
             }
 
-            Array.from(treeRoot.querySelectorAll(':scope > .hierarchy-node')).forEach(function (rootNode) {
-                evaluate(rootNode);
+            Array.from(treeRoot.querySelectorAll(':scope > li.org-node')).forEach(function (rootNode) {
+                evaluateNode(rootNode);
             });
-
-            updateToggleIcons();
         }
 
         searchInput?.addEventListener('input', function (e) {
-            applyFilter(e.target.value);
+            updateHierarchyView(e.target.value);
         });
 
-        expandBtn?.addEventListener('click', function () {
-            setAllCollapse(true);
-        });
-
-        collapseBtn?.addEventListener('click', function () {
-            setAllCollapse(false);
-        });
-
-        resetBtn?.addEventListener('click', function () {
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            treeRoot.querySelectorAll('.hierarchy-node').forEach(function (node) {
-                node.style.display = '';
+        modeButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                currentMode = button.dataset.mode || 'all';
+                modeButtons.forEach(function (btn) {
+                    btn.classList.toggle('is-active', btn === button);
+                });
+                updateHierarchyView(searchInput ? searchInput.value : '');
             });
-            setAllCollapse(true);
         });
 
-        treeRoot.addEventListener('click', function (event) {
-            const button = event.target.closest('[data-bs-toggle="collapse"]');
-            if (!button) {
-                return;
-            }
-            window.setTimeout(updateToggleIcons, 30);
-        });
-
-        setAllCollapse(true);
+        updateHierarchyView(searchInput ? searchInput.value : '');
         treeRoot.dataset.initialized = '1';
+
+        // === Premium scroll nav ===
+        const wrapper = document.getElementById('orgChartWrapper');
+        const scrollLeft = document.getElementById('orgScrollLeft');
+        const scrollRight = document.getElementById('orgScrollRight');
+        const scrollThumb = document.getElementById('orgScrollThumb');
+
+        function updateScrollThumb() {
+            if (!wrapper || !scrollThumb) return;
+            const { scrollLeft: sl, scrollWidth: sw, clientWidth: cw } = wrapper;
+            if (sw <= cw) { scrollThumb.style.width = '100%'; scrollThumb.style.marginLeft = '0'; return; }
+            const ratio = cw / sw;
+            const thumbW = Math.max(30, ratio * 100);
+            const maxLeft = 100 - thumbW;
+            const scrollRatio = sl / (sw - cw);
+            scrollThumb.style.width = thumbW + '%';
+            scrollThumb.style.marginLeft = (scrollRatio * maxLeft) + '%';
+        }
+
+        wrapper?.addEventListener('scroll', updateScrollThumb);
+        updateScrollThumb();
+
+        const STEP = 340;
+        function smoothScrollBy(px) {
+            if (!wrapper) return;
+            wrapper.scrollBy({ left: px, behavior: 'smooth' });
+        }
+        scrollLeft?.addEventListener('click', function () { smoothScrollBy(-STEP); });
+        scrollRight?.addEventListener('click', function () { smoothScrollBy(STEP); });
+
+        // Drag-to-pan
+        let isDragging = false, dragStartX = 0, dragScrollLeft = 0;
+        wrapper?.addEventListener('mousedown', function (e) {
+            if (e.button !== 0) return;
+            isDragging = true;
+            dragStartX = e.pageX - wrapper.offsetLeft;
+            dragScrollLeft = wrapper.scrollLeft;
+            wrapper.classList.add('is-dragging');
+        });
+        document.addEventListener('mousemove', function (e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const x = e.pageX - wrapper.offsetLeft;
+            wrapper.scrollLeft = dragScrollLeft - (x - dragStartX);
+        });
+        document.addEventListener('mouseup', function () {
+            if (isDragging) { isDragging = false; wrapper?.classList.remove('is-dragging'); }
+        });
+        // Touch pan
+        let touchStartX = 0, touchScrollLeft = 0;
+        wrapper?.addEventListener('touchstart', function (e) {
+            touchStartX = e.touches[0].pageX;
+            touchScrollLeft = wrapper.scrollLeft;
+        }, { passive: true });
+        wrapper?.addEventListener('touchmove', function (e) {
+            const dx = touchStartX - e.touches[0].pageX;
+            wrapper.scrollLeft = touchScrollLeft + dx;
+        }, { passive: true });
     }
 
     document.addEventListener("DOMContentLoaded", function () {
+        ensureHierarchySectionDetached();
+
         if (typeof window.initHierarchyUI === 'function') {
             window.initHierarchyUI();
         }

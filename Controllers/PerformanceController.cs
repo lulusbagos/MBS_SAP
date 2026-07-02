@@ -831,37 +831,91 @@ namespace MBS_SAP.Controllers
             ViewBag.CompanyHistory = companyHistory;
 
             // ==================== 12. Company Hierarchy Tree ====================
-            // Always load full hierarchy from ONE_DB_MITRA source view (vw_perusahaan).
-            var hierarchyCompanies = await _context.Perusahaans
+            // Build hierarchy strictly from DB_SAP.dbo.vw_m_hirarki_perusahaan active relations.
+            var hierarchyRelations = await _context.PerusahaanHierarchyRelations
                 .AsNoTracking()
-                .Where(p => p.StatusAktif)
                 .ToListAsync();
 
-            var nodeMap = new Dictionary<int, CompanyHierarchyNode>();
-            foreach (var c in hierarchyCompanies)
-            {
+            var activeCompanyNameById = new Dictionary<int, string>();
+            var parentByCompanyId = new Dictionary<int, int?>();
 
-                int empCount = allKaryawans.Count(k => k.IdPerusahaan == c.PerusahaanId);
-                
-                int subCount = (compHazards.FirstOrDefault(h => h.CompId == c.PerusahaanId)?.Count ?? 0)
-                             + (compInspections.FirstOrDefault(i => i.CompId == c.PerusahaanId)?.Count ?? 0)
-                             + (compSafetyTalks.FirstOrDefault(s => s.CompId == c.PerusahaanId)?.Count ?? 0)
-                             + (compP5ms.FirstOrDefault(p => p.CompId == c.PerusahaanId)?.Count ?? 0);
+            void UpsertActiveCompany(int companyId, string? companyName, int? parentCompanyId)
+            {
+                if (!activeCompanyNameById.ContainsKey(companyId))
+                {
+                    activeCompanyNameById[companyId] = string.IsNullOrWhiteSpace(companyName) ? $"Company {companyId}" : companyName!;
+                }
+
+                if (!parentByCompanyId.ContainsKey(companyId) && parentCompanyId.HasValue && parentCompanyId.Value > 0 && parentCompanyId.Value != companyId)
+                {
+                    parentByCompanyId[companyId] = parentCompanyId;
+                }
+            }
+
+            foreach (var rel in hierarchyRelations)
+            {
+                if (rel.ParentCompanyId.HasValue && rel.ParentIsActive == true)
+                {
+                    UpsertActiveCompany(rel.ParentCompanyId.Value, rel.ParentCompanyName, null);
+                }
+
+                if (rel.ChildCompanyId.HasValue && rel.ChildIsActive == true)
+                {
+                    int? parentId = rel.ParentCompanyId.HasValue && rel.ParentCompanyId.Value > 0
+                        ? rel.ParentCompanyId
+                        : null;
+                    UpsertActiveCompany(rel.ChildCompanyId.Value, rel.ChildCompanyName, parentId);
+                }
+            }
+
+            var nodeMap = new Dictionary<int, CompanyHierarchyNode>();
+            foreach (var company in activeCompanyNameById.OrderBy(x => x.Value))
+            {
+                int hierarchyCompanyId = company.Key;
+                int? parentCompanyId = parentByCompanyId.TryGetValue(hierarchyCompanyId, out var pId) ? pId : null;
+
+                int empCount = allKaryawans.Count(k => k.IdPerusahaan == hierarchyCompanyId);
+
+                int subCount = (compHazards.FirstOrDefault(h => h.CompId == hierarchyCompanyId)?.Count ?? 0)
+                             + (compInspections.FirstOrDefault(i => i.CompId == hierarchyCompanyId)?.Count ?? 0)
+                             + (compSafetyTalks.FirstOrDefault(s => s.CompId == hierarchyCompanyId)?.Count ?? 0)
+                             + (compP5ms.FirstOrDefault(p => p.CompId == hierarchyCompanyId)?.Count ?? 0);
 
                 int target = empCount * 4;
                 double rate = target > 0 ? (double)subCount / target * 100.0 : 0.0;
 
                 var node = new CompanyHierarchyNode
                 {
-                    CompanyId = c.PerusahaanId,
-                    CompanyName = c.NamaPerusahaan ?? "Unknown",
-                    ParentCompanyId = c.PerusahaanIndukId,
+                    CompanyId = hierarchyCompanyId,
+                    CompanyName = company.Value,
+                    ParentCompanyId = parentCompanyId,
                     OwnEmployees = empCount,
                     OwnSubmissions = subCount,
                     OwnTarget = target,
                     OwnAchievementRate = Math.Round(rate, 1)
                 };
-                nodeMap[c.PerusahaanId] = node;
+                nodeMap[hierarchyCompanyId] = node;
+            }
+
+            // Fix parent relationships using the authoritative source table (vw_perusahaan).
+            // vw_m_hirarki_perusahaan can have ROOT rows where the parent is actually defined
+            // in the underlying tbl_m_perusahaan — apply those overrides now.
+            var sourceParentMap = await _context.Perusahaans
+                .AsNoTracking()
+                .Where(p => p.StatusAktif && p.PerusahaanIndukId.HasValue && p.PerusahaanIndukId.Value > 0)
+                .Select(p => new { p.PerusahaanId, p.PerusahaanIndukId })
+                .ToListAsync();
+
+            foreach (var sp in sourceParentMap)
+            {
+                if (!parentByCompanyId.ContainsKey(sp.PerusahaanId)
+                    && nodeMap.ContainsKey(sp.PerusahaanId)
+                    && nodeMap.ContainsKey(sp.PerusahaanIndukId!.Value))
+                {
+                    // Override: correct the missing parent from authoritative source
+                    parentByCompanyId[sp.PerusahaanId] = sp.PerusahaanIndukId;
+                    nodeMap[sp.PerusahaanId].ParentCompanyId = sp.PerusahaanIndukId;
+                }
             }
 
             var rootNodes = new List<CompanyHierarchyNode>();
@@ -909,14 +963,52 @@ namespace MBS_SAP.Controllers
 
             rootNodes = rootNodes.OrderBy(r => r.CompanyName).ToList();
 
-            var primaryChildNames = new List<string>
+            HashSet<int> CollectHierarchyIds(IEnumerable<CompanyHierarchyNode> roots)
+            {
+                var visited = new HashSet<int>();
+                var stack = new Stack<CompanyHierarchyNode>(roots);
+                while (stack.Count > 0)
+                {
+                    var node = stack.Pop();
+                    if (!visited.Add(node.CompanyId))
+                    {
+                        continue;
+                    }
+
+                    foreach (var child in node.Children)
+                    {
+                        stack.Push(child);
+                    }
+                }
+
+                return visited;
+            }
+
+            string NormalizeCompanyKey(string? name)
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    return string.Empty;
+                }
+
+                var compact = new string(name
+                    .ToUpperInvariant()
+                    .Where(char.IsLetterOrDigit)
+                    .ToArray());
+
+                // Treat ENERGI and ENERGY as equivalent naming variants.
+                return compact.Replace("ENERGI", "ENERGY");
+            }
+
+            var primaryChildTargets = new List<string>
             {
                 "PT UNGGUL DINAMIKA UTAMA",
                 "PT KALIMANTAN PRIMA PERSADA",
-                "PT MEGA GLOBAL ENERGI",
-                "PT PELAYARAN GANESA LAUT JAYA",
-                "PT UNGGUL ABADI INFRASTRUKTUR"
+                "PT MEGA GLOBAL ENERGY",
+                "PT PELAYARAN GANESA LAUT JAYA"
             };
+            var resolvedPrimaryChildNames = new List<string>();
+            var resolvedPrimaryChildIds = new List<int>();
 
             var indeximRoot = nodeMap.Values
                 .FirstOrDefault(r => (r.CompanyName ?? string.Empty).Contains("INDEXIM", StringComparison.OrdinalIgnoreCase));
@@ -933,12 +1025,19 @@ namespace MBS_SAP.Controllers
                     rootNodes.RemoveAll(r => r.CompanyId == child.CompanyId);
                 }
 
-                foreach (var childName in primaryChildNames)
+                foreach (var childName in primaryChildTargets)
                 {
-                    var primaryChild = nodeMap.Values.FirstOrDefault(n => string.Equals(n.CompanyName, childName, StringComparison.OrdinalIgnoreCase));
+                    var childKey = NormalizeCompanyKey(childName);
+                    var primaryChild = nodeMap.Values.FirstOrDefault(n => NormalizeCompanyKey(n.CompanyName) == childKey);
                     if (primaryChild == null || primaryChild.CompanyId == indeximRoot.CompanyId)
                     {
                         continue;
+                    }
+
+                    if (!resolvedPrimaryChildIds.Contains(primaryChild.CompanyId))
+                    {
+                        resolvedPrimaryChildIds.Add(primaryChild.CompanyId);
+                        resolvedPrimaryChildNames.Add(primaryChild.CompanyName);
                     }
 
                     if (!indeximRoot.Children.Any(c => c.CompanyId == primaryChild.CompanyId))
@@ -950,7 +1049,7 @@ namespace MBS_SAP.Controllers
 
                 int PrimarySortWeight(CompanyHierarchyNode node)
                 {
-                    var idx = primaryChildNames.FindIndex(x => string.Equals(x, node.CompanyName, StringComparison.OrdinalIgnoreCase));
+                    var idx = resolvedPrimaryChildIds.IndexOf(node.CompanyId);
                     return idx >= 0 ? idx : int.MaxValue;
                 }
 
@@ -973,9 +1072,33 @@ namespace MBS_SAP.Controllers
                 rootNodes = new List<CompanyHierarchyNode> { indeximRoot };
             }
 
-            ViewBag.CompanyHierarchyPrimaryChildren = primaryChildNames;
+            // Ensure hierarchy still contains all active companies from vw_m_hirarki_perusahaan source.
+            var renderedIds = CollectHierarchyIds(rootNodes);
+            var missingActiveNodes = nodeMap.Values
+                .Where(n => !renderedIds.Contains(n.CompanyId))
+                .OrderBy(n => n.CompanyName)
+                .ToList();
+
+            if (missingActiveNodes.Any())
+            {
+                foreach (var missing in missingActiveNodes)
+                {
+                    CalculateCumulative(missing);
+                    rootNodes.Add(missing);
+                }
+
+                rootNodes = rootNodes
+                    .GroupBy(n => n.CompanyId)
+                    .Select(g => g.First())
+                    .OrderBy(n => n.CompanyName)
+                    .ToList();
+            }
+
+            ViewBag.CompanyHierarchyPrimaryChildren = resolvedPrimaryChildNames;
             ViewBag.CompanyHierarchy = rootNodes;
-            ViewBag.CompanyHierarchySource = "ONE_DB_MITRA.vw_perusahaan";
+            ViewBag.CompanyHierarchySource = "DB_SAP.vw_m_hirarki_perusahaan";
+            ViewBag.CompanyHierarchyActualActiveCount = activeCompanyNameById.Count;
+            ViewBag.CompanyHierarchyRenderedCount = CollectHierarchyIds(rootNodes).Count;
 
             var canViewGeoPhotos = User.IsInRole("Admin");
             var geoSafetyData = await BuildGeoSafetyRadarDataAsync(companyId, allowedCompanyIds, Request.Query["area"].FirstOrDefault()?.Trim(), canViewGeoPhotos);

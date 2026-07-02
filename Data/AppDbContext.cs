@@ -35,6 +35,7 @@ namespace MBS_SAP.Data
         public DbSet<PersonalView> Personals { get; set; } = null!;
         public DbSet<PenggunaView> Penggunas { get; set; } = null!;
         public DbSet<PerusahaanView> Perusahaans { get; set; } = null!;
+        public DbSet<PerusahaanHierarchyRelationView> PerusahaanHierarchyRelations { get; set; } = null!;
         public DbSet<DepartemenView> Departemens { get; set; } = null!;
         public DbSet<JabatanView> Jabatans { get; set; } = null!;
 
@@ -121,6 +122,10 @@ namespace MBS_SAP.Data
             modelBuilder.Entity<PerusahaanView>()
                 .ToView("vw_perusahaan")
                 .HasKey(p => p.PerusahaanId);
+
+            modelBuilder.Entity<PerusahaanHierarchyRelationView>()
+                .ToView("vw_m_hirarki_perusahaan")
+                .HasNoKey();
 
             modelBuilder.Entity<DepartemenView>()
                 .ToView("vw_departemen")
