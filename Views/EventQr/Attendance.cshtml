@@ -533,6 +533,109 @@
             background: rgba(255, 255, 255, 0.01);
         }
 
+        /* Queue Notification Toast Styling */
+        .attendance-toast {
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 20px;
+            padding: 20px 24px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(56, 189, 248, 0.25);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            animation: toastSlideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            width: 380px;
+            max-width: 90vw;
+            position: relative;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .attendance-toast.fade-out {
+            animation: toastSlideOut 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+        }
+
+        @@keyframes toastSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(45px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @@keyframes toastSlideOut {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-25px) scale(0.92);
+            }
+        }
+
+        .toast-icon-wrapper {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--color-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: var(--glow-green);
+            margin-bottom: 4px;
+        }
+
+        .toast-role {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .toast-name {
+            font-family: 'Outfit', sans-serif;
+            font-size: 20px;
+            font-weight: 900;
+            color: #ffffff;
+            text-align: center;
+            margin: 2px 0 0;
+            line-height: 1.2;
+        }
+
+        .toast-company {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--color-primary);
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-green));
+            width: 100%;
+            animation: toastProgress linear forwards;
+        }
+
+        @@keyframes toastProgress {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+
         /* Scrollbars */
         ::-webkit-scrollbar {
             width: 6px;
@@ -599,6 +702,11 @@
             </div>
         </div>
         <div class="header-actions">
+            <!-- Audio Toggle Button -->
+            <button type="button" class="btn-action" id="soundToggleBtn" title="Aktifkan/Nonaktifkan Suara Absen">
+                <i class="bi bi-volume-up-fill" id="soundIcon" style="color: var(--color-green);"></i>
+                <span id="soundLabel">Suara Aktif</span>
+            </button>
             <div class="live-clock" id="liveClock">
                 <i class="bi bi-clock-history"></i><span>--:--:--</span>
             </div>
@@ -772,6 +880,9 @@
     </main>
 </div>
 
+<!-- Floating Toast Container for Queue Notifications -->
+<div id="toastContainer" style="position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none; display: flex; flex-direction: column-reverse; align-items: center;"></div>
+
 <!-- QR and Realtime scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
@@ -783,6 +894,24 @@
         const companyGridEl = document.getElementById('companyGrid');
         const pendingCompaniesListEl = document.getElementById('pendingCompaniesList');
         const attendeeFeedBodyEl = document.getElementById('attendeeFeedTableBody');
+        
+        // Sound and Queue elements
+        const soundToggleBtn = document.getElementById('soundToggleBtn');
+        const soundIcon = document.getElementById('soundIcon');
+        const soundLabel = document.getElementById('soundLabel');
+        const toastContainer = document.getElementById('toastContainer');
+        const TOAST_DURATION_MS = 3200;
+
+        let soundEnabled = true;
+        const processedNiks = new Set();
+        const attendanceQueue = [];
+        let isQueueProcessing = false;
+
+        // Initialize set with existing attendees to prevent popping up on first load
+        @foreach (var attendee in Model.Attendees)
+        {
+            @:processedNiks.add('@attendee.Nik.Trim()');
+        }
 
         // Draw Event QR Code Large
         const qrContainer = document.getElementById('eventQrCode');
@@ -827,6 +956,104 @@
             const isFs = !!document.fullscreenElement;
             if (icon) icon.className = isFs ? 'bi bi-fullscreen-exit' : 'bi bi-arrows-fullscreen';
             if (label) label.textContent = isFs ? 'Keluar Fullscreen' : 'Fullscreen';
+        }
+
+        // Play Synthesizer Chime
+        function playChime() {
+            if (!soundEnabled) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                
+                // Note 1 (E5 - 659.25 Hz)
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(659.25, ctx.currentTime);
+                gain1.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                osc1.start();
+                osc1.stop(ctx.currentTime + 0.3);
+
+                // Note 2 (A5 - 880.00 Hz) after 100ms
+                setTimeout(() => {
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(880.00, ctx.currentTime);
+                    gain2.gain.setValueAtTime(0.12, ctx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                    osc2.start();
+                    osc2.stop(ctx.currentTime + 0.4);
+                }, 100);
+            } catch (e) {
+                console.warn("Audio Context blocked or not supported:", e);
+            }
+        }
+
+        // Speak Name via TTS
+        function speakWelcome(name, company) {
+            if (!soundEnabled || !window.speechSynthesis) return;
+            try {
+                window.speechSynthesis.cancel(); // cancel current speech
+                const utterance = new SpeechSynthesisUtterance(`${name} dari ${company}`);
+                utterance.lang = 'id-ID';
+                utterance.rate = 0.95;
+                utterance.pitch = 1.0;
+                window.speechSynthesis.speak(utterance);
+            } catch (e) {
+                console.warn("Speech synthesis failed:", e);
+            }
+        }
+
+        // Show Slide-up Toast with promise resolved on animation complete
+        function showToast(item) {
+            if (!toastContainer) return Promise.resolve();
+            return new Promise((resolve) => {
+                const toast = document.createElement('div');
+                toast.className = 'attendance-toast';
+                toast.innerHTML = `
+                    <div class="toast-icon-wrapper">
+                        <i class="bi bi-person-check-fill"></i>
+                    </div>
+                    <div class="toast-role">${escapeHtml(item.jabatan)}</div>
+                    <div class="toast-name">${escapeHtml(item.nama)}</div>
+                    <div class="toast-company">${escapeHtml(item.companyName)}</div>
+                    <div class="toast-progress" style="animation-duration: ${TOAST_DURATION_MS}ms;"></div>
+                `;
+                
+                toastContainer.appendChild(toast);
+                
+                // Play notification and text-to-speech
+                playChime();
+                speakWelcome(item.nama, item.companyName);
+
+                setTimeout(() => {
+                    toast.classList.add('fade-out');
+                    setTimeout(() => {
+                        toast.remove();
+                        resolve();
+                    }, 400); // Wait for fade-out animation to complete
+                }, TOAST_DURATION_MS);
+            });
+        }
+
+        // Queue processing loop
+        async function processQueue() {
+            if (attendanceQueue.length === 0) {
+                isQueueProcessing = false;
+                return;
+            }
+            isQueueProcessing = true;
+            const nextItem = attendanceQueue.shift();
+            await showToast(nextItem);
+            // Brief gap between queue items
+            setTimeout(processQueue, 150);
         }
 
         function renderCompanyStatuses(companies) {
@@ -878,13 +1105,57 @@
                 const response = await fetch(snapshotUrl, { cache: 'no-store' });
                 if (!response.ok) return;
                 const data = await response.json();
+                
+                // Render view lists first
                 renderCompanyStatuses(data.companyStatuses || []);
                 renderPendingCompanies(data.pendingCompanies || []);
                 renderAttendees(data.attendees || []);
                 updateSummary(data.totals || {});
-            } catch {
+
+                // Process new check-ins in chronological order (oldest to newest)
+                if (data.attendees && data.attendees.length > 0) {
+                    let hasNew = false;
+                    for (let i = data.attendees.length - 1; i >= 0; i--) {
+                        const att = data.attendees[i];
+                        const nikKey = att.nik.trim();
+                        if (!processedNiks.has(nikKey)) {
+                            processedNiks.add(nikKey);
+                            attendanceQueue.push({
+                                nama: att.nama,
+                                companyName: att.companyName,
+                                jabatan: att.jabatan,
+                                nik: att.nik
+                            });
+                            hasNew = true;
+                        }
+                    }
+                    if (hasNew && !isQueueProcessing) {
+                        processQueue();
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch attendance update:", err);
             }
         }
+
+        // Toggle sound status and unlock Audio Context for browser compatibility
+        soundToggleBtn?.addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            if (soundEnabled) {
+                soundIcon.className = 'bi bi-volume-up-fill';
+                soundIcon.style.color = 'var(--color-green)';
+                soundLabel.textContent = 'Suara Aktif';
+                // Try unlocking context
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    ctx.resume();
+                } catch {}
+            } else {
+                soundIcon.className = 'bi bi-volume-mute-fill';
+                soundIcon.style.color = 'var(--color-red)';
+                soundLabel.textContent = 'Suara Hening';
+            }
+        });
 
         fullscreenBtn?.addEventListener('click', async function () {
             try {
@@ -897,6 +1168,16 @@
             }
             syncFullscreenLabel();
         });
+
+        // Trigger unlock context on any screen interaction
+        document.body.addEventListener('click', () => {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (ctx.state === 'suspended') {
+                    ctx.resume();
+                }
+            } catch {}
+        }, { once: true });
 
         document.addEventListener('fullscreenchange', syncFullscreenLabel);
         updateClock();
