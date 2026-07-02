@@ -48,13 +48,10 @@
                         <i class="bi bi-bar-chart-line-fill"></i>
                         <span>Pencapaian SAP</span>
                     </a>
-                    @if (!User.IsInRole("Admin"))
-                    {
-                        <a asp-controller="QrCode" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "QrCode" ? "active" : "")">
-                            <i class="bi bi-qr-code-scan"></i>
-                            <span>QR Code</span>
-                        </a>
-                    }
+                    <a asp-controller="QrCode" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "QrCode" ? "active" : "")">
+                        <i class="bi bi-qr-code-scan"></i>
+                        <span>QR Code</span>
+                    </a>
                     <a asp-controller="Timeline" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Timeline" ? "active" : "")">
                         <i class="bi bi-rss-fill"></i>
                         <span>SafeFeed</span>
@@ -198,13 +195,10 @@
                         <i class="bi bi-bar-chart-line-fill"></i>
                         <span>Pencapaian</span>
                     </a>
-                    @if (!User.IsInRole("Admin"))
-                    {
-                        <a asp-controller="QrCode" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "QrCode" ? "active" : "")">
-                            <i class="bi bi-qr-code-scan"></i>
-                            <span>QR</span>
-                        </a>
-                    }
+                    <a asp-controller="QrCode" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "QrCode" ? "active" : "")">
+                        <i class="bi bi-qr-code-scan"></i>
+                        <span>QR</span>
+                    </a>
                     <a asp-controller="Timeline" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Timeline" ? "active" : "")">
                         <i class="bi bi-rss-fill"></i>
                         <span>SafeFeed</span>
