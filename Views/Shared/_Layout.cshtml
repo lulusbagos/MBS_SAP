@@ -216,8 +216,11 @@
         </div>
     </div>
 
-    <!-- Incident Popup (rendered at body-level to avoid overflow:hidden clipping) -->
-    @await Component.InvokeAsync("IncidentPopup")
+    <!-- Incident Popup (only shown after user login/authenticated) -->
+    @if (User?.Identity?.IsAuthenticated == true)
+    {
+        @await Component.InvokeAsync("IncidentPopup")
+    }
 
     <!-- Notification Sidebar (Offcanvas) -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="notificationSidebar" aria-labelledby="notificationSidebarLabel" style="border-radius: 20px 0 0 20px; border-left: none; box-shadow: -4px 0 24px rgba(0,0,0,0.05);">

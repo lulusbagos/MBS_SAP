@@ -36,6 +36,7 @@ namespace MBS_SAP.Controllers
         {
             ViewData["HeaderTitle"] = "Temuan Hazard";
             ViewData["ActiveTab"] = "Hazard";
+            var historyWindowStart = DateTime.Today.AddDays(-6);
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var isAdmin = User.IsInRole("Admin");
@@ -56,9 +57,31 @@ namespace MBS_SAP.Controllers
                 query = query.Where(r => r.Nik == userNik || r.NikPja == userNik);
             }
 
+            // History card only shows last 7 days (including today).
+            query = query.Where(r => r.Tanggal >= historyWindowStart || r.CreatedAt >= historyWindowStart);
+
             var reports = await query
                 .OrderByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.Id)
                 .ToListAsync();
+
+            // Prevent duplicate cards from repeated inserts of the same report payload.
+            reports = reports
+                .GroupBy(r => new
+                {
+                    Nik = (r.Nik ?? string.Empty).Trim().ToUpperInvariant(),
+                    Tanggal = r.Tanggal.Date,
+                    JamMenit = $"{r.Waktu.Hours:D2}:{r.Waktu.Minutes:D2}",
+                    Area = (r.Area ?? string.Empty).Trim().ToUpperInvariant(),
+                    Lokasi = (r.Lokasi ?? string.Empty).Trim().ToUpperInvariant(),
+                    Temuan = (r.Temuan ?? string.Empty).Trim().ToUpperInvariant()
+                })
+                .Select(g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First())
+                .OrderByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.Id)
+                .ToList();
+
+            ViewBag.HistoryDays = 7;
             return View(reports);
         }
 

@@ -257,8 +257,117 @@ namespace MBS_SAP.Controllers
             int monthP5ms = await p5ms.CountAsync(p => p.CreatedAt >= startOfMonth);
             int monthTotal = monthHazards + monthInspections + monthSafetyTalks + monthP5ms;
 
+            // Incident Pyramid from the same source used by Incident/Index (published incidents)
+            var startOfYear = new DateTime(now.Year, 1, 1);
+            var endOfYear = new DateTime(now.Year, 12, 31, 23, 59, 59);
+            var incidentBaseQuery = _context.IncidentNewsList.Where(i => i.IsPublished);
+            var incidentIndexTotal = await incidentBaseQuery.CountAsync();
+
+            var incidentMonthData = await incidentBaseQuery
+                .Where(i => (i.TanggalKejadian ?? i.CreatedAt) >= startOfYear && (i.TanggalKejadian ?? i.CreatedAt) <= endOfYear)
+                .Select(i => new { i.Kategori, i.Judul, i.Konten })
+                .ToListAsync();
+
+            string BuildIncidentText(string? kategori, string? judul, string? konten)
+            {
+                return string.Join(" ", new[] { kategori ?? string.Empty, judul ?? string.Empty, konten ?? string.Empty })
+                    .ToLowerInvariant();
+            }
+
+            string ResolveIncidentCategory(string? kategori, string? judul, string? konten)
+            {
+                var k = (kategori ?? string.Empty).Trim();
+                if (k.Equals("Fatality", StringComparison.OrdinalIgnoreCase) ||
+                    k.Equals("Fatal", StringComparison.OrdinalIgnoreCase) ||
+                    k.Equals("Mati", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Fatality";
+                }
+                if (k.Equals("First Aid Injury", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "First Aid Injury";
+                }
+                if (k.Equals("Kebakaran", StringComparison.OrdinalIgnoreCase) ||
+                    k.Equals("Fire", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Kebakaran";
+                }
+                if (k.Equals("Medical Treatment Injury", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Medical Treatment Injury";
+                }
+                if (k.Equals("Near Miss", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Near Miss";
+                }
+                if (k.Equals("Property Damage", StringComparison.OrdinalIgnoreCase) ||
+                    k.Equals("Property Damaged", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "Property Damage";
+                }
+
+                var text = BuildIncidentText(kategori, judul, konten);
+                if (text.Contains("meninggal") || text.Contains("death") || text.Contains("fatal")) return "Fatality";
+                if (text.Contains("kebakaran") || text.Contains("fire")) return "Kebakaran";
+                if (text.Contains("medical treatment") || text.Contains("rawat jalan") || text.Contains("klinik") || text.Contains("dokter")) return "Medical Treatment Injury";
+                if (text.Contains("first aid") || text.Contains("p3k") || text.Contains("pertolongan pertama")) return "First Aid Injury";
+                if (text.Contains("property") || text.Contains("damage") || text.Contains("damaged") || text.Contains("kerusakan") || text.Contains("aset") || text.Contains("alat rusak")) return "Property Damage";
+                if (text.Contains("near miss") || text.Contains("nyaris") || text.Contains("hampir celaka")) return "Near Miss";
+
+                return "Near Miss";
+            }
+
+            int incidentNearMiss = 0;
+            int incidentPropertyDamage = 0;
+            int incidentFirstAidInjury = 0;
+            int incidentMedicalTreatmentInjury = 0;
+            int incidentKebakaran = 0;
+            int incidentFatality = 0;
+
+            foreach (var item in incidentMonthData)
+            {
+                var canonicalCategory = ResolveIncidentCategory(item.Kategori, item.Judul, item.Konten);
+                switch (canonicalCategory)
+                {
+                    case "Fatality":
+                        incidentFatality++;
+                        break;
+                    case "First Aid Injury":
+                        incidentFirstAidInjury++;
+                        break;
+                    case "Kebakaran":
+                        incidentKebakaran++;
+                        break;
+                    case "Medical Treatment Injury":
+                        incidentMedicalTreatmentInjury++;
+                        break;
+                    case "Property Damage":
+                        incidentPropertyDamage++;
+                        break;
+                    default:
+                        incidentNearMiss++;
+                        break;
+                }
+            }
+
+            ViewBag.IncidentIndexTotal = incidentIndexTotal;
+            ViewBag.IncidentYearTotal = incidentMonthData.Count;
+
             // 4. Open Hazards breakdown by Risk Level (Low/Medium/High/Extreme)
+            // Scoped list keeps existing behavior for KPI cards that follow user/company access scope.
             var openHazardsList = await hazards.Where(h => h.StatusTemuan == "Open" && h.TingkatResiko != null).Select(h => h.TingkatResiko).ToListAsync();
+
+            // Safety pyramid must show all companies regardless of login scope and status.
+            var riskHazardsListAllCompanies = await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.TingkatResiko != null)
+                .Select(h => h.TingkatResiko)
+                .ToListAsync();
+
+            int safetyOpenExtreme = riskHazardsListAllCompanies.Count(r => string.Equals(r, "Extreme", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Sangat Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ekstrim", StringComparison.OrdinalIgnoreCase));
+            int safetyOpenHigh = riskHazardsListAllCompanies.Count(r => string.Equals(r, "High", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Tinggi", StringComparison.OrdinalIgnoreCase));
+            int safetyOpenMedium = riskHazardsListAllCompanies.Count(r => string.Equals(r, "Medium", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Sedang", StringComparison.OrdinalIgnoreCase));
+            int safetyOpenLow = riskHazardsListAllCompanies.Count(r => string.Equals(r, "Low", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ringan", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Rendah", StringComparison.OrdinalIgnoreCase));
+
             int openInsiden = openHazardsList.Count(r => string.Equals(r, "Insiden", StringComparison.OrdinalIgnoreCase));
             int openKritis = openHazardsList.Count(r => string.Equals(r, "Kritis", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Critical", StringComparison.OrdinalIgnoreCase));
             int openExtreme = openHazardsList.Count(r => string.Equals(r, "Extreme", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Sangat Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ekstrim", StringComparison.OrdinalIgnoreCase));
@@ -278,15 +387,14 @@ namespace MBS_SAP.Controllers
             int overdueHazards = await hazards.CountAsync(h => h.StatusTemuan == "Open" && h.Tanggal < overdueDate);
             double overdueRate = totalOpenHazards > 0 ? (double)overdueHazards / totalOpenHazards * 100 : 0;
 
-            int highRiskOpen = openKritis + openExtreme + openHigh;
+            int highRiskOpen = openExtreme + openHigh;
             double complianceRisk = totalOpenHazards > 0 ? (double)highRiskOpen / totalOpenHazards * 100 : 0;
 
             var allHazardRisks = await hazards.Select(h => new { h.StatusTemuan, h.TingkatResiko }).ToListAsync();
             int GetRiskWeight(string r) {
                 if (string.IsNullOrEmpty(r)) return 0;
-                if (r.Contains("Insiden", StringComparison.OrdinalIgnoreCase)) return 6;
-                if (r.Contains("Kritis", StringComparison.OrdinalIgnoreCase) || r.Contains("Critical", StringComparison.OrdinalIgnoreCase)) return 5;
                 if (r.Contains("Extreme", StringComparison.OrdinalIgnoreCase) || r.Contains("Ekstrim", StringComparison.OrdinalIgnoreCase) || r.Contains("Sangat Berat", StringComparison.OrdinalIgnoreCase)) return 4;
+                if (r.Contains("Kritis", StringComparison.OrdinalIgnoreCase) || r.Contains("Critical", StringComparison.OrdinalIgnoreCase)) return 4;
                 if (r.Contains("High", StringComparison.OrdinalIgnoreCase) || r.Contains("Tinggi", StringComparison.OrdinalIgnoreCase) || r.Contains("Berat", StringComparison.OrdinalIgnoreCase)) return 3;
                 if (r.Contains("Medium", StringComparison.OrdinalIgnoreCase) || r.Contains("Sedang", StringComparison.OrdinalIgnoreCase)) return 2;
                 if (r.Contains("Low", StringComparison.OrdinalIgnoreCase) || r.Contains("Rendah", StringComparison.OrdinalIgnoreCase) || r.Contains("Ringan", StringComparison.OrdinalIgnoreCase)) return 1;
@@ -296,20 +404,26 @@ namespace MBS_SAP.Controllers
             int closedRiskWeight = allHazardRisks.Where(h => h.StatusTemuan == "Closed").Sum(h => GetRiskWeight(h.TingkatResiko));
             double rri = totalRiskWeight > 0 ? (double)closedRiskWeight / totalRiskWeight * 100 : 0;
 
-            var hazardSigs = await hazards.Where(h => h.JenisBahaya != null && h.Area != null)
-                .Select(h => new { h.JenisBahaya, h.Area, h.Lokasi, h.Pja })
+            // RHR is calculated from repeated hazard locations (location-only basis).
+            var hazardLocations = await hazards
+                .Where(h => !string.IsNullOrWhiteSpace(h.Lokasi))
+                .Select(h => h.Lokasi!.Trim())
                 .ToListAsync();
-            var groupedSigs = hazardSigs.GroupBy(h => $"{h.JenisBahaya}|{h.Area}|{h.Lokasi}|{h.Pja}").ToList();
-            int repeatSignatures = groupedSigs.Count(g => g.Count() > 1);
-            int totalSignatures = groupedSigs.Count;
-            double rhr = totalSignatures > 0 ? (double)repeatSignatures / totalSignatures * 100 : 0;
 
-            var topRepeated = groupedSigs
+            var groupedLocations = hazardLocations
+                .GroupBy(l => l, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            int repeatLocations = groupedLocations.Count(g => g.Count() > 1);
+            int totalLocations = groupedLocations.Count;
+            double rhr = totalLocations > 0 ? (double)repeatLocations / totalLocations * 100 : 0;
+
+            var topRepeated = groupedLocations
                 .Where(g => g.Count() > 1)
                 .OrderByDescending(g => g.Count())
                 .Take(5)
                 .Select(g => new {
-                    Label = $"{g.First().JenisBahaya} - {g.First().Area}",
+                    Label = g.Key,
                     Count = g.Count()
                 })
                 .ToList();
@@ -322,14 +436,14 @@ namespace MBS_SAP.Controllers
             int closedKritis = closedHazardsList.Count(r => string.Equals(r, "Kritis", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Critical", StringComparison.OrdinalIgnoreCase));
             int closedExtreme = closedHazardsList.Count(r => string.Equals(r, "Extreme", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Sangat Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ekstrim", StringComparison.OrdinalIgnoreCase));
             int closedHigh = closedHazardsList.Count(r => string.Equals(r, "High", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Tinggi", StringComparison.OrdinalIgnoreCase));
-            int highRiskClosed = closedKritis + closedExtreme + closedHigh;
+            int highRiskClosed = closedExtreme + closedHigh;
             int totalHighRisk = highRiskOpen + highRiskClosed;
             double highRiskResolution = totalHighRisk > 0 ? (double)highRiskClosed / totalHighRisk * 100 : 0;
 
             // 5b. Extra Professional Graphs Data
             var allKategori = await hazards.Where(h => h.StatusTemuan == "Open" && h.KategoriBahaya != null).Select(h => h.KategoriBahaya).ToListAsync();
             int unsafeActCount = allKategori.Count(k => k.Contains("Tindakan", StringComparison.OrdinalIgnoreCase) || k.Contains("Act", StringComparison.OrdinalIgnoreCase) || k.Contains("KTA", StringComparison.OrdinalIgnoreCase));
-            int unsafeConditionCount = allKategori.Count(k => k.Contains("Kondisi", StringComparison.OrdinalIgnoreCase) || k.Contains("Condition", StringComparison.OrdinalIgnoreCase) || k.Contains("KTC", StringComparison.OrdinalIgnoreCase));
+            int unsafeConditionCount = allKategori.Count(k => k.Contains("Kondisi", StringComparison.OrdinalIgnoreCase) || k.Contains("Condition", StringComparison.OrdinalIgnoreCase) || k.Contains("TTA", StringComparison.OrdinalIgnoreCase) || k.Contains("KTC", StringComparison.OrdinalIgnoreCase));
             
             var topAreas = await hazards.Where(h => h.StatusTemuan == "Open" && !string.IsNullOrEmpty(h.Area))
                                         .GroupBy(h => h.Area)
@@ -341,10 +455,10 @@ namespace MBS_SAP.Controllers
             // 6. Leaderboard Perusahaan
             var allKaryawans = await _context.Karyawans.Where(k => k.StatusAktif).ToListAsync();
 
-            var compHazards = await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= startOfMonth).GroupBy(h => h.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
-            var compInspections = await _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= startOfMonth).GroupBy(i => i.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
-            var compSafetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= startOfMonth).GroupBy(s => s.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
-            var compP5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= startOfMonth).GroupBy(p => p.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
+            var compHazards = await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= startOfYear).GroupBy(h => h.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
+            var compInspections = await _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= startOfYear).GroupBy(i => i.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
+            var compSafetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= startOfYear).GroupBy(s => s.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
+            var compP5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= startOfYear).GroupBy(p => p.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
 
             var leaderboard = new List<CompanyLeaderboardViewModel>();
             foreach (var c in allCompanies)
@@ -362,7 +476,8 @@ namespace MBS_SAP.Controllers
                              + (compSafetyTalks.FirstOrDefault(s => s.CompId == c.PerusahaanId)?.Count ?? 0)
                              + (compP5ms.FirstOrDefault(p => p.CompId == c.PerusahaanId)?.Count ?? 0);
 
-                int target = empCount * 4;
+                int monthsElapsed = Math.Max(1, now.Month);
+                int target = empCount * 4 * monthsElapsed;
                 double achievementRate = target > 0 ? (double)subCount / target * 100.0 : 0.0;
 
                 leaderboard.Add(new CompanyLeaderboardViewModel
@@ -472,12 +587,32 @@ namespace MBS_SAP.Controllers
             ViewBag.MonthSafetyTalks = monthSafetyTalks;
             ViewBag.MonthP5ms = monthP5ms;
 
+            ViewBag.IncidentNearMiss = incidentNearMiss;
+            ViewBag.IncidentPropertyDamage = incidentPropertyDamage;
+            ViewBag.IncidentFirstAidInjury = incidentFirstAidInjury;
+            ViewBag.IncidentMedicalTreatmentInjury = incidentMedicalTreatmentInjury;
+            ViewBag.IncidentKebakaran = incidentKebakaran;
+            ViewBag.IncidentFatality = incidentFatality;
+
+            int accidentPyramidTotal = incidentNearMiss
+                + incidentPropertyDamage
+                + incidentFirstAidInjury
+                + incidentMedicalTreatmentInjury
+                + incidentKebakaran
+                + incidentFatality;
+            ViewBag.SafetyTopInsiden = accidentPyramidTotal;
+
             ViewBag.OpenInsiden = openInsiden;
             ViewBag.OpenKritis = openKritis;
             ViewBag.OpenExtreme = openExtreme;
             ViewBag.OpenHigh = openHigh;
             ViewBag.OpenMedium = openMedium;
             ViewBag.OpenLow = openLow;
+
+            ViewBag.SafetyOpenExtreme = safetyOpenExtreme;
+            ViewBag.SafetyOpenHigh = safetyOpenHigh;
+            ViewBag.SafetyOpenMedium = safetyOpenMedium;
+            ViewBag.SafetyOpenLow = safetyOpenLow;
 
             ViewBag.TotalOpenHazards = totalOpenHazards;
             ViewBag.TotalClosedHazards = totalClosedHazards;
@@ -491,8 +626,9 @@ namespace MBS_SAP.Controllers
             ViewBag.ComplianceRisk = Math.Round(complianceRisk, 1);
             ViewBag.RRI = Math.Round(rri, 1);
             ViewBag.RHR = Math.Round(rhr, 1);
-            ViewBag.RepeatHazards = repeatSignatures;
-            ViewBag.TotalSignatures = totalSignatures;
+            ViewBag.RepeatHazards = repeatLocations;
+            ViewBag.TotalLocations = totalLocations;
+            ViewBag.TotalSignatures = totalLocations;
             ViewBag.HighRiskResolution = Math.Round(highRiskResolution, 1);
 
             ViewBag.UnsafeActCount = unsafeActCount;
@@ -695,13 +831,15 @@ namespace MBS_SAP.Controllers
             ViewBag.CompanyHistory = companyHistory;
 
             // ==================== 12. Company Hierarchy Tree ====================
+            // Always load full hierarchy from ONE_DB_MITRA source view (vw_perusahaan).
+            var hierarchyCompanies = await _context.Perusahaans
+                .AsNoTracking()
+                .Where(p => p.StatusAktif)
+                .ToListAsync();
+
             var nodeMap = new Dictionary<int, CompanyHierarchyNode>();
-            foreach (var c in allCompanies)
+            foreach (var c in hierarchyCompanies)
             {
-                if (companyId.HasValue && !allowedCompanyIds.Contains(c.PerusahaanId))
-                {
-                    continue;
-                }
 
                 int empCount = allKaryawans.Count(k => k.IdPerusahaan == c.PerusahaanId);
                 
@@ -730,31 +868,15 @@ namespace MBS_SAP.Controllers
             foreach (var kvp in nodeMap)
             {
                 var node = kvp.Value;
-                if (companyId.HasValue)
+
+                if (node.ParentCompanyId.HasValue && node.ParentCompanyId.Value != 0 && nodeMap.ContainsKey(node.ParentCompanyId.Value))
                 {
-                    // Untuk user biasa, root-nya adalah perusahaannya sendiri
-                    if (node.CompanyId == companyId.Value)
-                    {
-                        rootNodes.Add(node);
-                    }
-                    else if (node.ParentCompanyId.HasValue && node.ParentCompanyId.Value != 0 && nodeMap.ContainsKey(node.ParentCompanyId.Value))
-                    {
-                        var parentNode = nodeMap[node.ParentCompanyId.Value];
-                        parentNode.Children.Add(node);
-                    }
+                    var parentNode = nodeMap[node.ParentCompanyId.Value];
+                    parentNode.Children.Add(node);
                 }
                 else
                 {
-                    // Untuk admin/safety, root adalah yang tidak punya parent di nodeMap
-                    if (node.ParentCompanyId.HasValue && node.ParentCompanyId.Value != 0 && nodeMap.ContainsKey(node.ParentCompanyId.Value))
-                    {
-                        var parentNode = nodeMap[node.ParentCompanyId.Value];
-                        parentNode.Children.Add(node);
-                    }
-                    else
-                    {
-                        rootNodes.Add(node);
-                    }
+                    rootNodes.Add(node);
                 }
             }
 
@@ -786,7 +908,74 @@ namespace MBS_SAP.Controllers
             }
 
             rootNodes = rootNodes.OrderBy(r => r.CompanyName).ToList();
+
+            var primaryChildNames = new List<string>
+            {
+                "PT UNGGUL DINAMIKA UTAMA",
+                "PT KALIMANTAN PRIMA PERSADA",
+                "PT MEGA GLOBAL ENERGI",
+                "PT PELAYARAN GANESA LAUT JAYA",
+                "PT UNGGUL ABADI INFRASTRUKTUR"
+            };
+
+            var indeximRoot = nodeMap.Values
+                .FirstOrDefault(r => (r.CompanyName ?? string.Empty).Contains("INDEXIM", StringComparison.OrdinalIgnoreCase));
+
+            if (indeximRoot != null)
+            {
+                // Detach helper for display tree re-parenting without changing source data.
+                void DetachFromCurrentParent(CompanyHierarchyNode child)
+                {
+                    foreach (var node in nodeMap.Values)
+                    {
+                        node.Children.RemoveAll(c => c.CompanyId == child.CompanyId);
+                    }
+                    rootNodes.RemoveAll(r => r.CompanyId == child.CompanyId);
+                }
+
+                foreach (var childName in primaryChildNames)
+                {
+                    var primaryChild = nodeMap.Values.FirstOrDefault(n => string.Equals(n.CompanyName, childName, StringComparison.OrdinalIgnoreCase));
+                    if (primaryChild == null || primaryChild.CompanyId == indeximRoot.CompanyId)
+                    {
+                        continue;
+                    }
+
+                    if (!indeximRoot.Children.Any(c => c.CompanyId == primaryChild.CompanyId))
+                    {
+                        DetachFromCurrentParent(primaryChild);
+                        indeximRoot.Children.Add(primaryChild);
+                    }
+                }
+
+                int PrimarySortWeight(CompanyHierarchyNode node)
+                {
+                    var idx = primaryChildNames.FindIndex(x => string.Equals(x, node.CompanyName, StringComparison.OrdinalIgnoreCase));
+                    return idx >= 0 ? idx : int.MaxValue;
+                }
+
+                void SortHierarchy(CompanyHierarchyNode node)
+                {
+                    node.Children = node.Children
+                        .OrderBy(c => PrimarySortWeight(c))
+                        .ThenBy(c => c.CompanyName)
+                        .ToList();
+
+                    foreach (var child in node.Children)
+                    {
+                        SortHierarchy(child);
+                    }
+                }
+
+                // Recalculate after display re-parenting to keep aggregate metrics consistent.
+                CalculateCumulative(indeximRoot);
+                SortHierarchy(indeximRoot);
+                rootNodes = new List<CompanyHierarchyNode> { indeximRoot };
+            }
+
+            ViewBag.CompanyHierarchyPrimaryChildren = primaryChildNames;
             ViewBag.CompanyHierarchy = rootNodes;
+            ViewBag.CompanyHierarchySource = "ONE_DB_MITRA.vw_perusahaan";
 
             var canViewGeoPhotos = User.IsInRole("Admin");
             var geoSafetyData = await BuildGeoSafetyRadarDataAsync(companyId, allowedCompanyIds, Request.Query["area"].FirstOrDefault()?.Trim(), canViewGeoPhotos);

@@ -294,319 +294,15 @@
         }
         else
         {
-            int loopIndex = 1;
-            foreach (var item in Model)
-            {
-                var delayClass = "delay-" + (loopIndex > 6 ? 6 : loopIndex);
-                <div class="timeline-card animate-fade-up @delayClass">
-                    
-                    <!-- Header Post -->
-                    <div class="pt-3 pb-2 px-3 d-flex justify-content-between align-items-start">
-                        <div class="d-flex align-items-center">
-                            <div class="position-relative d-inline-flex me-2">
-                                @if (!string.IsNullOrEmpty(item.FotoDiriUrl))
-                                {
-                                    <img src="@item.FotoDiriUrl" class="rounded-circle shadow-sm" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid var(--color-primary);" alt="Profile" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                                    <div class="rounded-circle shadow-sm" style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--color-primary, #3b82f6), #1d4ed8); color: white; font-weight: bold; font-size: 14px; display: none; align-items: center; justify-content: center;">
-                                        @(string.IsNullOrEmpty(item.Nama) ? "?" : item.Nama.Substring(0, 1).ToUpper())
-                                    </div>
-                                }
-                                else
-                                {
-                                    <div class="rounded-circle d-flex justify-content-center align-items-center shadow-sm" style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--color-primary, #3b82f6), #1d4ed8); color: white; font-weight: bold; font-size: 14px;">
-                                        @(string.IsNullOrEmpty(item.Nama) ? "?" : item.Nama.Substring(0, 1).ToUpper())
-                                    </div>
-                                }
-                            </div>
-                            <div style="line-height: 1.2;">
-                                <div class="fw-bold" style="font-size: 14px; color: var(--text-main);">@item.Nama</div>
-                                @if (!string.IsNullOrEmpty(item.Jabatan) || !string.IsNullOrEmpty(item.Perusahaan) || !string.IsNullOrEmpty(item.Departemen))
-                                {
-                                    <div class="text-muted d-flex flex-wrap align-items-center gap-1 my-0.5" style="font-size: 10px;">
-                                        @if (!string.IsNullOrEmpty(item.Jabatan))
-                                        {
-                                            <span class="badge bg-light text-dark border px-1.5 py-0.5" style="font-size: 9px; font-weight: 600; line-height: 1;">@item.Jabatan</span>
-                                        }
-                                        @if (!string.IsNullOrEmpty(item.Departemen))
-                                        {
-                                            <span>@item.Departemen</span>
-                                        }
-                                        @if (!string.IsNullOrEmpty(item.Perusahaan))
-                                        {
-                                            <span class="text-secondary fw-semibold">| @item.Perusahaan</span>
-                                        }
-                                    </div>
-                                }
-                                <div class="text-muted" style="font-size: 10px; margin-top: 1px; display: flex; align-items: center; gap: 4px;">
-                                    <span><i class="bi bi-clock" style="font-size: 9px;"></i> @item.Tanggal.ToString("dd MMM yyyy") @item.Waktu.ToString(@"hh\:mm")</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex flex-column align-items-end gap-1">
-                            @if (!string.IsNullOrEmpty(item.Status))
-                            {
-                                var statusLower = item.Status.ToLower();
-                                if (item.ItemType == "Observation")
-                                {
-                                    if (statusLower == "violation")
-                                    {
-                                        <span class="badge-glass badge-status-violation"><i class="bi bi-x-circle-fill"></i>Violation</span>
-                                    }
-                                    else if (statusLower == "improvement")
-                                    {
-                                        <span class="badge-glass badge-status-improvement"><i class="bi bi-exclamation-triangle-fill"></i>Improvement</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge-glass badge-status-positive"><i class="bi bi-check-circle-fill"></i>Positive</span>
-                                    }
-                                }
-                                else if (item.ItemType == "P2h")
-                                {
-                                    if (statusLower == "good")
-                                    {
-                                        <span class="badge-glass badge-status-positive"><i class="bi bi-check-circle-fill"></i>Aman</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge-glass badge-status-violation"><i class="bi bi-exclamation-circle-fill"></i>Temuan</span>
-                                    }
-                                }
-                                else
-                                {
-                                    if (statusLower == "open")
-                                    {
-                                        <span class="badge-glass badge-status-open"><i class="bi bi-exclamation-circle-fill"></i>Open</span>
-                                    }
-                                    else if (statusLower == "progres")
-                                    {
-                                        <span class="badge-glass badge-status-progres"><i class="bi bi-arrow-repeat"></i>Progres</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge-glass badge-status-closed"><i class="bi bi-check-circle-fill"></i>Closed</span>
-                                    }
-                                }
-                            }
-                            
-                            @{
-                                var itemTypeBadgeClass = item.ItemType.ToLower() switch {
-                                    "hazard" => "badge-type-hazard",
-                                    "inspection" => "badge-type-inspection",
-                                    "actionplan" => "badge-type-actionplan",
-                                    "safetytalk" => "badge-type-safetytalk",
-                                    "p5m" => "badge-type-p5m",
-                                    "observation" => "badge-type-observation",
-                                    "p2h" => "badge-type-p2h",
-                                    _ => "bg-secondary text-white"
-                                };
-                                var itemTypeDisplay = item.ItemType.ToLower() switch {
-                                    "hazard" => "Hazard Report",
-                                    "inspection" => "Inspeksi",
-                                    "actionplan" => "Action Plan",
-                                    "safetytalk" => "Safety Talk",
-                                    "p5m" => "P5M",
-                                    "observation" => "Observasi",
-                                    "p2h" => "P2H",
-                                    _ => item.ItemType
-                                };
-                                var itemTypeIcon = item.ItemType.ToLower() switch {
-                                    "hazard" => "bi-exclamation-triangle",
-                                    "inspection" => "bi-clipboard-check",
-                                    "actionplan" => "bi-calendar-check",
-                                    "safetytalk" => "bi-megaphone",
-                                    "p5m" => "bi-people",
-                                    "observation" => "bi-eye",
-                                    "p2h" => "bi-truck",
-                                    _ => "bi-rss"
-                                };
-                            }
-                            <span class="badge-glass @itemTypeBadgeClass"><i class="bi @itemTypeIcon"></i>@itemTypeDisplay</span>
-                            
-                            @if (!string.IsNullOrEmpty(item.TingkatResiko))
-                            {
-                                var riskLower = item.TingkatResiko.ToLower();
-                                var riskClass = riskLower switch {
-                                    "ekstrim" => "badge-risk-ekstrim",
-                                    "tinggi"  => "badge-risk-tinggi",
-                                    "sedang"  => "badge-risk-sedang",
-                                    _         => "badge-risk-rendah"
-                                };
-                                <span class="badge-glass @riskClass">
-                                    <i class="bi bi-shield-fill-exclamation"></i>@item.TingkatResiko.ToUpper()
-                                </span>
-                            }
-                        </div>
-                    </div>
-
-                    <!-- Card Body -->
-                    <div class="px-3 pb-3 pt-1">
-                        
-                        <!-- Metadata Grid -->
-                        @if (!string.IsNullOrEmpty(item.Area) || !string.IsNullOrEmpty(item.Lokasi) || !string.IsNullOrEmpty(item.Kategori))
-                        {
-                            <div class="meta-grid">
-                                @if (!string.IsNullOrEmpty(item.Area))
-                                {
-                                    <div class="meta-item" title="Area">
-                                        <i class="bi bi-geo-alt-fill text-primary"></i>
-                                        <div>
-                                            <div class="meta-item-label">Area</div>
-                                            <div class="meta-item-value">@item.Area</div>
-                                        </div>
-                                    </div>
-                                }
-                                @if (!string.IsNullOrEmpty(item.Lokasi))
-                                {
-                                    <div class="meta-item" title="Lokasi Spesifik">
-                                        <i class="bi bi-pin-map-fill text-info"></i>
-                                        <div>
-                                            <div class="meta-item-label">Lokasi</div>
-                                            <div class="meta-item-value">@item.Lokasi</div>
-                                        </div>
-                                    </div>
-                                }
-                                @if (!string.IsNullOrEmpty(item.Kategori))
-                                {
-                                    var categoryIcon = item.ItemType.ToLower() switch {
-                                        "p2h" => "bi-truck-front",
-                                        "hazard" => "bi-exclamation-octagon",
-                                        "inspection" => "bi-journal-check",
-                                        "observation" => "bi-eye",
-                                        _ => "bi-tag"
-                                    };
-                                    <div class="meta-item" title="Kategori / Jenis">
-                                        <i class="bi @categoryIcon text-warning"></i>
-                                        <div>
-                                            <div class="meta-item-label">Kategori</div>
-                                            <div class="meta-item-value">@item.Kategori</div>
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        }
-
-                        <!-- Post Description / Content Box -->
-                        @if (item.ItemType == "P2h")
-                        {
-                            <div class="detail-box-p2h mb-3">
-                                <div class="d-flex align-items-center gap-2 mb-2">
-                                    <i class="bi bi-shield-check text-primary" style="font-size: 14px;"></i>
-                                    <span class="fw-bold" style="font-size: 12px; color: var(--text-main);">Hasil Pemeriksaan Unit</span>
-                                </div>
-                                <p class="mb-0 text-muted" style="font-size: 13px; line-height: 1.5; font-family: var(--font-body);">@item.Content</p>
-                            </div>
-                        }
-                        else if (item.ItemType == "Hazard")
-                        {
-                            <div class="detail-box-hazard mb-3">
-                                <div class="d-flex align-items-center gap-2 mb-2">
-                                    <i class="bi bi-exclamation-octagon-fill text-danger" style="font-size: 14px;"></i>
-                                    <span class="fw-bold" style="font-size: 12px; color: var(--text-main);">Deskripsi Temuan Bahaya</span>
-                                </div>
-                                <p class="mb-0 text-muted" style="font-size: 13px; line-height: 1.5; font-family: var(--font-body);">@item.Content</p>
-                            </div>
-                        }
-                        else
-                        {
-                            @if (!string.IsNullOrEmpty(item.Content))
-                            {
-                                <div class="mb-3" style="font-size: 13px; line-height: 1.5; color: var(--text-main); font-family: var(--font-body);">
-                                    @if (!string.IsNullOrEmpty(item.Title))
-                                    {
-                                        <strong class="d-block mb-1" style="font-size: 14px; color: var(--text-main); font-family: var(--font-heading);">@item.Title</strong>
-                                    }
-                                    @item.Content
-                                </div>
-                            }
-                        }
-
-                        <!-- Image Display (Full Width Box) - hanya Admin yang bisa melihat foto -->
-                        @if (!string.IsNullOrEmpty(item.FotoUrl))
-                        {
-                            if (User.IsInRole("Admin"))
-                            {
-                                <div class="feed-image-container">
-                                    <img src="@item.FotoUrl" class="feed-image" alt="Foto Laporan" />
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="px-3 py-2.5 d-flex align-items-center gap-2 mb-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px;">
-                                    <i class="bi bi-shield-lock-fill text-warning" style="font-size: 16px;"></i>
-                                    <span class="text-muted" style="font-size: 11px;">📷 Foto tersedia — hanya dapat dilihat oleh Administrator</span>
-                                </div>
-                            }
-                        }
-
-                        <!-- Action Bar (Like, Comment, Share) -->
-                        <div class="d-flex gap-2 mb-2 align-items-center">
-                            <button class="btn-action-feed btn-like" 
-                                    data-type="@item.ItemType" data-id="@item.OriginalId"
-                                    style="color: @(item.IsLikedByCurrentUser ? "var(--color-primary)" : "var(--text-muted)");"
-                                    title="Suka">
-                                <i class="bi @(item.IsLikedByCurrentUser ? "bi-hand-thumbs-up-fill" : "bi-hand-thumbs-up")" style="font-size: 18px;"></i>
-                            </button>
-                            <button class="btn-action-feed btn-comment-toggle"
-                                    onclick="$('#comment-input-@item.ItemType-@item.OriginalId').focus();"
-                                    style="color: var(--text-muted);"
-                                    title="Komentar">
-                                <i class="bi bi-chat" style="font-size: 18px;"></i>
-                            </button>
-                            <button class="btn-action-feed btn-share"
-                                    onclick="shareTimelineItem('@item.ItemType', '@item.Title', '@item.Nama')"
-                                    style="color: var(--text-muted);"
-                                    title="Bagikan">
-                                <i class="bi bi-send" style="font-size: 18px;"></i>
-                            </button>
-                            
-                            <!-- Likes Count (Suka) -->
-                            <div class="fw-bold ms-2" style="font-size: 12.5px; color: var(--text-main);">
-                                <span id="like-count-@item.ItemType-@item.OriginalId">@item.LikesCount</span> suka
-                            </div>
-                        </div>
-
-                        <!-- Comments Section -->
-                        <div class="mt-2">
-                            @if (item.CommentsCount > 0)
-                            {
-                                <div class="text-muted mb-2 btn-comment-toggle" style="font-size: 12.5px; cursor: pointer; font-weight: 500;" onclick="$('#comments-list-@item.ItemType-@item.OriginalId').slideToggle(150);">
-                                    Lihat semua <span id="comment-count-@item.ItemType-@item.OriginalId">@item.CommentsCount</span> komentar
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="text-muted mb-2" style="font-size: 12.5px; display: none; font-weight: 500;" id="comment-count-wrapper-@item.ItemType-@item.OriginalId">
-                                    Lihat semua <span id="comment-count-@item.ItemType-@item.OriginalId">0</span> komentar
-                                </div>
-                            }
-                            
-                            <div class="comments-list ps-1 mb-2" id="comments-list-@item.ItemType-@item.OriginalId" style="display: none; border-left: 2px solid var(--border-color); padding-left: 8px;">
-                                @foreach (var c in item.Comments)
-                                {
-                                    <div class="mb-1.5" style="font-size: 12.5px; color: var(--text-main); line-height: 1.4;">
-                                        <span class="fw-bold me-1 text-primary" style="font-size: 12px;">@c.NamaPengguna</span>
-                                        <span>@c.CommentText</span>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-
-                        <!-- Add Comment Input Pill -->
-                        <div class="pt-2 border-top d-flex align-items-center" style="border-color: var(--border-color) !important;">
-                            <div class="comment-input-pill">
-                                <input type="text" class="form-control border-0 px-0 shadow-none" id="comment-input-@item.ItemType-@item.OriginalId" placeholder="Tambahkan komentar..." style="font-size: 12.5px; background-color: transparent; color: var(--text-main);" />
-                                <button class="btn btn-link text-primary text-decoration-none fw-bold p-0 btn-send-comment ms-2" data-type="@item.ItemType" data-id="@item.OriginalId" style="font-size: 12.5px; min-width: 40px;">
-                                    Kirim
-                                </button>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-                loopIndex++;
-            }
+            <div id="timelineItems">
+                @await Html.PartialAsync("_TimelineCards", Model)
+            </div>
+            <div id="timelineLoading" class="text-center py-3 d-none">
+                <div class="spinner-border text-primary" role="status" style="width: 1.5rem; height: 1.5rem;"></div>
+                <div class="text-muted mt-2" style="font-size: 12px;">Memuat aktivitas berikutnya...</div>
+            </div>
+            <div id="timelineEnd" class="text-center text-muted py-3 d-none" style="font-size: 12px;">Semua aktivitas sudah dimuat.</div>
+            <div id="timelineSentinel" style="height: 1px;"></div>
         }
     </div>
 </div>
@@ -614,8 +310,67 @@
 @section Scripts {
     <script>
         $(document).ready(function() {
-            // Like action
-            $('.btn-like').click(function() {
+            let timelineSkip = @Model.Count();
+            const timelineTake = @(ViewBag.PageSize ?? 12);
+            let timelineHasMore = @(((bool?)ViewBag.HasMore ?? false) ? "true" : "false");
+            let timelineLoading = false;
+
+            const $timelineItems = $('#timelineItems');
+            const $timelineLoading = $('#timelineLoading');
+            const $timelineEnd = $('#timelineEnd');
+            const timelineSentinel = document.getElementById('timelineSentinel');
+
+            async function loadMoreTimeline() {
+                if (!timelineHasMore || timelineLoading) return;
+                timelineLoading = true;
+                $timelineLoading.removeClass('d-none');
+
+                try {
+                    const response = await fetch(`/Timeline/LoadMore?skip=${timelineSkip}&take=${timelineTake}`, {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Gagal memuat data timeline');
+                    }
+
+                    const html = await response.text();
+                    const itemCount = parseInt(response.headers.get('X-Item-Count') || '0', 10);
+                    const hasMoreHeader = (response.headers.get('X-Has-More') || '0') === '1';
+
+                    if (html && html.trim().length > 0) {
+                        $timelineItems.append(html);
+                    }
+
+                    timelineSkip += itemCount;
+                    timelineHasMore = hasMoreHeader;
+
+                    if (!timelineHasMore) {
+                        $timelineEnd.removeClass('d-none');
+                    }
+                } catch (err) {
+                    console.error(err);
+                } finally {
+                    timelineLoading = false;
+                    $timelineLoading.addClass('d-none');
+                }
+            }
+
+            if (timelineSentinel && 'IntersectionObserver' in window) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            loadMoreTimeline();
+                        }
+                    });
+                }, { root: null, rootMargin: '300px 0px', threshold: 0 });
+
+                observer.observe(timelineSentinel);
+            }
+
+            // Like action (delegated for dynamic cards)
+            $(document).on('click', '.btn-like', function() {
                 var btn = $(this);
                 var type = btn.data('type');
                 var id = btn.data('id');
@@ -643,13 +398,13 @@
                 });
             });
 
-            // Send comment on button click
-            $('.btn-send-comment').click(function() {
+            // Send comment on button click (delegated for dynamic cards)
+            $(document).on('click', '.btn-send-comment', function() {
                 sendComment($(this));
             });
 
-            // Send comment on enter key
-            $('input[id^="comment-input-"]').keypress(function(e) {
+            // Send comment on enter key (delegated for dynamic cards)
+            $(document).on('keypress', 'input[id^="comment-input-"]', function(e) {
                 if(e.which == 13) {
                     var input = $(this);
                     var type = input.attr('id').split('-')[2];

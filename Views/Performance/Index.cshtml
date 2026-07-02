@@ -393,6 +393,67 @@
     .hierarchy-item {
         position: relative;
     }
+    .hierarchy-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+    .hierarchy-search {
+        flex: 1 1 280px;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--bg-card);
+        color: var(--text-main);
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .hierarchy-search:focus {
+        outline: none;
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+    .hierarchy-btn {
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--bg-card);
+        color: var(--text-main);
+        padding: 8px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        transition: all 0.15s ease;
+    }
+    .hierarchy-btn:hover {
+        border-color: #38bdf8;
+        color: #38bdf8;
+    }
+    .hierarchy-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    .hierarchy-summary-chip {
+        border: 1px solid var(--border-color);
+        background: rgba(56, 189, 248, 0.08);
+        border-radius: 999px;
+        padding: 5px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+    .hierarchy-meta-badge {
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        border-radius: 999px;
+        border: 1px solid var(--border-color);
+        padding: 2px 6px;
+        color: var(--text-muted);
+    }
     .hierarchy-item .card-sap {
         transition: all 0.2s ease;
         border-left: 3px solid transparent !important;
@@ -416,8 +477,21 @@
     body.light-theme .hierarchy-children > .hierarchy-node > .hierarchy-item::before {
         border-top: 1.5px dashed rgba(0, 0, 0, 0.15);
     }
+    .hierarchy-item .toggle-icon {
+        transition: transform 0.2s ease;
+    }
+    .hierarchy-item .toggle-icon.is-collapsed {
+        transform: rotate(-90deg);
+    }
 
     @@media (max-width: 767.98px) {
+        .hierarchy-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .hierarchy-btn {
+            width: 100%;
+        }
         .hierarchy-children {
             padding-left: 16px;
             margin-left: 6px;
@@ -500,6 +574,37 @@
         font-size: 20px;
         color: #0f172a;
     }
+
+    /* Accident pyramid readability */
+    .accident-pyramid-bar .pyramid-label,
+    .accident-pyramid-bar .pyramid-value {
+        color: #0f172a;
+        text-shadow: none;
+    }
+
+    .accident-pyramid-bar.has-fill .pyramid-label,
+    .accident-pyramid-bar.has-fill .pyramid-value {
+        color: #f8fafc;
+        text-shadow: 0 1px 2px rgba(15, 23, 42, 0.55);
+    }
+
+    .accident-pyramid-bar .pyramid-progress {
+        border-right: none;
+    }
+
+    .accident-pyramid-bar.is-zero {
+        background: #f8fafc;
+    }
+
+    .accident-pyramid-bar .pyramid-value {
+        min-width: 32px;
+        text-align: right;
+    }
+
+    .accident-pyramid-bar .pyramid-label {
+        letter-spacing: 0.35px;
+        font-size: 11.5px;
+    }
     .pyramid-progress {
         position: absolute;
         top: 0;
@@ -514,9 +619,6 @@
     .bar-insiden .pyramid-progress {
         background: linear-gradient(90deg, #f1f5f9, #cbd5e1);
     }
-    .bar-kritis .pyramid-progress {
-        background: linear-gradient(90deg, #fca5a5, #ef4444);
-    }
     .bar-ekstrim .pyramid-progress {
         background: linear-gradient(90deg, #f87171, #dc2626);
     }
@@ -528,6 +630,25 @@
     }
     .bar-rendah .pyramid-progress {
         background: linear-gradient(90deg, #86efac, #22c55e);
+    }
+
+    .bar-near-miss .pyramid-progress {
+        background: linear-gradient(90deg, #16a34a, #22c55e);
+    }
+    .bar-property-damaged .pyramid-progress {
+        background: linear-gradient(90deg, #0f766e, #14b8a6);
+    }
+    .bar-first-aid .pyramid-progress {
+        background: linear-gradient(90deg, #2563eb, #3b82f6);
+    }
+    .bar-medical-treatment .pyramid-progress {
+        background: linear-gradient(90deg, #7c3aed, #8b5cf6);
+    }
+    .bar-kebakaran .pyramid-progress {
+        background: linear-gradient(90deg, #ea580c, #fb923c);
+    }
+    .bar-fatality .pyramid-progress {
+        background: linear-gradient(90deg, #7f1d1d, #991b1b);
     }
 </style>
 
@@ -558,6 +679,9 @@
             </button>
             <button class="tab-btn px-4 py-2 tab-inactive" id="tabHitSafe" onclick="switchTab('hitsafe')">
                 <i class="bi bi-geo-alt-fill me-1"></i> Safe Map
+            </button>
+            <button class="tab-btn px-4 py-2 tab-inactive" id="tabHierarchy" onclick="switchTab('hierarchy')">
+                <i class="bi bi-diagram-3-fill me-1"></i> Hirarki Perusahaan
             </button>
         </div>
     </div>
@@ -841,7 +965,7 @@
                     <div class="kpi-card text-center d-flex flex-column" style="padding: 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-card);">
                         <div style="font-size: 9px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); text-align: left;">Repeat Hazard Rate (RHR)</div>
                         <div style="font-size: 20px; font-weight: 900; color: var(--text-main); text-align: left; line-height: 1.1; margin-top: 4px;">@ViewBag.RHR%</div>
-                        <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px; min-height: 24px;">@ViewBag.RepeatHazards repeat dari @ViewBag.TotalSignatures signature</div>
+                        <div style="font-size: 9px; font-weight: 500; color: var(--text-muted); text-align: left; margin-bottom: 16px; min-height: 24px;">@ViewBag.RepeatHazards lokasi berulang dari @ViewBag.TotalLocations lokasi unik</div>
                         <div style="position: relative; height: 80px; width: 100%;">
                             <canvas id="gaugeRHR"></canvas>
                         </div>
@@ -865,14 +989,14 @@
             <div class="row mt-2 g-2 text-start" style="font-size: 11px; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 12px; line-height: 1.5;">
                 <div class="col-12 col-md-4">
                     <p class="mb-1"><strong>Compliance Close:</strong> persentase temuan yang sudah status <strong>Close</strong> dari total Open+Close.</p>
-                    <p class="mb-0"><strong>RRI:</strong> bobot risiko yang berhasil ditutup (Rendah=1 s/d Kritis=5). Lebih tinggi lebih baik.</p>
+                    <p class="mb-0"><strong>RRI:</strong> bobot risiko yang berhasil ditutup (Rendah=1 s/d Ekstrim=4). Lebih tinggi lebih baik.</p>
                 </div>
                 <div class="col-12 col-md-4">
                     <p class="mb-1"><strong>Overdue:</strong> proporsi temuan Open yang melewati SLA <strong>&gt;14 hari</strong>. Lebih rendah lebih baik.</p>
-                    <p class="mb-0"><strong>RHR:</strong> persentase signature hazard yang berulang (type+area+lokasi+PJA). Lebih rendah lebih sehat.</p>
+                    <p class="mb-0"><strong>RHR:</strong> persentase lokasi hazard yang berulang. Lebih rendah lebih sehat.</p>
                 </div>
                 <div class="col-12 col-md-4">
-                    <p class="mb-1"><strong>Compliance Risk:</strong> proporsi Open dengan risiko <strong>Kritis/Ekstrim/Tinggi</strong>. Lebih rendah lebih baik.</p>
+                    <p class="mb-1"><strong>Compliance Risk:</strong> proporsi Open dengan risiko <strong>Ekstrim/Tinggi</strong>. Lebih rendah lebih baik.</p>
                     <p class="mb-0"><strong>High-Risk Resolution:</strong> persentase temuan risiko tinggi yang berhasil ditutup.</p>
                 </div>
             </div>
@@ -943,16 +1067,125 @@
 
         <!-- Charts Row -->
         <div class="row g-3 mb-4 animate-fade-in">
-            <!-- Doughnut 1: Proporsi Aktivitas -->
+            <!-- Accident Pyramid (replace Proporsi Aktivitas) -->
             <div class="col-12 col-md-6">
                 <div class="premium-card">
                     <div class="premium-header">
-                        <i class="bi bi-pie-chart-fill text-info" style="font-size: 16px; color: #38bdf8 !important;"></i>
-                        <h6 class="premium-title">Proporsi Aktivitas SAP (Bulan Ini)</h6>
+                        <i class="bi bi-exclamation-octagon-fill text-danger" style="font-size: 16px; color: #ef4444 !important;"></i>
+                        <h6 class="premium-title">Piramida Kecelakaan (Tahun Ini)</h6>
                     </div>
                     <div class="premium-body">
-                        <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
-                            <canvas id="proporsiChart"></canvas>
+                        <div class="w-100 pyramid-group">
+                            <div class="d-flex flex-column gap-2 align-items-center w-100 py-2" style="margin: 0 auto; max-width: 480px;">
+                                <div class="pyramid-row" style="width: 40%;">
+                                    <div class="pyramid-bar accident-pyramid-bar bar-fatality" data-val="@ViewBag.IncidentFatality" title="Fatality: @ViewBag.IncidentFatality">
+                                        <div class="pyramid-progress"></div>
+                                        <span class="pyramid-label">FATALITY</span>
+                                        <span class="pyramid-value">@ViewBag.IncidentFatality</span>
+                                    </div>
+                                </div>
+                                <div class="pyramid-row" style="width: 50%;">
+                                    <div class="pyramid-bar accident-pyramid-bar bar-kebakaran" data-val="@ViewBag.IncidentKebakaran" title="Kebakaran: @ViewBag.IncidentKebakaran">
+                                        <div class="pyramid-progress"></div>
+                                        <span class="pyramid-label">KEBAKARAN</span>
+                                        <span class="pyramid-value">@ViewBag.IncidentKebakaran</span>
+                                    </div>
+                                </div>
+                                <div class="pyramid-row" style="width: 64%;">
+                                    <div class="pyramid-bar accident-pyramid-bar bar-medical-treatment" data-val="@ViewBag.IncidentMedicalTreatmentInjury" title="Medical Treatment Injury: @ViewBag.IncidentMedicalTreatmentInjury">
+                                        <div class="pyramid-progress"></div>
+                                        <span class="pyramid-label">MEDICAL TREATMENT INJURY</span>
+                                        <span class="pyramid-value">@ViewBag.IncidentMedicalTreatmentInjury</span>
+                                    </div>
+                                </div>
+                                <div class="pyramid-row" style="width: 78%;">
+                                    <div class="pyramid-bar accident-pyramid-bar bar-first-aid" data-val="@ViewBag.IncidentFirstAidInjury" title="First Aid Injury: @ViewBag.IncidentFirstAidInjury">
+                                        <div class="pyramid-progress"></div>
+                                        <span class="pyramid-label">FIRST AID INJURY</span>
+                                        <span class="pyramid-value">@ViewBag.IncidentFirstAidInjury</span>
+                                    </div>
+                                </div>
+                                <div class="pyramid-row" style="width: 90%;">
+                                    <div class="pyramid-bar accident-pyramid-bar bar-property-damaged" data-val="@ViewBag.IncidentPropertyDamage" title="Property Damage: @ViewBag.IncidentPropertyDamage">
+                                        <div class="pyramid-progress"></div>
+                                        <span class="pyramid-label">PROPERTY DAMAGE</span>
+                                        <span class="pyramid-value">@ViewBag.IncidentPropertyDamage</span>
+                                    </div>
+                                </div>
+                                <div class="pyramid-row" style="width: 100%;">
+                                    <div class="pyramid-bar accident-pyramid-bar bar-near-miss" data-val="@ViewBag.IncidentNearMiss" title="Near Miss: @ViewBag.IncidentNearMiss">
+                                        <div class="pyramid-progress"></div>
+                                        <span class="pyramid-label">NEAR MISS</span>
+                                        <span class="pyramid-value">@ViewBag.IncidentNearMiss</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @{
+                                int totalAccidentPyramid = ViewBag.IncidentNearMiss + ViewBag.IncidentPropertyDamage + ViewBag.IncidentFirstAidInjury + ViewBag.IncidentMedicalTreatmentInjury + ViewBag.IncidentKebakaran + ViewBag.IncidentFatality;
+                            }
+                            <div class="mt-3 p-2.5 text-center" style="background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 8px; font-weight: 700; color: #9f1239; font-size: 13px;">
+                                Total Indikator Piramida: <span style="font-weight: 900; font-size: 14px;">@totalAccidentPyramid</span>
+                            </div>
+
+                            <div class="table-responsive mt-3" style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff;">
+                                <table class="table table-sm align-middle text-start mb-0" style="color: #0f172a; font-size: 12px; border-collapse: collapse;">
+                                    <thead style="background: #f1f5f9; font-weight: 700; color: #475569;">
+                                        <tr>
+                                            <th class="ps-3 py-2" style="border-bottom: 1.5px solid #cbd5e1;">Kategori Insiden</th>
+                                            <th class="text-center py-2" style="border-bottom: 1.5px solid #cbd5e1;">Jumlah</th>
+                                            <th class="text-end pe-3 py-2" style="border-bottom: 1.5px solid #cbd5e1;">Komposisi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{
+                                            double pNearMiss = totalAccidentPyramid > 0 ? (double)ViewBag.IncidentNearMiss / totalAccidentPyramid * 100.0 : 0.0;
+                                            double pPropertyDamage = totalAccidentPyramid > 0 ? (double)ViewBag.IncidentPropertyDamage / totalAccidentPyramid * 100.0 : 0.0;
+                                            double pFirstAid = totalAccidentPyramid > 0 ? (double)ViewBag.IncidentFirstAidInjury / totalAccidentPyramid * 100.0 : 0.0;
+                                            double pMedical = totalAccidentPyramid > 0 ? (double)ViewBag.IncidentMedicalTreatmentInjury / totalAccidentPyramid * 100.0 : 0.0;
+                                            double pKebakaran = totalAccidentPyramid > 0 ? (double)ViewBag.IncidentKebakaran / totalAccidentPyramid * 100.0 : 0.0;
+                                            double pFatality = totalAccidentPyramid > 0 ? (double)ViewBag.IncidentFatality / totalAccidentPyramid * 100.0 : 0.0;
+                                        }
+                                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                                            <td class="ps-3 py-2" style="font-weight: 600;">Near Miss</td>
+                                            <td class="text-center py-2" style="font-weight: 600;">@ViewBag.IncidentNearMiss</td>
+                                            <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pNearMiss, 1)%</td>
+                                        </tr>
+                                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                                            <td class="ps-3 py-2" style="font-weight: 600;">Property Damage</td>
+                                            <td class="text-center py-2" style="font-weight: 600;">@ViewBag.IncidentPropertyDamage</td>
+                                            <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pPropertyDamage, 1)%</td>
+                                        </tr>
+                                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                                            <td class="ps-3 py-2" style="font-weight: 600;">First Aid Injury</td>
+                                            <td class="text-center py-2" style="font-weight: 600;">@ViewBag.IncidentFirstAidInjury</td>
+                                            <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pFirstAid, 1)%</td>
+                                        </tr>
+                                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                                            <td class="ps-3 py-2" style="font-weight: 600;">Medical Treatment Injury</td>
+                                            <td class="text-center py-2" style="font-weight: 600;">@ViewBag.IncidentMedicalTreatmentInjury</td>
+                                            <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pMedical, 1)%</td>
+                                        </tr>
+                                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                                            <td class="ps-3 py-2" style="font-weight: 600;">Kebakaran</td>
+                                            <td class="text-center py-2" style="font-weight: 600;">@ViewBag.IncidentKebakaran</td>
+                                            <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pKebakaran, 1)%</td>
+                                        </tr>
+                                        <tr style="border-bottom: none;">
+                                            <td class="ps-3 py-2" style="font-weight: 600;">Fatality</td>
+                                            <td class="text-center py-2" style="font-weight: 600;">@ViewBag.IncidentFatality</td>
+                                            <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pFatality, 1)%</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <small class="d-block mt-2 text-muted" style="font-size: 10px;">
+                                Urutan dari bawah ke atas: Near Miss, Property Damage, First Aid Injury, Medical Treatment Injury, Kebakaran, Fatality.
+                            </small>
+                            <small class="d-block mt-1 text-muted" style="font-size: 10px;">
+                                Sumber data: Incident/Index (Published). Total Incident Index: @ViewBag.IncidentIndexTotal | Terhitung Tahun Ini: @ViewBag.IncidentYearTotal
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -968,71 +1201,63 @@
                     <div class="premium-body">
                         <div class="w-100">
                             <div style="font-size: 10px; color: #64748b; font-weight: 600; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            Sumber data asli: hazard_danger_name (status Open), kritis ditempatkan paling atas
+                                Sumber data: level risiko hazard seluruh perusahaan (Open + Closed) + puncak insiden dari total piramida kecelakaan
                         </div>
                         
                         <!-- Stacked Bar Pyramid Graphic Elements -->
                         <div class="d-flex flex-column gap-2 align-items-center w-100 py-2" style="margin: 0 auto; max-width: 480px;">
                             <!-- INSIDEN Row -->
                             <div class="pyramid-row" style="width: 35%;">
-                                <div class="pyramid-bar bar-insiden" data-val="@ViewBag.OpenInsiden" title="Insiden: @ViewBag.OpenInsiden">
+                                <div class="pyramid-bar safety-pyramid-bar bar-insiden" data-val="@ViewBag.SafetyTopInsiden" title="Insiden: @ViewBag.SafetyTopInsiden">
                                     <div class="pyramid-progress"></div>
                                     <span class="pyramid-label">INSIDEN</span>
-                                    <span class="pyramid-value">@ViewBag.OpenInsiden</span>
-                                </div>
-                            </div>
-                            <!-- KRITIS Row -->
-                            <div class="pyramid-row" style="width: 48%;">
-                                <div class="pyramid-bar bar-kritis" data-val="@ViewBag.OpenKritis" title="Kritis: @ViewBag.OpenKritis">
-                                    <div class="pyramid-progress"></div>
-                                    <span class="pyramid-label">KRITIS</span>
-                                    <span class="pyramid-value">@ViewBag.OpenKritis</span>
+                                    <span class="pyramid-value">@ViewBag.SafetyTopInsiden</span>
                                 </div>
                             </div>
                             <!-- EKSTRIM Row -->
-                            <div class="pyramid-row" style="width: 61%;">
-                                <div class="pyramid-bar bar-ekstrim" data-val="@ViewBag.OpenExtreme" title="Ekstrim: @ViewBag.OpenExtreme">
+                            <div class="pyramid-row" style="width: 52%;">
+                                <div class="pyramid-bar safety-pyramid-bar bar-ekstrim" data-val="@ViewBag.SafetyOpenExtreme" title="Ekstrim: @ViewBag.SafetyOpenExtreme">
                                     <div class="pyramid-progress"></div>
                                     <span class="pyramid-label">EKSTRIM</span>
-                                    <span class="pyramid-value">@ViewBag.OpenExtreme</span>
+                                    <span class="pyramid-value">@ViewBag.SafetyOpenExtreme</span>
                                 </div>
                             </div>
                             <!-- TINGGI Row -->
-                            <div class="pyramid-row" style="width: 74%;">
-                                <div class="pyramid-bar bar-tinggi" data-val="@ViewBag.OpenHigh" title="Tinggi: @ViewBag.OpenHigh">
+                            <div class="pyramid-row" style="width: 68%;">
+                                <div class="pyramid-bar safety-pyramid-bar bar-tinggi" data-val="@ViewBag.SafetyOpenHigh" title="Tinggi: @ViewBag.SafetyOpenHigh">
                                     <div class="pyramid-progress"></div>
                                     <span class="pyramid-label">TINGGI</span>
-                                    <span class="pyramid-value">@ViewBag.OpenHigh</span>
+                                    <span class="pyramid-value">@ViewBag.SafetyOpenHigh</span>
                                 </div>
                             </div>
                             <!-- SEDANG Row -->
-                            <div class="pyramid-row" style="width: 87%;">
-                                <div class="pyramid-bar bar-sedang" data-val="@ViewBag.OpenMedium" title="Sedang: @ViewBag.OpenMedium">
+                            <div class="pyramid-row" style="width: 84%;">
+                                <div class="pyramid-bar safety-pyramid-bar bar-sedang" data-val="@ViewBag.SafetyOpenMedium" title="Sedang: @ViewBag.SafetyOpenMedium">
                                     <div class="pyramid-progress"></div>
                                     <span class="pyramid-label">SEDANG</span>
-                                    <span class="pyramid-value">@ViewBag.OpenMedium</span>
+                                    <span class="pyramid-value">@ViewBag.SafetyOpenMedium</span>
                                 </div>
                             </div>
                             <!-- RENDAH Row -->
                             <div class="pyramid-row" style="width: 100%;">
-                                <div class="pyramid-bar bar-rendah" data-val="@ViewBag.OpenLow" title="Rendah: @ViewBag.OpenLow">
+                                <div class="pyramid-bar safety-pyramid-bar bar-rendah" data-val="@ViewBag.SafetyOpenLow" title="Rendah: @ViewBag.SafetyOpenLow">
                                     <div class="pyramid-progress"></div>
                                     <span class="pyramid-label">RENDAH</span>
-                                    <span class="pyramid-value">@ViewBag.OpenLow</span>
+                                    <span class="pyramid-value">@ViewBag.SafetyOpenLow</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Total Open Badge -->
                         @{
-                            int totalOpenAll = ViewBag.OpenInsiden + ViewBag.OpenKritis + ViewBag.OpenExtreme + ViewBag.OpenHigh + ViewBag.OpenMedium + ViewBag.OpenLow;
+                            int totalOpenAll = ViewBag.SafetyTopInsiden + ViewBag.SafetyOpenExtreme + ViewBag.SafetyOpenHigh + ViewBag.SafetyOpenMedium + ViewBag.SafetyOpenLow;
                         }
                         <div class="mt-3 p-2.5 text-center" style="background: #f0f9ff; border: 1.5px solid #e0f2fe; border-radius: 8px; font-weight: 700; color: #0369a1; font-size: 13px;">
-                            Total Open (semua level): <span style="font-weight: 900; font-size: 14px;">@totalOpenAll</span>
+                            Total Indikator Piramida Risiko: <span style="font-weight: 900; font-size: 14px;">@totalOpenAll</span>
                         </div>
 
                         <!-- Warning under-reporting -->
-                        @if (ViewBag.OpenLow < ViewBag.OpenMedium)
+                        @if (ViewBag.SafetyOpenLow < ViewBag.SafetyOpenMedium)
                         {
                             <div class="mt-3 p-3" style="background: #fffbeb; border: 1.5px solid #fde047; border-radius: 8px; font-weight: 600; color: #b45309; font-size: 11px; line-height: 1.5; text-align: left;">
                                 <i class="bi bi-exclamation-triangle-fill me-1"></i>
@@ -1052,41 +1277,35 @@
                                 </thead>
                                 <tbody>
                                     @{
-                                        double pInsiden = totalOpenAll > 0 ? (double)ViewBag.OpenInsiden / totalOpenAll * 100.0 : 0.0;
-                                        double pKritis = totalOpenAll > 0 ? (double)ViewBag.OpenKritis / totalOpenAll * 100.0 : 0.0;
-                                        double pExtreme = totalOpenAll > 0 ? (double)ViewBag.OpenExtreme / totalOpenAll * 100.0 : 0.0;
-                                        double pHigh = totalOpenAll > 0 ? (double)ViewBag.OpenHigh / totalOpenAll * 100.0 : 0.0;
-                                        double pMedium = totalOpenAll > 0 ? (double)ViewBag.OpenMedium / totalOpenAll * 100.0 : 0.0;
-                                        double pLow = totalOpenAll > 0 ? (double)ViewBag.OpenLow / totalOpenAll * 100.0 : 0.0;
+                                        double pInsiden = totalOpenAll > 0 ? (double)ViewBag.SafetyTopInsiden / totalOpenAll * 100.0 : 0.0;
+                                        double pExtreme = totalOpenAll > 0 ? (double)ViewBag.SafetyOpenExtreme / totalOpenAll * 100.0 : 0.0;
+                                        double pHigh = totalOpenAll > 0 ? (double)ViewBag.SafetyOpenHigh / totalOpenAll * 100.0 : 0.0;
+                                        double pMedium = totalOpenAll > 0 ? (double)ViewBag.SafetyOpenMedium / totalOpenAll * 100.0 : 0.0;
+                                        double pLow = totalOpenAll > 0 ? (double)ViewBag.SafetyOpenLow / totalOpenAll * 100.0 : 0.0;
                                     }
                                     <tr style="border-bottom: 1px solid #e2e8f0;">
                                         <td class="ps-3 py-2" style="font-weight: 600;">Insiden</td>
-                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenInsiden</td>
+                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.SafetyTopInsiden</td>
                                         <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pInsiden, 1)%</td>
                                     </tr>
                                     <tr style="border-bottom: 1px solid #e2e8f0;">
-                                        <td class="ps-3 py-2" style="font-weight: 600;">Kritis</td>
-                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenKritis</td>
-                                        <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pKritis, 1)%</td>
-                                    </tr>
-                                    <tr style="border-bottom: 1px solid #e2e8f0;">
                                         <td class="ps-3 py-2" style="font-weight: 600;">Ekstrim</td>
-                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenExtreme</td>
+                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.SafetyOpenExtreme</td>
                                         <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pExtreme, 1)%</td>
                                     </tr>
                                     <tr style="border-bottom: 1px solid #e2e8f0;">
                                         <td class="ps-3 py-2" style="font-weight: 600;">Tinggi</td>
-                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenHigh</td>
+                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.SafetyOpenHigh</td>
                                         <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pHigh, 1)%</td>
                                     </tr>
                                     <tr style="border-bottom: 1px solid #e2e8f0;">
                                         <td class="ps-3 py-2" style="font-weight: 600;">Sedang</td>
-                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenMedium</td>
+                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.SafetyOpenMedium</td>
                                         <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pMedium, 1)%</td>
                                     </tr>
                                     <tr style="border-bottom: none;">
                                         <td class="ps-3 py-2" style="font-weight: 600;">Rendah</td>
-                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.OpenLow</td>
+                                        <td class="text-center py-2" style="font-weight: 600;">@ViewBag.SafetyOpenLow</td>
                                         <td class="text-end pe-3 py-2" style="font-family: monospace; font-weight: 600;">@Math.Round(pLow, 1)%</td>
                                     </tr>
                                 </tbody>
@@ -1104,7 +1323,7 @@
                 <div class="premium-card">
                     <div class="premium-header">
                         <i class="bi bi-arrow-repeat text-danger" style="font-size: 16px; color: #f43f5e !important;"></i>
-                        <h6 class="premium-title">Top 5 Hazard Berulang Terbanyak (Bulan Ini)</h6>
+                        <h6 class="premium-title">Top 5 Lokasi Hazard Berulang (Bulan Ini)</h6>
                     </div>
                     <div class="premium-body">
                         <div style="height: 250px; position: relative;">
@@ -1114,12 +1333,12 @@
                 </div>
             </div>
 
-            <!-- Kategori Bahaya (KTA vs KTC) -->
+            <!-- Kategori Bahaya (KTA vs TTA) -->
             <div class="col-12 col-md-6">
                 <div class="premium-card">
                     <div class="premium-header">
                         <i class="bi bi-exclamation-circle-fill text-warning" style="font-size: 16px; color: #fbbf24 !important;"></i>
-                        <h6 class="premium-title">Kategori Temuan Hazard (KTA vs KTC)</h6>
+                        <h6 class="premium-title">Kategori Temuan Hazard (KTA vs TTA)</h6>
                     </div>
                     <div class="premium-body">
                         <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
@@ -1170,7 +1389,7 @@
                 <div class="premium-card">
                     <div class="premium-header">
                         <i class="bi bi-trophy-fill text-warning" style="font-size: 16px; color: #f59e0b !important;"></i>
-                        <h6 class="premium-title">@(ViewBag.IsAdmin == true ? "Leaderboard Kepatuhan Perusahaan (Bulan Ini)" : "Pencapaian Kepatuhan Perusahaan (Bulan Ini)")</h6>
+                        <h6 class="premium-title">@(ViewBag.IsAdmin == true ? "Leaderboard Kepatuhan Perusahaan (Tahun Ini)" : "Pencapaian Kepatuhan Perusahaan (Tahun Ini)")</h6>
                     </div>
                     <div class="premium-body">
                         <div class="table-responsive">
@@ -1184,7 +1403,7 @@
                                     <th>Perusahaan</th>
                                     <th style="width: 120px;" class="text-center">Karyawan Aktif</th>
                                     <th style="width: 140px;" class="text-center">Aktivitas Dilaporkan</th>
-                                    <th style="width: 140px;" class="text-center">Target Kepatuhan</th>
+                                    <th style="width: 140px;" class="text-center">Target Kepatuhan (YTD)</th>
                                     <th class="text-end" style="width: 200px;">Pencapaian (%)</th>
                                 </tr>
                             </thead>
@@ -1239,6 +1458,9 @@
             </div>
         </div>
     </div>
+
+    </div> <!-- Closing sectionCompany -->
+
     @{
         var uncompliantWeek = ViewBag.UncompliantWeek as List<MBS_SAP.Controllers.UncompliantEmployeeViewModel> ?? new List<MBS_SAP.Controllers.UncompliantEmployeeViewModel>();
         var uncompliantMonth = ViewBag.UncompliantMonth as List<MBS_SAP.Controllers.UncompliantEmployeeViewModel> ?? new List<MBS_SAP.Controllers.UncompliantEmployeeViewModel>();
@@ -1249,14 +1471,41 @@
     @{
         var hierarchy = ViewBag.CompanyHierarchy as List<MBS_SAP.Controllers.CompanyHierarchyNode> ?? new List<MBS_SAP.Controllers.CompanyHierarchyNode>();
 
+        int CountNodes(IEnumerable<MBS_SAP.Controllers.CompanyHierarchyNode> nodes)
+        {
+            var total = 0;
+            foreach (var n in nodes)
+            {
+                total += 1;
+                if (n.Children != null && n.Children.Count > 0)
+                {
+                    total += CountNodes(n.Children);
+                }
+            }
+            return total;
+        }
+
+        int MaxDepth(MBS_SAP.Controllers.CompanyHierarchyNode node, int currentLevel = 1)
+        {
+            if (node.Children == null || node.Children.Count == 0)
+            {
+                return currentLevel;
+            }
+            return node.Children.Max(c => MaxDepth(c, currentLevel + 1));
+        }
+
+        var totalHierarchyNodes = CountNodes(hierarchy);
+        var hierarchyDepth = hierarchy.Any() ? hierarchy.Max(n => MaxDepth(n)) : 0;
+
         void RenderNode(MBS_SAP.Controllers.CompanyHierarchyNode node, int level = 0)
         {
             var hasChildren = node.Children != null && node.Children.Count > 0;
             var collapseId = $"collapse_comp_{node.CompanyId}";
             var progressColor = node.CumulativeAchievementRate >= 100 ? "bg-success" : (node.CumulativeAchievementRate >= 50 ? "bg-warning" : "bg-danger");
             var ownProgressColor = node.OwnAchievementRate >= 100 ? "bg-success" : (node.OwnAchievementRate >= 50 ? "bg-warning" : "bg-danger");
+            var leftIndent = level * 18;
 
-            <div class="hierarchy-node">
+            <div class="hierarchy-node" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@(level + 1)" style="margin-left:@(leftIndent)px;">
                 <div class="hierarchy-item mb-2">
                     <div class="card-sap p-3 border-0 position-relative animate-fade-in" style="border-radius: 14px; background: var(--bg-card);">
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
@@ -1274,8 +1523,13 @@
                                     <div style="width: 24px;"></div>
                                 }
                                 <div>
-                                    <div style="font-weight: 800; font-size: 13px; color: var(--text-main);">
-                                        @node.CompanyName
+                                    <div class="d-flex align-items-center gap-2 flex-wrap" style="font-weight: 800; font-size: 13px; color: var(--text-main);">
+                                        <span>@node.CompanyName</span>
+                                        <span class="hierarchy-meta-badge">Level @(level + 1)</span>
+                                        @if (hasChildren)
+                                        {
+                                            <span class="hierarchy-meta-badge">@(node.Children?.Count ?? 0) Anak</span>
+                                        }
                                     </div>
                                     <span class="text-muted" style="font-size: 10px;">ID Perusahaan: @node.CompanyId</span>
                                 </div>
@@ -1337,7 +1591,74 @@
             </div>
         }
     }
-    </div> <!-- Closing sectionCompany -->
+
+    <!-- ==================== SECTION 4: HIRARKI PERUSAHAAN ==================== -->
+    <div id="sectionHierarchy" style="display: none;">
+        <div class="premium-card animate-fade-in">
+            <div class="premium-header">
+                <i class="bi bi-diagram-3-fill text-primary" style="font-size: 16px; color: #38bdf8 !important;"></i>
+                <h6 class="premium-title">Hirarki Perusahaan</h6>
+            </div>
+            <div class="premium-body">
+                <p class="text-muted mb-3" style="font-size: 12px;">
+                    Struktur parent-child perusahaan ditampilkan berjenjang dari INDEXIM sampai level terbawah.
+                </p>
+                <p class="text-muted mb-3" style="font-size: 11px;">
+                    Sumber data hirarki: @((ViewBag.CompanyHierarchySource as string) ?? "ONE_DB_MITRA.vw_perusahaan")
+                </p>
+                <div class="hierarchy-summary">
+                    <span class="hierarchy-summary-chip"><i class="bi bi-diagram-3 me-1"></i>Total Node: @totalHierarchyNodes</span>
+                    <span class="hierarchy-summary-chip"><i class="bi bi-layers me-1"></i>Level Maksimum: @hierarchyDepth</span>
+                </div>
+                @{
+                    var primaryChildren = ViewBag.CompanyHierarchyPrimaryChildren as List<string> ?? new List<string>();
+                }
+                @if (primaryChildren.Any())
+                {
+                    <div class="card-sap mb-3" style="padding: 12px; border: 1px dashed var(--border-color);">
+                        <div style="font-size: 11px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">Anak Utama INDEXIM</div>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var child in primaryChildren)
+                            {
+                                <span class="badge" style="background: rgba(56,189,248,0.15); color: #38bdf8; font-size: 10px; font-weight: 700; padding: 5px 8px; border: 1px solid rgba(56,189,248,0.35);">
+                                    @child
+                                </span>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (hierarchy == null || !hierarchy.Any())
+                {
+                    <div class="card-sap text-center py-4 text-muted">
+                        <i class="bi bi-diagram-3-fill d-block mb-2" style="font-size: 28px;"></i>
+                        Data hirarki perusahaan belum tersedia.
+                    </div>
+                }
+                else
+                {
+                    var indeximRoot = hierarchy.FirstOrDefault(h => (h.CompanyName ?? string.Empty).Contains("INDEXIM", StringComparison.OrdinalIgnoreCase));
+                    var rootsToRender = indeximRoot != null
+                        ? new List<MBS_SAP.Controllers.CompanyHierarchyNode> { indeximRoot }
+                        : hierarchy;
+
+                    <div class="hierarchy-toolbar">
+                        <input id="hierarchySearchInput" type="text" class="hierarchy-search" placeholder="Cari perusahaan / ID perusahaan..." autocomplete="off" />
+                        <button type="button" class="hierarchy-btn" id="btnExpandAllHierarchy"><i class="bi bi-arrows-expand me-1"></i>Buka Semua</button>
+                        <button type="button" class="hierarchy-btn" id="btnCollapseAllHierarchy"><i class="bi bi-arrows-collapse me-1"></i>Tutup Semua</button>
+                        <button type="button" class="hierarchy-btn" id="btnResetHierarchy"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset</button>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2" id="hierarchyTreeRoot">
+                        @foreach (var root in rootsToRender)
+                        {
+                            RenderNode(root);
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
 
 <!-- Charts & Tabs Handling Script -->
 @section Scripts {
@@ -1346,10 +1667,12 @@
         document.getElementById('sectionMy').style.display = tab === 'my' ? 'block' : 'none';
         document.getElementById('sectionCompany').style.display = tab === 'company' ? 'block' : 'none';
         document.getElementById('sectionHitSafe').style.display = tab === 'hitsafe' ? 'block' : 'none';
+        document.getElementById('sectionHierarchy').style.display = tab === 'hierarchy' ? 'block' : 'none';
 
         document.getElementById('tabMy').className = 'tab-btn px-4 py-2 ' + (tab === 'my' ? 'tab-active' : 'tab-inactive');
         document.getElementById('tabCompany').className = 'tab-btn px-4 py-2 ' + (tab === 'company' ? 'tab-active' : 'tab-inactive');
         document.getElementById('tabHitSafe').className = 'tab-btn px-4 py-2 ' + (tab === 'hitsafe' ? 'tab-active' : 'tab-inactive');
+        document.getElementById('tabHierarchy').className = 'tab-btn px-4 py-2 ' + (tab === 'hierarchy' ? 'tab-active' : 'tab-inactive');
 
         if (tab === 'company' && typeof window._initCompanyCharts === 'function') {
             window._initCompanyCharts();
@@ -1361,9 +1684,120 @@
         } else if (typeof window.stopHitSafeLocationTracking === 'function') {
             window.stopHitSafeLocationTracking();
         }
+
+        if (tab === 'hierarchy' && typeof window.initHierarchyUI === 'function') {
+            window.initHierarchyUI();
+        }
+    }
+
+    function initHierarchyUI() {
+        const treeRoot = document.getElementById('hierarchyTreeRoot');
+        if (!treeRoot || treeRoot.dataset.initialized === '1') {
+            return;
+        }
+
+        const searchInput = document.getElementById('hierarchySearchInput');
+        const expandBtn = document.getElementById('btnExpandAllHierarchy');
+        const collapseBtn = document.getElementById('btnCollapseAllHierarchy');
+        const resetBtn = document.getElementById('btnResetHierarchy');
+
+        function updateToggleIcons() {
+            treeRoot.querySelectorAll('.hierarchy-item').forEach(function (item) {
+                const icon = item.querySelector('.toggle-icon');
+                const collapse = item.parentElement ? item.parentElement.querySelector(':scope > .collapse') : null;
+                if (!icon || !collapse) {
+                    return;
+                }
+                icon.classList.toggle('is-collapsed', !collapse.classList.contains('show'));
+            });
+        }
+
+        function setAllCollapse(show) {
+            treeRoot.querySelectorAll('.hierarchy-node > .collapse').forEach(function (el) {
+                if (show) {
+                    el.classList.add('show');
+                } else {
+                    el.classList.remove('show');
+                }
+            });
+            updateToggleIcons();
+        }
+
+        function applyFilter(keyword) {
+            const normalized = (keyword || '').trim().toLowerCase();
+
+            function evaluate(nodeEl) {
+                const selfName = (nodeEl.dataset.companyName || '').toLowerCase();
+                const selfId = (nodeEl.dataset.companyId || '').toLowerCase();
+                const children = Array.from(nodeEl.querySelectorAll(':scope > .collapse > .hierarchy-children > .hierarchy-node'));
+                let childVisible = false;
+
+                children.forEach(function (child) {
+                    if (evaluate(child)) {
+                        childVisible = true;
+                    }
+                });
+
+                const selfMatch = normalized.length === 0 || selfName.includes(normalized) || selfId.includes(normalized);
+                const visible = selfMatch || childVisible;
+                nodeEl.style.display = visible ? '' : 'none';
+
+                const collapse = nodeEl.querySelector(':scope > .collapse');
+                if (collapse) {
+                    if (normalized.length > 0 && visible && childVisible) {
+                        collapse.classList.add('show');
+                    }
+                }
+
+                return visible;
+            }
+
+            Array.from(treeRoot.querySelectorAll(':scope > .hierarchy-node')).forEach(function (rootNode) {
+                evaluate(rootNode);
+            });
+
+            updateToggleIcons();
+        }
+
+        searchInput?.addEventListener('input', function (e) {
+            applyFilter(e.target.value);
+        });
+
+        expandBtn?.addEventListener('click', function () {
+            setAllCollapse(true);
+        });
+
+        collapseBtn?.addEventListener('click', function () {
+            setAllCollapse(false);
+        });
+
+        resetBtn?.addEventListener('click', function () {
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            treeRoot.querySelectorAll('.hierarchy-node').forEach(function (node) {
+                node.style.display = '';
+            });
+            setAllCollapse(true);
+        });
+
+        treeRoot.addEventListener('click', function (event) {
+            const button = event.target.closest('[data-bs-toggle="collapse"]');
+            if (!button) {
+                return;
+            }
+            window.setTimeout(updateToggleIcons, 30);
+        });
+
+        setAllCollapse(true);
+        treeRoot.dataset.initialized = '1';
     }
 
     document.addEventListener("DOMContentLoaded", function () {
+        if (typeof window.initHierarchyUI === 'function') {
+            window.initHierarchyUI();
+        }
+
         // Safe high-contrast theme detection
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
                        document.body.classList.contains('dark') || 
@@ -1469,56 +1903,37 @@
             });
         }
 
-        // 2. Chart Proporsi Aktivitas Perusahaan
-        const proporsiEl = document.getElementById('proporsiChart');
-        if (proporsiEl) {
-            const ctxProp = proporsiEl.getContext('2d');
-            new Chart(ctxProp, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'P5M'],
-                    datasets: [{
-                        data: [@ViewBag.MonthHazards, @ViewBag.MonthInspections, @ViewBag.MonthSafetyTalks, @ViewBag.MonthP5ms],
-                        backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#10b981'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { color: textColor, font: { weight: 'bold', size: 11 } }
-                        }
-                    }
+        // 2. Initialize pyramid progress bar widths per group (accident vs safety)
+        function applyPyramidProgress(selector, fullFillForPositive = false) {
+            const bars = Array.from(document.querySelectorAll(selector));
+            if (!bars.length) return;
+
+            const values = bars.map(bar => parseInt(bar.getAttribute('data-val')) || 0);
+            const maxVal = Math.max(...values, 0);
+
+            bars.forEach(bar => {
+                const val = parseInt(bar.getAttribute('data-val')) || 0;
+                const progress = bar.querySelector('.pyramid-progress');
+                if (!progress) return;
+
+                bar.classList.toggle('has-fill', val > 0);
+                bar.classList.toggle('is-zero', val <= 0);
+
+                if (maxVal > 0) {
+                    const pct = fullFillForPositive
+                        ? (val > 0 ? 100 : 0)
+                        : ((val / maxVal) * 100);
+                    progress.style.width = pct + '%';
+                } else {
+                    progress.style.width = '0%';
                 }
             });
         }
 
-        // 3. Initialize Safety Pyramid progress bar widths
-        const pyramidVals = [
-            @ViewBag.OpenInsiden,
-            @ViewBag.OpenKritis,
-            @ViewBag.OpenExtreme,
-            @ViewBag.OpenHigh,
-            @ViewBag.OpenMedium,
-            @ViewBag.OpenLow
-        ];
-        const maxPyramidVal = Math.max(...pyramidVals);
-        const pyramidBars = document.querySelectorAll('.pyramid-bar');
-        pyramidBars.forEach(bar => {
-            const val = parseInt(bar.getAttribute('data-val')) || 0;
-            const progress = bar.querySelector('.pyramid-progress');
-            if (maxPyramidVal > 0) {
-                const pct = (val / maxPyramidVal) * 100;
-                progress.style.width = pct + '%';
-            } else {
-                progress.style.width = '0%';
-            }
-        });
+        applyPyramidProgress('.accident-pyramid-bar', true);
+        applyPyramidProgress('.safety-pyramid-bar');
 
-        // 4. Chart Tren Bulanan & 5. Leaderboard Chart
+        // 3. Chart Tren Bulanan & 4. Leaderboard Chart
         // --> Diinisialisasi saat tab "Kinerja Perusahaan" diklik (lazy init)
         //     agar tidak crash karena canvas dalam display:none
 
@@ -1595,7 +2010,7 @@
                     data: {
                         labels: repeatedLabels,
                         datasets: [{
-                            label: 'Jumlah Temuan Berulang',
+                            label: 'Jumlah Hazard Berulang per Lokasi',
                             data: repeatedData,
                             backgroundColor: 'rgba(168, 85, 247, 0.85)',
                             borderRadius: 6
@@ -1622,13 +2037,13 @@
                 });
             }
 
-            // Inisialisasi Kategori Bahaya (KTA vs KTC) secara lazy
+            // Inisialisasi Kategori Bahaya (KTA vs TTA) secara lazy
             const ctxKategori = document.getElementById('chartKategoriBahaya');
             if (ctxKategori) {
                 new Chart(ctxKategori.getContext('2d'), {
                     type: 'doughnut',
                     data: {
-                        labels: ['Tindakan Tidak Aman (KTA)', 'Kondisi Tidak Aman (KTC)'],
+                        labels: ['Tindakan Tidak Aman (KTA)', 'Kondisi Tidak Aman (TTA)'],
                         datasets: [{
                             data: [@ViewBag.UnsafeActCount, @ViewBag.UnsafeConditionCount],
                             backgroundColor: ['rgba(245, 158, 11, 0.85)', 'rgba(59, 130, 246, 0.85)'],

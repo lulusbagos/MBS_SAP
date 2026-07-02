@@ -33,6 +33,7 @@ namespace MBS_SAP.Controllers
         {
             ViewData["HeaderTitle"] = "Safety Inspeksi";
             ViewData["ActiveTab"] = "Inspection";
+            var historyWindowStart = DateTime.Today.AddDays(-6);
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var isAdmin = User.IsInRole("Admin");
@@ -61,6 +62,9 @@ namespace MBS_SAP.Controllers
                 query = query.Where(i => false);
             }
 
+            // History card only shows last 7 days (including today).
+            query = query.Where(i => i.Tanggal >= historyWindowStart || i.CreatedAt >= historyWindowStart);
+
             ViewBag.JenisInspeksiList = await query
                 .Where(i => !string.IsNullOrEmpty(i.JenisInspeksi))
                 .Select(i => i.JenisInspeksi!)
@@ -75,7 +79,26 @@ namespace MBS_SAP.Controllers
 
             var inspections = await query
                 .OrderByDescending(i => i.CreatedAt)
+                .ThenByDescending(i => i.Id)
                 .ToListAsync();
+
+            // Prevent duplicate cards from repeated inserts of the same inspection payload.
+            inspections = inspections
+                .GroupBy(i => new
+                {
+                    Nik = (i.Nik ?? string.Empty).Trim().ToUpperInvariant(),
+                    Tanggal = i.Tanggal.Date,
+                    JamMenit = $"{i.Waktu.Hours:D2}:{i.Waktu.Minutes:D2}",
+                    Jenis = (i.JenisInspeksi ?? string.Empty).Trim().ToUpperInvariant(),
+                    Area = (i.Area ?? string.Empty).Trim().ToUpperInvariant(),
+                    Lokasi = (i.Lokasi ?? string.Empty).Trim().ToUpperInvariant()
+                })
+                .Select(g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First())
+                .OrderByDescending(i => i.CreatedAt)
+                .ThenByDescending(i => i.Id)
+                .ToList();
+
+            ViewBag.HistoryDays = 7;
 
             return View(inspections);
         }

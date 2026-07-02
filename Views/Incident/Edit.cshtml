@@ -1,0 +1,88 @@
+@model MBS_SAP.Models.IncidentNews
+@{
+    ViewData["Title"] = "Edit Data Insiden";
+    var categories = ViewBag.IncidentCategories as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+        ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+}
+
+<div class="animate-fade-in pb-4">
+    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #0ea5e9, #2563eb); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <i class="bi bi-pencil-square text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px;">EDIT DATA INSIDEN</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Update data dan tambahkan ilustrasi agar laporan lebih jelas.</p>
+        </div>
+    </div>
+
+    <div class="card-sap border-0 p-4" style="border-radius: 20px;">
+        <form asp-action="Edit" method="post" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+
+            <div class="row">
+                <div class="col-md-8 form-group-sap">
+                    <label class="form-label-sap">Judul Insiden <span class="text-danger">*</span></label>
+                    <input type="text" name="judul" class="input-sap" required maxlength="300" value="@Model.Judul" />
+                </div>
+                <div class="col-md-4 form-group-sap">
+                    <label class="form-label-sap">Kategori</label>
+                    <select name="kategori" class="input-sap" required>
+                        @foreach (var item in categories)
+                        {
+                            if (item.Selected)
+                            {
+                                <option value="@item.Value" selected>@item.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@item.Value">@item.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 form-group-sap">
+                    <label class="form-label-sap">Lokasi</label>
+                    <input type="text" name="lokasi" class="input-sap" maxlength="150" value="@Model.Lokasi" />
+                </div>
+                <div class="col-md-6 form-group-sap">
+                    <label class="form-label-sap">Tanggal Kejadian</label>
+                    <input type="date" name="tanggalKejadian" class="input-sap" value="@(Model.TanggalKejadian?.ToString("yyyy-MM-dd"))" />
+                </div>
+            </div>
+
+            <div class="form-group-sap">
+                <label class="form-label-sap">Konten / Keterangan <span class="text-danger">*</span></label>
+                <textarea name="konten" class="input-sap" rows="6" style="font-size: 13px; line-height: 1.6;" required>@Model.Konten</textarea>
+            </div>
+
+            <div class="form-group-sap">
+                <label class="form-label-sap">Ilustrasi (Opsional)</label>
+                <input type="file" name="gambar" class="input-sap" accept="image/*" style="padding: 10px 12px; height: auto;" />
+                <small class="text-muted">Upload gambar baru hanya jika ingin mengganti ilustrasi lama.</small>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.GambarUrl))
+            {
+                <div class="mb-3">
+                    <label class="form-label-sap">Ilustrasi Saat Ini</label>
+                    <div>
+                        <img src="@Model.GambarUrl" alt="Ilustrasi @Model.Judul" style="max-width: 280px; width: 100%; border-radius: 12px; border: 1px solid var(--border-color);" />
+                    </div>
+                </div>
+            }
+
+            <div class="d-flex gap-2 mt-3">
+                <a asp-action="Index" class="btn btn-sap-outline flex-fill py-2" style="border-radius: 12px; font-weight: 600;">
+                    <i class="bi bi-arrow-left me-1"></i> Kembali
+                </a>
+                <button type="submit" class="btn btn-sap-primary flex-fill py-2" style="border-radius: 12px; font-weight: 700;">
+                    <i class="bi bi-check2-circle me-1"></i> Simpan Perubahan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

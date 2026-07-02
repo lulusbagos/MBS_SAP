@@ -18,10 +18,17 @@ namespace MBS_SAP.ViewComponents
 
         public async Task<IViewComponentResult> InvokeAsync()
         {
-            var threeDaysAgo = DateTime.UtcNow.AddDays(-3);
+            if (UserClaimsPrincipal?.Identity?.IsAuthenticated != true)
+            {
+                return Content(string.Empty);
+            }
+
+            var sevenDaysAgo = DateTime.Now.AddDays(-7);
+
             var incident = await _context.IncidentNewsList
-                .Where(i => i.IsPublished && i.CreatedAt >= threeDaysAgo)
-                .OrderByDescending(i => i.CreatedAt)
+                .Where(i => i.IsPublished && (i.TanggalKejadian ?? i.CreatedAt) >= sevenDaysAgo)
+                .OrderByDescending(i => (i.TanggalKejadian ?? i.CreatedAt))
+                .ThenByDescending(i => i.Id)
                 .FirstOrDefaultAsync<IncidentNews>();
             return View(incident);
         }

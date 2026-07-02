@@ -1,489 +1,481 @@
 @model IEnumerable<MBS_SAP.Models.IncidentNews>
 @{
-    ViewData["Title"] = "Berita Insiden";
+    ViewData["Title"] = "Data Insiden";
     bool isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
-    var allIncidents = Model.ToList();
-    var featured = allIncidents.FirstOrDefault();
-    var others = allIncidents.Skip(1).ToList();
+    var incidents = Model.ToList();
+    int currentPage = (int)(ViewBag.CurrentPage ?? 1);
+    int totalPages = (int)(ViewBag.TotalPages ?? 1);
+    int totalItems = (int)(ViewBag.TotalItems ?? incidents.Count);
+    int pageSize = (int)(ViewBag.PageSize ?? 20);
+    var newest = ViewBag.NewestIncident as MBS_SAP.Models.IncidentNews ?? incidents.FirstOrDefault();
 }
 
 <style>
-    /* ========== NEWS PORTAL STYLES ========== */
-    
-    .news-portal { animation: fadeInUp 0.5s ease-out; }
+    .incident-page { animation: fadeInUp 0.35s ease-out; }
     @@keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(20px); }
+        from { opacity: 0; transform: translateY(14px); }
         to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Hero / Featured Article */
-    .hero-card {
-        background: var(--bg-card);
+    .incident-top-banner {
+        background: linear-gradient(135deg, #dc2626, #f43f5e);
+        border-bottom-left-radius: 24px;
+        border-bottom-right-radius: 24px;
+        padding: 28px 20px 24px;
+        color: #fff;
+        text-align: center;
+        margin: -20px -20px 20px -20px;
+    }
+
+    .newest-card {
         border: 1px solid var(--border-color);
-        border-radius: 20px;
+        background: var(--bg-card);
+        border-radius: 16px;
         overflow: hidden;
-        margin-bottom: 28px;
-        transition: box-shadow 0.3s ease;
-        position: relative;
+        margin-bottom: 16px;
     }
-    .hero-card:hover {
-        box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+
+    .newest-header {
+        background: linear-gradient(135deg, rgba(244,63,94,0.16), rgba(220,38,38,0.08));
+        border-bottom: 1px solid var(--border-color);
+        padding: 10px 14px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #f43f5e;
     }
-    .hero-img-wrap {
-        position: relative;
-        width: 100%;
-        height: 340px;
-        overflow: hidden;
-        background: #111;
+
+    .newest-body {
+        display: grid;
+        grid-template-columns: 130px 1fr;
+        gap: 14px;
+        padding: 14px;
     }
-    .hero-img {
-        width: 100%;
-        height: 100%;
+
+    .newest-image {
+        width: 130px;
+        height: 96px;
         object-fit: cover;
-        transition: transform 0.6s ease;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
     }
-    .hero-card:hover .hero-img {
-        transform: scale(1.04);
-    }
-    .hero-no-img {
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(135deg, rgba(244,63,94,0.18), rgba(220,38,38,0.08));
+
+    .newest-placeholder {
+        width: 130px;
+        height: 96px;
+        border-radius: 10px;
+        border: 1px dashed var(--border-color);
+        background: rgba(148,163,184,0.07);
         display: flex;
         align-items: center;
         justify-content: center;
+        color: var(--text-muted);
+        font-size: 11px;
+        text-align: center;
+        padding: 8px;
     }
-    .hero-gradient {
-        position: absolute;
-        bottom: 0; left: 0; right: 0;
-        height: 160px;
-        background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
-        z-index: 1;
-    }
-    .hero-badge-wrap {
-        position: absolute;
-        top: 16px; left: 16px;
-        z-index: 3;
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-    .hero-label {
-        background: rgba(244,63,94,0.9);
-        color: #fff;
-        font-size: 10px;
+
+    .newest-title {
+        font-size: 16px;
         font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 1.2px;
-        padding: 5px 14px;
-        border-radius: 99px;
-        backdrop-filter: blur(8px);
-    }
-    .hero-body {
-        padding: 24px 28px 20px;
-    }
-    .hero-title {
-        font-weight: 800;
-        font-size: 22px;
         color: var(--text-main);
+        margin-bottom: 8px;
         line-height: 1.35;
-        margin-bottom: 10px;
+    }
+
+    .newest-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        color: var(--text-muted);
+        font-size: 11px;
+        margin-bottom: 8px;
+    }
+
+    .newest-desc {
+        color: var(--text-muted);
+        font-size: 12px;
+        line-height: 1.55;
+        margin: 0;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
-    .hero-excerpt {
-        font-size: 13.5px;
-        color: var(--text-muted);
-        line-height: 1.7;
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        margin-bottom: 16px;
-    }
-    .hero-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 14px;
-        align-items: center;
-        font-size: 11.5px;
-        color: var(--text-muted);
-        margin-bottom: 16px;
-    }
-    .hero-meta i { margin-right: 4px; }
 
-    /* Grid Cards */
-    .news-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
-    }
-    @@media (max-width: 768px) {
-        .news-grid { grid-template-columns: 1fr; }
-        .hero-img-wrap { height: 220px; }
-        .hero-body { padding: 18px 18px 16px; }
-        .hero-title { font-size: 18px; }
-    }
-
-    .news-card {
-        background: var(--bg-card);
+    .incident-table-card {
         border: 1px solid var(--border-color);
         border-radius: 16px;
         overflow: hidden;
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
-        display: flex;
-        flex-direction: column;
-    }
-    .news-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.14);
-    }
-    .news-card-img-wrap {
-        position: relative;
-        width: 100%;
-        height: 180px;
-        overflow: hidden;
-        background: #111;
-    }
-    .news-card-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.5s ease;
-    }
-    .news-card:hover .news-card-img {
-        transform: scale(1.05);
-    }
-    .news-card-no-img {
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(135deg, rgba(244,63,94,0.12), rgba(220,38,38,0.06));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .news-card-body {
-        padding: 16px 18px 14px;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-    }
-    .news-card-title {
-        font-weight: 700;
-        font-size: 15px;
-        color: var(--text-main);
-        line-height: 1.4;
-        margin-bottom: 8px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-    .news-card-excerpt {
-        font-size: 12.5px;
-        color: var(--text-muted);
-        line-height: 1.65;
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        margin-bottom: 12px;
-        flex: 1;
-    }
-    .news-card-meta {
-        font-size: 11px;
-        color: var(--text-muted);
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
-    }
-    .news-card-meta i { margin-right: 3px; }
-
-    /* Badges */
-    .severity-badge {
-        font-size: 10px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.7px;
-        padding: 4px 12px;
-        border-radius: 99px;
-        display: inline-block;
-        backdrop-filter: blur(6px);
-    }
-    .sev-ringan { background: rgba(16,185,129,0.18); color: #10b981; }
-    .sev-sedang { background: rgba(245,158,11,0.18); color: #f59e0b; }
-    .sev-berat  { background: rgba(244,63,94,0.18); color: #f43f5e; }
-    .sev-fatal  { background: rgba(220,38,38,0.28); color: #dc2626; }
-
-    /* Read More Button */
-    .btn-read-more {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 8px 20px;
-        border-radius: 12px;
-        font-size: 12.5px;
-        font-weight: 700;
-        color: #fff;
-        background: linear-gradient(135deg, #f43f5e, #dc2626);
-        border: none;
-        text-decoration: none;
-        transition: all 0.25s ease;
-        box-shadow: 0 4px 14px rgba(244,63,94,0.25);
-    }
-    .btn-read-more:hover {
-        background: linear-gradient(135deg, #e11d48, #b91c1c);
-        box-shadow: 0 6px 20px rgba(244,63,94,0.4);
-        transform: translateY(-1px);
-        color: #fff;
-        text-decoration: none;
-    }
-    .btn-read-more i {
-        transition: transform 0.2s ease;
-    }
-    .btn-read-more:hover i {
-        transform: translateX(3px);
+        background: var(--bg-card);
     }
 
-    /* Card Footer */
-    .news-card-footer {
-        padding: 12px 18px 14px;
-        border-top: 1px solid var(--border-color);
+    .incident-table-head {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border-color);
+        background: rgba(148,163,184,0.08);
     }
 
-    /* Section title */
-    .section-title {
+    .incident-table-title {
+        margin: 0;
+        font-size: 13px;
         font-weight: 800;
-        font-size: 16px;
         color: var(--text-main);
-        margin-bottom: 16px;
+    }
+
+    .incident-table-wrap {
+        overflow: auto;
+    }
+
+    .incident-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 1020px;
+    }
+
+    .incident-table thead th {
+        background: rgba(15,23,42,0.88);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: .4px;
+        padding: 11px 10px;
+        text-transform: uppercase;
+        border-right: 1px solid rgba(255,255,255,0.08);
+        white-space: nowrap;
+    }
+
+    .incident-table tbody td {
+        padding: 10px;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 12px;
+        color: var(--text-main);
+        vertical-align: middle;
+    }
+
+    .incident-table tbody tr:nth-child(even) {
+        background: rgba(148,163,184,0.05);
+    }
+
+    .incident-table tbody tr:hover {
+        background: rgba(56,189,248,0.08);
+    }
+
+    .badge-soft {
+        display: inline-block;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 3px 10px;
+        white-space: nowrap;
+    }
+
+    .badge-nearmiss { background: rgba(34,197,94,.2); color: #15803d; }
+    .badge-property { background: rgba(245,158,11,.2); color: #b45309; }
+    .badge-firstaid { background: rgba(59,130,246,.2); color: #1d4ed8; }
+    .badge-medical { background: rgba(139,92,246,.2); color: #6d28d9; }
+    .badge-default { background: rgba(148,163,184,.22); color: #334155; }
+
+    .row-title {
+        max-width: 260px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 600;
+    }
+
+    .row-content {
+        max-width: 280px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--text-muted);
+    }
+
+    .img-chip {
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 999px;
+        padding: 3px 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .img-chip-ok { background: rgba(34,197,94,.18); color: #166534; }
+    .img-chip-empty { background: rgba(148,163,184,.2); color: #475569; }
+
+    .btn-table {
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 5px 8px;
+        border: 1px solid var(--border-color);
+        background: #fff;
+        color: #0f172a;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .btn-table:hover {
+        background: #f8fafc;
+        color: #0f172a;
+        text-decoration: none;
+    }
+
+    .btn-table-edit {
+        border-color: rgba(37,99,235,.35);
+        color: #1d4ed8;
+    }
+
+    .incident-pager {
         display: flex;
+        justify-content: center;
         align-items: center;
         gap: 8px;
-    }
-    .section-title::after {
-        content: '';
-        flex: 1;
-        height: 2px;
-        background: linear-gradient(to right, var(--border-color), transparent);
-        margin-left: 8px;
+        margin-top: 14px;
+        flex-wrap: wrap;
     }
 
-    /* Admin delete small btn */
-    .btn-delete-sm {
-        background: transparent;
-        border: 1px solid rgba(244,63,94,0.3);
-        color: #f43f5e;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 4px 12px;
+    .pager-link {
+        min-width: 34px;
+        height: 34px;
         border-radius: 8px;
-        transition: all 0.2s ease;
-        cursor: pointer;
+        border: 1px solid var(--border-color);
+        background: #fff;
+        color: #0f172a;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 10px;
     }
-    .btn-delete-sm:hover {
-        background: rgba(244,63,94,0.12);
-        border-color: #f43f5e;
+
+    .pager-link:hover {
+        text-decoration: none;
+        color: #0f172a;
+        background: #f8fafc;
+    }
+
+    .pager-link.active {
+        background: #0ea5e9;
+        border-color: #0ea5e9;
+        color: #fff;
+    }
+
+    .pager-link.disabled {
+        opacity: .45;
+        pointer-events: none;
+    }
+
+    @@media (max-width: 768px) {
+        .newest-body {
+            grid-template-columns: 1fr;
+        }
+
+        .newest-image,
+        .newest-placeholder {
+            width: 100%;
+            height: 180px;
+        }
     }
 </style>
 
-<div class="news-portal pb-4">
-
-    <!-- Header Banner -->
-    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
-        <div style="background: linear-gradient(135deg, #dc2626, #f43f5e); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
-            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
-            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
-            <i class="bi bi-newspaper text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
-            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px; letter-spacing: 0.5px;">BERITA INSIDEN</h4>
-            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Portal informasi dan laporan insiden keselamatan kerja.</p>
-        </div>
+<div class="incident-page pb-4">
+    <div class="incident-top-banner">
+        <i class="bi bi-exclamation-triangle-fill d-block mb-2" style="font-size: 30px;"></i>
+        <h4 style="font-weight: 800; margin-bottom: 4px; letter-spacing: .4px;">DATA INSIDEN</h4>
+        <p style="margin: 0; font-size: 12px; opacity: .92;">Data ditampilkan dari yang paling baru agar monitoring lebih cepat.</p>
     </div>
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(16, 185, 129, 0.15); color: var(--color-green); border-radius: 12px;">
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-3" role="alert" style="background-color: rgba(16, 185, 129, 0.15); color: var(--color-green); border-radius: 12px;">
             <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
+
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="alert alert-danger alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-3" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
             <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
-    <!-- Admin: Tambah Berita -->
     @if (isAdmin)
     {
-        <a asp-action="Create" class="btn btn-sap-primary w-100 py-2 mb-4" style="border-radius: 12px; font-weight: 700;">
-            <i class="bi bi-plus-circle-fill me-2"></i> Buat Berita Insiden Baru
+        <a asp-action="Create" class="btn btn-sap-primary w-100 py-2 mb-3" style="border-radius: 12px; font-weight: 700;">
+            <i class="bi bi-plus-circle-fill me-2"></i> Tambah Data Insiden
         </a>
     }
 
-    <!-- Empty State -->
-    @if (!allIncidents.Any())
+    @if (!incidents.Any())
     {
         <div class="card-sap text-center py-5 text-muted">
-            <i class="bi bi-shield-fill-check d-block mb-3" style="font-size: 48px; color: var(--color-green);"></i>
-            <h5>Belum Ada Berita Insiden</h5>
-            <p class="mb-0">Semoga tetap aman dan selamat di tempat kerja.</p>
+            <i class="bi bi-journal-x d-block mb-3" style="font-size: 44px;"></i>
+            <h5>Belum ada data insiden</h5>
+            <p class="mb-0">Data akan muncul di sini setelah input dilakukan.</p>
         </div>
     }
     else
     {
-        @* ========== FEATURED / HERO ARTICLE ========== *@
-        if (featured != null)
+        if (newest != null)
         {
-            var featSevClass = (featured.Kategori?.ToLower()) switch
-            {
-                "ringan" => "sev-ringan",
-                "sedang" => "sev-sedang",
-                "berat" => "sev-berat",
-                "fatal" => "sev-fatal",
-                _ => "sev-sedang"
-            };
-
-            <div class="hero-card">
-                <!-- Hero Image -->
-                <div class="hero-img-wrap">
-                    @if (!string.IsNullOrEmpty(featured.GambarUrl))
+            var newestBadge = GetCategoryBadgeClass(newest.Kategori);
+            <div class="newest-card">
+                <div class="newest-header">
+                    <i class="bi bi-stars me-1"></i> Data Insiden Paling Baru
+                </div>
+                <div class="newest-body">
+                    @if (!string.IsNullOrWhiteSpace(newest.GambarUrl))
                     {
-                        <img src="@featured.GambarUrl" alt="@featured.Judul" class="hero-img" />
+                        <img src="@newest.GambarUrl" alt="@newest.Judul" class="newest-image" />
                     }
                     else
                     {
-                        <div class="hero-no-img">
-                            <i class="bi bi-exclamation-triangle-fill" style="font-size: 60px; color: rgba(244,63,94,0.3);"></i>
+                        <div class="newest-placeholder">
+                            Belum ada ilustrasi
                         </div>
                     }
-                    <div class="hero-gradient"></div>
-
-                    <!-- Top badges -->
-                    <div class="hero-badge-wrap">
-                        <span class="hero-label"><i class="bi bi-lightning-fill me-1"></i>Terbaru</span>
-                        <span class="severity-badge @featSevClass">@(featured.Kategori ?? "Info")</span>
-                    </div>
-                </div>
-
-                <!-- Hero Body -->
-                <div class="hero-body">
-                    <h2 class="hero-title">@featured.Judul</h2>
-
-                    <div class="hero-meta">
-                        <span><i class="bi bi-calendar3"></i> @featured.CreatedAt.ToString("dd MMMM yyyy")</span>
-                        @if (!string.IsNullOrEmpty(featured.Lokasi))
-                        {
-                            <span><i class="bi bi-geo-alt-fill" style="color: #f43f5e;"></i> @featured.Lokasi</span>
-                        }
-                        @if (featured.TanggalKejadian.HasValue)
-                        {
-                            <span><i class="bi bi-clock-history"></i> Kejadian: @featured.TanggalKejadian.Value.ToString("dd MMM yyyy")</span>
-                        }
-                        <span><i class="bi bi-person-fill"></i> @featured.DibuatOleh</span>
-                    </div>
-
-                    <p class="hero-excerpt">@featured.Konten</p>
-
-                    <div class="d-flex justify-content-between align-items-center">
-                        <a asp-action="Detail" asp-route-id="@featured.Id" class="btn-read-more">
-                            <i class="bi bi-book-half"></i> Baca Insiden <i class="bi bi-arrow-right"></i>
-                        </a>
-                        @if (isAdmin)
-                        {
-                            <form asp-action="Delete" method="post" style="display: inline;"
-                                  onsubmit="return confirm('Yakin hapus berita ini?');">
-                                <input type="hidden" name="id" value="@featured.Id" />
-                                <button type="submit" class="btn-delete-sm">
-                                    <i class="bi bi-trash3-fill me-1"></i>Hapus
-                                </button>
-                            </form>
-                        }
+                    <div>
+                        <div class="newest-title">@newest.Judul</div>
+                        <div class="newest-meta">
+                            <span><i class="bi bi-hash"></i> ID @newest.Id</span>
+                            <span><i class="bi bi-calendar3"></i> Input @newest.CreatedAt.ToString("dd MMM yyyy HH:mm")</span>
+                            @if (newest.TanggalKejadian.HasValue)
+                            {
+                                <span><i class="bi bi-clock-history"></i> Kejadian @newest.TanggalKejadian.Value.ToString("dd MMM yyyy")</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(newest.Lokasi))
+                            {
+                                <span><i class="bi bi-geo-alt-fill"></i> @newest.Lokasi</span>
+                            }
+                            <span class="badge-soft @newestBadge">@(newest.Kategori ?? "-")</span>
+                        </div>
+                        <p class="newest-desc">@newest.Konten</p>
                     </div>
                 </div>
             </div>
         }
 
-        @* ========== OTHER ARTICLES GRID ========== *@
-        @if (others.Any())
-        {
-            <div class="section-title">
-                <i class="bi bi-grid-3x3-gap-fill" style="color: #f43f5e;"></i> Berita Lainnya
+        <div class="incident-table-card">
+            <div class="incident-table-head">
+                <h6 class="incident-table-title"><i class="bi bi-table me-1"></i> Tabel Data Insiden</h6>
+                <span style="font-size:11px; color: var(--text-muted);">Total @totalItems data | Halaman @currentPage dari @totalPages</span>
             </div>
 
-            <div class="news-grid">
-            @foreach (var item in others)
+            <div class="incident-table-wrap">
+                <table class="incident-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">ID</th>
+                            <th style="width: 210px;">Judul</th>
+                            <th style="width: 120px;">Kategori</th>
+                            <th style="width: 140px;">Tgl Kejadian</th>
+                            <th style="width: 180px;">Lokasi</th>
+                            <th style="width: 230px;">Keterangan</th>
+                            <th style="width: 120px;">Ilustrasi</th>
+                            <th style="width: 160px;">Diinput</th>
+                            <th style="width: 160px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in incidents)
+                        {
+                            var badgeClass = GetCategoryBadgeClass(item.Kategori);
+                            <tr>
+                                <td><strong>#@item.Id</strong></td>
+                                <td>
+                                    <div class="row-title" title="@item.Judul">@item.Judul</div>
+                                </td>
+                                <td>
+                                    <span class="badge-soft @badgeClass">@(item.Kategori ?? "-")</span>
+                                </td>
+                                <td>
+                                    @(item.TanggalKejadian?.ToString("dd MMM yyyy") ?? "-")
+                                </td>
+                                <td title="@item.Lokasi">@(string.IsNullOrWhiteSpace(item.Lokasi) ? "-" : item.Lokasi)</td>
+                                <td>
+                                    <div class="row-content" title="@item.Konten">@item.Konten</div>
+                                </td>
+                                <td>
+                                    @if (string.IsNullOrWhiteSpace(item.GambarUrl))
+                                    {
+                                        <span class="img-chip img-chip-empty"><i class="bi bi-image"></i> Belum</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="img-chip img-chip-ok"><i class="bi bi-check2-circle"></i> Ada</span>
+                                    }
+                                </td>
+                                <td>@item.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a asp-action="Detail" asp-route-id="@item.Id" class="btn-table">
+                                            <i class="bi bi-eye"></i> Detail
+                                        </a>
+
+                                        @if (isAdmin)
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn-table btn-table-edit" title="Edit data dan tambah ilustrasi">
+                                                <i class="bi bi-pencil-square"></i> Edit
+                                            </a>
+
+                                            <form asp-action="Delete" method="post" onsubmit="return confirm('Yakin hapus data insiden ini?');" style="display:inline;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <button type="submit" class="btn-table" style="color:#dc2626; border-color:rgba(220,38,38,.35);">
+                                                    <i class="bi bi-trash3"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (totalPages > 1)
             {
-                var sevClass = (item.Kategori?.ToLower()) switch
-                {
-                    "ringan" => "sev-ringan",
-                    "sedang" => "sev-sedang",
-                    "berat" => "sev-berat",
-                    "fatal" => "sev-fatal",
-                    _ => "sev-sedang"
-                };
+                <div class="incident-pager pb-3 px-2">
+                    <a asp-action="Index" asp-route-page="@(currentPage - 1)" asp-route-pageSize="@pageSize" class="pager-link @(currentPage <= 1 ? "disabled" : string.Empty)">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
 
-                <div class="news-card">
-                    <!-- Card Image -->
-                    <div class="news-card-img-wrap">
-                        @if (!string.IsNullOrEmpty(item.GambarUrl))
-                        {
-                            <img src="@item.GambarUrl" alt="@item.Judul" class="news-card-img" />
-                        }
-                        else
-                        {
-                            <div class="news-card-no-img">
-                                <i class="bi bi-exclamation-triangle-fill" style="font-size: 40px; color: rgba(244,63,94,0.25);"></i>
-                            </div>
-                        }
-                        <!-- Category badge on image -->
-                        <div style="position: absolute; top: 12px; left: 12px; z-index: 2;">
-                            <span class="severity-badge @sevClass">@(item.Kategori ?? "Info")</span>
-                        </div>
-                        <!-- Gradient overlay -->
-                        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 60px; background: linear-gradient(to top, rgba(0,0,0,0.5), transparent); z-index: 1;"></div>
-                    </div>
+                    @for (int p = Math.Max(1, currentPage - 2); p <= Math.Min(totalPages, currentPage + 2); p++)
+                    {
+                        <a asp-action="Index" asp-route-page="@p" asp-route-pageSize="@pageSize" class="pager-link @(p == currentPage ? "active" : string.Empty)">@p</a>
+                    }
 
-                    <!-- Card Body -->
-                    <div class="news-card-body">
-                        <h5 class="news-card-title">@item.Judul</h5>
-                        <p class="news-card-excerpt">@item.Konten</p>
-                        <div class="news-card-meta">
-                            <span><i class="bi bi-calendar3"></i> @item.CreatedAt.ToString("dd MMM yyyy")</span>
-                            @if (!string.IsNullOrEmpty(item.Lokasi))
-                            {
-                                <span><i class="bi bi-geo-alt-fill" style="color: #f43f5e;"></i> @item.Lokasi</span>
-                            }
-                        </div>
-                    </div>
-
-                    <!-- Card Footer -->
-                    <div class="news-card-footer">
-                        <a asp-action="Detail" asp-route-id="@item.Id" class="btn-read-more" style="font-size: 11.5px; padding: 6px 16px;">
-                            Baca Insiden <i class="bi bi-arrow-right"></i>
-                        </a>
-                        @if (isAdmin)
-                        {
-                            <form asp-action="Delete" method="post" style="display: inline;"
-                                  onsubmit="return confirm('Yakin hapus berita ini?');">
-                                <input type="hidden" name="id" value="@item.Id" />
-                                <button type="submit" class="btn-delete-sm">
-                                    <i class="bi bi-trash3-fill"></i>
-                                </button>
-                            </form>
-                        }
-                    </div>
+                    <a asp-action="Index" asp-route-page="@(currentPage + 1)" asp-route-pageSize="@pageSize" class="pager-link @(currentPage >= totalPages ? "disabled" : string.Empty)">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
                 </div>
             }
-            </div>
-        }
+        </div>
     }
 </div>
+
+@functions {
+    private static string GetCategoryBadgeClass(string? category)
+    {
+        var c = (category ?? string.Empty).Trim().ToLowerInvariant();
+        if (c.Contains("near")) return "badge-nearmiss";
+        if (c.Contains("property")) return "badge-property";
+        if (c.Contains("first aid")) return "badge-firstaid";
+        if (c.Contains("medical")) return "badge-medical";
+        return "badge-default";
+    }
+}

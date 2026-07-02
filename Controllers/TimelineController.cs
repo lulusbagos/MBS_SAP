@@ -21,13 +21,37 @@ namespace MBS_SAP.Controllers
         public async Task<IActionResult> Index()
         {
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+            const int pageSize = 12;
+            var page = await BuildTimelinePageAsync(userNik, 0, pageSize);
 
+            ViewData["ActiveTab"] = "Timeline";
+            ViewBag.PageSize = pageSize;
+            ViewBag.HasMore = page.HasMore;
+            return View(page.Items);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> LoadMore(int skip = 0, int take = 12)
+        {
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
+            skip = skip < 0 ? 0 : skip;
+            take = take <= 0 ? 12 : (take > 30 ? 30 : take);
+
+            var page = await BuildTimelinePageAsync(userNik, skip, take);
+
+            Response.Headers["X-Item-Count"] = page.Items.Count.ToString();
+            Response.Headers["X-Has-More"] = page.HasMore ? "1" : "0";
+            return PartialView("_TimelineCards", page.Items);
+        }
+
+        private async Task<(List<TimelineViewModel> Items, bool HasMore)> BuildTimelinePageAsync(string userNik, int skip, int take)
+        {
             static string Norm(string? value) => (value ?? string.Empty).Trim().ToUpperInvariant();
 
             static List<T> DeduplicateRecent<T>(
                 IEnumerable<T> source,
                 Func<T, string> signatureSelector,
-                Func<T, DateTime> createdAtSelector,
+                Func<T, System.DateTime> createdAtSelector,
                 int duplicateWindowSeconds = 120)
             {
                 var deduped = new List<T>();
@@ -39,7 +63,7 @@ namespace MBS_SAP.Controllers
 
                     var isDuplicate = deduped.Any(existing =>
                         signatureSelector(existing) == sig
-                        && Math.Abs((createdAtSelector(existing) - createdAt).TotalSeconds) <= duplicateWindowSeconds);
+                        && System.Math.Abs((createdAtSelector(existing) - createdAt).TotalSeconds) <= duplicateWindowSeconds);
 
                     if (!isDuplicate)
                     {
@@ -49,17 +73,17 @@ namespace MBS_SAP.Controllers
 
                 return deduped;
             }
-            
-            // Fetch top 30 from each to keep it lightweight
-            var hazards = await _context.HazardReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync();
-            var inspections = await _context.Inspections.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync();
-            var actionPlans = await _context.ActionPlans.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync();
-            var safetyTalks = await _context.SafetyTalks.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync();
-            var p5ms = await _context.P5ms.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync();
-            var observations = await _context.Observations.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync();
-            var p2hReports = await _context.P2hReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync();
 
-            // Filter duplicate posts caused by accidental double-click save (same content in near time window).
+            var sourceTake = System.Math.Max(60, skip + take + 30);
+
+            var hazards = await _context.HazardReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
+            var inspections = await _context.Inspections.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
+            var actionPlans = await _context.ActionPlans.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
+            var safetyTalks = await _context.SafetyTalks.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
+            var p5ms = await _context.P5ms.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
+            var observations = await _context.Observations.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
+            var p2hReports = await _context.P2hReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
+
             hazards = DeduplicateRecent(
                 hazards,
                 h => $"{Norm(h.Nik)}|{h.Tanggal:yyyyMMdd}|{h.Waktu}|{Norm(h.Temuan)}|{Norm(h.Area)}|{Norm(h.Lokasi)}",
@@ -87,8 +111,6 @@ namespace MBS_SAP.Controllers
 
             var timelineList = new List<TimelineViewModel>();
 
-            // Muat action plan hazard untuk deteksi status Progres (sudah dialihkan ke PJA lain)
-            var hazardIds = hazards.Select(h => h.Id).ToList();
             var hazardActionPlans = await _context.ActionPlans
                 .Where(ap => !ap.IsDeleted && ap.ItemSap != null && ap.ItemSap.StartsWith("hazard:"))
                 .ToListAsync();
@@ -103,15 +125,28 @@ namespace MBS_SAP.Controllers
                 {
                     hazardStatus = "Progres";
                 }
-                timelineList.Add(new TimelineViewModel {
-                    ItemType = "Hazard", OriginalId = h.Id,
-                    Nama = h.Nama, Nik = h.Nik, Departemen = h.Departemen, PerusahaanId = h.PerusahaanId,
-                    Tanggal = h.Tanggal, Waktu = h.Waktu, CreatedAt = h.CreatedAt,
-                    Area = h.Area, Lokasi = h.Lokasi, Kategori = h.JenisBahaya,
-                    Content = h.Temuan, Status = hazardStatus, FotoUrl = h.FotoTemuan,
+
+                timelineList.Add(new TimelineViewModel
+                {
+                    ItemType = "Hazard",
+                    OriginalId = h.Id,
+                    Nama = h.Nama,
+                    Nik = h.Nik,
+                    Departemen = h.Departemen,
+                    PerusahaanId = h.PerusahaanId,
+                    Tanggal = h.Tanggal,
+                    Waktu = h.Waktu,
+                    CreatedAt = h.CreatedAt,
+                    Area = h.Area,
+                    Lokasi = h.Lokasi,
+                    Kategori = h.JenisBahaya,
+                    Content = h.Temuan,
+                    Status = hazardStatus,
+                    FotoUrl = h.FotoTemuan,
                     TingkatResiko = h.TingkatResiko
                 });
             }
+
             var inspectionActionPlans = await _context.ActionPlans
                 .Where(ap => !ap.IsDeleted && (ap.ItemSap == "inspection" || ap.ItemSap == "Inspection"))
                 .ToListAsync();
@@ -126,55 +161,111 @@ namespace MBS_SAP.Controllers
 
                 var hasOpenActionPlan = openAps.Any();
                 var hasReassigned = openAps.Any(ap => !string.IsNullOrEmpty(ap.ReassignedFrom));
-
                 string inspectionStatus = !hasOpenActionPlan ? "Closed" : hasReassigned ? "Progres" : "Open";
 
-                timelineList.Add(new TimelineViewModel {
-                    ItemType = "Inspection", OriginalId = i.Id,
-                    Nama = i.Nama, Nik = i.Nik, Departemen = i.Departemen, PerusahaanId = i.PerusahaanId,
-                    Tanggal = i.Tanggal, Waktu = i.Waktu, CreatedAt = i.CreatedAt,
-                    Area = i.Area, Lokasi = i.Lokasi, Kategori = i.JenisInspeksi,
-                    Title = "Laporan Inspeksi", Status = inspectionStatus
+                timelineList.Add(new TimelineViewModel
+                {
+                    ItemType = "Inspection",
+                    OriginalId = i.Id,
+                    Nama = i.Nama,
+                    Nik = i.Nik,
+                    Departemen = i.Departemen,
+                    PerusahaanId = i.PerusahaanId,
+                    Tanggal = i.Tanggal,
+                    Waktu = i.Waktu,
+                    CreatedAt = i.CreatedAt,
+                    Area = i.Area,
+                    Lokasi = i.Lokasi,
+                    Kategori = i.JenisInspeksi,
+                    Title = "Laporan Inspeksi",
+                    Status = inspectionStatus
                 });
             }
+
             foreach (var a in actionPlans)
             {
-                timelineList.Add(new TimelineViewModel {
-                    ItemType = "ActionPlan", OriginalId = a.Id,
-                    Nama = a.Nama, Nik = a.Nik, Departemen = a.Departemen, PerusahaanId = a.PerusahaanId,
-                    Tanggal = a.Tanggal, Waktu = a.Waktu, CreatedAt = a.CreatedAt,
-                    Area = a.Area, Lokasi = a.Lokasi, Kategori = a.KategoriTemuan,
-                    Content = a.Perbaikan, Status = a.Status, FotoUrl = a.FotoPerbaikan ?? a.FotoTemuan
+                timelineList.Add(new TimelineViewModel
+                {
+                    ItemType = "ActionPlan",
+                    OriginalId = a.Id,
+                    Nama = a.Nama,
+                    Nik = a.Nik,
+                    Departemen = a.Departemen,
+                    PerusahaanId = a.PerusahaanId,
+                    Tanggal = a.Tanggal,
+                    Waktu = a.Waktu,
+                    CreatedAt = a.CreatedAt,
+                    Area = a.Area,
+                    Lokasi = a.Lokasi,
+                    Kategori = a.KategoriTemuan,
+                    Content = a.Perbaikan,
+                    Status = a.Status,
+                    FotoUrl = a.FotoPerbaikan ?? a.FotoTemuan
                 });
             }
+
             foreach (var s in safetyTalks)
             {
-                timelineList.Add(new TimelineViewModel {
-                    ItemType = "SafetyTalk", OriginalId = s.Id,
-                    Nama = s.Nama, Nik = s.Nik, Departemen = s.Departemen, PerusahaanId = s.PerusahaanId,
-                    Tanggal = s.Tanggal, Waktu = s.Waktu, CreatedAt = s.CreatedAt,
-                    Area = s.Area, Lokasi = s.Lokasi, Title = s.Judul,
-                    Content = s.Keterangan, FotoUrl = s.FotoKegiatan, FotoDiriUrl = s.FotoDiri
+                timelineList.Add(new TimelineViewModel
+                {
+                    ItemType = "SafetyTalk",
+                    OriginalId = s.Id,
+                    Nama = s.Nama,
+                    Nik = s.Nik,
+                    Departemen = s.Departemen,
+                    PerusahaanId = s.PerusahaanId,
+                    Tanggal = s.Tanggal,
+                    Waktu = s.Waktu,
+                    CreatedAt = s.CreatedAt,
+                    Area = s.Area,
+                    Lokasi = s.Lokasi,
+                    Title = s.Judul,
+                    Content = s.Keterangan,
+                    FotoUrl = s.FotoKegiatan,
+                    FotoDiriUrl = s.FotoDiri
                 });
             }
+
             foreach (var p in p5ms)
             {
-                timelineList.Add(new TimelineViewModel {
-                    ItemType = "P5m", OriginalId = p.Id,
-                    Nama = p.Nama, Nik = p.Nik, Departemen = p.Departemen, PerusahaanId = p.PerusahaanId,
-                    Tanggal = p.Tanggal, Waktu = p.Waktu, CreatedAt = p.CreatedAt,
-                    Area = p.Area, Lokasi = p.Lokasi, Title = p.Topik,
-                    Content = p.Keterangan, FotoUrl = p.FotoKegiatan
+                timelineList.Add(new TimelineViewModel
+                {
+                    ItemType = "P5m",
+                    OriginalId = p.Id,
+                    Nama = p.Nama,
+                    Nik = p.Nik,
+                    Departemen = p.Departemen,
+                    PerusahaanId = p.PerusahaanId,
+                    Tanggal = p.Tanggal,
+                    Waktu = p.Waktu,
+                    CreatedAt = p.CreatedAt,
+                    Area = p.Area,
+                    Lokasi = p.Lokasi,
+                    Title = p.Topik,
+                    Content = p.Keterangan,
+                    FotoUrl = p.FotoKegiatan
                 });
             }
+
             foreach (var o in observations)
             {
-                timelineList.Add(new TimelineViewModel {
-                    ItemType = "Observation", OriginalId = o.Id,
-                    Nama = o.Nama, Nik = o.Nik, Departemen = o.Departemen, PerusahaanId = null,
-                    Tanggal = o.Date, Waktu = o.Date.TimeOfDay, CreatedAt = o.CreatedAt,
-                    Area = o.Area, Lokasi = o.Lokasi, Kategori = o.PerihalYangDiamati,
-                    Title = "Observasi Lapangan", Status = o.HasilObservasi, FotoUrl = o.FotoUrl,
+                timelineList.Add(new TimelineViewModel
+                {
+                    ItemType = "Observation",
+                    OriginalId = o.Id,
+                    Nama = o.Nama,
+                    Nik = o.Nik,
+                    Departemen = o.Departemen,
+                    PerusahaanId = null,
+                    Tanggal = o.Date,
+                    Waktu = o.Date.TimeOfDay,
+                    CreatedAt = o.CreatedAt,
+                    Area = o.Area,
+                    Lokasi = o.Lokasi,
+                    Kategori = o.PerihalYangDiamati,
+                    Title = "Observasi Lapangan",
+                    Status = o.HasilObservasi,
+                    FotoUrl = o.FotoUrl,
                     Content = $"Kegiatan yang diamati: {o.KegiatanYangDiamati}. Keterangan: {o.Keterangan}"
                 });
             }
@@ -216,25 +307,40 @@ namespace MBS_SAP.Controllers
                         }
                     }
                 }
-                catch (Exception) { }
+                catch (System.Exception)
+                {
+                }
 
-                string contentText = defectCount == 0 
-                    ? "Kondisi unit: SEMUA BAIK" 
+                string contentText = defectCount == 0
+                    ? "Kondisi unit: SEMUA BAIK"
                     : $"Kondisi unit: DITEMUKAN {defectCount} TEMUAN KERUSAKAN ({string.Join(", ", defects)})";
 
-                timelineList.Add(new TimelineViewModel {
-                    ItemType = "P2h", OriginalId = r.Id,
-                    Nama = r.Nama, Nik = r.Nik, Departemen = "P2H", PerusahaanId = null,
-                    Tanggal = r.Tanggal, Waktu = r.Waktu, CreatedAt = r.CreatedAt,
-                    Area = r.NoLambung, Lokasi = $"{r.Merek} (KM: {r.Kilometer})", Kategori = r.JenisKendaraan,
-                    Title = "Pemeriksaan Kendaraan Harian (P2H)", Status = defectCount == 0 ? "GOOD" : "NOT_GOOD", 
+                timelineList.Add(new TimelineViewModel
+                {
+                    ItemType = "P2h",
+                    OriginalId = r.Id,
+                    Nama = r.Nama,
+                    Nik = r.Nik,
+                    Departemen = "P2H",
+                    PerusahaanId = null,
+                    Tanggal = r.Tanggal,
+                    Waktu = r.Waktu,
+                    CreatedAt = r.CreatedAt,
+                    Area = r.NoLambung,
+                    Lokasi = $"{r.Merek} (KM: {r.Kilometer})",
+                    Kategori = r.JenisKendaraan,
+                    Title = "Pemeriksaan Kendaraan Harian (P2H)",
+                    Status = defectCount == 0 ? "GOOD" : "NOT_GOOD",
                     FotoUrl = r.FotoSpeedometer,
                     Content = contentText
                 });
             }
 
-            // Ambil detail karyawan (Nama, Jabatan, Perusahaan, PathFoto) untuk timeline secara efisien
-            var distinctNiks = timelineList.Select(x => x.Nik).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
+            timelineList = timelineList.OrderByDescending(x => x.CreatedAt).ToList();
+            var totalCount = timelineList.Count;
+            var pagedTimeline = timelineList.Skip(skip).Take(take).ToList();
+
+            var distinctNiks = pagedTimeline.Select(x => x.Nik).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
             var employeeDetails = await (from k in _context.Karyawans
                                          join p in _context.Personals on k.IdPersonal equals p.IdPersonal
                                          join j in _context.Jabatans on k.IdJabatan equals j.JabatanId into jg
@@ -242,7 +348,8 @@ namespace MBS_SAP.Controllers
                                          join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
                                          from c in cg.DefaultIfEmpty()
                                          where distinctNiks.Contains(k.NoNik)
-                                         select new {
+                                         select new
+                                         {
                                              Nik = k.NoNik,
                                              Nama = p.NamaLengkap,
                                              Jabatan = j != null ? j.NamaJabatan : "Karyawan",
@@ -256,7 +363,7 @@ namespace MBS_SAP.Controllers
                 .GroupBy(e => e.Nik)
                 .ToDictionary(g => g.Key, g => g.First());
 
-            foreach (var item in timelineList)
+            foreach (var item in pagedTimeline)
             {
                 if (!string.IsNullOrEmpty(item.Nik) && employeeMap.TryGetValue(item.Nik, out var emp))
                 {
@@ -264,6 +371,7 @@ namespace MBS_SAP.Controllers
                     {
                         item.Nama = emp.Nama;
                     }
+
                     item.Jabatan = emp.Jabatan;
                     item.Perusahaan = emp.Perusahaan;
 
@@ -284,28 +392,31 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            // Get all likes and comments for these items
-            var itemKeys = timelineList.Select(x => x.ItemType + "_" + x.OriginalId).ToList();
-            
-            var allLikes = await _context.TimelineLikes.ToListAsync();
-            var allComments = await _context.TimelineComments.OrderBy(c => c.CreatedAt).ToListAsync();
+            var pageItemIds = pagedTimeline.Select(x => x.OriginalId).Distinct().ToList();
+            var pageItemTypes = pagedTimeline.Select(x => x.ItemType).Distinct().ToList();
 
-            foreach (var item in timelineList)
+            var allLikes = await _context.TimelineLikes
+                .Where(l => pageItemIds.Contains(l.ItemId) && pageItemTypes.Contains(l.ItemType))
+                .ToListAsync();
+
+            var allComments = await _context.TimelineComments
+                .Where(c => pageItemIds.Contains(c.ItemId) && pageItemTypes.Contains(c.ItemType))
+                .OrderBy(c => c.CreatedAt)
+                .ToListAsync();
+
+            foreach (var item in pagedTimeline)
             {
                 var likes = allLikes.Where(l => l.ItemType == item.ItemType && l.ItemId == item.OriginalId).ToList();
                 var comments = allComments.Where(c => c.ItemType == item.ItemType && c.ItemId == item.OriginalId).ToList();
-                
+
                 item.LikesCount = likes.Count;
                 item.CommentsCount = comments.Count;
                 item.IsLikedByCurrentUser = likes.Any(l => l.Nik == userNik);
                 item.Comments = comments;
             }
 
-            // Sort everything by latest created
-            timelineList = timelineList.OrderByDescending(x => x.CreatedAt).ToList();
-            
-            ViewData["ActiveTab"] = "Timeline";
-            return View(timelineList);
+            var hasMore = skip + pagedTimeline.Count < totalCount;
+            return (pagedTimeline, hasMore);
         }
 
         [HttpPost]

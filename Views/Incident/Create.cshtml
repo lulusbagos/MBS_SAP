@@ -21,6 +21,24 @@
         </div>
     }
 
+    <div class="card-sap border-0 p-3 mb-3" style="border-radius: 16px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25) !important;">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <div style="font-size: 13px; font-weight: 800; color: var(--text-main);">
+                    <i class="bi bi-file-earmark-excel-fill me-2 text-primary"></i>Import Incident Register (Sheet: source data)
+                </div>
+                <div class="text-muted" style="font-size: 11px;">Kolom wajib: <strong>aktual insiden / actual incident</strong>. Mendukung file <strong>.xlsx</strong> dan <strong>.csv</strong>.</div>
+            </div>
+            <form asp-action="ImportSourceData" method="post" enctype="multipart/form-data" class="d-flex align-items-center gap-2 flex-wrap">
+                @Html.AntiForgeryToken()
+                <input type="file" name="excelFile" accept=".xlsx,.csv" class="input-sap" style="height: auto; padding: 8px 10px; min-width: 230px;" required />
+                <button type="submit" class="btn btn-primary" style="border-radius: 10px; font-weight: 700; white-space: nowrap;">
+                    <i class="bi bi-upload me-1"></i>Import Excel
+                </button>
+            </form>
+        </div>
+    </div>
+
     <div class="card-sap border-0 p-4" style="border-radius: 20px;">
         <form asp-action="Create" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
@@ -44,10 +62,13 @@
             <div class="form-group-sap">
                 <label class="form-label-sap">Kategori Insiden</label>
                 <select name="kategori" class="input-sap" required>
-                    <option value="Ringan">🟢 Ringan (Near Miss / P3K)</option>
-                    <option value="Sedang" selected>🟡 Sedang (Rawat Jalan)</option>
-                    <option value="Berat">🔴 Berat (Rawat Inap)</option>
-                    <option value="Fatal">⚫ Fatal (Meninggal)</option>
+                    <option value="Near Miss" selected>🟢 Near Miss</option>
+                    <option value="Property Damaged">🟩 Property Damaged</option>
+                    <option value="First Aid Injury">🔵 First Aid Injury</option>
+                    <option value="Medical Treatment Injury">🟣 Medical Treatment Injury</option>
+                    <option value="Ringan">🟡 RINGAN</option>
+                    <option value="Berat">🟠 BERAT</option>
+                    <option value="Mati">⚫ MATI</option>
                 </select>
             </div>
 

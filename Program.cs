@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using MBS_SAP.Data;
+using MBS_SAP.Services;
 using Microsoft.Extensions.FileProviders;
 using System.IO;var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,9 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<MBS_SAP.Services.ExcelService>();
 builder.Services.AddScoped<MBS_SAP.Services.CompanyHierarchyService>();
 builder.Services.AddScoped<MBS_SAP.Services.ImageUploadService>();
+builder.Services.Configure<PostgresReplicationOptions>(builder.Configuration.GetSection("PostgresReplication"));
+builder.Services.AddScoped<PostgresReplicationService>();
+builder.Services.AddHostedService<PostgresReplicationScheduler>();
 builder.Services.AddHttpClient();
 
 // Register DbContext with SQL Server

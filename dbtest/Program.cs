@@ -1,35 +1,48 @@
-using System;
-using System.Text;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 
-namespace dbtest
+var connStr = "Host=172.16.1.96;Port=5432;Database=sysinteg_indexsafe2;Username=postgres;Password=index.123;";
+
+var views = new[]
 {
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            string connStr = "Server=172.16.1.93;Database=DB_SAP;User Id=sa;Password=technical.indexim.123;TrustServerCertificate=True;MultipleActiveResultSets=True;";
-            string targetNik = "24051940986";
+    "vw_actionplandetail",
+    "vw_coachingdetail",
+    "vw_hazardreportdetail",
+    "vw_inspectiondetail",
+    "vw_observationdetail",
+    "vw_p2hdetail",
+    "vw_p5mdetail",
+    "vw_safetytalkdetail"
+};
 
-            using (var conn = new SqlConnection(connStr))
-            {
-                conn.Open();
-                string q = @"
-                    IF NOT EXISTS (
-                        SELECT * FROM sys.columns 
-                        WHERE object_id = OBJECT_ID(N'[tbl_t_notifications]') 
-                        AND name = 'notif_type'
-                    )
-                    BEGIN
-                        ALTER TABLE tbl_t_notifications ADD notif_type NVARCHAR(50) NULL;
-                    END
-                ";
-                using (var cmd = new SqlCommand(q, conn))
-                {
-                    cmd.ExecuteNonQuery();
-                    Console.WriteLine("Column notif_type added successfully or already exists.");
-                }
-            }
-        }
+var sql = @"
+SELECT table_schema, table_name, column_name, data_type, ordinal_position
+FROM information_schema.columns
+WHERE table_schema NOT IN ('information_schema','pg_catalog')
+  AND table_name = ANY (@views)
+ORDER BY table_name, ordinal_position;";
+
+await using var conn = new NpgsqlConnection(connStr);
+await conn.OpenAsync();
+
+await using var cmd = new NpgsqlCommand(sql, conn);
+cmd.Parameters.AddWithValue("views", views);
+
+await using var reader = await cmd.ExecuteReaderAsync();
+
+string? current = null;
+while (await reader.ReadAsync())
+{
+    var viewName = reader.GetString(reader.GetOrdinal("table_name"));
+    var columnName = reader.GetString(reader.GetOrdinal("column_name"));
+    var dataType = reader.GetString(reader.GetOrdinal("data_type"));
+    var position = reader.GetInt32(reader.GetOrdinal("ordinal_position"));
+
+    if (!string.Equals(current, viewName, StringComparison.OrdinalIgnoreCase))
+    {
+        current = viewName;
+        Console.WriteLine();
+        Console.WriteLine($"=== {viewName} ===");
     }
+
+    Console.WriteLine($"{position,2}. {columnName} ({dataType})");
 }
