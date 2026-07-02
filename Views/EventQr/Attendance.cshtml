@@ -593,9 +593,147 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Visualizer Canvas */
+        #visualizerCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.22;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Music Player Capsule */
+        .music-player-capsule {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 18px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .music-player-capsule:hover {
+            border-color: rgba(56, 189, 248, 0.3);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+        }
+        .music-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        .music-btn:hover {
+            background: var(--color-primary);
+            color: #030712;
+            border-color: var(--color-primary);
+            transform: scale(1.05);
+            box-shadow: var(--glow-primary);
+        }
+        .music-track-info {
+            width: 120px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .music-track-title-container {
+            width: 100%;
+            overflow: hidden;
+            position: relative;
+            height: 16px;
+        }
+        .music-track-title {
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            color: var(--text-main);
+            position: absolute;
+            will-change: transform;
+        }
+        .music-track-status {
+            font-size: 8px;
+            font-weight: 800;
+            color: var(--color-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 10px;
+        }
+        .music-volume-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .music-volume-slider {
+            width: 0;
+            opacity: 0;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+            border-radius: 2px;
+            transition: width 0.3s ease, opacity 0.3s ease;
+        }
+        .music-volume-container:hover .music-volume-slider,
+        .music-volume-slider:focus {
+            width: 60px;
+            opacity: 1;
+        }
+        .music-volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--color-primary);
+            cursor: pointer;
+            box-shadow: var(--glow-primary);
+        }
+        .equalizer-bar-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 8px;
+            width: 12px;
+        }
+        .equalizer-bar {
+            width: 2px;
+            height: 100%;
+            background-color: var(--color-primary);
+            transform-origin: bottom;
+            animation: bounce-eq 0.8s ease infinite alternate;
+        }
+        .equalizer-bar:nth-child(2) { animation-delay: 0.2s; }
+        .equalizer-bar:nth-child(3) { animation-delay: 0.4s; }
+
+        @@keyframes bounce-eq {
+            0% { transform: scaleY(0.2); }
+            100% { transform: scaleY(1); }
+        }
     </style>
 </head>
 <body>
+<canvas id="visualizerCanvas"></canvas>
 <div class="display-shell">
     <!-- Top Header -->
     <header class="dashboard-header">
@@ -607,6 +745,29 @@
             </div>
         </div>
         <div class="header-actions">
+            <!-- Music Player Widget -->
+            <div class="music-player-capsule" id="musicPlayerCapsule">
+                <button type="button" class="music-btn" id="musicPlayBtn" title="Mainkan/Jeda Musik Latar">
+                    <i class="bi bi-play-fill"></i>
+                </button>
+                <button type="button" class="music-btn" id="musicNextBtn" title="Lagu Berikutnya">
+                    <i class="bi bi-skip-forward-fill"></i>
+                </button>
+                <div class="music-track-info">
+                    <div class="music-track-title-container">
+                        <div class="music-track-title" id="musicTrackTitle">Memuat musik...</div>
+                    </div>
+                    <div class="music-track-status" id="musicTrackStatus">
+                        <span>Menghubungkan</span>
+                    </div>
+                </div>
+                <div class="music-volume-container">
+                    <button type="button" class="music-btn" id="musicVolumeBtn" title="Mute/Unmute Musik">
+                        <i class="bi bi-volume-up-fill" id="musicVolumeIcon"></i>
+                    </button>
+                    <input type="range" id="musicVolumeSlider" min="0" max="1" step="0.05" value="0.25" class="music-volume-slider" title="Volume Musik" />
+                </div>
+            </div>
             <!-- Audio Toggle Button -->
             <button type="button" class="btn-action" id="soundToggleBtn" title="Aktifkan/Nonaktifkan Suara Absen">
                 <i class="bi bi-volume-up-fill" id="soundIcon" style="color: var(--color-green);"></i>
@@ -792,6 +953,401 @@
         const attendanceQueue = [];
         let isQueueProcessing = false;
 
+        // --- BACKGROUND MUSIC & VISUALIZER ENGINE ---
+        let playlist = [];
+        let shuffledPlaylist = [];
+        let currentTrackIndex = -1;
+        let isPlaying = false;
+        let currentVolume = 0.25;
+        let isMuted = false;
+        let isDucked = false;
+
+        const bgAudio = new Audio();
+        bgAudio.crossOrigin = "anonymous";
+
+        let audioCtx = null;
+        let audioSource = null;
+        let analyser = null;
+        let gainNode = null;
+
+        // Initialize Web Audio Context
+        function initAudioContext() {
+            if (audioCtx) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256; 
+                
+                gainNode = audioCtx.createGain();
+                gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
+                
+                audioSource = audioCtx.createMediaElementSource(bgAudio);
+                audioSource.connect(analyser);
+                analyser.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+            } catch (e) {
+                console.warn("Web Audio API initialization failed:", e);
+            }
+        }
+
+        // Fetch music file list and initialize player
+        async function initBackgroundMusic() {
+            try {
+                const response = await fetch('/EventQr/GetMusicList');
+                if (!response.ok) return;
+                playlist = await response.json();
+                if (playlist && playlist.length > 0) {
+                    shuffledPlaylist = [...playlist];
+                    shuffleArray(shuffledPlaylist);
+                    currentTrackIndex = 0;
+                    loadTrack(shuffledPlaylist[currentTrackIndex]);
+                } else {
+                    document.getElementById('musicTrackTitle').textContent = "Tidak ada file musik";
+                    document.getElementById('musicTrackStatus').innerHTML = "<span>KOSONG</span>";
+                }
+            } catch (err) {
+                console.error("Failed to load music list:", err);
+                document.getElementById('musicTrackTitle').textContent = "Gagal memuat musik";
+                document.getElementById('musicTrackStatus').innerHTML = "<span>ERROR</span>";
+            }
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function loadTrack(filename) {
+            bgAudio.src = '/music/' + encodeURIComponent(filename);
+            bgAudio.load();
+            
+            const displayTitle = filename.replace(/\.[^/.]+$/, "");
+            const titleEl = document.getElementById('musicTrackTitle');
+            if (titleEl) {
+                titleEl.textContent = displayTitle;
+                marqueeOffset = 0; // Reset scroll position
+            }
+            
+            if (isPlaying) {
+                playMusic();
+            }
+        }
+
+        bgAudio.onended = () => {
+            playNextTrack();
+        };
+
+        function playNextTrack() {
+            if (shuffledPlaylist.length === 0) return;
+            currentTrackIndex = (currentTrackIndex + 1) % shuffledPlaylist.length;
+            if (currentTrackIndex === 0) {
+                shuffleArray(shuffledPlaylist);
+            }
+            loadTrack(shuffledPlaylist[currentTrackIndex]);
+            playMusic();
+        }
+
+        async function playMusic() {
+            initAudioContext();
+            try {
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
+                await bgAudio.play();
+                isPlaying = true;
+                updateMusicUI();
+            } catch (e) {
+                console.warn("Play request was blocked or failed:", e);
+                isPlaying = false;
+                updateMusicUI();
+            }
+        }
+
+        function pauseMusic() {
+            bgAudio.pause();
+            isPlaying = false;
+            updateMusicUI();
+        }
+
+        function updateMusicUI() {
+            const playBtn = document.getElementById('musicPlayBtn');
+            const statusEl = document.getElementById('musicTrackStatus');
+            
+            if (playBtn) {
+                const icon = playBtn.querySelector('i');
+                if (icon) {
+                    icon.className = isPlaying ? 'bi bi-pause-fill' : 'bi bi-play-fill';
+                }
+            }
+            
+            if (statusEl) {
+                if (isPlaying) {
+                    statusEl.innerHTML = `
+                        <div class="equalizer-bar-container">
+                            <div class="equalizer-bar"></div>
+                            <div class="equalizer-bar"></div>
+                            <div class="equalizer-bar"></div>
+                        </div>
+                        <span>MEMUTAR</span>
+                    `;
+                } else {
+                    statusEl.innerHTML = `<span>JEDA</span>`;
+                }
+            }
+        }
+
+        function setVolumeSmoothly(targetValue, durationMs = 300) {
+            if (gainNode && audioCtx) {
+                const t = audioCtx.currentTime;
+                gainNode.gain.cancelScheduledValues(t);
+                gainNode.gain.setValueAtTime(gainNode.gain.value, t);
+                gainNode.gain.linearRampToValueAtTime(targetValue, t + durationMs / 1000);
+            } else {
+                bgAudio.volume = targetValue;
+            }
+        }
+
+        function updateVolume() {
+            let activeVol = isMuted ? 0 : currentVolume;
+            if (isDucked) {
+                activeVol = activeVol * 0.15; // Duck to 15%
+            }
+            
+            setVolumeSmoothly(activeVol, 150);
+            
+            if (volumeSlider) {
+                volumeSlider.value = isMuted ? 0 : currentVolume;
+            }
+            
+            if (volumeIcon) {
+                if (isMuted || activeVol === 0) {
+                    volumeIcon.className = 'bi bi-volume-mute-fill';
+                    volumeIcon.style.color = 'var(--color-red)';
+                } else if (currentVolume < 0.5) {
+                    volumeIcon.className = 'bi bi-volume-down-fill';
+                    volumeIcon.style.color = 'var(--color-primary)';
+                } else {
+                    volumeIcon.className = 'bi bi-volume-up-fill';
+                    volumeIcon.style.color = 'var(--color-primary)';
+                }
+            }
+        }
+
+        function duckMusic() {
+            if (isDucked) return;
+            isDucked = true;
+            updateVolume();
+        }
+
+        function unduckMusic() {
+            if (!isDucked) return;
+            isDucked = false;
+            updateVolume();
+        }
+
+        // Setup Controls Listeners
+        const playBtn = document.getElementById('musicPlayBtn');
+        if (playBtn) {
+            playBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (isPlaying) {
+                    pauseMusic();
+                } else {
+                    playMusic();
+                }
+            });
+        }
+
+        const nextBtn = document.getElementById('musicNextBtn');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                playNextTrack();
+            });
+        }
+
+        const volumeSlider = document.getElementById('musicVolumeSlider');
+        const volumeBtn = document.getElementById('musicVolumeBtn');
+        const volumeIcon = document.getElementById('musicVolumeIcon');
+        
+        if (volumeSlider) {
+            volumeSlider.value = currentVolume;
+            volumeSlider.addEventListener('input', (e) => {
+                currentVolume = parseFloat(e.target.value);
+                isMuted = currentVolume === 0;
+                updateVolume();
+            });
+        }
+        
+        if (volumeBtn) {
+            volumeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                isMuted = !isMuted;
+                updateVolume();
+            });
+        }
+
+        // --- CANVAS AUDIO VISUALIZER ---
+        const canvas = document.getElementById('visualizerCanvas');
+        let canvasCtx = null;
+        let particles = [];
+        const numParticles = 75;
+        let visualAngle = 0;
+        let marqueeOffset = 0;
+
+        if (canvas) {
+            canvasCtx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            initParticles();
+            requestAnimationFrame(renderVisualizer);
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < numParticles; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.45,
+                    vy: (Math.random() - 0.5) * 0.45,
+                    size: Math.random() * 2 + 1,
+                    baseSize: Math.random() * 2 + 1,
+                    color: getRandomColor()
+                });
+            }
+        }
+
+        function getRandomColor() {
+            const colors = [
+                'rgba(56, 189, 248, 0.35)', // cyan
+                'rgba(16, 185, 129, 0.3)',  // green
+                'rgba(139, 92, 246, 0.3)',  // purple
+                'rgba(244, 63, 94, 0.3)'    // red
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function getAverage(array, start, end) {
+            let sum = 0;
+            const count = end - start + 1;
+            for (let i = start; i <= end; i++) {
+                sum += array[i] || 0;
+            }
+            return sum / count;
+        }
+
+        function updateMarquee() {
+            const titleEl = document.getElementById('musicTrackTitle');
+            if (!titleEl) return;
+            const containerWidth = titleEl.parentElement.offsetWidth;
+            const titleWidth = titleEl.scrollWidth;
+            if (titleWidth > containerWidth) {
+                marqueeOffset -= 0.45; // scroll speed
+                if (marqueeOffset < -titleWidth) {
+                    marqueeOffset = containerWidth;
+                }
+                titleEl.style.transform = `translateX(${marqueeOffset}px)`;
+            } else {
+                titleEl.style.transform = 'none';
+            }
+        }
+
+        function renderVisualizer() {
+            if (!canvas || !canvasCtx) return;
+            
+            const bufferLength = analyser ? analyser.frequencyBinCount : 128;
+            const dataArray = new Uint8Array(bufferLength);
+            if (isPlaying && analyser) {
+                analyser.getByteFrequencyData(dataArray);
+            }
+            
+            const bass = getAverage(dataArray, 0, 8) / 255;      
+            const mids = getAverage(dataArray, 9, 32) / 255;     
+            const treble = getAverage(dataArray, 33, 80) / 255;   
+            
+            // Clean trail clear
+            canvasCtx.fillStyle = 'rgba(3, 7, 18, 0.16)';
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const maxRadius = Math.min(canvas.width, canvas.height) * 0.65;
+            
+            // 1. Bass Pulse center glow
+            const glowGradient = canvasCtx.createRadialGradient(
+                centerX, centerY, 20, 
+                centerX, centerY, maxRadius
+            );
+            
+            const r = Math.floor(3 + bass * 25);
+            const g = Math.floor(7 + mids * 35);
+            const b = Math.floor(18 + treble * 60);
+            
+            glowGradient.addColorStop(0, `rgba(${r + 35}, ${g + 55}, ${b + 130}, ${0.12 + bass * 0.16})`);
+            glowGradient.addColorStop(0.5, `rgba(${r}, ${g}, ${b}, ${0.04 + mids * 0.06})`);
+            glowGradient.addColorStop(1, 'rgba(3, 7, 18, 0)');
+            
+            canvasCtx.fillStyle = glowGradient;
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 2. Wave circles
+            const waveCount = 3;
+            visualAngle += 0.002 + bass * 0.004;
+            for (let w = 0; w < waveCount; w++) {
+                const ringRadius = ((w / waveCount * maxRadius + visualAngle * 90) % maxRadius);
+                const opacity = (1 - ringRadius / maxRadius) * (0.08 + bass * 0.22);
+                
+                canvasCtx.beginPath();
+                canvasCtx.arc(centerX, centerY, ringRadius, 0, Math.PI * 2);
+                canvasCtx.strokeStyle = `rgba(56, 189, 248, ${opacity})`;
+                canvasCtx.lineWidth = 1 + bass * 3.5;
+                canvasCtx.shadowBlur = 8 + bass * 18;
+                canvasCtx.shadowColor = 'rgba(56, 189, 248, 0.45)';
+                canvasCtx.stroke();
+            }
+            canvasCtx.shadowBlur = 0; 
+            
+            // 3. Particles
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                
+                const speedMult = 1 + bass * 4.2;
+                p.x += p.vx * speedMult;
+                p.y += p.vy * speedMult;
+                
+                const sizeMult = 1 + treble * 2.2;
+                const drawSize = p.baseSize * sizeMult;
+                
+                if (p.x < -10) p.x = canvas.width + 10;
+                if (p.x > canvas.width + 10) p.x = -10;
+                if (p.y < -10) p.y = canvas.height + 10;
+                if (p.y > canvas.height + 10) p.y = -10;
+                
+                canvasCtx.beginPath();
+                canvasCtx.arc(p.x, p.y, drawSize, 0, Math.PI * 2);
+                canvasCtx.fillStyle = p.color;
+                
+                if (treble > 0.35) {
+                    canvasCtx.shadowBlur = 4 + treble * 10;
+                    canvasCtx.shadowColor = p.color;
+                }
+                canvasCtx.fill();
+                canvasCtx.shadowBlur = 0;
+            }
+            
+            updateMarquee();
+            requestAnimationFrame(renderVisualizer);
+        }
+
         // Initialize set with existing attendees to prevent popping up on first load
         @foreach (var attendee in Model.Attendees)
         {
@@ -930,11 +1486,15 @@
         async function processQueue() {
             if (attendanceQueue.length === 0) {
                 isQueueProcessing = false;
+                unduckMusic(); // Return background music to normal volume
                 return;
             }
             isQueueProcessing = true;
+            duckMusic(); // Lower background music volume smoothly
+            
             const nextItem = attendanceQueue.shift();
             await showToast(nextItem);
+            
             // Brief gap between queue items
             setTimeout(processQueue, 150);
         }
@@ -977,7 +1537,6 @@
             
             let scrollDirection = 1; // 1 = down, -1 = up
             const speed = 0.4; // Pixels per frame
-            let lastTimestamp = 0;
             
             function step(timestamp) {
                 if (el.scrollHeight > el.clientHeight) {
@@ -1073,6 +1632,11 @@
                     ctx.resume();
                 }
             } catch {}
+            // Initialize background music and play if loaded
+            initAudioContext();
+            if (!isPlaying && shuffledPlaylist.length > 0) {
+                playMusic();
+            }
         }, { once: true });
 
         document.addEventListener('fullscreenchange', syncFullscreenLabel);
@@ -1081,6 +1645,9 @@
         setInterval(updateClock, 1000);
         setInterval(refreshAttendanceSnapshot, REFRESH_MS);
         
+        // Initialize background music playlist
+        initBackgroundMusic();
+
         // Initialize Auto Scroll for Pending Companies
         initAutoScroll('pendingCompaniesList');
     })();

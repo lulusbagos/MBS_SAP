@@ -416,6 +416,27 @@ namespace MBS_SAP.Controllers
             });
         }
 
+        [HttpGet]
+        public IActionResult GetMusicList()
+        {
+            try
+            {
+                var musicFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "music");
+                if (Directory.Exists(musicFolder))
+                {
+                    var files = Directory.GetFiles(musicFolder, "*.mp3")
+                                         .Select(Path.GetFileName)
+                                         .ToList();
+                    return Json(files);
+                }
+            }
+            catch (Exception)
+            {
+                // ignore
+            }
+            return Json(new List<string>());
+        }
+
         private async Task<EventQrAttendanceViewModel?> BuildAttendanceViewModelAsync(int id)
         {
             var ev = await _context.AttendanceEvents

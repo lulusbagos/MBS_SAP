@@ -356,9 +356,16 @@ namespace MBS_SAP.Controllers
                 .ThenBy(x => x.DriverNama)
                 .ToListAsync();
 
-            using var workbook = new XLWorkbook();
-            var worksheet = workbook.Worksheets.Add("DPA Driver Summary");
+            var reports = await _context.DpaReports
+                .Where(r => !r.IsDeleted && r.PerusahaanId == 1)
+                .OrderByDescending(r => r.TanggalPenilaian)
+                .ThenByDescending(r => r.CreatedAt)
+                .ToListAsync();
 
+            using var workbook = new XLWorkbook();
+            
+            // Sheet 1: Summary
+            var worksheet = workbook.Worksheets.Add("DPA Driver Summary");
             worksheet.Cell(1, 1).Value = "No";
             worksheet.Cell(1, 2).Value = "NIK Driver";
             worksheet.Cell(1, 3).Value = "Nama Driver";
@@ -392,13 +399,113 @@ namespace MBS_SAP.Controllers
                 worksheet.Cell(row, 9).Style.DateFormat.Format = "yyyy-MM-dd";
                 row++;
             }
-
             worksheet.Columns().AdjustToContents();
+
+            // Sheet 2: Assessment Details
+            var detailSheet = workbook.Worksheets.Add("DPA Assessment Details");
+            detailSheet.Cell(1, 1).Value = "No";
+            detailSheet.Cell(1, 2).Value = "Tanggal Penilaian";
+            detailSheet.Cell(1, 3).Value = "Tanggal & Jam Input";
+            detailSheet.Cell(1, 4).Value = "NIK Assessor";
+            detailSheet.Cell(1, 5).Value = "Nama Assessor";
+            detailSheet.Cell(1, 6).Value = "Departemen Assessor";
+            detailSheet.Cell(1, 7).Value = "NIK Driver";
+            detailSheet.Cell(1, 8).Value = "Nama Driver";
+            detailSheet.Cell(1, 9).Value = "Departemen Driver";
+            detailSheet.Cell(1, 10).Value = "Jenis Perjalanan";
+            detailSheet.Cell(1, 11).Value = "Rute";
+            detailSheet.Cell(1, 12).Value = "No Lambung";
+            detailSheet.Cell(1, 13).Value = "Score Penumpang";
+            detailSheet.Cell(1, 14).Value = "Score GPS";
+            detailSheet.Cell(1, 15).Value = "Score LenzGuard";
+            detailSheet.Cell(1, 16).Value = "Score Final";
+            detailSheet.Cell(1, 17).Value = "Kategori";
+            detailSheet.Cell(1, 18).Value = "Keterangan";
+            detailSheet.Cell(1, 19).Value = "Safety Q1: Kecepatan";
+            detailSheet.Cell(1, 20).Value = "Safety Q2: Antisipasi Bahaya";
+            detailSheet.Cell(1, 21).Value = "Safety Q3: Kehalusan Pengereman/Akselerasi";
+            detailSheet.Cell(1, 22).Value = "Skill Q1: Fokus & Konsentrasi";
+            detailSheet.Cell(1, 23).Value = "Skill Q2: Pengendalian Kendaraan";
+            detailSheet.Cell(1, 24).Value = "Behavior Q1: Sikap & Keramahan";
+            detailSheet.Cell(1, 25).Value = "Behavior Q2: Komunikasi";
+            detailSheet.Cell(1, 26).Value = "Service Q1: Kebersihan & Kerapihan";
+            detailSheet.Cell(1, 27).Value = "Service Q2: Ketepatan Waktu";
+            detailSheet.Cell(1, 28).Value = "Service Q3: Performa Keseluruhan";
+
+            var detailHeaderRange = detailSheet.Range(1, 1, 1, 28);
+            detailHeaderRange.Style.Font.Bold = true;
+            detailHeaderRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#E2F3FB");
+
+            int detailRow = 2;
+            int detailNo = 1;
+            foreach (var item in reports)
+            {
+                detailSheet.Cell(detailRow, 1).Value = detailNo++;
+                detailSheet.Cell(detailRow, 2).Value = item.TanggalPenilaian;
+                detailSheet.Cell(detailRow, 3).Value = item.CreatedAt;
+                detailSheet.Cell(detailRow, 4).Value = item.AssessorNik;
+                detailSheet.Cell(detailRow, 5).Value = item.AssessorNama;
+                detailSheet.Cell(detailRow, 6).Value = item.AssessorDepartemen ?? "";
+                detailSheet.Cell(detailRow, 7).Value = item.DriverNik;
+                detailSheet.Cell(detailRow, 8).Value = item.DriverNama;
+                detailSheet.Cell(detailRow, 9).Value = item.DriverDepartemen ?? "";
+                detailSheet.Cell(detailRow, 10).Value = item.JenisPerjalanan;
+                detailSheet.Cell(detailRow, 11).Value = item.Rute ?? "";
+                detailSheet.Cell(detailRow, 12).Value = item.NoLambung ?? "";
+                detailSheet.Cell(detailRow, 13).Value = item.ScorePenumpang;
+                detailSheet.Cell(detailRow, 14).Value = item.ScoreGps;
+                detailSheet.Cell(detailRow, 15).Value = item.ScoreLenzguard;
+                detailSheet.Cell(detailRow, 16).Value = item.ScoreFinal;
+                detailSheet.Cell(detailRow, 17).Value = item.Kategori ?? "";
+                detailSheet.Cell(detailRow, 18).Value = item.Keterangan ?? "";
+
+                detailSheet.Cell(detailRow, 2).Style.DateFormat.Format = "yyyy-MM-dd";
+                detailSheet.Cell(detailRow, 3).Style.DateFormat.Format = "yyyy-MM-dd HH:mm:ss";
+                detailSheet.Cell(detailRow, 13).Style.NumberFormat.Format = "0.0";
+                detailSheet.Cell(detailRow, 14).Style.NumberFormat.Format = "0.0";
+                detailSheet.Cell(detailRow, 15).Style.NumberFormat.Format = "0.0";
+                detailSheet.Cell(detailRow, 16).Style.NumberFormat.Format = "0.0";
+
+                var safety = string.IsNullOrEmpty(item.SafetyDrivingJson) ? null : JsonSerializer.Deserialize<List<AssessmentItem>>(item.SafetyDrivingJson);
+                var skill = string.IsNullOrEmpty(item.DrivingSkillJson) ? null : JsonSerializer.Deserialize<List<AssessmentItem>>(item.DrivingSkillJson);
+                var behavior = string.IsNullOrEmpty(item.BehaviorJson) ? null : JsonSerializer.Deserialize<List<AssessmentItem>>(item.BehaviorJson);
+                var service = string.IsNullOrEmpty(item.ServiceQualityJson) ? null : JsonSerializer.Deserialize<List<AssessmentItem>>(item.ServiceQualityJson);
+
+                WriteQuestionScore(detailSheet, detailRow, 19, safety, 0);
+                WriteQuestionScore(detailSheet, detailRow, 20, safety, 1);
+                WriteQuestionScore(detailSheet, detailRow, 21, safety, 2);
+
+                WriteQuestionScore(detailSheet, detailRow, 22, skill, 0);
+                WriteQuestionScore(detailSheet, detailRow, 23, skill, 1);
+
+                WriteQuestionScore(detailSheet, detailRow, 24, behavior, 0);
+                WriteQuestionScore(detailSheet, detailRow, 25, behavior, 1);
+
+                WriteQuestionScore(detailSheet, detailRow, 26, service, 0);
+                WriteQuestionScore(detailSheet, detailRow, 27, service, 1);
+                WriteQuestionScore(detailSheet, detailRow, 28, service, 2);
+
+                detailRow++;
+            }
+            detailSheet.Columns().AdjustToContents();
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
             var fileName = $"DPA_Driver_Summary_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
             return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        private static void WriteQuestionScore(IXLWorksheet sheet, int row, int col, List<AssessmentItem>? list, int index)
+        {
+            if (list != null && index >= 0 && index < list.Count)
+            {
+                var q = list[index];
+                sheet.Cell(row, col).Value = $"{q.Score} ({q.Label})";
+            }
+            else
+            {
+                sheet.Cell(row, col).Value = "-";
+            }
         }
 
         [HttpGet]
