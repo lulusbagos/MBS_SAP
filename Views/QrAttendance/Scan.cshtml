@@ -42,16 +42,32 @@
         margin-bottom: 12px;
     }
     .scan-success {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: rgba(34, 197, 94, 0.3);
+        color: var(--color-green);
+    }
+    .scan-info {
+        background: rgba(56, 189, 248, 0.15);
+        border-color: rgba(56, 189, 248, 0.3);
+        color: var(--color-primary);
+    }
+    .scan-danger {
+        background: rgba(244, 63, 94, 0.15);
+        border-color: rgba(244, 63, 94, 0.3);
+        color: var(--color-red);
+    }
+
+    body.light-theme .scan-success {
         background: #dcfce7;
         border-color: #86efac;
         color: #166534;
     }
-    .scan-info {
+    body.light-theme .scan-info {
         background: #e0f2fe;
         border-color: #7dd3fc;
         color: #0c4a6e;
     }
-    .scan-danger {
+    body.light-theme .scan-danger {
         background: #fee2e2;
         border-color: #fca5a5;
         color: #991b1b;
@@ -86,8 +102,22 @@
             <div><strong>Lokasi:</strong> @(string.IsNullOrWhiteSpace(Model.EventLocation) ? "-" : Model.EventLocation)</div>
             <div><strong>Waktu:</strong> @Model.StartAt.ToString("dd MMM yyyy HH:mm") - @Model.EndAt.ToString("dd MMM yyyy HH:mm")</div>
             <div><strong>Peserta:</strong> @Model.AttendeeName (@Model.AttendeeNik)</div>
+            
+            @if (Model.Status == "success" || Model.Status == "duplicate")
+            {
+                <div class="mt-2 pt-2 border-top text-success" style="font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Terima kasih, Anda sudah absen di acara ini.</span>
+                </div>
+            }
         </div>
     }
+
+    <div class="mt-4 text-center">
+        <a asp-controller="Home" asp-action="Index" class="btn btn-sap-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Kembali ke Menu Utama
+        </a>
+    </div>
 </div>
 
 <div class="modal fade" id="scanResultModal" tabindex="-1" aria-hidden="true">
