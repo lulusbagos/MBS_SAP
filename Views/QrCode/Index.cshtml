@@ -1,0 +1,368 @@
+@model MBS_SAP.Controllers.QrProfileViewModel
+@{
+    ViewData["Title"] = "Scan QR Absensi";
+    var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}";
+}
+
+<style>
+    .scan-page {
+        background: radial-gradient(circle at 10% 10%, rgba(14, 165, 233, 0.14), transparent 30%),
+                    radial-gradient(circle at 90% 10%, rgba(34, 197, 94, 0.14), transparent 28%),
+                    var(--bg-body);
+        border: 1px solid var(--border-color);
+        border-radius: 18px;
+        padding: 20px;
+    }
+
+    .scan-hero {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 14px;
+        margin-bottom: 14px;
+    }
+
+    .scan-card {
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        background: var(--bg-card);
+        padding: 16px;
+    }
+
+    .scan-title {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 900;
+        color: var(--text-main);
+        letter-spacing: 0.3px;
+    }
+
+    .scan-subtitle {
+        margin: 8px 0 0;
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    .scan-profile {
+        display: grid;
+        gap: 5px;
+        font-size: 12px;
+        color: var(--text-main);
+    }
+
+    .scan-profile span {
+        opacity: 0.88;
+    }
+
+    .scanner-layout {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 14px;
+    }
+
+    .scanner-card {
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        background: var(--bg-card);
+        padding: 14px;
+        box-shadow: 0 5px 16px rgba(2, 6, 23, 0.08);
+    }
+
+    .scanner-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .scanner-head h3 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--text-main);
+    }
+
+    .scanner-head p {
+        margin: 0;
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+
+    #qrReader {
+        width: 100%;
+        min-height: 300px;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        background: #0f172a;
+    }
+
+    .scanner-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .scan-btn {
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--bg-body);
+        color: var(--text-main);
+        font-size: 11px;
+        font-weight: 700;
+        padding: 8px 11px;
+        cursor: pointer;
+    }
+
+    .scan-btn:hover {
+        border-color: #38bdf8;
+        color: #0284c7;
+        background: rgba(56, 189, 248, 0.08);
+    }
+
+    .scan-status {
+        margin-top: 10px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        padding: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        display: none;
+    }
+
+    .scan-status.ok {
+        display: block;
+        border-color: #86efac;
+        color: #166534;
+        background: #dcfce7;
+    }
+
+    .scan-status.err {
+        display: block;
+        border-color: #fca5a5;
+        color: #991b1b;
+        background: #fee2e2;
+    }
+
+    .manual-area {
+        display: grid;
+        gap: 8px;
+    }
+
+    .manual-area input {
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        background: var(--bg-body);
+        color: var(--text-main);
+        font-size: 12px;
+        padding: 9px 10px;
+    }
+
+    .manual-area input:focus {
+        outline: none;
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.18);
+    }
+
+    .scan-help {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.6;
+    }
+
+    .scan-help li {
+        margin-bottom: 6px;
+    }
+
+    @@media (max-width: 1024px) {
+        .scan-hero,
+        .scanner-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .scan-page {
+            padding: 14px;
+            border-radius: 14px;
+        }
+    }
+</style>
+
+<div class="scan-page">
+    <div class="scan-hero">
+        <section class="scan-card">
+            <h2 class="scan-title">Camera Scan QR Event</h2>
+            <p class="scan-subtitle">Menu ini khusus non-admin untuk scan QR acara yang dibuat admin, lalu sistem otomatis merekam absensi kedatangan.</p>
+        </section>
+        <section class="scan-card scan-profile">
+            <span><strong>NIK:</strong> @Model.Nik</span>
+            <span><strong>Nama:</strong> @Model.Nama</span>
+            <span><strong>Jabatan:</strong> @Model.Jabatan</span>
+            <span><strong>Perusahaan:</strong> @Model.Perusahaan</span>
+        </section>
+    </div>
+
+    <div class="scanner-layout">
+        <section class="scanner-card">
+            <div class="scanner-head">
+                <div>
+                    <h3><i class="bi bi-camera-fill me-2"></i>Live Scanner</h3>
+                    <p>Arahkan kamera ke QR event absensi.</p>
+                </div>
+            </div>
+
+            <div id="qrReader"></div>
+
+            <div class="scanner-actions">
+                <button type="button" id="startScanBtn" class="scan-btn"><i class="bi bi-play-circle me-1"></i>Mulai Scan</button>
+                <button type="button" id="stopScanBtn" class="scan-btn"><i class="bi bi-stop-circle me-1"></i>Stop</button>
+            </div>
+
+            <div id="scanStatus" class="scan-status"></div>
+        </section>
+
+        <section class="scanner-card">
+            <div class="scanner-head">
+                <div>
+                    <h3><i class="bi bi-keyboard-fill me-2"></i>Manual Token</h3>
+                    <p>Jika kamera bermasalah, tempel token QR event manual.</p>
+                </div>
+            </div>
+
+            <div class="manual-area">
+                <input id="manualTokenInput" type="text" placeholder="Tempel URL atau token QR event" />
+                <button type="button" id="manualSubmitBtn" class="scan-btn"><i class="bi bi-send-check me-1"></i>Proses</button>
+            </div>
+
+            <hr />
+
+            <ul class="scan-help">
+                <li>Pastikan Anda sudah login sebagai user non-admin.</li>
+                <li>Izinkan akses kamera saat browser meminta permission.</li>
+                <li>Setelah berhasil scan, Anda akan diarahkan ke halaman hasil absensi dengan popup konfirmasi.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://unpkg.com/html5-qrcode" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        (function () {
+            const baseUrl = '@baseUrl';
+            const statusEl = document.getElementById('scanStatus');
+            const startBtn = document.getElementById('startScanBtn');
+            const stopBtn = document.getElementById('stopScanBtn');
+            const manualInput = document.getElementById('manualTokenInput');
+            const manualBtn = document.getElementById('manualSubmitBtn');
+
+            let scanner = null;
+            let isRunning = false;
+
+            function setStatus(type, message) {
+                if (!statusEl) return;
+                statusEl.className = 'scan-status ' + type;
+                statusEl.textContent = message;
+            }
+
+            function normalizeToScanUrl(rawText) {
+                const text = (rawText || '').trim();
+                if (!text) return null;
+
+                if (text.includes('/QrAttendance/Scan/')) {
+                    if (text.startsWith('http://') || text.startsWith('https://')) {
+                        return text;
+                    }
+                    return baseUrl + (text.startsWith('/') ? text : '/' + text);
+                }
+
+                if (/^[a-fA-F0-9]{16,64}$/.test(text)) {
+                    return baseUrl + '/QrAttendance/Scan/' + text;
+                }
+
+                try {
+                    const url = new URL(text);
+                    if (url.pathname.includes('/QrAttendance/Scan/')) {
+                        return url.toString();
+                    }
+                } catch {
+                    return null;
+                }
+
+                return null;
+            }
+
+            function proceedScan(text) {
+                const target = normalizeToScanUrl(text);
+                if (!target) {
+                    setStatus('err', 'QR tidak dikenali sebagai QR absensi event.');
+                    return;
+                }
+
+                setStatus('ok', 'QR valid. Mengarahkan ke absensi...');
+                setTimeout(function () {
+                    window.location.href = target;
+                }, 250);
+            }
+
+            async function startScan() {
+                if (isRunning) return;
+                if (!window.Html5Qrcode) {
+                    setStatus('err', 'Library scanner tidak tersedia. Refresh halaman.');
+                    return;
+                }
+
+                scanner = scanner || new Html5Qrcode('qrReader');
+
+                try {
+                    await scanner.start(
+                        { facingMode: 'environment' },
+                        { fps: 10, qrbox: { width: 250, height: 250 } },
+                        function (decodedText) {
+                            proceedScan(decodedText);
+                        },
+                        function () {}
+                    );
+
+                    isRunning = true;
+                    setStatus('ok', 'Scanner aktif. Arahkan kamera ke QR event.');
+                } catch {
+                    setStatus('err', 'Gagal mengakses kamera. Cek izin browser atau perangkat kamera.');
+                }
+            }
+
+            async function stopScan() {
+                if (!scanner || !isRunning) return;
+                try {
+                    await scanner.stop();
+                    await scanner.clear();
+                } catch {
+                }
+                isRunning = false;
+                setStatus('ok', 'Scanner dihentikan.');
+            }
+
+            startBtn?.addEventListener('click', function () {
+                startScan();
+            });
+
+            stopBtn?.addEventListener('click', function () {
+                stopScan();
+            });
+
+            manualBtn?.addEventListener('click', function () {
+                proceedScan(manualInput ? manualInput.value : '');
+            });
+
+            manualInput?.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    proceedScan(manualInput.value);
+                }
+            });
+
+            startScan();
+        })();
+    </script>
+}

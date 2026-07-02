@@ -868,6 +868,29 @@ namespace MBS_SAP.Controllers
                 }
             }
 
+            // Hierarchy achievement is hazard-only:
+            // - Weekly: from start of current week
+            // - Monthly: from start of current month
+            var hierarchyWeeklyHazards = await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.CreatedAt >= startOfWeek)
+                .GroupBy(h => h.PerusahaanId)
+                .Select(g => new { CompId = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var hierarchyMonthlyHazards = await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.CreatedAt >= startOfMonth)
+                .GroupBy(h => h.PerusahaanId)
+                .Select(g => new { CompId = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var weeklyHazardByCompanyId = hierarchyWeeklyHazards
+                .Where(x => x.CompId.HasValue)
+                .ToDictionary(x => x.CompId!.Value, x => x.Count);
+
+            var monthlyHazardByCompanyId = hierarchyMonthlyHazards
+                .Where(x => x.CompId.HasValue)
+                .ToDictionary(x => x.CompId!.Value, x => x.Count);
+
             var nodeMap = new Dictionary<int, CompanyHierarchyNode>();
             foreach (var company in activeCompanyNameById.OrderBy(x => x.Value))
             {
@@ -876,13 +899,11 @@ namespace MBS_SAP.Controllers
 
                 int empCount = allKaryawans.Count(k => k.IdPerusahaan == hierarchyCompanyId);
 
-                int subCount = (compHazards.FirstOrDefault(h => h.CompId == hierarchyCompanyId)?.Count ?? 0)
-                             + (compInspections.FirstOrDefault(i => i.CompId == hierarchyCompanyId)?.Count ?? 0)
-                             + (compSafetyTalks.FirstOrDefault(s => s.CompId == hierarchyCompanyId)?.Count ?? 0)
-                             + (compP5ms.FirstOrDefault(p => p.CompId == hierarchyCompanyId)?.Count ?? 0);
-
-                int target = empCount * 4;
-                double rate = target > 0 ? (double)subCount / target * 100.0 : 0.0;
+                int weeklyHazardCount = weeklyHazardByCompanyId.TryGetValue(hierarchyCompanyId, out var wh) ? wh : 0;
+                int monthlyHazardCount = monthlyHazardByCompanyId.TryGetValue(hierarchyCompanyId, out var mh) ? mh : 0;
+                int hierarchyWeeklyTarget = empCount * 1;
+                int hierarchyMonthlyTarget = empCount * 4;
+                double monthlyRate = hierarchyMonthlyTarget > 0 ? (double)monthlyHazardCount / hierarchyMonthlyTarget * 100.0 : 0.0;
 
                 var node = new CompanyHierarchyNode
                 {
@@ -890,9 +911,11 @@ namespace MBS_SAP.Controllers
                     CompanyName = company.Value,
                     ParentCompanyId = parentCompanyId,
                     OwnEmployees = empCount,
-                    OwnSubmissions = subCount,
-                    OwnTarget = target,
-                    OwnAchievementRate = Math.Round(rate, 1)
+                    OwnSubmissions = monthlyHazardCount,
+                    OwnTarget = hierarchyMonthlyTarget,
+                    OwnAchievementRate = Math.Round(monthlyRate, 1),
+                    OwnWeeklyHazards = weeklyHazardCount,
+                    OwnWeeklyTarget = hierarchyWeeklyTarget
                 };
                 nodeMap[hierarchyCompanyId] = node;
             }
@@ -940,6 +963,8 @@ namespace MBS_SAP.Controllers
                 node.CumulativeEmployees = node.OwnEmployees;
                 node.CumulativeSubmissions = node.OwnSubmissions;
                 node.CumulativeTarget = node.OwnTarget;
+                node.CumulativeWeeklyHazards = node.OwnWeeklyHazards;
+                node.CumulativeWeeklyTarget = node.OwnWeeklyTarget;
 
                 foreach (var child in node.Children)
                 {
@@ -947,6 +972,8 @@ namespace MBS_SAP.Controllers
                     node.CumulativeEmployees += child.CumulativeEmployees;
                     node.CumulativeSubmissions += child.CumulativeSubmissions;
                     node.CumulativeTarget += child.CumulativeTarget;
+                    node.CumulativeWeeklyHazards += child.CumulativeWeeklyHazards;
+                    node.CumulativeWeeklyTarget += child.CumulativeWeeklyTarget;
                 }
 
                 node.CumulativeAchievementRate = node.CumulativeTarget > 0 
@@ -1575,12 +1602,16 @@ namespace MBS_SAP.Controllers
         public int OwnSubmissions { get; set; }
         public int OwnTarget { get; set; }
         public double OwnAchievementRate { get; set; }
+        public int OwnWeeklyHazards { get; set; }
+        public int OwnWeeklyTarget { get; set; }
 
         // Cumulative (Group) stats
         public int CumulativeEmployees { get; set; }
         public int CumulativeSubmissions { get; set; }
         public int CumulativeTarget { get; set; }
         public double CumulativeAchievementRate { get; set; }
+        public int CumulativeWeeklyHazards { get; set; }
+        public int CumulativeWeeklyTarget { get; set; }
 
         public List<CompanyHierarchyNode> Children { get; set; } = new List<CompanyHierarchyNode>();
     }

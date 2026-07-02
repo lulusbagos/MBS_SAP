@@ -29,6 +29,8 @@ namespace MBS_SAP.Data
         public DbSet<DpaReport> DpaReports { get; set; } = null!;
         public DbSet<DpaDriver> DpaDrivers { get; set; } = null!;
         public DbSet<IncidentNews> IncidentNewsList { get; set; } = null!;
+        public DbSet<AttendanceEvent> AttendanceEvents { get; set; } = null!;
+        public DbSet<AttendanceRecord> AttendanceRecords { get; set; } = null!;
 
         // View entities
         public DbSet<KaryawanView> Karyawans { get; set; } = null!;
@@ -105,6 +107,26 @@ namespace MBS_SAP.Data
 
             modelBuilder.Entity<IncidentNews>()
                 .ToTable("tbl_t_incident_news");
+
+            modelBuilder.Entity<AttendanceEvent>()
+                .ToTable("tbl_t_attendance_event");
+
+            modelBuilder.Entity<AttendanceRecord>()
+                .ToTable("tbl_t_attendance_record");
+
+            modelBuilder.Entity<AttendanceEvent>()
+                .HasIndex(e => e.QrToken)
+                .IsUnique();
+
+            modelBuilder.Entity<AttendanceRecord>()
+                .HasIndex(r => new { r.AttendanceEventId, r.Nik })
+                .IsUnique();
+
+            modelBuilder.Entity<AttendanceRecord>()
+                .HasOne(r => r.AttendanceEvent)
+                .WithMany(e => e.AttendanceRecords)
+                .HasForeignKey(r => r.AttendanceEventId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // View mappings
             modelBuilder.Entity<KaryawanView>()

@@ -1,0 +1,123 @@
+@model MBS_SAP.Controllers.QrAttendanceScanResultViewModel
+@{
+    ViewData["Title"] = "Scan Absensi";
+
+    var statusClass = Model.Status switch
+    {
+        "success" => "scan-success",
+        "duplicate" => "scan-info",
+        _ => "scan-danger"
+    };
+}
+
+<style>
+    .scan-shell {
+        max-width: 760px;
+        margin: 0 auto;
+        border: 1px solid var(--border-color);
+        border-radius: 18px;
+        padding: 20px;
+        background:
+            radial-gradient(circle at 10% 8%, rgba(34, 197, 94, 0.15), transparent 28%),
+            radial-gradient(circle at 90% 8%, rgba(56, 189, 248, 0.16), transparent 30%),
+            var(--bg-card);
+        box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+    }
+    .scan-title {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 900;
+        letter-spacing: 0.3px;
+        color: var(--text-main);
+    }
+    .scan-sub {
+        margin: 6px 0 16px;
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+    .scan-status {
+        border-radius: 12px;
+        border: 1px solid;
+        padding: 14px;
+        margin-bottom: 12px;
+    }
+    .scan-success {
+        background: #dcfce7;
+        border-color: #86efac;
+        color: #166534;
+    }
+    .scan-info {
+        background: #e0f2fe;
+        border-color: #7dd3fc;
+        color: #0c4a6e;
+    }
+    .scan-danger {
+        background: #fee2e2;
+        border-color: #fca5a5;
+        color: #991b1b;
+    }
+    .scan-event {
+        display: grid;
+        gap: 5px;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 12px;
+        background: var(--bg-body);
+        font-size: 12px;
+        color: var(--text-main);
+    }
+    .scan-event strong {
+        font-weight: 800;
+    }
+</style>
+
+<div class="scan-shell">
+    <h2 class="scan-title"><i class="bi bi-qr-code-scan me-2"></i>Absensi QR Event</h2>
+    <p class="scan-sub">Scan berhasil diproses. Status absensi Anda ditampilkan di bawah ini.</p>
+
+    <div class="scan-status @statusClass">
+        <strong>@Model.Message</strong>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.EventName))
+    {
+        <div class="scan-event">
+            <div><strong>Event:</strong> @Model.EventName</div>
+            <div><strong>Lokasi:</strong> @(string.IsNullOrWhiteSpace(Model.EventLocation) ? "-" : Model.EventLocation)</div>
+            <div><strong>Waktu:</strong> @Model.StartAt.ToString("dd MMM yyyy HH:mm") - @Model.EndAt.ToString("dd MMM yyyy HH:mm")</div>
+            <div><strong>Peserta:</strong> @Model.AttendeeName (@Model.AttendeeNik)</div>
+        </div>
+    }
+</div>
+
+<div class="modal fade" id="scanResultModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: 1px solid var(--border-color); background: var(--bg-card);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                <h5 class="modal-title" style="font-weight: 800; color: var(--text-main);">@Model.PopupTitle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p style="margin: 0; font-size: 14px; color: var(--text-main);">@Model.PopupBody</p>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const shouldShow = @(Model.ShowPopup ? "true" : "false");
+            if (!shouldShow) return;
+
+            const modalEl = document.getElementById('scanResultModal');
+            if (!modalEl) return;
+
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        })();
+    </script>
+}

@@ -48,6 +48,13 @@
                         <i class="bi bi-bar-chart-line-fill"></i>
                         <span>Pencapaian SAP</span>
                     </a>
+                    @if (!User.IsInRole("Admin"))
+                    {
+                        <a asp-controller="QrCode" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "QrCode" ? "active" : "")">
+                            <i class="bi bi-qr-code-scan"></i>
+                            <span>QR Code</span>
+                        </a>
+                    }
                     <a asp-controller="Timeline" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Timeline" ? "active" : "")">
                         <i class="bi bi-rss-fill"></i>
                         <span>SafeFeed</span>
@@ -97,6 +104,10 @@
                     </a>
                     @if (User.IsInRole("Admin"))
                     {
+                        <a asp-controller="EventQr" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "EventQrAdmin" ? "active" : "")">
+                            <i class="bi bi-qr-code-scan" style="color: #22c55e;"></i>
+                            <span>Event QR (Admin)</span>
+                        </a>
                         <a asp-controller="UserManagement" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "UserMgmt" ? "active" : "")">
                             <i class="bi bi-person-gear" style="color: #a855f7;"></i>
                             <span>User Management</span>
@@ -187,6 +198,13 @@
                         <i class="bi bi-bar-chart-line-fill"></i>
                         <span>Pencapaian</span>
                     </a>
+                    @if (!User.IsInRole("Admin"))
+                    {
+                        <a asp-controller="QrCode" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "QrCode" ? "active" : "")">
+                            <i class="bi bi-qr-code-scan"></i>
+                            <span>QR</span>
+                        </a>
+                    }
                     <a asp-controller="Timeline" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Timeline" ? "active" : "")">
                         <i class="bi bi-rss-fill"></i>
                         <span>SafeFeed</span>
@@ -207,6 +225,13 @@
                         <i class="bi bi-newspaper"></i>
                         <span>Insiden</span>
                     </a>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <a asp-controller="EventQr" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "EventQrAdmin" ? "active" : "")">
+                            <i class="bi bi-qr-code-scan"></i>
+                            <span>Event QR</span>
+                        </a>
+                    }
                     <a asp-controller="Account" asp-action="Profile" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Profile" ? "active" : "")">
                         <i class="bi bi-person-badge-fill"></i>
                         <span>Profil</span>

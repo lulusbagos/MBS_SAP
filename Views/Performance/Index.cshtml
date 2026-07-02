@@ -384,8 +384,8 @@
     ═══════════════════════════════════════════════════ */
     .org-chart-wrapper {
         /* tokens */
-        --oc-line:         #b0bec5;
-        --oc-line-w:       2px;
+        --oc-line:         #64748b;
+        --oc-line-w:       2.8px;
         --oc-radius:       12px;
         --oc-gap-h:        28px;
         --oc-conn-v:       28px;
@@ -425,6 +425,7 @@
         text-align: center;
         min-width: max-content;
         padding: 4px 8px 8px;
+        zoom: var(--org-zoom, 1);
     }
     .org-chart-tree ul {
         position: relative;
@@ -496,6 +497,25 @@
     }
     .org-scroll-btn:active {
         transform: scale(0.93);
+    }
+    .org-zoom-controls {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: 6px;
+    }
+    .org-zoom-value {
+        min-width: 58px;
+        text-align: center;
+        font-size: 11px;
+        font-weight: 800;
+        color: #0f172a;
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 6px 8px;
+        line-height: 1;
+        box-shadow: 0 1px 4px rgba(15,23,42,0.07);
     }
     .org-scroll-track {
         flex: 1;
@@ -650,7 +670,7 @@
         top: 0;
         transform: translateX(-50%);
         height: 12px;
-        border-left: var(--org-line-width) solid var(--org-line-color);
+        border-left: var(--oc-line-w) solid var(--oc-line);
     }
     .org-secondary-branch-subcons > li {
         width: 100%;
@@ -718,6 +738,9 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+    }
+    .org-node {
+        --ach-rate: 0;
     }
     .org-chart-tree li::before,
     .org-chart-tree li::after {
@@ -890,32 +913,19 @@
         border-radius: 6px;
         padding: 2px 6px;
     }
-    /* Achievement state: merah -> coklat -> hijau */
-    .org-node[data-ach-band="none"] .org-node-tag {
+    /* Achievement color scale: 0% merah -> 100% hijau */
+    .org-node .org-node-tag {
+        --ach-hue: calc(var(--ach-rate) * 1.2);
+        color: hsl(var(--ach-hue), 72%, 24%);
+        background: hsl(var(--ach-hue), 85%, 92%);
+        border-color: hsl(var(--ach-hue), 70%, 72%);
+        transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+    }
+    .org-node[style*="--ach-rate:0"] .org-node-tag,
+    .org-node[style*="--ach-rate:0;"] .org-node-tag {
         color: #b91c1c;
         background: #fee2e2;
         border-color: #fca5a5;
-    }
-    .org-node[data-ach-band="low"] .org-node-tag {
-        color: #92400e;
-        background: #fef3c7;
-        border-color: #fcd34d;
-    }
-    .org-node[data-ach-band="mid"] .org-node-tag {
-        color: #3f6212;
-        background: #fef9c3;
-        border-color: #bef264;
-    }
-    .org-node[data-ach-band="good"] .org-node-tag {
-        color: #166534;
-        background: #dcfce7;
-        border-color: #86efac;
-    }
-    .org-node[data-ach-band="full"] .org-node-tag {
-        color: #14532d;
-        background: #bbf7d0;
-        border-color: #4ade80;
-        box-shadow: 0 0 0 1px rgba(34,197,94,0.25) inset;
     }
     .org-level-pill {
         display: inline-flex;
@@ -2232,29 +2242,25 @@
             return "org-children";
         }
 
-        string GetAchievementBand(double achievementRate)
+        string GetAchievementRateCss(double achievementRate)
         {
             var normalized = Math.Max(0d, Math.Min(achievementRate, 100d));
-            if (normalized <= 0d) return "none";
-            if (normalized < 35d) return "low";
-            if (normalized < 70d) return "mid";
-            if (normalized < 100d) return "good";
-            return "full";
+            return normalized.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
         }
 
         void RenderMatrixNode(MBS_SAP.Controllers.CompanyHierarchyNode node, int level, string mainconGroup)
         {
             var tierName = GetTierName(level);
             var tierKey = GetTierKey(level);
-            var achievementBand = GetAchievementBand(node.CumulativeAchievementRate);
+            var achievementRateCss = GetAchievementRateCss(node.CumulativeAchievementRate);
 
-            <li class="org-node org-node-matrix" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup" data-ach-band="@achievementBand">
+            <li class="org-node org-node-matrix" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup" style="--ach-rate:@achievementRateCss;">
                 <div class="org-node-card">
                     <div class="org-node-card-inner">
                         <div class="org-avatar"><i class="bi bi-building"></i></div>
                         <div class="org-node-text">
                             <div class="org-node-title">@node.CompanyName</div>
-                            <div class="org-node-meta">@node.CumulativeSubmissions/@node.CumulativeTarget SAP</div>
+                            <div class="org-node-meta">Bulan @node.CumulativeSubmissions/@node.CumulativeTarget Hazard | Minggu @node.CumulativeWeeklyHazards/@node.CumulativeWeeklyTarget</div>
                             <div class="org-node-badges">
                                 <span class="org-node-tag">@($"{node.CumulativeAchievementRate:0.#}%")</span>
                                 <span class="org-level-pill">@tierName</span>
@@ -2270,15 +2276,15 @@
             var hasChildren = mainconNode.Children != null && mainconNode.Children.Count > 0;
             var tierKey = GetTierKey(level);
             var tierLabel = "MAINCON L2";
-            var achievementBand = GetAchievementBand(mainconNode.CumulativeAchievementRate);
+            var achievementRateCss = GetAchievementRateCss(mainconNode.CumulativeAchievementRate);
 
-            <li class="org-node org-node-matrix org-secondary-branch @(hasChildren ? "has-children" : string.Empty)" data-company-name="@mainconNode.CompanyName" data-company-id="@mainconNode.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="secondary" data-ach-band="@achievementBand">
+            <li class="org-node org-node-matrix org-secondary-branch @(hasChildren ? "has-children" : string.Empty)" data-company-name="@mainconNode.CompanyName" data-company-id="@mainconNode.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="secondary" style="--ach-rate:@achievementRateCss;">
                 <div class="org-node-card">
                     <div class="org-node-card-inner">
                         <div class="org-avatar"><i class="bi bi-building"></i></div>
                         <div class="org-node-text">
                             <div class="org-node-title">@mainconNode.CompanyName</div>
-                            <div class="org-node-meta">@mainconNode.CumulativeSubmissions/@mainconNode.CumulativeTarget SAP</div>
+                            <div class="org-node-meta">Bulan @mainconNode.CumulativeSubmissions/@mainconNode.CumulativeTarget Hazard | Minggu @mainconNode.CumulativeWeeklyHazards/@mainconNode.CumulativeWeeklyTarget</div>
                             <div class="org-node-badges">
                                 <span class="org-node-tag">@($"{mainconNode.CumulativeAchievementRate:0.#}%")</span>
                                 <span class="org-level-pill">@tierLabel</span>
@@ -2311,15 +2317,15 @@
             var isPrimaryMaincon = isMainconLevel && primaryChildSet.Contains(companyNameKey);
             var mainconGroup = isMainconLevel ? (isPrimaryMaincon ? "primary" : "secondary") : inheritedMainconGroup;
             var childContainerClass = GetChildContainerClass(childCount);
-            var achievementBand = GetAchievementBand(node.CumulativeAchievementRate);
+            var achievementRateCss = GetAchievementRateCss(node.CumulativeAchievementRate);
 
-            <li class="org-node @(hasChildren ? "has-children" : string.Empty)" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup" data-ach-band="@achievementBand">
+            <li class="org-node @(hasChildren ? "has-children" : string.Empty)" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup" style="--ach-rate:@achievementRateCss;">
                 <div class="org-node-card">
                     <div class="org-node-card-inner">
                         <div class="org-avatar"><i class="bi @(level == 0 ? "bi-building-fill" : (hasChildren ? "bi-building" : "bi-building"))"></i></div>
                         <div class="org-node-text">
                             <div class="org-node-title">@node.CompanyName</div>
-                            <div class="org-node-meta">@node.CumulativeSubmissions/@node.CumulativeTarget SAP</div>
+                            <div class="org-node-meta">Bulan @node.CumulativeSubmissions/@node.CumulativeTarget Hazard | Minggu @node.CumulativeWeeklyHazards/@node.CumulativeWeeklyTarget</div>
                             <div class="org-node-badges">
                                 <span class="org-node-tag">@($"{node.CumulativeAchievementRate:0.#}%")</span>
                                 <span class="org-level-pill">@tierName</span>
@@ -2387,39 +2393,6 @@
                 <h6 class="premium-title">Hirarki Perusahaan</h6>
             </div>
             <div class="premium-body">
-                <p class="hierarchy-lead">
-                    Struktur parent-child perusahaan ditampilkan berjenjang dari INDEXIM sampai level terbawah.
-                </p>
-                <p class="hierarchy-source">
-                    Sumber data hirarki: @((ViewBag.CompanyHierarchySource as string) ?? "ONE_DB_MITRA.vw_perusahaan")
-                </p>
-                <div class="hierarchy-summary">
-                    <span class="hierarchy-summary-chip"><i class="bi bi-diagram-3 me-1"></i>Total Node: @totalHierarchyNodes</span>
-                    <span class="hierarchy-summary-chip"><i class="bi bi-check2-circle me-1"></i>Rendered: @renderedHierarchyNodes</span>
-                    <span class="hierarchy-summary-chip"><i class="bi bi-layers me-1"></i>Level Maksimum: @hierarchyDepth</span>
-                </div>
-                <div class="hierarchy-level-guide">
-                    <span class="role-owner">OWNER</span>
-                    <span class="role-maincon">MAINCON</span>
-                    <span class="role-maincon-primary">MAINCON UTAMA</span>
-                    <span class="role-subcon">SUBCON</span>
-                    <span class="role-vendor">VENDOR</span>
-                </div>
-                @if (primaryChildren.Any())
-                {
-                    <div class="card-sap mb-3" style="padding: 12px; border: 1px dashed var(--border-color);">
-                        <div style="font-size: 11px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">Anak Utama INDEXIM</div>
-                        <div class="d-flex flex-wrap gap-2">
-                            @foreach (var child in primaryChildren)
-                            {
-                                <span class="badge" style="background: rgba(56,189,248,0.15); color: #38bdf8; font-size: 10px; font-weight: 700; padding: 5px 8px; border: 1px solid rgba(56,189,248,0.35);">
-                                    @child
-                                </span>
-                            }
-                        </div>
-                    </div>
-                }
-
                 @if (hierarchy == null || !hierarchy.Any())
                 {
                     <div class="card-sap text-center py-4 hierarchy-empty">
@@ -2450,6 +2423,12 @@
                             <button type="button" class="org-scroll-btn" id="orgScrollLeft" title="Geser kiri"><i class="bi bi-chevron-left"></i></button>
                             <div class="org-scroll-track"><div class="org-scroll-thumb" id="orgScrollThumb"></div></div>
                             <button type="button" class="org-scroll-btn" id="orgScrollRight" title="Geser kanan"><i class="bi bi-chevron-right"></i></button>
+                            <div class="org-zoom-controls" aria-label="Kontrol zoom hirarki">
+                                <button type="button" class="org-scroll-btn" id="orgZoomOut" title="Zoom out"><i class="bi bi-zoom-out"></i></button>
+                                <span class="org-zoom-value" id="orgZoomValue">100%</span>
+                                <button type="button" class="org-scroll-btn" id="orgZoomIn" title="Zoom in"><i class="bi bi-zoom-in"></i></button>
+                                <button type="button" class="org-scroll-btn" id="orgZoomReset" title="Reset zoom"><i class="bi bi-arrow-counterclockwise"></i></button>
+                            </div>
                         </div>
                         <div class="org-chart-wrapper" id="orgChartWrapper">
                             <ul class="org-chart-tree" id="hierarchyOrgTree">
@@ -2581,6 +2560,51 @@
         const scrollLeft = document.getElementById('orgScrollLeft');
         const scrollRight = document.getElementById('orgScrollRight');
         const scrollThumb = document.getElementById('orgScrollThumb');
+        const zoomInBtn = document.getElementById('orgZoomIn');
+        const zoomOutBtn = document.getElementById('orgZoomOut');
+        const zoomResetBtn = document.getElementById('orgZoomReset');
+        const zoomValueEl = document.getElementById('orgZoomValue');
+        const ZOOM_MIN = 0.6;
+        const ZOOM_MAX = 1.8;
+        const ZOOM_STEP = 0.1;
+        let currentZoom = 1;
+
+        function updateZoomLabel() {
+            if (!zoomValueEl) return;
+            zoomValueEl.textContent = Math.round(currentZoom * 100) + '%';
+        }
+
+        function setZoom(nextZoom, keepCenter = true) {
+            if (!wrapper || !treeRoot) return;
+
+            const clamped = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, nextZoom));
+            const prev = currentZoom;
+            if (Math.abs(clamped - prev) < 0.001) {
+                updateZoomLabel();
+                return;
+            }
+
+            const centerRatioX = wrapper.scrollWidth > 0
+                ? (wrapper.scrollLeft + wrapper.clientWidth / 2) / wrapper.scrollWidth
+                : 0;
+            const centerRatioY = wrapper.scrollHeight > 0
+                ? (wrapper.scrollTop + wrapper.clientHeight / 2) / wrapper.scrollHeight
+                : 0;
+
+            currentZoom = clamped;
+            treeRoot.style.setProperty('--org-zoom', String(currentZoom));
+            updateZoomLabel();
+
+            requestAnimationFrame(function () {
+                if (keepCenter) {
+                    const targetLeft = (wrapper.scrollWidth * centerRatioX) - (wrapper.clientWidth / 2);
+                    const targetTop = (wrapper.scrollHeight * centerRatioY) - (wrapper.clientHeight / 2);
+                    wrapper.scrollLeft = Math.max(0, targetLeft);
+                    wrapper.scrollTop = Math.max(0, targetTop);
+                }
+                updateScrollThumb();
+            });
+        }
 
         function updateScrollThumb() {
             if (!wrapper || !scrollThumb) return;
@@ -2604,6 +2628,16 @@
         }
         scrollLeft?.addEventListener('click', function () { smoothScrollBy(-STEP); });
         scrollRight?.addEventListener('click', function () { smoothScrollBy(STEP); });
+        zoomInBtn?.addEventListener('click', function () { setZoom(currentZoom + ZOOM_STEP); });
+        zoomOutBtn?.addEventListener('click', function () { setZoom(currentZoom - ZOOM_STEP); });
+        zoomResetBtn?.addEventListener('click', function () { setZoom(1, false); });
+
+        wrapper?.addEventListener('wheel', function (e) {
+            if (!e.ctrlKey) return;
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+            setZoom(currentZoom + delta);
+        }, { passive: false });
 
         // Drag-to-pan
         let isDragging = false, dragStartX = 0, dragScrollLeft = 0;
@@ -2633,6 +2667,8 @@
             const dx = touchStartX - e.touches[0].pageX;
             wrapper.scrollLeft = touchScrollLeft + dx;
         }, { passive: true });
+
+        setZoom(1, false);
     }
 
     document.addEventListener("DOMContentLoaded", function () {
