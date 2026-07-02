@@ -1,132 +1,96 @@
 @model MBS_SAP.Controllers.QrProfileViewModel
 @{
+    Layout = null;
     ViewData["Title"] = "Scan QR Absensi";
     var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}";
 }
 
 <style>
-    .scan-page {
-        background: radial-gradient(circle at 10% 10%, rgba(14, 165, 233, 0.14), transparent 30%),
-                    radial-gradient(circle at 90% 10%, rgba(34, 197, 94, 0.14), transparent 28%),
-                    var(--bg-body);
-        border: 1px solid var(--border-color);
-        border-radius: 18px;
-        padding: 20px;
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+        background: #020617;
+        color: #e2e8f0;
     }
-
-    .scan-hero {
-        display: grid;
-        grid-template-columns: 1.2fr 0.8fr;
-        gap: 14px;
+    .scan-page {
+        min-height: 100vh;
+        padding: 16px;
+        background:
+            radial-gradient(circle at top left, rgba(14, 165, 233, 0.22), transparent 28%),
+            radial-gradient(circle at top right, rgba(34, 197, 94, 0.16), transparent 26%),
+            linear-gradient(180deg, #020617 0%, #0f172a 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .scan-shell {
+        width: min(100%, 520px);
+        border-radius: 24px;
+        padding: 18px;
+        background: rgba(15, 23, 42, 0.82);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        box-shadow: 0 24px 60px rgba(2, 6, 23, 0.45);
+        backdrop-filter: blur(14px);
+    }
+    .scan-head {
         margin-bottom: 14px;
     }
-
-    .scan-card {
-        border: 1px solid var(--border-color);
-        border-radius: 14px;
-        background: var(--bg-card);
-        padding: 16px;
-    }
-
     .scan-title {
         margin: 0;
-        font-size: 20px;
+        font-size: 22px;
         font-weight: 900;
-        color: var(--text-main);
-        letter-spacing: 0.3px;
+        letter-spacing: -0.03em;
+        color: #f8fafc;
     }
-
     .scan-subtitle {
         margin: 8px 0 0;
         font-size: 12px;
-        color: var(--text-muted);
-    }
-
-    .scan-profile {
-        display: grid;
-        gap: 5px;
-        font-size: 12px;
-        color: var(--text-main);
-    }
-
-    .scan-profile span {
-        opacity: 0.88;
-    }
-
-    .scanner-layout {
-        display: grid;
-        grid-template-columns: 1fr 320px;
-        gap: 14px;
-    }
-
-    .scanner-card {
-        border: 1px solid var(--border-color);
-        border-radius: 14px;
-        background: var(--bg-card);
-        padding: 14px;
-        box-shadow: 0 5px 16px rgba(2, 6, 23, 0.08);
-    }
-
-    .scanner-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 10px;
-    }
-
-    .scanner-head h3 {
-        margin: 0;
-        font-size: 14px;
-        font-weight: 800;
-        color: var(--text-main);
-    }
-
-    .scanner-head p {
-        margin: 0;
-        font-size: 11px;
-        color: var(--text-muted);
+        line-height: 1.6;
+        color: #94a3b8;
     }
 
     #qrReader {
         width: 100%;
-        min-height: 300px;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
+        min-height: min(68vh, 520px);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 20px;
         overflow: hidden;
         background: #0f172a;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
     }
 
     .scanner-actions {
-        display: flex;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
         gap: 8px;
-        margin-top: 10px;
+        margin-top: 14px;
     }
 
     .scan-btn {
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        background: var(--bg-body);
-        color: var(--text-main);
-        font-size: 11px;
-        font-weight: 700;
-        padding: 8px 11px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 14px;
+        background: rgba(255,255,255,0.08);
+        color: #e2e8f0;
+        font-size: 12px;
+        font-weight: 800;
+        padding: 11px 12px;
         cursor: pointer;
     }
 
     .scan-btn:hover {
-        border-color: #38bdf8;
-        color: #0284c7;
-        background: rgba(56, 189, 248, 0.08);
+        border-color: rgba(56, 189, 248, 0.42);
+        color: #f8fafc;
+        background: rgba(56, 189, 248, 0.16);
     }
 
     .scan-status {
-        margin-top: 10px;
-        border-radius: 10px;
+        margin-top: 12px;
+        border-radius: 14px;
         border: 1px solid transparent;
-        padding: 10px;
+        padding: 11px 12px;
         font-size: 12px;
-        font-weight: 600;
+        font-weight: 700;
         display: none;
     }
 
@@ -144,105 +108,41 @@
         background: #fee2e2;
     }
 
-    .manual-area {
-        display: grid;
-        gap: 8px;
-    }
-
-    .manual-area input {
-        border: 1px solid var(--border-color);
-        border-radius: 10px;
-        background: var(--bg-body);
-        color: var(--text-main);
-        font-size: 12px;
-        padding: 9px 10px;
-    }
-
-    .manual-area input:focus {
-        outline: none;
-        border-color: #38bdf8;
-        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.18);
-    }
-
-    .scan-help {
-        font-size: 12px;
-        color: var(--text-muted);
-        line-height: 1.6;
-    }
-
-    .scan-help li {
-        margin-bottom: 6px;
-    }
-
-    @@media (max-width: 1024px) {
-        .scan-hero,
-        .scanner-layout {
-            grid-template-columns: 1fr;
-        }
-    }
-
     @@media (max-width: 768px) {
         .scan-page {
+            padding: 10px;
+            align-items: stretch;
+        }
+        .scan-shell {
+            width: 100%;
+            min-height: calc(100vh - 20px);
+            border-radius: 20px;
             padding: 14px;
-            border-radius: 14px;
+        }
+        .scan-title {
+            font-size: 20px;
+        }
+        #qrReader {
+            min-height: 62vh;
         }
     }
 </style>
 
 <div class="scan-page">
-    <div class="scan-hero">
-        <section class="scan-card">
+    <div class="scan-shell">
+        <div class="scan-head">
             <h2 class="scan-title">Camera Scan QR Event</h2>
-            <p class="scan-subtitle">Menu ini khusus non-admin untuk scan QR acara yang dibuat admin, lalu sistem otomatis merekam absensi kedatangan.</p>
-        </section>
-        <section class="scan-card scan-profile">
-            <span><strong>NIK:</strong> @Model.Nik</span>
-            <span><strong>Nama:</strong> @Model.Nama</span>
-            <span><strong>Jabatan:</strong> @Model.Jabatan</span>
-            <span><strong>Perusahaan:</strong> @Model.Perusahaan</span>
-        </section>
-    </div>
-
-    <div class="scanner-layout">
-        <section class="scanner-card">
-            <div class="scanner-head">
-                <div>
-                    <h3><i class="bi bi-camera-fill me-2"></i>Live Scanner</h3>
-                    <p>Arahkan kamera ke QR event absensi.</p>
-                </div>
-            </div>
-
-            <div id="qrReader"></div>
-
-            <div class="scanner-actions">
-                <button type="button" id="startScanBtn" class="scan-btn"><i class="bi bi-play-circle me-1"></i>Mulai Scan</button>
-                <button type="button" id="stopScanBtn" class="scan-btn"><i class="bi bi-stop-circle me-1"></i>Stop</button>
-            </div>
-
-            <div id="scanStatus" class="scan-status"></div>
-        </section>
-
-        <section class="scanner-card">
-            <div class="scanner-head">
-                <div>
-                    <h3><i class="bi bi-keyboard-fill me-2"></i>Manual Token</h3>
-                    <p>Jika kamera bermasalah, tempel token QR event manual.</p>
-                </div>
-            </div>
-
-            <div class="manual-area">
-                <input id="manualTokenInput" type="text" placeholder="Tempel URL atau token QR event" />
-                <button type="button" id="manualSubmitBtn" class="scan-btn"><i class="bi bi-send-check me-1"></i>Proses</button>
-            </div>
-
-            <hr />
-
-            <ul class="scan-help">
-                <li>Pastikan Anda sudah login sebagai user non-admin.</li>
-                <li>Izinkan akses kamera saat browser meminta permission.</li>
-                <li>Setelah berhasil scan, Anda akan diarahkan ke halaman hasil absensi dengan popup konfirmasi.</li>
-            </ul>
+            <p class="scan-subtitle">Arahkan kamera ke QR acara untuk absensi. Halaman ini dibuat fokus kamera agar stabil di mode mobile.</p>
         </div>
+
+        <div id="qrReader"></div>
+
+        <div class="scanner-actions">
+            <button type="button" id="startScanBtn" class="scan-btn"><i class="bi bi-play-circle me-1"></i>Mulai Scan</button>
+            <button type="button" id="stopScanBtn" class="scan-btn"><i class="bi bi-stop-circle me-1"></i>Stop</button>
+        </div>
+
+        <div id="scanStatus" class="scan-status"></div>
     </div>
 </div>
 
@@ -254,8 +154,6 @@
             const statusEl = document.getElementById('scanStatus');
             const startBtn = document.getElementById('startScanBtn');
             const stopBtn = document.getElementById('stopScanBtn');
-            const manualInput = document.getElementById('manualTokenInput');
-            const manualBtn = document.getElementById('manualSubmitBtn');
 
             let scanner = null;
             let isRunning = false;
@@ -349,17 +247,6 @@
 
             stopBtn?.addEventListener('click', function () {
                 stopScan();
-            });
-
-            manualBtn?.addEventListener('click', function () {
-                proceedScan(manualInput ? manualInput.value : '');
-            });
-
-            manualInput?.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    proceedScan(manualInput.value);
-                }
             });
 
             startScan();

@@ -162,13 +162,91 @@ namespace MBS_SAP.Controllers
             ViewData["HideNav"] = true;
             ViewData["HideHeader"] = true;
 
+            var viewModel = await BuildAttendanceViewModelAsync(id);
+            if (viewModel == null)
+            {
+                return NotFound();
+            }
+
+            return View(viewModel);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> AttendanceSnapshot(int id)
+        {
+            var viewModel = await BuildAttendanceViewModelAsync(id);
+            if (viewModel == null)
+            {
+                return NotFound();
+            }
+
+            return Json(new
+            {
+                eventInfo = new
+                {
+                    id = viewModel.Event.Id,
+                    eventName = viewModel.Event.EventName,
+                    eventLocation = viewModel.Event.EventLocation,
+                    eventDescription = viewModel.Event.EventDescription,
+                    startAt = viewModel.Event.StartAt,
+                    endAt = viewModel.Event.EndAt
+                },
+                totals = new
+                {
+                    activeCompanies = viewModel.TotalActiveCompanies,
+                    presentCompanies = viewModel.TotalPresentCompanies,
+                    activeEmployees = viewModel.TotalActiveEmployees,
+                    presentEmployees = viewModel.TotalPresentEmployees,
+                    totalScans = viewModel.Records.Count,
+                    pendingCompanies = viewModel.PendingCompanies.Count,
+                    refreshedAt = DateTime.Now
+                },
+                companyStatuses = viewModel.CompanyStatuses.Select(company => new
+                {
+                    companyId = company.CompanyId,
+                    companyName = company.CompanyName,
+                    activeEmployees = company.ActiveEmployees,
+                    attendedEmployees = company.AttendedEmployees,
+                    pendingEmployees = company.PendingEmployees,
+                    hasAttendance = company.HasAttendance,
+                    attendanceRate = company.AttendanceRate,
+                    recentAttendees = company.RecentAttendees.Select(attendee => new
+                    {
+                        nik = attendee.Nik,
+                        nama = attendee.Nama,
+                        jabatan = attendee.Jabatan,
+                        departemen = attendee.Departemen,
+                        companyName = attendee.CompanyName,
+                        scanAt = attendee.ScanAt
+                    })
+                }),
+                pendingCompanies = viewModel.PendingCompanies.Select(company => new
+                {
+                    companyId = company.CompanyId,
+                    companyName = company.CompanyName,
+                    activeEmployees = company.ActiveEmployees
+                }),
+                attendees = viewModel.Attendees.Select(attendee => new
+                {
+                    nik = attendee.Nik,
+                    nama = attendee.Nama,
+                    jabatan = attendee.Jabatan,
+                    departemen = attendee.Departemen,
+                    companyName = attendee.CompanyName,
+                    scanAt = attendee.ScanAt
+                })
+            });
+        }
+
+        private async Task<EventQrAttendanceViewModel?> BuildAttendanceViewModelAsync(int id)
+        {
             var ev = await _context.AttendanceEvents
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (ev == null)
             {
-                return NotFound();
+                return null;
             }
 
             var records = await _context.AttendanceRecords
@@ -262,7 +340,7 @@ namespace MBS_SAP.Controllers
                 .ThenBy(c => c.CompanyName)
                 .ToList();
 
-            return View(new EventQrAttendanceViewModel
+            return new EventQrAttendanceViewModel
             {
                 Event = ev,
                 Records = records,
@@ -273,7 +351,7 @@ namespace MBS_SAP.Controllers
                 TotalPresentCompanies = activeCompanyRows.Count(c => c.HasAttendance),
                 TotalActiveEmployees = activeEmployees.Select(e => e.Nik.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
                 TotalPresentEmployees = attendeeRows.Select(a => a.Nik.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count()
-            });
+            };
         }
     }
 

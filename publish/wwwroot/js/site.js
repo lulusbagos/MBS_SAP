@@ -46,7 +46,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const submitBtn = form.querySelector('button[type="submit"]');
             if (submitBtn) {
                 setTimeout(function() {
-                    submitBtn.disabled = true;
+                    // Use pointer-events instead of disabling to avoid aborting form submission
+                    submitBtn.style.pointerEvents = 'none';
                     if (submitBtn.innerHTML.indexOf('spinner-border') === -1) {
                         const originalText = submitBtn.innerText;
                         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right: 8px;"></span>Menyimpan...';

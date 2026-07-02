@@ -107,9 +107,10 @@ namespace MBS_SAP.Controllers
                 model.Message = $"Absensi sudah terekam pada {existing.ScanAt:dd MMM yyyy HH:mm}.";
                 model.AttendeeName = nama;
                 model.AttendeeNik = nik;
+                model.RecordedAt = existing.ScanAt;
                 model.ShowPopup = true;
                 model.PopupTitle = "Sudah Terekam";
-                model.PopupBody = "Kehadiran Anda sudah tercatat. Terima kasih.";
+                model.PopupBody = $"Anda sudah absen jam {existing.ScanAt:HH:mm}. Terima kasih :)";
                 return View(model);
             }
 
@@ -144,19 +145,23 @@ namespace MBS_SAP.Controllers
                     : "Absensi sudah pernah terekam untuk event ini.";
                 model.AttendeeName = nama;
                 model.AttendeeNik = nik;
+                model.RecordedAt = latest?.ScanAt;
                 model.ShowPopup = true;
                 model.PopupTitle = "Sudah Terekam";
-                model.PopupBody = "Kehadiran Anda sudah tercatat. Terima kasih.";
+                model.PopupBody = latest != null
+                    ? $"Anda sudah absen jam {latest.ScanAt:HH:mm}. Terima kasih :)"
+                    : "Absensi Anda sudah tercatat. Terima kasih :)";
                 return View(model);
             }
 
             model.Status = "success";
             model.AttendeeName = nama;
             model.AttendeeNik = nik;
+            model.RecordedAt = record.ScanAt;
             model.Message = "Terima kasih, kehadiran Anda sudah terekam.";
             model.ShowPopup = true;
             model.PopupTitle = "Absensi Berhasil";
-            model.PopupBody = "Terima kasih sudah terekam.";
+            model.PopupBody = $"Anda sudah absen jam {record.ScanAt:HH:mm}. Terima kasih :)";
 
             return View(model);
         }
@@ -173,6 +178,7 @@ namespace MBS_SAP.Controllers
         public DateTime EndAt { get; set; }
         public string? AttendeeName { get; set; }
         public string? AttendeeNik { get; set; }
+        public DateTime? RecordedAt { get; set; }
         public bool ShowPopup { get; set; }
         public string PopupTitle { get; set; } = string.Empty;
         public string PopupBody { get; set; } = string.Empty;

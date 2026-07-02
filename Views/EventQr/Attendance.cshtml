@@ -1,493 +1,301 @@
 @model MBS_SAP.Controllers.EventQrAttendanceViewModel
 @{
+    Layout = null;
     ViewData["Title"] = "Display Kehadiran Event";
-    var employeeRate = Model.TotalActiveEmployees > 0
-        ? Math.Round((double)Model.TotalPresentEmployees / Model.TotalActiveEmployees * 100.0, 1)
-        : 0.0;
+    var snapshotUrl = Url.Action("AttendanceSnapshot", "EventQr", new { id = Model.Event.Id }) ?? string.Empty;
     var companyRate = Model.TotalActiveCompanies > 0
         ? Math.Round((double)Model.TotalPresentCompanies / Model.TotalActiveCompanies * 100.0, 1)
         : 0.0;
 }
-
-<style>
-    .display-shell {
-        padding: 20px;
-        background:
-            radial-gradient(circle at 12% 10%, rgba(34, 197, 94, 0.18), transparent 24%),
-            radial-gradient(circle at 85% 8%, rgba(56, 189, 248, 0.16), transparent 28%),
-            linear-gradient(180deg, #f8fbff 0%, #eef6f7 100%);
-        min-height: 100vh;
-        color: #0f172a;
-        font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
-    }
-    .display-hero {
-        display: grid;
-        grid-template-columns: 1.5fr 1fr;
-        gap: 16px;
-        margin-bottom: 16px;
-    }
-    .glass-card {
-        background: rgba(255,255,255,0.84);
-        border: 1px solid rgba(148,163,184,0.22);
-        border-radius: 22px;
-        box-shadow: 0 20px 50px rgba(15,23,42,0.08);
-        backdrop-filter: blur(14px);
-    }
-    .hero-main {
-        padding: 20px 22px;
-    }
-    .hero-title {
-        margin: 0;
-        font-size: 28px;
-        font-weight: 900;
-        line-height: 1.15;
-        letter-spacing: -0.03em;
-    }
-    .hero-sub {
-        margin: 10px 0 0;
-        font-size: 14px;
-        color: #475569;
-        line-height: 1.6;
-    }
-    .hero-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 16px;
-    }
-    .hero-toolbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-    }
-    .display-actions {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .display-btn {
-        border: 1px solid rgba(148,163,184,0.24);
-        background: rgba(255,255,255,0.88);
-        color: #0f172a;
-        border-radius: 999px;
-        padding: 9px 14px;
-        font-size: 12px;
-        font-weight: 800;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        box-shadow: 0 8px 24px rgba(15,23,42,0.06);
-    }
-    .display-btn:hover {
-        color: #0369a1;
-        border-color: rgba(56,189,248,0.32);
-        background: rgba(240,249,255,0.92);
-    }
-    .live-clock {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 12px;
-        font-weight: 800;
-        color: #0f172a;
-        background: rgba(255,255,255,0.82);
-        border: 1px solid rgba(148,163,184,0.18);
-        border-radius: 999px;
-        padding: 8px 12px;
-    }
-    .hero-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        border-radius: 999px;
-        border: 1px solid rgba(14,165,233,0.18);
-        background: rgba(255,255,255,0.75);
-        padding: 8px 12px;
-        font-size: 12px;
-        font-weight: 700;
-        color: #0f172a;
-    }
-    .hero-stats {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-        padding: 18px;
-    }
-    .stat-card {
-        border-radius: 18px;
-        padding: 16px;
-        background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.78));
-        border: 1px solid rgba(148,163,184,0.18);
-        min-height: 150px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-    .stat-label {
-        font-size: 11px;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #64748b;
-    }
-    .stat-value {
-        margin-top: 12px;
-        font-size: 36px;
-        font-weight: 900;
-        line-height: 1;
-    }
-    .stat-rate {
-        margin-top: 6px;
-        font-size: 14px;
-        font-weight: 700;
-        color: #166534;
-    }
-    .display-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 2fr) minmax(320px, 0.9fr);
-        gap: 16px;
-        align-items: start;
-    }
-    .section-card {
-        padding: 16px;
-    }
-    .section-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 14px;
-    }
-    .section-title {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 900;
-        letter-spacing: -0.02em;
-    }
-    .section-desc {
-        margin: 3px 0 0;
-        font-size: 12px;
-        color: #64748b;
-    }
-    .company-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
-        gap: 12px;
-        max-height: 68vh;
-        overflow: auto;
-        padding-right: 4px;
-    }
-    .company-card {
-        border-radius: 18px;
-        padding: 16px;
-        border: 1px solid rgba(148,163,184,0.2);
-        background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(248,250,252,0.92));
-        display: grid;
-        gap: 12px;
-        min-height: 220px;
-        transition: transform 0.18s ease, box-shadow 0.18s ease;
-    }
-    .company-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 28px rgba(15,23,42,0.08);
-    }
-    .company-card.is-present {
-        border-color: rgba(34,197,94,0.35);
-        background: linear-gradient(180deg, rgba(220,252,231,0.95), rgba(240,253,244,0.88));
-    }
-    .company-card.is-pending {
-        border-color: rgba(226,232,240,0.92);
-        background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.92));
-    }
-    .company-top {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        align-items: flex-start;
-    }
-    .company-name {
-        margin: 0;
-        font-size: 15px;
-        font-weight: 800;
-        line-height: 1.35;
-    }
-    .status-pill {
-        flex-shrink: 0;
-        display: inline-flex;
-        align-items: center;
-        border-radius: 999px;
-        padding: 5px 10px;
-        font-size: 10px;
-        font-weight: 800;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-    }
-    .status-pill.present {
-        color: #166534;
-        background: rgba(34,197,94,0.18);
-        border: 1px solid rgba(34,197,94,0.32);
-    }
-    .status-pill.pending {
-        color: #475569;
-        background: rgba(226,232,240,0.7);
-        border: 1px solid rgba(148,163,184,0.28);
-    }
-    .company-metrics {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
-    }
-    .company-metric {
-        border-radius: 12px;
-        background: rgba(255,255,255,0.72);
-        border: 1px solid rgba(148,163,184,0.12);
-        padding: 10px;
-        text-align: center;
-    }
-    .company-metric strong {
-        display: block;
-        font-size: 18px;
-        font-weight: 900;
-        line-height: 1;
-        margin-bottom: 5px;
-    }
-    .company-metric span {
-        display: block;
-        font-size: 10px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.07em;
-        color: #64748b;
-    }
-    .company-progress {
-        display: grid;
-        gap: 6px;
-    }
-    .company-progress-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 11px;
-        font-weight: 700;
-        color: #334155;
-    }
-    .progress-track {
-        height: 10px;
-        border-radius: 999px;
-        background: rgba(148,163,184,0.16);
-        overflow: hidden;
-    }
-    .progress-bar {
-        height: 100%;
-        border-radius: inherit;
-        background: linear-gradient(90deg, #16a34a, #22c55e);
-    }
-    .attendee-list {
-        display: grid;
-        gap: 8px;
-    }
-    .attendee-item {
-        display: grid;
-        grid-template-columns: 42px minmax(0,1fr) auto;
-        gap: 10px;
-        align-items: center;
-        padding: 10px;
-        border-radius: 12px;
-        background: rgba(255,255,255,0.76);
-        border: 1px solid rgba(148,163,184,0.12);
-    }
-    .attendee-avatar {
-        width: 42px;
-        height: 42px;
-        border-radius: 14px;
-        background: linear-gradient(135deg, #15803d, #22c55e);
-        color: #ffffff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
-        font-weight: 800;
-    }
-    .attendee-name {
-        font-size: 12px;
-        font-weight: 800;
-        line-height: 1.3;
-        color: #0f172a;
-    }
-    .attendee-meta {
-        margin-top: 3px;
-        font-size: 10px;
-        color: #64748b;
-        line-height: 1.45;
-    }
-    .attendee-time {
-        font-size: 10px;
-        font-weight: 800;
-        color: #166534;
-        white-space: nowrap;
-    }
-    .pending-list {
-        display: grid;
-        gap: 10px;
-        max-height: 68vh;
-        overflow: auto;
-        padding-right: 4px;
-    }
-    .pending-item {
-        border-radius: 16px;
-        padding: 14px;
-        background: rgba(255,255,255,0.88);
-        border: 1px solid rgba(148,163,184,0.16);
-        display: grid;
-        gap: 8px;
-    }
-    .pending-item h4 {
-        margin: 0;
-        font-size: 14px;
-        font-weight: 800;
-    }
-    .pending-item p {
-        margin: 0;
-        font-size: 11px;
-        color: #64748b;
-    }
-    .live-table-wrap {
-        margin-top: 16px;
-        border-top: 1px solid rgba(148,163,184,0.18);
-        padding-top: 16px;
-    }
-    .live-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0 8px;
-    }
-    .live-table thead th {
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #64748b;
-        padding: 0 10px 6px;
-        font-weight: 800;
-    }
-    .live-table tbody tr {
-        background: rgba(255,255,255,0.84);
-        box-shadow: 0 4px 12px rgba(15,23,42,0.05);
-    }
-    .live-table tbody td {
-        padding: 10px;
-        font-size: 12px;
-        color: #0f172a;
-        border-top: 1px solid rgba(148,163,184,0.1);
-        border-bottom: 1px solid rgba(148,163,184,0.1);
-    }
-    .live-table tbody td:first-child {
-        border-left: 1px solid rgba(148,163,184,0.1);
-        border-radius: 12px 0 0 12px;
-    }
-    .live-table tbody td:last-child {
-        border-right: 1px solid rgba(148,163,184,0.1);
-        border-radius: 0 12px 12px 0;
-    }
-    .empty-state {
-        padding: 24px;
-        text-align: center;
-        border-radius: 18px;
-        border: 1px dashed rgba(148,163,184,0.35);
-        color: #64748b;
-        background: rgba(255,255,255,0.64);
-        font-size: 12px;
-        font-weight: 600;
-    }
-    @@media (max-width: 1280px) {
-        .display-grid {
-            grid-template-columns: 1fr;
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>@ViewData["Title"]</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+            background: linear-gradient(180deg, #f8fbff 0%, #eef6f7 100%);
+            color: #0f172a;
         }
-    }
-    @@media (max-width: 900px) {
-        .display-hero {
-            grid-template-columns: 1fr;
-        }
-        .hero-stats {
-            grid-template-columns: 1fr 1fr;
-        }
-        .hero-toolbar {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-    }
-    @@media (max-width: 768px) {
         .display-shell {
-            padding: 12px;
+            min-height: 100vh;
+            padding: 20px;
+            background:
+                radial-gradient(circle at 12% 10%, rgba(34, 197, 94, 0.18), transparent 24%),
+                radial-gradient(circle at 85% 8%, rgba(56, 189, 248, 0.16), transparent 28%),
+                linear-gradient(180deg, #f8fbff 0%, #eef6f7 100%);
+        }
+        .display-hero {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .glass-card {
+            background: rgba(255,255,255,0.88);
+            border: 1px solid rgba(148,163,184,0.22);
+            border-radius: 22px;
+            box-shadow: 0 20px 50px rgba(15,23,42,0.08);
+            backdrop-filter: blur(14px);
+        }
+        .hero-main, .section-card { padding: 18px 20px; }
+        .hero-brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .hero-brand img {
+            width: 52px;
+            height: 52px;
+            object-fit: contain;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.92);
+            padding: 6px;
+            box-shadow: 0 10px 24px rgba(2,6,23,0.12);
+        }
+        .hero-brand-copy {
+            display: grid;
+            gap: 2px;
+        }
+        .hero-brand-label {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #0284c7;
+        }
+        .hero-brand-name {
+            font-size: 18px;
+            font-weight: 900;
+            color: #0f172a;
+            line-height: 1.1;
+        }
+        .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 18px; }
+        .hero-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
         }
         .hero-title {
-            font-size: 22px;
+            margin: 0;
+            font-size: 28px;
+            font-weight: 900;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+        }
+        .hero-sub {
+            margin: 10px 0 0;
+            font-size: 14px;
+            color: #475569;
+            line-height: 1.6;
+        }
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .hero-chip, .live-clock, .display-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 999px;
+            padding: 9px 12px;
+            font-size: 12px;
+            font-weight: 800;
+            background: rgba(255,255,255,0.82);
+            border: 1px solid rgba(148,163,184,0.18);
+            color: #0f172a;
+            text-decoration: none;
+        }
+        .display-actions { display: inline-flex; align-items: center; gap: 8px; }
+        .display-btn { cursor: pointer; }
+        .display-btn:hover { color: #0369a1; border-color: rgba(56,189,248,0.32); }
+        .stat-card {
+            border-radius: 18px;
+            padding: 16px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.78));
+            border: 1px solid rgba(148,163,184,0.18);
+            min-height: 140px;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+        }
+        .stat-value {
+            margin-top: 12px;
+            font-size: 36px;
+            font-weight: 900;
+            line-height: 1;
+        }
+        .stat-rate {
+            margin-top: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #166534;
+        }
+        .display-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(320px, 0.9fr);
+            gap: 16px;
+            align-items: start;
+        }
+        .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .section-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 900;
+        }
+        .section-desc {
+            margin: 4px 0 0;
+            font-size: 12px;
+            color: #64748b;
         }
         .company-grid {
-            grid-template-columns: 1fr;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 12px;
+            max-height: 68vh;
+            overflow: auto;
+            padding-right: 4px;
         }
-        .company-metrics {
-            grid-template-columns: 1fr 1fr 1fr;
+        .company-card {
+            border-radius: 18px;
+            padding: 16px;
+            border: 1px solid rgba(148,163,184,0.2);
+            background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(248,250,252,0.92));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-height: 88px;
         }
-        .live-table-wrap {
-            overflow-x: auto;
+        .company-card.is-present {
+            border-color: rgba(34,197,94,0.35);
+            background: linear-gradient(180deg, rgba(220,252,231,0.95), rgba(240,253,244,0.88));
         }
-        .live-table {
-            min-width: 720px;
+        .company-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: flex-start;
         }
-    }
-</style>
-
+        .company-name { margin: 0; font-size: 15px; font-weight: 800; line-height: 1.35; }
+        .company-caption {
+            margin-top: 4px;
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.4;
+        }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 5px 10px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .status-pill.present { color: #166534; background: rgba(34,197,94,0.18); border: 1px solid rgba(34,197,94,0.32); }
+        .status-pill.pending { color: #475569; background: rgba(226,232,240,0.7); border: 1px solid rgba(148,163,184,0.28); }
+        .pending-list { display: grid; gap: 10px; max-height: 68vh; overflow: auto; padding-right: 4px; }
+        .pending-item {
+            border-radius: 16px;
+            padding: 14px;
+            background: rgba(255,255,255,0.88);
+            border: 1px solid rgba(148,163,184,0.16);
+        }
+        .pending-item h4 { margin: 0 0 8px; font-size: 14px; font-weight: 800; }
+        .pending-item p { margin: 0; font-size: 11px; color: #64748b; line-height: 1.5; }
+        .live-table-wrap { margin-top: 16px; border-top: 1px solid rgba(148,163,184,0.18); padding-top: 16px; }
+        .live-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+        .live-table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; padding: 0 10px 6px; font-weight: 800; }
+        .live-table tbody tr { background: rgba(255,255,255,0.84); box-shadow: 0 4px 12px rgba(15,23,42,0.05); }
+        .live-table tbody td {
+            padding: 10px;
+            font-size: 12px;
+            color: #0f172a;
+            border-top: 1px solid rgba(148,163,184,0.1);
+            border-bottom: 1px solid rgba(148,163,184,0.1);
+        }
+        .live-table tbody td:first-child { border-left: 1px solid rgba(148,163,184,0.1); border-radius: 12px 0 0 12px; }
+        .live-table tbody td:last-child { border-right: 1px solid rgba(148,163,184,0.1); border-radius: 0 12px 12px 0; }
+        .empty-state {
+            padding: 24px;
+            text-align: center;
+            border-radius: 18px;
+            border: 1px dashed rgba(148,163,184,0.35);
+            color: #64748b;
+            background: rgba(255,255,255,0.64);
+            font-size: 12px;
+            font-weight: 600;
+        }
+        @@media (max-width: 1280px) { .display-grid { grid-template-columns: 1fr; } }
+        @@media (max-width: 900px) {
+            .display-hero { grid-template-columns: 1fr; }
+            .hero-stats { grid-template-columns: 1fr; }
+            .hero-toolbar { flex-direction: column; align-items: flex-start; }
+        }
+        @@media (max-width: 768px) {
+            .display-shell { padding: 12px; }
+            .hero-title { font-size: 22px; }
+            .company-grid { grid-template-columns: 1fr; }
+            .live-table-wrap { overflow-x: auto; }
+            .live-table { min-width: 720px; }
+        }
+    </style>
+</head>
+<body>
 <div class="display-shell">
     <section class="display-hero">
         <div class="glass-card hero-main">
-            <div class="hero-toolbar">
-                <h1 class="hero-title">@Model.Event.EventName</h1>
-                <div class="display-actions">
-                    <div class="live-clock" id="liveClock"><i class="bi bi-clock-history"></i><span>--:--:--</span></div>
-                    <button type="button" class="display-btn" id="fullscreenToggleBtn"><i class="bi bi-arrows-fullscreen"></i>Fullscreen</button>
+            <div class="hero-brand">
+                <img src="/images/logo_mbs.png" alt="INDEXIM SAP" />
+                <div class="hero-brand-copy">
+                    <div class="hero-brand-label">INDEXIM Safety Accountability Program</div>
+                    <div class="hero-brand-name">Live Attendance Display</div>
                 </div>
             </div>
-            <p class="hero-sub">
-                Monitoring kehadiran event secara real-time berdasarkan perusahaan aktif. Perusahaan yang sudah memiliki karyawan hadir ditandai hijau, sedangkan perusahaan yang belum ada kehadiran tetap tampil di panel pending.
-            </p>
+            <div class="hero-toolbar">
+                <h1 class="hero-title" id="eventTitle">@Model.Event.EventName</h1>
+                <div class="display-actions">
+                    <div class="live-clock" id="liveClock"><i class="bi bi-clock-history"></i><span>--:--:--</span></div>
+                    <button type="button" class="display-btn" id="fullscreenToggleBtn"><i class="bi bi-arrows-fullscreen"></i><span>Fullscreen</span></button>
+                </div>
+            </div>
+            <p class="hero-sub">Monitoring kehadiran event secara real-time. Begitu satu karyawan dari perusahaan hadir, perusahaan itu langsung dianggap hadir dan keluar dari list pending.</p>
             <div class="hero-meta">
-                <span class="hero-chip"><i class="bi bi-geo-alt-fill"></i>@(string.IsNullOrWhiteSpace(Model.Event.EventLocation) ? "Lokasi belum diisi" : Model.Event.EventLocation)</span>
-                <span class="hero-chip"><i class="bi bi-clock-fill"></i>@Model.Event.StartAt.ToString("dd MMM yyyy HH:mm") - @Model.Event.EndAt.ToString("HH:mm")</span>
-                <span class="hero-chip"><i class="bi bi-diagram-3-fill"></i>@Model.TotalActiveCompanies perusahaan aktif</span>
-                <span class="hero-chip"><i class="bi bi-people-fill"></i>@Model.TotalActiveEmployees karyawan aktif</span>
+                <span class="hero-chip" id="eventLocationChip"><i class="bi bi-geo-alt-fill"></i>@(string.IsNullOrWhiteSpace(Model.Event.EventLocation) ? "Lokasi belum diisi" : Model.Event.EventLocation)</span>
+                <span class="hero-chip" id="eventTimeChip"><i class="bi bi-clock-fill"></i>@Model.Event.StartAt.ToString("dd MMM yyyy HH:mm") - @Model.Event.EndAt.ToString("HH:mm")</span>
+                <span class="hero-chip" id="activeCompaniesChip"><i class="bi bi-diagram-3-fill"></i>@Model.TotalActiveCompanies perusahaan aktif</span>
             </div>
         </div>
         <div class="glass-card hero-stats">
-            <div class="stat-card">
-                <div>
-                    <div class="stat-label">Perusahaan Hadir</div>
-                    <div class="stat-value">@Model.TotalPresentCompanies</div>
-                </div>
-                <div class="stat-rate">@companyRate% dari total perusahaan aktif</div>
-            </div>
-            <div class="stat-card">
-                <div>
-                    <div class="stat-label">Karyawan Hadir</div>
-                    <div class="stat-value">@Model.TotalPresentEmployees</div>
-                </div>
-                <div class="stat-rate">@employeeRate% dari total karyawan aktif</div>
-            </div>
-            <div class="stat-card">
-                <div>
-                    <div class="stat-label">Belum Hadir</div>
-                    <div class="stat-value">@(Model.TotalActiveCompanies - Model.TotalPresentCompanies)</div>
-                </div>
-                <div class="stat-rate">perusahaan belum ada absensi</div>
-            </div>
-            <div class="stat-card">
-                <div>
-                    <div class="stat-label">Total Scan</div>
-                    <div class="stat-value">@Model.Records.Count</div>
-                </div>
-                <div class="stat-rate">seluruh record tersimpan</div>
-            </div>
+            <div class="stat-card"><div><div class="stat-label">Perusahaan Aktif</div><div class="stat-value" id="activeCompaniesValue">@Model.TotalActiveCompanies</div></div><div class="stat-rate">total perusahaan terdaftar untuk display</div></div>
+            <div class="stat-card"><div><div class="stat-label">Sudah Hadir</div><div class="stat-value" id="presentCompaniesValue">@Model.TotalPresentCompanies</div></div><div class="stat-rate" id="presentCompaniesRate">@companyRate% dari total perusahaan aktif</div></div>
+            <div class="stat-card"><div><div class="stat-label">Belum Hadir</div><div class="stat-value" id="pendingCompaniesValue">@(Model.TotalActiveCompanies - Model.TotalPresentCompanies)</div></div><div class="stat-rate">perusahaan yang belum ada perwakilan hadir</div></div>
         </div>
     </section>
 
@@ -496,107 +304,45 @@
             <div class="section-head">
                 <div>
                     <h2 class="section-title">Status Perusahaan</h2>
-                    <p class="section-desc">Hijau berarti sudah ada karyawan yang hadir. Setiap kartu menampilkan ringkasan kehadiran dan contoh attendee terbaru.</p>
+                    <p class="section-desc">Kartu hijau berarti perusahaan sudah mengirim minimal satu peserta. Feed di bawahnya menampilkan siapa yang sudah absen beserta jabatan dan perusahaan secara realtime.</p>
                 </div>
-                <a class="display-btn" asp-action="Index"><i class="bi bi-arrow-left"></i>Kembali ke Event</a>
+                <a class="display-btn" href="/EventQr"><i class="bi bi-arrow-left"></i><span>Kembali</span></a>
             </div>
 
-            @if (Model.CompanyStatuses.Count == 0)
-            {
-                <div class="empty-state">Belum ada perusahaan aktif yang dapat ditampilkan.</div>
-            }
-            else
-            {
-                <div class="company-grid">
-                    @foreach (var company in Model.CompanyStatuses)
-                    {
-                        var progressWidth = Math.Max(0, Math.Min(company.AttendanceRate, 100));
-                        <article class="company-card @(company.HasAttendance ? "is-present" : "is-pending")">
-                            <div class="company-top">
-                                <div>
-                                    <h3 class="company-name">@company.CompanyName</h3>
-                                </div>
-                                <span class="status-pill @(company.HasAttendance ? "present" : "pending")">@(company.HasAttendance ? "Hadir" : "Belum Hadir")</span>
+            <div class="company-grid" id="companyGrid">
+                @foreach (var company in Model.CompanyStatuses)
+                {
+                    <article class="company-card @(company.HasAttendance ? "is-present" : "is-pending")">
+                        <div class="company-top">
+                            <div>
+                                <h3 class="company-name">@company.CompanyName</h3>
+                                <div class="company-caption">1 peserta hadir sudah cukup untuk menandai perusahaan ini hadir.</div>
                             </div>
+                        </div>
+                        <span class="status-pill @(company.HasAttendance ? "present" : "pending")">@(company.HasAttendance ? "Sudah Hadir" : "Belum Hadir")</span>
+                    </article>
+                }
+            </div>
 
-                            <div class="company-metrics">
-                                <div class="company-metric">
-                                    <strong>@company.ActiveEmployees</strong>
-                                    <span>Aktif</span>
-                                </div>
-                                <div class="company-metric">
-                                    <strong>@company.AttendedEmployees</strong>
-                                    <span>Hadir</span>
-                                </div>
-                                <div class="company-metric">
-                                    <strong>@company.PendingEmployees</strong>
-                                    <span>Tersisa</span>
-                                </div>
-                            </div>
-
-                            <div class="company-progress">
-                                <div class="company-progress-head">
-                                    <span>Progress Kehadiran</span>
-                                    <span>@company.AttendanceRate%</span>
-                                </div>
-                                <div class="progress-track">
-                                    <div class="progress-bar" style="width:@progressWidth.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></div>
-                                </div>
-                            </div>
-
-                            @if (company.RecentAttendees.Any())
+            <div class="live-table-wrap">
+                <div class="section-head" style="margin-bottom:8px;">
+                    <div>
+                        <h2 class="section-title">Live Attendance Feed</h2>
+                        <p class="section-desc">List peserta yang sudah absen secara realtime, lengkap dengan jabatan dan perusahaan.</p>
+                    </div>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="live-table">
+                        <thead>
+                            <tr><th>Waktu</th><th>NIK</th><th>Nama</th><th>Jabatan</th><th>Departemen</th><th>Perusahaan</th></tr>
+                        </thead>
+                        <tbody id="attendeeFeedTableBody">
+                            @if (Model.Attendees.Count == 0)
                             {
-                                <div class="attendee-list">
-                                    @foreach (var attendee in company.RecentAttendees)
-                                    {
-                                        var initial = string.IsNullOrWhiteSpace(attendee.Nama) ? "?" : attendee.Nama.Trim()[0].ToString().ToUpperInvariant();
-                                        <div class="attendee-item">
-                                            <div class="attendee-avatar">@initial</div>
-                                            <div>
-                                                <div class="attendee-name">@attendee.Nama</div>
-                                                <div class="attendee-meta">@attendee.Jabatan | @attendee.Departemen</div>
-                                            </div>
-                                            <div class="attendee-time">@attendee.ScanAt.ToString("HH:mm")</div>
-                                        </div>
-                                    }
-                                </div>
+                                <tr><td colspan="6" style="text-align:center;">Belum ada absensi masuk untuk event ini.</td></tr>
                             }
                             else
                             {
-                                <div class="empty-state" style="padding: 16px; font-size: 11px;">Belum ada karyawan dari perusahaan ini yang scan absensi.</div>
-                            }
-                        </article>
-                    }
-                </div>
-            }
-
-            <div class="live-table-wrap">
-                <div class="section-head" style="margin-bottom: 8px;">
-                    <div>
-                        <h2 class="section-title">Live Attendance Feed</h2>
-                        <p class="section-desc">Menampilkan siapa yang sudah absen lengkap dengan jabatan, departemen, dan perusahaan.</p>
-                    </div>
-                </div>
-
-                @if (Model.Attendees.Count == 0)
-                {
-                    <div class="empty-state">Belum ada absensi masuk untuk event ini.</div>
-                }
-                else
-                {
-                    <div style="overflow-x:auto;">
-                        <table class="live-table">
-                            <thead>
-                                <tr>
-                                    <th>Waktu</th>
-                                    <th>NIK</th>
-                                    <th>Nama</th>
-                                    <th>Jabatan</th>
-                                    <th>Departemen</th>
-                                    <th>Perusahaan</th>
-                                </tr>
-                            </thead>
-                            <tbody>
                                 @foreach (var attendee in Model.Attendees)
                                 {
                                     <tr>
@@ -608,10 +354,10 @@
                                         <td>@attendee.CompanyName</td>
                                     </tr>
                                 }
-                            </tbody>
-                        </table>
-                    </div>
-                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -619,80 +365,146 @@
             <div class="section-head">
                 <div>
                     <h2 class="section-title">Perusahaan Belum Hadir</h2>
-                    <p class="section-desc">Daftar perusahaan aktif yang sama sekali belum mengirimkan absensi kedatangan.</p>
+                    <p class="section-desc">Begitu satu orang hadir, perusahaan langsung hilang dari list ini.</p>
                 </div>
             </div>
-
-            @if (Model.PendingCompanies.Count == 0)
-            {
-                <div class="empty-state">Semua perusahaan aktif sudah memiliki kehadiran tercatat.</div>
-            }
-            else
-            {
-                <div class="pending-list">
+            <div class="pending-list" id="pendingCompaniesList">
+                @if (Model.PendingCompanies.Count == 0)
+                {
+                    <div class="empty-state">Semua perusahaan aktif sudah memiliki kehadiran tercatat.</div>
+                }
+                else
+                {
                     @foreach (var company in Model.PendingCompanies)
                     {
                         <article class="pending-item">
                             <h4>@company.CompanyName</h4>
-                            <p><strong>@company.ActiveEmployees</strong> karyawan aktif terdaftar</p>
-                            <p>Belum ada karyawan yang melakukan scan absensi untuk event ini.</p>
+                            <p>Belum ada perwakilan yang melakukan scan absensi untuk event ini.</p>
                         </article>
                     }
-                </div>
-            }
+                }
+            </div>
         </aside>
     </section>
 </div>
 
-@section Scripts {
-    <script>
-        (function () {
-            const REFRESH_MS = 15000;
-            const clockEl = document.querySelector('#liveClock span');
-            const fullscreenBtn = document.getElementById('fullscreenToggleBtn');
+<script>
+    (function () {
+        const REFRESH_MS = 5000;
+        const snapshotUrl = '@snapshotUrl';
+        const clockEl = document.querySelector('#liveClock span');
+        const fullscreenBtn = document.getElementById('fullscreenToggleBtn');
+        const companyGridEl = document.getElementById('companyGrid');
+        const pendingCompaniesListEl = document.getElementById('pendingCompaniesList');
+        const attendeeFeedBodyEl = document.getElementById('attendeeFeedTableBody');
 
-            function updateClock() {
-                if (!clockEl) return;
-                const now = new Date();
-                clockEl.textContent = now.toLocaleString('id-ID', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-            }
-
-            function syncFullscreenLabel() {
-                if (!fullscreenBtn) return;
-                const icon = fullscreenBtn.querySelector('i');
-                const isFs = !!document.fullscreenElement;
-                if (icon) {
-                    icon.className = isFs ? 'bi bi-fullscreen-exit' : 'bi bi-arrows-fullscreen';
-                }
-                fullscreenBtn.lastChild.textContent = isFs ? 'Keluar Fullscreen' : 'Fullscreen';
-            }
-
-            fullscreenBtn?.addEventListener('click', async function () {
-                try {
-                    if (!document.fullscreenElement) {
-                        await document.documentElement.requestFullscreen();
-                    } else {
-                        await document.exitFullscreen();
-                    }
-                } catch {
-                }
-                syncFullscreenLabel();
+        function updateClock() {
+            if (!clockEl) return;
+            clockEl.textContent = new Date().toLocaleString('id-ID', {
+                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
             });
+        }
 
-            document.addEventListener('fullscreenchange', syncFullscreenLabel);
-            updateClock();
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatDateTime(value) {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '-';
+            return date.toLocaleString('id-ID', {
+                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        function formatTime(value) {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '--:--';
+            return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function syncFullscreenLabel() {
+            if (!fullscreenBtn) return;
+            const icon = fullscreenBtn.querySelector('i');
+            const label = fullscreenBtn.querySelector('span');
+            const isFs = !!document.fullscreenElement;
+            if (icon) icon.className = isFs ? 'bi bi-fullscreen-exit' : 'bi bi-arrows-fullscreen';
+            if (label) label.textContent = isFs ? 'Keluar Fullscreen' : 'Fullscreen';
+        }
+
+        function renderCompanyStatuses(companies) {
+            if (!companyGridEl) return;
+            companyGridEl.innerHTML = (companies || []).length === 0
+                ? '<div class="empty-state">Belum ada perusahaan aktif yang dapat ditampilkan.</div>'
+                : companies.map(function (company) {
+                    return `<article class="company-card ${company.hasAttendance ? 'is-present' : 'is-pending'}"><div class="company-top"><div><h3 class="company-name">${escapeHtml(company.companyName)}</h3><div class="company-caption">1 peserta hadir sudah cukup untuk menandai perusahaan ini hadir.</div></div></div><span class="status-pill ${company.hasAttendance ? 'present' : 'pending'}">${company.hasAttendance ? 'Sudah Hadir' : 'Belum Hadir'}</span></article>`;
+                }).join('');
+        }
+
+        function renderPendingCompanies(companies) {
+            if (!pendingCompaniesListEl) return;
+            pendingCompaniesListEl.innerHTML = (companies || []).length === 0
+                ? '<div class="empty-state">Semua perusahaan aktif sudah memiliki kehadiran tercatat.</div>'
+                : companies.map(function (company) {
+                    return `<article class="pending-item"><h4>${escapeHtml(company.companyName)}</h4><p>Belum ada perwakilan yang melakukan scan absensi untuk event ini.</p></article>`;
+                }).join('');
+        }
+
+        function renderAttendees(attendees) {
+            if (!attendeeFeedBodyEl) return;
+            attendeeFeedBodyEl.innerHTML = (attendees || []).length === 0
+                ? '<tr><td colspan="6" style="text-align:center;">Belum ada absensi masuk untuk event ini.</td></tr>'
+                : attendees.map(function (attendee) {
+                    return `<tr><td>${escapeHtml(formatDateTime(attendee.scanAt))}</td><td>${escapeHtml(attendee.nik)}</td><td>${escapeHtml(attendee.nama)}</td><td>${escapeHtml(attendee.jabatan)}</td><td>${escapeHtml(attendee.departemen)}</td><td>${escapeHtml(attendee.companyName)}</td></tr>`;
+                }).join('');
+        }
+
+        function updateSummary(totals) {
+            const companyRate = totals.activeCompanies > 0 ? ((totals.presentCompanies / totals.activeCompanies) * 100).toFixed(1) : '0.0';
+            document.getElementById('activeCompaniesValue').textContent = totals.activeCompanies;
+            document.getElementById('presentCompaniesValue').textContent = totals.presentCompanies;
+            document.getElementById('presentCompaniesRate').textContent = `${companyRate}% dari total perusahaan aktif`;
+            document.getElementById('pendingCompaniesValue').textContent = totals.pendingCompanies;
+            document.getElementById('activeCompaniesChip').innerHTML = `<i class="bi bi-diagram-3-fill"></i>${totals.activeCompanies} perusahaan aktif`;
+        }
+
+        async function refreshAttendanceSnapshot() {
+            if (!snapshotUrl) return;
+            try {
+                const response = await fetch(snapshotUrl, { cache: 'no-store' });
+                if (!response.ok) return;
+                const data = await response.json();
+                renderCompanyStatuses(data.companyStatuses || []);
+                renderPendingCompanies(data.pendingCompanies || []);
+                renderAttendees(data.attendees || []);
+                updateSummary(data.totals || {});
+            } catch {
+            }
+        }
+
+        fullscreenBtn?.addEventListener('click', async function () {
+            try {
+                if (!document.fullscreenElement) {
+                    await document.documentElement.requestFullscreen();
+                } else {
+                    await document.exitFullscreen();
+                }
+            } catch {
+            }
             syncFullscreenLabel();
-            setInterval(updateClock, 1000);
-            setTimeout(function () {
-                window.location.reload();
-            }, REFRESH_MS);
-        })();
-    </script>
-}
+        });
+
+        document.addEventListener('fullscreenchange', syncFullscreenLabel);
+        updateClock();
+        syncFullscreenLabel();
+        setInterval(updateClock, 1000);
+        setInterval(refreshAttendanceSnapshot, REFRESH_MS);
+    })();
+</script>
+</body>
+</html>
