@@ -48,6 +48,20 @@ namespace MBS_SAP.Controllers
         {
             static string Norm(string? value) => (value ?? string.Empty).Trim().ToUpperInvariant();
 
+            static System.DateTime ToEventMoment(System.DateTime datePart, System.TimeSpan? timePart, System.DateTime fallback)
+            {
+                try
+                {
+                    var baseDate = datePart.Date;
+                    var candidate = baseDate + (timePart ?? System.TimeSpan.Zero);
+                    return candidate > fallback ? candidate : fallback;
+                }
+                catch
+                {
+                    return fallback;
+                }
+            }
+
             static List<T> DeduplicateRecent<T>(
                 IEnumerable<T> source,
                 Func<T, string> signatureSelector,
@@ -78,38 +92,52 @@ namespace MBS_SAP.Controllers
             // before timeline entries from multiple modules are merged.
             var sourceTake = System.Math.Max(200, skip + take + 120);
 
-            var hazards = await _context.HazardReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
-            var inspections = await _context.Inspections.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
-            var actionPlans = await _context.ActionPlans.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
-            var safetyTalks = await _context.SafetyTalks.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
-            var p5ms = await _context.P5ms.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
-            var observations = await _context.Observations.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
-            var p2hReports = await _context.P2hReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
+            var hazards = await _context.HazardReports.Where(x => !x.IsDeleted)
+                .OrderByDescending(x => x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .Take(sourceTake).ToListAsync();
+            var inspections = await _context.Inspections.Where(x => !x.IsDeleted)
+                .OrderByDescending(x => x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .Take(sourceTake).ToListAsync();
+            var actionPlans = await _context.ActionPlans.Where(x => !x.IsDeleted)
+                .OrderByDescending(x => x.TanggalPerbaikan ?? x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .Take(sourceTake).ToListAsync();
+            var safetyTalks = await _context.SafetyTalks.Where(x => !x.IsDeleted)
+                .OrderByDescending(x => x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .Take(sourceTake).ToListAsync();
+            var p5ms = await _context.P5ms.Where(x => !x.IsDeleted)
+                .OrderByDescending(x => x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .Take(sourceTake).ToListAsync();
+            var observations = await _context.Observations.Where(x => !x.IsDeleted)
+                .OrderByDescending(x => x.Date).ThenByDescending(x => x.CreatedAt)
+                .Take(sourceTake).ToListAsync();
+            var p2hReports = await _context.P2hReports.Where(x => !x.IsDeleted)
+                .OrderByDescending(x => x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .Take(sourceTake).ToListAsync();
 
             hazards = DeduplicateRecent(
                 hazards,
                 h => $"{Norm(h.Nik)}|{h.Tanggal:yyyyMMdd}|{h.Waktu}|{Norm(h.Temuan)}|{Norm(h.Area)}|{Norm(h.Lokasi)}",
-                h => h.CreatedAt);
+                h => ToEventMoment(h.Tanggal, h.Waktu, h.CreatedAt));
 
             inspections = DeduplicateRecent(
                 inspections,
                 i => $"{Norm(i.Nik)}|{i.Tanggal:yyyyMMdd}|{i.Waktu}|{Norm(i.JenisInspeksi)}|{Norm(i.Area)}|{Norm(i.Lokasi)}",
-                i => i.CreatedAt);
+                i => ToEventMoment(i.Tanggal, i.Waktu, i.CreatedAt));
 
             safetyTalks = DeduplicateRecent(
                 safetyTalks,
                 s => $"{Norm(s.Nik)}|{s.Tanggal:yyyyMMdd}|{s.Waktu}|{Norm(s.Judul)}|{Norm(s.Keterangan)}|{Norm(s.Area)}|{Norm(s.Lokasi)}",
-                s => s.CreatedAt);
+                s => ToEventMoment(s.Tanggal, s.Waktu, s.CreatedAt));
 
             p5ms = DeduplicateRecent(
                 p5ms,
                 p => $"{Norm(p.Nik)}|{p.Tanggal:yyyyMMdd}|{p.Waktu}|{Norm(p.Topik)}|{Norm(p.Keterangan)}|{Norm(p.Area)}|{Norm(p.Lokasi)}",
-                p => p.CreatedAt);
+                p => ToEventMoment(p.Tanggal, p.Waktu, p.CreatedAt));
 
             p2hReports = DeduplicateRecent(
                 p2hReports,
                 r => $"{Norm(r.Nik)}|{r.Tanggal:yyyyMMdd}|{r.Waktu}|{Norm(r.NoLambung)}|{Norm(r.JenisKendaraan)}|{Norm(r.Merek)}",
-                r => r.CreatedAt);
+                r => ToEventMoment(r.Tanggal, r.Waktu, r.CreatedAt));
 
             var timelineList = new List<TimelineViewModel>();
 
@@ -138,7 +166,7 @@ namespace MBS_SAP.Controllers
                     PerusahaanId = h.PerusahaanId,
                     Tanggal = h.Tanggal,
                     Waktu = h.Waktu,
-                    CreatedAt = h.CreatedAt,
+                    CreatedAt = ToEventMoment(h.Tanggal, h.Waktu, h.CreatedAt),
                     Area = h.Area,
                     Lokasi = h.Lokasi,
                     Kategori = h.JenisBahaya,
@@ -175,7 +203,7 @@ namespace MBS_SAP.Controllers
                     PerusahaanId = i.PerusahaanId,
                     Tanggal = i.Tanggal,
                     Waktu = i.Waktu,
-                    CreatedAt = i.CreatedAt,
+                    CreatedAt = ToEventMoment(i.Tanggal, i.Waktu, i.CreatedAt),
                     Area = i.Area,
                     Lokasi = i.Lokasi,
                     Kategori = i.JenisInspeksi,
@@ -225,7 +253,7 @@ namespace MBS_SAP.Controllers
                     PerusahaanId = s.PerusahaanId,
                     Tanggal = s.Tanggal,
                     Waktu = s.Waktu,
-                    CreatedAt = s.CreatedAt,
+                    CreatedAt = ToEventMoment(s.Tanggal, s.Waktu, s.CreatedAt),
                     Area = s.Area,
                     Lokasi = s.Lokasi,
                     Title = s.Judul,
@@ -247,7 +275,7 @@ namespace MBS_SAP.Controllers
                     PerusahaanId = p.PerusahaanId,
                     Tanggal = p.Tanggal,
                     Waktu = p.Waktu,
-                    CreatedAt = p.CreatedAt,
+                    CreatedAt = ToEventMoment(p.Tanggal, p.Waktu, p.CreatedAt),
                     Area = p.Area,
                     Lokasi = p.Lokasi,
                     Title = p.Topik,
@@ -268,7 +296,7 @@ namespace MBS_SAP.Controllers
                     PerusahaanId = null,
                     Tanggal = o.Date,
                     Waktu = o.Date.TimeOfDay,
-                    CreatedAt = o.CreatedAt,
+                    CreatedAt = o.Date > o.CreatedAt ? o.Date : o.CreatedAt,
                     Area = o.Area,
                     Lokasi = o.Lokasi,
                     Kategori = o.PerihalYangDiamati,
@@ -334,7 +362,7 @@ namespace MBS_SAP.Controllers
                     PerusahaanId = null,
                     Tanggal = r.Tanggal,
                     Waktu = r.Waktu,
-                    CreatedAt = r.CreatedAt,
+                    CreatedAt = ToEventMoment(r.Tanggal, r.Waktu, r.CreatedAt),
                     Area = r.NoLambung,
                     Lokasi = $"{r.Merek} (KM: {r.Kilometer})",
                     Kategori = r.JenisKendaraan,
