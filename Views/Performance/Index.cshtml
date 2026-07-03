@@ -3319,8 +3319,18 @@
             const points = [];
             let sequence = 0;
             const seenSignatures = new Set();
+            const seenIds = new Set();
 
             function registerPoint(type, normalized) {
+                const normalizedId = String(normalized.id ?? '').trim();
+                if (normalizedId) {
+                    const idKey = type + '|' + normalizedId;
+                    if (seenIds.has(idKey)) {
+                        return;
+                    }
+                    seenIds.add(idKey);
+                }
+
                 const signature = [
                     type,
                     String(normalized.lat ?? ''),
@@ -3331,10 +3341,12 @@
                     String(normalized.area ?? '')
                 ].join('|');
 
-                if (seenSignatures.has(signature)) {
+                if (!normalizedId && seenSignatures.has(signature)) {
                     return;
                 }
-                seenSignatures.add(signature);
+                if (!normalizedId) {
+                    seenSignatures.add(signature);
+                }
 
                 points.push({
                     key: type + '-' + String(normalized.id ?? sequence) + '-' + String(sequence),

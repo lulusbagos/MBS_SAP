@@ -74,7 +74,9 @@ namespace MBS_SAP.Controllers
                 return deduped;
             }
 
-            var sourceTake = System.Math.Max(60, skip + take + 30);
+            // Pull a wider source window so recent updates are not pushed out
+            // before timeline entries from multiple modules are merged.
+            var sourceTake = System.Math.Max(200, skip + take + 120);
 
             var hazards = await _context.HazardReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
             var inspections = await _context.Inspections.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(sourceTake).ToListAsync();
@@ -184,6 +186,13 @@ namespace MBS_SAP.Controllers
 
             foreach (var a in actionPlans)
             {
+                var actionPlanActivityAt = new[]
+                {
+                    a.CreatedAt,
+                    a.ReassignedAt ?? System.DateTime.MinValue,
+                    a.TanggalPerbaikan ?? System.DateTime.MinValue
+                }.Max();
+
                 timelineList.Add(new TimelineViewModel
                 {
                     ItemType = "ActionPlan",
@@ -194,7 +203,7 @@ namespace MBS_SAP.Controllers
                     PerusahaanId = a.PerusahaanId,
                     Tanggal = a.Tanggal,
                     Waktu = a.Waktu,
-                    CreatedAt = a.CreatedAt,
+                    CreatedAt = actionPlanActivityAt,
                     Area = a.Area,
                     Lokasi = a.Lokasi,
                     Kategori = a.KategoriTemuan,
