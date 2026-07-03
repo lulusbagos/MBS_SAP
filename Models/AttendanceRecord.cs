@@ -30,6 +30,10 @@ namespace MBS_SAP.Models
         [MaxLength(60)]
         public string Source { get; set; } = "qr";
 
+        public double? Latitude { get; set; }
+
+        public double? Longitude { get; set; }
+
         public AttendanceEvent? AttendanceEvent { get; set; }
     }
 }

@@ -103,24 +103,23 @@
                 const text = (rawText || '').trim();
                 if (!text) return null;
 
-                if (text.includes('/QrAttendance/Scan/')) {
-                    if (text.startsWith('http://') || text.startsWith('https://')) {
-                        return text;
-                    }
-                    return baseUrl + (text.startsWith('/') ? text : '/' + text);
-                }
-
+                // If it's a raw token (alphanumeric, 16-64 chars)
                 if (/^[a-fA-F0-9]{16,64}$/.test(text)) {
                     return baseUrl + '/QrAttendance/Scan/' + text;
                 }
 
-                try {
-                    const url = new URL(text);
-                    if (url.pathname.includes('/QrAttendance/Scan/')) {
-                        return url.toString();
+                // If the QR contains the correct endpoint, extract just the path 
+                // to avoid localhost routing issues when scanned from a phone.
+                if (text.includes('/QrAttendance/Scan/')) {
+                    try {
+                        // If it's a full URL
+                        const url = new URL(text);
+                        return baseUrl + url.pathname + url.search;
+                    } catch {
+                        // If it's just a path string
+                        const pathIndex = text.indexOf('/QrAttendance/Scan/');
+                        return baseUrl + text.substring(pathIndex);
                     }
-                } catch {
-                    return null;
                 }
 
                 return null;
@@ -134,9 +133,28 @@
                 }
 
                 setStatus('ok', 'QR valid. Mengarahkan ke absensi...');
-                setTimeout(function () {
-                    window.location.href = target;
-                }, 250);
+                
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        function (position) {
+                            const lat = position.coords.latitude;
+                            const lng = position.coords.longitude;
+                            let finalUrl = target;
+                            finalUrl += (finalUrl.includes('?') ? '&' : '?') + 'lat=' + lat + '&lng=' + lng;
+                            window.location.href = finalUrl;
+                        },
+                        function (error) {
+                            console.warn("Geolocation failed", error);
+                            // Proceed without location
+                            window.location.href = target;
+                        },
+                        { timeout: 5000, maximumAge: 0, enableHighAccuracy: true }
+                    );
+                } else {
+                    setTimeout(function () {
+                        window.location.href = target;
+                    }, 250);
+                }
             }
 
             async function startScan() {

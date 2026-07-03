@@ -60,4 +60,14 @@ app.MapControllerRoute(
     pattern: "{controller=Account}/{action=Login}/{id?}")
     .WithStaticAssets();
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<MBS_SAP.Data.AppDbContext>();
+    try {
+        dbContext.Database.ExecuteSqlRaw("ALTER TABLE tbl_t_attendance_record ADD Latitude float NULL, Longitude float NULL;");
+    } catch {
+        // Ignored, columns might already exist
+    }
+}
+
 app.Run();

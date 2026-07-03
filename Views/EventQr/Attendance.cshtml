@@ -41,6 +41,10 @@
             --glow-red: 0 0 25px rgba(244, 63, 94, 0.25);
         }
 
+        body.kiosk-mode {
+            cursor: none !important;
+        }
+
         body {
             margin: 0;
             font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
@@ -53,13 +57,11 @@
         .display-shell {
             min-height: 100vh;
             padding: 24px;
-            background:
-                radial-gradient(circle at 10% 15%, rgba(56, 189, 248, 0.12), transparent 35%),
-                radial-gradient(circle at 90% 10%, rgba(16, 185, 129, 0.1), transparent 35%),
-                linear-gradient(180deg, #030712 0%, #090d16 100%);
+            background: transparent;
             display: flex;
             flex-direction: column;
             gap: 20px;
+            position: relative;
         }
 
         /* Top Header */
@@ -160,7 +162,7 @@
         /* Layout Grid */
         .monitor-layout {
             display: grid;
-            grid-template-columns: 360px 1fr;
+            grid-template-columns: 420px 1fr;
             gap: 20px;
             align-items: start;
         }
@@ -733,8 +735,8 @@
     </style>
 </head>
 <body>
-<canvas id="visualizerCanvas"></canvas>
-<div class="display-shell">
+<canvas id="visualizerCanvas" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;"></canvas>
+<div class="display-shell" style="background: transparent;">
     <!-- Top Header -->
     <header class="dashboard-header">
         <div class="brand-section">
@@ -779,7 +781,7 @@
             <button type="button" class="btn-action" id="fullscreenToggleBtn">
                 <i class="bi bi-arrows-fullscreen"></i><span>Fullscreen</span>
             </button>
-            <a class="btn-action" href="/EventQr">
+            <a class="btn-action" href="/Display">
                 <i class="bi bi-arrow-left"></i><span>Kembali</span>
             </a>
         </div>
@@ -932,6 +934,8 @@
 
 <!-- QR and Realtime scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- Confetti Library -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <script>
     (function () {
         const REFRESH_MS = 5000;
@@ -1031,14 +1035,12 @@
                 marqueeOffset = 0; // Reset scroll position
             }
             
-            if (isPlaying) {
-                playMusic();
-            }
+            // Do not call playMusic() here, let the caller handle it to prevent double-play errors.
         }
 
-        bgAudio.onended = () => {
+        bgAudio.addEventListener('ended', () => {
             playNextTrack();
-        };
+        });
 
         function playNextTrack() {
             if (shuffledPlaylist.length === 0) return;
@@ -1049,6 +1051,17 @@
             loadTrack(shuffledPlaylist[currentTrackIndex]);
             playMusic();
         }
+
+        // --- Auto-play workaround ---
+        // Browsers block autoplay without user interaction.
+        // We listen for the first click anywhere on the document to start the music automatically.
+        document.addEventListener('click', function autoStartMusic() {
+            if (!isPlaying && shuffledPlaylist.length > 0) {
+                playMusic();
+                // Remove listener after first interaction
+                document.removeEventListener('click', autoStartMusic);
+            }
+        });
 
         async function playMusic() {
             initAudioContext();
@@ -1147,6 +1160,45 @@
             isDucked = false;
             updateVolume();
         }
+
+        // ---------------------------------------------------------
+        // STARTUP
+        // ---------------------------------------------------------
+        document.addEventListener('DOMContentLoaded', () => {
+            updateTime();
+            initBackgroundMusic();
+            initBackgroundVideo();
+            initWebsocket();
+            drawVisualizer();
+            
+            // Allow fullscreen
+            const fsBtn = document.getElementById('fullscreenToggleBtn');
+            if (fsBtn) {
+                fsBtn.addEventListener('click', () => {
+                    if (!document.fullscreenElement) {
+                        document.documentElement.requestFullscreen().catch(err => {
+                            console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                        });
+                    } else {
+                        document.exitFullscreen();
+                    }
+                });
+            }
+
+            // Kiosk Mode: Hide Cursor on Idle
+            let idleTimer;
+            function resetIdleTimer() {
+                document.body.classList.remove('kiosk-mode');
+                clearTimeout(idleTimer);
+                idleTimer = setTimeout(() => {
+                    document.body.classList.add('kiosk-mode');
+                }, 3000); // Hide after 3 seconds of inactivity
+            }
+            window.addEventListener('mousemove', resetIdleTimer);
+            window.addEventListener('keydown', resetIdleTimer);
+            window.addEventListener('touchstart', resetIdleTimer);
+            resetIdleTimer();
+        });
 
         // Setup Controls Listeners
         const playBtn = document.getElementById('musicPlayBtn');
@@ -1344,6 +1396,37 @@
                 canvasCtx.shadowBlur = 0;
             }
             
+            // 4. Spectrum Bars at the bottom
+            const barWidth = (canvas.width / bufferLength) * 2.5;
+            let barHeight;
+            let x = 0;
+            const baseY = canvas.height;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                barHeight = dataArray[i] * 1.8; // Scale up for better visibility
+                if (barHeight > 0) {
+                    // Vibrant Cyberpunk Gradient Colors based on frequency and height
+                    const hue = (i / bufferLength) * 360 + (visualAngle * 250);
+                    const color = `hsl(${hue % 360}, 100%, 60%)`;
+                    
+                    canvasCtx.fillStyle = color; 
+                    // Add glow for "Wow" effect
+                    canvasCtx.shadowBlur = 15 + (barHeight * 0.05); 
+                    canvasCtx.shadowColor = color;
+                    
+                    // Main Bar (starting from the very bottom or slightly above)
+                    // Draw with a slight border radius effect using roundRect if possible, or just rect
+                    canvasCtx.fillRect(x, baseY - barHeight, barWidth - 2, barHeight);
+                    
+                    // Add a bright core highlight to the bar
+                    canvasCtx.fillStyle = '#ffffff';
+                    canvasCtx.shadowBlur = 0;
+                    canvasCtx.fillRect(x + (barWidth-2)*0.3, baseY - barHeight, (barWidth-2)*0.4, barHeight * 0.1);
+                }
+                x += barWidth;
+            }
+            canvasCtx.shadowBlur = 0; // Reset
+            
             updateMarquee();
             requestAnimationFrame(renderVisualizer);
         }
@@ -1359,8 +1442,8 @@
         if (qrContainer) {
             new QRCode(qrContainer, {
                 text: '@qrUrl',
-                width: 260,
-                height: 260,
+                width: 320,
+                height: 320,
                 colorDark: '#030712',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.Q
@@ -1440,7 +1523,7 @@
             if (!soundEnabled || !window.speechSynthesis) return;
             try {
                 window.speechSynthesis.cancel(); // cancel current speech
-                const utterance = new SpeechSynthesisUtterance(`${name} dari ${company}`);
+                const utterance = new SpeechSynthesisUtterance(`Selamat datang ${name}`);
                 utterance.lang = 'id-ID';
                 utterance.rate = 0.95;
                 utterance.pitch = 1.0;
@@ -1454,6 +1537,8 @@
         function showToast(item) {
             if (!toastContainer) return Promise.resolve();
             return new Promise((resolve) => {
+                const firstName = (item.nama || '').trim().split(' ')[0];
+                
                 const toast = document.createElement('div');
                 toast.className = 'attendance-toast';
                 toast.innerHTML = `
@@ -1461,7 +1546,7 @@
                         <i class="bi bi-person-check-fill"></i>
                     </div>
                     <div class="toast-role">${escapeHtml(item.jabatan)}</div>
-                    <div class="toast-name">${escapeHtml(item.nama)}</div>
+                    <div class="toast-name">${escapeHtml(firstName)}</div>
                     <div class="toast-company">${escapeHtml(item.companyName)}</div>
                     <div class="toast-progress" style="animation-duration: ${TOAST_DURATION_MS}ms;"></div>
                 `;
@@ -1470,7 +1555,18 @@
                 
                 // Play notification and text-to-speech
                 playChime();
-                speakWelcome(item.nama, item.companyName);
+                speakWelcome(firstName, item.companyName);
+
+                // Confetti Explosion
+                if (typeof confetti === 'function') {
+                    confetti({
+                        particleCount: 150,
+                        spread: 80,
+                        origin: { y: 0.9 }, // Shoot from bottom
+                        colors: ['#38bdf8', '#10b981', '#f8fafc', '#f43f5e', '#f59e0b'],
+                        zIndex: 10000
+                    });
+                }
 
                 setTimeout(() => {
                     toast.classList.add('fade-out');

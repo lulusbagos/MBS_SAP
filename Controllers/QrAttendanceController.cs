@@ -21,7 +21,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet("QrAttendance/Scan/{token}")]
-        public async Task<IActionResult> Scan(string token)
+        public async Task<IActionResult> Scan(string token, [FromQuery] double? lat = null, [FromQuery] double? lng = null)
         {
             ViewData["HideNav"] = null;
             ViewData["HeaderTitle"] = "Scan Absensi";
@@ -131,7 +131,9 @@ namespace MBS_SAP.Controllers
                 Jabatan = jabatan,
                 Perusahaan = perusahaan,
                 ScanAt = DateTime.Now,
-                Source = isLate ? "late" : "qr"
+                Source = isLate ? "late" : "qr",
+                Latitude = lat,
+                Longitude = lng
             };
 
             _context.AttendanceRecords.Add(record);
