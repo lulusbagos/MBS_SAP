@@ -37,6 +37,16 @@ namespace MBS_SAP.Controllers
             return View();
         }
 
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult AccessDenied(string? returnUrl = null)
+        {
+            ViewData["HideHeader"] = true;
+            ViewData["HideNav"] = true;
+            ViewData["ReturnUrl"] = returnUrl;
+            return View();
+        }
+
         [HttpPost]
         public async Task<IActionResult> Login(string nrp, string password, bool rememberMe = false)
         {
@@ -215,14 +225,14 @@ namespace MBS_SAP.Controllers
             var existingAppUser = await _context.AppUsers.FindAsync(nrp);
             if (existingAppUser != null && !string.IsNullOrEmpty(existingAppUser.Role))
             {
-                role = existingAppUser.Role;
+                role = NormalizeRole(existingAppUser.Role, mappedRole);
             }
             else
             {
                 // Jika tidak ada override manual, dan bukan Admin, gunakan role dari tipe perusahaan
                 if (role != "Admin")
                 {
-                    role = mappedRole;
+                    role = NormalizeRole(mappedRole, "Operator");
                 }
             }
 
@@ -261,7 +271,7 @@ namespace MBS_SAP.Controllers
                     Departemen = deptName,
                     Perusahaan = companyName,
                     IdPerusahaan = idPerusahaan,
-                    Role = role,
+                    Role = NormalizeRole(role, "Operator"),
                     LastLogin = DateTime.Now
                 };
                 _context.AppUsers.Add(appUser);
@@ -274,7 +284,7 @@ namespace MBS_SAP.Controllers
                 appUser.IdPerusahaan = idPerusahaan;
                 if (string.IsNullOrEmpty(appUser.Role))
                 {
-                    appUser.Role = role;
+                    appUser.Role = NormalizeRole(role, "Operator");
                 }
                 appUser.LastLogin = DateTime.Now;
                 _context.AppUsers.Update(appUser);
@@ -586,6 +596,23 @@ namespace MBS_SAP.Controllers
             await _context.SaveChangesAsync();
             TempData["SuccessMessage"] = "Password berhasil direset ke default: 123456. Silakan ganti password Anda setelah login berikutnya.";
             return RedirectToAction("Profile");
+        }
+        private static string NormalizeRole(string? role, string fallback)
+        {
+            var value = (role ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return fallback;
+            }
+
+            if (string.Equals(value, "Admin", StringComparison.OrdinalIgnoreCase)) return "Admin";
+            if (string.Equals(value, "Owner", StringComparison.OrdinalIgnoreCase)) return "Owner";
+            if (string.Equals(value, "Maincon", StringComparison.OrdinalIgnoreCase)) return "Maincon";
+            if (string.Equals(value, "Subcon", StringComparison.OrdinalIgnoreCase)) return "Subcon";
+            if (string.Equals(value, "Vendor", StringComparison.OrdinalIgnoreCase)) return "Vendor";
+            if (string.Equals(value, "Operator", StringComparison.OrdinalIgnoreCase)) return "Operator";
+
+            return fallback;
         }
     }
 }

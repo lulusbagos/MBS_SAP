@@ -9,11 +9,6 @@ namespace MBS_SAP.Controllers
     {
         public IActionResult Index()
         {
-            if (User.IsInRole("Admin"))
-            {
-                return Forbid();
-            }
-
             ViewData["HeaderTitle"] = "Scan QR Absensi";
             ViewData["ActiveTab"] = "QrCode";
 

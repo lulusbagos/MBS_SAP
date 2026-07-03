@@ -45,12 +45,30 @@ namespace MBS_SAP.Controllers
                 return RedirectToAction("Index");
             }
 
-            user.Role = role;
+            user.Role = NormalizeRole(role, "Operator");
             _context.AppUsers.Update(user);
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = $"Role {user.Nama} berhasil diubah menjadi {role}. Perubahan berlaku saat user login ulang.";
+            TempData["SuccessMessage"] = $"Role {user.Nama} berhasil diubah menjadi {user.Role}. Perubahan berlaku saat user login ulang.";
             return RedirectToAction("Index");
+        }
+
+        private static string NormalizeRole(string? role, string fallback)
+        {
+            var value = (role ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return fallback;
+            }
+
+            if (string.Equals(value, "Admin", StringComparison.OrdinalIgnoreCase)) return "Admin";
+            if (string.Equals(value, "Owner", StringComparison.OrdinalIgnoreCase)) return "Owner";
+            if (string.Equals(value, "Maincon", StringComparison.OrdinalIgnoreCase)) return "Maincon";
+            if (string.Equals(value, "Subcon", StringComparison.OrdinalIgnoreCase)) return "Subcon";
+            if (string.Equals(value, "Vendor", StringComparison.OrdinalIgnoreCase)) return "Vendor";
+            if (string.Equals(value, "Operator", StringComparison.OrdinalIgnoreCase)) return "Operator";
+
+            return fallback;
         }
     }
 }

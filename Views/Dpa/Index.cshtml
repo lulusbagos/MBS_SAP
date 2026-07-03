@@ -1,7 +1,7 @@
 @model IEnumerable<MBS_SAP.Models.DpaReport>
 @{
     ViewData["Title"] = "Driver Performance Assessment";
-    var isAdmin = ViewBag.IsAdmin as bool? ?? User.IsInRole("Admin");
+    var isAdmin = ViewBag.IsAdmin as bool? ?? string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase);
     var currentUserNik = ViewBag.UserNik as string ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
     var adminSummaries = ViewBag.AdminDriverSummaries as List<MBS_SAP.Controllers.DpaController.DriverAssessmentSummaryViewModel>
         ?? new List<MBS_SAP.Controllers.DpaController.DriverAssessmentSummaryViewModel>();

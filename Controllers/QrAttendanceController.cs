@@ -27,11 +27,6 @@ namespace MBS_SAP.Controllers
             ViewData["HeaderTitle"] = "Scan Absensi";
             ViewData["ActiveTab"] = "QrAttendance";
 
-            if (User.IsInRole("Admin"))
-            {
-                return Forbid();
-            }
-
             var model = new QrAttendanceScanResultViewModel
             {
                 Token = token

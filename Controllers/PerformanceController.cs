@@ -234,7 +234,7 @@ namespace MBS_SAP.Controllers
 
             // Date ranges
             var now = DateTime.Now;
-            var startOfWeek = DateTime.Today.AddDays(-((int)DateTime.Today.DayOfWeek + 6) % 7); // Monday
+            var startOfWeek = DateTime.Today.AddDays(-6); // rolling 7 calendar days (today inclusive)
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
 
             // Submissions query
@@ -869,8 +869,9 @@ namespace MBS_SAP.Controllers
             }
 
             // Hierarchy achievement is hazard-only:
-            // - Weekly: from start of current week
-            // - Monthly: from start of current month
+            // - Weekly: rolling last 7 calendar days (today inclusive)
+            // - Monthly: from day 1 of current month
+            // - YTD: from Jan 1 of current year
             var hierarchyWeeklyHazards = await _context.HazardReports
                 .Where(h => !h.IsDeleted && h.CreatedAt >= startOfWeek)
                 .GroupBy(h => h.PerusahaanId)
@@ -883,6 +884,12 @@ namespace MBS_SAP.Controllers
                 .Select(g => new { CompId = g.Key, Count = g.Count() })
                 .ToListAsync();
 
+            var hierarchyYtdHazards = await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.CreatedAt >= startOfYear)
+                .GroupBy(h => h.PerusahaanId)
+                .Select(g => new { CompId = g.Key, Count = g.Count() })
+                .ToListAsync();
+
             var weeklyHazardByCompanyId = hierarchyWeeklyHazards
                 .Where(x => x.CompId.HasValue)
                 .ToDictionary(x => x.CompId!.Value, x => x.Count);
@@ -890,6 +897,91 @@ namespace MBS_SAP.Controllers
             var monthlyHazardByCompanyId = hierarchyMonthlyHazards
                 .Where(x => x.CompId.HasValue)
                 .ToDictionary(x => x.CompId!.Value, x => x.Count);
+
+            var ytdHazardByCompanyId = hierarchyYtdHazards
+                .Where(x => x.CompId.HasValue)
+                .ToDictionary(x => x.CompId!.Value, x => x.Count);
+
+            var elapsedWeeksYtd = Math.Max(1, ((DateTime.Today - startOfYear.Date).Days / 7) + 1);
+
+            var departmentNameById = await _context.Departemens
+                .AsNoTracking()
+                .ToDictionaryAsync(d => d.DepartemenId, d => string.IsNullOrWhiteSpace(d.NamaDepartemen) ? "General" : d.NamaDepartemen!);
+
+            var activeNikByCompanyDept = new Dictionary<int, Dictionary<string, HashSet<string>>>();
+            foreach (var k in allKaryawans)
+            {
+                if (k.IdPerusahaan <= 0)
+                {
+                    continue;
+                }
+
+                var nik = (k.NoNik ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(nik))
+                {
+                    continue;
+                }
+
+                var deptName = k.IdDepartemen.HasValue && departmentNameById.TryGetValue(k.IdDepartemen.Value, out var dName)
+                    ? dName
+                    : "General";
+
+                if (!activeNikByCompanyDept.TryGetValue(k.IdPerusahaan, out var deptMap))
+                {
+                    deptMap = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+                    activeNikByCompanyDept[k.IdPerusahaan] = deptMap;
+                }
+
+                if (!deptMap.TryGetValue(deptName, out var nikSet))
+                {
+                    nikSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    deptMap[deptName] = nikSet;
+                }
+
+                nikSet.Add(nik);
+            }
+
+            var hierarchyHazardRows = await _context.HazardReports
+                .AsNoTracking()
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.CreatedAt >= startOfYear)
+                .Select(h => new { CompanyId = h.PerusahaanId!.Value, h.Nik, h.CreatedAt })
+                .ToListAsync();
+
+            var ytdHazardsByCompanyNik = new Dictionary<int, Dictionary<string, int>>();
+            var mtdHazardsByCompanyNik = new Dictionary<int, Dictionary<string, int>>();
+            var weekHazardsByCompanyNik = new Dictionary<int, Dictionary<string, int>>();
+
+            void IncrementHazard(Dictionary<int, Dictionary<string, int>> bucket, int companyId, string nik)
+            {
+                if (!bucket.TryGetValue(companyId, out var nikMap))
+                {
+                    nikMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                    bucket[companyId] = nikMap;
+                }
+
+                nikMap[nik] = nikMap.TryGetValue(nik, out var current) ? current + 1 : 1;
+            }
+
+            foreach (var row in hierarchyHazardRows)
+            {
+                var nik = (row.Nik ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(nik))
+                {
+                    continue;
+                }
+
+                IncrementHazard(ytdHazardsByCompanyNik, row.CompanyId, nik);
+
+                if (row.CreatedAt >= startOfMonth)
+                {
+                    IncrementHazard(mtdHazardsByCompanyNik, row.CompanyId, nik);
+                }
+
+                if (row.CreatedAt >= startOfWeek)
+                {
+                    IncrementHazard(weekHazardsByCompanyNik, row.CompanyId, nik);
+                }
+            }
 
             var nodeMap = new Dictionary<int, CompanyHierarchyNode>();
             foreach (var company in activeCompanyNameById.OrderBy(x => x.Value))
@@ -901,9 +993,13 @@ namespace MBS_SAP.Controllers
 
                 int weeklyHazardCount = weeklyHazardByCompanyId.TryGetValue(hierarchyCompanyId, out var wh) ? wh : 0;
                 int monthlyHazardCount = monthlyHazardByCompanyId.TryGetValue(hierarchyCompanyId, out var mh) ? mh : 0;
+                int ytdHazardCount = ytdHazardByCompanyId.TryGetValue(hierarchyCompanyId, out var yh) ? yh : 0;
                 int hierarchyWeeklyTarget = empCount * 1;
                 int hierarchyMonthlyTarget = empCount * 4;
+                int hierarchyYtdTarget = empCount * elapsedWeeksYtd;
+                double weeklyRate = hierarchyWeeklyTarget > 0 ? (double)weeklyHazardCount / hierarchyWeeklyTarget * 100.0 : 0.0;
                 double monthlyRate = hierarchyMonthlyTarget > 0 ? (double)monthlyHazardCount / hierarchyMonthlyTarget * 100.0 : 0.0;
+                double ytdRate = hierarchyYtdTarget > 0 ? (double)ytdHazardCount / hierarchyYtdTarget * 100.0 : 0.0;
 
                 var node = new CompanyHierarchyNode
                 {
@@ -915,8 +1011,69 @@ namespace MBS_SAP.Controllers
                     OwnTarget = hierarchyMonthlyTarget,
                     OwnAchievementRate = Math.Round(monthlyRate, 1),
                     OwnWeeklyHazards = weeklyHazardCount,
-                    OwnWeeklyTarget = hierarchyWeeklyTarget
+                    OwnWeeklyTarget = hierarchyWeeklyTarget,
+                    OwnYtdHazards = ytdHazardCount,
+                    OwnYtdTarget = hierarchyYtdTarget,
+                    OwnWeeklyAchievementRate = Math.Round(weeklyRate, 1),
+                    OwnMonthlyAchievementRate = Math.Round(monthlyRate, 1),
+                    OwnYtdAchievementRate = Math.Round(ytdRate, 1)
                 };
+
+                var departmentAchievements = new List<DepartmentAchievementViewModel>();
+                if (activeNikByCompanyDept.TryGetValue(hierarchyCompanyId, out var deptNikMap))
+                {
+                    foreach (var dept in deptNikMap.OrderBy(x => x.Key))
+                    {
+                        var deptEmployeeCount = dept.Value.Count;
+                        if (deptEmployeeCount <= 0)
+                        {
+                            continue;
+                        }
+
+                        int deptYtdHazards = 0;
+                        int deptMtdHazards = 0;
+                        int deptWeekHazards = 0;
+
+                        if (ytdHazardsByCompanyNik.TryGetValue(hierarchyCompanyId, out var ytdNikMap))
+                        {
+                            foreach (var nik in dept.Value)
+                            {
+                                if (ytdNikMap.TryGetValue(nik, out var value)) deptYtdHazards += value;
+                            }
+                        }
+
+                        if (mtdHazardsByCompanyNik.TryGetValue(hierarchyCompanyId, out var mtdNikMap))
+                        {
+                            foreach (var nik in dept.Value)
+                            {
+                                if (mtdNikMap.TryGetValue(nik, out var value)) deptMtdHazards += value;
+                            }
+                        }
+
+                        if (weekHazardsByCompanyNik.TryGetValue(hierarchyCompanyId, out var weekNikMap))
+                        {
+                            foreach (var nik in dept.Value)
+                            {
+                                if (weekNikMap.TryGetValue(nik, out var value)) deptWeekHazards += value;
+                            }
+                        }
+
+                        var deptYtdTarget = deptEmployeeCount * elapsedWeeksYtd;
+                        var deptMtdTarget = deptEmployeeCount * 4;
+                        var deptWeekTarget = deptEmployeeCount * 1;
+
+                        departmentAchievements.Add(new DepartmentAchievementViewModel
+                        {
+                            DepartmentName = dept.Key,
+                            EmployeeCount = deptEmployeeCount,
+                            YtdAchievementRate = deptYtdTarget > 0 ? Math.Round((double)deptYtdHazards / deptYtdTarget * 100.0, 1) : 0,
+                            MtdAchievementRate = deptMtdTarget > 0 ? Math.Round((double)deptMtdHazards / deptMtdTarget * 100.0, 1) : 0,
+                            WeeklyAchievementRate = deptWeekTarget > 0 ? Math.Round((double)deptWeekHazards / deptWeekTarget * 100.0, 1) : 0
+                        });
+                    }
+                }
+
+                node.DepartmentAchievements = departmentAchievements;
                 nodeMap[hierarchyCompanyId] = node;
             }
 
@@ -965,6 +1122,8 @@ namespace MBS_SAP.Controllers
                 node.CumulativeTarget = node.OwnTarget;
                 node.CumulativeWeeklyHazards = node.OwnWeeklyHazards;
                 node.CumulativeWeeklyTarget = node.OwnWeeklyTarget;
+                node.CumulativeYtdHazards = node.OwnYtdHazards;
+                node.CumulativeYtdTarget = node.OwnYtdTarget;
 
                 foreach (var child in node.Children)
                 {
@@ -974,10 +1133,24 @@ namespace MBS_SAP.Controllers
                     node.CumulativeTarget += child.CumulativeTarget;
                     node.CumulativeWeeklyHazards += child.CumulativeWeeklyHazards;
                     node.CumulativeWeeklyTarget += child.CumulativeWeeklyTarget;
+                    node.CumulativeYtdHazards += child.CumulativeYtdHazards;
+                    node.CumulativeYtdTarget += child.CumulativeYtdTarget;
                 }
 
-                node.CumulativeAchievementRate = node.CumulativeTarget > 0 
+                node.CumulativeAchievementRate = node.CumulativeTarget > 0
                     ? Math.Round((double)node.CumulativeSubmissions / node.CumulativeTarget * 100.0, 1) 
+                    : 0.0;
+
+                node.CumulativeMonthlyAchievementRate = node.CumulativeTarget > 0
+                    ? Math.Round((double)node.CumulativeSubmissions / node.CumulativeTarget * 100.0, 1)
+                    : 0.0;
+
+                node.CumulativeWeeklyAchievementRate = node.CumulativeWeeklyTarget > 0
+                    ? Math.Round((double)node.CumulativeWeeklyHazards / node.CumulativeWeeklyTarget * 100.0, 1)
+                    : 0.0;
+
+                node.CumulativeYtdAchievementRate = node.CumulativeYtdTarget > 0
+                    ? Math.Round((double)node.CumulativeYtdHazards / node.CumulativeYtdTarget * 100.0, 1)
                     : 0.0;
 
                 node.Children = node.Children.OrderBy(c => c.CompanyName).ToList();
@@ -1233,7 +1406,7 @@ namespace MBS_SAP.Controllers
 
             // Date ranges
             var now = DateTime.Now;
-            var startOfWeek = DateTime.Today.AddDays(-((int)DateTime.Today.DayOfWeek + 6) % 7); // Monday
+            var startOfWeek = DateTime.Today.AddDays(-6); // rolling 7 calendar days (today inclusive)
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
             var targetStart = range == "month" ? startOfMonth : startOfWeek;
 
@@ -1604,6 +1777,11 @@ namespace MBS_SAP.Controllers
         public double OwnAchievementRate { get; set; }
         public int OwnWeeklyHazards { get; set; }
         public int OwnWeeklyTarget { get; set; }
+        public int OwnYtdHazards { get; set; }
+        public int OwnYtdTarget { get; set; }
+        public double OwnWeeklyAchievementRate { get; set; }
+        public double OwnMonthlyAchievementRate { get; set; }
+        public double OwnYtdAchievementRate { get; set; }
 
         // Cumulative (Group) stats
         public int CumulativeEmployees { get; set; }
@@ -1612,7 +1790,23 @@ namespace MBS_SAP.Controllers
         public double CumulativeAchievementRate { get; set; }
         public int CumulativeWeeklyHazards { get; set; }
         public int CumulativeWeeklyTarget { get; set; }
+        public int CumulativeYtdHazards { get; set; }
+        public int CumulativeYtdTarget { get; set; }
+        public double CumulativeWeeklyAchievementRate { get; set; }
+        public double CumulativeMonthlyAchievementRate { get; set; }
+        public double CumulativeYtdAchievementRate { get; set; }
+
+        public List<DepartmentAchievementViewModel> DepartmentAchievements { get; set; } = new List<DepartmentAchievementViewModel>();
 
         public List<CompanyHierarchyNode> Children { get; set; } = new List<CompanyHierarchyNode>();
+    }
+
+    public class DepartmentAchievementViewModel
+    {
+        public string DepartmentName { get; set; } = string.Empty;
+        public int EmployeeCount { get; set; }
+        public double YtdAchievementRate { get; set; }
+        public double MtdAchievementRate { get; set; }
+        public double WeeklyAchievementRate { get; set; }
     }
 }

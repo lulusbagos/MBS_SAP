@@ -225,7 +225,8 @@
 
             @if (!string.IsNullOrEmpty(item.FotoUrl))
             {
-                if (User.IsInRole("Admin"))
+                var isAdminUser = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase);
+                if (isAdminUser)
                 {
                     <div class="feed-image-container">
                         <img src="@item.FotoUrl" class="feed-image" alt="Foto Laporan" />

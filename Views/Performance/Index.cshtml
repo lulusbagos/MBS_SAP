@@ -12,7 +12,7 @@
     double myMonthlyProgress = (double)ViewBag.MyTotalMonth / 4.0 * 100.0;
     myMonthlyProgress = Math.Min(myMonthlyProgress, 100.0);
     bool isMyWeekCompliant = ViewBag.MyTotalWeek >= 1;
-    bool canViewGeoPhoto = User.IsInRole("Admin");
+    bool canViewGeoPhoto = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase);
 }
 
 <!-- Leaflet CSS & JS -->
@@ -517,6 +517,24 @@
         line-height: 1;
         box-shadow: 0 1px 4px rgba(15,23,42,0.07);
     }
+    .org-zoom-select {
+        min-width: 76px;
+        height: 30px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #0f172a;
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0 8px;
+        line-height: 1;
+        box-shadow: 0 1px 4px rgba(15,23,42,0.07);
+    }
+    .org-zoom-select:focus {
+        outline: none;
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
     .org-scroll-track {
         flex: 1;
         height: 4px;
@@ -789,8 +807,8 @@
         border-left: var(--oc-line-w) solid var(--oc-line);
     }
     .org-node-card {
-        width: 200px;
-        min-height: 88px;
+        width: 228px;
+        min-height: 108px;
         background: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: var(--oc-radius);
@@ -820,8 +838,8 @@
     .org-node-card-inner {
         display: flex;
         align-items: flex-start;
-        gap: 8px;
-        padding: 9px 10px 10px;
+        gap: 10px;
+        padding: 12px 12px 12px;
         flex: 1;
     }
     .org-node.has-children > .org-node-card::after {
@@ -834,27 +852,27 @@
         border-left: var(--oc-line-w) solid var(--oc-line);
     }
     .org-node[data-level="0"] > .org-node-card {
-        width: 230px;
+        width: 264px;
     }
     .org-node[data-level="1"] > .org-node-card {
-        width: 206px;
+        width: 240px;
     }
     .org-node[data-level="2"] > .org-node-card {
-        width: 192px;
+        width: 224px;
     }
     .org-node[data-level="3"] > .org-node-card,
     .org-node[data-level="4"] > .org-node-card,
     .org-node[data-level="5"] > .org-node-card {
-        width: 178px;
-        min-height: 82px;
+        width: 208px;
+        min-height: 102px;
     }
     .org-chart-tree ul.org-children-compact > .org-node > .org-node-card {
-        width: 178px;
-        min-height: 82px;
+        width: 198px;
+        min-height: 98px;
     }
     .org-chart-tree ul.org-children-dense > .org-node > .org-node-card {
-        width: 158px;
-        min-height: 78px;
+        width: 184px;
+        min-height: 94px;
     }
     .org-avatar {
         width: 32px;
@@ -877,7 +895,7 @@
     }
     .org-node-text { flex: 1; min-width: 0; }
     .org-node-title {
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 800;
         color: #0f172a;
         line-height: 1.35;
@@ -887,7 +905,7 @@
         font-size: 10px;
     }
     .org-node-meta {
-        font-size: 9.5px;
+        font-size: 10px;
         color: #64748b;
         line-height: 1.4;
         margin-top: 3px;
@@ -905,13 +923,34 @@
     .org-node-tag {
         display: inline-flex;
         align-items: center;
-        font-size: 9px;
+        font-size: 10px;
         font-weight: 700;
         color: #0369a1;
         background: #e0f2fe;
         border: 1px solid #bae6fd;
         border-radius: 6px;
         padding: 2px 6px;
+    }
+    .org-node-menu-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        border: 1px solid #dbeafe;
+        background: #f8fafc;
+        color: #334155;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 2;
+    }
+    .org-node-menu-btn:hover {
+        background: #e0f2fe;
+        color: #0369a1;
+        border-color: #93c5fd;
     }
     /* Achievement color scale: 0% merah -> 100% hijau */
     .org-node .org-node-tag {
@@ -1213,19 +1252,19 @@
             height: 10px;
         }
         .org-node-card {
-            width: 164px;
-            min-height: 84px;
+            width: 186px;
+            min-height: 102px;
             padding: 8px;
         }
         .org-node[data-level="0"] > .org-node-card {
-            width: 182px;
+            width: 206px;
         }
         .org-node[data-level="1"] > .org-node-card,
         .org-node[data-level="2"] > .org-node-card,
         .org-node[data-level="3"] > .org-node-card,
         .org-node[data-level="4"] > .org-node-card,
         .org-node[data-level="5"] > .org-node-card {
-            width: 160px;
+            width: 182px;
         }
         .org-node.org-node-matrix > .org-node-card {
             width: 100%;
@@ -1235,8 +1274,89 @@
         }
         .org-chart-tree ul.org-children-compact > .org-node > .org-node-card,
         .org-chart-tree ul.org-children-dense > .org-node > .org-node-card {
-            width: 148px;
+            width: 170px;
         }
+    }
+    .dept-achievement-modal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1100;
+        padding: 16px;
+    }
+    .dept-achievement-modal.show {
+        display: flex;
+    }
+    .dept-achievement-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(2, 6, 23, 0.55);
+    }
+    .dept-achievement-dialog {
+        position: relative;
+        width: min(760px, 100%);
+        max-height: 80vh;
+        overflow: auto;
+        border-radius: 14px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        box-shadow: 0 18px 44px rgba(2, 6, 23, 0.28);
+        z-index: 1;
+    }
+    .dept-achievement-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 16px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .dept-achievement-title {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    .dept-achievement-close {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #f8fafc;
+        color: #334155;
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+    .dept-achievement-close:hover {
+        background: #e2e8f0;
+    }
+    .dept-achievement-body {
+        padding: 14px 16px 16px;
+    }
+    .dept-achievement-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+    .dept-achievement-table th,
+    .dept-achievement-table td {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 8px;
+        text-align: left;
+    }
+    .dept-achievement-table th {
+        font-weight: 800;
+        color: #334155;
+        background: #f8fafc;
+        position: sticky;
+        top: 0;
+    }
+    .dept-achievement-rate {
+        font-weight: 800;
+        color: #0f766e;
     }
 
     /* Safety Pyramid Styles */
@@ -2253,16 +2373,22 @@
             var tierName = GetTierName(level);
             var tierKey = GetTierKey(level);
             var achievementRateCss = GetAchievementRateCss(node.CumulativeAchievementRate);
+            var departmentJson = System.Text.Json.JsonSerializer.Serialize(node.DepartmentAchievements ?? new List<MBS_SAP.Controllers.DepartmentAchievementViewModel>());
 
-            <li class="org-node org-node-matrix" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup" style="--ach-rate:@achievementRateCss;">
+            <li class="org-node org-node-matrix" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup" data-dept-achievements="@departmentJson" style="--ach-rate:@achievementRateCss;">
                 <div class="org-node-card">
+                    <button type="button" class="org-node-menu-btn" title="Lihat pencapaian per departemen" aria-label="Lihat pencapaian per departemen">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
                     <div class="org-node-card-inner">
                         <div class="org-avatar"><i class="bi bi-building"></i></div>
                         <div class="org-node-text">
                             <div class="org-node-title">@node.CompanyName</div>
-                            <div class="org-node-meta">Bulan @node.CumulativeSubmissions/@node.CumulativeTarget Hazard | Minggu @node.CumulativeWeeklyHazards/@node.CumulativeWeeklyTarget</div>
+                            <div class="org-node-meta">Persentase pencapaian hazard</div>
                             <div class="org-node-badges">
-                                <span class="org-node-tag">@($"{node.CumulativeAchievementRate:0.#}%")</span>
+                                <span class="org-node-tag">@($"YTD {node.CumulativeYtdAchievementRate:0.#}%")</span>
+                                <span class="org-node-tag">@($"MTD {node.CumulativeMonthlyAchievementRate:0.#}%")</span>
+                                <span class="org-node-tag">@($"WEEK {node.CumulativeWeeklyAchievementRate:0.#}%")</span>
                                 <span class="org-level-pill">@tierName</span>
                             </div>
                         </div>
@@ -2277,16 +2403,22 @@
             var tierKey = GetTierKey(level);
             var tierLabel = "MAINCON L2";
             var achievementRateCss = GetAchievementRateCss(mainconNode.CumulativeAchievementRate);
+            var departmentJson = System.Text.Json.JsonSerializer.Serialize(mainconNode.DepartmentAchievements ?? new List<MBS_SAP.Controllers.DepartmentAchievementViewModel>());
 
-            <li class="org-node org-node-matrix org-secondary-branch @(hasChildren ? "has-children" : string.Empty)" data-company-name="@mainconNode.CompanyName" data-company-id="@mainconNode.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="secondary" style="--ach-rate:@achievementRateCss;">
+            <li class="org-node org-node-matrix org-secondary-branch @(hasChildren ? "has-children" : string.Empty)" data-company-name="@mainconNode.CompanyName" data-company-id="@mainconNode.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="secondary" data-dept-achievements="@departmentJson" style="--ach-rate:@achievementRateCss;">
                 <div class="org-node-card">
+                    <button type="button" class="org-node-menu-btn" title="Lihat pencapaian per departemen" aria-label="Lihat pencapaian per departemen">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
                     <div class="org-node-card-inner">
                         <div class="org-avatar"><i class="bi bi-building"></i></div>
                         <div class="org-node-text">
                             <div class="org-node-title">@mainconNode.CompanyName</div>
-                            <div class="org-node-meta">Bulan @mainconNode.CumulativeSubmissions/@mainconNode.CumulativeTarget Hazard | Minggu @mainconNode.CumulativeWeeklyHazards/@mainconNode.CumulativeWeeklyTarget</div>
+                            <div class="org-node-meta">Persentase pencapaian hazard</div>
                             <div class="org-node-badges">
-                                <span class="org-node-tag">@($"{mainconNode.CumulativeAchievementRate:0.#}%")</span>
+                                <span class="org-node-tag">@($"YTD {mainconNode.CumulativeYtdAchievementRate:0.#}%")</span>
+                                <span class="org-node-tag">@($"MTD {mainconNode.CumulativeMonthlyAchievementRate:0.#}%")</span>
+                                <span class="org-node-tag">@($"WEEK {mainconNode.CumulativeWeeklyAchievementRate:0.#}%")</span>
                                 <span class="org-level-pill">@tierLabel</span>
                             </div>
                         </div>
@@ -2318,16 +2450,22 @@
             var mainconGroup = isMainconLevel ? (isPrimaryMaincon ? "primary" : "secondary") : inheritedMainconGroup;
             var childContainerClass = GetChildContainerClass(childCount);
             var achievementRateCss = GetAchievementRateCss(node.CumulativeAchievementRate);
+            var departmentJson = System.Text.Json.JsonSerializer.Serialize(node.DepartmentAchievements ?? new List<MBS_SAP.Controllers.DepartmentAchievementViewModel>());
 
-            <li class="org-node @(hasChildren ? "has-children" : string.Empty)" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup" style="--ach-rate:@achievementRateCss;">
+            <li class="org-node @(hasChildren ? "has-children" : string.Empty)" data-company-name="@node.CompanyName" data-company-id="@node.CompanyId" data-level="@level" data-tier="@tierKey" data-maincon-group="@mainconGroup" data-dept-achievements="@departmentJson" style="--ach-rate:@achievementRateCss;">
                 <div class="org-node-card">
+                    <button type="button" class="org-node-menu-btn" title="Lihat pencapaian per departemen" aria-label="Lihat pencapaian per departemen">
+                        <i class="bi bi-three-dots"></i>
+                    </button>
                     <div class="org-node-card-inner">
                         <div class="org-avatar"><i class="bi @(level == 0 ? "bi-building-fill" : (hasChildren ? "bi-building" : "bi-building"))"></i></div>
                         <div class="org-node-text">
                             <div class="org-node-title">@node.CompanyName</div>
-                            <div class="org-node-meta">Bulan @node.CumulativeSubmissions/@node.CumulativeTarget Hazard | Minggu @node.CumulativeWeeklyHazards/@node.CumulativeWeeklyTarget</div>
+                            <div class="org-node-meta">Persentase pencapaian hazard</div>
                             <div class="org-node-badges">
-                                <span class="org-node-tag">@($"{node.CumulativeAchievementRate:0.#}%")</span>
+                                <span class="org-node-tag">@($"YTD {node.CumulativeYtdAchievementRate:0.#}%")</span>
+                                <span class="org-node-tag">@($"MTD {node.CumulativeMonthlyAchievementRate:0.#}%")</span>
+                                <span class="org-node-tag">@($"WEEK {node.CumulativeWeeklyAchievementRate:0.#}%")</span>
                                 <span class="org-level-pill">@tierName</span>
                             </div>
                         </div>
@@ -2426,6 +2564,17 @@
                             <div class="org-zoom-controls" aria-label="Kontrol zoom hirarki">
                                 <button type="button" class="org-scroll-btn" id="orgZoomOut" title="Zoom out"><i class="bi bi-zoom-out"></i></button>
                                 <span class="org-zoom-value" id="orgZoomValue">100%</span>
+                                <select id="orgZoomPreset" class="org-zoom-select" title="Pilih zoom">
+                                    <option value="1">100%</option>
+                                    <option value="0.9">90%</option>
+                                    <option value="0.8">80%</option>
+                                    <option value="0.7">70%</option>
+                                    <option value="0.6">60%</option>
+                                    <option value="0.5">50%</option>
+                                    <option value="0.4">40%</option>
+                                    <option value="0.3">30%</option>
+                                    <option value="0.2">20%</option>
+                                </select>
                                 <button type="button" class="org-scroll-btn" id="orgZoomIn" title="Zoom in"><i class="bi bi-zoom-in"></i></button>
                                 <button type="button" class="org-scroll-btn" id="orgZoomReset" title="Reset zoom"><i class="bi bi-arrow-counterclockwise"></i></button>
                             </div>
@@ -2437,6 +2586,36 @@
                                     RenderOrgNode(root);
                                 }
                             </ul>
+                        </div>
+                    </div>
+
+                    <div class="dept-achievement-modal" id="deptAchievementModal" aria-hidden="true">
+                        <div class="dept-achievement-backdrop" data-dept-close="true"></div>
+                        <div class="dept-achievement-dialog" role="dialog" aria-modal="true" aria-labelledby="deptAchievementTitle">
+                            <div class="dept-achievement-header">
+                                <h6 class="dept-achievement-title" id="deptAchievementTitle">Pencapaian Per Departemen</h6>
+                                <button type="button" class="dept-achievement-close" id="deptAchievementClose" aria-label="Tutup">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div class="dept-achievement-body">
+                                <div class="table-responsive">
+                                    <table class="dept-achievement-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Departemen</th>
+                                                <th>Jumlah Karyawan</th>
+                                                <th>YTD</th>
+                                                <th>MTD</th>
+                                                <th>WEEK</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="deptAchievementRows">
+                                            <tr><td colspan="5" class="text-center text-muted">Belum ada data departemen.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 }
@@ -2497,6 +2676,59 @@
             return;
         }
 
+        const deptModal = document.getElementById('deptAchievementModal');
+        const deptRows = document.getElementById('deptAchievementRows');
+        const deptTitle = document.getElementById('deptAchievementTitle');
+        const deptCloseBtn = document.getElementById('deptAchievementClose');
+
+        function closeDeptModal() {
+            if (!deptModal) return;
+            deptModal.classList.remove('show');
+            deptModal.setAttribute('aria-hidden', 'true');
+        }
+
+        function openDeptModal(companyName, deptData) {
+            if (!deptModal || !deptRows || !deptTitle) return;
+
+            deptTitle.textContent = 'Pencapaian Per Departemen - ' + (companyName || 'Perusahaan');
+
+            if (!Array.isArray(deptData) || deptData.length === 0) {
+                deptRows.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Belum ada data departemen.</td></tr>';
+            } else {
+                deptRows.innerHTML = deptData.map(function (item) {
+                    const deptName = String(item.departmentName || item.DepartmentName || '-');
+                    const employeeCount = Number(item.employeeCount || item.EmployeeCount || 0);
+                    const ytd = Number(item.ytdAchievementRate || item.YtdAchievementRate || 0).toFixed(1);
+                    const mtd = Number(item.mtdAchievementRate || item.MtdAchievementRate || 0).toFixed(1);
+                    const week = Number(item.weeklyAchievementRate || item.WeeklyAchievementRate || 0).toFixed(1);
+
+                    return '<tr>' +
+                        '<td>' + deptName + '</td>' +
+                        '<td>' + employeeCount + '</td>' +
+                        '<td class="dept-achievement-rate">' + ytd + '%</td>' +
+                        '<td class="dept-achievement-rate">' + mtd + '%</td>' +
+                        '<td class="dept-achievement-rate">' + week + '%</td>' +
+                        '</tr>';
+                }).join('');
+            }
+
+            deptModal.classList.add('show');
+            deptModal.setAttribute('aria-hidden', 'false');
+        }
+
+        deptCloseBtn?.addEventListener('click', closeDeptModal);
+        deptModal?.addEventListener('click', function (e) {
+            const target = e.target;
+            if (target && target.getAttribute && target.getAttribute('data-dept-close') === 'true') {
+                closeDeptModal();
+            }
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeDeptModal();
+            }
+        });
+
         const searchInput = document.getElementById('hierarchySearchInput');
         const modeButtons = Array.from(document.querySelectorAll('#hierarchyModeToggle .hierarchy-mode-btn'));
         let currentMode = 'all';
@@ -2538,6 +2770,33 @@
             });
         }
 
+        treeRoot.addEventListener('click', function (e) {
+            const trigger = e.target.closest('.org-node-menu-btn');
+            if (!trigger) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const nodeEl = trigger.closest('li.org-node');
+            if (!nodeEl) {
+                return;
+            }
+
+            const companyName = nodeEl.dataset.companyName || 'Perusahaan';
+            const raw = nodeEl.dataset.deptAchievements || '[]';
+            let parsed = [];
+
+            try {
+                parsed = JSON.parse(raw);
+            } catch (_) {
+                parsed = [];
+            }
+
+            openDeptModal(companyName, parsed);
+        });
+
         searchInput?.addEventListener('input', function (e) {
             updateHierarchyView(e.target.value);
         });
@@ -2564,14 +2823,18 @@
         const zoomOutBtn = document.getElementById('orgZoomOut');
         const zoomResetBtn = document.getElementById('orgZoomReset');
         const zoomValueEl = document.getElementById('orgZoomValue');
-        const ZOOM_MIN = 0.6;
-        const ZOOM_MAX = 1.8;
+        const zoomPresetEl = document.getElementById('orgZoomPreset');
+        const ZOOM_MIN = 0.2;
+        const ZOOM_MAX = 1.0;
         const ZOOM_STEP = 0.1;
         let currentZoom = 1;
 
         function updateZoomLabel() {
             if (!zoomValueEl) return;
             zoomValueEl.textContent = Math.round(currentZoom * 100) + '%';
+            if (zoomPresetEl) {
+                zoomPresetEl.value = currentZoom.toFixed(1).replace(/\.0$/, '');
+            }
         }
 
         function setZoom(nextZoom, keepCenter = true) {
@@ -2631,6 +2894,12 @@
         zoomInBtn?.addEventListener('click', function () { setZoom(currentZoom + ZOOM_STEP); });
         zoomOutBtn?.addEventListener('click', function () { setZoom(currentZoom - ZOOM_STEP); });
         zoomResetBtn?.addEventListener('click', function () { setZoom(1, false); });
+        zoomPresetEl?.addEventListener('change', function () {
+            const selected = parseFloat(zoomPresetEl.value);
+            if (Number.isFinite(selected)) {
+                setZoom(selected);
+            }
+        });
 
         wrapper?.addEventListener('wheel', function (e) {
             if (!e.ctrlKey) return;
