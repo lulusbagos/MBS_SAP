@@ -1495,8 +1495,8 @@
                 gain1.connect(ctx.destination);
                 osc1.type = 'sine';
                 osc1.frequency.setValueAtTime(659.25, ctx.currentTime);
-                gain1.gain.setValueAtTime(0.1, ctx.currentTime);
-                gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                gain1.gain.setValueAtTime(0.04, ctx.currentTime); // Lowered volume
+                gain1.gain.exponentialRampToValueAtTime(0.005, ctx.currentTime + 0.3);
                 osc1.start();
                 osc1.stop(ctx.currentTime + 0.3);
 
@@ -1508,8 +1508,8 @@
                     gain2.connect(ctx.destination);
                     osc2.type = 'sine';
                     osc2.frequency.setValueAtTime(880.00, ctx.currentTime);
-                    gain2.gain.setValueAtTime(0.12, ctx.currentTime);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                    gain2.gain.setValueAtTime(0.05, ctx.currentTime); // Lowered volume
+                    gain2.gain.exponentialRampToValueAtTime(0.005, ctx.currentTime + 0.4);
                     osc2.start();
                     osc2.stop(ctx.currentTime + 0.4);
                 }, 100);
@@ -1527,6 +1527,7 @@
                 utterance.lang = 'id-ID';
                 utterance.rate = 0.95;
                 utterance.pitch = 1.0;
+                utterance.volume = 0.4; // Softer volume (default is 1.0)
                 window.speechSynthesis.speak(utterance);
             } catch (e) {
                 console.warn("Speech synthesis failed:", e);
@@ -1633,10 +1634,12 @@
             
             let scrollDirection = 1; // 1 = down, -1 = up
             const speed = 0.4; // Pixels per frame
+            let currentScroll = 0;
             
             function step(timestamp) {
                 if (el.scrollHeight > el.clientHeight) {
-                    el.scrollTop += scrollDirection * speed;
+                    currentScroll += scrollDirection * speed;
+                    el.scrollTop = currentScroll;
                     
                     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1) {
                         scrollDirection = -1;
@@ -1645,6 +1648,7 @@
                     }
                 } else {
                     el.scrollTop = 0;
+                    currentScroll = 0;
                 }
                 requestAnimationFrame(step);
             }
