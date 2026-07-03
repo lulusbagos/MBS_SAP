@@ -252,8 +252,13 @@ namespace MBS_SAP.Controllers
                 var userProf = overrides.FirstOrDefault(o => o.Nrp == item.Nik);
                 item.UserProfilePic = userProf?.ProfilePicture ?? "/images/default-avatar.png";
             }
-
-            var sortedFeed = feed.OrderByDescending(f => f.CreatedAt).Take(50).ToList();
+            
+            // Filter masa depan dan urutkan
+            var maxAllowedTime = System.DateTime.Now.AddMinutes(5);
+            var sortedFeed = feed.Where(f => f.CreatedAt <= maxAllowedTime)
+                                 .OrderByDescending(f => f.CreatedAt)
+                                 .Take(30).ToList();
+            
             return Json(sortedFeed);
         }
 

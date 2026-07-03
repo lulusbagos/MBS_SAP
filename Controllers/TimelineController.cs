@@ -54,7 +54,8 @@ namespace MBS_SAP.Controllers
                 {
                     var baseDate = datePart.Date;
                     var candidate = baseDate + (timePart ?? System.TimeSpan.Zero);
-                    return candidate > fallback ? candidate : fallback;
+                    var maxAllowed = System.DateTime.Now.AddDays(1);
+                    return candidate > maxAllowed ? fallback : (candidate > fallback ? candidate : fallback);
                 }
                 catch
                 {
@@ -93,25 +94,25 @@ namespace MBS_SAP.Controllers
             var sourceTake = System.Math.Max(200, skip + take + 120);
 
             var hazards = await _context.HazardReports.Where(x => !x.IsDeleted)
-                .OrderByDescending(x => x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .OrderByDescending(x => x.CreatedAt)
                 .Take(sourceTake).ToListAsync();
             var inspections = await _context.Inspections.Where(x => !x.IsDeleted)
-                .OrderByDescending(x => x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .OrderByDescending(x => x.CreatedAt)
                 .Take(sourceTake).ToListAsync();
             var actionPlans = await _context.ActionPlans.Where(x => !x.IsDeleted)
-                .OrderByDescending(x => x.TanggalPerbaikan ?? x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .OrderByDescending(x => x.CreatedAt)
                 .Take(sourceTake).ToListAsync();
             var safetyTalks = await _context.SafetyTalks.Where(x => !x.IsDeleted)
-                .OrderByDescending(x => x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .OrderByDescending(x => x.CreatedAt)
                 .Take(sourceTake).ToListAsync();
             var p5ms = await _context.P5ms.Where(x => !x.IsDeleted)
-                .OrderByDescending(x => x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .OrderByDescending(x => x.CreatedAt)
                 .Take(sourceTake).ToListAsync();
             var observations = await _context.Observations.Where(x => !x.IsDeleted)
-                .OrderByDescending(x => x.Date).ThenByDescending(x => x.CreatedAt)
+                .OrderByDescending(x => x.CreatedAt)
                 .Take(sourceTake).ToListAsync();
             var p2hReports = await _context.P2hReports.Where(x => !x.IsDeleted)
-                .OrderByDescending(x => x.Tanggal).ThenByDescending(x => x.Waktu).ThenByDescending(x => x.CreatedAt)
+                .OrderByDescending(x => x.CreatedAt)
                 .Take(sourceTake).ToListAsync();
 
             hazards = DeduplicateRecent(
@@ -373,7 +374,8 @@ namespace MBS_SAP.Controllers
                 });
             }
 
-            timelineList = timelineList.OrderByDescending(x => x.CreatedAt).ToList();
+            var nowLimit = System.DateTime.Now.AddHours(24);
+            timelineList = timelineList.Where(x => x.CreatedAt <= nowLimit && x.Tanggal <= nowLimit).OrderByDescending(x => x.CreatedAt).ToList();
             var totalCount = timelineList.Count;
             var pagedTimeline = timelineList.Skip(skip).Take(take).ToList();
 

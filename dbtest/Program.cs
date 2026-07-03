@@ -1,48 +1,35 @@
-using Npgsql;
+using Microsoft.Data.SqlClient;
+using System;
 
-var connStr = "Host=172.16.1.96;Port=5432;Database=sysinteg_indexsafe2;Username=postgres;Password=index.123;";
-
-var views = new[]
-{
-    "vw_actionplandetail",
-    "vw_coachingdetail",
-    "vw_hazardreportdetail",
-    "vw_inspectiondetail",
-    "vw_observationdetail",
-    "vw_p2hdetail",
-    "vw_p5mdetail",
-    "vw_safetytalkdetail"
-};
+var connStr = "Server=172.16.1.93;Database=DB_SAP;User Id=sa;Password=technical.indexim.123;TrustServerCertificate=True;MultipleActiveResultSets=True;";
 
 var sql = @"
-SELECT table_schema, table_name, column_name, data_type, ordinal_position
-FROM information_schema.columns
-WHERE table_schema NOT IN ('information_schema','pg_catalog')
-  AND table_name = ANY (@views)
-ORDER BY table_name, ordinal_position;";
+SELECT TOP 10 * FROM (
+SELECT 'Hazard' as Tipe, Id, Nama, Tanggal, Waktu, created_at, is_deleted FROM tbl_t_hazard_report WHERE Tanggal > '2026-07-03'
+UNION ALL
+SELECT 'Inspection', Id, Nama, Tanggal, Waktu, created_at, is_deleted FROM tbl_t_inspection WHERE Tanggal > '2026-07-03'
+UNION ALL
+SELECT 'ActionPlan', Id, Nama, Tanggal, Waktu, created_at, is_deleted FROM tbl_t_action_plan WHERE Tanggal > '2026-07-03'
+UNION ALL
+SELECT 'SafetyTalk', Id, Nama, Tanggal, Waktu, created_at, is_deleted FROM tbl_t_safety_talk WHERE Tanggal > '2026-07-03'
+UNION ALL
+SELECT 'P5M', Id, Nama, Tanggal, Waktu, created_at, is_deleted FROM tbl_t_p5m WHERE Tanggal > '2026-07-03'
+UNION ALL
+SELECT 'Observation', Id, Nama, Date, Date, created_at, is_deleted FROM tbl_t_observation WHERE Date > '2026-07-03'
+) as AllItems
+WHERE is_deleted = 0
+ORDER BY created_at DESC;
+";
 
-await using var conn = new NpgsqlConnection(connStr);
-await conn.OpenAsync();
+using var conn = new SqlConnection(connStr);
+conn.Open();
 
-await using var cmd = new NpgsqlCommand(sql, conn);
-cmd.Parameters.AddWithValue("views", views);
+using var cmd = new SqlCommand(sql, conn);
+using var reader = cmd.ExecuteReader();
 
-await using var reader = await cmd.ExecuteReaderAsync();
-
-string? current = null;
-while (await reader.ReadAsync())
+while (reader.Read())
 {
-    var viewName = reader.GetString(reader.GetOrdinal("table_name"));
-    var columnName = reader.GetString(reader.GetOrdinal("column_name"));
-    var dataType = reader.GetString(reader.GetOrdinal("data_type"));
-    var position = reader.GetInt32(reader.GetOrdinal("ordinal_position"));
-
-    if (!string.Equals(current, viewName, StringComparison.OrdinalIgnoreCase))
-    {
-        current = viewName;
-        Console.WriteLine();
-        Console.WriteLine($"=== {viewName} ===");
-    }
-
-    Console.WriteLine($"{position,2}. {columnName} ({dataType})");
+    Console.WriteLine($"[{reader["Tipe"]}] ID: {reader["Id"]}, Nama: {reader["Nama"]}, Tanggal: {reader["Tanggal"]:yyyy-MM-dd}, Waktu: {reader["Waktu"]}, CreatedAt: {reader["created_at"]:yyyy-MM-dd HH:mm:ss}");
 }
+
+
