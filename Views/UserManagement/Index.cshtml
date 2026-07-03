@@ -1,6 +1,17 @@
-@model IEnumerable<MBS_SAP.Models.AppUser>
+@model MBS_SAP.Controllers.UserManagementController.UserManagementIndexViewModel
 @{
     ViewData["Title"] = "User Management";
+
+    bool IsRole(string? role, string expected) => string.Equals((role ?? string.Empty).Trim(), expected, StringComparison.OrdinalIgnoreCase);
+    var totalUsersOnPage = Model.Users.Count;
+    var totalUsersFiltered = Model.TotalFilteredUsers;
+    var totalUsersAll = Model.TotalAllUsers;
+    var adminCount = Model.Users.Count(u => IsRole(u.Role, "Admin"));
+    var ownerCount = Model.Users.Count(u => IsRole(u.Role, "Owner"));
+    var mainconCount = Model.Users.Count(u => IsRole(u.Role, "Maincon"));
+    var subconCount = Model.Users.Count(u => IsRole(u.Role, "Subcon"));
+    var vendorCount = Model.Users.Count(u => IsRole(u.Role, "Vendor"));
+    var operatorCount = Model.Users.Count(u => IsRole(u.Role, "Operator") || string.IsNullOrWhiteSpace(u.Role));
 }
 
 <style>
@@ -61,6 +72,29 @@
         padding: 14px 16px;
         margin-bottom: 10px;
     }
+    .paging-btn {
+        min-width: 36px;
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+        color: var(--text-main);
+        font-size: 12px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+    }
+    .paging-btn.active {
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+        color: #fff;
+    }
+    .paging-btn.disabled {
+        opacity: 0.45;
+        pointer-events: none;
+    }
 </style>
 
 <div class="animate-fade-in pb-4">
@@ -94,38 +128,59 @@
     <!-- Stats -->
     <div class="d-flex gap-3 mb-4 flex-wrap">
         <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
-            <div style="font-size: 20px; font-weight: 900; color: var(--color-primary);">@Model.Count()</div>
-            <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Total User</div>
+            <div style="font-size: 20px; font-weight: 900; color: var(--color-primary);">@totalUsersFiltered</div>
+            <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Filtered User</div>
         </div>
         <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
-            <div style="font-size: 20px; font-weight: 900; color: #a855f7;">@Model.Count(u => u.Role == "Admin")</div>
+            <div style="font-size: 20px; font-weight: 900; color: #a855f7;">@adminCount</div>
             <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Admin</div>
         </div>
         <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
-            <div style="font-size: 20px; font-weight: 900; color: #10b981;">@Model.Count(u => u.Role == "Owner")</div>
+            <div style="font-size: 20px; font-weight: 900; color: #10b981;">@ownerCount</div>
             <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Owner</div>
         </div>
         <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
-            <div style="font-size: 20px; font-weight: 900; color: #f59e0b;">@Model.Count(u => u.Role == "Maincon")</div>
+            <div style="font-size: 20px; font-weight: 900; color: #f59e0b;">@mainconCount</div>
             <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Maincon</div>
         </div>
         <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
-            <div style="font-size: 20px; font-weight: 900; color: #3b82f6;">@Model.Count(u => u.Role == "Subcon")</div>
+            <div style="font-size: 20px; font-weight: 900; color: #3b82f6;">@subconCount</div>
             <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Subcon</div>
         </div>
         <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
-            <div style="font-size: 20px; font-weight: 900; color: #9ca3af;">@Model.Count(u => u.Role == "Vendor")</div>
+            <div style="font-size: 20px; font-weight: 900; color: #9ca3af;">@vendorCount</div>
             <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Vendor</div>
         </div>
         <div class="card-sap flex-fill text-center p-3 mb-0 border-0" style="border-radius: 14px; min-width: 80px;">
-            <div style="font-size: 20px; font-weight: 900; color: #38bdf8;">@Model.Count(u => u.Role == "Operator" || (u.Role != "Admin" && u.Role != "Owner" && u.Role != "Maincon" && u.Role != "Subcon" && u.Role != "Vendor"))</div>
+            <div style="font-size: 20px; font-weight: 900; color: #38bdf8;">@operatorCount</div>
             <div class="text-muted" style="font-size: 9px; font-weight: 700; text-transform: uppercase;">Operator</div>
         </div>
     </div>
 
-    <!-- Search -->
-    <div class="mb-3">
-        <input type="text" id="searchUser" class="input-sap" placeholder="🔍 Cari nama atau NIK..." style="height: 40px; font-size: 13px;" />
+    <!-- Filter -->
+    <form method="get" class="mb-3 d-flex gap-2 flex-wrap align-items-center">
+        <input type="text" name="q" value="@Model.Query" class="input-sap" placeholder="Cari nama / NIK / departemen / perusahaan..." style="height: 40px; font-size: 13px; min-width: 260px; flex: 1 1 320px;" />
+        <select name="filterRole" class="role-select" style="height: 40px; min-width: 150px;">
+            <option value="All" selected="@(string.Equals(Model.FilterRole, "All", StringComparison.OrdinalIgnoreCase))">Semua Role</option>
+            <option value="Admin" selected="@(string.Equals(Model.FilterRole, "Admin", StringComparison.OrdinalIgnoreCase))">Admin</option>
+            <option value="Owner" selected="@(string.Equals(Model.FilterRole, "Owner", StringComparison.OrdinalIgnoreCase))">Owner</option>
+            <option value="Maincon" selected="@(string.Equals(Model.FilterRole, "Maincon", StringComparison.OrdinalIgnoreCase))">Maincon</option>
+            <option value="Subcon" selected="@(string.Equals(Model.FilterRole, "Subcon", StringComparison.OrdinalIgnoreCase))">Subcon</option>
+            <option value="Vendor" selected="@(string.Equals(Model.FilterRole, "Vendor", StringComparison.OrdinalIgnoreCase))">Vendor</option>
+            <option value="Operator" selected="@(string.Equals(Model.FilterRole, "Operator", StringComparison.OrdinalIgnoreCase))">Operator</option>
+        </select>
+        <select name="pageSize" class="role-select" style="height: 40px; min-width: 120px;">
+            <option value="10" selected="@(Model.PageSize == 10)">10 / page</option>
+            <option value="20" selected="@(Model.PageSize == 20)">20 / page</option>
+            <option value="50" selected="@(Model.PageSize == 50)">50 / page</option>
+            <option value="100" selected="@(Model.PageSize == 100)">100 / page</option>
+        </select>
+        <button type="submit" class="btn" style="background: var(--color-primary); color: white; border: none; border-radius: 10px; height: 40px; padding: 0 14px; font-size: 12px; font-weight: 700;">
+            <i class="bi bi-funnel-fill me-1"></i> Filter
+        </button>
+    </form>
+    <div class="text-muted mb-3" style="font-size: 11px;">
+        Menampilkan @totalUsersOnPage dari @totalUsersFiltered user hasil filter (Total keseluruhan: @totalUsersAll).
     </div>
 
     <!-- Desktop Table -->
@@ -142,7 +197,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var user in Model)
+                @foreach (var user in Model.Users)
                 {
                     var currentRole = user.Role ?? "Operator";
                     var initial = !string.IsNullOrEmpty(user.Nama) ? user.Nama[0].ToString().ToUpper() : "?";
@@ -181,6 +236,10 @@
                             <form asp-action="UpdateRole" method="post" class="d-flex gap-1 align-items-center">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="nik" value="@user.Nik" />
+                                <input type="hidden" name="q" value="@Model.Query" />
+                                <input type="hidden" name="filterRole" value="@Model.FilterRole" />
+                                <input type="hidden" name="page" value="@Model.Page" />
+                                <input type="hidden" name="pageSize" value="@Model.PageSize" />
                                 <select name="role" class="role-select">
                                     <option value="Operator" selected="@(currentRole == "Operator")">Operator</option>
                                     <option value="Admin" selected="@(currentRole == "Admin")">Admin</option>
@@ -202,7 +261,7 @@
 
     <!-- Mobile Cards -->
     <div class="d-md-none">
-        @foreach (var user in Model)
+        @foreach (var user in Model.Users)
         {
             var currentRole = user.Role ?? "Operator";
             var initial = !string.IsNullOrEmpty(user.Nama) ? user.Nama[0].ToString().ToUpper() : "?";
@@ -233,6 +292,10 @@
                 <form asp-action="UpdateRole" method="post" class="d-flex gap-2 align-items-center">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="nik" value="@user.Nik" />
+                    <input type="hidden" name="q" value="@Model.Query" />
+                    <input type="hidden" name="filterRole" value="@Model.FilterRole" />
+                    <input type="hidden" name="page" value="@Model.Page" />
+                    <input type="hidden" name="pageSize" value="@Model.PageSize" />
                     <select name="role" class="role-select flex-grow-1">
                         <option value="Operator" selected="@(currentRole == "Operator")">Operator</option>
                         <option value="Admin" selected="@(currentRole == "Admin")">Admin</option>
@@ -249,16 +312,42 @@
         }
     </div>
 
-</div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="d-flex align-items-center justify-content-center gap-2 mt-3 flex-wrap">
+            <a class="paging-btn @(Model.Page <= 1 ? "disabled" : "")"
+               asp-action="Index"
+               asp-route-q="@Model.Query"
+               asp-route-filterRole="@Model.FilterRole"
+               asp-route-page="@(Model.Page - 1)"
+               asp-route-pageSize="@Model.PageSize">
+                <i class="bi bi-chevron-left"></i>
+            </a>
 
-@section Scripts {
-    <script>
-        $('#searchUser').on('input', function() {
-            var q = $(this).val().toLowerCase();
-            $('.user-item').each(function() {
-                var data = $(this).data('search') || '';
-                $(this).toggle(data.indexOf(q) !== -1);
-            });
-        });
-    </script>
-}
+            @{
+                var startPage = Math.Max(1, Model.Page - 2);
+                var endPage = Math.Min(Model.TotalPages, Model.Page + 2);
+            }
+
+            @for (var p = startPage; p <= endPage; p++)
+            {
+                <a class="paging-btn @(p == Model.Page ? "active" : "")"
+                   asp-action="Index"
+                   asp-route-q="@Model.Query"
+                   asp-route-filterRole="@Model.FilterRole"
+                   asp-route-page="@p"
+                   asp-route-pageSize="@Model.PageSize">@p</a>
+            }
+
+            <a class="paging-btn @(Model.Page >= Model.TotalPages ? "disabled" : "")"
+               asp-action="Index"
+               asp-route-q="@Model.Query"
+               asp-route-filterRole="@Model.FilterRole"
+               asp-route-page="@(Model.Page + 1)"
+               asp-route-pageSize="@Model.PageSize">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    }
+
+</div>
