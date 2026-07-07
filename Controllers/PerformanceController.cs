@@ -641,20 +641,35 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            var compHazards = await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= startOfYear).GroupBy(h => h.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
-            var compInspections = await _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= startOfYear).GroupBy(i => i.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
-            var compSafetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= startOfYear).GroupBy(s => s.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
-            var compP5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= startOfYear).GroupBy(p => p.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
-            var compCoachings = await _context.Coachings.Where(c => !c.IsDeleted && c.CreatedAt >= startOfYear).GroupBy(c => c.PerusahaanId).Select(g => new { CompId = g.Key, Count = g.Count() }).ToListAsync();
-            var compObservations = await (from o in _context.Observations
-                                          join k in _context.Karyawans on o.Nik equals k.NoNik
-                                          where !o.IsDeleted && o.CreatedAt >= startOfYear
-                                          group o by k.IdPerusahaan into g
-                                          select new { CompId = (int?)g.Key, Count = g.Count() })
-                                         .ToListAsync();
+            // MTD: company leaderboard uses same basis as hierarchy (capped per-employee per-category)
+            var compHazardsNik = await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(h.PerusahaanId!.Value))
+                .Select(h => new { CompId = h.PerusahaanId!.Value, h.Nik })
+                .ToListAsync();
+            var compInspNik = await _context.Inspections
+                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && i.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(i.PerusahaanId!.Value))
+                .Select(i => new { CompId = i.PerusahaanId!.Value, i.Nik })
+                .ToListAsync();
+            var compSTNik = await _context.SafetyTalks
+                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && s.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(s.PerusahaanId!.Value))
+                .Select(s => new { CompId = s.PerusahaanId!.Value, s.Nik })
+                .ToListAsync();
+            var compP5mNik = await _context.P5ms
+                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && p.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(p.PerusahaanId!.Value))
+                .Select(p => new { CompId = p.PerusahaanId!.Value, p.Nik })
+                .ToListAsync();
+            var compCoaNik = await _context.Coachings
+                .Where(c => !c.IsDeleted && c.PerusahaanId.HasValue && c.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(c.PerusahaanId!.Value))
+                .Select(c => new { CompId = c.PerusahaanId!.Value, c.Nik })
+                .ToListAsync();
+            var compObsNik = await (from o in _context.Observations
+                                    join k in _context.Karyawans on o.Nik equals k.NoNik
+                                    where !o.IsDeleted && o.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan)
+                                    select new { CompId = k.IdPerusahaan, o.Nik })
+                                   .ToListAsync();
 
             var leaderboard = new List<CompanyLeaderboardViewModel>();
-            
+
             int targetHazardTotal = 0;
             int targetInspeksiTotal = 0;
             int targetSafetyTalkTotal = 0;
@@ -676,17 +691,79 @@ namespace MBS_SAP.Controllers
                     continue;
                 }
 
-                int empCount = allKaryawans.Count(k => k.IdPerusahaan == c.PerusahaanId);
+                var companyEmps = allKaryawans.Where(k => k.IdPerusahaan == c.PerusahaanId).ToList();
+                int empCount = companyEmps.Count;
                 if (empCount == 0) continue;
 
-                int cHaz = compHazards.FirstOrDefault(h => h.CompId == c.PerusahaanId)?.Count ?? 0;
-                int cIns = compInspections.FirstOrDefault(i => i.CompId == c.PerusahaanId)?.Count ?? 0;
-                int cST = compSafetyTalks.FirstOrDefault(s => s.CompId == c.PerusahaanId)?.Count ?? 0;
-                int cP5m = compP5ms.FirstOrDefault(p => p.CompId == c.PerusahaanId)?.Count ?? 0;
-                int cCoa = compCoachings.FirstOrDefault(co => co.CompId == c.PerusahaanId)?.Count ?? 0;
-                int cObs = compObservations.FirstOrDefault(ob => ob.CompId == c.PerusahaanId)?.Count ?? 0;
+                // MTD actuals per NIK for this company (raw, uncapped)
+                var hazByNik = compHazardsNik.Where(x => x.CompId == c.PerusahaanId)
+                    .GroupBy(x => x.Nik, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var insByNik = compInspNik.Where(x => x.CompId == c.PerusahaanId)
+                    .GroupBy(x => x.Nik, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var stByNik = compSTNik.Where(x => x.CompId == c.PerusahaanId)
+                    .GroupBy(x => x.Nik, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var p5mByNik = compP5mNik.Where(x => x.CompId == c.PerusahaanId)
+                    .GroupBy(x => x.Nik, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var coaByNik = compCoaNik.Where(x => x.CompId == c.PerusahaanId)
+                    .GroupBy(x => x.Nik, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var obsByNik = compObsNik.Where(x => x.CompId == c.PerusahaanId)
+                    .GroupBy(x => x.Nik, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
 
-                int subCount = cHaz + cIns + cST + cCoa + cObs;
+                int companyMtdTarget = 0;
+                int companyMtdActual = 0;
+                int cHaz = 0, cIns = 0, cST = 0, cP5m = 0, cCoa = 0, cObs = 0;
+
+                foreach (var emp in companyEmps)
+                {
+                    var nik = (emp.NoNik ?? string.Empty).Trim();
+
+                    int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0, p5mTar = 1;
+                    if (employeeTargets.TryGetValue(emp.IdKaryawan, out var et))
+                    {
+                        hTar = et.hTar;
+                        insTar = et.insTar;
+                        stTar = et.stTar;
+                        obsTar = et.obsTar;
+                        cTar = et.cTar;
+                    }
+
+                    int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
+                    int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
+                    int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
+                    int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
+                    int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
+                    int actP5 = string.IsNullOrEmpty(nik) ? 0 : (p5mByNik.TryGetValue(nik, out var ap) ? ap : 0);
+
+                    // Cap per category
+                    int cappedH = Math.Min(actH, hTar);
+                    int cappedI = Math.Min(actI, insTar);
+                    int cappedST = Math.Min(actST, stTar);
+                    int cappedO = Math.Min(actO, obsTar);
+                    int cappedC = Math.Min(actC, cTar);
+
+                    int empTarget = hTar + insTar + stTar + obsTar + cTar;
+                    int empActual = cappedH + cappedI + cappedST + cappedO + cappedC;
+
+                    companyMtdTarget += empTarget;
+                    companyMtdActual += empActual;
+
+                    // Raw actuals for type chart (uncapped)
+                    cHaz += actH; cIns += actI; cST += actST; cP5m += actP5; cCoa += actC; cObs += actO;
+
+                    // Accumulate MTD targets for type breakdown chart
+                    targetHazardTotal += hTar;
+                    targetInspeksiTotal += insTar;
+                    targetSafetyTalkTotal += stTar;
+                    targetObservasiTotal += obsTar;
+                    targetCoachingTotal += cTar;
+                    targetP5mTotal += p5mTar;
+                }
 
                 realHazardTotal += cHaz;
                 realInspeksiTotal += cIns;
@@ -695,52 +772,18 @@ namespace MBS_SAP.Controllers
                 realCoachingTotal += cCoa;
                 realObservasiTotal += cObs;
 
-                var companyEmps = allKaryawans.Where(k => k.IdPerusahaan == c.PerusahaanId).ToList();
-                int companyMonthlyTarget = 0;
-                foreach(var emp in companyEmps)
-                {
-                    if (employeeTargets.TryGetValue(emp.IdKaryawan, out var et))
-                    {
-                        companyMonthlyTarget += et.total;
-                        targetHazardTotal += et.hTar;
-                        targetInspeksiTotal += et.insTar;
-                        targetSafetyTalkTotal += et.stTar;
-                        targetObservasiTotal += et.obsTar;
-                        targetCoachingTotal += et.cTar;
-                        targetP5mTotal += et.p5mTar;
-                    }
-                    else
-                    {
-                        companyMonthlyTarget += 5; // Default overall total (2 + 1 + 1 + 1 P5M)
-                        targetHazardTotal += 2;
-                        targetInspeksiTotal += 1;
-                        targetSafetyTalkTotal += 1;
-                        targetP5mTotal += 1;
-                    }
-                }
-
-                int monthsElapsed = Math.Max(1, now.Month);
-                int target = companyMonthlyTarget * monthsElapsed;
-                double achievementRate = target > 0 ? (double)subCount / target * 100.0 : 0.0;
+                double achievementRate = companyMtdTarget > 0 ? Math.Min(100.0, Math.Round((double)companyMtdActual / companyMtdTarget * 100.0, 1)) : 0.0;
 
                 leaderboard.Add(new CompanyLeaderboardViewModel
                 {
                     CompanyId = c.PerusahaanId,
                     CompanyName = c.NamaPerusahaan ?? "Unknown",
                     ActiveEmployees = empCount,
-                    TotalSubmissions = subCount,
-                    TargetSubmissions = target,
-                    AchievementRate = Math.Round(achievementRate, 1)
+                    TotalSubmissions = companyMtdActual,
+                    TargetSubmissions = companyMtdTarget,
+                    AchievementRate = achievementRate
                 });
             }
-
-            int totalMonthsElapsed = Math.Max(1, now.Month);
-            targetHazardTotal *= totalMonthsElapsed;
-            targetInspeksiTotal *= totalMonthsElapsed;
-            targetSafetyTalkTotal *= totalMonthsElapsed;
-            targetObservasiTotal *= totalMonthsElapsed;
-            targetCoachingTotal *= totalMonthsElapsed;
-            targetP5mTotal *= totalMonthsElapsed;
 
             ViewBag.SaTypeLabels = new List<string> { "Hazard Report", "Inspeksi", "Safety Talk", "P5M", "Observasi", "Coaching" };
             ViewBag.SaTypeTargetData = new List<int> { targetHazardTotal, targetInspeksiTotal, targetSafetyTalkTotal, targetP5mTotal, targetObservasiTotal, targetCoachingTotal };
