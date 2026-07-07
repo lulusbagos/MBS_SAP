@@ -783,12 +783,26 @@
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    AUDIO
 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-const alertSound = new Audio('/notifikasi/freesound_community-plopp-84863.mp3');
+const defaultSound = new Audio('/notifikasi/freesound_community-plopp-84863.mp3');
+const customSounds = {
+    'hazard': new Audio('/notifikasi/laporan hazard baru telah masuk.MP3'),
+    'inspection': new Audio('/notifikasi/LAPORAN INSPEKSI BARU TELAH MASUK.MP3'),
+    'inspeksi': new Audio('/notifikasi/LAPORAN INSPEKSI BARU TELAH MASUK.MP3'),
+    'safetytalk': new Audio('/notifikasi/SAEFTY TALK.MP3'),
+    'p5m': new Audio('/notifikasi/P5M.MP3'),
+    'observation': new Audio('/notifikasi/OBSERVASI.MP3'),
+    'coaching': new Audio('/notifikasi/COACHING.MP3')
+};
 
-function beep() {
+function beep(type) {
+    let activeSound = defaultSound;
+    if (type && customSounds[type.toLowerCase()]) {
+        activeSound = customSounds[type.toLowerCase()];
+    }
+    
     // Reset playback position to allow overlapping playbacks
-    alertSound.currentTime = 0;
-    alertSound.play()
+    activeSound.currentTime = 0;
+    activeSound.play()
         .then(() => {
             // Successfully played, hide warning badge
             const badge = document.getElementById('audioUnlockBadge');
@@ -803,8 +817,8 @@ function beep() {
 }
 
 function unlockAudio() {
-    alertSound.currentTime = 0;
-    alertSound.play()
+    defaultSound.currentTime = 0;
+    defaultSound.play()
         .then(() => {
             const badge = document.getElementById('audioUnlockBadge');
             if (badge) badge.style.display = 'none';
@@ -1659,7 +1673,7 @@ function getAvatarColor(name) {
    NEW ITEM ALERT
 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function triggerNewAlert(item) {
-    beep();
+    beep(item.type || '');
     
     // Screen Flash Anim
     const f = document.getElementById('screenFlash');
