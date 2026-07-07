@@ -1352,20 +1352,31 @@
     .dept-achievement-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 12px;
+        font-size: 12.5px;
     }
     .dept-achievement-table th,
     .dept-achievement-table td {
-        border-bottom: 1px solid #e5e7eb;
-        padding: 8px;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 10px 12px;
         text-align: left;
+        vertical-align: middle;
     }
     .dept-achievement-table th {
         font-weight: 800;
-        color: #334155;
-        background: #f8fafc;
+        color: #ffffff;
+        background: #0f172a;
         position: sticky;
         top: 0;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+    }
+    .dept-achievement-table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+    .dept-achievement-table tbody tr:nth-child(even) {
+        background-color: #fafbfc;
     }
     .dept-achievement-rate {
         font-weight: 800;
@@ -2714,6 +2725,7 @@
                                     <table class="dept-achievement-table">
                                         <thead>
                                             <tr>
+                                                <th style="width: 50px;">No</th>
                                                 <th>Departemen</th>
                                                 <th>Jml Karyawan</th>
                                                 <th>YTD Total</th>
@@ -2724,11 +2736,57 @@
                                                 <th>S.Talk</th>
                                                 <th>Observasi</th>
                                                 <th>Coaching</th>
-                                                <th>P5M</th>
+                                                <th style="background-color: #78350f; color: #ffffff; border-left: 2px solid #b45309;">P5M *</th>
+                                                <th style="text-align: center;">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody id="deptAchievementRows">
-                                            <tr><td colspan="5" class="text-center text-muted">Belum ada data departemen.</td></tr>
+                                            <tr><td colspan="13" class="text-center text-muted">Belum ada data departemen.</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <span class="text-muted" style="font-size: 11px; font-style: italic; margin-top: 12px; display: block; line-height: 1.4;">
+                                    * Catatan: Kolom P5M sengaja diwarnai berbeda karena tidak diikutsertakan dalam akumulasi target total kepatuhan SAP perusahaan (Target P5M dimonitor terpisah).
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Secondary Modal: Detail Karyawan (Lazy Load) -->
+                    <div class="dept-achievement-modal" id="employeeDetailModal" aria-hidden="true" style="z-index: 1200;">
+                        <div class="dept-achievement-backdrop" data-emp-close="true"></div>
+                        <div class="dept-achievement-dialog" role="dialog" aria-modal="true" aria-labelledby="employeeDetailTitle" style="width: min(1100px, 100%);">
+                            <div class="dept-achievement-header" style="background: #f8fafc;">
+                                <h6 class="dept-achievement-title" id="employeeDetailTitle">Detail Karyawan per Departemen</h6>
+                                <button type="button" class="dept-achievement-close" id="employeeDetailClose" aria-label="Tutup">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <div class="dept-achievement-body">
+                                <div id="employeeLoading" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status" style="width: 2rem; height: 2rem;">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="text-muted mt-2 mb-0" style="font-size: 13px; font-weight: 600;">Memuat data karyawan...</p>
+                                </div>
+                                <div class="table-responsive d-none" id="employeeTableContainer">
+                                    <table class="dept-achievement-table" style="font-size: 12px;">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 50px;">No</th>
+                                                <th>Nama Karyawan</th>
+                                                <th>NIK</th>
+                                                <th class="text-center">Compliance</th>
+                                                <th class="text-center">Hazard (Real/Tgt)</th>
+                                                <th class="text-center">Inspeksi (Real/Tgt)</th>
+                                                <th class="text-center">S.Talk (Real/Tgt)</th>
+                                                <th class="text-center">Observasi (Real/Tgt)</th>
+                                                <th class="text-center">Coaching (Real/Tgt)</th>
+                                                <th class="text-center" style="background-color: #78350f; color: #ffffff; border-left: 2px solid #b45309;">P5M * (Real/Tgt)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="employeeDetailRows">
+                                            <!-- Lazy loaded rows -->
                                         </tbody>
                                     </table>
                                 </div>
@@ -2798,19 +2856,35 @@
         const deptTitle = document.getElementById('deptAchievementTitle');
         const deptCloseBtn = document.getElementById('deptAchievementClose');
 
+        const empModal = document.getElementById('employeeDetailModal');
+        const empRows = document.getElementById('employeeDetailRows');
+        const empTitle = document.getElementById('employeeDetailTitle');
+        const empCloseBtn = document.getElementById('employeeDetailClose');
+        const empLoading = document.getElementById('employeeLoading');
+        const empTableContainer = document.getElementById('employeeTableContainer');
+
+        let currentCompanyId = null;
+
         function closeDeptModal() {
             if (!deptModal) return;
             deptModal.classList.remove('show');
             deptModal.setAttribute('aria-hidden', 'true');
         }
 
-        function openDeptModal(companyName, deptData) {
+        function closeEmpModal() {
+            if (!empModal) return;
+            empModal.classList.remove('show');
+            empModal.setAttribute('aria-hidden', 'true');
+        }
+
+        function openDeptModal(companyId, companyName, deptData) {
+            currentCompanyId = companyId;
             if (!deptModal || !deptRows || !deptTitle) return;
 
             deptTitle.textContent = 'Pencapaian Per Departemen - ' + (companyName || 'Perusahaan');
 
             if (!Array.isArray(deptData) || deptData.length === 0) {
-                deptRows.innerHTML = '<tr><td colspan="11" class="text-center text-muted">Belum ada data departemen.</td></tr>';
+                deptRows.innerHTML = '<tr><td colspan="13" class="text-center text-muted">Belum ada data departemen.</td></tr>';
             } else {
                 const sortedDeptData = deptData.slice().sort(function(a, b) {
                     const ytdA = Number(a.ytdAchievementRate || a.YtdAchievementRate || 0);
@@ -2818,7 +2892,7 @@
                     return ytdB - ytdA;
                 });
                 
-                deptRows.innerHTML = sortedDeptData.map(function (item) {
+                deptRows.innerHTML = sortedDeptData.map(function (item, idx) {
                     const deptName = String(item.departmentName || item.DepartmentName || '-');
                     const employeeCount = Number(item.employeeCount || item.EmployeeCount || 0);
                     const ytd = Number(item.ytdAchievementRate || item.YtdAchievementRate || 0).toFixed(1);
@@ -2832,7 +2906,8 @@
                     const p5mRate = Number(item.ytdP5mRate || item.YtdP5mRate || 0).toFixed(1);
 
                     return '<tr>' +
-                        '<td>' + deptName + '</td>' +
+                        '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
+                        '<td class="fw-bold" style="color: #334155;">' + deptName + '</td>' +
                         '<td>' + employeeCount + '</td>' +
                         '<td class="dept-achievement-rate fw-bold text-primary">' + ytd + '%</td>' +
                         '<td class="dept-achievement-rate">' + mtd + '%</td>' +
@@ -2842,7 +2917,12 @@
                         '<td class="dept-achievement-rate">' + stRate + '%</td>' +
                         '<td class="dept-achievement-rate">' + oRate + '%</td>' +
                         '<td class="dept-achievement-rate">' + cRate + '%</td>' +
-                        '<td class="dept-achievement-rate">' + p5mRate + '%</td>' +
+                        '<td class="dept-achievement-rate" style="background-color: #fffbeb; color: #b45309; border-left: 2px solid #f59e0b; font-weight: bold;">' + p5mRate + '%</td>' +
+                        '<td style="text-align: center;">' +
+                            '<button type="button" class="btn btn-sm btn-primary py-1 px-2" style="font-size: 10.5px; font-weight: 700; border-radius: 6px;" onclick="viewEmployeeDetails(\'' + deptName.replace(/'/g, "\\'") + '\')">' +
+                                '<i class="bi bi-people-fill me-1"></i>Detail' +
+                            '</button>' +
+                        '</td>' +
                         '</tr>';
                 }).join('');
             }
@@ -2851,6 +2931,70 @@
             deptModal.setAttribute('aria-hidden', 'false');
         }
 
+        window.viewEmployeeDetails = function(deptName) {
+            if (!empModal || !empRows || !empTitle || !empLoading || !empTableContainer) return;
+
+            empTitle.textContent = 'Detail Karyawan & Target YTD - ' + deptName;
+            
+            empLoading.classList.remove('d-none');
+            empTableContainer.classList.add('d-none');
+            
+            empModal.classList.add('show');
+            empModal.setAttribute('aria-hidden', 'false');
+
+            const url = `/Performance/GetDepartmentEmployees?companyId=${currentCompanyId}&departmentName=${encodeURIComponent(deptName)}`;
+            fetch(url)
+                .then(res => {
+                    if (!res.ok) throw new Error('Gagal mengambil data');
+                    return res.json();
+                })
+                .then(data => {
+                    empLoading.classList.add('d-none');
+                    empTableContainer.classList.remove('d-none');
+
+                    if (!Array.isArray(data) || data.length === 0) {
+                        empRows.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Tidak ada data karyawan aktif.</td></tr>';
+                    } else {
+                        empRows.innerHTML = data.map((item, idx) => {
+                            const name = item.karyawanName || '-';
+                            const nik = item.nik || '-';
+                            const comp = Number(item.complianceRate || 0).toFixed(1);
+                            
+                            const h = item.hazard || { target: 0, actual: 0 };
+                            const i = item.inspeksi || { target: 0, actual: 0 };
+                            const st = item.safetyTalk || { target: 0, actual: 0 };
+                            const o = item.observasi || { target: 0, actual: 0 };
+                            const c = item.coaching || { target: 0, actual: 0 };
+                            const p5 = item.p5m || { target: 0, actual: 0 };
+
+                            const totalTgt = item.ytdTotalTarget || 0;
+                            const totalAct = item.ytdTotalActual || 0;
+
+                            const compColor = comp >= 100 ? 'text-success' : comp >= 50 ? 'text-warning' : 'text-danger';
+
+                            return '<tr>' +
+                                '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
+                                '<td class="fw-bold" style="color: #334155;">' + name + '</td>' +
+                                '<td>' + nik + '</td>' +
+                                '<td class="text-center fw-bold ' + compColor + '">' + comp + '%<br/><small class="text-muted" style="font-weight: 500;">' + totalAct + ' / ' + totalTgt + '</small></td>' +
+                                '<td class="text-center fw-bold">' + h.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + h.target + '</span></td>' +
+                                '<td class="text-center fw-bold">' + i.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + i.target + '</span></td>' +
+                                '<td class="text-center fw-bold">' + st.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + st.target + '</span></td>' +
+                                '<td class="text-center fw-bold">' + o.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + o.target + '</span></td>' +
+                                '<td class="text-center fw-bold">' + c.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + c.target + '</span></td>' +
+                                '<td class="text-center fw-bold" style="background-color: #fffbeb; color: #b45309; border-left: 2px solid #f59e0b;">' + p5.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + p5.target + '</span></td>' +
+                                '</tr>';
+                        }).join('');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    empLoading.classList.add('d-none');
+                    empTableContainer.classList.remove('d-none');
+                    empRows.innerHTML = '<tr><td colspan="10" class="text-center text-danger">Gagal memuat data karyawan.</td></tr>';
+                });
+        };
+
         deptCloseBtn?.addEventListener('click', closeDeptModal);
         deptModal?.addEventListener('click', function (e) {
             const target = e.target;
@@ -2858,9 +3002,19 @@
                 closeDeptModal();
             }
         });
+
+        empCloseBtn?.addEventListener('click', closeEmpModal);
+        empModal?.addEventListener('click', function (e) {
+            const target = e.target;
+            if (target && target.getAttribute && target.getAttribute('data-emp-close') === 'true') {
+                closeEmpModal();
+            }
+        });
+
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 closeDeptModal();
+                closeEmpModal();
             }
         });
 
@@ -2919,6 +3073,7 @@
                 return;
             }
 
+            const companyId = nodeEl.dataset.companyId;
             const companyName = nodeEl.dataset.companyName || 'Perusahaan';
             const raw = nodeEl.dataset.deptAchievements || '[]';
             let parsed = [];
@@ -2929,7 +3084,7 @@
                 parsed = [];
             }
 
-            openDeptModal(companyName, parsed);
+            openDeptModal(companyId, companyName, parsed);
         });
 
         searchInput?.addEventListener('input', function (e) {

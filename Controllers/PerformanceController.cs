@@ -62,6 +62,106 @@ namespace MBS_SAP.Controllers
             return (companyId, allowedCompanyIds);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetDepartmentEmployees(int companyId, string departmentName)
+        {
+            var (scopeCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
+            if (scopeCompanyId.HasValue && !allowedCompanyIds.Contains(companyId))
+            {
+                return Forbid();
+            }
+
+            var startOfYear = new DateTime(DateTime.Today.Year, 1, 1);
+            var elapsedWeeksYtd = Math.Max(1, ((DateTime.Today - startOfYear.Date).Days / 7) + 1);
+
+            var deptKaryawans = await (from k in _context.Karyawans
+                                      join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                      join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
+                                      from d in dg.DefaultIfEmpty()
+                                      where k.IdPerusahaan == companyId && k.StatusAktif == true
+                                      select new {
+                                          k.IdKaryawan,
+                                          k.NoNik,
+                                          NamaLengkap = p.NamaLengkap,
+                                          NamaDepartemen = d != null ? d.NamaDepartemen : "General"
+                                      }).ToListAsync();
+
+            var targetMappingCompany = await _context.KaryawanJabatanMappings
+                .AsNoTracking()
+                .Where(m => m.PerusahaanId == companyId)
+                .ToListAsync();
+
+            var mappingsDict = targetMappingCompany.ToDictionary(m => m.KaryawanId);
+
+            var deptKaryawansFiltered = deptKaryawans.Where(k => 
+                string.Equals(k.NamaDepartemen ?? "General", departmentName, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+
+            var hazards = await _context.HazardReports.Where(h => !h.IsDeleted && h.PerusahaanId == companyId && h.CreatedAt >= startOfYear).Select(h => h.Nik).ToListAsync();
+            var inspections = await _context.Inspections.Where(i => !i.IsDeleted && i.PerusahaanId == companyId && i.CreatedAt >= startOfYear).Select(i => i.Nik).ToListAsync();
+            var safetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.PerusahaanId == companyId && s.CreatedAt >= startOfYear).Select(s => s.Nik).ToListAsync();
+            var p5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.PerusahaanId == companyId && p.CreatedAt >= startOfYear).Select(p => p.Nik).ToListAsync();
+            var coachings = await _context.Coachings.Where(c => !c.IsDeleted && c.PerusahaanId == companyId && c.CreatedAt >= startOfYear).Select(c => c.Nik).ToListAsync();
+            
+            var observations = await (from o in _context.Observations
+                                  join k in _context.Karyawans on o.Nik equals k.NoNik
+                                  where !o.IsDeleted && o.CreatedAt >= startOfYear && k.IdPerusahaan == companyId
+                                  select o.Nik).ToListAsync();
+
+            var result = new List<object>();
+            foreach (var k in deptKaryawansFiltered)
+            {
+                var nik = (k.NoNik ?? string.Empty).Trim();
+                if (string.IsNullOrEmpty(nik)) continue;
+
+                int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0, p5mTar = 1;
+                if (mappingsDict.TryGetValue(k.IdKaryawan, out var m))
+                {
+                    hTar = m.TargetHazardReport ?? 2;
+                    insTar = m.TargetInspeksi ?? 1;
+                    stTar = m.TargetSafetyTalk ?? 1;
+                    obsTar = m.TargetObservasi ?? 0;
+                    cTar = m.TargetCoaching ?? 0;
+                }
+
+                int ytdTgtH = hTar * elapsedWeeksYtd;
+                int ytdTgtI = insTar * elapsedWeeksYtd;
+                int ytdTgtST = stTar * elapsedWeeksYtd;
+                int ytdTgtO = obsTar * elapsedWeeksYtd;
+                int ytdTgtC = cTar * elapsedWeeksYtd;
+                int ytdTgtP5 = p5mTar * elapsedWeeksYtd;
+
+                int ytdActH = hazards.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int ytdActI = inspections.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int ytdActST = safetyTalks.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int ytdActO = observations.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int ytdActC = coachings.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int ytdActP5 = p5ms.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+
+                int totalTgt = ytdTgtH + ytdTgtI + ytdTgtST + ytdTgtO + ytdTgtC;
+                int totalAct = ytdActH + ytdActI + ytdActST + ytdActO + ytdActC;
+
+                double compliance = totalTgt > 0 ? Math.Round((double)totalAct / totalTgt * 100.0, 1) : 0;
+
+                result.Add(new {
+                    karyawanName = k.NamaLengkap,
+                    nik = k.NoNik,
+                    ytdTotalTarget = totalTgt,
+                    ytdTotalActual = totalAct,
+                    complianceRate = compliance,
+                    hazard = new { target = ytdTgtH, actual = ytdActH },
+                    inspeksi = new { target = ytdTgtI, actual = ytdActI },
+                    safetyTalk = new { target = ytdTgtST, actual = ytdActST },
+                    observasi = new { target = ytdTgtO, actual = ytdActO },
+                    coaching = new { target = ytdTgtC, actual = ytdActC },
+                    p5m = new { target = ytdTgtP5, actual = ytdActP5 }
+                });
+            }
+
+            var sortedResult = result.Cast<dynamic>().OrderByDescending(r => r.complianceRate).ToList();
+            return Json(sortedResult);
+        }
+
         private async Task<GeoSafetyRadarViewModel> BuildGeoSafetyRadarDataAsync(int? companyId, HashSet<int> allowedCompanyIds, string? requestedGeoArea, bool includePhotos = false)
         {
             var hazardPoints = new List<GeoSafetyPointViewModel>();
