@@ -529,9 +529,14 @@
 </div>
 
 <!-- Floating Audio Warning Badge -->
-<div id="audioUnlockBadge" style="position: fixed; bottom: 24px; left: 24px; z-index: 10000; display: none; background: rgba(239, 68, 68, 0.95); color: #fff; padding: 12px 18px; border-radius: 10px; font-weight: 700; font-size: 12.5px; cursor: pointer; border: 1px solid rgba(239, 68, 68, 0.55); align-items: center; gap: 10px; font-family: 'Outfit', sans-serif; backdrop-filter: blur(8px); animation: pulseAlert 2s infinite; transition: all 0.3s ease;">
-    <i class="bi bi-volume-mute-fill" style="font-size: 16px;"></i>
-    <span>ðŸ”‡ Suara Terblokir! Klik di sini untuk aktifkan audio</span>
+<div id="audioUnlockBadge" style="position: fixed; bottom: 24px; left: 24px; z-index: 10000; display: none; background: rgba(239, 68, 68, 0.95); color: #fff; padding: 14px 20px; border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; border: 1px solid rgba(239, 68, 68, 0.55); flex-direction: column; align-items: flex-start; gap: 6px; font-family: 'Outfit', sans-serif; backdrop-filter: blur(12px); box-shadow: 0 12px 30px rgba(239, 68, 68, 0.4); animation: pulseAlert 2s infinite; transition: all 0.3s ease;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="bi bi-volume-mute-fill" style="font-size: 18px;"></i>
+        <span>Audio Terblokir Browser! Klik di sini untuk mengaktifkan suara display</span>
+    </div>
+    <div style="font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.85); margin-left: 26px;">
+        Tips TV: Izinkan suara di browser (chrome://settings/content/sound) agar otomatis menyala tanpa klik setelah restart TV.
+    </div>
 </div>
 
 <div class="tv">
@@ -784,6 +789,8 @@
    AUDIO
 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const defaultSound = new Audio('/notifikasi/freesound_community-plopp-84863.mp3');
+defaultSound.preload = 'auto';
+
 const customSounds = {
     'hazard': new Audio('/notifikasi/laporan hazard baru telah masuk.MP3'),
     'inspection': new Audio('/notifikasi/LAPORAN INSPEKSI BARU TELAH MASUK.MP3'),
@@ -793,6 +800,13 @@ const customSounds = {
     'observation': new Audio('/notifikasi/OBSERVASI.MP3'),
     'coaching': new Audio('/notifikasi/COACHING.MP3')
 };
+
+// Preload all audio assets
+defaultSound.load();
+for (const key in customSounds) {
+    customSounds[key].preload = 'auto';
+    customSounds[key].load();
+}
 
 function beep(type) {
     let activeSound = defaultSound;
@@ -820,15 +834,55 @@ function unlockAudio() {
     defaultSound.currentTime = 0;
     defaultSound.play()
         .then(() => {
+            console.log("Default sound unlocked successfully.");
+        })
+        .catch(e => console.warn("Could not unlock default sound:", e));
+        
+    // Warm up / unlock all custom sound elements in browser memory
+    for (const key in customSounds) {
+        const sound = customSounds[key];
+        const origVolume = sound.volume;
+        sound.volume = 0;
+        sound.play()
+            .then(() => {
+                sound.pause();
+                sound.volume = origVolume;
+                sound.currentTime = 0;
+                console.log(`Sound element ${key} unlocked.`);
+            })
+            .catch(e => console.warn(`Could not unlock sound element ${key}:`, e));
+    }
+
+    const badge = document.getElementById('audioUnlockBadge');
+    if (badge) badge.style.display = 'none';
+}
+
+function checkAutoplay() {
+    // Attempt playing default sound at 0 volume to check autoplay policy
+    const origVol = defaultSound.volume;
+    defaultSound.volume = 0;
+    defaultSound.play()
+        .then(() => {
+            defaultSound.pause();
+            defaultSound.volume = origVol;
+            defaultSound.currentTime = 0;
             const badge = document.getElementById('audioUnlockBadge');
             if (badge) badge.style.display = 'none';
-            console.log("Audio unlocked successfully.");
+            console.log("Autoplay is enabled, sound can play automatically.");
         })
-        .catch(e => console.warn("Could not unlock audio yet:", e));
+        .catch(err => {
+            defaultSound.volume = origVol;
+            const badge = document.getElementById('audioUnlockBadge');
+            if (badge) badge.style.display = 'flex';
+            console.warn("Autoplay is blocked. Warning badge shown.");
+        });
 }
 
 // Attach event listeners to unlock audio
 document.addEventListener('DOMContentLoaded', () => {
+    // Check autoplay status immediately upon page load
+    checkAutoplay();
+
     const badge = document.getElementById('audioUnlockBadge');
     if (badge) {
         badge.addEventListener('click', (e) => {
@@ -860,7 +914,7 @@ setInterval(tickClock, 1000); tickClock();
    COUNTDOWN TIMER
 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const DATA_INTERVAL_S  = 30;   // fetch data every 30 sec
-const PAGE_RELOAD_MIN  = 15;   // full page reload every 15 min
+const PAGE_RELOAD_MIN  = 1440; // full page reload every 24 hours (1440 min)
 
 let nextDataAt    = Date.now() + DATA_INTERVAL_S * 1000;
 let pageReloadAt  = Date.now() + PAGE_RELOAD_MIN * 60 * 1000;
