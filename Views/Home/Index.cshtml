@@ -103,13 +103,13 @@
             <a asp-controller="Hazard" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
                 <img src="~/images/menu_hazard.png" class="menu-action-icon" alt="Lapor Hazard" asp-append-version="true" />
                 <span style="font-weight: 700; font-size: 13px;">Lapor Hazard</span>
-                <span class="badge" style="background-color: rgba(249, 115, 22, 0.1); color: #ea580c; font-size: 10px; font-weight: 600;">@(ViewData["TotalHazards"] ?? "0") Laporan</span>
+                <span class="badge" style="background-color: rgba(249, 115, 22, 0.1); color: #ea580c; font-size: 10px; font-weight: 600;">@(ViewData["ThisMonthHazards"] ?? "0") / @(ViewData["TargetHazard"] ?? "0") (MTD)</span>
             </a>
             
             <a asp-controller="Inspection" asp-action="Index" class="btn-action-card animate-pop-in delay-3">
                 <img src="~/images/menu_inspection.png" class="menu-action-icon" alt="Safety Inspeksi" asp-append-version="true" />
                 <span style="font-weight: 700; font-size: 13px;">Safety Inspeksi</span>
-                <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">@(ViewData["TotalInspections"] ?? "0") Selesai</span>
+                <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">@(ViewData["ThisMonthInspections"] ?? "0") / @(ViewData["TargetInspeksi"] ?? "0") (MTD)</span>
             </a>
             
             <a asp-controller="ActionPlan" asp-action="Index" class="btn-action-card animate-pop-in delay-4">
@@ -121,19 +121,19 @@
             <a asp-controller="SafetyTalk" asp-action="Index" class="btn-action-card animate-pop-in delay-5">
                 <img src="~/images/menu_safetytalk.png" class="menu-action-icon" alt="Safety Talk" asp-append-version="true" />
                 <span style="font-weight: 700; font-size: 13px;">Safety Talk</span>
-                <span class="badge" style="background-color: rgba(244, 63, 94, 0.1); color: #e11d48; font-size: 10px; font-weight: 600;">@(ViewData["TotalSafetyTalks"] ?? "0") Briefing</span>
+                <span class="badge" style="background-color: rgba(244, 63, 94, 0.1); color: #e11d48; font-size: 10px; font-weight: 600;">@(ViewData["ThisMonthSafetyTalks"] ?? "0") / @(ViewData["TargetSafetyTalk"] ?? "0") (MTD)</span>
             </a>
             
             <a asp-controller="P5m" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
                 <img src="~/images/menu_p5m.png" class="menu-action-icon" alt="P5M" asp-append-version="true" />
                 <span style="font-weight: 700; font-size: 13px;">P5M</span>
-                <span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; font-size: 10px; font-weight: 600;">@(ViewData["TotalP5ms"] ?? "0") Sesi</span>
+                <span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; font-size: 10px; font-weight: 600;">@(ViewData["ThisMonthP5ms"] ?? "0") / @(ViewData["TargetP5m"] ?? "0") (MTD)</span>
             </a>
 
             <a asp-controller="Observation" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
                 <img src="~/images/menu_observation.png" class="menu-action-icon" alt="Observasi" asp-append-version="true" />
                 <span style="font-weight: 700; font-size: 13px;">Observasi</span>
-                <span class="badge" style="background-color: rgba(79, 70, 229, 0.1); color: #4f46e5; font-size: 10px; font-weight: 600;">Laporan Baru</span>
+                <span class="badge" style="background-color: rgba(79, 70, 229, 0.1); color: #4f46e5; font-size: 10px; font-weight: 600;">@(ViewData["ThisMonthObservations"] ?? "0") / @(ViewData["TargetObservasi"] ?? "0") (MTD)</span>
             </a>
 
             <a asp-controller="P2h" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
