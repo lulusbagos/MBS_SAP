@@ -668,8 +668,9 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
                                 "closed" => ("#00ff9d","rgba(0,255,157,0.1)"),
                                 _        => ("#00e5ff","rgba(0,229,255,0.1)")
                             };
+                            var clrGlow = clr + "40";
                             <div class="fui-feed-item">
-                                <div class="fui-feed-icon" style="background:@bg;color:@clr;box-shadow:0 0 8px @(clr + "40");">
+                                <div class="fui-feed-icon" style="background:@bg;color:@clr;box-shadow:0 0 8px @clrGlow;">
                                     <i class="bi @ic" style="filter:drop-shadow(0 0 4px @clr);"></i>
                                 </div>
                                 <div style="flex:1;min-width:0;">
