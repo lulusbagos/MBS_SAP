@@ -100,11 +100,11 @@ namespace MBS_SAP.Controllers
 
             var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             
-            var thisMonthHazards = await hazardQuery.CountAsync(h => h.CreatedAt >= startOfMonth);
-            var thisMonthInspections = await inspectionQuery.CountAsync(i => i.CreatedAt >= startOfMonth);
-            var thisMonthSafetyTalks = await safetyTalkQuery.CountAsync(s => s.CreatedAt >= startOfMonth);
-            var thisMonthP5ms = await p5mQuery.CountAsync(p => p.CreatedAt >= startOfMonth);
-            var thisMonthCoachings = await coachingQuery.CountAsync(c => c.CreatedAt >= startOfMonth);
+            var thisMonthHazards = await hazardQuery.CountAsync(h => h.Tanggal >= startOfMonth);
+            var thisMonthInspections = await inspectionQuery.CountAsync(i => i.Tanggal >= startOfMonth);
+            var thisMonthSafetyTalks = await safetyTalkQuery.CountAsync(s => s.Tanggal >= startOfMonth);
+            var thisMonthP5ms = await p5mQuery.CountAsync(p => p.Tanggal >= startOfMonth);
+            var thisMonthCoachings = await coachingQuery.CountAsync(c => c.Tanggal >= startOfMonth);
             
             // Assume observasi is not in the dashboard queries yet, or we add it? We don't have observasiQuery.
             // But we can just use the ones we have for the Monthly Score.
@@ -112,8 +112,14 @@ namespace MBS_SAP.Controllers
             var thisMonthObservations = await observationQuery.CountAsync(o => o.Date >= startOfMonth);
             var totalObservations = await observationQuery.CountAsync();
  
-            int myTotalMonthTarget = targetHazardReport + targetInspeksi + targetSafetyTalk + targetP5m + targetObservasi + targetCoaching;
-            int myTotalThisMonth = thisMonthHazards + thisMonthInspections + thisMonthSafetyTalks + thisMonthP5ms + thisMonthObservations + thisMonthCoachings;
+            int cappedActH = Math.Min(thisMonthHazards, targetHazardReport);
+            int cappedActI = Math.Min(thisMonthInspections, targetInspeksi);
+            int cappedActST = Math.Min(thisMonthSafetyTalks, targetSafetyTalk);
+            int cappedActO = Math.Min(thisMonthObservations, targetObservasi);
+            int cappedActC = Math.Min(thisMonthCoachings, targetCoaching);
+
+            int myTotalMonthTarget = targetHazardReport + targetInspeksi + targetSafetyTalk + targetObservasi + targetCoaching;
+            int myTotalThisMonth = cappedActH + cappedActI + cappedActST + cappedActO + cappedActC;
 
             int complianceScore = 0;
             if (myTotalMonthTarget > 0)
