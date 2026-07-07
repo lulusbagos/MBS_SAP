@@ -135,6 +135,12 @@
                 <span style="font-weight: 700; font-size: 13px;">Observasi</span>
                 <span class="badge" style="background-color: rgba(79, 70, 229, 0.1); color: #4f46e5; font-size: 10px; font-weight: 600;">@(ViewData["ThisMonthObservations"] ?? "0") / @(ViewData["TargetObservasi"] ?? "0") (MTD)</span>
             </a>
+            
+            <a asp-controller="Coaching" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
+                <i class="bi bi-person-video3" style="font-size: 32px; color: #3b82f6; display: block; margin: 0 auto 12px; text-align: center;"></i>
+                <span style="font-weight: 700; font-size: 13px;">Coaching</span>
+                <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; font-size: 10px; font-weight: 600;">@(ViewData["ThisMonthCoachings"] ?? "0") / @(ViewData["TargetCoaching"] ?? "0") (MTD)</span>
+            </a>
 
             <a asp-controller="P2h" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
                 <img src="~/images/menu_p2h.png" class="menu-action-icon" alt="P2H Kendaraan" asp-append-version="true" />

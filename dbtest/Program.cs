@@ -1,32 +1,24 @@
-using Npgsql;
 using System;
+using System.Data.SqlClient;
 
-var pgConnStr = "Host=172.16.1.96;Port=5432;Database=sysinteg_indexsafe2;Username=postgres;Password=index.123;";
-
-using var connPg = new NpgsqlConnection(pgConnStr);
-connPg.Open();
-
-string nik = "24011950928";
-Console.WriteLine($"\n=== CHECKING vw_safetytalkdetail FOR NIK {nik} TODAY ===");
-try
-{
-    using var cmd = new NpgsqlCommand($@"
-        SELECT *
-        FROM public.vw_safetytalkdetail 
-        WHERE employee_nik = @nik AND date::date = current_date
-        ORDER BY date DESC, time DESC", connPg);
-    cmd.Parameters.AddWithValue("nik", nik);
-
-    using var reader = cmd.ExecuteReader();
-    if (!reader.HasRows) {
-        Console.WriteLine($"TIDAK ADA data safety talk untuk NIK {nik} pada hari ini dari postgres.");
+namespace dbtest {
+    class Program {
+        static void Main(string[] args) {
+            string connStr = "Server=localhost;Database=MBS_SAP;Trusted_Connection=True;TrustServerCertificate=True;";
+            using (SqlConnection conn = new SqlConnection(connStr)) {
+                conn.Open();
+                using (SqlCommand cmd = new SqlCommand("SELECT Id, Tanggal, CreatedAt, PerusahaanId FROM tbl_t_safety_talk WHERE Nik = '24041930970' ORDER BY CreatedAt DESC", conn)) {
+                    using (SqlDataReader reader = cmd.ExecuteReader()) {
+                        while (reader.Read()) {
+                            Console.WriteLine("ST Id: " + reader["Id"] + ", Tanggal: " + reader["Tanggal"] + ", CreatedAt: " + reader["CreatedAt"] + ", PerusahaanId: " + reader["PerusahaanId"]);
+                        }
+                    }
+                }
+                using (SqlCommand cmd = new SqlCommand("SELECT TOP 1 TargetSafetyTalk FROM v_karyawan_jabatan_mapping WHERE NoNik = '24041930970'", conn)) {
+                    var result = cmd.ExecuteScalar();
+                    Console.WriteLine("Target ST: " + (result != DBNull.Value ? result : "NULL"));
+                }
+            }
+        }
     }
-    while (reader.Read())
-    {
-        Console.WriteLine($"- SUDAH ADA: Tanggal: {reader["date"]}, Waktu: {reader["time"]}, Topik: {reader["title"]}, Lokasi: {reader["location_name"]}");
-    }
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Error: {ex.Message}");
 }

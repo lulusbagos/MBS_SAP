@@ -1387,11 +1387,19 @@ namespace MBS_SAP.Controllers
                 .Select(p => new { CompanyId = p.PerusahaanId!.Value, p.Nik, p.CreatedAt })
                 .ToListAsync();
 
-            var hierarchyCoachingRows = await _context.Coachings
+            var coachingCreatorsRows = await _context.Coachings
                 .AsNoTracking()
                 .Where(c => !c.IsDeleted && c.PerusahaanId.HasValue && c.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(c.PerusahaanId!.Value))
                 .Select(c => new { CompanyId = c.PerusahaanId!.Value, c.Nik, c.CreatedAt })
                 .ToListAsync();
+
+            var coachingParticipantsRows = await _context.CoachingParticipants
+                .AsNoTracking()
+                .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId.HasValue && p.Coaching.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(p.Coaching.PerusahaanId!.Value))
+                .Select(p => new { CompanyId = p.Coaching!.PerusahaanId!.Value, p.Nik, CreatedAt = p.Coaching.CreatedAt })
+                .ToListAsync();
+
+            var hierarchyCoachingRows = coachingCreatorsRows.Concat(coachingParticipantsRows).ToList();
 
             var hierarchyObservationRows = await (from o in _context.Observations
                                                   join k in _context.Karyawans on o.Nik equals k.NoNik
