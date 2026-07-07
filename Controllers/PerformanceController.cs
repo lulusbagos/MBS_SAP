@@ -87,8 +87,8 @@ namespace MBS_SAP.Controllers
                 return Json(new List<object>());
             }
 
-            var startOfYear = new DateTime(DateTime.Today.Year, 1, 1);
-            var elapsedWeeksYtd = Math.Max(1, ((DateTime.Today - startOfYear.Date).Days / 7) + 1);
+            var today = DateTime.Today;
+            var startOfMonth = new DateTime(today.Year, today.Month, 1);
 
             var deptKaryawans = await (from k in _context.Karyawans
                                       join p in _context.Personals on k.IdPersonal equals p.IdPersonal
@@ -113,15 +113,16 @@ namespace MBS_SAP.Controllers
                 string.Equals(k.NamaDepartemen ?? "General", departmentName, StringComparison.OrdinalIgnoreCase)
             ).ToList();
 
-            var hazards = await _context.HazardReports.Where(h => !h.IsDeleted && h.PerusahaanId == companyId && h.CreatedAt >= startOfYear).Select(h => h.Nik).ToListAsync();
-            var inspections = await _context.Inspections.Where(i => !i.IsDeleted && i.PerusahaanId == companyId && i.CreatedAt >= startOfYear).Select(i => i.Nik).ToListAsync();
-            var safetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.PerusahaanId == companyId && s.CreatedAt >= startOfYear).Select(s => s.Nik).ToListAsync();
-            var p5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.PerusahaanId == companyId && p.CreatedAt >= startOfYear).Select(p => p.Nik).ToListAsync();
-            var coachings = await _context.Coachings.Where(c => !c.IsDeleted && c.PerusahaanId == companyId && c.CreatedAt >= startOfYear).Select(c => c.Nik).ToListAsync();
+            // MTD: filter by startOfMonth
+            var hazards = await _context.HazardReports.Where(h => !h.IsDeleted && h.PerusahaanId == companyId && h.CreatedAt >= startOfMonth).Select(h => h.Nik).ToListAsync();
+            var inspections = await _context.Inspections.Where(i => !i.IsDeleted && i.PerusahaanId == companyId && i.CreatedAt >= startOfMonth).Select(i => i.Nik).ToListAsync();
+            var safetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.PerusahaanId == companyId && s.CreatedAt >= startOfMonth).Select(s => s.Nik).ToListAsync();
+            var p5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.PerusahaanId == companyId && p.CreatedAt >= startOfMonth).Select(p => p.Nik).ToListAsync();
+            var coachings = await _context.Coachings.Where(c => !c.IsDeleted && c.PerusahaanId == companyId && c.CreatedAt >= startOfMonth).Select(c => c.Nik).ToListAsync();
             
             var observations = await (from o in _context.Observations
                                   join k in _context.Karyawans on o.Nik equals k.NoNik
-                                  where !o.IsDeleted && o.CreatedAt >= startOfYear && k.IdPerusahaan == companyId
+                                  where !o.IsDeleted && o.CreatedAt >= startOfMonth && k.IdPerusahaan == companyId
                                   select o.Nik).ToListAsync();
 
             var result = new List<object>();
@@ -130,6 +131,7 @@ namespace MBS_SAP.Controllers
                 var nik = (k.NoNik ?? string.Empty).Trim();
                 if (string.IsNullOrEmpty(nik)) continue;
 
+                // MTD target = monthly target directly from mapping view
                 int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0, p5mTar = 1;
                 if (mappingsDict.TryGetValue(k.IdKaryawan, out var m))
                 {
@@ -140,34 +142,30 @@ namespace MBS_SAP.Controllers
                     cTar = m.TargetCoaching ?? 0;
                 }
 
-                int wTgtH = hTar > 0 ? Math.Max(1, (int)Math.Round(hTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                int wTgtI = insTar > 0 ? Math.Max(1, (int)Math.Round(insTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                int wTgtST = stTar > 0 ? Math.Max(1, (int)Math.Round(stTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                int wTgtO = obsTar > 0 ? Math.Max(1, (int)Math.Round(obsTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                int wTgtC = cTar > 0 ? Math.Max(1, (int)Math.Round(cTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                int wTgtP5 = p5mTar > 0 ? Math.Max(1, (int)Math.Round(p5mTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                // MTD target = monthly targets (already monthly from vw_r_karyawan_jabatan_mapping_preview)
+                int mtdTgtH = hTar;
+                int mtdTgtI = insTar;
+                int mtdTgtST = stTar;
+                int mtdTgtO = obsTar;
+                int mtdTgtC = cTar;
+                int mtdTgtP5 = p5mTar;
 
-                int ytdTgtH = wTgtH * elapsedWeeksYtd;
-                int ytdTgtI = wTgtI * elapsedWeeksYtd;
-                int ytdTgtST = wTgtST * elapsedWeeksYtd;
-                int ytdTgtO = wTgtO * elapsedWeeksYtd;
-                int ytdTgtC = wTgtC * elapsedWeeksYtd;
-                int ytdTgtP5 = wTgtP5 * elapsedWeeksYtd;
+                // MTD actuals
+                int mtdActH = hazards.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int mtdActI = inspections.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int mtdActST = safetyTalks.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int mtdActO = observations.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int mtdActC = coachings.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int mtdActP5 = p5ms.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
 
-                int ytdActH = hazards.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
-                int ytdActI = inspections.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
-                int ytdActST = safetyTalks.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
-                int ytdActO = observations.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
-                int ytdActC = coachings.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
-                int ytdActP5 = p5ms.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                // Cap per category at target (max 100% each)
+                int cappedActH = Math.Min(mtdActH, mtdTgtH);
+                int cappedActI = Math.Min(mtdActI, mtdTgtI);
+                int cappedActST = Math.Min(mtdActST, mtdTgtST);
+                int cappedActO = Math.Min(mtdActO, mtdTgtO);
+                int cappedActC = Math.Min(mtdActC, mtdTgtC);
 
-                int cappedActH = Math.Min(ytdActH, ytdTgtH);
-                int cappedActI = Math.Min(ytdActI, ytdTgtI);
-                int cappedActST = Math.Min(ytdActST, ytdTgtST);
-                int cappedActO = Math.Min(ytdActO, ytdTgtO);
-                int cappedActC = Math.Min(ytdActC, ytdTgtC);
-
-                int totalTgt = ytdTgtH + ytdTgtI + ytdTgtST + ytdTgtO + ytdTgtC;
+                int totalTgt = mtdTgtH + mtdTgtI + mtdTgtST + mtdTgtO + mtdTgtC;
                 int totalAct = cappedActH + cappedActI + cappedActST + cappedActO + cappedActC;
 
                 double compliance = totalTgt > 0 ? Math.Round((double)totalAct / totalTgt * 100.0, 1) : 0;
@@ -176,15 +174,15 @@ namespace MBS_SAP.Controllers
                 result.Add(new {
                     karyawanName = k.NamaLengkap,
                     nik = k.NoNik,
-                    ytdTotalTarget = totalTgt,
-                    ytdTotalActual = totalAct,
+                    mtdTotalTarget = totalTgt,
+                    mtdTotalActual = totalAct,
                     complianceRate = compliance,
-                    hazard = new { target = ytdTgtH, actual = ytdActH },
-                    inspeksi = new { target = ytdTgtI, actual = ytdActI },
-                    safetyTalk = new { target = ytdTgtST, actual = ytdActST },
-                    observasi = new { target = ytdTgtO, actual = ytdActO },
-                    coaching = new { target = ytdTgtC, actual = ytdActC },
-                    p5m = new { target = ytdTgtP5, actual = ytdActP5 }
+                    hazard = new { target = mtdTgtH, actual = mtdActH },
+                    inspeksi = new { target = mtdTgtI, actual = mtdActI },
+                    safetyTalk = new { target = mtdTgtST, actual = mtdActST },
+                    observasi = new { target = mtdTgtO, actual = mtdActO },
+                    coaching = new { target = mtdTgtC, actual = mtdActC },
+                    p5m = new { target = mtdTgtP5, actual = mtdActP5 }
                 });
             }
 
@@ -1642,8 +1640,8 @@ namespace MBS_SAP.Controllers
                     }
                 }
 
-                // Sort departments by YTD Achievement Rate descending
-                node.DepartmentAchievements = departmentAchievements.OrderByDescending(d => d.YtdAchievementRate).ToList();
+                // Sort departments by MTD Achievement Rate descending
+                node.DepartmentAchievements = departmentAchievements.OrderByDescending(d => d.MtdAchievementRate).ToList();
                 nodeMap[hierarchyCompanyId] = node;
             }
 
@@ -1931,7 +1929,7 @@ namespace MBS_SAP.Controllers
 
                     if (nodeMap.TryGetValue(myKaryawan.IdPerusahaan, out var userCompanyNode))
                     {
-                        var sortedDepts = userCompanyNode.DepartmentAchievements.OrderByDescending(d => d.YtdAchievementRate).ToList();
+                        var sortedDepts = userCompanyNode.DepartmentAchievements.OrderByDescending(d => d.MtdAchievementRate).ToList();
                         var myDeptRankInfo = sortedDepts
                             .Select((d, idx) => new { Dept = d, Rank = idx + 1 })
                             .FirstOrDefault(x => string.Equals(x.Dept.DepartmentName, userDeptName, StringComparison.OrdinalIgnoreCase));
@@ -1939,7 +1937,7 @@ namespace MBS_SAP.Controllers
                         if (myDeptRankInfo != null)
                         {
                             ViewBag.UserDeptName = userDeptName;
-                            ViewBag.UserDeptYtdRate = myDeptRankInfo.Dept.YtdAchievementRate;
+                            ViewBag.UserDeptMtdRate = myDeptRankInfo.Dept.MtdAchievementRate;
                             ViewBag.UserDeptRank = myDeptRankInfo.Rank;
                             ViewBag.UserDeptTotalCount = sortedDepts.Count;
                         }

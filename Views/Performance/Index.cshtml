@@ -1562,7 +1562,7 @@
                                 @if (ViewBag.UserDeptName != null)
                                 {
                                     <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
-                                        <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (YTD: @ViewBag.UserDeptYtdRate.ToString("0.0")%)
+                                        <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (MTD: @ViewBag.UserDeptMtdRate.ToString("0.0")%)
                                     </span>
                                 }
                             </div>
@@ -1583,7 +1583,7 @@
                                 @if (ViewBag.UserDeptName != null)
                                 {
                                     <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
-                                        <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (YTD: @ViewBag.UserDeptYtdRate.ToString("0.0")%)
+                                        <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (MTD: @ViewBag.UserDeptMtdRate.ToString("0.0")%)
                                     </span>
                                 }
                             </div>
@@ -2950,7 +2950,7 @@
         window.viewEmployeeDetails = function(deptName) {
             if (!empModal || !empRows || !empTitle || !empLoading || !empTableContainer) return;
 
-            empTitle.textContent = 'Detail Karyawan & Target YTD - ' + deptName;
+            empTitle.textContent = 'Detail Karyawan & Target MTD - ' + deptName;
             
             empLoading.classList.remove('d-none');
             empTableContainer.classList.add('d-none');
@@ -2983,8 +2983,8 @@
                             const c = item.coaching || { target: 0, actual: 0 };
                             const p5 = item.p5m || { target: 0, actual: 0 };
 
-                            const totalTgt = item.ytdTotalTarget || 0;
-                            const totalAct = item.ytdTotalActual || 0;
+                            const totalTgt = item.mtdTotalTarget || 0;
+                            const totalAct = item.mtdTotalActual || 0;
 
                             const compColor = comp >= 100 ? 'text-success' : comp >= 50 ? 'text-warning' : 'text-danger';
 
