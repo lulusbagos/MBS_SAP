@@ -15,13 +15,13 @@
 
     <style>
     /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    :root {
-        --bg:          #0b1220;
-        --bg-card:     #162035;
-        --panel:       #162035;
-        --border:      #2e4a6e;
+        --bg:          #080e1a;
+        --bg-card:     #0f1e34;
+        --panel:       #0f1e34;
+        --border:      #1e3a5f;
         --brutal-brd:  #0d1626;
-        --txt:         #f1f5f9;
-        --muted:       #94a3b8;
+        --txt:         #ffffff;
+        --muted:       #a8bbd4;
         --blue:        #3b82f6;
         --green:       #10b981;
         --red:         #ef4444;
@@ -32,6 +32,7 @@
         --r:           12px;
     }
 
+    html { background: #080e1a; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -114,7 +115,7 @@
        HEADER
     â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .tv-hdr {
-        background: linear-gradient(135deg, #0f1a2e 0%, #162035 100%);
+        background: linear-gradient(135deg, #0a1626 0%, #0f1e34 100%);
         border: 1px solid var(--border);
         border-radius: var(--r);
         padding: 10px 22px;
@@ -140,7 +141,7 @@
     }
 
     .hdr-title   { font-size: 22px; font-weight: 900; color: #ffffff; letter-spacing: .4px; }
-    .hdr-sub     { font-size: 11px; color: #94a3b8; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+    .hdr-sub     { font-size: 11px; color: #a8bbd4; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
 
     .hdr-center  { text-align: center; }
     .refresh-badge {
@@ -151,7 +152,7 @@
         animation: badgeGlow 3s infinite ease-in-out;
     }
     .refresh-label { font-size: 11px; font-weight: 800; color: #34d399; letter-spacing: 0.5px; }
-    .refresh-countdown { font-size: 10px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+    .refresh-countdown { font-size: 11px; color: #a8bbd4; font-weight: 600; margin-top: 2px; }
 
     /* Sonar ping red live dot */
     .sonar-ping {
@@ -181,7 +182,7 @@
 
     .hdr-clock { text-align: right; }
     .clock-time { font-size: 30px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; color: #ffffff; }
-    .clock-date { font-size: 11px; color: #94a3b8; font-weight: 600; margin-top: 2px; }
+    .clock-date { font-size: 11px; color: #a8bbd4; font-weight: 600; margin-top: 2px; }
 
     /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        BODY GRID: LEFT ANALYTICS | RIGHT FEED
@@ -226,7 +227,7 @@
 
     /* â”€â”€ Panel â”€â”€ */
     .panel {
-        background: linear-gradient(160deg, #0e1b30 0%, #152034 100%);
+        background: linear-gradient(160deg, #0a1626 0%, #0f1e34 100%);
         border: 1px solid var(--border);
         border-radius: var(--r);
         padding: 14px 16px;
@@ -241,7 +242,7 @@
         display: flex; align-items: center; gap: 6px;
         font-size: 10px; font-weight: 800;
         text-transform: uppercase; letter-spacing: .8px;
-        color: #cbd5e1; margin-bottom: 10px; flex-shrink: 0;
+        color: #e2e8f0; margin-bottom: 12px; flex-shrink: 0; font-size: 11px;
     }
     .sec-hdr i { font-size: 12px; }
 
@@ -249,7 +250,7 @@
     .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
 
     .kpi {
-        background: linear-gradient(135deg, #0f1a2e 0%, #162035 100%);
+        background: linear-gradient(135deg, #0a1626 0%, #0f1e34 100%);
         border: 1px solid var(--border);
         border-radius: 10px;
         padding: 10px 6px;
@@ -259,8 +260,8 @@
     }
     .kpi:hover { border-color: rgba(59, 130, 246, 0.3); }
     .kpi-lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #94a3b8; margin-bottom: 4px; }
-    .kpi-val { font-size: 22px; font-weight: 900; line-height: 1; color: #ffffff; }
-    .kpi-target { font-size: 8px; color: #7d95b8; margin-top: 1px; }
+    .kpi-val { font-size: 24px; font-weight: 900; line-height: 1; color: #ffffff; }
+    .kpi-target { font-size: 9px; color: #a8bbd4; margin-top: 1px; }
 
     /* â”€â”€ Chart containers â”€â”€ */
     .chart-wrap { flex: 1; position: relative; min-height: 0; }
@@ -273,7 +274,7 @@
         flex: 1; padding: 5px 4px;
         background: var(--bg); border: 1px solid var(--border);
         border-radius: 8px; font-size: 9.5px; font-weight: 800;
-        color: #94a3b8; cursor: pointer; text-transform: uppercase; font-size: 10px;
+        color: #a8bbd4; cursor: pointer; text-transform: uppercase; font-size: 10px;
         letter-spacing: .4px; transition: all .25s ease;
     }
     .tab-btn.active {
@@ -303,7 +304,7 @@
     .co-bar-wrap { width: 80px; height: 5px; background: rgba(255,255,255,.12); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
     .co-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
     .co-pct { font-size: 14px; font-weight: 900; flex-shrink: 0; text-align: right; }
-    .co-detail { font-size: 8.5px; color: var(--muted); text-align: right; }
+    .co-detail { font-size: 9px; color: #a8bbd4; text-align: right; }
 
     /* â”€â”€ Stagnant pill â”€â”€ */
     .stagnant-tag {
@@ -318,7 +319,7 @@
     .right-col { display: grid; grid-template-rows: 1.55fr 1fr; gap: 12px; overflow: hidden; }
 
     .feed-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0; }
-    .feed-title-txt { font-size: 14px; font-weight: 900; color: #ffffff; display: flex; align-items: center; gap: 8px; }
+    .feed-title-txt { font-size: 14px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 8px; }
 
     .feed-grid {
         flex: 1;
@@ -365,7 +366,7 @@
     .fcard-user { display: flex; align-items: center; gap: 7px; }
     .fcard-avatar { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(56,189,248,.35); flex-shrink: 0; }
     .fcard-uname { font-size: 12px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .fcard-uloc  { font-size: 9.5px; color: #7d9cb8; }
+    .fcard-uloc  { font-size: 10px; color: #a8bbd4; }
     .fcard-badges { display: flex; gap: 4px; flex-wrap: wrap; }
     .bgt { padding: 2px 5px; border-radius: 4px; font-size: 8px; font-weight: 800; text-transform: uppercase; }
     .bgt-type   { background: rgba(56,189,248,.1);   color: #38bdf8; }
@@ -637,7 +638,7 @@
                         <span>SAFEFEED &mdash; Aktivitas & Perbaikan K3</span>
                         <span id="feedPageIndicator" style="font-size: 9.5px; color: var(--blue); font-weight: 800; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25); padding: 2px 8px; border-radius: 6px; display: none;"></span>
                     </div>
-                    <div style="font-size:10.5px; color:var(--muted);" id="feedCount">Memuat...</div>
+                    <div style="font-size:11px; color:#a8bbd4; font-weight:600;" id="feedCount">Memuat...</div>
                 </div>
 
                 <div class="tab-row feed-tabs" style="margin-bottom: 12px; flex-shrink: 0;">
@@ -659,16 +660,16 @@
                 <!-- Section 1: RHR Ratios -->
                 <div style="display:flex; flex-direction:column; justify-content:space-between;">
                     <div class="sec-hdr">
-                        <i class="bi bi-shield-slash-fill" style="color:var(--red)"></i> Indikator Resiko & Kepatuhan (RHR)
+                        <i class="bi bi-shield-slash-fill" style="color:var(--red)"></i> <span style="color:#e2e8f0;">Indikator Resiko &amp; Kepatuhan (RHR)</span>
                     </div>
                     <div class="d-flex flex-column gap-2 justify-content-center" style="flex:1;">
                         <!-- RRI -->
                         <div>
                             <div class="d-flex justify-content-between mb-1" style="font-size:10.5px;">
-                                <span style="font-weight:700;">Risk Reduction Index (RRI)</span>
+                                <span style="font-weight:700; color:#e2e8f0;">Risk Reduction Index (RRI)</span>
                                 <span id="lbl-rri" style="font-weight:900; color:var(--green)">0%</span>
                             </div>
-                            <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                            <div style="height:6px; background:rgba(255,255,255,0.15); border-radius:3px; overflow:hidden;">
                                 <div id="bar-rri" style="height:100%; width:0%; background:linear-gradient(90deg, var(--red), var(--green)); transition: width 1s ease;"></div>
                             </div>
                         </div>
@@ -678,7 +679,7 @@
                                 <span style="font-weight:700; color:#e2e8f0;">Kepatuhan Resiko Tinggi</span>
                                 <span id="lbl-comp-risk" style="font-weight:900; color:var(--blue)">0%</span>
                             </div>
-                            <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                            <div style="height:6px; background:rgba(255,255,255,0.15); border-radius:3px; overflow:hidden;">
                                 <div id="bar-comp-risk" style="height:100%; width:0%; background:linear-gradient(90deg, var(--amber), var(--blue)); transition: width 1s ease;"></div>
                             </div>
                         </div>
@@ -688,7 +689,7 @@
                                 <span style="font-weight:700; color:#e2e8f0;">Realisasi Target Mingguan</span>
                                 <span id="lbl-weekly-pct" style="font-weight:900; color:var(--purple)">0%</span>
                             </div>
-                            <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                            <div style="height:6px; background:rgba(255,255,255,0.15); border-radius:3px; overflow:hidden;">
                                 <div id="bar-weekly-pct" style="height:100%; width:0%; background:linear-gradient(90deg, var(--blue), var(--purple)); transition: width 1s ease;"></div>
                             </div>
                         </div>
@@ -698,17 +699,17 @@
                 <!-- Section 2: Top Locations -->
                 <div style="display:flex; flex-direction:column;">
                     <div class="sec-hdr">
-                        <i class="bi bi-geo-alt-fill" style="color:var(--amber)"></i> Top Area Temuan Terbanyak
+                        <i class="bi bi-geo-alt-fill" style="color:var(--amber)"></i> <span style="color:#e2e8f0;">Top Area Temuan Terbanyak</span>
                     </div>
                     <div id="location-list" class="d-flex flex-column gap-2 justify-content-center" style="flex:1;">
-                        <div style="font-size:11px; color:var(--muted); text-align:center;">Memuat data...</div>
+                        <div style="font-size:11px; color:#a8bbd4; text-align:center;">Memuat data...</div>
                     </div>
                 </div>
 
                 <!-- Section 3: Radar/Polar Area Visualizer -->
                 <div style="display:flex; flex-direction:column;">
                     <div class="sec-hdr">
-                        <i class="bi bi-pie-chart-fill" style="color:var(--pink)"></i> Visualisasi Rasio Area
+                        <i class="bi bi-pie-chart-fill" style="color:var(--pink)"></i> <span style="color:#e2e8f0;">Visualisasi Rasio Area</span>
                     </div>
                     <div class="chart-wrap" style="flex:1; min-height:0;">
                         <canvas id="chartLocations"></canvas>
@@ -1315,7 +1316,7 @@ async function fetchPerformance() {
                         <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${l.locationName}</span>
                         <span>${l.count} temuan</span>
                     </div>
-                    <div style="height:4px; background:rgba(255,255,255,0.04); border-radius:2px; margin-top:2px; overflow:hidden;">
+                    <div style="height:4px; background:rgba(255,255,255,0.15); border-radius:2px; margin-top:2px; overflow:hidden;">
                         <div style="height:100%; width:${pct}%; background:${color}; border-radius:2px; transition:width 1s ease;"></div>
                     </div>
                 </div>`;
