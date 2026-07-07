@@ -124,12 +124,19 @@ namespace MBS_SAP.Controllers
                     cTar = m.TargetCoaching ?? 0;
                 }
 
-                int ytdTgtH = hTar * elapsedWeeksYtd;
-                int ytdTgtI = insTar * elapsedWeeksYtd;
-                int ytdTgtST = stTar * elapsedWeeksYtd;
-                int ytdTgtO = obsTar * elapsedWeeksYtd;
-                int ytdTgtC = cTar * elapsedWeeksYtd;
-                int ytdTgtP5 = p5mTar * elapsedWeeksYtd;
+                int wTgtH = hTar > 0 ? Math.Max(1, (int)Math.Round(hTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                int wTgtI = insTar > 0 ? Math.Max(1, (int)Math.Round(insTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                int wTgtST = stTar > 0 ? Math.Max(1, (int)Math.Round(stTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                int wTgtO = obsTar > 0 ? Math.Max(1, (int)Math.Round(obsTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                int wTgtC = cTar > 0 ? Math.Max(1, (int)Math.Round(cTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                int wTgtP5 = p5mTar > 0 ? Math.Max(1, (int)Math.Round(p5mTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+
+                int ytdTgtH = wTgtH * elapsedWeeksYtd;
+                int ytdTgtI = wTgtI * elapsedWeeksYtd;
+                int ytdTgtST = wTgtST * elapsedWeeksYtd;
+                int ytdTgtO = wTgtO * elapsedWeeksYtd;
+                int ytdTgtC = wTgtC * elapsedWeeksYtd;
+                int ytdTgtP5 = wTgtP5 * elapsedWeeksYtd;
 
                 int ytdActH = hazards.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int ytdActI = inspections.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
@@ -138,10 +145,17 @@ namespace MBS_SAP.Controllers
                 int ytdActC = coachings.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int ytdActP5 = p5ms.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
 
+                int cappedActH = Math.Min(ytdActH, ytdTgtH);
+                int cappedActI = Math.Min(ytdActI, ytdTgtI);
+                int cappedActST = Math.Min(ytdActST, ytdTgtST);
+                int cappedActO = Math.Min(ytdActO, ytdTgtO);
+                int cappedActC = Math.Min(ytdActC, ytdTgtC);
+
                 int totalTgt = ytdTgtH + ytdTgtI + ytdTgtST + ytdTgtO + ytdTgtC;
-                int totalAct = ytdActH + ytdActI + ytdActST + ytdActO + ytdActC;
+                int totalAct = cappedActH + cappedActI + cappedActST + cappedActO + cappedActC;
 
                 double compliance = totalTgt > 0 ? Math.Round((double)totalAct / totalTgt * 100.0, 1) : 0;
+                compliance = Math.Min(compliance, 100.0);
 
                 result.Add(new {
                     karyawanName = k.NamaLengkap,
@@ -813,8 +827,24 @@ namespace MBS_SAP.Controllers
                 myCoachingsMonth = await myCoachingsQuery.CountAsync(c => c.CreatedAt >= startOfMonth);
             }
 
-            int myTotalWeek = myHazardsWeek + myInspectionsWeek + mySafetyTalksWeek + myObservationsWeek + myCoachingsWeek;
-            int myTotalMonth = myHazardsMonth + myInspectionsMonth + mySafetyTalksMonth + myObservationsMonth + myCoachingsMonth;
+            int wTarH = targetHazardReport > 0 ? Math.Max(1, (int)Math.Round(targetHazardReport / 4.0, MidpointRounding.AwayFromZero)) : 0;
+            int wTarI = targetInspeksi > 0 ? Math.Max(1, (int)Math.Round(targetInspeksi / 4.0, MidpointRounding.AwayFromZero)) : 0;
+            int wTarST = targetSafetyTalk > 0 ? Math.Max(1, (int)Math.Round(targetSafetyTalk / 4.0, MidpointRounding.AwayFromZero)) : 0;
+            int wTarO = targetObservasi > 0 ? Math.Max(1, (int)Math.Round(targetObservasi / 4.0, MidpointRounding.AwayFromZero)) : 0;
+            int wTarC = targetCoaching > 0 ? Math.Max(1, (int)Math.Round(targetCoaching / 4.0, MidpointRounding.AwayFromZero)) : 0;
+
+            int myTotalWeek = Math.Min(myHazardsWeek, wTarH) +
+                             Math.Min(myInspectionsWeek, wTarI) +
+                             Math.Min(mySafetyTalksWeek, wTarST) +
+                             Math.Min(myObservationsWeek, wTarO) +
+                             Math.Min(myCoachingsWeek, wTarC);
+
+            int myTotalMonth = Math.Min(myHazardsMonth, targetHazardReport) +
+                              Math.Min(myInspectionsMonth, targetInspeksi) +
+                              Math.Min(mySafetyTalksMonth, targetSafetyTalk) +
+                              Math.Min(myObservationsMonth, targetObservasi) +
+                              Math.Min(myCoachingsMonth, targetCoaching);
+
             int myTotalMonthTarget = targetHazardReport + targetInspeksi + targetSafetyTalk + targetObservasi + targetCoaching;
 
             // 9. Average Closure Days for Action Plans
@@ -1302,14 +1332,15 @@ namespace MBS_SAP.Controllers
                                                  .ToListAsync();
 
             var ytdMetricsByCompanyNik = new Dictionary<int, Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>>();
-            var mtdTotalByCompanyNik = new Dictionary<int, Dictionary<string, int>>();
-            var weekTotalByCompanyNik = new Dictionary<int, Dictionary<string, int>>();
+            var mtdMetricsByCompanyNik = new Dictionary<int, Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>>();
+            var weekMetricsByCompanyNik = new Dictionary<int, Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>>();
 
             void ProcessRow(int companyId, string? rawNik, DateTime created, string type)
             {
                 var nik = (rawNik ?? string.Empty).Trim();
                 if (string.IsNullOrWhiteSpace(nik)) return;
 
+                // 1. YTD
                 if (!ytdMetricsByCompanyNik.TryGetValue(companyId, out var nikMap))
                 {
                     nikMap = new Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>(StringComparer.OrdinalIgnoreCase);
@@ -1326,24 +1357,44 @@ namespace MBS_SAP.Controllers
                 if (type != "P5M") current.total++; // Exclude P5M from total SAP achievement
                 nikMap[nik] = current;
 
-                if (created >= startOfMonth && type != "P5M")
+                // 2. MTD
+                if (created >= startOfMonth)
                 {
-                    if (!mtdTotalByCompanyNik.TryGetValue(companyId, out var mtdMap))
+                    if (!mtdMetricsByCompanyNik.TryGetValue(companyId, out var mtdMap))
                     {
-                        mtdMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                        mtdTotalByCompanyNik[companyId] = mtdMap;
+                        mtdMap = new Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>(StringComparer.OrdinalIgnoreCase);
+                        mtdMetricsByCompanyNik[companyId] = mtdMap;
                     }
-                    mtdMap[nik] = mtdMap.TryGetValue(nik, out var mCurrent) ? mCurrent + 1 : 1;
+                    (int h, int i, int st, int o, int c, int p5m, int total) mCurrent = mtdMap.TryGetValue(nik, out var mVal) ? mVal : (0, 0, 0, 0, 0, 0, 0);
+                    if (type == "H") mCurrent.h++;
+                    else if (type == "I") mCurrent.i++;
+                    else if (type == "ST") mCurrent.st++;
+                    else if (type == "O") mCurrent.o++;
+                    else if (type == "C") mCurrent.c++;
+                    else if (type == "P5M") mCurrent.p5m++;
+                    
+                    if (type != "P5M") mCurrent.total++; // Exclude P5M from total SAP achievement
+                    mtdMap[nik] = mCurrent;
                 }
 
-                if (created >= startOfWeek && type != "P5M")
+                // 3. WEEK
+                if (created >= startOfWeek)
                 {
-                    if (!weekTotalByCompanyNik.TryGetValue(companyId, out var weekMap))
+                    if (!weekMetricsByCompanyNik.TryGetValue(companyId, out var weekMap))
                     {
-                        weekMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                        weekTotalByCompanyNik[companyId] = weekMap;
+                        weekMap = new Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>(StringComparer.OrdinalIgnoreCase);
+                        weekMetricsByCompanyNik[companyId] = weekMap;
                     }
-                    weekMap[nik] = weekMap.TryGetValue(nik, out var wCurrent) ? wCurrent + 1 : 1;
+                    (int h, int i, int st, int o, int c, int p5m, int total) wCurrent = weekMap.TryGetValue(nik, out var wVal) ? wVal : (0, 0, 0, 0, 0, 0, 0);
+                    if (type == "H") wCurrent.h++;
+                    else if (type == "I") wCurrent.i++;
+                    else if (type == "ST") wCurrent.st++;
+                    else if (type == "O") wCurrent.o++;
+                    else if (type == "C") wCurrent.c++;
+                    else if (type == "P5M") wCurrent.p5m++;
+                    
+                    if (type != "P5M") wCurrent.total++; // Exclude P5M from total SAP achievement
+                    weekMap[nik] = wCurrent;
                 }
             }
 
@@ -1363,18 +1414,77 @@ namespace MBS_SAP.Controllers
                 var companyEmps = allKaryawans.Where(k => k.IdPerusahaan == hierarchyCompanyId).ToList();
                 int companyMonthlyHazardTarget = companyEmps.Sum(k => employeeTargets.TryGetValue(k.IdKaryawan, out var et) ? et.total : 7);
 
-                int weeklyHazardCount = weekTotalByCompanyNik.TryGetValue(hierarchyCompanyId, out var wMap) ? wMap.Values.Sum() : 0;
-                int monthlyHazardCount = mtdTotalByCompanyNik.TryGetValue(hierarchyCompanyId, out var mMap) ? mMap.Values.Sum() : 0;
-                int ytdHazardCount = ytdMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var yMap) ? yMap.Values.Sum(v => v.total) : 0;
+                int weeklyCappedCount = 0;
+                int monthlyCappedCount = 0;
+                int ytdCappedCount = 0;
+
+                foreach (var emp in companyEmps)
+                {
+                    var empNik = (emp.NoNik ?? string.Empty).Trim();
+                    if (string.IsNullOrEmpty(empNik)) continue;
+
+                    int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0;
+                    if (employeeTargets.TryGetValue(emp.IdKaryawan, out var et))
+                    {
+                        hTar = et.hTar;
+                        insTar = et.insTar;
+                        stTar = et.stTar;
+                        obsTar = et.obsTar;
+                        cTar = et.cTar;
+                    }
+
+                    int mTgtH = hTar;
+                    int mTgtI = insTar;
+                    int mTgtST = stTar;
+                    int mTgtO = obsTar;
+                    int mTgtC = cTar;
+
+                    int wTgtH = hTar > 0 ? Math.Max(1, (int)Math.Round(hTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                    int wTgtI = insTar > 0 ? Math.Max(1, (int)Math.Round(insTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                    int wTgtST = stTar > 0 ? Math.Max(1, (int)Math.Round(stTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                    int wTgtO = obsTar > 0 ? Math.Max(1, (int)Math.Round(obsTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                    int wTgtC = cTar > 0 ? Math.Max(1, (int)Math.Round(cTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+
+                    int ytdTgtH = wTgtH * elapsedWeeksYtd;
+                    int ytdTgtI = wTgtI * elapsedWeeksYtd;
+                    int ytdTgtST = wTgtST * elapsedWeeksYtd;
+                    int ytdTgtO = wTgtO * elapsedWeeksYtd;
+                    int ytdTgtC = wTgtC * elapsedWeeksYtd;
+
+                    int wActH = 0, wActI = 0, wActST = 0, wActO = 0, wActC = 0;
+                    int mActH = 0, mActI = 0, mActST = 0, mActO = 0, mActC = 0;
+                    int yActH = 0, yActI = 0, yActST = 0, yActO = 0, yActC = 0;
+
+                    if (weekMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var weekNikMap) && weekNikMap.TryGetValue(empNik, out var wVal))
+                    {
+                        wActH = wVal.h; wActI = wVal.i; wActST = wVal.st; wActO = wVal.o; wActC = wVal.c;
+                    }
+                    if (mtdMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var mtdNikMap) && mtdNikMap.TryGetValue(empNik, out var mVal))
+                    {
+                        mActH = mVal.h; mActI = mVal.i; mActST = mVal.st; mActO = mVal.o; mActC = mVal.c;
+                    }
+                    if (ytdMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var ytdNikMap) && ytdNikMap.TryGetValue(empNik, out var yVal))
+                    {
+                        yActH = yVal.h; yActI = yVal.i; yActST = yVal.st; yActO = yVal.o; yActC = yVal.c;
+                    }
+
+                    weeklyCappedCount += Math.Min(wActH, wTgtH) + Math.Min(wActI, wTgtI) + Math.Min(wActST, wTgtST) + Math.Min(wActO, wTgtO) + Math.Min(wActC, wTgtC);
+                    monthlyCappedCount += Math.Min(mActH, mTgtH) + Math.Min(mActI, mTgtI) + Math.Min(mActST, mTgtST) + Math.Min(mActO, mTgtO) + Math.Min(mActC, mTgtC);
+                    ytdCappedCount += Math.Min(yActH, ytdTgtH) + Math.Min(yActI, ytdTgtI) + Math.Min(yActST, ytdTgtST) + Math.Min(yActO, ytdTgtO) + Math.Min(yActC, ytdTgtC);
+                }
+
+                int weeklyHazardCount = weeklyCappedCount;
+                int monthlyHazardCount = monthlyCappedCount;
+                int ytdHazardCount = ytdCappedCount;
 
                 int hierarchyMonthlyTarget = companyMonthlyHazardTarget;
                 int hierarchyWeeklyTarget = (int)Math.Round(hierarchyMonthlyTarget / 4.0, MidpointRounding.AwayFromZero);
                 if (hierarchyWeeklyTarget < 1 && hierarchyMonthlyTarget > 0) hierarchyWeeklyTarget = 1;
                 int hierarchyYtdTarget = hierarchyWeeklyTarget * elapsedWeeksYtd;
 
-                double weeklyRate = hierarchyWeeklyTarget > 0 ? (double)weeklyHazardCount / hierarchyWeeklyTarget * 100.0 : 0.0;
-                double monthlyRate = hierarchyMonthlyTarget > 0 ? (double)monthlyHazardCount / hierarchyMonthlyTarget * 100.0 : 0.0;
-                double ytdRate = hierarchyYtdTarget > 0 ? (double)ytdHazardCount / hierarchyYtdTarget * 100.0 : 0.0;
+                double weeklyRate = Math.Min(100.0, hierarchyWeeklyTarget > 0 ? (double)weeklyHazardCount / hierarchyWeeklyTarget * 100.0 : 0.0);
+                double monthlyRate = Math.Min(100.0, hierarchyMonthlyTarget > 0 ? (double)monthlyHazardCount / hierarchyMonthlyTarget * 100.0 : 0.0);
+                double ytdRate = Math.Min(100.0, hierarchyYtdTarget > 0 ? (double)ytdHazardCount / hierarchyYtdTarget * 100.0 : 0.0);
 
                 var node = new CompanyHierarchyNode
                 {
@@ -1408,91 +1518,108 @@ namespace MBS_SAP.Controllers
                         int deptYtdTotal = 0, deptMtdTotal = 0, deptWeekTotal = 0;
                         int deptYtdH = 0, deptYtdI = 0, deptYtdSt = 0, deptYtdO = 0, deptYtdC = 0, deptYtdP5m = 0;
 
-                        if (ytdMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var ytdNikMap))
-                        {
-                            foreach (var nik in dept.Value)
-                            {
-                                if (ytdNikMap.TryGetValue(nik, out var m))
-                                {
-                                    deptYtdTotal += m.total;
-                                    deptYtdH += m.h;
-                                    deptYtdI += m.i;
-                                    deptYtdSt += m.st;
-                                    deptYtdO += m.o;
-                                    deptYtdC += m.c;
-                                    deptYtdP5m += m.p5m;
-                                }
-                            }
-                        }
-
-                        if (mtdTotalByCompanyNik.TryGetValue(hierarchyCompanyId, out var mtdNikMap))
-                        {
-                            foreach (var nik in dept.Value)
-                            {
-                                if (mtdNikMap.TryGetValue(nik, out var value)) deptMtdTotal += value;
-                            }
-                        }
-
-                        if (weekTotalByCompanyNik.TryGetValue(hierarchyCompanyId, out var weekNikMap))
-                        {
-                            foreach (var nik in dept.Value)
-                            {
-                                if (weekNikMap.TryGetValue(nik, out var value)) deptWeekTotal += value;
-                            }
-                        }
-
                         int deptMtdTargetTotal = 0;
-                        int deptMtdTargetH = 0, deptMtdTargetI = 0, deptMtdTargetSt = 0, deptMtdTargetO = 0, deptMtdTargetC = 0, deptMtdTargetP5m = 0;
+                        int deptWeekTargetTotal = 0;
+                        int deptYtdTargetTotal = 0;
+                        int ytdTargetH = 0, ytdTargetI = 0, ytdTargetSt = 0, ytdTargetO = 0, ytdTargetC = 0, ytdTargetP5m = 0;
 
                         foreach (var nik in dept.Value)
                         {
+                            int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0, p5mTar = 1;
                             if (employeeTargetsByNik.TryGetValue(nik, out var et))
                             {
-                                deptMtdTargetTotal += et.total;
-                                deptMtdTargetH += et.hTar;
-                                deptMtdTargetI += et.insTar;
-                                deptMtdTargetSt += et.stTar;
-                                deptMtdTargetO += et.obsTar;
-                                deptMtdTargetC += et.cTar;
-                                deptMtdTargetP5m += et.p5mTar;
+                                hTar = et.hTar;
+                                insTar = et.insTar;
+                                stTar = et.stTar;
+                                obsTar = et.obsTar;
+                                cTar = et.cTar;
+                                p5mTar = et.p5mTar;
                             }
-                            else
+
+                            int mTgtH = hTar;
+                            int mTgtI = insTar;
+                            int mTgtST = stTar;
+                            int mTgtO = obsTar;
+                            int mTgtC = cTar;
+                            int mTgtP5M = p5mTar;
+
+                            int wTgtH = hTar > 0 ? Math.Max(1, (int)Math.Round(hTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                            int wTgtI = insTar > 0 ? Math.Max(1, (int)Math.Round(insTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                            int wTgtST = stTar > 0 ? Math.Max(1, (int)Math.Round(stTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                            int wTgtO = obsTar > 0 ? Math.Max(1, (int)Math.Round(obsTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                            int wTgtC = cTar > 0 ? Math.Max(1, (int)Math.Round(cTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+                            int wTgtP5M = p5mTar > 0 ? Math.Max(1, (int)Math.Round(p5mTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
+
+                            int ytdTgtH = wTgtH * elapsedWeeksYtd;
+                            int ytdTgtI = wTgtI * elapsedWeeksYtd;
+                            int ytdTgtST = wTgtST * elapsedWeeksYtd;
+                            int ytdTgtO = wTgtO * elapsedWeeksYtd;
+                            int ytdTgtC = wTgtC * elapsedWeeksYtd;
+                            int ytdTgtP5M = wTgtP5M * elapsedWeeksYtd;
+
+                            deptMtdTargetTotal += hTar + insTar + stTar + obsTar + cTar;
+                            deptWeekTargetTotal += wTgtH + wTgtI + wTgtST + wTgtO + wTgtC;
+                            deptYtdTargetTotal += ytdTgtH + ytdTgtI + ytdTgtST + ytdTgtO + ytdTgtC;
+
+                            ytdTargetH += ytdTgtH;
+                            ytdTargetI += ytdTgtI;
+                            ytdTargetSt += ytdTgtST;
+                            ytdTargetO += ytdTgtO;
+                            ytdTargetC += ytdTgtC;
+                            ytdTargetP5m += ytdTgtP5M;
+
+                            int wActH = 0, wActI = 0, wActST = 0, wActO = 0, wActC = 0, wActP5M = 0;
+                            int mActH = 0, mActI = 0, mActST = 0, mActO = 0, mActC = 0, mActP5M = 0;
+                            int yActH = 0, yActI = 0, yActST = 0, yActO = 0, yActC = 0, yActP5M = 0;
+
+                            if (weekMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var weekNikMap) && weekNikMap.TryGetValue(nik, out var wVal))
                             {
-                                deptMtdTargetTotal += 6; // Exclude P5M
-                                deptMtdTargetH += 2;
-                                deptMtdTargetI += 1;
-                                deptMtdTargetSt += 1;
-                                deptMtdTargetO += 1;
-                                deptMtdTargetC += 1;
-                                deptMtdTargetP5m += 1; // P5m target tracked separately but not in total
+                                wActH = wVal.h; wActI = wVal.i; wActST = wVal.st; wActO = wVal.o; wActC = wVal.c; wActP5M = wVal.p5m;
                             }
+                            if (mtdMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var mtdNikMap) && mtdNikMap.TryGetValue(nik, out var mVal))
+                            {
+                                mActH = mVal.h; mActI = mVal.i; mActST = mVal.st; mActO = mVal.o; mActC = mVal.c; mActP5M = mVal.p5m;
+                            }
+                            if (ytdMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var ytdNikMap) && ytdNikMap.TryGetValue(nik, out var yVal))
+                            {
+                                yActH = yVal.h; yActI = yVal.i; yActST = yVal.st; yActO = yVal.o; yActC = yVal.c; yActP5M = yVal.p5m;
+                            }
+
+                            deptWeekTotal += Math.Min(wActH, wTgtH) + Math.Min(wActI, wTgtI) + Math.Min(wActST, wTgtST) + Math.Min(wActO, wTgtO) + Math.Min(wActC, wTgtC);
+                            deptMtdTotal += Math.Min(mActH, mTgtH) + Math.Min(mActI, mTgtI) + Math.Min(mActST, mTgtST) + Math.Min(mActO, mTgtO) + Math.Min(mActC, mTgtC);
+                            deptYtdTotal += Math.Min(yActH, ytdTgtH) + Math.Min(yActI, ytdTgtI) + Math.Min(yActST, ytdTgtST) + Math.Min(yActO, ytdTgtO) + Math.Min(yActC, ytdTgtC);
+
+                            deptYtdH += Math.Min(yActH, ytdTgtH);
+                            deptYtdI += Math.Min(yActI, ytdTgtI);
+                            deptYtdSt += Math.Min(yActST, ytdTgtST);
+                            deptYtdO += Math.Min(yActO, ytdTgtO);
+                            deptYtdC += Math.Min(yActC, ytdTgtC);
+                            deptYtdP5m += Math.Min(yActP5M, ytdTgtP5M);
                         }
 
-                        int deptWeekTargetTotal = Math.Max(1, (int)Math.Round(deptMtdTargetTotal / 4.0, MidpointRounding.AwayFromZero));
-                        if (deptWeekTargetTotal < 1 && deptMtdTargetTotal > 0) deptWeekTargetTotal = 1;
-
-                        int deptYtdTargetTotal = deptWeekTargetTotal * elapsedWeeksYtd;
-
-                        int ytdTargetH = Math.Max(1, (int)Math.Round(deptMtdTargetH / 4.0, MidpointRounding.AwayFromZero)) * elapsedWeeksYtd;
-                        int ytdTargetI = Math.Max(1, (int)Math.Round(deptMtdTargetI / 4.0, MidpointRounding.AwayFromZero)) * elapsedWeeksYtd;
-                        int ytdTargetSt = Math.Max(1, (int)Math.Round(deptMtdTargetSt / 4.0, MidpointRounding.AwayFromZero)) * elapsedWeeksYtd;
-                        int ytdTargetO = Math.Max(1, (int)Math.Round(deptMtdTargetO / 4.0, MidpointRounding.AwayFromZero)) * elapsedWeeksYtd;
-                        int ytdTargetC = Math.Max(1, (int)Math.Round(deptMtdTargetC / 4.0, MidpointRounding.AwayFromZero)) * elapsedWeeksYtd;
-                        int ytdTargetP5m = Math.Max(1, (int)Math.Round(deptMtdTargetP5m / 4.0, MidpointRounding.AwayFromZero)) * elapsedWeeksYtd;
+                        int deptWeekTargetTotalVal = Math.Max(1, deptWeekTargetTotal);
+                        int deptYtdTargetTotalVal = Math.Max(1, deptYtdTargetTotal);
+                        int deptMtdTargetTotalVal = Math.Max(1, deptMtdTargetTotal);
+                        int ytdTargetHVal = Math.Max(1, ytdTargetH);
+                        int ytdTargetIVal = Math.Max(1, ytdTargetI);
+                        int ytdTargetStVal = Math.Max(1, ytdTargetSt);
+                        int ytdTargetOVal = Math.Max(1, ytdTargetO);
+                        int ytdTargetCVal = Math.Max(1, ytdTargetC);
+                        int ytdTargetP5mVal = Math.Max(1, ytdTargetP5m);
 
                         departmentAchievements.Add(new DepartmentAchievementViewModel
                         {
                             DepartmentName = dept.Key,
                             EmployeeCount = deptEmployeeCount,
-                            YtdAchievementRate = deptYtdTargetTotal > 0 ? Math.Round((double)deptYtdTotal / deptYtdTargetTotal * 100.0, 1) : 0,
-                            MtdAchievementRate = deptMtdTargetTotal > 0 ? Math.Round((double)deptMtdTotal / deptMtdTargetTotal * 100.0, 1) : 0,
-                            WeeklyAchievementRate = deptWeekTargetTotal > 0 ? Math.Round((double)deptWeekTotal / deptWeekTargetTotal * 100.0, 1) : 0,
-                            YtdHazardRate = ytdTargetH > 0 ? Math.Round((double)deptYtdH / ytdTargetH * 100.0, 1) : 0,
-                            YtdInspeksiRate = ytdTargetI > 0 ? Math.Round((double)deptYtdI / ytdTargetI * 100.0, 1) : 0,
-                            YtdSafetyTalkRate = ytdTargetSt > 0 ? Math.Round((double)deptYtdSt / ytdTargetSt * 100.0, 1) : 0,
-                            YtdObservasiRate = ytdTargetO > 0 ? Math.Round((double)deptYtdO / ytdTargetO * 100.0, 1) : 0,
-                            YtdCoachingRate = ytdTargetC > 0 ? Math.Round((double)deptYtdC / ytdTargetC * 100.0, 1) : 0,
-                            YtdP5mRate = ytdTargetP5m > 0 ? Math.Round((double)deptYtdP5m / ytdTargetP5m * 100.0, 1) : 0
+                            YtdAchievementRate = deptYtdTargetTotalVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdTotal / deptYtdTargetTotalVal * 100.0, 1)) : 0,
+                            MtdAchievementRate = deptMtdTargetTotalVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdTotal / deptMtdTargetTotalVal * 100.0, 1)) : 0,
+                            WeeklyAchievementRate = deptWeekTargetTotalVal > 0 ? Math.Min(100.0, Math.Round((double)deptWeekTotal / deptWeekTargetTotalVal * 100.0, 1)) : 0,
+                            YtdHazardRate = ytdTargetHVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdH / ytdTargetHVal * 100.0, 1)) : 0,
+                            YtdInspeksiRate = ytdTargetIVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdI / ytdTargetIVal * 100.0, 1)) : 0,
+                            YtdSafetyTalkRate = ytdTargetStVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdSt / ytdTargetStVal * 100.0, 1)) : 0,
+                            YtdObservasiRate = ytdTargetOVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdO / ytdTargetOVal * 100.0, 1)) : 0,
+                            YtdCoachingRate = ytdTargetCVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdC / ytdTargetCVal * 100.0, 1)) : 0,
+                            YtdP5mRate = ytdTargetP5mVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdP5m / ytdTargetP5mVal * 100.0, 1)) : 0
                         });
                     }
                 }
