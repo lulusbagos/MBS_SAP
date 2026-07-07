@@ -1560,13 +1560,29 @@
                                 </span>
                                 @if (ViewBag.UserDeptName != null)
                                 {
-                                    <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                                        <div style="display: inline-flex; align-items: center; gap: 6px;">
                                         <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
                                             <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (MTD: @ViewBag.UserDeptMtdRate.ToString("0.0")%)
                                         </span>
-                                        <button type="button" class="btn btn-sm btn-light py-1 px-2" style="font-size: 10.5px; font-weight: 700; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="currentCompanyId = @(ViewBag.UserCompanyId ?? 0); viewEmployeeDetails('@ViewBag.UserDeptName.Replace("'", "\\'")');">
+                                        <button type="button" class="btn btn-sm btn-light py-1 px-2" style="font-size: 10.5px; font-weight: 700; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="viewEmployeeDetails('@ViewBag.UserDeptName.Replace("'", "\\'")', @(ViewBag.UserCompanyId ?? 0));">
                                             <i class="bi bi-people-fill me-1"></i>Detail
                                         </button>
+                                    </div>
+                                    <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                        @if (ViewBag.UserEmpDeptRank != null)
+                                        {
+                                            <span style="font-size: 11px; font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(56, 189, 248, 0.3); color: #e0f2fe;">
+                                                <i class="bi bi-person-badge"></i> Rank Saya di Dept: #@ViewBag.UserEmpDeptRank / @ViewBag.UserEmpDeptTotalCount
+                                            </span>
+                                        }
+                                        @if (ViewBag.UserEmpCompanyRank != null)
+                                        {
+                                            <span style="font-size: 11px; font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(56, 189, 248, 0.3); color: #e0f2fe;">
+                                                <i class="bi bi-building"></i> Rank Saya di Perusahaan: #@ViewBag.UserEmpCompanyRank / @ViewBag.UserEmpCompanyTotalCount
+                                            </span>
+                                        }
+                                    </div>
                                     </div>
                                 }
                             </div>
@@ -1586,13 +1602,29 @@
                                 </span>
                                 @if (ViewBag.UserDeptName != null)
                                 {
-                                    <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                                        <div style="display: inline-flex; align-items: center; gap: 6px;">
                                         <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
                                             <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (MTD: @ViewBag.UserDeptMtdRate.ToString("0.0")%)
                                         </span>
-                                        <button type="button" class="btn btn-sm btn-light py-1 px-2" style="font-size: 10.5px; font-weight: 700; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="currentCompanyId = @(ViewBag.UserCompanyId ?? 0); viewEmployeeDetails('@ViewBag.UserDeptName.Replace("'", "\\'")');">
+                                        <button type="button" class="btn btn-sm btn-light py-1 px-2" style="font-size: 10.5px; font-weight: 700; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="viewEmployeeDetails('@ViewBag.UserDeptName.Replace("'", "\\'")', @(ViewBag.UserCompanyId ?? 0));">
                                             <i class="bi bi-people-fill me-1"></i>Detail
                                         </button>
+                                    </div>
+                                    <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                        @if (ViewBag.UserEmpDeptRank != null)
+                                        {
+                                            <span style="font-size: 11px; font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(56, 189, 248, 0.3); color: #e0f2fe;">
+                                                <i class="bi bi-person-badge"></i> Rank Saya di Dept: #@ViewBag.UserEmpDeptRank / @ViewBag.UserEmpDeptTotalCount
+                                            </span>
+                                        }
+                                        @if (ViewBag.UserEmpCompanyRank != null)
+                                        {
+                                            <span style="font-size: 11px; font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(56, 189, 248, 0.3); color: #e0f2fe;">
+                                                <i class="bi bi-building"></i> Rank Saya di Perusahaan: #@ViewBag.UserEmpCompanyRank / @ViewBag.UserEmpCompanyTotalCount
+                                            </span>
+                                        }
+                                    </div>
                                     </div>
                                 }
                             </div>
@@ -2952,8 +2984,8 @@
                         '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(cRate) + ';">' + cRate + '%</td>' +
                         '<td class="dept-achievement-rate fw-bold" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: ' + getAchievementColor(p5mRate) + ';">' + p5mRate + '%</td>' +
                         '<td style="text-align: center;">' +
-                            '<button type="button" class="btn btn-sm btn-primary py-1 px-2" style="font-size: 10.5px; font-weight: 700; border-radius: 6px;" onclick="viewEmployeeDetails(\'' + deptName.replace(/'/g, "\\'") + '\')">' +
-                                '<i class="bi bi-people-fill me-1"></i>Detail' +
+                            '<button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600;" onclick="viewEmployeeDetails(\'' + deptName.replace(/'/g, "\\'") + '\')">' +
+                                'Ranking <i class="bi bi-chevron-right ms-1"></i>' +
                             '</button>' +
                         '</td>' +
                         '</tr>';
@@ -2964,8 +2996,9 @@
             deptModal.setAttribute('aria-hidden', 'false');
         }
 
-        window.viewEmployeeDetails = function(deptName) {
+        window.viewEmployeeDetails = function(deptName, companyIdOverride) {
             if (!empModal || !empRows || !empTitle || !empLoading || !empTableContainer) return;
+            const cid = companyIdOverride || currentCompanyId;
 
             empTitle.textContent = 'Detail Karyawan & Target MTD - ' + deptName;
             
@@ -2975,7 +3008,7 @@
             empModal.classList.add('show');
             empModal.setAttribute('aria-hidden', 'false');
 
-            const url = `/Performance/GetDepartmentEmployees?companyId=${currentCompanyId}&departmentName=${encodeURIComponent(deptName)}`;
+            const url = `/Performance/GetDepartmentEmployees?companyId=${cid}&departmentName=${encodeURIComponent(deptName)}`;
             fetch(url)
                 .then(res => {
                     if (!res.ok) throw new Error('Gagal mengambil data');
