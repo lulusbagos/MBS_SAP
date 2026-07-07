@@ -81,10 +81,16 @@ namespace MBS_SAP.Controllers
                 return Forbid();
             }
 
+            var result = await GetEmployeesComplianceData(companyId, departmentName);
+            return Json(result);
+        }
+
+        private async Task<List<dynamic>> GetEmployeesComplianceData(int companyId, string departmentNameFilter = null)
+        {
             // Block excluded companies
             if (ExcludedCompanies.IsExcluded(companyId))
             {
-                return Json(new List<object>());
+                return new List<dynamic>();
             }
 
             var today = DateTime.Today;
@@ -110,7 +116,7 @@ namespace MBS_SAP.Controllers
             var mappingsDict = targetMappingCompany.ToDictionary(m => m.KaryawanId);
 
             var deptKaryawansFiltered = deptKaryawans.Where(k => 
-                string.Equals(k.NamaDepartemen ?? "General", departmentName, StringComparison.OrdinalIgnoreCase)
+                departmentNameFilter == null || string.Equals(k.NamaDepartemen ?? "General", departmentNameFilter, StringComparison.OrdinalIgnoreCase)
             ).ToList();
 
             // MTD: filter by startOfMonth
@@ -125,7 +131,7 @@ namespace MBS_SAP.Controllers
                                   where !o.IsDeleted && o.CreatedAt >= startOfMonth && k.IdPerusahaan == companyId
                                   select o.Nik).ToListAsync();
 
-            var result = new List<object>();
+            var result = new List<dynamic>();
             foreach (var k in deptKaryawansFiltered)
             {
                 var nik = (k.NoNik ?? string.Empty).Trim();
@@ -142,7 +148,6 @@ namespace MBS_SAP.Controllers
                     cTar = m.TargetCoaching ?? 0;
                 }
 
-                // MTD target = monthly targets (already monthly from vw_r_karyawan_jabatan_mapping_preview)
                 int mtdTgtH = hTar;
                 int mtdTgtI = insTar;
                 int mtdTgtST = stTar;
@@ -150,7 +155,6 @@ namespace MBS_SAP.Controllers
                 int mtdTgtC = cTar;
                 int mtdTgtP5 = p5mTar;
 
-                // MTD actuals
                 int mtdActH = hazards.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int mtdActI = inspections.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int mtdActST = safetyTalks.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
@@ -158,7 +162,6 @@ namespace MBS_SAP.Controllers
                 int mtdActC = coachings.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int mtdActP5 = p5ms.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
 
-                // Cap per category at target (max 100% each)
                 int cappedActH = Math.Min(mtdActH, mtdTgtH);
                 int cappedActI = Math.Min(mtdActI, mtdTgtI);
                 int cappedActST = Math.Min(mtdActST, mtdTgtST);
@@ -173,7 +176,8 @@ namespace MBS_SAP.Controllers
 
                 result.Add(new {
                     karyawanName = k.NamaLengkap,
-                    nik = k.NoNik,
+                    nik = nik,
+                    departmentName = k.NamaDepartemen,
                     mtdTotalTarget = totalTgt,
                     mtdTotalActual = totalAct,
                     complianceRate = compliance,
@@ -186,8 +190,7 @@ namespace MBS_SAP.Controllers
                 });
             }
 
-            var sortedResult = result.Cast<dynamic>().OrderByDescending(r => r.complianceRate).ToList();
-            return Json(sortedResult);
+            return result.OrderByDescending(r => r.complianceRate).ToList();
         }
 
         private async Task<GeoSafetyRadarViewModel> BuildGeoSafetyRadarDataAsync(int? companyId, HashSet<int> allowedCompanyIds, string? requestedGeoArea, bool includePhotos = false)
@@ -1972,35 +1975,44 @@ namespace MBS_SAP.Controllers
                         userDeptName = string.IsNullOrWhiteSpace(dView?.NamaDepartemen) ? "General" : dView.NamaDepartemen;
                     }
 
-                    // Calculate global department rank across visible hierarchy
-                    var visibleIds = CollectHierarchyIds(rootNodes);
-                    var allVisibleNodes = visibleIds.Select(id => nodeMap.TryGetValue(id, out var n) ? n : null).Where(n => n != null).ToList();
-
-                    var globalDepts = allVisibleNodes
-                        .SelectMany(n => n.DepartmentAchievements)
-                        .GroupBy(d => d.DepartmentName)
-                        .Select(g => new DepartmentAchievementViewModel
-                        {
-                            DepartmentName = g.Key,
-                            EmployeeCount = g.Sum(x => x.EmployeeCount),
-                            MtdAchievementRate = g.Sum(x => x.EmployeeCount) > 0 
-                                ? Math.Round(g.Sum(x => x.MtdAchievementRate * x.EmployeeCount) / g.Sum(x => x.EmployeeCount), 1) 
-                                : 0
-                        })
-                        .OrderByDescending(d => d.MtdAchievementRate)
-                        .ToList();
-
-                    var myDeptRankInfo = globalDepts
-                        .Select((d, idx) => new { Dept = d, Rank = idx + 1 })
-                        .FirstOrDefault(x => string.Equals(x.Dept.DepartmentName, userDeptName, StringComparison.OrdinalIgnoreCase));
-
-                    if (myDeptRankInfo != null)
+                    // 1. Department rank within their company
+                    if (nodeMap.TryGetValue(myKaryawan.IdPerusahaan, out var userCompanyNode))
                     {
-                        ViewBag.UserDeptName = userDeptName;
-                        ViewBag.UserDeptMtdRate = myDeptRankInfo.Dept.MtdAchievementRate;
-                        ViewBag.UserDeptRank = myDeptRankInfo.Rank;
-                        ViewBag.UserDeptTotalCount = globalDepts.Count;
-                        ViewBag.UserCompanyId = myKaryawan.IdPerusahaan;
+                        var sortedDepts = userCompanyNode.DepartmentAchievements.OrderByDescending(d => d.MtdAchievementRate).ToList();
+                        var myDeptRankInfo = sortedDepts
+                            .Select((d, idx) => new { Dept = d, Rank = idx + 1 })
+                            .FirstOrDefault(x => string.Equals(x.Dept.DepartmentName, userDeptName, StringComparison.OrdinalIgnoreCase));
+
+                        if (myDeptRankInfo != null)
+                        {
+                            ViewBag.UserDeptName = userDeptName;
+                            ViewBag.UserDeptMtdRate = myDeptRankInfo.Dept.MtdAchievementRate;
+                            ViewBag.UserDeptRank = myDeptRankInfo.Rank;
+                            ViewBag.UserDeptTotalCount = sortedDepts.Count;
+                            ViewBag.UserCompanyId = myKaryawan.IdPerusahaan;
+                        }
+                    }
+
+                    // 2. Employee Rank
+                    var companyEmployees = await GetEmployeesComplianceData(myKaryawan.IdPerusahaan);
+                    
+                    var myCompanyEmpRankInfo = companyEmployees
+                        .Select((e, idx) => new { Emp = e, Rank = idx + 1 })
+                        .FirstOrDefault(x => string.Equals((string)x.Emp.nik, userNik, StringComparison.OrdinalIgnoreCase));
+                    if (myCompanyEmpRankInfo != null)
+                    {
+                        ViewBag.UserEmpCompanyRank = myCompanyEmpRankInfo.Rank;
+                        ViewBag.UserEmpCompanyTotalCount = companyEmployees.Count;
+                    }
+
+                    var deptEmployees = companyEmployees.Where(e => string.Equals((string)e.departmentName, userDeptName, StringComparison.OrdinalIgnoreCase)).ToList();
+                    var myDeptEmpRankInfo = deptEmployees
+                        .Select((e, idx) => new { Emp = e, Rank = idx + 1 })
+                        .FirstOrDefault(x => string.Equals((string)x.Emp.nik, userNik, StringComparison.OrdinalIgnoreCase));
+                    if (myDeptEmpRankInfo != null)
+                    {
+                        ViewBag.UserEmpDeptRank = myDeptEmpRankInfo.Rank;
+                        ViewBag.UserEmpDeptTotalCount = deptEmployees.Count;
                     }
                 }
             }
