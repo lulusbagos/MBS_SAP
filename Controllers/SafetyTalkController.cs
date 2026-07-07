@@ -84,6 +84,8 @@ namespace MBS_SAP.Controllers
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
             var userName = User.Identity?.Name ?? "Anonymous";
             var userDept = User.FindFirst("Department")?.Value ?? "General";
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
 
             SafetyTalk? talk;
             bool isNew = true;
@@ -107,6 +109,7 @@ namespace MBS_SAP.Controllers
                     Nama = userName,
                     Nik = userNik,
                     Departemen = userDept,
+                    PerusahaanId = userCompanyId,
                     CreatedAt = DateTime.Now
                 };
             }
@@ -223,6 +226,24 @@ namespace MBS_SAP.Controllers
 
             TempData["SuccessMessage"] = "Safety Talk berhasil dihapus.";
             return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet("FixMySafetyTalk")]
+        public async Task<IActionResult> FixSafetyTalk()
+        {
+            var sts = await _context.SafetyTalks.Where(s => s.PerusahaanId == null).ToListAsync();
+            int count = 0;
+            foreach (var s in sts)
+            {
+                var k = await _context.Karyawans.FirstOrDefaultAsync(x => x.NoNik == s.Nik);
+                if (k != null && k.IdPerusahaan > 0)
+                {
+                    s.PerusahaanId = k.IdPerusahaan;
+                    count++;
+                }
+            }
+            if (count > 0) await _context.SaveChangesAsync();
+            return Content($"Fixed {count} SafetyTalk records");
         }
     }
 }
