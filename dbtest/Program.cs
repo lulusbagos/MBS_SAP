@@ -6,42 +6,27 @@ var pgConnStr = "Host=172.16.1.96;Port=5432;Database=sysinteg_indexsafe2;Usernam
 using var connPg = new NpgsqlConnection(pgConnStr);
 connPg.Open();
 
-void CheckView(string viewName, string photoCol)
+string nik = "24011950928";
+Console.WriteLine($"\n=== CHECKING vw_safetytalkdetail FOR NIK {nik} TODAY ===");
+try
 {
-    Console.WriteLine($"\n=== CHECKING {viewName} ({photoCol}) ===");
-    try
-    {
-        using var cmd = new NpgsqlCommand($"SELECT COUNT(*) FROM public.{viewName} WHERE {photoCol} IS NOT NULL AND {photoCol} <> ''", connPg);
-        var total = cmd.ExecuteScalar();
-        Console.WriteLine($"Total records with photos: {total}");
+    using var cmd = new NpgsqlCommand($@"
+        SELECT *
+        FROM public.vw_safetytalkdetail 
+        WHERE employee_nik = @nik AND date::date = current_date
+        ORDER BY date DESC, time DESC", connPg);
+    cmd.Parameters.AddWithValue("nik", nik);
 
-        using var cmdLocal = new NpgsqlCommand($@"
-            SELECT COUNT(*) FROM public.{viewName} 
-            WHERE {photoCol} IS NOT NULL 
-              AND ({photoCol} LIKE '%/private/var/mobile%' 
-                   OR {photoCol} LIKE '%/data/user/0%' 
-                   OR {photoCol} LIKE '%/cache/%'
-                   OR {photoCol} LIKE '%/tmp/%')", connPg);
-        var local = cmdLocal.ExecuteScalar();
-        Console.WriteLine($"Records with local mobile paths: {local}");
-
-        if (Convert.ToInt32(total) > 0)
-        {
-            using var cmdSample = new NpgsqlCommand($"SELECT {photoCol} FROM public.{viewName} WHERE {photoCol} IS NOT NULL AND {photoCol} <> '' LIMIT 2", connPg);
-            using var reader = cmdSample.ExecuteReader();
-            while (reader.Read())
-            {
-                Console.WriteLine($"- Sample: '{reader[photoCol]}'");
-            }
-        }
+    using var reader = cmd.ExecuteReader();
+    if (!reader.HasRows) {
+        Console.WriteLine($"TIDAK ADA data safety talk untuk NIK {nik} pada hari ini dari postgres.");
     }
-    catch (Exception ex)
+    while (reader.Read())
     {
-        Console.WriteLine($"Error: {ex.Message}");
+        Console.WriteLine($"- SUDAH ADA: Tanggal: {reader["date"]}, Waktu: {reader["time"]}, Topik: {reader["title"]}, Lokasi: {reader["location_name"]}");
     }
 }
-
-CheckView("vw_coachingdetail", "foto");
-CheckView("vw_p5mdetail", "foto");
-CheckView("vw_hazardreportdetail", "foto_temuan");
-CheckView("vw_observationdetail", "foto");
+catch (Exception ex)
+{
+    Console.WriteLine($"Error: {ex.Message}");
+}

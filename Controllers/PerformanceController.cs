@@ -1584,11 +1584,13 @@ namespace MBS_SAP.Controllers
 
                         int deptYtdTotal = 0, deptMtdTotal = 0, deptWeekTotal = 0;
                         int deptYtdH = 0, deptYtdI = 0, deptYtdSt = 0, deptYtdO = 0, deptYtdC = 0, deptYtdP5m = 0;
+                        int deptMtdH = 0, deptMtdI = 0, deptMtdSt = 0, deptMtdO = 0, deptMtdC = 0, deptMtdP5m = 0;
 
                         int deptMtdTargetTotal = 0;
                         int deptWeekTargetTotal = 0;
                         int deptYtdTargetTotal = 0;
                         int ytdTargetH = 0, ytdTargetI = 0, ytdTargetSt = 0, ytdTargetO = 0, ytdTargetC = 0, ytdTargetP5m = 0;
+                        int mtdTargetH = 0, mtdTargetI = 0, mtdTargetSt = 0, mtdTargetO = 0, mtdTargetC = 0, mtdTargetP5m = 0;
 
                         foreach (var nik in dept.Value)
                         {
@@ -1635,6 +1637,13 @@ namespace MBS_SAP.Controllers
                             ytdTargetC += ytdTgtC;
                             ytdTargetP5m += ytdTgtP5M;
 
+                            mtdTargetH += mTgtH;
+                            mtdTargetI += mTgtI;
+                            mtdTargetSt += mTgtST;
+                            mtdTargetO += mTgtO;
+                            mtdTargetC += mTgtC;
+                            mtdTargetP5m += mTgtP5M;
+
                             int wActH = 0, wActI = 0, wActST = 0, wActO = 0, wActC = 0, wActP5M = 0;
                             int mActH = 0, mActI = 0, mActST = 0, mActO = 0, mActC = 0, mActP5M = 0;
                             int yActH = 0, yActI = 0, yActST = 0, yActO = 0, yActC = 0, yActP5M = 0;
@@ -1662,6 +1671,13 @@ namespace MBS_SAP.Controllers
                             deptYtdO += Math.Min(yActO, ytdTgtO);
                             deptYtdC += Math.Min(yActC, ytdTgtC);
                             deptYtdP5m += Math.Min(yActP5M, ytdTgtP5M);
+
+                            deptMtdH += Math.Min(mActH, mTgtH);
+                            deptMtdI += Math.Min(mActI, mTgtI);
+                            deptMtdSt += Math.Min(mActST, mTgtST);
+                            deptMtdO += Math.Min(mActO, mTgtO);
+                            deptMtdC += Math.Min(mActC, mTgtC);
+                            deptMtdP5m += Math.Min(mActP5M, mTgtP5M);
                         }
 
                         int deptWeekTargetTotalVal = Math.Max(1, deptWeekTargetTotal);
@@ -1673,6 +1689,13 @@ namespace MBS_SAP.Controllers
                         int ytdTargetOVal = Math.Max(1, ytdTargetO);
                         int ytdTargetCVal = Math.Max(1, ytdTargetC);
                         int ytdTargetP5mVal = Math.Max(1, ytdTargetP5m);
+
+                        int mtdTargetHVal = Math.Max(1, mtdTargetH);
+                        int mtdTargetIVal = Math.Max(1, mtdTargetI);
+                        int mtdTargetStVal = Math.Max(1, mtdTargetSt);
+                        int mtdTargetOVal = Math.Max(1, mtdTargetO);
+                        int mtdTargetCVal = Math.Max(1, mtdTargetC);
+                        int mtdTargetP5mVal = Math.Max(1, mtdTargetP5m);
 
                         departmentAchievements.Add(new DepartmentAchievementViewModel
                         {
@@ -1686,7 +1709,14 @@ namespace MBS_SAP.Controllers
                             YtdSafetyTalkRate = ytdTargetStVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdSt / ytdTargetStVal * 100.0, 1)) : 0,
                             YtdObservasiRate = ytdTargetOVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdO / ytdTargetOVal * 100.0, 1)) : 0,
                             YtdCoachingRate = ytdTargetCVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdC / ytdTargetCVal * 100.0, 1)) : 0,
-                            YtdP5mRate = ytdTargetP5mVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdP5m / ytdTargetP5mVal * 100.0, 1)) : 0
+                            YtdP5mRate = ytdTargetP5mVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdP5m / ytdTargetP5mVal * 100.0, 1)) : 0,
+
+                            MtdHazardRate = mtdTargetHVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdH / mtdTargetHVal * 100.0, 1)) : 0,
+                            MtdInspeksiRate = mtdTargetIVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdI / mtdTargetIVal * 100.0, 1)) : 0,
+                            MtdSafetyTalkRate = mtdTargetStVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdSt / mtdTargetStVal * 100.0, 1)) : 0,
+                            MtdObservasiRate = mtdTargetOVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdO / mtdTargetOVal * 100.0, 1)) : 0,
+                            MtdCoachingRate = mtdTargetCVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdC / mtdTargetCVal * 100.0, 1)) : 0,
+                            MtdP5mRate = mtdTargetP5mVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdP5m / mtdTargetP5mVal * 100.0, 1)) : 0
                         });
                     }
                 }
@@ -2624,5 +2654,12 @@ namespace MBS_SAP.Controllers
         public double YtdP5mRate { get; set; }
         public double YtdObservasiRate { get; set; }
         public double YtdCoachingRate { get; set; }
+
+        public double MtdHazardRate { get; set; }
+        public double MtdInspeksiRate { get; set; }
+        public double MtdSafetyTalkRate { get; set; }
+        public double MtdP5mRate { get; set; }
+        public double MtdObservasiRate { get; set; }
+        public double MtdCoachingRate { get; set; }
     }
 }

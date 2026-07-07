@@ -2785,15 +2785,13 @@
                                                 <th style="width: 50px;">No</th>
                                                 <th>Departemen</th>
                                                 <th>Jml Karyawan</th>
-                                                <th>YTD Total</th>
                                                 <th>MTD Total</th>
-                                                <th>WEEK Total</th>
-                                                <th>YTD Hazard</th><th>YTD Inspeksi</th><th>YTD S.Talk</th><th>YTD Observasi</th><th>YTD Coaching</th><th style="background-color: #78350f; color: #ffffff; border-left: 2px solid #b45309;">YTD P5M *</th>
+                                                <th>MTD Hazard</th><th>MTD Inspeksi</th><th>MTD S.Talk</th><th>MTD Observasi</th><th>MTD Coaching</th><th style="background-color: #78350f; color: #ffffff; border-left: 2px solid #b45309;">MTD P5M *</th>
                                                 <th style="text-align: center;">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody id="deptAchievementRows">
-                                            <tr><td colspan="13" class="text-center text-muted">Belum ada data departemen.</td></tr>
+                                            <tr><td colspan="11" class="text-center text-muted">Belum ada data departemen.</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -2912,20 +2910,36 @@
                 if (!Array.isArray(data) || data.length === 0) {
                     empRows.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Tidak ada data karyawan aktif.</td></tr>';
                 } else {
-                    empRows.innerHTML = data.map((item, idx) => {
+                    const sortedData = data.slice().sort((a, b) => {
+                        const aZero = (a.mtdTotalTarget === 0) ? 1 : 0;
+                        const bZero = (b.mtdTotalTarget === 0) ? 1 : 0;
+                        if (aZero !== bZero) return aZero - bZero;
+                        return (b.complianceRate || 0) - (a.complianceRate || 0);
+                    });
+
+                    empRows.innerHTML = sortedData.map((item, idx) => {
                         const name = item.karyawanName || '-';
-                        const nik = item.karyawanNik || '-';
+                        const nik = item.nik || '-';
                         const jabatan = item.jabatanName || '-';
                         
-                        const mtd = Number(item.mtdAchievementRate || 0).toFixed(1);
-                        const hazard = item.mtdHazardCount + ' / ' + item.targetHazardMtd;
-                        const inspeksi = item.mtdInspeksiCount + ' / ' + item.targetInspeksiMtd;
-                        const safetyTalk = item.mtdSafetyTalkCount + ' / ' + item.targetSafetyTalkMtd;
-                        const observasi = item.mtdObservasiCount + ' / ' + item.targetObservasiMtd;
-                        const coaching = item.mtdCoachingCount + ' / ' + item.targetCoachingMtd;
-                        const p5m = item.mtdP5mCount + ' / ' + item.targetP5mMtd;
+                        const mtd = Number(item.complianceRate || 0).toFixed(1);
                         
-                        return '<tr>' +
+                        function formatZeroTgt(actual, target) {
+                            if (target === 0) return '<span style="font-weight: 900; color: #000000;">' + actual + ' / ' + target + '</span>';
+                            return actual + ' / ' + target;
+                        }
+
+                        const hazard = formatZeroTgt(item.hazard ? item.hazard.actual : 0, item.hazard ? item.hazard.target : 0);
+                        const inspeksi = formatZeroTgt(item.inspeksi ? item.inspeksi.actual : 0, item.inspeksi ? item.inspeksi.target : 0);
+                        const safetyTalk = formatZeroTgt(item.safetyTalk ? item.safetyTalk.actual : 0, item.safetyTalk ? item.safetyTalk.target : 0);
+                        const observasi = formatZeroTgt(item.observasi ? item.observasi.actual : 0, item.observasi ? item.observasi.target : 0);
+                        const coaching = formatZeroTgt(item.coaching ? item.coaching.actual : 0, item.coaching ? item.coaching.target : 0);
+                        const p5m = formatZeroTgt(item.p5m ? item.p5m.actual : 0, item.p5m ? item.p5m.target : 0);
+                        
+                        const isZeroTarget = (item.mtdTotalTarget === 0);
+                        const rowStyle = isZeroTarget ? 'background-color: #f0fdf4;' : '';
+                        
+                        return '<tr style="' + rowStyle + '">' +
                             '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
                             '<td><div class="fw-bold" style="color: #334155;">' + name + '</div><div style="font-size: 10px; color: #64748b;">' + nik + '</div></td>' +
                             '<td>' + jabatan + '</td>' +
@@ -2955,34 +2969,30 @@
         deptTitle.textContent = 'Pencapaian Per Departemen - ' + (companyName || 'Perusahaan');
 
         if (!Array.isArray(deptData) || deptData.length === 0) {
-            deptRows.innerHTML = '<tr><td colspan="13" class="text-center text-muted">Belum ada data departemen.</td></tr>';
+            deptRows.innerHTML = '<tr><td colspan="11" class="text-center text-muted">Belum ada data departemen.</td></tr>';
         } else {
             const sortedDeptData = deptData.slice().sort(function(a, b) {
-                const ytdA = Number(a.ytdAchievementRate || a.YtdAchievementRate || 0);
-                const ytdB = Number(b.ytdAchievementRate || b.YtdAchievementRate || 0);
-                return ytdB - ytdA;
+                const mtdA = Number(a.mtdAchievementRate || a.MtdAchievementRate || 0);
+                const mtdB = Number(b.mtdAchievementRate || b.MtdAchievementRate || 0);
+                return mtdB - mtdA;
             });
             
             deptRows.innerHTML = sortedDeptData.map(function (item, idx) {
                 const deptName = String(item.departmentName || item.DepartmentName || '-');
                 const employeeCount = Number(item.employeeCount || item.EmployeeCount || 0);
-                const ytd = Number(item.ytdAchievementRate || item.YtdAchievementRate || 0).toFixed(1);
                 const mtd = Number(item.mtdAchievementRate || item.MtdAchievementRate || 0).toFixed(1);
-                const week = Number(item.weeklyAchievementRate || item.WeeklyAchievementRate || 0).toFixed(1);
-                const hRate = Number(item.ytdHazardRate || item.YtdHazardRate || 0).toFixed(1);
-                const iRate = Number(item.ytdInspeksiRate || item.YtdInspeksiRate || 0).toFixed(1);
-                const stRate = Number(item.ytdSafetyTalkRate || item.YtdSafetyTalkRate || 0).toFixed(1);
-                const oRate = Number(item.ytdObservasiRate || item.YtdObservasiRate || 0).toFixed(1);
-                const cRate = Number(item.ytdCoachingRate || item.YtdCoachingRate || 0).toFixed(1);
-                const p5mRate = Number(item.ytdP5mRate || item.YtdP5mRate || 0).toFixed(1);
+                const hRate = Number(item.mtdHazardRate || item.MtdHazardRate || 0).toFixed(1);
+                const iRate = Number(item.mtdInspeksiRate || item.MtdInspeksiRate || 0).toFixed(1);
+                const stRate = Number(item.mtdSafetyTalkRate || item.MtdSafetyTalkRate || 0).toFixed(1);
+                const oRate = Number(item.mtdObservasiRate || item.MtdObservasiRate || 0).toFixed(1);
+                const cRate = Number(item.mtdCoachingRate || item.MtdCoachingRate || 0).toFixed(1);
+                const p5mRate = Number(item.mtdP5mRate || item.MtdP5mRate || 0).toFixed(1);
 
                 return '<tr>' +
                     '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
                     '<td class="fw-bold" style="color: #334155;">' + deptName + '</td>' +
                     '<td>' + employeeCount + '</td>' +
-                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(ytd) + ';">' + ytd + '%</td>' +
                     '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
-                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(week) + ';">' + week + '%</td>' +
                     '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(hRate) + ';">' + hRate + '%</td>' +
                     '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(iRate) + ';">' + iRate + '%</td>' +
                     '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(stRate) + ';">' + stRate + '%</td>' +
