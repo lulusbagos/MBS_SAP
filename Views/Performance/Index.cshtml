@@ -1382,6 +1382,91 @@
         color: #0f766e;
     }
 
+    /* League Football Style Enhancements */
+    .league-table-container {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 4px 12px rgba(2, 6, 23, 0.05);
+    }
+    .dept-achievement-table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .dept-achievement-table th {
+        background: #1e293b !important;
+        border-bottom: 2px solid #0f172a !important;
+        color: #ffffff !important;
+        text-align: center;
+    }
+    .league-row-champions {
+        border-left: 4px solid #10b981 !important;
+        background-color: rgba(16, 185, 129, 0.02) !important;
+    }
+    .league-row-champions:hover {
+        background-color: rgba(16, 185, 129, 0.06) !important;
+    }
+    .league-row-relegation {
+        border-left: 4px solid #ef4444 !important;
+        background-color: rgba(239, 68, 68, 0.02) !important;
+    }
+    .league-row-relegation:hover {
+        background-color: rgba(239, 68, 68, 0.06) !important;
+    }
+    .league-row-normal {
+        border-left: 4px solid #cbd5e1 !important;
+    }
+    .league-rank-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 8px;
+        min-width: 32px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 11px;
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+    }
+    .league-rank-champions {
+        background: #d1fae5;
+        color: #065f46;
+        border-color: #a7f3d0;
+    }
+    .league-rank-relegation {
+        background: #fee2e2;
+        color: #991b1b;
+        border-color: #fca5a5;
+    }
+    .league-legend-box {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 12px 16px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        margin-top: 16px;
+        margin-bottom: 12px;
+        font-size: 11px;
+    }
+    .league-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+        color: #475569;
+    }
+    .league-legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+    .dot-champions { background: #10b981; }
+    .dot-relegation { background: #ef4444; }
+    .dot-normal { background: #cbd5e1; }
+
     /* Safety Pyramid Styles */
     .pyramid-graphic {
         background: #ffffff !important; /* Force light background to match aesthetic in dark mode */
@@ -2778,15 +2863,20 @@
                                 </button>
                             </div>
                             <div class="dept-achievement-body">
-                                <div class="table-responsive">
+                                <div class="table-responsive league-table-container">
                                     <table class="dept-achievement-table">
                                         <thead>
                                             <tr>
-                                                <th style="width: 50px;">No</th>
-                                                <th>Departemen</th>
-                                                <th>Jml Karyawan</th>
-                                                <th>MTD Total</th>
-                                                <th>MTD Hazard</th><th>MTD Inspeksi</th><th>MTD S.Talk</th><th>MTD Observasi</th><th>MTD Coaching</th><th style="background-color: #78350f; color: #ffffff; border-left: 2px solid #b45309;">MTD P5M *</th>
+                                                <th style="width: 60px; text-align: center;">Pos</th>
+                                                <th>Klub (Departemen)</th>
+                                                <th style="text-align: center;">Skuad (Karyawan)</th>
+                                                <th style="text-align: center; background-color: #1e3a8a; color: #ffffff;">PTS (Kepatuhan %)</th>
+                                                <th style="text-align: center;">HZ (Hazard)</th>
+                                                <th style="text-align: center;">IP (Inspeksi)</th>
+                                                <th style="text-align: center;">ST (S. Talk)</th>
+                                                <th style="text-align: center;">OB (Observasi)</th>
+                                                <th style="text-align: center;">CC (Coaching)</th>
+                                                <th style="background-color: #78350f; color: #ffffff; border-left: 2px solid #b45309; text-align: center;">P5M *</th>
                                                 <th style="text-align: center;">Aksi</th>
                                             </tr>
                                         </thead>
@@ -2794,6 +2884,20 @@
                                             <tr><td colspan="11" class="text-center text-muted">Belum ada data departemen.</td></tr>
                                         </tbody>
                                     </table>
+                                </div>
+                                <div class="league-legend-box">
+                                    <div class="league-legend-item">
+                                        <div class="league-legend-dot dot-champions"></div>
+                                        <span>Zona Champions (Peringkat 1-3): Kepatuhan Tinggi / Apresiasi Unggul</span>
+                                    </div>
+                                    <div class="league-legend-item">
+                                        <div class="league-legend-dot dot-normal"></div>
+                                        <span>Zona Aman (Tengah): Memenuhi Standar Safety</span>
+                                    </div>
+                                    <div class="league-legend-item">
+                                        <div class="league-legend-dot dot-relegation"></div>
+                                        <span>Zona Degradasi/Pembinaan (3 Peringkat Bawah): Butuh Re-Coaching & Pendampingan</span>
+                                    </div>
                                 </div>
                                 <span class="text-muted" style="font-size: 11px; font-style: italic; margin-top: 12px; display: block; line-height: 1.4;">
                                     * Catatan: Kolom P5M sengaja diwarnai berbeda karena tidak diikutsertakan dalam akumulasi target total kepatuhan SAP perusahaan (Target P5M dimonitor terpisah).
@@ -2819,26 +2923,40 @@
                                     </div>
                                     <p class="text-muted mt-2 mb-0" style="font-size: 13px; font-weight: 600;">Memuat data karyawan...</p>
                                 </div>
-                                <div class="table-responsive d-none" id="employeeTableContainer">
+                                <div class="table-responsive d-none league-table-container" id="employeeTableContainer">
                                     <table class="dept-achievement-table" style="font-size: 12px;">
                                         <thead>
                                             <tr>
-                                                <th style="width: 50px;">No</th>
-                                                <th>Nama Karyawan</th>
-                                                <th>NIK</th>
-                                                <th class="text-center">Compliance</th>
-                                                <th class="text-center">Hazard (Real/Tgt)</th>
-                                                <th class="text-center">Inspeksi (Real/Tgt)</th>
-                                                <th class="text-center">S.Talk (Real/Tgt)</th>
-                                                <th class="text-center">Observasi (Real/Tgt)</th>
-                                                <th class="text-center">Coaching (Real/Tgt)</th>
-                                                <th class="text-center" style="background-color: #78350f; color: #ffffff; border-left: 2px solid #b45309;">P5M * (Real/Tgt)</th>
+                                                <th style="width: 60px; text-align: center;">Pos</th>
+                                                <th>Pemain (Nama Karyawan & NIK)</th>
+                                                <th>Jabatan</th>
+                                                <th class="text-center" style="background-color: #1e3a8a; color: #ffffff;">PTS (Kepatuhan %)</th>
+                                                <th class="text-center">HZ (Hazard)</th>
+                                                <th class="text-center">IP (Inspeksi)</th>
+                                                <th class="text-center">ST (S. Talk)</th>
+                                                <th class="text-center">OB (Observasi)</th>
+                                                <th class="text-center">CC (Coaching)</th>
+                                                <th class="text-center" style="background-color: #78350f; color: #ffffff; border-left: 2px solid #b45309;">P5M *</th>
                                             </tr>
                                         </thead>
                                         <tbody id="employeeDetailRows">
                                             <!-- Lazy loaded rows -->
                                         </tbody>
                                     </table>
+                                </div>
+                                <div class="league-legend-box" id="employeeLeagueLegend" style="margin-top: 12px; margin-bottom: 12px;">
+                                    <div class="league-legend-item">
+                                        <div class="league-legend-dot dot-champions"></div>
+                                        <span>Zona Champions (Top 3): Pemain Teladan Safety</span>
+                                    </div>
+                                    <div class="league-legend-item">
+                                        <div class="league-legend-dot dot-normal"></div>
+                                        <span>Zona Aman (Tengah): Patuh Kriteria K3</span>
+                                    </div>
+                                    <div class="league-legend-item">
+                                        <div class="league-legend-dot dot-relegation"></div>
+                                        <span>Zona Degradasi/Pembinaan (3 Bawah): Perlu Konseling & Pembinaan PJA</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2917,6 +3035,7 @@
                         return (b.complianceRate || 0) - (a.complianceRate || 0);
                     });
 
+                    const totalEmployees = sortedData.length;
                     empRows.innerHTML = sortedData.map((item, idx) => {
                         const name = item.karyawanName || '-';
                         const nik = item.nik || '-';
@@ -2937,24 +3056,36 @@
                         const p5m = formatZeroTgt(item.p5m ? item.p5m.actual : 0, item.p5m ? item.p5m.target : 0);
                         
                         const isZeroTarget = (item.mtdTotalTarget === 0);
-                        const rowStyle = isZeroTarget ? 'background-color: #f0fdf4;' : '';
+                        let rowStyle = isZeroTarget ? 'background-color: #f0fdf4;' : '';
 
                         let rankDisplay = idx + 1;
-                        if (idx === 0) rankDisplay = '<span style="font-size: 16px;" title="Juara 1 (Emas)">🥇</span>';
-                        else if (idx === 1) rankDisplay = '<span style="font-size: 16px;" title="Juara 2 (Perak)">🥈</span>';
-                        else if (idx === 2) rankDisplay = '<span style="font-size: 16px;" title="Juara 3 (Perunggu)">🥉</span>';
+                        let rankClass = 'league-rank-pill';
+                        let rowClass = 'league-row-normal';
+
+                        if (idx < 3) {
+                            rowClass = 'league-row-champions';
+                            rankClass += ' league-rank-champions';
+                            if (idx === 0) rankDisplay = '🥇 1';
+                            else if (idx === 1) rankDisplay = '🥈 2';
+                            else if (idx === 2) rankDisplay = '🥉 3';
+                        } else if (idx >= totalEmployees - 3 && totalEmployees > 5) {
+                            rowClass = 'league-row-relegation';
+                            rankClass += ' league-rank-relegation';
+                        }
+
+                        const rankPill = '<div class="' + rankClass + '">' + rankDisplay + '</div>';
                         
-                        return '<tr style="' + rowStyle + '">' +
-                            '<td class="text-muted fw-bold">' + rankDisplay + '</td>' +
+                        return '<tr class="' + rowClass + '" style="' + rowStyle + '">' +
+                            '<td class="text-muted fw-bold" style="text-align: center;">' + rankPill + '</td>' +
                             '<td><div class="fw-bold" style="color: #334155;">' + name + '</div><div style="font-size: 10px; color: #64748b;">' + nik + '</div></td>' +
                             '<td>' + jabatan + '</td>' +
-                            '<td class="fw-bold" style="color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
-                            '<td>' + hazard + '</td>' +
-                            '<td>' + inspeksi + '</td>' +
-                            '<td>' + safetyTalk + '</td>' +
-                            '<td>' + observasi + '</td>' +
-                            '<td>' + coaching + '</td>' +
-                            '<td style="background-color: #fffbeb; border-left: 2px solid #f59e0b;">' + p5m + '</td>' +
+                            '<td class="fw-bold text-center" style="color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
+                            '<td class="text-center">' + hazard + '</td>' +
+                            '<td class="text-center">' + inspeksi + '</td>' +
+                            '<td class="text-center">' + safetyTalk + '</td>' +
+                            '<td class="text-center">' + observasi + '</td>' +
+                            '<td class="text-center">' + coaching + '</td>' +
+                            '<td class="text-center" style="background-color: #fffbeb; border-left: 2px solid #f59e0b;">' + p5m + '</td>' +
                         '</tr>';
                     }).join('');
                 }
@@ -2988,6 +3119,7 @@
                 return mtdB - mtdA;
             });
             
+            const totalDepts = sortedDeptData.length;
             deptRows.innerHTML = sortedDeptData.map(function (item, idx) {
                 const deptName = String(item.departmentName || item.DepartmentName || '-');
                 const employeeCount = Number(item.employeeCount || item.EmployeeCount || 0);
@@ -3000,21 +3132,33 @@
                 const p5mRate = Number(item.mtdP5mRate || item.MtdP5mRate || 0).toFixed(1);
 
                 let rankDisplay = idx + 1;
-                if (idx === 0) rankDisplay = '<span style="font-size: 16px;" title="Juara 1 (Emas)">🥇</span>';
-                else if (idx === 1) rankDisplay = '<span style="font-size: 16px;" title="Juara 2 (Perak)">🥈</span>';
-                else if (idx === 2) rankDisplay = '<span style="font-size: 16px;" title="Juara 3 (Perunggu)">🥉</span>';
+                let rankClass = 'league-rank-pill';
+                let rowClass = 'league-row-normal';
 
-                return '<tr>' +
-                    '<td class="text-muted fw-bold">' + rankDisplay + '</td>' +
+                if (idx < 3) {
+                    rowClass = 'league-row-champions';
+                    rankClass += ' league-rank-champions';
+                    if (idx === 0) rankDisplay = '🥇 1';
+                    else if (idx === 1) rankDisplay = '🥈 2';
+                    else if (idx === 2) rankDisplay = '🥉 3';
+                } else if (idx >= totalDepts - 3 && totalDepts > 5) {
+                    rowClass = 'league-row-relegation';
+                    rankClass += ' league-rank-relegation';
+                }
+
+                rankDisplay = '<div class="' + rankClass + '">' + rankDisplay + '</div>';
+
+                return '<tr class="' + rowClass + '">' +
+                    '<td class="text-muted fw-bold" style="text-align: center;">' + rankDisplay + '</td>' +
                     '<td class="fw-bold" style="color: #334155;">' + deptName + '</td>' +
-                    '<td>' + employeeCount + '</td>' +
-                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
-                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(hRate) + ';">' + hRate + '%</td>' +
-                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(iRate) + ';">' + iRate + '%</td>' +
-                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(stRate) + ';">' + stRate + '%</td>' +
-                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(oRate) + ';">' + oRate + '%</td>' +
-                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(cRate) + ';">' + cRate + '%</td>' +
-                    '<td class="dept-achievement-rate fw-bold" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: ' + getAchievementColor(p5mRate) + ';">' + p5mRate + '%</td>' +
+                    '<td style="text-align: center;">' + employeeCount + '</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="text-align: center; color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="text-align: center; color: ' + getAchievementColor(hRate) + ';">' + hRate + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="text-align: center; color: ' + getAchievementColor(iRate) + ';">' + iRate + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="text-align: center; color: ' + getAchievementColor(stRate) + ';">' + stRate + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="text-align: center; color: ' + getAchievementColor(oRate) + ';">' + oRate + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="text-align: center; color: ' + getAchievementColor(cRate) + ';">' + cRate + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="text-align: center; background-color: #fffbeb; border-left: 2px solid #f59e0b; color: ' + getAchievementColor(p5mRate) + ';">' + p5mRate + '%</td>' +
                     '<td style="text-align: center;">' +
                         '<button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600;" onclick="viewEmployeeDetails(\'' + deptName.replace(/\'/g, "\\'") + '\')">' +
                             'Ranking <i class="bi bi-chevron-right ms-1"></i>' +
