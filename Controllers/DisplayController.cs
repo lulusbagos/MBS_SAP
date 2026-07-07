@@ -95,6 +95,7 @@ namespace MBS_SAP.Controllers
                 int targetSafetyTalk= targetMappings.Sum(m => m.TargetSafetyTalk ?? 0);
                 int targetObs       = targetMappings.Sum(m => m.TargetObservasi ?? 0);
                 int targetCoaching  = targetMappings.Sum(m => m.TargetCoaching ?? 0);
+                int targetP5m       = targetMappings.Count;
 
                 // ── Hazard close metrics ────────────────────────────────────────
                 var allHazards = await _context.HazardReports
@@ -159,6 +160,7 @@ namespace MBS_SAP.Controllers
                     int tgtST = targetMappings.Where(m => m.PerusahaanId == c.PerusahaanId).Sum(m => m.TargetSafetyTalk  ?? 0);
                     int tgtO  = targetMappings.Where(m => m.PerusahaanId == c.PerusahaanId).Sum(m => m.TargetObservasi   ?? 0);
                     int tgtC  = targetMappings.Where(m => m.PerusahaanId == c.PerusahaanId).Sum(m => m.TargetCoaching    ?? 0);
+                    int tgtP5 = targetMappings.Count(m => m.PerusahaanId == c.PerusahaanId);
                     int totalTarget = tgtH + tgtI + tgtST + tgtO + tgtC;
                     if (totalTarget == 0) continue;
 
@@ -179,7 +181,7 @@ namespace MBS_SAP.Controllers
                         Hazard       = new { Target = tgtH,  Real = rH },
                         Inspeksi     = new { Target = tgtI,  Real = rI },
                         SafetyTalk   = new { Target = tgtST, Real = rST },
-                        P5m          = new { Target = 0,     Real = rP5 },
+                        P5m          = new { Target = tgtP5, Real = rP5 },
                         Coaching     = new { Target = tgtC,  Real = rC },
                         Observasi    = new { Target = tgtO,  Real = rO }
                     });
@@ -261,6 +263,7 @@ namespace MBS_SAP.Controllers
                     targetSafetyTalk,
                     targetObs,
                     targetCoaching,
+                    targetP5m,
                     // Company rankings
                     topCompanies    = topComp,
                     stagnantCompanies = stagnant,

@@ -853,11 +853,11 @@ function buildCharts() {
     cSap = new Chart(ctx1, {
         type: 'bar',
         data: {
-            labels: ['Hazard Report', 'Inspeksi', 'Safety Talk', 'Observasi', 'Coaching/P5M'],
+            labels: ['Hazard Report', 'Inspeksi', 'Safety Talk', 'Observasi', 'Coaching', 'P5M'],
             datasets: [
                 {
                     label: 'Target',
-                    data: [0,0,0,0,0],
+                    data: [0,0,0,0,0,0],
                     backgroundColor: sapGradTarget,
                     borderColor: 'rgba(255,255,255,.18)',
                     borderWidth: 1, borderRadius: 4,
@@ -865,8 +865,8 @@ function buildCharts() {
                 },
                 {
                     label: 'Realisasi',
-                    data: [0,0,0,0,0],
-                    backgroundColor: ['#ef4444','#38bdf8','#a855f7','#14b8a6','#10b981'],
+                    data: [0,0,0,0,0,0],
+                    backgroundColor: ['#ef4444','#38bdf8','#a855f7','#14b8a6','#f59e0b','#10b981'],
                     borderRadius: 4,
                     borderSkipped: false
                 }
@@ -912,10 +912,10 @@ function buildCharts() {
     cDonut = new Chart(ctx2, {
         type: 'doughnut',
         data: {
-            labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'Observasi', 'P5M'],
+            labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'Observasi', 'Coaching', 'P5M'],
             datasets: [{
-                data: [0,0,0,0,0],
-                backgroundColor: ['#ef4444','#38bdf8','#a855f7','#14b8a6','#10b981'],
+                data: [0,0,0,0,0,0],
+                backgroundColor: ['#ef4444','#38bdf8','#a855f7','#14b8a6','#f59e0b','#10b981'],
                 borderWidth: 2, borderColor: '#050810',
                 hoverOffset: 6
             }]
@@ -1090,17 +1090,18 @@ function buildCharts() {
     cToday = new Chart(ctx6, {
         type: 'bar',
         data: {
-            labels: ['Hazard', 'P2H', 'P5M', 'Inspeksi', 'Observasi', 'Safety Talk'],
+            labels: ['Hazard', 'P2H', 'P5M', 'Inspeksi', 'Observasi', 'Safety Talk', 'Coaching'],
             datasets: [{
                 label: 'Laporan Hari Ini',
-                data: [0, 0, 0, 0, 0, 0],
+                data: [0, 0, 0, 0, 0, 0, 0],
                 backgroundColor: [
                     'rgba(239, 68, 68, 0.85)',  // Hazard: red
                     'rgba(129, 140, 248, 0.85)', // P2H: indigo
                     'rgba(16, 185, 129, 0.85)',  // P5M: green
                     'rgba(56, 189, 248, 0.85)',  // Inspeksi: blue
                     'rgba(20, 184, 166, 0.85)',  // Observasi: teal
-                    'rgba(168, 85, 247, 0.85)'   // Safety Talk: purple
+                    'rgba(168, 85, 247, 0.85)',  // Safety Talk: purple
+                    'rgba(245, 158, 11, 0.85)'   // Coaching: amber
                 ],
                 borderColor: [
                     '#ef4444',
@@ -1108,7 +1109,8 @@ function buildCharts() {
                     '#10b981',
                     '#38bdf8',
                     '#14b8a6',
-                    '#a855f7'
+                    '#a855f7',
+                    '#f59e0b'
                 ],
                 borderWidth: 1.5,
                 borderRadius: 6
@@ -1246,13 +1248,15 @@ async function fetchPerformance() {
                 d.targetInspeksi  ?? 0,
                 d.targetSafetyTalk?? 0,
                 d.targetObs       ?? 0,
-                d.targetCoaching  ?? 0
+                d.targetCoaching  ?? 0,
+                d.targetP5m       ?? 0
             ];
             cSap.data.datasets[1].data = [
                 d.monthHazards    ?? 0,
                 d.monthInspections?? 0,
                 d.monthSafetyTalks?? 0,
                 d.monthObs        ?? 0,
+                d.monthCoachings  ?? 0,
                 d.monthP5ms       ?? 0
             ];
             cSap.update('active');
@@ -1265,6 +1269,7 @@ async function fetchPerformance() {
                 d.monthInspections?? 0,
                 d.monthSafetyTalks?? 0,
                 d.monthObs        ?? 0,
+                d.monthCoachings  ?? 0,
                 d.monthP5ms       ?? 0
             ];
             cDonut.update('active');
@@ -1352,7 +1357,8 @@ async function fetchPerformance() {
                 d.todayP5ms        ?? 0,
                 d.todayInspections ?? 0,
                 d.todayObservations?? 0,
-                d.todaySafetyTalks ?? 0
+                d.todaySafetyTalks ?? 0,
+                d.todayCoachings   ?? 0
             ];
             cToday.update('active');
         }
