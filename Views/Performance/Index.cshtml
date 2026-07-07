@@ -1297,7 +1297,7 @@
         align-items: center;
         justify-content: center;
         z-index: 1100;
-        padding: 16px;
+        padding: 8px;
     }
     .dept-achievement-modal.show {
         display: flex;
@@ -1309,8 +1309,8 @@
     }
     .dept-achievement-dialog {
         position: relative;
-        width: min(1000px, 100%);
-        max-height: 80vh;
+        width: min(1420px, 96vw);
+        max-height: 90vh;
         overflow: auto;
         border-radius: 14px;
         border: 1px solid #cbd5e1;
@@ -1347,17 +1347,17 @@
         background: #e2e8f0;
     }
     .dept-achievement-body {
-        padding: 14px 16px 16px;
+        padding: 10px 12px 14px;
     }
     .dept-achievement-table {
         width: 100%;
         border-collapse: collapse;
-        font-size: 12.5px;
+        font-size: 11.5px;
     }
     .dept-achievement-table th,
     .dept-achievement-table td {
         border-bottom: 1px solid #e2e8f0;
-        padding: 10px 12px;
+        padding: 8px 10px;
         text-align: left;
         vertical-align: middle;
     }
@@ -2771,7 +2771,7 @@
                     <!-- Secondary Modal: Detail Karyawan (Lazy Load) -->
                     <div class="dept-achievement-modal" id="employeeDetailModal" aria-hidden="true" style="z-index: 1200;">
                         <div class="dept-achievement-backdrop" data-emp-close="true"></div>
-                        <div class="dept-achievement-dialog" role="dialog" aria-modal="true" aria-labelledby="employeeDetailTitle" style="width: min(1100px, 100%);">
+                        <div class="dept-achievement-dialog" role="dialog" aria-modal="true" aria-labelledby="employeeDetailTitle" style="width: min(1500px, 96vw);">
                             <div class="dept-achievement-header" style="background: #f8fafc;">
                                 <h6 class="dept-achievement-title" id="employeeDetailTitle">Detail Karyawan per Departemen</h6>
                                 <button type="button" class="dept-achievement-close" id="employeeDetailClose" aria-label="Tutup">
