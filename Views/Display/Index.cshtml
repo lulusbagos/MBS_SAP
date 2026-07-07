@@ -801,10 +801,12 @@ const customSounds = {
     'coaching': new Audio('/notifikasi/COACHING.MP3')
 };
 
-// Preload all audio assets
+// Preload all audio assets and set volume to 50%
+defaultSound.volume = 0.5;
 defaultSound.load();
 for (const key in customSounds) {
     customSounds[key].preload = 'auto';
+    customSounds[key].volume = 0.5;
     customSounds[key].load();
 }
 
