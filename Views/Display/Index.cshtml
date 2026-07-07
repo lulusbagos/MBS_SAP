@@ -100,9 +100,9 @@
         position: absolute;
         padding-left: 100%;
         animation: scrollMarquee 45s linear infinite;
-        font-size: 13px;
+        font-size: 15px;
         font-weight: 600;
-        color: #f1f5f9;
+        color: #ffffff;
         letter-spacing: 0.5px;
         will-change: transform;
     }
@@ -141,7 +141,7 @@
     }
 
     .hdr-title   { font-size: 22px; font-weight: 900; color: #ffffff; letter-spacing: .4px; }
-    .hdr-sub     { font-size: 11px; color: #a8bbd4; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+    .hdr-sub     { font-size: 12px; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
     .hdr-center  { text-align: center; }
     .refresh-badge {
@@ -151,8 +151,8 @@
         box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
         animation: badgeGlow 3s infinite ease-in-out;
     }
-    .refresh-label { font-size: 11px; font-weight: 800; color: #34d399; letter-spacing: 0.5px; }
-    .refresh-countdown { font-size: 11px; color: #a8bbd4; font-weight: 600; margin-top: 2px; }
+    .refresh-label { font-size: 13px; font-weight: 800; color: #34d399; letter-spacing: 0.5px; }
+    .refresh-countdown { font-size: 12px; color: #94a3b8; font-weight: 600; margin-top: 2px; }
 
     /* Sonar ping red live dot */
     .sonar-ping {
@@ -181,8 +181,8 @@
     }
 
     .hdr-clock { text-align: right; }
-    .clock-time { font-size: 30px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; color: #ffffff; }
-    .clock-date { font-size: 11px; color: #a8bbd4; font-weight: 600; margin-top: 2px; }
+    .clock-time { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; color: #ffffff; }
+    .clock-date { font-size: 12px; color: #94a3b8; font-weight: 600; margin-top: 2px; }
 
     /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        BODY GRID: LEFT ANALYTICS | RIGHT FEED
@@ -239,10 +239,10 @@
 
     /* ──────────────── Section Header ──────────────── */
     .sec-hdr {
-        display: flex; align-items: center; gap: 6px;
-        font-size: 10px; font-weight: 800;
+        display: flex; align-items: center; gap: 8px;
+        font-size: 13px; font-weight: 800;
         text-transform: uppercase; letter-spacing: .8px;
-        color: #e2e8f0; margin-bottom: 12px; flex-shrink: 0; font-size: 11px;
+        color: #e2e8f0; margin-bottom: 14px; flex-shrink: 0;
     }
     .sec-hdr i { font-size: 12px; }
 
@@ -259,9 +259,9 @@
         transition: border-color 0.3s ease;
     }
     .kpi:hover { border-color: rgba(59, 130, 246, 0.3); }
-    .kpi-lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #94a3b8; margin-bottom: 4px; }
-    .kpi-val { font-size: 24px; font-weight: 900; line-height: 1; color: #ffffff; }
-    .kpi-target { font-size: 9px; color: #a8bbd4; margin-top: 1px; }
+    .kpi-lbl { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #94a3b8; margin-bottom: 6px; }
+    .kpi-val { font-size: 32px; font-weight: 900; line-height: 1; color: #ffffff; }
+    .kpi-target { font-size: 11px; color: #94a3b8; margin-top: 2px; }
 
     /* â”€â”€ Chart containers â”€â”€ */
     .chart-wrap { flex: 1; position: relative; min-height: 0; }
@@ -271,16 +271,16 @@
         display: flex; gap: 6px; margin-bottom: 10px; flex-shrink: 0;
     }
     .tab-btn {
-        flex: 1; padding: 5px 4px;
-        background: var(--bg); border: 1px solid var(--border);
-        border-radius: 8px; font-size: 9.5px; font-weight: 800;
-        color: #a8bbd4; cursor: pointer; text-transform: uppercase; font-size: 10px;
-        letter-spacing: .4px; transition: all .25s ease;
+        flex: 1; padding: 7px 4px;
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px; font-size: 11px; font-weight: 700;
+        color: #94a3b8; cursor: pointer; text-transform: uppercase;
+        letter-spacing: .3px; transition: all .25s ease;
     }
     .tab-btn.active {
-        background: rgba(56,189,248,.12);
-        border-color: #38bdf8;
-        color: #38bdf8;
+        background: rgba(59,130,246,.15);
+        border-color: #3b82f6;
+        color: #60a5fa;
     }
     .tab-pane { display: none; flex: 1; overflow-y: auto; flex-direction: column; gap: 6px; }
     .tab-pane.active { display: flex; }
@@ -300,11 +300,11 @@
         display: flex; align-items: center; justify-content: center;
         font-size: 10px; font-weight: 900; color: #000; flex-shrink: 0;
     }
-    .co-name { font-size: 12px; font-weight: 700; color: #ffffff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .co-bar-wrap { width: 80px; height: 5px; background: rgba(255,255,255,.12); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+    .co-name { font-size: 14px; font-weight: 700; color: #ffffff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .co-bar-wrap { width: 80px; height: 7px; background: rgba(255,255,255,.15); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
     .co-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
-    .co-pct { font-size: 14px; font-weight: 900; flex-shrink: 0; text-align: right; }
-    .co-detail { font-size: 9px; color: #a8bbd4; text-align: right; }
+    .co-pct { font-size: 17px; font-weight: 900; flex-shrink: 0; text-align: right; }
+    .co-detail { font-size: 11px; color: #94a3b8; text-align: right; }
 
     /* â”€â”€ Stagnant pill â”€â”€ */
     .stagnant-tag {
@@ -319,7 +319,7 @@
     .right-col { display: grid; grid-template-rows: 1.55fr 1fr; gap: 12px; overflow: hidden; }
 
     .feed-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0; }
-    .feed-title-txt { font-size: 14px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 8px; }
+    .feed-title-txt { font-size: 15px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 8px; }
 
     .feed-grid {
         flex: 1;
@@ -365,7 +365,7 @@
     .fcard-body { padding: 9px 11px 11px; display: flex; flex-direction: column; gap: 6px; }
     .fcard-user { display: flex; align-items: center; gap: 7px; }
     .fcard-avatar { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(56,189,248,.35); flex-shrink: 0; }
-    .fcard-uname { font-size: 12px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fcard-uname { font-size: 13px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .fcard-uloc  { font-size: 10px; color: #a8bbd4; }
     .fcard-badges { display: flex; gap: 4px; flex-wrap: wrap; }
     .bgt { padding: 2px 5px; border-radius: 4px; font-size: 8px; font-weight: 800; text-transform: uppercase; }
@@ -665,32 +665,32 @@
                     <div class="d-flex flex-column gap-2 justify-content-center" style="flex:1;">
                         <!-- RRI -->
                         <div>
-                            <div class="d-flex justify-content-between mb-1" style="font-size:10.5px;">
-                                <span style="font-weight:700; color:#e2e8f0;">Risk Reduction Index (RRI)</span>
+                            <div class="d-flex justify-content-between mb-1" style="font-size:13px;">
+                                <span style="font-weight:700; color:#ffffff; font-size:13px;">Risk Reduction Index (RRI)</span>
                                 <span id="lbl-rri" style="font-weight:900; color:var(--green)">0%</span>
                             </div>
-                            <div style="height:6px; background:rgba(255,255,255,0.15); border-radius:3px; overflow:hidden;">
-                                <div id="bar-rri" style="height:100%; width:0%; background:linear-gradient(90deg, var(--red), var(--green)); transition: width 1s ease;"></div>
+                            <div style="height:10px; background:rgba(255,255,255,0.15); border-radius:5px; overflow:hidden;">
+                                <div id="bar-rri" style="height:100%; border-radius:5px; width:0%; background:linear-gradient(90deg, var(--red), var(--green)); transition: width 1s ease;"></div>
                             </div>
                         </div>
                         <!-- Compliance Risk -->
                         <div>
-                            <div class="d-flex justify-content-between mb-1" style="font-size:10.5px;">
+                            <div class="d-flex justify-content-between mb-1" style="font-size:13px;">
                                 <span style="font-weight:700; color:#e2e8f0;">Kepatuhan Resiko Tinggi</span>
                                 <span id="lbl-comp-risk" style="font-weight:900; color:var(--blue)">0%</span>
                             </div>
-                            <div style="height:6px; background:rgba(255,255,255,0.15); border-radius:3px; overflow:hidden;">
-                                <div id="bar-comp-risk" style="height:100%; width:0%; background:linear-gradient(90deg, var(--amber), var(--blue)); transition: width 1s ease;"></div>
+                            <div style="height:10px; background:rgba(255,255,255,0.15); border-radius:5px; overflow:hidden;">
+                                <div id="bar-comp-risk" style="height:100%; border-radius:5px; width:0%; background:linear-gradient(90deg, var(--amber), var(--blue)); transition: width 1s ease;"></div>
                             </div>
                         </div>
                         <!-- Weekly Pct -->
                         <div>
-                            <div class="d-flex justify-content-between mb-1" style="font-size:10.5px;">
+                            <div class="d-flex justify-content-between mb-1" style="font-size:13px;">
                                 <span style="font-weight:700; color:#e2e8f0;">Realisasi Target Mingguan</span>
                                 <span id="lbl-weekly-pct" style="font-weight:900; color:var(--purple)">0%</span>
                             </div>
-                            <div style="height:6px; background:rgba(255,255,255,0.15); border-radius:3px; overflow:hidden;">
-                                <div id="bar-weekly-pct" style="height:100%; width:0%; background:linear-gradient(90deg, var(--blue), var(--purple)); transition: width 1s ease;"></div>
+                            <div style="height:10px; background:rgba(255,255,255,0.15); border-radius:5px; overflow:hidden;">
+                                <div id="bar-weekly-pct" style="height:100%; border-radius:5px; width:0%; background:linear-gradient(90deg, var(--blue), var(--purple)); transition: width 1s ease;"></div>
                             </div>
                         </div>
                     </div>
