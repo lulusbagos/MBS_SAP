@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = null;
 }
 <!DOCTYPE html>
@@ -14,30 +14,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
-    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    :root {
-        --bg:          #080e1a;
-        --bg-card:     #0f1e34;
-        --panel:       #0f1e34;
-        --border:      #1e3a5f;
-        --brutal-brd:  #0d1626;
+    :root {
+        --bg:          #050811;
+        --bg-card:     rgba(15, 23, 42, 0.45);
+        --panel:       rgba(10, 18, 32, 0.7);
+        --border:      rgba(56, 189, 248, 0.08);
+        --brutal-brd:  #070c16;
         --txt:         #ffffff;
-        --muted:       #a8bbd4;
-        --blue:        #3b82f6;
-        --green:       #10b981;
-        --red:         #ef4444;
-        --amber:       #f59e0b;
-        --purple:      #8b5cf6;
-        --pink:        #e879a0;
-        --teal:        #14b8a6;
-        --r:           12px;
+        --muted:       #94a3b8;
+        --blue:        #38bdf8;
+        --green:       #34d399;
+        --red:         #f87171;
+        --amber:       #fbbf24;
+        --purple:      #a78bfa;
+        --pink:        #f472b6;
+        --teal:        #2dd4bf;
+        --r:           16px;
     }
 
-    html { background: #080e1a; }
+    html { background: #050811; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
         background: var(--bg);
-        background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-image: radial-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px);
         background-size: 28px 28px;
         font-family: 'Outfit', sans-serif;
         color: var(--txt);
@@ -79,12 +79,14 @@
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: var(--r);
-        padding: 8px 16px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 8px 20px;
         overflow: hidden;
         display: flex;
         align-items: center;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        gap: 14px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        gap: 16px;
         height: 48px;
     }
     .marquee-container {
@@ -109,21 +111,21 @@
         0%   { transform: translateX(0%); }
         100% { transform: translateX(-200%); }
     }
-        100% { transform: translate3d(-100%, 0, 0); }
-    }
 
     /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        HEADER
     â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .tv-hdr {
-        background: linear-gradient(135deg, #0a1626 0%, #0f1e34 100%);
+        background: var(--panel);
         border: 1px solid var(--border);
         border-radius: var(--r);
-        padding: 10px 22px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 12px 24px;
         display: grid;
         grid-template-columns: 1fr auto 1fr;
         align-items: center;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.05);
     }
 
     .hdr-brand { display: flex; align-items: center; gap: 12px; }
@@ -226,16 +228,17 @@
         width: 14px; border-radius: 3px;
     }
 
-    /* â”€â”€ Panel â”€â”€ */
     .panel {
-        background: linear-gradient(160deg, #0a1626 0%, #0f1e34 100%);
+        background: var(--panel);
         border: 1px solid var(--border);
         border-radius: var(--r);
-        padding: 14px 16px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 16px 18px;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.05);
     }
 
     /* ──────────────── Section Header ──────────────── */
@@ -251,18 +254,26 @@
     .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
 
     .kpi {
-        background: linear-gradient(135deg, #0a1626 0%, #0f1e34 100%);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 10px 6px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+        padding: 12px 6px;
         text-align: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04);
-        transition: border-color 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.03);
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
     }
-    .kpi:hover { border-color: rgba(59, 130, 246, 0.3); }
-    .kpi-lbl { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #94a3b8; margin-bottom: 6px; }
-    .kpi-val { font-size: 32px; font-weight: 900; line-height: 1; color: #ffffff; }
-    .kpi-target { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .kpi:hover {
+        border-color: rgba(56, 189, 248, 0.35);
+        background: rgba(255, 255, 255, 0.04);
+        transform: translateY(-2px);
+    }
+    .kpi-lbl { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255, 255, 255, 0.5); margin-bottom: 4px; }
+    .kpi-val { font-size: 28px; font-weight: 800; line-height: 1.1; color: #ffffff; letter-spacing: -0.5px; }
+    .kpi-target { font-size: 9.5px; color: rgba(255, 255, 255, 0.35); margin-top: 4px; font-weight: 600; }
 
     /* â”€â”€ Chart containers â”€â”€ */
     .chart-wrap { flex: 1; position: relative; min-height: 0; }
@@ -338,12 +349,19 @@
 
     /* Feed Card */
     .fcard {
-        background: var(--bg);
-        border: 1px solid var(--border);
-        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.015);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
         overflow: hidden;
         display: flex; flex-direction: column;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .fcard:hover {
+        transform: translateY(-4px) scale(1.01);
+        border-color: rgba(56, 189, 248, 0.25);
+        background: rgba(255, 255, 255, 0.03);
+        box-shadow: 0 12px 28px rgba(0,0,0,0.4), 0 0 12px rgba(56, 189, 248, 0.1);
     }
     .fcard.is-new {
         animation: cardIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -805,11 +823,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Unlock on the very first click anywhere on the page
-    document.addEventListener('click', function unlockOnFirstClick() {
+    // Unlock on the very first interaction anywhere on the page
+    const unlockEvents = ['click', 'keydown', 'mousedown', 'pointerdown', 'touchstart'];
+    function unlockOnFirstInteraction() {
         unlockAudio();
-        document.removeEventListener('click', unlockOnFirstClick);
-    }, { once: true });
+        unlockEvents.forEach(evt => document.removeEventListener(evt, unlockOnFirstInteraction));
+    }
+    unlockEvents.forEach(evt => document.addEventListener(evt, unlockOnFirstInteraction, { once: true }));
 });
 
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
