@@ -38,24 +38,14 @@
     --cyber-purple:  #bf5af2;
     --cyber-orange:  #ff8c00;
     --cyber-blue:    #0ea5e9;
-    --neon-glow-c:   0 0 18px rgba(0,229,255,0.55),  0 0 40px rgba(0,229,255,0.2);
-    --neon-glow-g:   0 0 18px rgba(0,255,157,0.55),  0 0 40px rgba(0,255,157,0.2);
-    --neon-glow-p:   0 0 18px rgba(255,75,110,0.55), 0 0 40px rgba(255,75,110,0.2);
+    
+    
+    
 }
 
 /* ─── Scanline grid overlay ───────────────────────────────────── */
 .fui-page { position: relative; padding-bottom: 1rem; }
-.fui-page::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-}
+
 
 /* ─── HERO ──────────────────────────────────────────────────────── */
 .fui-hero {
@@ -72,11 +62,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background:
-        radial-gradient(ellipse 70% 60% at 85% -10%, rgba(0,229,255,0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 40% at 5% 110%,  rgba(0,255,157,0.08) 0%, transparent 55%);
-    pointer-events: none;
-}
+    }
 /* Corner decorations */
 .fui-hero::after {
     content: '';
@@ -149,7 +135,7 @@
     width: 6px; height: 6px;
     border-radius: 50%;
     background: inherit;
-    filter: blur(2px) brightness(2);
+    
 }
 
 /* ─── Marquee ───────────────────────────────────────────────────── */
@@ -191,7 +177,7 @@
     top: 0; left: 10%; right: 10%;
     height: 1.5px;
     background: var(--c-accent, var(--cyber-cyan));
-    box-shadow: 0 0 12px var(--c-glow, rgba(0,229,255,0.6));
+    ;
     border-radius: 0 0 4px 4px;
     opacity: 0.7;
     transition: opacity 0.2s;
@@ -200,7 +186,7 @@
 .fui-card:hover {
     transform: translateY(-5px) scale(1.02);
     border-color: var(--c-border-h, rgba(0,229,255,0.55));
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 20px var(--c-glow, rgba(0,229,255,0.15));
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
     color: var(--text-main);
 }
 .fui-card:active { transform: scale(0.97); }
@@ -218,7 +204,7 @@
 img.fui-img {
     width: 50px; height: 50px;
     object-fit: contain;
-    filter: drop-shadow(0 0 8px var(--c-glow, rgba(0,229,255,0.4)));
+    ));
     transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
 }
 .fui-card-name {
@@ -256,7 +242,7 @@ img.fui-img {
     width: 5px; height: 5px;
     border-radius: 50%;
     background: currentColor;
-    filter: blur(2px) brightness(3);
+    
 }
 
 /* ─── LIVE FEED ─────────────────────────────────────────────────── */
@@ -266,7 +252,7 @@ img.fui-img {
     border-radius: 16px;
     overflow: hidden;
     height: 100%;
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.3), var(--neon-glow-c);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
     position: relative;
 }
 .fui-feed::before {
@@ -275,7 +261,7 @@ img.fui-img {
     top: 0; left: 10%; right: 10%;
     height: 1.5px;
     background: var(--cyber-cyan);
-    box-shadow: 0 0 14px rgba(0,229,255,0.7);
+    ;
 }
 .fui-feed-head {
     display: flex; justify-content: space-between; align-items: center;
@@ -302,10 +288,10 @@ img.fui-img {
     width: 6px; height: 6px;
     border-radius: 50%;
     background: var(--cyber-green);
-    box-shadow: 0 0 8px var(--cyber-green);
-    animation: fui-blink 1.2s ease infinite;
+    ;
+    
 }
-@@keyframes fui-blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+ 50%{opacity:0.3;} }
 
 .fui-feed-item {
     display: flex; align-items: center; gap: 9px;
@@ -329,17 +315,10 @@ img.fui-img {
 }
 
 /* ─── Animated scan line ────────────────────────────────────────── */
-@@keyframes fui-scan {
-    0%   { top: -2px; }
+
     100% { top: 100%; }
 }
-.fui-scan-line {
-    position: absolute;
-    left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(0,229,255,0.3), transparent);
-    animation: fui-scan 4s linear infinite;
-    pointer-events: none;
-}
+
 
 /* ─── Glitch username ────────────────────────────────────────────── */
 .fui-username {
@@ -356,8 +335,7 @@ img.fui-img {
     left: 2px; top: 0;
     display: none;
 }
-@@keyframes glitch {
-    0%,90%,100%{ opacity:0; transform:none; }
+
     92%{ opacity:0.7; transform:translate(-2px,0) skewX(-5deg); clip-path:inset(20% 0 60% 0); }
     94%{ opacity:0.5; transform:translate(2px,0) skewX(3deg); clip-path:inset(60% 0 10% 0); }
     96%{ opacity:0; }
@@ -382,7 +360,7 @@ img.fui-img {
     position: absolute;
     top: 0; left: 15%; right: 15%; height: 1px;
     background: var(--sb-color, var(--cyber-cyan));
-    box-shadow: 0 0 8px var(--sb-color, var(--cyber-cyan));
+    ;
 }
 .fui-stat-val {
     font-family: 'Poppins', sans-serif;
@@ -403,7 +381,7 @@ body.light-theme .fui-card:hover { background: #ffffff; }
 body.light-theme .fui-feed { background: rgba(248,250,252,0.98); border-color: rgba(2,132,199,0.2); box-shadow: 0 4px 24px rgba(2,132,199,0.08); }
 body.light-theme .fui-card-name { color: #0f172a; }
 body.light-theme .fui-feed-title { color: #0284c7; text-shadow: none; }
-body.light-theme .fui-page::before { opacity: 0.4; }
+body.light-theme 
 body.light-theme .fui-ring-inner { background: #f1f5f9; }
 body.light-theme .fui-stat-box { background: rgba(2,132,199,0.04); border-color: rgba(2,132,199,0.15); }
 body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
@@ -426,7 +404,7 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
                     <div class="fui-username" data-text="@User.Identity?.Name">@User.Identity?.Name</div>
                     @if (ViewData["KategoriPengawas"] != null && !string.IsNullOrWhiteSpace(ViewData["KategoriPengawas"].ToString()))
                     {
-                        <div style="color:var(--cyber-green);font-size:9px;font-weight:700;margin-top:2px;font-family:'Poppins', sans-serif;letter-spacing:0.5px;filter:drop-shadow(0 0 4px var(--cyber-green));">
+                        <div style="color:var(--cyber-green);font-size:9px;font-weight:700;margin-top:2px;font-family:'Poppins', sans-serif;letter-spacing:0.5px);">
                             ⬡ @ViewData["KategoriPengawas"]
                         </div>
                     }
@@ -435,9 +413,9 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
 
             <!-- Score Ring -->
             <div style="text-align:center;flex-shrink:0;">
-                <div class="fui-ring" style="--pct:@complianceScore;background:conic-gradient(@scoreColor calc(@complianceScore * 1%), rgba(255,255,255,0.04) 0);box-shadow:0 0 20px @scoreGlow;">
+                <div class="fui-ring" style="--pct:@complianceScore;background:conic-gradient(@scoreColor calc(@complianceScore * 1%), rgba(255,255,255,0.04) 0)">
                     <div class="fui-ring-inner">
-                        <span class="fui-ring-pct" style="color:@scoreColor;text-shadow:0 0 10px @scoreGlow;">@complianceScore%</span>
+                        <span class="fui-ring-pct" style="color:@scoreColor">@complianceScore%</span>
                         <span class="fui-ring-label" style="color:rgba(255,255,255,0.4);">MTD</span>
                     </div>
                 </div>
@@ -484,8 +462,8 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
                 <!-- Pencapaian -->
                 <a asp-controller="Performance" asp-action="Index" class="fui-card"
                    style="--c-border:rgba(0,229,255,0.25);--c-border-h:rgba(0,229,255,0.6);--c-accent:var(--cyber-cyan);--c-glow:rgba(0,229,255,0.4);">
-                    <div class="fui-icon-box" style="background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(0,229,255,0.05));border:1px solid rgba(0,229,255,0.3);box-shadow:0 0 16px rgba(0,229,255,0.2);">
-                        <i class="bi bi-bar-chart-line-fill" style="font-size:22px;color:var(--cyber-cyan);filter:drop-shadow(0 0 6px var(--cyber-cyan));"></i>
+                    <div class="fui-icon-box" style="background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(0,229,255,0.05));border:1px solid rgba(0,229,255,0.3)">
+                        <i class="bi bi-bar-chart-line-fill" style="font-size:22px;color:var(--cyber-cyan));"></i>
                     </div>
                     <span class="fui-card-name" style="color:var(--cyber-cyan);">PENCAPAIAN</span>
                     <span class="fui-chip" style="background:rgba(0,229,255,0.1);color:var(--cyber-cyan);border:1px solid rgba(0,229,255,0.2);">KPI</span>
@@ -495,7 +473,7 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
                 <a asp-controller="Timeline" asp-action="Index" class="fui-card"
                    style="--c-border:rgba(0,255,157,0.2);--c-border-h:rgba(0,255,157,0.5);--c-accent:var(--cyber-green);--c-glow:rgba(0,255,157,0.35);">
                     <img src="~/images/menu_timeline.png" class="fui-img" alt="SafeFeed" asp-append-version="true"
-                         style="filter:drop-shadow(0 0 8px rgba(0,255,157,0.5));" />
+                         style=");" />
                     <span class="fui-card-name" style="color:var(--cyber-green);">SAFEFEED</span>
                     <span class="fui-chip" style="background:rgba(0,255,157,0.1);color:var(--cyber-green);border:1px solid rgba(0,255,157,0.2);">FEED</span>
                 </a>
@@ -504,27 +482,27 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
                 <a asp-controller="Hazard" asp-action="Index" class="fui-card"
                    style="--c-border:rgba(255,140,0,0.2);--c-border-h:rgba(255,140,0,0.55);--c-accent:var(--cyber-orange);--c-glow:rgba(255,140,0,0.4);">
                     <img src="~/images/menu_hazard.png" class="fui-img" alt="Hazard" asp-append-version="true"
-                         style="filter:drop-shadow(0 0 8px rgba(255,140,0,0.5));" />
+                         style=");" />
                     <span class="fui-card-name" style="color:var(--cyber-orange);">HAZARD</span>
                     <span class="fui-chip" style="background:rgba(255,140,0,0.1);color:var(--cyber-orange);border:1px solid rgba(255,140,0,0.2);">@hazAct / @hazTgt</span>
-                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@hazPct%;background:var(--cyber-orange);box-shadow:0 0 6px rgba(255,140,0,0.6);color:var(--cyber-orange);"></div></div>
+                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@hazPct%;background:var(--cyber-orange);color:var(--cyber-orange);"></div></div>
                 </a>
 
                 <!-- Inspeksi -->
                 <a asp-controller="Inspection" asp-action="Index" class="fui-card"
                    style="--c-border:rgba(0,229,255,0.2);--c-border-h:rgba(0,229,255,0.5);--c-accent:var(--cyber-cyan);--c-glow:rgba(0,229,255,0.3);">
                     <img src="~/images/menu_inspection.png" class="fui-img" alt="Inspeksi" asp-append-version="true"
-                         style="filter:drop-shadow(0 0 8px rgba(0,229,255,0.4));" />
+                         style=");" />
                     <span class="fui-card-name" style="color:var(--cyber-cyan);">INSPEKSI</span>
                     <span class="fui-chip" style="background:rgba(0,229,255,0.1);color:var(--cyber-cyan);border:1px solid rgba(0,229,255,0.2);">@insAct / @insTgt</span>
-                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@insPct%;background:var(--cyber-cyan);box-shadow:0 0 6px rgba(0,229,255,0.6);color:var(--cyber-cyan);"></div></div>
+                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@insPct%;background:var(--cyber-cyan);color:var(--cyber-cyan);"></div></div>
                 </a>
 
                 <!-- Action Plan -->
                 <a asp-controller="ActionPlan" asp-action="Index" class="fui-card"
                    style="--c-border:rgba(0,255,157,0.2);--c-border-h:rgba(0,255,157,0.5);--c-accent:var(--cyber-green);--c-glow:rgba(0,255,157,0.3);">
                     <img src="~/images/menu_actionplan.png" class="fui-img" alt="Action Plan" asp-append-version="true"
-                         style="filter:drop-shadow(0 0 8px rgba(0,255,157,0.4));" />
+                         style=");" />
                     <span class="fui-card-name" style="color:var(--cyber-green);">ACTION PLAN</span>
                     <span class="fui-chip" style="background:rgba(0,255,157,0.1);color:var(--cyber-green);border:1px solid rgba(0,255,157,0.2);">@(ViewData["TotalActionPlans"] ?? "0") ITEM</span>
                 </a>
@@ -533,33 +511,33 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
                 <a asp-controller="SafetyTalk" asp-action="Index" class="fui-card"
                    style="--c-border:rgba(255,75,110,0.2);--c-border-h:rgba(255,75,110,0.5);--c-accent:var(--cyber-pink);--c-glow:rgba(255,75,110,0.35);">
                     <img src="~/images/menu_safetytalk.png" class="fui-img" alt="Safety Talk" asp-append-version="true"
-                         style="filter:drop-shadow(0 0 8px rgba(255,75,110,0.5));" />
+                         style=");" />
                     <span class="fui-card-name" style="color:var(--cyber-pink);">SAFETY TALK</span>
                     <span class="fui-chip" style="background:rgba(255,75,110,0.1);color:var(--cyber-pink);border:1px solid rgba(255,75,110,0.2);">@stAct / @stTgt</span>
-                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@stPct%;background:var(--cyber-pink);box-shadow:0 0 6px rgba(255,75,110,0.6);color:var(--cyber-pink);"></div></div>
+                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@stPct%;background:var(--cyber-pink);color:var(--cyber-pink);"></div></div>
                 </a>
 
                 <!-- P5M -->
                 <a asp-controller="P5m" asp-action="Index" class="fui-card"
                    style="--c-border:rgba(191,90,242,0.2);--c-border-h:rgba(191,90,242,0.5);--c-accent:var(--cyber-purple);--c-glow:rgba(191,90,242,0.35);">
                     <img src="~/images/menu_p5m.png" class="fui-img" alt="P5M" asp-append-version="true"
-                         style="filter:drop-shadow(0 0 8px rgba(191,90,242,0.5));" />
+                         style=");" />
                     <span class="fui-card-name" style="color:var(--cyber-purple);">P5M</span>
                     <span class="fui-chip" style="background:rgba(191,90,242,0.1);color:var(--cyber-purple);border:1px solid rgba(191,90,242,0.2);">@p5Act / @p5Tgt</span>
-                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@p5Pct%;background:var(--cyber-purple);box-shadow:0 0 6px rgba(191,90,242,0.6);color:var(--cyber-purple);"></div></div>
+                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@p5Pct%;background:var(--cyber-purple);color:var(--cyber-purple);"></div></div>
                 </a>
 
                 <!-- Coaching -->
                 <a asp-controller="Coaching" asp-action="Index" class="fui-card"
                    style="--c-border:rgba(191,90,242,0.2);--c-border-h:rgba(191,90,242,0.5);--c-accent:var(--cyber-purple);--c-glow:rgba(191,90,242,0.35);">
-                    <div class="fui-icon-box" style="background:linear-gradient(135deg,rgba(191,90,242,0.15),rgba(124,58,237,0.08));border:1px solid rgba(191,90,242,0.3);box-shadow:0 0 14px rgba(191,90,242,0.2);">
-                        <i class="bi bi-person-badge-fill" style="font-size:22px;color:var(--cyber-purple);filter:drop-shadow(0 0 6px var(--cyber-purple));"></i>
+                    <div class="fui-icon-box" style="background:linear-gradient(135deg,rgba(191,90,242,0.15),rgba(124,58,237,0.08));border:1px solid rgba(191,90,242,0.3)">
+                        <i class="bi bi-person-badge-fill" style="font-size:22px;color:var(--cyber-purple));"></i>
                     </div>
                     <span class="fui-card-name" style="color:var(--cyber-purple);">COACHING</span>
                     <span class="fui-chip" style="background:rgba(191,90,242,0.1);color:var(--cyber-purple);border:1px solid rgba(191,90,242,0.2);">@coaAct / @coaTgt</span>
                     @if (coaTgt > 0)
                     {
-                        <div class="fui-bar"><div class="fui-bar-fill" style="width:@coaPct%;background:var(--cyber-purple);box-shadow:0 0 6px rgba(191,90,242,0.6);color:var(--cyber-purple);"></div></div>
+                        <div class="fui-bar"><div class="fui-bar-fill" style="width:@coaPct%;background:var(--cyber-purple);color:var(--cyber-purple);"></div></div>
                     }
                 </a>
 
@@ -567,12 +545,12 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
                 <a asp-controller="Observation" asp-action="Index" class="fui-card"
                    style="--c-border:rgba(99,102,241,0.2);--c-border-h:rgba(99,102,241,0.5);--c-accent:#6366f1;--c-glow:rgba(99,102,241,0.35);">
                     <img src="~/images/menu_observation.png" class="fui-img" alt="Observasi" asp-append-version="true"
-                         style="filter:drop-shadow(0 0 8px rgba(99,102,241,0.5));" />
+                         style=");" />
                     <span class="fui-card-name" style="color:#818cf8;">OBSERVASI</span>
                     <span class="fui-chip" style="background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.2);">@obsAct / @obsTgt</span>
                     @if (obsTgt > 0)
                     {
-                        <div class="fui-bar"><div class="fui-bar-fill" style="width:@obsPct%;background:#6366f1;box-shadow:0 0 6px rgba(99,102,241,0.6);"></div></div>
+                        <div class="fui-bar"><div class="fui-bar-fill" style="width:@obsPct%;background:#6366f1"></div></div>
                     }
                 </a>
 
@@ -580,7 +558,7 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
                 <a asp-controller="P2h" asp-action="Index" class="fui-card"
                    style="--c-border:rgba(236,72,153,0.2);--c-border-h:rgba(236,72,153,0.5);--c-accent:#ec4899;--c-glow:rgba(236,72,153,0.35);">
                     <img src="~/images/menu_p2h.png" class="fui-img" alt="P2H" asp-append-version="true"
-                         style="filter:drop-shadow(0 0 8px rgba(236,72,153,0.5));" />
+                         style=");" />
                     <span class="fui-card-name" style="color:#f472b6;">P2H UNIT</span>
                     <span class="fui-chip" style="background:rgba(236,72,153,0.1);color:#f472b6;border:1px solid rgba(236,72,153,0.2);">CEK</span>
                 </a>
@@ -590,7 +568,7 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
                     <a asp-controller="Dpa" asp-action="Index" class="fui-card"
                        style="--c-border:rgba(191,90,242,0.2);--c-border-h:rgba(191,90,242,0.5);--c-accent:var(--cyber-purple);--c-glow:rgba(191,90,242,0.3);">
                         <img src="~/images/menu_dpa.png" class="fui-img" alt="DPA" asp-append-version="true"
-                             style="filter:drop-shadow(0 0 8px rgba(191,90,242,0.5));" />
+                             style=");" />
                         <span class="fui-card-name" style="color:var(--cyber-purple);">DPA</span>
                         <span class="fui-chip" style="background:rgba(191,90,242,0.1);color:var(--cyber-purple);border:1px solid rgba(191,90,242,0.2);">DRIVER</span>
                     </a>
@@ -599,8 +577,8 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
                 <!-- Insiden -->
                 <a asp-controller="Incident" asp-action="Index" class="fui-card"
                    style="--c-border:rgba(255,75,110,0.2);--c-border-h:rgba(255,75,110,0.5);--c-accent:var(--cyber-pink);--c-glow:rgba(255,75,110,0.4);">
-                    <div class="fui-icon-box" style="background:linear-gradient(135deg,rgba(255,75,110,0.15),rgba(220,38,38,0.08));border:1px solid rgba(255,75,110,0.3);box-shadow:0 0 14px rgba(255,75,110,0.2);">
-                        <i class="bi bi-newspaper" style="font-size:22px;color:var(--cyber-pink);filter:drop-shadow(0 0 6px var(--cyber-pink));"></i>
+                    <div class="fui-icon-box" style="background:linear-gradient(135deg,rgba(255,75,110,0.15),rgba(220,38,38,0.08));border:1px solid rgba(255,75,110,0.3)">
+                        <i class="bi bi-newspaper" style="font-size:22px;color:var(--cyber-pink));"></i>
                     </div>
                     <span class="fui-card-name" style="color:var(--cyber-pink);">INSIDEN</span>
                     <span class="fui-chip" style="background:rgba(255,75,110,0.1);color:var(--cyber-pink);border:1px solid rgba(255,75,110,0.2);">BERITA K3</span>
@@ -646,8 +624,8 @@ body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
                             };
                             var clrGlow = clr + "40";
                             <div class="fui-feed-item">
-                                <div class="fui-feed-icon" style="background:@bg;color:@clr;box-shadow:0 0 8px @clrGlow;">
-                                    <i class="bi @ic" style="filter:drop-shadow(0 0 4px @clr);"></i>
+                                <div class="fui-feed-icon" style="background:@bg;color:@clr">
+                                    <i class="bi @ic"></i>
                                 </div>
                                 <div style="flex:1;min-width:0;">
                                     <div style="font-size:11.5px;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@activity.Title</div>
