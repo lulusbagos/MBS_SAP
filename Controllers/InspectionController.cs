@@ -134,6 +134,13 @@ namespace MBS_SAP.Controllers
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
             var userName = User.Identity?.Name ?? "Anonymous";
             var userDept = User.FindFirst("Department")?.Value ?? "General";
+            var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
+            if (!userCompanyId.HasValue)
+            {
+                var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                if (karyawan != null) userCompanyId = karyawan.IdPerusahaan;
+            }
 
             Inspection? inspection;
             bool isNew = true;
@@ -152,8 +159,6 @@ namespace MBS_SAP.Controllers
             }
             else
             {
-                var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
-                int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
 
                 inspection = new Inspection
                 {

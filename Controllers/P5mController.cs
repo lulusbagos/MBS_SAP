@@ -106,6 +106,13 @@ namespace MBS_SAP.Controllers
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
             var userName = User.Identity?.Name ?? "Anonymous";
             var userDept = User.FindFirst("Department")?.Value ?? "General";
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+            if (!userCompanyId.HasValue)
+            {
+                var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                if (karyawan != null) userCompanyId = karyawan.IdPerusahaan;
+            }
 
             string? photoPath = null;
 
@@ -194,8 +201,7 @@ namespace MBS_SAP.Controllers
                     var q = questions[i];
                     var a = i < answers.Count ? answers[i] : "No";
 
-                    var companyIdStr = User.FindFirst("CompanyId")?.Value;
-                    int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+                    int? companyId = userCompanyId;
 
                     var p5mRecord = new P5m
                     {

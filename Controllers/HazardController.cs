@@ -125,6 +125,11 @@ namespace MBS_SAP.Controllers
             var userDept = User.FindFirst("Department")?.Value ?? "General";
             var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
             int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
+            if (!userCompanyId.HasValue)
+            {
+                var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                if (karyawan != null) userCompanyId = karyawan.IdPerusahaan;
+            }
 
             HazardReport? report;
             bool isNew = true;
