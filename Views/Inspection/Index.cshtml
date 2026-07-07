@@ -1132,21 +1132,21 @@
             var fotoInput = $('#foto_' + module + '_' + question);
             var commentInput = $('#commentQ' + module + '_' + question);
 
-            // Always show the container because YA also can upload photo (optional)
-            commentContainer.slideDown('fast');
-
             if (score === 0) { // TIDAK
-                reqImg.show();
-                fotoInput.prop('required', true);
+                commentContainer.slideDown('fast');
+                reqImg.hide();
+                fotoInput.prop('required', false);
                 divRencana.slideDown('fast');
                 commentInput.prop('required', true);
             } else if (score === 1) { // N/A
-                reqImg.show();
-                fotoInput.prop('required', true);
+                commentContainer.slideUp('fast');
+                reqImg.hide();
+                fotoInput.prop('required', false);
                 divRencana.slideUp('fast');
                 commentInput.prop('required', false).val('');
                 updateMainNotes();
             } else if (score === 2) { // YA
+                commentContainer.slideDown('fast');
                 reqImg.hide();
                 fotoInput.prop('required', false);
                 divRencana.slideUp('fast');
