@@ -2938,9 +2938,14 @@
                         
                         const isZeroTarget = (item.mtdTotalTarget === 0);
                         const rowStyle = isZeroTarget ? 'background-color: #f0fdf4;' : '';
+
+                        let rankDisplay = idx + 1;
+                        if (idx === 0) rankDisplay = '<span style="font-size: 16px;" title="Juara 1 (Emas)">🥇</span>';
+                        else if (idx === 1) rankDisplay = '<span style="font-size: 16px;" title="Juara 2 (Perak)">🥈</span>';
+                        else if (idx === 2) rankDisplay = '<span style="font-size: 16px;" title="Juara 3 (Perunggu)">🥉</span>';
                         
                         return '<tr style="' + rowStyle + '">' +
-                            '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
+                            '<td class="text-muted fw-bold">' + rankDisplay + '</td>' +
                             '<td><div class="fw-bold" style="color: #334155;">' + name + '</div><div style="font-size: 10px; color: #64748b;">' + nik + '</div></td>' +
                             '<td>' + jabatan + '</td>' +
                             '<td class="fw-bold" style="color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
@@ -2966,7 +2971,13 @@
         currentCompanyId = companyId;
         if (!deptModal || !deptRows || !deptTitle) return;
 
-        deptTitle.textContent = 'Pencapaian Per Departemen - ' + (companyName || 'Perusahaan');
+        // Check if company is Indexim
+        const isIndexim = (companyName || '').toUpperCase().includes('INDEXIM');
+        if (isIndexim) {
+            deptTitle.innerHTML = '<img src="/images/logo_indexim.png" style="height: 24px; width: auto; vertical-align: middle; margin-right: 8px;" /> <span style="vertical-align: middle; font-weight: 800;">LIGA Safety Accountability Program</span>';
+        } else {
+            deptTitle.innerHTML = '<span style="vertical-align: middle;">Pencapaian Per Departemen - ' + (companyName || 'Perusahaan') + '</span>';
+        }
 
         if (!Array.isArray(deptData) || deptData.length === 0) {
             deptRows.innerHTML = '<tr><td colspan="11" class="text-center text-muted">Belum ada data departemen.</td></tr>';
@@ -2988,8 +2999,13 @@
                 const cRate = Number(item.mtdCoachingRate || item.MtdCoachingRate || 0).toFixed(1);
                 const p5mRate = Number(item.mtdP5mRate || item.MtdP5mRate || 0).toFixed(1);
 
+                let rankDisplay = idx + 1;
+                if (idx === 0) rankDisplay = '<span style="font-size: 16px;" title="Juara 1 (Emas)">🥇</span>';
+                else if (idx === 1) rankDisplay = '<span style="font-size: 16px;" title="Juara 2 (Perak)">🥈</span>';
+                else if (idx === 2) rankDisplay = '<span style="font-size: 16px;" title="Juara 3 (Perunggu)">🥉</span>';
+
                 return '<tr>' +
-                    '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
+                    '<td class="text-muted fw-bold">' + rankDisplay + '</td>' +
                     '<td class="fw-bold" style="color: #334155;">' + deptName + '</td>' +
                     '<td>' + employeeCount + '</td>' +
                     '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
