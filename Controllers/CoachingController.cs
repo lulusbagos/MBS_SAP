@@ -40,19 +40,26 @@ namespace MBS_SAP.Controllers
             var areas = await _context.MasterAreas.OrderBy(a => a.NamaArea).ToListAsync();
             ViewBag.Areas = areas;
 
-            // Load employees for participants selection
-            var employeesQuery = from k in _context.Karyawans
-                                 join p in _context.Personals on k.IdPersonal equals p.IdPersonal
-                                 where k.StatusAktif
-                                 select new { k.NoNik, p.NamaLengkap, k.IdPerusahaan };
-
+            // Load accessible companies for participant company filter
+            List<int> accessibleIds;
             if (companyId.HasValue)
             {
-                employeesQuery = employeesQuery.Where(e => e.IdPerusahaan == companyId.Value);
+                accessibleIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
+            }
+            else
+            {
+                // Admin/no-company: all active companies
+                accessibleIds = await _context.Perusahaans.Where(p => p.StatusAktif).Select(p => p.PerusahaanId).ToListAsync();
             }
 
-            var employeeList = await employeesQuery.OrderBy(e => e.NamaLengkap).ToListAsync();
-            ViewBag.EmployeeList = employeeList.Select(e => new { e.NoNik, e.NamaLengkap }).ToList();
+            var companyList = await _context.Perusahaans
+                .Where(p => p.StatusAktif && accessibleIds.Contains(p.PerusahaanId))
+                .OrderBy(p => p.NamaPerusahaan)
+                .Select(p => new { p.PerusahaanId, p.NamaPerusahaan })
+                .ToListAsync();
+
+            ViewBag.CompanyList = companyList;
+            ViewBag.UserCompanyId = companyId;
 
             var query = _context.Coachings.Include(c => c.Participants).Where(c => !c.IsDeleted);
 
@@ -262,6 +269,52 @@ namespace MBS_SAP.Controllers
 
             TempData["SuccessMessage"] = isNew ? "Laporan Coaching baru berhasil disimpan!" : "Laporan Coaching berhasil diperbarui!";
             return RedirectToAction(nameof(Index));
+        }
+
+        // GET: Coaching/SearchEmployees?q=...&companyId=...
+        [HttpGet]
+        public async Task<IActionResult> SearchEmployees(string? q, int? companyId)
+        {
+            if (string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2)
+                return Json(new List<object>());
+
+            var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? userCompanyId = int.TryParse(userCompanyIdStr, out var ucid) && ucid > 0 ? ucid : null;
+
+            // Determine accessible companies
+            List<int> accessibleIds;
+            if (userCompanyId.HasValue)
+            {
+                accessibleIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
+            }
+            else
+            {
+                accessibleIds = await _context.Perusahaans.Where(p => p.StatusAktif).Select(p => p.PerusahaanId).ToListAsync();
+            }
+
+            var term = q.Trim().ToLower();
+
+            var empQuery = from k in _context.Karyawans
+                           join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                           join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
+                           from c in cg.DefaultIfEmpty()
+                           where k.StatusAktif && accessibleIds.Contains(k.IdPerusahaan)
+                                 && (p.NamaLengkap.ToLower().Contains(term) || k.NoNik.ToLower().Contains(term))
+                           select new
+                           {
+                               nik = k.NoNik,
+                               nama = p.NamaLengkap,
+                               companyId = k.IdPerusahaan,
+                               companyName = c != null ? c.NamaPerusahaan : "—"
+                           };
+
+            if (companyId.HasValue && companyId.Value > 0)
+            {
+                empQuery = empQuery.Where(e => e.companyId == companyId.Value);
+            }
+
+            var result = await empQuery.OrderBy(e => e.nama).Take(30).ToListAsync();
+            return Json(result);
         }
 
         // POST: Coaching/Delete/5

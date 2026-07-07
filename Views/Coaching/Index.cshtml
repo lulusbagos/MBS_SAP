@@ -129,10 +129,39 @@
                 <!-- Search and Add Trainee Selector -->
                 <div class="form-group-sap position-relative">
                     <label class="form-label-sap">Pilih Peserta Coaching (Trainee)</label>
-                    <div class="input-sap-wrapper mb-2">
+
+                    <!-- Company filter row -->
+                    <div class="d-flex gap-2 mb-2 align-items-center">
+                        <div class="input-sap-wrapper flex-grow-1 mb-0">
+                            <i class="bi bi-building input-sap-icon"></i>
+                            <select id="traineeCompanyFilter" class="input-sap" style="font-size: 12px;">
+                                <option value="">— Semua Perusahaan —</option>
+                                @if (ViewBag.CompanyList != null)
+                                {
+                                    foreach (var comp in ViewBag.CompanyList)
+                                    {
+                                        if (ViewBag.UserCompanyId != null && comp.PerusahaanId == (int)ViewBag.UserCompanyId)
+                                        {
+                                            <option value="@comp.PerusahaanId" selected>@comp.NamaPerusahaan</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@comp.PerusahaanId">@comp.NamaPerusahaan</option>
+                                        }
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Search input -->
+                    <div class="input-sap-wrapper mb-2" style="position: relative;">
                         <i class="bi bi-search input-sap-icon"></i>
-                        <input type="text" id="traineeSearchInput" class="input-sap" placeholder="Ketik nama atau NIK peserta..." autocomplete="off" onfocus="showTraineeSuggestions()" />
-                        <div id="traineeSuggestions" class="d-none" style="position: absolute; left: 0; right: 0; top: 100%; max-height: 200px; overflow-y: auto; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.25); padding: 4px;">
+                        <input type="text" id="traineeSearchInput" class="input-sap" placeholder="Ketik nama atau NIK peserta (min 2 karakter)..." autocomplete="off" />
+                        <span id="traineeSearchSpinner" class="d-none" style="position: absolute; right: 12px; top: 10px;">
+                            <span class="spinner-border spinner-border-sm text-purple" style="width:14px;height:14px;border-color:#a855f7;border-right-color:transparent;" role="status"></span>
+                        </span>
+                        <div id="traineeSuggestions" class="d-none" style="position: absolute; left: 0; right: 0; top: 100%; max-height: 220px; overflow-y: auto; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.25); padding: 4px;">
                         </div>
                     </div>
 
@@ -140,7 +169,7 @@
                     <div id="selectedTraineesContainer" class="d-flex flex-wrap gap-2 p-3 mb-2" style="border: 1px solid var(--border-color); border-radius: 12px; min-height: 54px; background: rgba(0,0,0,0.25); align-items: center;">
                         <span class="text-muted" id="noTraineesLabel" style="font-size: 13px;">Belum ada peserta yang dipilih. Ketik & pilih dari hasil pencarian di atas.</span>
                     </div>
-                    <small class="text-muted" style="font-size: 10px;">Pilih satu atau lebih karyawan perusahaan Anda yang menerima coaching dengan memilih hasil pencarian</small>
+                    <small class="text-muted" style="font-size: 10px;">Gunakan filter perusahaan untuk mempersempit pencarian antar perusahaan</small>
                 </div>
 
                 <div class="form-group-sap">
@@ -289,48 +318,61 @@
             }
         }
 
-        const allEmployees = [
-            @if (ViewBag.EmployeeList != null)
-            {
-                foreach (var emp in ViewBag.EmployeeList)
-                {
-                    @: { nik: "@emp.NoNik", name: "@Html.Raw(emp.NamaLengkap)" },
-                }
-            }
-        ];
+        const allEmployees = [];  // not used for search anymore (server-side)
 
         let selectedTrainees = [];
+        let searchDebounceTimer = null;
 
         function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+            return String(str ?? '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        function showTraineeSuggestions() {
-            filterTraineeSuggestions();
+        function getSelectedCompanyId() {
+            const el = document.getElementById('traineeCompanyFilter');
+            return el ? el.value : '';
         }
 
-        function filterTraineeSuggestions() {
+        async function fetchTraineeSuggestions(term) {
+            const companyId = getSelectedCompanyId();
+            let url = '/Coaching/SearchEmployees?q=' + encodeURIComponent(term);
+            if (companyId) url += '&companyId=' + encodeURIComponent(companyId);
+
+            const spinner = document.getElementById('traineeSearchSpinner');
+            if (spinner) spinner.classList.remove('d-none');
+
+            try {
+                const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!resp.ok) return [];
+                return await resp.json();
+            } catch {
+                return [];
+            } finally {
+                if (spinner) spinner.classList.add('d-none');
+            }
+        }
+
+        async function filterTraineeSuggestions() {
             const input = document.getElementById('traineeSearchInput');
-            const query = input.value.toLowerCase().trim();
             const suggestions = document.getElementById('traineeSuggestions');
-            
-            // Require at least 3 characters before showing suggestions
-            if (query.length < 3) {
+            const term = (input ? input.value : '').trim();
+
+            if (term.length < 2) {
                 suggestions.classList.add('d-none');
+                suggestions.innerHTML = '';
                 return;
             }
-            
-            const matches = allEmployees.filter(emp => 
-                emp.name.toLowerCase().includes(query) || 
-                emp.nik.toLowerCase().includes(query)
-            );
 
-            if (matches.length === 0) {
+            const matches = await fetchTraineeSuggestions(term);
+
+            if (!matches || matches.length === 0) {
                 suggestions.innerHTML = '<div class="text-muted p-2" style="font-size: 13px;">Karyawan tidak ditemukan</div>';
             } else {
                 suggestions.innerHTML = matches.map(emp => `
-                    <div class="suggestion-item p-2" style="cursor: pointer; border-radius: 6px; font-size: 13px; color: var(--text-main);" onclick="addTrainee('${emp.nik}', '${escapeHtml(emp.name)}')">
-                        <strong>${emp.name}</strong> <span style="color: var(--text-muted);">(${emp.nik})</span>
+                    <div class="suggestion-item p-2" style="cursor: pointer; border-radius: 6px; font-size: 13px; color: var(--text-main);" 
+                         onclick="addTrainee('${escapeHtml(emp.nik)}', '${escapeHtml(emp.nama)}')">
+                        <strong>${escapeHtml(emp.nama)}</strong>
+                        <span style="color: var(--text-muted);">(${escapeHtml(emp.nik)})</span>
+                        <span class="badge ms-1" style="background:rgba(168,85,247,0.15);color:#c084fc;font-size:9px;border-radius:6px;">${escapeHtml(emp.companyName)}</span>
                     </div>
                 `).join('');
             }
@@ -360,13 +402,13 @@
             const container = document.getElementById('selectedTraineesContainer');
 
             if (selectedTrainees.length === 0) {
-                container.innerHTML = `<span class="text-muted" id="noTraineesLabel" style="font-size: 13px;">Belum ada peserta yang dipilih. Ketik & pilih dari hasil pencarian di atas.</span>`;
+                container.innerHTML = `<span class="text-muted" id="noTraineesLabel" style="font-size: 13px;">Belum ada peserta yang dipilih. Ketik &amp; pilih dari hasil pencarian di atas.</span>`;
             } else {
                 container.innerHTML = selectedTrainees.map(t => `
                     <div class="badge d-flex align-items-center gap-2 py-2 px-3" style="background-color: rgba(124, 58, 237, 0.12); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 20px; font-size: 12px; color: var(--text-main);">
-                        <span><strong style="color: #7c3aed;">${escapeHtml(t.name)}</strong> <span style="color: var(--text-muted); font-weight: normal;">(${t.nik})</span></span>
-                        <i class="bi bi-x-circle-fill text-danger" style="cursor: pointer; font-size: 14px;" onclick="removeTrainee('${t.nik}')" title="Hapus"></i>
-                        <input type="hidden" name="selectedParticipants" value="${t.nik}" />
+                        <span><strong style="color: #7c3aed;">${escapeHtml(t.name)}</strong> <span style="color: var(--text-muted); font-weight: normal;">(${escapeHtml(t.nik)})</span></span>
+                        <i class="bi bi-x-circle-fill text-danger" style="cursor: pointer; font-size: 14px;" onclick="removeTrainee('${escapeHtml(t.nik)}')" title="Hapus"></i>
+                        <input type="hidden" name="selectedParticipants" value="${escapeHtml(t.nik)}" />
                     </div>
                 `).join('');
             }
@@ -381,11 +423,25 @@
             }
         });
 
-        // Keyup handler
+        // Keyup handler with debounce
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('traineeSearchInput');
+            const companyFilter = document.getElementById('traineeCompanyFilter');
+
             if (searchInput) {
-                searchInput.addEventListener('input', filterTraineeSuggestions);
+                searchInput.addEventListener('input', function() {
+                    clearTimeout(searchDebounceTimer);
+                    searchDebounceTimer = setTimeout(filterTraineeSuggestions, 300);
+                });
+                searchInput.addEventListener('focus', function() {
+                    if (this.value.trim().length >= 2) filterTraineeSuggestions();
+                });
+            }
+            if (companyFilter) {
+                companyFilter.addEventListener('change', function() {
+                    const input = document.getElementById('traineeSearchInput');
+                    if (input && input.value.trim().length >= 2) filterTraineeSuggestions();
+                });
             }
         });
 
@@ -492,13 +548,22 @@
                     // Check selected participants
                     selectedTrainees = [];
                     if (data.participants && data.participants.length > 0) {
-                        data.participants.forEach(function(nik) {
-                            const emp = allEmployees.find(e => e.nik === nik);
-                            const name = emp ? emp.name : "Karyawan";
-                            selectedTrainees.push({ nik: nik, name: name });
+                        // Fetch names for existing participants via server search
+                        const nikList = data.participants;
+                        const fetchPromises = nikList.map(nik =>
+                            fetch('/Coaching/SearchEmployees?q=' + encodeURIComponent(nik), { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                                .then(r => r.ok ? r.json() : [])
+                                .then(results => {
+                                    const found = Array.isArray(results) ? results.find(e => e.nik === nik) : null;
+                                    return { nik: nik, name: found ? found.nama : nik };
+                                })
+                                .catch(() => ({ nik: nik, name: nik }))
+                        );
+                        Promise.all(fetchPromises).then(resolved => {
+                            selectedTrainees = resolved;
+                            renderTraineeChips();
                         });
                     }
-                    renderTraineeChips();
 
                     $('#formTitle').html('<i class="bi bi-pencil-square me-2" style="color: #a855f7;"></i>Edit Laporan Coaching');
                     $('#btnCancelEdit').removeClass('d-none');

@@ -1,228 +1,689 @@
 @model IEnumerable<MBS_SAP.Controllers.RecentActivityViewModel>
 @{
     ViewData["Title"] = "Dashboard - SAP";
+    var complianceScore = (int)(ViewData["ComplianceScore"] ?? 75);
+    var myTotalThisMonth = (int)(ViewData["MyTotalThisMonth"] ?? 0);
+    var myTotalMonthTarget = (int)(ViewData["MyTotalMonthTarget"] ?? 0);
+    var hazAct = (int)(ViewData["ThisMonthHazards"] ?? 0);
+    var hazTgt = (int)(ViewData["TargetHazard"] ?? 1);
+    var hazPct = hazTgt > 0 ? Math.Min(100, (int)Math.Round((double)hazAct / hazTgt * 100)) : 0;
+    var insAct = (int)(ViewData["ThisMonthInspections"] ?? 0);
+    var insTgt = (int)(ViewData["TargetInspeksi"] ?? 1);
+    var insPct = insTgt > 0 ? Math.Min(100, (int)Math.Round((double)insAct / insTgt * 100)) : 0;
+    var stAct = (int)(ViewData["ThisMonthSafetyTalks"] ?? 0);
+    var stTgt = (int)(ViewData["TargetSafetyTalk"] ?? 1);
+    var stPct = stTgt > 0 ? Math.Min(100, (int)Math.Round((double)stAct / stTgt * 100)) : 0;
+    var p5Act = (int)(ViewData["ThisMonthP5ms"] ?? 0);
+    var p5Tgt = (int)(ViewData["TargetP5m"] ?? 1);
+    var p5Pct = p5Tgt > 0 ? Math.Min(100, (int)Math.Round((double)p5Act / p5Tgt * 100)) : 0;
+    var coaAct = (int)(ViewData["ThisMonthCoachings"] ?? 0);
+    var coaTgt = (int)(ViewData["TargetCoaching"] ?? 0);
+    var coaPct = coaTgt > 0 ? Math.Min(100, (int)Math.Round((double)coaAct / coaTgt * 100)) : 0;
+    var obsAct = (int)(ViewData["ThisMonthObservations"] ?? 0);
+    var obsTgt = (int)(ViewData["TargetObservasi"] ?? 0);
+    var obsPct = obsTgt > 0 ? Math.Min(100, (int)Math.Round((double)obsAct / obsTgt * 100)) : 0;
+    var scoreColor = complianceScore >= 80 ? "#00ff9d" : complianceScore >= 50 ? "#f0c040" : "#ff4b6e";
+    var scoreGlow = complianceScore >= 80 ? "rgba(0,255,157,0.4)" : complianceScore >= 50 ? "rgba(240,192,64,0.4)" : "rgba(255,75,110,0.4)";
 }
 
-<div class="animate-fade-in pb-4">
-    <!-- Header with Banner -->
-    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
-        <div style="background: linear-gradient(135deg, #0f172a, #334155); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; position: relative; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-            <!-- Decorative circle -->
-            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
-            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
-            
-            <div class="d-flex justify-content-between align-items-center position-relative" style="z-index: 1;">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.2);">
-                        <i class="bi bi-person-badge-fill text-white" style="font-size: 24px;"></i>
-                    </div>
-                    <div>
-                        <div style="color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 500;">Selamat Bekerja,</div>
-                        <h5 style="color: white; font-weight: 800; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">@User.Identity?.Name</h5>
-                        @if (ViewData["KategoriPengawas"] != null && !string.IsNullOrWhiteSpace(ViewData["KategoriPengawas"].ToString()))
-                        {
-                            <div style="color: #38bdf8; font-size: 11px; font-weight: 700; margin-top: 2px;">
-                                <i class="bi bi-shield-shaded me-1"></i> @ViewData["KategoriPengawas"]
-                            </div>
-                        }
+<style>
+@@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800;900&family=Share+Tech+Mono&display=swap');
+
+/* ─── FUTURISTIC CORE ─────────────────────────────────────────── */
+:root {
+    --cyber-cyan:    #00e5ff;
+    --cyber-green:   #00ff9d;
+    --cyber-pink:    #ff4b6e;
+    --cyber-gold:    #f0c040;
+    --cyber-purple:  #bf5af2;
+    --cyber-orange:  #ff8c00;
+    --cyber-blue:    #0ea5e9;
+    --neon-glow-c:   0 0 18px rgba(0,229,255,0.55),  0 0 40px rgba(0,229,255,0.2);
+    --neon-glow-g:   0 0 18px rgba(0,255,157,0.55),  0 0 40px rgba(0,255,157,0.2);
+    --neon-glow-p:   0 0 18px rgba(255,75,110,0.55), 0 0 40px rgba(255,75,110,0.2);
+}
+
+/* ─── Scanline grid overlay ───────────────────────────────────── */
+.fui-page { position: relative; padding-bottom: 1rem; }
+.fui-page::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ─── HERO ──────────────────────────────────────────────────────── */
+.fui-hero {
+    position: relative;
+    background: linear-gradient(140deg, #020913 0%, #050d1a 55%, #090720 100%);
+    border: 1px solid rgba(0,229,255,0.25);
+    border-radius: 20px;
+    padding: 22px 18px 18px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(0,229,255,0.08), var(--neon-glow-c);
+}
+.fui-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 70% 60% at 85% -10%, rgba(0,229,255,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 5% 110%,  rgba(0,255,157,0.08) 0%, transparent 55%);
+    pointer-events: none;
+}
+/* Corner decorations */
+.fui-hero::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 24px; height: 24px;
+    border-top: 2px solid var(--cyber-cyan);
+    border-left: 2px solid var(--cyber-cyan);
+    border-radius: 4px 0 0 0;
+    filter: drop-shadow(0 0 6px var(--cyber-cyan));
+}
+.fui-corner-br {
+    position: absolute;
+    bottom: 0; right: 0;
+    width: 24px; height: 24px;
+    border-bottom: 2px solid var(--cyber-cyan);
+    border-right: 2px solid var(--cyber-cyan);
+    border-radius: 0 0 4px 0;
+    filter: drop-shadow(0 0 6px var(--cyber-cyan));
+}
+
+/* ─── Score Ring ────────────────────────────────────────────────── */
+.fui-ring {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: conic-gradient(v-color calc(var(--pct) * 1%), rgba(255,255,255,0.04) 0);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+}
+.fui-ring-inner {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: #030a14;
+    border: 1px solid rgba(0,229,255,0.15);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+}
+.fui-ring-pct {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+}
+.fui-ring-label {
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    opacity: 0.6;
+    margin-top: 1px;
+}
+
+/* ─── Progress Bar ──────────────────────────────────────────────── */
+.fui-progress-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(0,229,255,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+}
+.fui-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    position: relative;
+    transition: width 1s ease;
+}
+.fui-progress-fill::after {
+    content: '';
+    position: absolute;
+    right: 0; top: -1px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: inherit;
+    filter: blur(2px) brightness(2);
+}
+
+/* ─── Marquee ───────────────────────────────────────────────────── */
+.fui-marquee {
+    background: rgba(0,229,255,0.04);
+    border: 1px solid rgba(0,229,255,0.18);
+    border-radius: 10px;
+    padding: 8px 12px;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px;
+}
+
+/* ─── ACTION CARDS GRID ─────────────────────────────────────────── */
+.fui-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.fui-card {
+    position: relative;
+    background: linear-gradient(145deg, rgba(5,15,30,0.95), rgba(8,20,42,0.9));
+    border: 1px solid var(--c-border, rgba(0,229,255,0.2));
+    border-radius: 16px;
+    padding: 14px 8px 10px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--text-main);
+    display: flex; flex-direction: column;
+    align-items: center; gap: 5px;
+    overflow: hidden;
+    transition: all 0.22s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
+}
+/* top accent line */
+.fui-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 10%; right: 10%;
+    height: 1.5px;
+    background: var(--c-accent, var(--cyber-cyan));
+    box-shadow: 0 0 12px var(--c-glow, rgba(0,229,255,0.6));
+    border-radius: 0 0 4px 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+.fui-card:hover::before { opacity: 1; }
+.fui-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    border-color: var(--c-border-h, rgba(0,229,255,0.55));
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 20px var(--c-glow, rgba(0,229,255,0.15));
+    color: var(--text-main);
+}
+.fui-card:active { transform: scale(0.97); }
+
+.fui-icon-box {
+    width: 50px; height: 50px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+}
+.fui-card:hover .fui-icon-box { transform: scale(1.1) translateY(-2px); }
+.fui-card:hover img { transform: scale(1.1) translateY(-2px); }
+
+img.fui-img {
+    width: 50px; height: 50px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 8px var(--c-glow, rgba(0,229,255,0.4)));
+    transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1);
+}
+.fui-card-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+}
+.fui-chip {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+    font-family: 'Share Tech Mono', monospace;
+}
+.fui-bar {
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.fui-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    position: relative;
+}
+.fui-bar-fill::after {
+    content: '';
+    position: absolute;
+    right: -2px; top: -1px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    filter: blur(2px) brightness(3);
+}
+
+/* ─── LIVE FEED ─────────────────────────────────────────────────── */
+.fui-feed {
+    background: linear-gradient(145deg, rgba(5,15,30,0.98), rgba(3,8,20,0.95));
+    border: 1px solid rgba(0,229,255,0.2);
+    border-radius: 16px;
+    overflow: hidden;
+    height: 100%;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.3), var(--neon-glow-c);
+    position: relative;
+}
+.fui-feed::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 10%; right: 10%;
+    height: 1.5px;
+    background: var(--cyber-cyan);
+    box-shadow: 0 0 14px rgba(0,229,255,0.7);
+}
+.fui-feed-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid rgba(0,229,255,0.1);
+    background: rgba(0,229,255,0.03);
+}
+.fui-feed-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--cyber-cyan);
+    text-shadow: 0 0 10px rgba(0,229,255,0.5);
+    margin: 0;
+}
+.fui-live-dot {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 9px; font-weight: 700;
+    color: var(--cyber-green);
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 0.5px;
+}
+.fui-live-dot::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--cyber-green);
+    box-shadow: 0 0 8px var(--cyber-green);
+    animation: fui-blink 1.2s ease infinite;
+}
+@@keyframes fui-blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+.fui-feed-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(0,229,255,0.05);
+    transition: background 0.15s;
+}
+.fui-feed-item:last-child { border-bottom: none; }
+.fui-feed-item:hover { background: rgba(0,229,255,0.04); }
+.fui-feed-icon {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex-shrink: 0;
+}
+.fui-status {
+    font-size: 9px; font-weight: 700;
+    padding: 2px 6px; border-radius: 5px;
+    font-family: 'Share Tech Mono', monospace;
+    white-space: nowrap;
+}
+
+/* ─── Animated scan line ────────────────────────────────────────── */
+@@keyframes fui-scan {
+    0%   { top: -2px; }
+    100% { top: 100%; }
+}
+.fui-scan-line {
+    position: absolute;
+    left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,229,255,0.3), transparent);
+    animation: fui-scan 4s linear infinite;
+    pointer-events: none;
+}
+
+/* ─── Glitch username ────────────────────────────────────────────── */
+.fui-username {
+    font-family: 'Orbitron', monospace;
+    font-weight: 800;
+    font-size: 16px;
+    color: white;
+    letter-spacing: -0.5px;
+    position: relative;
+}
+.fui-username::after {
+    content: attr(data-text);
+    position: absolute;
+    left: 2px; top: 0;
+    color: var(--cyber-cyan);
+    opacity: 0;
+    clip-path: inset(0 0 0 0);
+    animation: glitch 5s infinite;
+}
+@@keyframes glitch {
+    0%,90%,100%{ opacity:0; transform:none; }
+    92%{ opacity:0.7; transform:translate(-2px,0) skewX(-5deg); clip-path:inset(20% 0 60% 0); }
+    94%{ opacity:0.5; transform:translate(2px,0) skewX(3deg); clip-path:inset(60% 0 10% 0); }
+    96%{ opacity:0; }
+}
+
+/* ─── Hero stats strip ────────────────────────────────────────── */
+.fui-stat-strip {
+    display: flex; gap: 8px; margin-top: 12px;
+}
+.fui-stat-box {
+    flex: 1;
+    background: rgba(0,229,255,0.04);
+    border: 1px solid rgba(0,229,255,0.12);
+    border-radius: 10px;
+    padding: 8px 6px 6px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.fui-stat-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 15%; right: 15%; height: 1px;
+    background: var(--sb-color, var(--cyber-cyan));
+    box-shadow: 0 0 8px var(--sb-color, var(--cyber-cyan));
+}
+.fui-stat-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 14px; font-weight: 900;
+    line-height: 1;
+}
+.fui-stat-lbl {
+    font-size: 8px; font-weight: 700;
+    letter-spacing: 0.5px; opacity: 0.5;
+    margin-top: 2px;
+    font-family: 'Share Tech Mono', monospace;
+}
+
+/* ─── Light theme compatibility ────────────────────────────────── */
+body.light-theme .fui-hero { border-color: rgba(2,132,199,0.3); box-shadow: 0 4px 24px rgba(2,132,199,0.1); }
+body.light-theme .fui-card { background: rgba(248,250,252,0.97); border-color: rgba(2,132,199,0.2); }
+body.light-theme .fui-card:hover { background: #ffffff; }
+body.light-theme .fui-feed { background: rgba(248,250,252,0.98); border-color: rgba(2,132,199,0.2); box-shadow: 0 4px 24px rgba(2,132,199,0.08); }
+body.light-theme .fui-card-name { color: #0f172a; }
+body.light-theme .fui-feed-title { color: #0284c7; text-shadow: none; }
+body.light-theme .fui-page::before { opacity: 0.4; }
+body.light-theme .fui-ring-inner { background: #f1f5f9; }
+body.light-theme .fui-stat-box { background: rgba(2,132,199,0.04); border-color: rgba(2,132,199,0.15); }
+body.light-theme .fui-feed-item:hover { background: rgba(2,132,199,0.03); }
+</style>
+
+<div class="fui-page animate-fade-in">
+
+    {{-- ═══════════════ HERO ════════════════ --}}
+    <div class="fui-hero">
+        <div class="fui-scan-line"></div>
+        <div class="fui-corner-br"></div>
+
+        <div class="d-flex justify-content-between align-items-start position-relative" style="z-index:1;">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:46px;height:46px;border-radius:12px;border:1.5px solid rgba(0,229,255,0.35);background:rgba(0,229,255,0.06);display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(0,229,255,0.2);flex-shrink:0;">
+                    <i class="bi bi-person-badge-fill" style="font-size:20px;color:var(--cyber-cyan);filter:drop-shadow(0 0 6px var(--cyber-cyan));"></i>
+                </div>
+                <div>
+                    <div style="color:rgba(0,229,255,0.5);font-size:9px;font-weight:700;letter-spacing:1.5px;font-family:'Share Tech Mono',monospace;">OPERATOR AKTIF</div>
+                    <div class="fui-username" data-text="@User.Identity?.Name">@User.Identity?.Name</div>
+                    @if (ViewData["KategoriPengawas"] != null && !string.IsNullOrWhiteSpace(ViewData["KategoriPengawas"].ToString()))
+                    {
+                        <div style="color:var(--cyber-green);font-size:9px;font-weight:700;margin-top:2px;font-family:'Share Tech Mono',monospace;letter-spacing:0.5px;filter:drop-shadow(0 0 4px var(--cyber-green));">
+                            ⬡ @ViewData["KategoriPengawas"]
+                        </div>
+                    }
+                </div>
+            </div>
+
+            {{-- Score Ring --}}
+            <div style="text-align:center;flex-shrink:0;">
+                <div class="fui-ring" style="--pct:@complianceScore;background:conic-gradient(@scoreColor calc(@complianceScore * 1%), rgba(255,255,255,0.04) 0);box-shadow:0 0 20px @scoreGlow;">
+                    <div class="fui-ring-inner">
+                        <span class="fui-ring-pct" style="color:@scoreColor;text-shadow:0 0 10px @scoreGlow;">@complianceScore%</span>
+                        <span class="fui-ring-label" style="color:rgba(255,255,255,0.4);">MTD</span>
                     </div>
                 </div>
-                
-                <span class="badge px-3 py-2 shadow-sm animate-pulse" style="background-color: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; font-weight: 800; font-size: 11px;">
-                    <i class="bi bi-shield-check me-1"></i> AMAN
-                </span>
+                <div style="font-size:8px;font-weight:700;letter-spacing:1px;color:rgba(0,229,255,0.4);margin-top:4px;font-family:'Share Tech Mono',monospace;">COMPLIANCE</div>
+            </div>
+        </div>
+
+        {{-- Stat Strip --}}
+        <div class="fui-stat-strip position-relative" style="z-index:1;">
+            <div class="fui-stat-box" style="--sb-color:var(--cyber-green);">
+                <div class="fui-stat-val" style="color:var(--cyber-green);text-shadow:0 0 8px var(--cyber-green);">@myTotalThisMonth</div>
+                <div class="fui-stat-lbl">ACTUAL</div>
+            </div>
+            <div class="fui-stat-box" style="--sb-color:var(--cyber-cyan);">
+                <div class="fui-stat-val" style="color:var(--cyber-cyan);text-shadow:0 0 8px var(--cyber-cyan);">@myTotalMonthTarget</div>
+                <div class="fui-stat-lbl">TARGET</div>
+            </div>
+            <div class="fui-stat-box" style="--sb-color:@scoreColor;">
+                <div class="fui-stat-val" style="color:@scoreColor;text-shadow:0 0 8px @scoreGlow;">@complianceScore%</div>
+                <div class="fui-stat-lbl">SCORE</div>
+            </div>
+            <div class="fui-stat-box" style="--sb-color:var(--cyber-gold);">
+                <div class="fui-stat-val" style="color:var(--cyber-gold);text-shadow:0 0 8px rgba(240,192,64,0.5);">MTD</div>
+                <div class="fui-stat-lbl">PERIODE</div>
             </div>
         </div>
     </div>
 
-    <!-- Safety Marquee Banner -->
-    <div class="mb-4 shadow-sm" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 10px 16px; display: flex; align-items: center; gap: 12px; color: #f59e0b;">
-        <div class="d-flex align-items-center justify-content-center flex-shrink-0" style="width: 28px; height: 28px; background: rgba(245, 158, 11, 0.2); border-radius: 50%;">
-            <i class="bi bi-megaphone-fill" style="font-size: 13px;"></i>
+    {{-- ═══════════════ MARQUEE ═════════════ --}}
+    <div class="fui-marquee">
+        <div style="width:24px;height:24px;border-radius:50%;background:rgba(240,192,64,0.15);border:1px solid rgba(240,192,64,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="bi bi-megaphone-fill" style="font-size:11px;color:var(--cyber-gold);"></i>
         </div>
-        <marquee scrollamount="6" scrolldelay="50" onmouseover="this.stop();" onmouseout="this.start();" style="font-weight: 600; font-size: 13px; letter-spacing: 0.3px; color: var(--text-main);">
+        <marquee scrollamount="5" onmouseover="this.stop();" onmouseout="this.start();" style="font-size:11.5px;font-weight:600;color:var(--text-main);font-family:'Share Tech Mono',monospace;">
             @if (ViewData["RunningTexts"] is List<string> texts && texts.Any())
             {
                 foreach (var text in texts)
                 {
-                    <span class="me-5">@Html.Raw(text.Replace("SAFETY FIRST:", "<strong style='color: #f59e0b;'>SAFETY FIRST:</strong>").Replace("INFO CUACA:", "<strong style='color: #f59e0b;'>INFO CUACA:</strong>").Replace("REMINDER:", "<strong style='color: #f59e0b;'>REMINDER:</strong>"))</span>
+                    <span class="me-5">@Html.Raw(text.Replace("SAFETY FIRST:", "<strong style='color:var(--cyber-gold);'>SAFETY FIRST:</strong>").Replace("INFO CUACA:", "<strong style='color:var(--cyber-cyan);'>INFO CUACA:</strong>").Replace("REMINDER:", "<strong style='color:var(--cyber-pink);'>REMINDER:</strong>"))</span>
                 }
             }
             else
             {
-                <span class="me-5"><strong style="color: #f59e0b;">MBS SAP:</strong> Selamat datang di Secure Access Platform. Utamakan Keselamatan Anda.</span>
+                <span class="me-5"><strong style="color:var(--cyber-gold);">MBS SAP:</strong> Selamat datang di Secure Access Platform. Utamakan Keselamatan Anda.</span>
             }
         </marquee>
     </div>
 
-<!-- Success Banner Alert -->
-@if (TempData["SuccessMessage"] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="background-color: rgba(16, 185, 129, 0.15); color: var(--color-green); border-radius: 16px;">
-        <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="filter: invert(var(--text-contrast));"></button>
-    </div>
-}
-
-<!-- Hybrid Dashboard Row: Grid & Actions on the left, Recent Activities on the right on Laptop -->
-<div class="row g-4">
-    
-    <!-- Left Column: Statistics Card & Navigation Cards -->
-    <div class="col-lg-8">
-        <!-- Accountability Score Card -->
-        @{
-            var complianceScore = (int)(ViewData["ComplianceScore"] ?? 75);
-            var compliantWeeks = (int)(ViewData["CompliantWeeks"] ?? 0);
-            var targetWeeks = (int)(ViewData["TargetWeeks"] ?? 4);
-            // Calculate stroke-dashoffset for circular progress bar (100 is full, 100 - score)
-            var strokeOffset = 100 - complianceScore;
-        }
-        <div class="card-sap border-green-accent mb-4 animate-fade-in delay-1">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <span class="form-label-sap mb-1">Accountability Score</span>
-                    <h4 class="mb-1" style="font-weight: 800; color: var(--text-main);">@complianceScore% <span style="font-size: 13px; font-weight: 500; color: var(--color-green);">Kepatuhan</span></h4>
-                    @{ 
-                        var myTotalThisMonth = (int)(ViewData["MyTotalThisMonth"] ?? 0); 
-                        var myTotalMonthTarget = (int)(ViewData["MyTotalMonthTarget"] ?? 0); 
-                    }
-                    <p class="mb-0" style="font-size: 12px; color: var(--text-muted);">Skor dihitung dari pencapaian bulan ini: <strong>@myTotalThisMonth</strong> dari total target <strong>@myTotalMonthTarget</strong> aktivitas K3.</p>
-                </div>
-                <div class="stats-circle-container">
-                    <img src="~/images/safety_badge.png" class="stats-circle-img" alt="Safety Badge" asp-append-version="true" style="position: static; width: 60px; height: 60px; object-fit: contain;" />
-                </div>
-            </div>
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-dismissible fade show border-0 mb-3" role="alert"
+             style="background:rgba(0,255,157,0.08);border:1px solid rgba(0,255,157,0.25)!important;border-radius:12px;color:var(--cyber-green);font-size:13px;">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
+    }
 
-        <!-- Quick Action Menu Cards -->
-        <div class="action-grid">
-            <a asp-controller="Performance" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0284c7, #0369a1); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
-                    <i class="bi bi-bar-chart-line-fill" style="font-size: 20px; color: white;"></i>
-                </div>
-                <span style="font-weight: 700; font-size: 13px;">Pencapaian</span>
-                <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">KPI Kinerja</span>
-            </a>
+    {{-- ═══════════════ MAIN GRID ══════════ --}}
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="fui-grid">
 
-            <a asp-controller="Timeline" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
-                <img src="~/images/menu_timeline.png" class="menu-action-icon" alt="SafeFeed" asp-append-version="true" />
-                <span style="font-weight: 700; font-size: 13px;">SafeFeed</span>
-                <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">Aktivitas</span>
-            </a>
-
-            <a asp-controller="Hazard" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
-                <img src="~/images/menu_hazard.png" class="menu-action-icon" alt="Lapor Hazard" asp-append-version="true" />
-                <span style="font-weight: 700; font-size: 13px;">Lapor Hazard</span>
-                <span class="badge" style="background-color: rgba(249, 115, 22, 0.1); color: #ea580c; font-size: 10px; font-weight: 600;">Target : @(ViewData["TargetHazard"] ?? "0") | Actual : @(ViewData["ThisMonthHazards"] ?? "0")</span>
-            </a>
-            
-            <a asp-controller="Inspection" asp-action="Index" class="btn-action-card animate-pop-in delay-3">
-                <img src="~/images/menu_inspection.png" class="menu-action-icon" alt="Safety Inspeksi" asp-append-version="true" />
-                <span style="font-weight: 700; font-size: 13px;">Safety Inspeksi</span>
-                <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">Target : @(ViewData["TargetInspeksi"] ?? "0") | Actual : @(ViewData["ThisMonthInspections"] ?? "0")</span>
-            </a>
-            
-            <a asp-controller="ActionPlan" asp-action="Index" class="btn-action-card animate-pop-in delay-4">
-                <img src="~/images/menu_actionplan.png" class="menu-action-icon" alt="Action Plan" asp-append-version="true" />
-                <span style="font-weight: 700; font-size: 13px;">Action Plan</span>
-                <span class="badge" style="background-color: rgba(16, 185, 129, 0.1); color: #059669; font-size: 10px; font-weight: 600;">@(ViewData["TotalActionPlans"] ?? "0") Temuan</span>
-            </a>
-
-            <a asp-controller="SafetyTalk" asp-action="Index" class="btn-action-card animate-pop-in delay-5">
-                <img src="~/images/menu_safetytalk.png" class="menu-action-icon" alt="Safety Talk" asp-append-version="true" />
-                <span style="font-weight: 700; font-size: 13px;">Safety Talk</span>
-                <span class="badge" style="background-color: rgba(244, 63, 94, 0.1); color: #e11d48; font-size: 10px; font-weight: 600;">Target : @(ViewData["TargetSafetyTalk"] ?? "0") | Actual : @(ViewData["ThisMonthSafetyTalks"] ?? "0")</span>
-            </a>
-            
-            <a asp-controller="P5m" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
-                <img src="~/images/menu_p5m.png" class="menu-action-icon" alt="P5M" asp-append-version="true" />
-                <span style="font-weight: 700; font-size: 13px;">P5M</span>
-                <span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; font-size: 10px; font-weight: 600;">Target : @(ViewData["TargetP5m"] ?? "0") | Actual : @(ViewData["ThisMonthP5ms"] ?? "0")</span>
-            </a>
-
-            <a asp-controller="Coaching" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #7c3aed, #a855f7); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
-                    <i class="bi bi-person-badge-fill" style="font-size: 20px; color: white;"></i>
-                </div>
-                <span style="font-weight: 700; font-size: 13px;">Coaching</span>
-                <span class="badge" style="background-color: rgba(124, 58, 237, 0.1); color: #7c3aed; font-size: 10px; font-weight: 600;">Target : @(ViewData["TargetCoaching"] ?? "0") | Actual : @(ViewData["ThisMonthCoachings"] ?? "0")</span>
-            </a>
-
-            <a asp-controller="Observation" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
-                <img src="~/images/menu_observation.png" class="menu-action-icon" alt="Observasi" asp-append-version="true" />
-                <span style="font-weight: 700; font-size: 13px;">Observasi</span>
-                <span class="badge" style="background-color: rgba(79, 70, 229, 0.1); color: #4f46e5; font-size: 10px; font-weight: 600;">Target : @(ViewData["TargetObservasi"] ?? "0") | Actual : @(ViewData["ThisMonthObservations"] ?? "0")</span>
-            </a>
-
-            <a asp-controller="P2h" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
-                <img src="~/images/menu_p2h.png" class="menu-action-icon" alt="P2H Kendaraan" asp-append-version="true" />
-                <span style="font-weight: 700; font-size: 13px;">P2H Kendaraan</span>
-                <span class="badge" style="background-color: rgba(236, 72, 153, 0.1); color: #ec4899; font-size: 10px; font-weight: 600;">Cek Unit</span>
-            </a>
-
-            @if (User.FindFirst("CompanyId")?.Value == "1")
-            {
-                <a asp-controller="Dpa" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
-                    <img src="~/images/menu_dpa.png" class="menu-action-icon" alt="DPA" asp-append-version="true" />
-                    <span style="font-weight: 700; font-size: 13px;">DPA</span>
-                    <span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; font-size: 10px; font-weight: 600;">Driver Assessment</span>
-                </a>
-            }
-
-            <a asp-controller="Incident" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #dc2626, #f43f5e); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
-                    <i class="bi bi-newspaper" style="font-size: 20px; color: white;"></i>
-                </div>
-                <span style="font-weight: 700; font-size: 13px;">Insiden</span>
-                <span class="badge" style="background-color: rgba(244, 63, 94, 0.1); color: #f43f5e; font-size: 10px; font-weight: 600;">Berita K3</span>
-            </a>
-        </div>
-    </div>
-
-    <!-- Right Column: Recent Activities Feed -->
-    <div class="col-lg-4">
-        <div class="card-sap mb-4 w-100 animate-fade-up delay-5" style="height: 100%;">
-        <div class="history-header">
-            <h6>Aktivitas K3 Terbaru</h6>
-            <span class="badge bg-secondary text-dark" style="font-size: 10px; font-weight: 700;">LIVE FEED</span>
-        </div>
-        
-        @if (Model == null || !Model.Any())
-        {
-            <div class="text-center py-4 text-muted" style="font-size: 13px;">
-                <i class="bi bi-card-list d-block mb-2" style="font-size: 28px;"></i>
-                Belum ada aktivitas tercatat hari ini.
-            </div>
-        }
-        else
-        {
-            <div style="display: flex; flex-direction: column;">
-                @foreach (var activity in Model)
-                {
-                    <div class="history-item">
-                        <div class="history-item-left">
-                            <div class="history-badge @(activity.Type.ToLower())">
-                                <i class="bi @(
-                                    activity.Type == "Hazard" ? "bi-exclamation-triangle-fill" : 
-                                    activity.Type == "Inspection" ? "bi-clipboard-check-fill" : 
-                                    activity.Type == "ActionPlan" ? "bi-calendar-check-fill" : 
-                                    activity.Type == "SafetyTalk" ? "bi-megaphone-fill" : 
-                                    activity.Type == "Coaching" ? "bi-person-badge-fill" : 
-                                    "bi-people-fill"
-                                )"></i>
-                            </div>
-                            <div class="history-details">
-                                <h7>@activity.Title</h7>
-                                <span><i class="bi bi-person me-1"></i>@activity.User &bull; @activity.Date.ToString("dd MMM, HH:mm")</span>
-                            </div>
-                        </div>
-                        <div>
-                            <span class="status-badge @(activity.Status.ToLower())">@activity.Status</span>
-                        </div>
+                {{-- Pencapaian --}}
+                <a asp-controller="Performance" asp-action="Index" class="fui-card"
+                   style="--c-border:rgba(0,229,255,0.25);--c-border-h:rgba(0,229,255,0.6);--c-accent:var(--cyber-cyan);--c-glow:rgba(0,229,255,0.4);">
+                    <div class="fui-icon-box" style="background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(0,229,255,0.05));border:1px solid rgba(0,229,255,0.3);box-shadow:0 0 16px rgba(0,229,255,0.2);">
+                        <i class="bi bi-bar-chart-line-fill" style="font-size:22px;color:var(--cyber-cyan);filter:drop-shadow(0 0 6px var(--cyber-cyan));"></i>
                     </div>
+                    <span class="fui-card-name" style="color:var(--cyber-cyan);">PENCAPAIAN</span>
+                    <span class="fui-chip" style="background:rgba(0,229,255,0.1);color:var(--cyber-cyan);border:1px solid rgba(0,229,255,0.2);">KPI</span>
+                </a>
+
+                {{-- SafeFeed --}}
+                <a asp-controller="Timeline" asp-action="Index" class="fui-card"
+                   style="--c-border:rgba(0,255,157,0.2);--c-border-h:rgba(0,255,157,0.5);--c-accent:var(--cyber-green);--c-glow:rgba(0,255,157,0.35);">
+                    <img src="~/images/menu_timeline.png" class="fui-img" alt="SafeFeed" asp-append-version="true"
+                         style="filter:drop-shadow(0 0 8px rgba(0,255,157,0.5));" />
+                    <span class="fui-card-name" style="color:var(--cyber-green);">SAFEFEED</span>
+                    <span class="fui-chip" style="background:rgba(0,255,157,0.1);color:var(--cyber-green);border:1px solid rgba(0,255,157,0.2);">FEED</span>
+                </a>
+
+                {{-- Hazard --}}
+                <a asp-controller="Hazard" asp-action="Index" class="fui-card"
+                   style="--c-border:rgba(255,140,0,0.2);--c-border-h:rgba(255,140,0,0.55);--c-accent:var(--cyber-orange);--c-glow:rgba(255,140,0,0.4);">
+                    <img src="~/images/menu_hazard.png" class="fui-img" alt="Hazard" asp-append-version="true"
+                         style="filter:drop-shadow(0 0 8px rgba(255,140,0,0.5));" />
+                    <span class="fui-card-name" style="color:var(--cyber-orange);">HAZARD</span>
+                    <span class="fui-chip" style="background:rgba(255,140,0,0.1);color:var(--cyber-orange);border:1px solid rgba(255,140,0,0.2);">@hazAct / @hazTgt</span>
+                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@hazPct%;background:var(--cyber-orange);box-shadow:0 0 6px rgba(255,140,0,0.6);color:var(--cyber-orange);"></div></div>
+                </a>
+
+                {{-- Inspeksi --}}
+                <a asp-controller="Inspection" asp-action="Index" class="fui-card"
+                   style="--c-border:rgba(0,229,255,0.2);--c-border-h:rgba(0,229,255,0.5);--c-accent:var(--cyber-cyan);--c-glow:rgba(0,229,255,0.3);">
+                    <img src="~/images/menu_inspection.png" class="fui-img" alt="Inspeksi" asp-append-version="true"
+                         style="filter:drop-shadow(0 0 8px rgba(0,229,255,0.4));" />
+                    <span class="fui-card-name" style="color:var(--cyber-cyan);">INSPEKSI</span>
+                    <span class="fui-chip" style="background:rgba(0,229,255,0.1);color:var(--cyber-cyan);border:1px solid rgba(0,229,255,0.2);">@insAct / @insTgt</span>
+                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@insPct%;background:var(--cyber-cyan);box-shadow:0 0 6px rgba(0,229,255,0.6);color:var(--cyber-cyan);"></div></div>
+                </a>
+
+                {{-- Action Plan --}}
+                <a asp-controller="ActionPlan" asp-action="Index" class="fui-card"
+                   style="--c-border:rgba(0,255,157,0.2);--c-border-h:rgba(0,255,157,0.5);--c-accent:var(--cyber-green);--c-glow:rgba(0,255,157,0.3);">
+                    <img src="~/images/menu_actionplan.png" class="fui-img" alt="Action Plan" asp-append-version="true"
+                         style="filter:drop-shadow(0 0 8px rgba(0,255,157,0.4));" />
+                    <span class="fui-card-name" style="color:var(--cyber-green);">ACTION PLAN</span>
+                    <span class="fui-chip" style="background:rgba(0,255,157,0.1);color:var(--cyber-green);border:1px solid rgba(0,255,157,0.2);">@(ViewData["TotalActionPlans"] ?? "0") ITEM</span>
+                </a>
+
+                {{-- Safety Talk --}}
+                <a asp-controller="SafetyTalk" asp-action="Index" class="fui-card"
+                   style="--c-border:rgba(255,75,110,0.2);--c-border-h:rgba(255,75,110,0.5);--c-accent:var(--cyber-pink);--c-glow:rgba(255,75,110,0.35);">
+                    <img src="~/images/menu_safetytalk.png" class="fui-img" alt="Safety Talk" asp-append-version="true"
+                         style="filter:drop-shadow(0 0 8px rgba(255,75,110,0.5));" />
+                    <span class="fui-card-name" style="color:var(--cyber-pink);">SAFETY TALK</span>
+                    <span class="fui-chip" style="background:rgba(255,75,110,0.1);color:var(--cyber-pink);border:1px solid rgba(255,75,110,0.2);">@stAct / @stTgt</span>
+                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@stPct%;background:var(--cyber-pink);box-shadow:0 0 6px rgba(255,75,110,0.6);color:var(--cyber-pink);"></div></div>
+                </a>
+
+                {{-- P5M --}}
+                <a asp-controller="P5m" asp-action="Index" class="fui-card"
+                   style="--c-border:rgba(191,90,242,0.2);--c-border-h:rgba(191,90,242,0.5);--c-accent:var(--cyber-purple);--c-glow:rgba(191,90,242,0.35);">
+                    <img src="~/images/menu_p5m.png" class="fui-img" alt="P5M" asp-append-version="true"
+                         style="filter:drop-shadow(0 0 8px rgba(191,90,242,0.5));" />
+                    <span class="fui-card-name" style="color:var(--cyber-purple);">P5M</span>
+                    <span class="fui-chip" style="background:rgba(191,90,242,0.1);color:var(--cyber-purple);border:1px solid rgba(191,90,242,0.2);">@p5Act / @p5Tgt</span>
+                    <div class="fui-bar"><div class="fui-bar-fill" style="width:@p5Pct%;background:var(--cyber-purple);box-shadow:0 0 6px rgba(191,90,242,0.6);color:var(--cyber-purple);"></div></div>
+                </a>
+
+                {{-- Coaching --}}
+                <a asp-controller="Coaching" asp-action="Index" class="fui-card"
+                   style="--c-border:rgba(191,90,242,0.2);--c-border-h:rgba(191,90,242,0.5);--c-accent:var(--cyber-purple);--c-glow:rgba(191,90,242,0.35);">
+                    <div class="fui-icon-box" style="background:linear-gradient(135deg,rgba(191,90,242,0.15),rgba(124,58,237,0.08));border:1px solid rgba(191,90,242,0.3);box-shadow:0 0 14px rgba(191,90,242,0.2);">
+                        <i class="bi bi-person-badge-fill" style="font-size:22px;color:var(--cyber-purple);filter:drop-shadow(0 0 6px var(--cyber-purple));"></i>
+                    </div>
+                    <span class="fui-card-name" style="color:var(--cyber-purple);">COACHING</span>
+                    <span class="fui-chip" style="background:rgba(191,90,242,0.1);color:var(--cyber-purple);border:1px solid rgba(191,90,242,0.2);">@coaAct / @coaTgt</span>
+                    @if (coaTgt > 0)
+                    {
+                        <div class="fui-bar"><div class="fui-bar-fill" style="width:@coaPct%;background:var(--cyber-purple);box-shadow:0 0 6px rgba(191,90,242,0.6);color:var(--cyber-purple);"></div></div>
+                    }
+                </a>
+
+                {{-- Observasi --}}
+                <a asp-controller="Observation" asp-action="Index" class="fui-card"
+                   style="--c-border:rgba(99,102,241,0.2);--c-border-h:rgba(99,102,241,0.5);--c-accent:#6366f1;--c-glow:rgba(99,102,241,0.35);">
+                    <img src="~/images/menu_observation.png" class="fui-img" alt="Observasi" asp-append-version="true"
+                         style="filter:drop-shadow(0 0 8px rgba(99,102,241,0.5));" />
+                    <span class="fui-card-name" style="color:#818cf8;">OBSERVASI</span>
+                    <span class="fui-chip" style="background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.2);">@obsAct / @obsTgt</span>
+                    @if (obsTgt > 0)
+                    {
+                        <div class="fui-bar"><div class="fui-bar-fill" style="width:@obsPct%;background:#6366f1;box-shadow:0 0 6px rgba(99,102,241,0.6);"></div></div>
+                    }
+                </a>
+
+                {{-- P2H --}}
+                <a asp-controller="P2h" asp-action="Index" class="fui-card"
+                   style="--c-border:rgba(236,72,153,0.2);--c-border-h:rgba(236,72,153,0.5);--c-accent:#ec4899;--c-glow:rgba(236,72,153,0.35);">
+                    <img src="~/images/menu_p2h.png" class="fui-img" alt="P2H" asp-append-version="true"
+                         style="filter:drop-shadow(0 0 8px rgba(236,72,153,0.5));" />
+                    <span class="fui-card-name" style="color:#f472b6;">P2H UNIT</span>
+                    <span class="fui-chip" style="background:rgba(236,72,153,0.1);color:#f472b6;border:1px solid rgba(236,72,153,0.2);">CEK</span>
+                </a>
+
+                @if (User.FindFirst("CompanyId")?.Value == "1")
+                {
+                    <a asp-controller="Dpa" asp-action="Index" class="fui-card"
+                       style="--c-border:rgba(191,90,242,0.2);--c-border-h:rgba(191,90,242,0.5);--c-accent:var(--cyber-purple);--c-glow:rgba(191,90,242,0.3);">
+                        <img src="~/images/menu_dpa.png" class="fui-img" alt="DPA" asp-append-version="true"
+                             style="filter:drop-shadow(0 0 8px rgba(191,90,242,0.5));" />
+                        <span class="fui-card-name" style="color:var(--cyber-purple);">DPA</span>
+                        <span class="fui-chip" style="background:rgba(191,90,242,0.1);color:var(--cyber-purple);border:1px solid rgba(191,90,242,0.2);">DRIVER</span>
+                    </a>
                 }
+
+                {{-- Insiden --}}
+                <a asp-controller="Incident" asp-action="Index" class="fui-card"
+                   style="--c-border:rgba(255,75,110,0.2);--c-border-h:rgba(255,75,110,0.5);--c-accent:var(--cyber-pink);--c-glow:rgba(255,75,110,0.4);">
+                    <div class="fui-icon-box" style="background:linear-gradient(135deg,rgba(255,75,110,0.15),rgba(220,38,38,0.08));border:1px solid rgba(255,75,110,0.3);box-shadow:0 0 14px rgba(255,75,110,0.2);">
+                        <i class="bi bi-newspaper" style="font-size:22px;color:var(--cyber-pink);filter:drop-shadow(0 0 6px var(--cyber-pink));"></i>
+                    </div>
+                    <span class="fui-card-name" style="color:var(--cyber-pink);">INSIDEN</span>
+                    <span class="fui-chip" style="background:rgba(255,75,110,0.1);color:var(--cyber-pink);border:1px solid rgba(255,75,110,0.2);">BERITA K3</span>
+                </a>
+
             </div>
-        }
+        </div>
+
+        {{-- Right: Live Feed --}}
+        <div class="col-lg-4">
+            <div class="fui-feed">
+                <div class="fui-scan-line" style="animation-delay:2s;"></div>
+                <div class="fui-feed-head">
+                    <h6 class="fui-feed-title">◈ ACTIVITY LOG</h6>
+                    <div class="fui-live-dot">LIVE FEED</div>
+                </div>
+                <div style="overflow-y:auto;max-height:calc(100% - 48px);">
+                    @if (Model == null || !Model.Any())
+                    {
+                        <div class="text-center py-5" style="color:rgba(0,229,255,0.3);font-family:'Share Tech Mono',monospace;font-size:11px;">
+                            <i class="bi bi-broadcast d-block mb-2" style="font-size:28px;"></i>
+                            NO ACTIVITY LOGGED
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var activity in Model)
+                        {
+                            var (ic, bg, clr) = activity.Type switch {
+                                "Hazard"      => ("bi-exclamation-triangle-fill", "rgba(255,140,0,0.12)",  "#ff8c00"),
+                                "Inspection"  => ("bi-clipboard-check-fill",      "rgba(0,229,255,0.12)",  "#00e5ff"),
+                                "SafetyTalk"  => ("bi-megaphone-fill",             "rgba(255,75,110,0.12)", "#ff4b6e"),
+                                "ActionPlan"  => ("bi-calendar-check-fill",        "rgba(0,255,157,0.12)",  "#00ff9d"),
+                                "Coaching"    => ("bi-person-badge-fill",           "rgba(191,90,242,0.12)","#bf5af2"),
+                                "P5m"         => ("bi-shield-check",               "rgba(191,90,242,0.12)","#bf5af2"),
+                                "Observation" => ("bi-binoculars-fill",             "rgba(99,102,241,0.12)","#818cf8"),
+                                _             => ("bi-people-fill",                 "rgba(0,229,255,0.12)",  "#00e5ff")
+                            };
+                            var stClr = activity.Status.ToLower() switch {
+                                "open"   => ("#ff8c00","rgba(255,140,0,0.12)"),
+                                "closed" => ("#00ff9d","rgba(0,255,157,0.1)"),
+                                _        => ("#00e5ff","rgba(0,229,255,0.1)")
+                            };
+                            <div class="fui-feed-item">
+                                <div class="fui-feed-icon" style="background:@bg;color:@clr;box-shadow:0 0 8px @(clr + "40");">
+                                    <i class="bi @ic" style="filter:drop-shadow(0 0 4px @clr);"></i>
+                                </div>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:11.5px;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@activity.Title</div>
+                                    <div style="font-size:9.5px;color:rgba(0,229,255,0.4);margin-top:1px;font-family:'Share Tech Mono',monospace;">
+                                        @activity.User · @activity.Date.ToString("dd MMM HH:mm")
+                                    </div>
+                                </div>
+                                <span class="fui-status" style="color:@stClr.Item1;background:@stClr.Item2;border:1px solid @stClr.Item1;opacity:0.9;">@activity.Status</span>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
         </div>
     </div>
 </div>
