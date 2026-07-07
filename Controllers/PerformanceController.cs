@@ -124,7 +124,9 @@ namespace MBS_SAP.Controllers
             var inspections = await _context.Inspections.Where(i => !i.IsDeleted && i.PerusahaanId == companyId && i.CreatedAt >= startOfMonth).Select(i => i.Nik).ToListAsync();
             var safetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.PerusahaanId == companyId && s.CreatedAt >= startOfMonth).Select(s => s.Nik).ToListAsync();
             var p5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.PerusahaanId == companyId && p.CreatedAt >= startOfMonth).Select(p => p.Nik).ToListAsync();
-            var coachings = await _context.Coachings.Where(c => !c.IsDeleted && c.PerusahaanId == companyId && c.CreatedAt >= startOfMonth).Select(c => c.Nik).ToListAsync();
+            var coachingCreators = await _context.Coachings.Where(c => !c.IsDeleted && c.PerusahaanId == companyId && c.CreatedAt >= startOfMonth).Select(c => c.Nik).ToListAsync();
+            var coachingParticipants = await _context.CoachingParticipants.Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId == companyId && p.Coaching.CreatedAt >= startOfMonth).Select(p => p.Nik).ToListAsync();
+            var coachings = coachingCreators.Concat(coachingParticipants).ToList();
             
             var observations = await (from o in _context.Observations
                                   join k in _context.Karyawans on o.Nik equals k.NoNik
