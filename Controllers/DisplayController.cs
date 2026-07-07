@@ -73,7 +73,7 @@ namespace MBS_SAP.Controllers
                 int weekP5ms         = await _context.P5ms.CountAsync(p => !p.IsDeleted && p.CreatedAt >= startOfWeek);
                 int weekCoachings    = await _context.Coachings.CountAsync(c => !c.IsDeleted && c.CreatedAt >= startOfWeek);
                 int weekObs          = await _context.Observations.CountAsync(o => !o.IsDeleted && o.CreatedAt >= startOfWeek);
-                int weeklyRealization= weekHazards + weekInspections + weekSafetyTalks + weekP5ms + weekCoachings + weekObs;
+                int weeklyRealization= weekHazards + weekInspections + weekSafetyTalks + weekCoachings + weekObs;
 
                 // ── Monthly aggregates ──────────────────────────────────────────
                 int monthHazards     = monthHazardsByCompany.Count;
@@ -82,7 +82,7 @@ namespace MBS_SAP.Controllers
                 int monthP5ms        = monthP5msByCompany.Count;
                 int monthCoachings   = monthCoachingsByCompany.Count;
                 int monthObs         = await _context.Observations.CountAsync(o => !o.IsDeleted && o.CreatedAt >= startOfMonth);
-                int monthlyRealization = monthHazards + monthInspections + monthSafetyTalks + monthP5ms + monthObs + monthCoachings;
+                int monthlyRealization = monthHazards + monthInspections + monthSafetyTalks + monthObs + monthCoachings;
 
                 // ── Overall targets ─────────────────────────────────────────────
                 int monthlyTarget   = targetMappings.Sum(m => (m.TargetHazardReport ?? 0) + (m.TargetInspeksi ?? 0) + (m.TargetSafetyTalk ?? 0) + (m.TargetObservasi ?? 0) + (m.TargetCoaching ?? 0));
@@ -168,7 +168,7 @@ namespace MBS_SAP.Controllers
                     int rP5 = monthP5msByCompany.Count(id => id == c.PerusahaanId);
                     int rC  = monthCoachingsByCompany.Count(id => id == c.PerusahaanId);
                     int rO  = monthObservationsByCompany.Count(id => id == c.PerusahaanId);
-                    int totalReal = rH + rI + rST + rP5 + rC + rO;
+                    int totalReal = rH + rI + rST + rC + rO;
 
                     double pct = Math.Round((double)totalReal / totalTarget * 100, 1);
                     allCompanyData.Add(new {
