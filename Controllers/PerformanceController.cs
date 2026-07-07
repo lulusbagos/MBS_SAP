@@ -1771,6 +1771,37 @@ namespace MBS_SAP.Controllers
             ViewBag.GeoAreaOptions = geoSafetyData.GeoAreaOptions;
             ViewBag.SelectedGeoArea = geoSafetyData.SelectedGeoArea;
 
+            // Resolve logged-in user's department & rank
+            if (!string.IsNullOrEmpty(userNik))
+            {
+                var myKaryawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                if (myKaryawan != null)
+                {
+                    string userDeptName = "General";
+                    if (myKaryawan.IdDepartemen.HasValue)
+                    {
+                        var dView = await _context.Departemens.FirstOrDefaultAsync(d => d.DepartemenId == myKaryawan.IdDepartemen.Value);
+                        userDeptName = string.IsNullOrWhiteSpace(dView?.NamaDepartemen) ? "General" : dView.NamaDepartemen;
+                    }
+
+                    if (nodeMap.TryGetValue(myKaryawan.IdPerusahaan, out var userCompanyNode))
+                    {
+                        var sortedDepts = userCompanyNode.DepartmentAchievements.OrderByDescending(d => d.YtdAchievementRate).ToList();
+                        var myDeptRankInfo = sortedDepts
+                            .Select((d, idx) => new { Dept = d, Rank = idx + 1 })
+                            .FirstOrDefault(x => string.Equals(x.Dept.DepartmentName, userDeptName, StringComparison.OrdinalIgnoreCase));
+
+                        if (myDeptRankInfo != null)
+                        {
+                            ViewBag.UserDeptName = userDeptName;
+                            ViewBag.UserDeptYtdRate = myDeptRankInfo.Dept.YtdAchievementRate;
+                            ViewBag.UserDeptRank = myDeptRankInfo.Rank;
+                            ViewBag.UserDeptTotalCount = sortedDepts.Count;
+                        }
+                    }
+                }
+            }
+
             return View();
         }
 

@@ -1555,9 +1555,17 @@
                         <div>
                             <h6 class="mb-1" style="font-weight: 800;">Target Minggu Ini Tercapai!</h6>
                             <p class="mb-2" style="font-size: 12px; opacity: 0.9;">Luar biasa! Anda telah mengunggah laporan SAP untuk minggu ini. Terima kasih atas komitmen Anda dalam menjaga keselamatan kerja.</p>
-                            <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="bi bi-person-check-fill"></i> Total laporan akun Anda bulan ini: @ViewBag.MyTotalMonth dari target @myTotalMonthTarget.
-                            </span>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i class="bi bi-person-check-fill"></i> Laporan saya bulan ini: @ViewBag.MyTotalMonth / @myTotalMonthTarget
+                                </span>
+                                @if (ViewBag.UserDeptName != null)
+                                {
+                                    <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
+                                        <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (YTD: @ViewBag.UserDeptYtdRate.ToString("0.0")%)
+                                    </span>
+                                }
+                            </div>
                         </div>
                     </div>
                 }
@@ -1568,9 +1576,17 @@
                         <div>
                             <h6 class="mb-1" style="font-weight: 800;">Belum Memenuhi Target Kepatuhan!</h6>
                             <p class="mb-2" style="font-size: 12px; opacity: 0.9;">Ayo! Anda belum mengirimkan minimal @myWeeklyTarget aktivitas gabungan untuk minggu ini. Segera buat laporan untuk memenuhi target!</p>
-                            <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="bi bi-person-check-fill"></i> Total laporan akun Anda bulan ini: @ViewBag.MyTotalMonth dari target @myTotalMonthTarget.
-                            </span>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i class="bi bi-person-check-fill"></i> Laporan saya bulan ini: @ViewBag.MyTotalMonth / @myTotalMonthTarget
+                                </span>
+                                @if (ViewBag.UserDeptName != null)
+                                {
+                                    <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
+                                        <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (YTD: @ViewBag.UserDeptYtdRate.ToString("0.0")%)
+                                    </span>
+                                }
+                            </div>
                         </div>
                     </div>
                 }
