@@ -15,13 +15,13 @@
 
     <style>
     /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    :root {
-        --bg:          #0a0f1e;
-        --bg-card:     #111827;
-        --panel:       #111827;
-        --border:      #1e2d45;
+        --bg:          #0d1526;
+        --bg-card:     #162035;
+        --panel:       #162035;
+        --border:      #2d3f5e;
         --brutal-brd:  #0d1626;
         --txt:         #f1f5f9;
-        --muted:       #64748b;
+        --muted:       #94a3b8;
         --blue:        #3b82f6;
         --green:       #10b981;
         --red:         #ef4444;
@@ -114,7 +114,7 @@
        HEADER
     â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .tv-hdr {
-        background: linear-gradient(135deg, #0d1626 0%, #111827 100%);
+        background: linear-gradient(135deg, #0f1a2e 0%, #162035 100%);
         border: 1px solid var(--border);
         border-radius: var(--r);
         padding: 10px 22px;
@@ -181,7 +181,7 @@
 
     .hdr-clock { text-align: right; }
     .clock-time { font-size: 27px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
-    .clock-date { font-size: 10px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+    .clock-date { font-size: 10px; color: #94a3b8; font-weight: 600; margin-top: 2px; }
 
     /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        BODY GRID: LEFT ANALYTICS | RIGHT FEED
@@ -226,7 +226,7 @@
 
     /* â”€â”€ Panel â”€â”€ */
     .panel {
-        background: linear-gradient(160deg, #0d1626 0%, #111827 100%);
+        background: linear-gradient(160deg, #0f1a2e 0%, #162035 100%);
         border: 1px solid var(--border);
         border-radius: var(--r);
         padding: 14px 16px;
@@ -241,7 +241,7 @@
         display: flex; align-items: center; gap: 6px;
         font-size: 10px; font-weight: 800;
         text-transform: uppercase; letter-spacing: .8px;
-        color: var(--muted); margin-bottom: 10px; flex-shrink: 0;
+        color: #b0c4de; margin-bottom: 10px; flex-shrink: 0;
     }
     .sec-hdr i { font-size: 12px; }
 
@@ -249,7 +249,7 @@
     .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
 
     .kpi {
-        background: linear-gradient(135deg, #0d1626 0%, #111827 100%);
+        background: linear-gradient(135deg, #0f1a2e 0%, #162035 100%);
         border: 1px solid var(--border);
         border-radius: 10px;
         padding: 10px 6px;
@@ -258,9 +258,9 @@
         transition: border-color 0.3s ease;
     }
     .kpi:hover { border-color: rgba(59, 130, 246, 0.3); }
-    .kpi-lbl { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 3px; }
+    .kpi-lbl { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #b0c4de; margin-bottom: 3px; }
     .kpi-val { font-size: 20px; font-weight: 900; line-height: 1; }
-    .kpi-target { font-size: 8px; color: var(--muted); margin-top: 1px; }
+    .kpi-target { font-size: 8px; color: #7d95b8; margin-top: 1px; }
 
     /* â”€â”€ Chart containers â”€â”€ */
     .chart-wrap { flex: 1; position: relative; min-height: 0; }
@@ -273,7 +273,7 @@
         flex: 1; padding: 5px 4px;
         background: var(--bg); border: 1px solid var(--border);
         border-radius: 8px; font-size: 9.5px; font-weight: 800;
-        color: var(--muted); cursor: pointer; text-transform: uppercase;
+        color: #94a3b8; cursor: pointer; text-transform: uppercase;
         letter-spacing: .4px; transition: all .25s ease;
     }
     .tab-btn.active {
@@ -300,7 +300,7 @@
         font-size: 10px; font-weight: 900; color: #000; flex-shrink: 0;
     }
     .co-name { font-size: 11.5px; font-weight: 700; color: #fff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .co-bar-wrap { width: 80px; height: 5px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+    .co-bar-wrap { width: 80px; height: 5px; background: rgba(255,255,255,.12); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
     .co-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
     .co-pct { font-size: 13px; font-weight: 900; flex-shrink: 0; text-align: right; }
     .co-detail { font-size: 8.5px; color: var(--muted); text-align: right; }
@@ -675,7 +675,7 @@
                         <!-- Compliance Risk -->
                         <div>
                             <div class="d-flex justify-content-between mb-1" style="font-size:10.5px;">
-                                <span style="font-weight:700;">Kepatuhan Resiko Tinggi</span>
+                                <span style="font-weight:700; color:#e2e8f0;">Kepatuhan Resiko Tinggi</span>
                                 <span id="lbl-comp-risk" style="font-weight:900; color:var(--blue)">0%</span>
                             </div>
                             <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
@@ -685,7 +685,7 @@
                         <!-- Weekly Pct -->
                         <div>
                             <div class="d-flex justify-content-between mb-1" style="font-size:10.5px;">
-                                <span style="font-weight:700;">Realisasi Target Mingguan</span>
+                                <span style="font-weight:700; color:#e2e8f0;">Realisasi Target Mingguan</span>
                                 <span id="lbl-weekly-pct" style="font-weight:900; color:var(--purple)">0%</span>
                             </div>
                             <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
