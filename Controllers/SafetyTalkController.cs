@@ -227,23 +227,5 @@ namespace MBS_SAP.Controllers
             TempData["SuccessMessage"] = "Safety Talk berhasil dihapus.";
             return RedirectToAction(nameof(Index));
         }
-
-        [HttpGet("FixMySafetyTalk")]
-        public async Task<IActionResult> FixSafetyTalk()
-        {
-            var sts = await _context.SafetyTalks.Where(s => s.PerusahaanId == null).ToListAsync();
-            int count = 0;
-            foreach (var s in sts)
-            {
-                var k = await _context.Karyawans.FirstOrDefaultAsync(x => x.NoNik == s.Nik);
-                if (k != null && k.IdPerusahaan > 0)
-                {
-                    s.PerusahaanId = k.IdPerusahaan;
-                    count++;
-                }
-            }
-            if (count > 0) await _context.SaveChangesAsync();
-            return Content($"Fixed {count} SafetyTalk records");
-        }
     }
 }
