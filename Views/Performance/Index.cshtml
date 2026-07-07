@@ -1467,6 +1467,42 @@
     .dot-relegation { background: #ef4444; }
     .dot-normal { background: #cbd5e1; }
 
+    /* Football Badge & Form Dots CSS */
+    .football-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 30px;
+        color: #ffffff;
+        font-weight: 850;
+        font-size: 9px;
+        clip-path: polygon(0% 0%, 100% 0%, 100% 70%, 50% 100%, 0% 70%);
+        margin-right: 10px;
+        border: 1.5px solid #ffffff;
+        vertical-align: middle;
+        text-transform: uppercase;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        text-shadow: 1px 1px 0px rgba(0,0,0,0.3);
+    }
+    .league-form-dot {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        font-weight: 800;
+        font-size: 9px;
+        color: #ffffff;
+        margin-right: 2px;
+        text-transform: uppercase;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .dot-w { background: #10b981; } /* Win */
+    .dot-d { background: #f59e0b; } /* Draw */
+    .dot-l { background: #ef4444; } /* Loss */
+
     /* Safety Pyramid Styles */
     .pyramid-graphic {
         background: #ffffff !important; /* Force light background to match aesthetic in dark mode */
@@ -2871,6 +2907,7 @@
                                                 <th>Klub (Departemen)</th>
                                                 <th style="text-align: center;">Skuad (Karyawan)</th>
                                                 <th style="text-align: center; background-color: #1e3a8a; color: #ffffff;">PTS (Kepatuhan %)</th>
+                                                <th style="text-align: center; width: 110px;">Form (5 Laga)</th>
                                                 <th style="text-align: center;">HZ (Hazard)</th>
                                                 <th style="text-align: center;">IP (Inspeksi)</th>
                                                 <th style="text-align: center;">ST (S. Talk)</th>
@@ -2931,6 +2968,7 @@
                                                 <th>Pemain (Nama Karyawan & NIK)</th>
                                                 <th>Jabatan</th>
                                                 <th class="text-center" style="background-color: #1e3a8a; color: #ffffff;">PTS (Kepatuhan %)</th>
+                                                <th class="text-center" style="width: 110px;">Form (5 Program)</th>
                                                 <th class="text-center">HZ (Hazard)</th>
                                                 <th class="text-center">IP (Inspeksi)</th>
                                                 <th class="text-center">ST (S. Talk)</th>
@@ -3048,11 +3086,24 @@
                             return actual + ' / ' + target;
                         }
 
-                        const hazard = formatZeroTgt(item.hazard ? item.hazard.actual : 0, item.hazard ? item.hazard.target : 0);
-                        const inspeksi = formatZeroTgt(item.inspeksi ? item.inspeksi.actual : 0, item.inspeksi ? item.inspeksi.target : 0);
-                        const safetyTalk = formatZeroTgt(item.safetyTalk ? item.safetyTalk.actual : 0, item.safetyTalk ? item.safetyTalk.target : 0);
-                        const observasi = formatZeroTgt(item.observasi ? item.observasi.actual : 0, item.observasi ? item.observasi.target : 0);
-                        const coaching = formatZeroTgt(item.coaching ? item.coaching.actual : 0, item.coaching ? item.coaching.target : 0);
+                        const hAct = item.hazard ? item.hazard.actual : 0;
+                        const hTgt = item.hazard ? item.hazard.target : 0;
+                        const iAct = item.inspeksi ? item.inspeksi.actual : 0;
+                        const iTgt = item.inspeksi ? item.inspeksi.target : 0;
+                        const stAct = item.safetyTalk ? item.safetyTalk.actual : 0;
+                        const stTgt = item.safetyTalk ? item.safetyTalk.target : 0;
+                        const oAct = item.observasi ? item.observasi.actual : 0;
+                        const oTgt = item.observasi ? item.observasi.target : 0;
+                        const cAct = item.coaching ? item.coaching.actual : 0;
+                        const cTgt = item.coaching ? item.coaching.target : 0;
+
+                        const formDisplay = getEmpFormDot(hAct, hTgt) + getEmpFormDot(iAct, iTgt) + getEmpFormDot(stAct, stTgt) + getEmpFormDot(oAct, oTgt) + getEmpFormDot(cAct, cTgt);
+
+                        const hazard = formatZeroTgt(hAct, hTgt);
+                        const inspeksi = formatZeroTgt(iAct, iTgt);
+                        const safetyTalk = formatZeroTgt(stAct, stTgt);
+                        const observasi = formatZeroTgt(oAct, oTgt);
+                        const coaching = formatZeroTgt(cAct, cTgt);
                         const p5m = formatZeroTgt(item.p5m ? item.p5m.actual : 0, item.p5m ? item.p5m.target : 0);
                         
                         const isZeroTarget = (item.mtdTotalTarget === 0);
@@ -3080,6 +3131,7 @@
                             '<td><div class="fw-bold" style="color: #334155;">' + name + '</div><div style="font-size: 10px; color: #64748b;">' + nik + '</div></td>' +
                             '<td>' + jabatan + '</td>' +
                             '<td class="fw-bold text-center" style="color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
+                            '<td style="text-align: center; white-space: nowrap;">' + formDisplay + '</td>' +
                             '<td class="text-center">' + hazard + '</td>' +
                             '<td class="text-center">' + inspeksi + '</td>' +
                             '<td class="text-center">' + safetyTalk + '</td>' +
@@ -3148,11 +3200,15 @@
 
                 rankDisplay = '<div class="' + rankClass + '">' + rankDisplay + '</div>';
 
+                const formDisplay = getFormDot(hRate) + getFormDot(iRate) + getFormDot(stRate) + getFormDot(oRate) + getFormDot(cRate);
+                const badge = '<div class="football-badge" style="background-color: ' + getDeptBadgeColor(deptName) + ';">' + getDeptInitials(deptName) + '</div>';
+
                 return '<tr class="' + rowClass + '">' +
                     '<td class="text-muted fw-bold" style="text-align: center;">' + rankDisplay + '</td>' +
-                    '<td class="fw-bold" style="color: #334155;">' + deptName + '</td>' +
+                    '<td class="fw-bold" style="color: #334155;">' + badge + '<span style="vertical-align: middle;">' + deptName + '</span></td>' +
                     '<td style="text-align: center;">' + employeeCount + '</td>' +
                     '<td class="dept-achievement-rate fw-bold" style="text-align: center; color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
+                    '<td style="text-align: center; white-space: nowrap;">' + formDisplay + '</td>' +
                     '<td class="dept-achievement-rate fw-bold" style="text-align: center; color: ' + getAchievementColor(hRate) + ';">' + hRate + '%</td>' +
                     '<td class="dept-achievement-rate fw-bold" style="text-align: center; color: ' + getAchievementColor(iRate) + ';">' + iRate + '%</td>' +
                     '<td class="dept-achievement-rate fw-bold" style="text-align: center; color: ' + getAchievementColor(stRate) + ';">' + stRate + '%</td>' +
