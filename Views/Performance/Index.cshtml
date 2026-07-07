@@ -2990,7 +2990,7 @@
                     '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(cRate) + ';">' + cRate + '%</td>' +
                     '<td class="dept-achievement-rate fw-bold" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: ' + getAchievementColor(p5mRate) + ';">' + p5mRate + '%</td>' +
                     '<td style="text-align: center;">' +
-                        '<button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600;" onclick="viewEmployeeDetails(\'' + deptName.replace(/'/g, "\\'\") + '\')">' +
+                        '<button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600;" onclick="viewEmployeeDetails(\'' + deptName.replace(/\'/g, "\\'") + '\')">' +
                             'Ranking <i class="bi bi-chevron-right ms-1"></i>' +
                         '</button>' +
                     '</td>' +
