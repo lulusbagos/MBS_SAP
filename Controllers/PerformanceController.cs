@@ -905,6 +905,7 @@ namespace MBS_SAP.Controllers
                               Math.Min(myCoachingsMonth, targetCoaching);
 
             int myTotalMonthTarget = targetHazardReport + targetInspeksi + targetSafetyTalk + targetObservasi + targetCoaching;
+            int myWeeklyTarget = wTarH + wTarI + wTarST + wTarO + wTarC;
 
             // 9. Average Closure Days for Action Plans
             var closedActions = await _context.ActionPlans
@@ -1009,6 +1010,7 @@ namespace MBS_SAP.Controllers
             ViewBag.TargetCoaching = targetCoaching;
             ViewBag.TargetP5M = targetP5m;
             ViewBag.MyTotalMonthTarget = myTotalMonthTarget;
+            ViewBag.MyWeeklyTarget = myWeeklyTarget;
             ViewBag.KategoriPengawas = kategoriPengawas;
 
             // Individual Gamification Rank
@@ -1970,20 +1972,35 @@ namespace MBS_SAP.Controllers
                         userDeptName = string.IsNullOrWhiteSpace(dView?.NamaDepartemen) ? "General" : dView.NamaDepartemen;
                     }
 
-                    if (nodeMap.TryGetValue(myKaryawan.IdPerusahaan, out var userCompanyNode))
-                    {
-                        var sortedDepts = userCompanyNode.DepartmentAchievements.OrderByDescending(d => d.MtdAchievementRate).ToList();
-                        var myDeptRankInfo = sortedDepts
-                            .Select((d, idx) => new { Dept = d, Rank = idx + 1 })
-                            .FirstOrDefault(x => string.Equals(x.Dept.DepartmentName, userDeptName, StringComparison.OrdinalIgnoreCase));
+                    // Calculate global department rank across visible hierarchy
+                    var visibleIds = CollectHierarchyIds(rootNodes);
+                    var allVisibleNodes = visibleIds.Select(id => nodeMap.TryGetValue(id, out var n) ? n : null).Where(n => n != null).ToList();
 
-                        if (myDeptRankInfo != null)
+                    var globalDepts = allVisibleNodes
+                        .SelectMany(n => n.DepartmentAchievements)
+                        .GroupBy(d => d.DepartmentName)
+                        .Select(g => new DepartmentAchievementViewModel
                         {
-                            ViewBag.UserDeptName = userDeptName;
-                            ViewBag.UserDeptMtdRate = myDeptRankInfo.Dept.MtdAchievementRate;
-                            ViewBag.UserDeptRank = myDeptRankInfo.Rank;
-                            ViewBag.UserDeptTotalCount = sortedDepts.Count;
-                        }
+                            DepartmentName = g.Key,
+                            EmployeeCount = g.Sum(x => x.EmployeeCount),
+                            MtdAchievementRate = g.Sum(x => x.EmployeeCount) > 0 
+                                ? Math.Round(g.Sum(x => x.MtdAchievementRate * x.EmployeeCount) / g.Sum(x => x.EmployeeCount), 1) 
+                                : 0
+                        })
+                        .OrderByDescending(d => d.MtdAchievementRate)
+                        .ToList();
+
+                    var myDeptRankInfo = globalDepts
+                        .Select((d, idx) => new { Dept = d, Rank = idx + 1 })
+                        .FirstOrDefault(x => string.Equals(x.Dept.DepartmentName, userDeptName, StringComparison.OrdinalIgnoreCase));
+
+                    if (myDeptRankInfo != null)
+                    {
+                        ViewBag.UserDeptName = userDeptName;
+                        ViewBag.UserDeptMtdRate = myDeptRankInfo.Dept.MtdAchievementRate;
+                        ViewBag.UserDeptRank = myDeptRankInfo.Rank;
+                        ViewBag.UserDeptTotalCount = globalDepts.Count;
+                        ViewBag.UserCompanyId = myKaryawan.IdPerusahaan;
                     }
                 }
             }

@@ -12,8 +12,7 @@
     int myTotalMonthTarget = ViewBag.MyTotalMonthTarget ?? 4;
     double myMonthlyProgress = myTotalMonthTarget > 0 ? (double)ViewBag.MyTotalMonth / (double)myTotalMonthTarget * 100.0 : 0.0;
     myMonthlyProgress = Math.Min(myMonthlyProgress, 100.0);
-    int myWeeklyTarget = (int)Math.Round(myTotalMonthTarget / 4.0, MidpointRounding.AwayFromZero);
-    if (myWeeklyTarget < 1 && myTotalMonthTarget > 0) myWeeklyTarget = 1;
+    int myWeeklyTarget = ViewBag.MyWeeklyTarget ?? 0;
     bool isMyWeekCompliant = myTotalMonthTarget == 0 || ViewBag.MyTotalWeek >= myWeeklyTarget;
     bool canViewGeoPhoto = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase);
 }
@@ -1561,9 +1560,14 @@
                                 </span>
                                 @if (ViewBag.UserDeptName != null)
                                 {
-                                    <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
-                                        <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (MTD: @ViewBag.UserDeptMtdRate.ToString("0.0")%)
-                                    </span>
+                                    <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                        <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
+                                            <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (MTD: @ViewBag.UserDeptMtdRate.ToString("0.0")%)
+                                        </span>
+                                        <button type="button" class="btn btn-sm btn-light py-1 px-2" style="font-size: 10.5px; font-weight: 700; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="currentCompanyId = @(ViewBag.UserCompanyId ?? 0); viewEmployeeDetails('@ViewBag.UserDeptName.Replace("'", "\\'")');">
+                                            <i class="bi bi-people-fill me-1"></i>Detail
+                                        </button>
+                                    </div>
                                 }
                             </div>
                         </div>
@@ -1582,9 +1586,14 @@
                                 </span>
                                 @if (ViewBag.UserDeptName != null)
                                 {
-                                    <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
-                                        <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (MTD: @ViewBag.UserDeptMtdRate.ToString("0.0")%)
-                                    </span>
+                                    <div style="display: inline-flex; align-items: center; gap: 6px;">
+                                        <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.25); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.2);">
+                                            <i class="bi bi-award-fill" style="color: #fbbf24;"></i> Departemen @ViewBag.UserDeptName: Peringkat #@ViewBag.UserDeptRank dari @ViewBag.UserDeptTotalCount (MTD: @ViewBag.UserDeptMtdRate.ToString("0.0")%)
+                                        </span>
+                                        <button type="button" class="btn btn-sm btn-light py-1 px-2" style="font-size: 10.5px; font-weight: 700; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="currentCompanyId = @(ViewBag.UserCompanyId ?? 0); viewEmployeeDetails('@ViewBag.UserDeptName.Replace("'", "\\'")');">
+                                            <i class="bi bi-people-fill me-1"></i>Detail
+                                        </button>
+                                    </div>
                                 }
                             </div>
                         </div>
@@ -2881,6 +2890,14 @@
 
         let currentCompanyId = null;
 
+        function getAchievementColor(rate) {
+            const val = Number(rate);
+            if (val >= 90) return '#16a34a'; // Green
+            if (val >= 60) return '#ca8a04'; // Yellow
+            if (val >= 30) return '#ea580c'; // Orange
+            return '#dc2626'; // Red
+        }
+
         function closeDeptModal() {
             if (!deptModal) return;
             deptModal.classList.remove('show');
@@ -2925,15 +2942,15 @@
                         '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
                         '<td class="fw-bold" style="color: #334155;">' + deptName + '</td>' +
                         '<td>' + employeeCount + '</td>' +
-                        '<td class="dept-achievement-rate fw-bold text-primary">' + ytd + '%</td>' +
-                        '<td class="dept-achievement-rate">' + mtd + '%</td>' +
-                        '<td class="dept-achievement-rate">' + week + '%</td>' +
-                        '<td class="dept-achievement-rate">' + hRate + '%</td>' +
-                        '<td class="dept-achievement-rate">' + iRate + '%</td>' +
-                        '<td class="dept-achievement-rate">' + stRate + '%</td>' +
-                        '<td class="dept-achievement-rate">' + oRate + '%</td>' +
-                        '<td class="dept-achievement-rate">' + cRate + '%</td>' +
-                        '<td class="dept-achievement-rate" style="background-color: #fffbeb; color: #b45309; border-left: 2px solid #f59e0b; font-weight: bold;">' + p5mRate + '%</td>' +
+                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(ytd) + ';">' + ytd + '%</td>' +
+                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
+                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(week) + ';">' + week + '%</td>' +
+                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(hRate) + ';">' + hRate + '%</td>' +
+                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(iRate) + ';">' + iRate + '%</td>' +
+                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(stRate) + ';">' + stRate + '%</td>' +
+                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(oRate) + ';">' + oRate + '%</td>' +
+                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(cRate) + ';">' + cRate + '%</td>' +
+                        '<td class="dept-achievement-rate fw-bold" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: ' + getAchievementColor(p5mRate) + ';">' + p5mRate + '%</td>' +
                         '<td style="text-align: center;">' +
                             '<button type="button" class="btn btn-sm btn-primary py-1 px-2" style="font-size: 10.5px; font-weight: 700; border-radius: 6px;" onclick="viewEmployeeDetails(\'' + deptName.replace(/'/g, "\\'") + '\')">' +
                                 '<i class="bi bi-people-fill me-1"></i>Detail' +
@@ -2986,19 +3003,26 @@
                             const totalTgt = item.mtdTotalTarget || 0;
                             const totalAct = item.mtdTotalActual || 0;
 
-                            const compColor = comp >= 100 ? 'text-success' : comp >= 50 ? 'text-warning' : 'text-danger';
+                            const compColor = getAchievementColor(comp);
+                            
+                            const hPerc = h.target > 0 ? (h.actual / h.target) * 100 : (h.actual > 0 ? 100 : 0);
+                            const iPerc = i.target > 0 ? (i.actual / i.target) * 100 : (i.actual > 0 ? 100 : 0);
+                            const stPerc = st.target > 0 ? (st.actual / st.target) * 100 : (st.actual > 0 ? 100 : 0);
+                            const oPerc = o.target > 0 ? (o.actual / o.target) * 100 : (o.actual > 0 ? 100 : 0);
+                            const cPerc = c.target > 0 ? (c.actual / c.target) * 100 : (c.actual > 0 ? 100 : 0);
+                            const p5Perc = p5.target > 0 ? (p5.actual / p5.target) * 100 : (p5.actual > 0 ? 100 : 0);
 
                             return '<tr>' +
                                 '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
                                 '<td class="fw-bold" style="color: #334155;">' + name + '</td>' +
                                 '<td>' + nik + '</td>' +
-                                '<td class="text-center fw-bold ' + compColor + '">' + comp + '%<br/><small class="text-muted" style="font-weight: 500;">' + totalAct + ' / ' + totalTgt + '</small></td>' +
-                                '<td class="text-center fw-bold">' + h.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + h.target + '</span></td>' +
-                                '<td class="text-center fw-bold">' + i.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + i.target + '</span></td>' +
-                                '<td class="text-center fw-bold">' + st.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + st.target + '</span></td>' +
-                                '<td class="text-center fw-bold">' + o.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + o.target + '</span></td>' +
-                                '<td class="text-center fw-bold">' + c.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + c.target + '</span></td>' +
-                                '<td class="text-center fw-bold" style="background-color: #fffbeb; color: #b45309; border-left: 2px solid #f59e0b;">' + p5.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + p5.target + '</span></td>' +
+                                '<td class="text-center fw-bold" style="color: ' + compColor + ';">' + comp + '%<br/><small class="text-muted" style="font-weight: 500;">' + totalAct + ' / ' + totalTgt + '</small></td>' +
+                                '<td class="text-center fw-bold" style="color: ' + getAchievementColor(hPerc) + ';">' + h.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + h.target + '</span></td>' +
+                                '<td class="text-center fw-bold" style="color: ' + getAchievementColor(iPerc) + ';">' + i.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + i.target + '</span></td>' +
+                                '<td class="text-center fw-bold" style="color: ' + getAchievementColor(stPerc) + ';">' + st.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + st.target + '</span></td>' +
+                                '<td class="text-center fw-bold" style="color: ' + getAchievementColor(oPerc) + ';">' + o.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + o.target + '</span></td>' +
+                                '<td class="text-center fw-bold" style="color: ' + getAchievementColor(cPerc) + ';">' + c.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + c.target + '</span></td>' +
+                                '<td class="text-center fw-bold" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: ' + getAchievementColor(p5Perc) + ';">' + p5.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + p5.target + '</span></td>' +
                                 '</tr>';
                         }).join('');
                     }
