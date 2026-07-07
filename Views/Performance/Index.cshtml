@@ -9,9 +9,12 @@
     monthlyProgress = Math.Min(monthlyProgress, 100.0);
 
     // Individual progress calculations
-    double myMonthlyProgress = (double)ViewBag.MyTotalMonth / 4.0 * 100.0;
+    int myTotalMonthTarget = ViewBag.MyTotalMonthTarget ?? 4;
+    double myMonthlyProgress = myTotalMonthTarget > 0 ? (double)ViewBag.MyTotalMonth / (double)myTotalMonthTarget * 100.0 : 0.0;
     myMonthlyProgress = Math.Min(myMonthlyProgress, 100.0);
-    bool isMyWeekCompliant = ViewBag.MyTotalWeek >= 1;
+    int myWeeklyTarget = (int)Math.Round(myTotalMonthTarget / 4.0, MidpointRounding.AwayFromZero);
+    if (myWeeklyTarget < 1 && myTotalMonthTarget > 0) myWeeklyTarget = 1;
+    bool isMyWeekCompliant = myTotalMonthTarget == 0 || ViewBag.MyTotalWeek >= myWeeklyTarget;
     bool canViewGeoPhoto = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase);
 }
 
@@ -187,9 +190,14 @@
 
     .hitsafe-toolbar {
         display: grid;
-        grid-template-columns: repeat(5, minmax(120px, 1fr));
+        grid-template-columns: repeat(6, minmax(100px, 1fr));
         gap: 10px;
         margin-bottom: 12px;
+    }
+    @@media (max-width: 1200px) {
+        .hitsafe-toolbar {
+            grid-template-columns: repeat(3, minmax(100px, 1fr));
+        }
     }
 
     .hitsafe-filter {
@@ -211,7 +219,12 @@
 
     @@media (max-width: 992px) {
         .hitsafe-toolbar {
-            grid-template-columns: repeat(2, minmax(120px, 1fr));
+            grid-template-columns: repeat(3, minmax(100px, 1fr));
+        }
+    }
+    @@media (max-width: 768px) {
+        .hitsafe-toolbar {
+            grid-template-columns: repeat(2, minmax(100px, 1fr));
         }
 
         #hitsafeLeafletMap {
@@ -1296,7 +1309,7 @@
     }
     .dept-achievement-dialog {
         position: relative;
-        width: min(760px, 100%);
+        width: min(1000px, 100%);
         max-height: 80vh;
         overflow: auto;
         border-radius: 14px;
@@ -1532,7 +1545,7 @@
                             <h6 class="mb-1" style="font-weight: 800;">Target Minggu Ini Tercapai!</h6>
                             <p class="mb-2" style="font-size: 12px; opacity: 0.9;">Luar biasa! Anda telah mengunggah laporan SAP untuk minggu ini. Terima kasih atas komitmen Anda dalam menjaga keselamatan kerja.</p>
                             <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="bi bi-person-check-fill"></i> Total laporan akun Anda bulan ini: @ViewBag.MyTotalMonth dari target 4.
+                                <i class="bi bi-person-check-fill"></i> Total laporan akun Anda bulan ini: @ViewBag.MyTotalMonth dari target @myTotalMonthTarget.
                             </span>
                         </div>
                     </div>
@@ -1543,9 +1556,9 @@
                         <i class="bi bi-bell-fill" style="font-size: 32px; animation: pulse 2s infinite; flex-shrink: 0;"></i>
                         <div>
                             <h6 class="mb-1" style="font-weight: 800;">Belum Memenuhi Target Kepatuhan!</h6>
-                            <p class="mb-2" style="font-size: 12px; opacity: 0.9;">Ayo! Anda belum mengirimkan minimal 1 laporan SAP untuk minggu ini. Segera buat laporan Hazard atau Inspeksi demi keselamatan area kerja Anda.</p>
+                            <p class="mb-2" style="font-size: 12px; opacity: 0.9;">Ayo! Anda belum mengirimkan minimal @myWeeklyTarget aktivitas gabungan untuk minggu ini. Segera buat laporan untuk memenuhi target!</p>
                             <span style="font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="bi bi-person-check-fill"></i> Total laporan akun Anda bulan ini: @ViewBag.MyTotalMonth dari target 4.
+                                <i class="bi bi-person-check-fill"></i> Total laporan akun Anda bulan ini: @ViewBag.MyTotalMonth dari target @myTotalMonthTarget.
                             </span>
                         </div>
                     </div>
@@ -1553,10 +1566,16 @@
             </div>
 
             <div class="col-12 col-lg-4">
-                <div class="kpi-card text-center d-flex flex-column align-items-center justify-content-center py-4">
+                <div class="kpi-card text-center d-flex flex-column align-items-center justify-content-center py-3">
                     <i class="bi @ViewBag.MyBadgeIcon" style="font-size: 40px; color: @ViewBag.MyBadgeColor; filter: drop-shadow(0 2px 8px @ViewBag.MyBadgeColor);"></i>
                     <h6 class="mt-2 mb-1" style="font-weight: 800; color: var(--text-main); font-size: 14px;">Lencana Kepatuhan Saya</h6>
-                    <span style="font-size: 13px; font-weight: 700; color: @ViewBag.MyBadgeColor; background: rgba(255,255,255,0.05); padding: 2px 10px; border-radius: 20px;">@ViewBag.MyBadgeName</span>
+                    <span style="font-size: 13px; font-weight: 700; color: @ViewBag.MyBadgeColor; background: rgba(255,255,255,0.05); padding: 2px 10px; border-radius: 20px; display: inline-block;">@ViewBag.MyBadgeName</span>
+                    @if (ViewBag.KategoriPengawas != null && !string.IsNullOrWhiteSpace(ViewBag.KategoriPengawas.ToString()))
+                    {
+                        <div class="mt-2" style="font-size: 11px; font-weight: 800; color: #38bdf8;">
+                            <i class="bi bi-shield-shaded me-1"></i> @ViewBag.KategoriPengawas
+                        </div>
+                    }
                     <p class="mb-0 text-muted" style="font-size: 10px; margin-top: 6px; font-weight: 500;">Tingkatkan kontribusi mingguan Anda untuk menaikkan rank Lencana Anda!</p>
                 </div>
             </div>
@@ -1595,7 +1614,7 @@
                     <div style="font-size: 22px; font-weight: 900; color: @(isMyWeekCompliant ? "#10b981" : "#ef4444");">
                         @(isMyWeekCompliant ? "PATUH (OK)" : "BELUM PATUH")
                     </div>
-                    <div class="text-muted mt-1" style="font-size: 11px;">Target: Minimal 1 laporan/minggu</div>
+                    <div class="text-muted mt-1" style="font-size: 11px;">Aktual: @ViewBag.MyTotalWeek / Target: Minimal @myWeeklyTarget aktivitas</div>
                 </div>
             </div>
 
@@ -1603,7 +1622,7 @@
                 <div class="kpi-card">
                     <i class="bi bi-award-fill kpi-icon-bg"></i>
                     <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Pencapaian Bulan Ini</div>
-                    <div style="font-size: 28px; font-weight: 900; color: #f59e0b;">@ViewBag.MyTotalMonth <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">/ 4 Target</span></div>
+                    <div style="font-size: 28px; font-weight: 900; color: #f59e0b;">@ViewBag.MyTotalMonth <span style="font-size: 14px; font-weight: 500; color: var(--text-muted);">/ @myTotalMonthTarget Target</span></div>
                     <div class="mt-2">
                         <div class="progress-achievement">
                             <div class="progress-bar bg-warning" style="width: @(myMonthlyProgress)%; height: 100%;"></div>
@@ -1629,7 +1648,8 @@
                     <div style="font-size: 13px; font-weight: 700; color: var(--text-main); line-height: 1.6;">
                         📋 Inspeksi: <strong>@ViewBag.MyInspectionsMonth</strong> <br />
                         📢 Safety Talk: <strong>@ViewBag.MySafetyTalksMonth</strong> <br />
-                        👥 P5M: <strong>@ViewBag.MyP5msMonth</strong>
+                        👥 P5M: <strong>@ViewBag.MyP5msMonth</strong> <br />
+                        👁️ Observasi: <strong>@ViewBag.MyObservationsMonth</strong>
                     </div>
                 </div>
             </div>
@@ -1648,47 +1668,107 @@
 
             <div class="col-12 col-md-6">
                 <div class="chart-container">
-                    <h6 class="mb-3" style="font-weight: 700;">Target Kepatuhan Detail Saya</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0" style="font-weight: 700;">Target Kepatuhan Detail Saya</h6>
+                        @if (ViewBag.KategoriPengawas != null && !string.IsNullOrWhiteSpace(ViewBag.KategoriPengawas.ToString()))
+                        {
+                            <span class="badge shadow-sm" style="background-color: rgba(56, 189, 248, 0.12); color: #38bdf8; font-size: 10.5px; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px;">
+                                <i class="bi bi-shield-shaded me-1"></i> @ViewBag.KategoriPengawas
+                            </span>
+                        }
+                    </div>
+                    @if (ViewBag.KaryawanIdMitra != null)
+                    {
+                        <div class="mb-3" style="font-size: 11px; color: var(--text-muted); background: rgba(0,0,0,0.02); padding: 8px; border-radius: 6px; border: 1px dashed rgba(0,0,0,0.1);">
+                            <strong>Detail Mitra (Debug):</strong> @ViewBag.NamaMitra (ID Karyawan: @ViewBag.KaryawanIdMitra)
+                        </div>
+                    }
                     <div class="d-flex flex-column gap-3 mt-3">
                         <div>
                             <div class="d-flex justify-content-between mb-1" style="font-size: 12px; font-weight: 700;">
                                 <span>Hazard Report</span>
-                                <span>@ViewBag.MyHazardsMonth Laporan</span>
+                                <span>Actual : @ViewBag.MyHazardsMonth | Target : @ViewBag.TargetHazardReport</span>
                             </div>
                             <div class="progress-achievement" style="height: 10px;">
-                                <div class="progress-bar bg-danger" style="width: @(Math.Min((double)ViewBag.MyHazardsMonth / 2.0 * 100.0, 100.0))%;"></div>
+                                @{
+                                    double targetHazardDouble = (double)(ViewBag.TargetHazardReport ?? 2);
+                                    double percentHazard = targetHazardDouble > 0 ? Math.Min((double)ViewBag.MyHazardsMonth / targetHazardDouble * 100.0, 100.0) : 0.0;
+                                }
+                                <div class="progress-bar bg-danger" style="width: @(percentHazard)%;"></div>
                             </div>
                         </div>
 
                         <div>
                             <div class="d-flex justify-content-between mb-1" style="font-size: 12px; font-weight: 700;">
                                 <span>Safety Inspection</span>
-                                <span>@ViewBag.MyInspectionsMonth Laporan</span>
+                                <span>Actual : @ViewBag.MyInspectionsMonth | Target : @ViewBag.TargetInspeksi</span>
                             </div>
                             <div class="progress-achievement" style="height: 10px;">
-                                <div class="progress-bar bg-primary" style="width: @(Math.Min((double)ViewBag.MyInspectionsMonth / 1.0 * 100.0, 100.0))%;"></div>
+                                @{
+                                    double targetInspeksiDouble = (double)(ViewBag.TargetInspeksi ?? 1);
+                                    double percentInspeksi = targetInspeksiDouble > 0 ? Math.Min((double)ViewBag.MyInspectionsMonth / targetInspeksiDouble * 100.0, 100.0) : 0.0;
+                                }
+                                <div class="progress-bar bg-primary" style="width: @(percentInspeksi)%;"></div>
                             </div>
                         </div>
 
                         <div>
                             <div class="d-flex justify-content-between mb-1" style="font-size: 12px; font-weight: 700;">
                                 <span>Safety Talk</span>
-                                <span>@ViewBag.MySafetyTalksMonth Kali</span>
+                                <span>Actual : @ViewBag.MySafetyTalksMonth | Target : @ViewBag.TargetSafetyTalk</span>
                             </div>
                             <div class="progress-achievement" style="height: 10px;">
-                                <div class="progress-bar bg-warning" style="width: @(Math.Min((double)ViewBag.MySafetyTalksMonth / 1.0 * 100.0, 100.0))%;"></div>
+                                @{
+                                    double targetSafetyTalkDouble = (double)(ViewBag.TargetSafetyTalk ?? 1);
+                                    double percentSafetyTalk = targetSafetyTalkDouble > 0 ? Math.Min((double)ViewBag.MySafetyTalksMonth / targetSafetyTalkDouble * 100.0, 100.0) : 0.0;
+                                }
+                                <div class="progress-bar bg-warning" style="width: @(percentSafetyTalk)%;"></div>
                             </div>
                         </div>
 
                         <div>
                             <div class="d-flex justify-content-between mb-1" style="font-size: 12px; font-weight: 700;">
                                 <span>P5M Pre-Start</span>
-                                <span>@ViewBag.MyP5msMonth Kali</span>
+                                <span>Actual : @ViewBag.MyP5msMonth | Target : @ViewBag.TargetP5M</span>
                             </div>
                             <div class="progress-achievement" style="height: 10px;">
-                                <div class="progress-bar bg-success" style="width: @(Math.Min((double)ViewBag.MyP5msMonth / 1.0 * 100.0, 100.0))%;"></div>
+                                @{
+                                    double targetP5mDouble = (double)(ViewBag.TargetP5M ?? 1);
+                                    double percentP5m = targetP5mDouble > 0 ? Math.Min((double)ViewBag.MyP5msMonth / targetP5mDouble * 100.0, 100.0) : 0.0;
+                                }
+                                <div class="progress-bar bg-success" style="width: @(percentP5m)%;"></div>
                             </div>
                         </div>
+
+                        @if ((ViewBag.TargetObservasi ?? 0) > 0 || ViewBag.MyObservationsMonth > 0)
+                        {
+                            <div>
+                                <div class="d-flex justify-content-between mb-1" style="font-size: 12px; font-weight: 700;">
+                                    <span>Safety Observation</span>
+                                    <span>Actual : @ViewBag.MyObservationsMonth | Target : @ViewBag.TargetObservasi</span>
+                                </div>
+                                <div class="progress-achievement" style="height: 10px;">
+                                    @{
+                                        double targetObservasiDouble = (double)(ViewBag.TargetObservasi ?? 0);
+                                        double percentObservasi = targetObservasiDouble > 0 ? Math.Min((double)ViewBag.MyObservationsMonth / targetObservasiDouble * 100.0, 100.0) : 0.0;
+                                    }
+                                    <div class="progress-bar" style="width: @(percentObservasi)%; background-color: #fb923c;"></div>
+                                </div>
+                            </div>
+                        }
+
+                        @if ((ViewBag.TargetCoaching ?? 0) > 0)
+                        {
+                            <div>
+                                <div class="d-flex justify-content-between mb-1" style="font-size: 12px; font-weight: 700;">
+                                    <span>Coaching</span>
+                                    <span>0 / @ViewBag.TargetCoaching Kali</span>
+                                </div>
+                                <div class="progress-achievement" style="height: 10px;">
+                                    <div class="progress-bar" style="width: 0%; background-color: #0d9488;"></div>
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -1728,6 +1808,7 @@
                     </select>
                     <input id="hitsafeFilterKeyword" class="hitsafe-filter" type="text" placeholder="Cari area/nama/detail..." />
                     <button id="hitsafeFilterReset" type="button" class="hitsafe-filter" style="background: #0f172a; color: #f8fafc; border-color: #1e293b;">Reset Filter</button>
+                    <button id="hitsafeLocateBtn" type="button" class="hitsafe-filter" style="background: #0f172a; color: #f8fafc; border-color: #1e293b; transition: all 0.2s ease;"><i class="bi bi-crosshair"></i> Lokasi Saya</button>
                 </div>
 
                 <div id="hitsafeLeafletMap"></div>
@@ -1897,6 +1978,7 @@
                 </div>
             </div>
         </div>
+
 
         <!-- Charts Row -->
         <div class="row g-3 mb-4 animate-fade-in">
@@ -2292,6 +2374,35 @@
         </div>
     </div>
 
+        <!-- NEW: SA Type and Company Achievement Charts Row -->
+        <div class="row g-3 mb-4 animate-fade-in">
+            <!-- SA Type Percentage -->
+            <div class="col-12 col-md-6">
+                <div class="premium-card h-100">
+                    <div class="premium-header">
+                        <i class="bi bi-radar text-info" style="font-size: 16px;"></i>
+                        <h6 class="premium-title">Pencapaian per Tipe SA</h6>
+                    </div>
+                    <div class="premium-body d-flex flex-column justify-content-center" style="position: relative; height: 350px; width: 100%;">
+                        <canvas id="saTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Company Achievement -->
+            <div class="col-12 col-md-6">
+                <div class="premium-card h-100">
+                    <div class="premium-header">
+                        <i class="bi bi-bar-chart-steps text-warning" style="font-size: 16px;"></i>
+                        <h6 class="premium-title">Top 10 Pencapaian Perusahaan</h6>
+                    </div>
+                    <div class="premium-body d-flex flex-column justify-content-center" style="position: relative; height: 350px; width: 100%;">
+                        <canvas id="companyAchievementChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div> <!-- Closing sectionCompany -->
 
     @{
@@ -2604,10 +2715,16 @@
                                         <thead>
                                             <tr>
                                                 <th>Departemen</th>
-                                                <th>Jumlah Karyawan</th>
-                                                <th>YTD</th>
-                                                <th>MTD</th>
-                                                <th>WEEK</th>
+                                                <th>Jml Karyawan</th>
+                                                <th>YTD Total</th>
+                                                <th>MTD Total</th>
+                                                <th>WEEK Total</th>
+                                                <th>Hazard</th>
+                                                <th>Inspeksi</th>
+                                                <th>S.Talk</th>
+                                                <th>Observasi</th>
+                                                <th>Coaching</th>
+                                                <th>P5M</th>
                                             </tr>
                                         </thead>
                                         <tbody id="deptAchievementRows">
@@ -2693,21 +2810,39 @@
             deptTitle.textContent = 'Pencapaian Per Departemen - ' + (companyName || 'Perusahaan');
 
             if (!Array.isArray(deptData) || deptData.length === 0) {
-                deptRows.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Belum ada data departemen.</td></tr>';
+                deptRows.innerHTML = '<tr><td colspan="11" class="text-center text-muted">Belum ada data departemen.</td></tr>';
             } else {
-                deptRows.innerHTML = deptData.map(function (item) {
+                const sortedDeptData = deptData.slice().sort(function(a, b) {
+                    const ytdA = Number(a.ytdAchievementRate || a.YtdAchievementRate || 0);
+                    const ytdB = Number(b.ytdAchievementRate || b.YtdAchievementRate || 0);
+                    return ytdB - ytdA;
+                });
+                
+                deptRows.innerHTML = sortedDeptData.map(function (item) {
                     const deptName = String(item.departmentName || item.DepartmentName || '-');
                     const employeeCount = Number(item.employeeCount || item.EmployeeCount || 0);
                     const ytd = Number(item.ytdAchievementRate || item.YtdAchievementRate || 0).toFixed(1);
                     const mtd = Number(item.mtdAchievementRate || item.MtdAchievementRate || 0).toFixed(1);
                     const week = Number(item.weeklyAchievementRate || item.WeeklyAchievementRate || 0).toFixed(1);
+                    const hRate = Number(item.ytdHazardRate || item.YtdHazardRate || 0).toFixed(1);
+                    const iRate = Number(item.ytdInspeksiRate || item.YtdInspeksiRate || 0).toFixed(1);
+                    const stRate = Number(item.ytdSafetyTalkRate || item.YtdSafetyTalkRate || 0).toFixed(1);
+                    const oRate = Number(item.ytdObservasiRate || item.YtdObservasiRate || 0).toFixed(1);
+                    const cRate = Number(item.ytdCoachingRate || item.YtdCoachingRate || 0).toFixed(1);
+                    const p5mRate = Number(item.ytdP5mRate || item.YtdP5mRate || 0).toFixed(1);
 
                     return '<tr>' +
                         '<td>' + deptName + '</td>' +
                         '<td>' + employeeCount + '</td>' +
-                        '<td class="dept-achievement-rate">' + ytd + '%</td>' +
+                        '<td class="dept-achievement-rate fw-bold text-primary">' + ytd + '%</td>' +
                         '<td class="dept-achievement-rate">' + mtd + '%</td>' +
                         '<td class="dept-achievement-rate">' + week + '%</td>' +
+                        '<td class="dept-achievement-rate">' + hRate + '%</td>' +
+                        '<td class="dept-achievement-rate">' + iRate + '%</td>' +
+                        '<td class="dept-achievement-rate">' + stRate + '%</td>' +
+                        '<td class="dept-achievement-rate">' + oRate + '%</td>' +
+                        '<td class="dept-achievement-rate">' + cRate + '%</td>' +
+                        '<td class="dept-achievement-rate">' + p5mRate + '%</td>' +
                         '</tr>';
                 }).join('');
             }
@@ -3032,10 +3167,10 @@
             new Chart(ctxMyProp, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'P5M'],
+                    labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'P5M', 'Observasi'],
                     datasets: [{
-                        data: [@ViewBag.MyHazardsMonth, @ViewBag.MyInspectionsMonth, @ViewBag.MySafetyTalksMonth, @ViewBag.MyP5msMonth],
-                        backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#10b981'],
+                        data: [@ViewBag.MyHazardsMonth, @ViewBag.MyInspectionsMonth, @ViewBag.MySafetyTalksMonth, @ViewBag.MyP5msMonth, @ViewBag.MyObservationsMonth],
+                        backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#10b981', '#fb923c'],
                         borderWidth: 0
                     }]
                 },
@@ -3255,6 +3390,112 @@
                     }
                 });
             }
+            // SA Type Chart Initialization
+            const saTypeEl = document.getElementById('saTypeChart');
+            if (saTypeEl) {
+                const saLabels = [];
+                const saTargetData = [];
+                const saRealData = [];
+                @if (ViewBag.SaTypeLabels != null) {
+                    foreach (var label in ViewBag.SaTypeLabels) { <text>saLabels.push('@Html.Raw(label)');</text> }
+                    foreach (var val in ViewBag.SaTypeTargetData) { <text>saTargetData.push(@val);</text> }
+                    foreach (var val in ViewBag.SaTypeRealData) { <text>saRealData.push(@val);</text> }
+                }
+
+                new Chart(saTypeEl.getContext('2d'), {
+                    type: 'radar',
+                    data: {
+                        labels: saLabels,
+                        datasets: [
+                            {
+                                label: 'Realisasi (YTD)',
+                                data: saRealData,
+                                backgroundColor: 'rgba(56, 189, 248, 0.4)',
+                                borderColor: 'rgba(56, 189, 248, 1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: 'rgba(56, 189, 248, 1)'
+                            },
+                            {
+                                label: 'Target (YTD)',
+                                data: saTargetData,
+                                backgroundColor: 'rgba(244, 63, 94, 0.2)',
+                                borderColor: 'rgba(244, 63, 94, 1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: 'rgba(244, 63, 94, 1)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { color: textColor } }
+                        },
+                        scales: {
+                            r: {
+                                angleLines: { color: gridColor },
+                                grid: { color: gridColor },
+                                pointLabels: { color: textColor, font: { weight: 'bold' } },
+                                ticks: { backdropColor: 'transparent', color: textColor, beginAtZero: true }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Company Achievement Chart Initialization
+            const companyAchievementEl = document.getElementById('companyAchievementChart');
+            if (companyAchievementEl) {
+                const caLabels = [];
+                const caRealData = [];
+                const caTargetData = [];
+                @if (ViewBag.Leaderboard != null) {
+                    foreach (var comp in ViewBag.Leaderboard) {
+                        <text>caLabels.push('@Html.Raw(comp.CompanyName)');</text>
+                        <text>caRealData.push(@comp.TotalSubmissions);</text>
+                        <text>caTargetData.push(@comp.TargetSubmissions);</text>
+                    }
+                }
+
+                new Chart(companyAchievementEl.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: caLabels,
+                        datasets: [
+                            {
+                                label: 'Realisasi Total',
+                                data: caRealData,
+                                backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Target SAP',
+                                data: caTargetData,
+                                backgroundColor: 'rgba(100, 116, 139, 0.5)',
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { color: textColor } }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: gridColor },
+                                ticks: { color: textColor }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { color: textColor, font: { size: 10, weight: 'bold' } }
+                            }
+                        }
+                    }
+                });
+            }
         }; // end window._initCompanyCharts
 
         let hitSafeMap = null;
@@ -3265,6 +3506,7 @@
         let hitSafeUserAccuracyCircle = null;
         let hitSafeGeolocAttempted = false;
         let hitSafeWatchId = null;
+        let hitSafeAutoCenter = true;
         let hitSafeAllPoints = [];
         let hitSafeFilteredPoints = [];
         let hitSafeMarkerByKey = new Map();
@@ -3491,6 +3733,19 @@
                 });
             }
 
+            const locateButton = document.getElementById('hitsafeLocateBtn');
+            if (locateButton) {
+                locateButton.addEventListener('click', function() {
+                    hitSafeAutoCenter = true;
+                    locateButton.classList.add('btn-success', 'text-white');
+                    locateButton.style.background = '';
+                    locateButton.style.color = '';
+                    locateButton.style.borderColor = '';
+                    locateButton.innerHTML = '<i class="bi bi-crosshair text-success"></i> Mengikuti...';
+                    updateHitSafeToUserLocation();
+                });
+            }
+
             hitSafeFiltersInitialized = true;
         }
 
@@ -3641,7 +3896,9 @@
                 fillOpacity: 0.18
             }).addTo(hitSafeMap);
 
-            hitSafeMap.setView([lat, lon], 15);
+            if (hitSafeAutoCenter) {
+                hitSafeMap.setView([lat, lon], 15);
+            }
             window.setTimeout(function() {
                 if (hitSafeMap) {
                     hitSafeMap.invalidateSize();
@@ -3755,6 +4012,19 @@
                 hitSafeAllPoints = buildHitSafeSourcePoints();
                 initHitSafeFilters();
                 applyHitSafeFiltersAndRender(true);
+
+                // Disable auto-centering when the user interacts with the map
+                hitSafeMap.on('dragstart zoomstart movestart', function() {
+                    hitSafeAutoCenter = false;
+                    const locateButton = document.getElementById('hitsafeLocateBtn');
+                    if (locateButton) {
+                        locateButton.classList.remove('btn-success', 'text-white');
+                        locateButton.style.background = '#0f172a';
+                        locateButton.style.color = '#f8fafc';
+                        locateButton.style.borderColor = '#1e293b';
+                        locateButton.innerHTML = '<i class="bi bi-crosshair"></i> Lokasi Saya';
+                    }
+                });
 
                 if (hitSafeFilteredPoints.length === 0) {
                     renderKaliorangFallback();

@@ -8,6 +8,7 @@
     int totalItems = (int)(ViewBag.TotalItems ?? incidents.Count);
     int pageSize = (int)(ViewBag.PageSize ?? 20);
     var newest = ViewBag.NewestIncident as MBS_SAP.Models.IncidentNews ?? incidents.FirstOrDefault();
+    var companyLookup = ViewBag.CompanyLookup as Dictionary<int, string?>;
 }
 
 <style>
@@ -360,6 +361,10 @@
                             {
                                 <span><i class="bi bi-geo-alt-fill"></i> @newest.Lokasi</span>
                             }
+                            @if (newest.PerusahaanId.HasValue && companyLookup != null && companyLookup.TryGetValue(newest.PerusahaanId.Value, out var newCompName))
+                            {
+                                <span><i class="bi bi-building"></i> @newCompName</span>
+                            }
                             <span class="badge-soft @newestBadge">@(newest.Kategori ?? "-")</span>
                         </div>
                         <p class="newest-desc">@newest.Konten</p>
@@ -380,6 +385,7 @@
                         <tr>
                             <th style="width: 60px;">ID</th>
                             <th style="width: 210px;">Judul</th>
+                            <th style="width: 140px;">Perusahaan</th>
                             <th style="width: 120px;">Kategori</th>
                             <th style="width: 140px;">Tgl Kejadian</th>
                             <th style="width: 180px;">Lokasi</th>
@@ -397,6 +403,16 @@
                                 <td><strong>#@item.Id</strong></td>
                                 <td>
                                     <div class="row-title" title="@item.Judul">@item.Judul</div>
+                                </td>
+                                <td>
+                                    @{
+                                        string companyName = "-";
+                                        if (item.PerusahaanId.HasValue && companyLookup != null && companyLookup.TryGetValue(item.PerusahaanId.Value, out var cName))
+                                        {
+                                            companyName = cName ?? "-";
+                                        }
+                                    }
+                                    @companyName
                                 </td>
                                 <td>
                                     <span class="badge-soft @badgeClass">@(item.Kategori ?? "-")</span>

@@ -183,6 +183,12 @@
                 <div class="meta-item">
                     <i class="bi bi-person-fill"></i> Oleh: @Model.DibuatOleh
                 </div>
+                @if (ViewBag.CompanyName != null)
+                {
+                    <div class="meta-item">
+                        <i class="bi bi-building"></i> Perusahaan: @ViewBag.CompanyName
+                    </div>
+                }
             </div>
 
             <!-- Content Area - Scrollable -->

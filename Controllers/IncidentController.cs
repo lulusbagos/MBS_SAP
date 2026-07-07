@@ -49,6 +49,23 @@ namespace MBS_SAP.Controllers
                 .ToList();
         }
 
+        private async Task SetCompanyOptionsAsync(int? selectedCompanyId = null)
+        {
+            var companies = await _context.Perusahaans
+                .Where(p => p.StatusAktif)
+                .OrderBy(p => p.NamaPerusahaan)
+                .ToListAsync();
+
+            ViewBag.Companies = companies
+                .Select(x => new SelectListItem
+                {
+                    Value = x.PerusahaanId.ToString(),
+                    Text = x.NamaPerusahaan?.ToUpperInvariant() ?? "-",
+                    Selected = x.PerusahaanId == selectedCompanyId
+                })
+                .ToList();
+        }
+
         [HttpGet]
         public async Task<IActionResult> Index(int page = 1, int pageSize = 20)
         {
@@ -70,6 +87,9 @@ namespace MBS_SAP.Controllers
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
+
+            var companies = await _context.Perusahaans.AsNoTracking().ToListAsync();
+            ViewBag.CompanyLookup = companies.ToDictionary(c => c.PerusahaanId, c => c.NamaPerusahaan);
 
             ViewBag.CurrentPage = page;
             ViewBag.PageSize = pageSize;
@@ -95,11 +115,17 @@ namespace MBS_SAP.Controllers
                 return RedirectToAction("Index");
             }
 
+            if (incident.PerusahaanId.HasValue)
+            {
+                var comp = await _context.Perusahaans.FirstOrDefaultAsync(c => c.PerusahaanId == incident.PerusahaanId.Value);
+                ViewBag.CompanyName = comp?.NamaPerusahaan;
+            }
+
             return View(incident);
         }
 
         [HttpGet]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
             if (!IsAdmin())
             {
@@ -109,13 +135,14 @@ namespace MBS_SAP.Controllers
 
             ViewData["ActiveTab"] = "Incident";
             SetIncidentCategoryOptions("Near Miss");
+            await SetCompanyOptionsAsync();
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(string judul, string konten, string? lokasi, 
-            DateTime? tanggalKejadian, string? kategori, IFormFile? gambar)
+            DateTime? tanggalKejadian, string? kategori, int? perusahaanId, IFormFile? gambar)
         {
             if (!IsAdmin())
             {
@@ -128,6 +155,7 @@ namespace MBS_SAP.Controllers
                 TempData["ErrorMessage"] = "Judul dan konten wajib diisi!";
                 ViewData["ActiveTab"] = "Incident";
                 SetIncidentCategoryOptions(kategori);
+                await SetCompanyOptionsAsync(perusahaanId);
                 return View();
             }
 
@@ -145,6 +173,7 @@ namespace MBS_SAP.Controllers
                 Lokasi = lokasi,
                 TanggalKejadian = tanggalKejadian,
                 Kategori = CanonicalizeIncidentCategory(kategori) ?? "Near Miss",
+                PerusahaanId = perusahaanId,
                 DibuatOleh = User.Identity?.Name ?? "Admin",
                 NikPembuat = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0",
                 CreatedAt = DateTime.Now
@@ -176,13 +205,14 @@ namespace MBS_SAP.Controllers
             }
 
             SetIncidentCategoryOptions(incident.Kategori);
+            await SetCompanyOptionsAsync(incident.PerusahaanId);
             return View(incident);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, string judul, string konten, string? lokasi,
-            DateTime? tanggalKejadian, string? kategori, IFormFile? gambar)
+            DateTime? tanggalKejadian, string? kategori, int? perusahaanId, IFormFile? gambar)
         {
             if (!IsAdmin())
             {
@@ -201,7 +231,9 @@ namespace MBS_SAP.Controllers
             {
                 TempData["ErrorMessage"] = "Judul dan konten wajib diisi.";
                 incident.Kategori = kategori;
+                incident.PerusahaanId = perusahaanId;
                 SetIncidentCategoryOptions(kategori);
+                await SetCompanyOptionsAsync(perusahaanId);
                 return View(incident);
             }
 
@@ -215,6 +247,7 @@ namespace MBS_SAP.Controllers
             incident.Lokasi = Truncate(lokasi, 150);
             incident.TanggalKejadian = tanggalKejadian;
             incident.Kategori = Truncate(CanonicalizeIncidentCategory(kategori) ?? "Near Miss", 100);
+            incident.PerusahaanId = perusahaanId;
             incident.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();

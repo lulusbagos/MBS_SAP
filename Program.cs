@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using MBS_SAP.Data;
 using MBS_SAP.Services;
 using Microsoft.Extensions.FileProviders;
-using System.IO;var builder = WebApplication.CreateBuilder(args);
+using System.IO;
+using System.Security.Claims;
+
+var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -20,7 +24,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
 
-// Add Cookie Authentication
+// Add Cookie Authentication with Real-time Session Invalidation
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -28,6 +32,42 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Account/AccessDenied";
         options.LogoutPath = "/Account/Logout";
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnValidatePrincipal = async context =>
+            {
+                var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                var nrp = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var passwordClaim = context.Principal?.FindFirst("PasswordHash")?.Value;
+                
+                if (!string.IsNullOrEmpty(nrp))
+                {
+                    // Check if employee is still active
+                    var karyawan = await dbContext.Karyawans.FirstOrDefaultAsync(k => k.NoNik == nrp && k.StatusAktif);
+                    if (karyawan == null)
+                    {
+                        context.RejectPrincipal();
+                        await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                        return;
+                    }
+                    
+                    // Check if password has changed since cookie was issued
+                    var overridePwd = await dbContext.PasswordOverrides.FirstOrDefaultAsync(p => p.Nrp == nrp);
+                    var currentPassword = overridePwd?.KataSandi;
+                    if (string.IsNullOrEmpty(currentPassword))
+                    {
+                        var pg = await dbContext.Penggunas.FirstOrDefaultAsync(p => p.Username == nrp && p.IsAktif);
+                        currentPassword = pg?.KataSandi ?? "123456";
+                    }
+                    
+                    if (passwordClaim != currentPassword)
+                    {
+                        context.RejectPrincipal();
+                        await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    }
+                }
+            }
+        };
     });
 
 var app = builder.Build();
@@ -64,8 +104,79 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MBS_SAP.Data.AppDbContext>();
     try {
-        dbContext.Database.ExecuteSqlRaw("ALTER TABLE tbl_t_attendance_record ADD Latitude float NULL, Longitude float NULL;");
-    } catch {
+        dbContext.Database.ExecuteSqlRaw(@"
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[tbl_t_attendance_record]') AND name = N'latitude')
+            BEGIN
+                ALTER TABLE tbl_t_attendance_record ADD Latitude float NULL;
+            END
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[tbl_t_attendance_record]') AND name = N'longitude')
+            BEGIN
+                ALTER TABLE tbl_t_attendance_record ADD Longitude float NULL;
+            END
+            IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[tbl_t_incident_news]') AND name = N'perusahaan_id')
+            BEGIN
+                ALTER TABLE tbl_t_incident_news ADD perusahaan_id int NULL;
+            END
+
+            IF OBJECT_ID(N'[dbo].[tbl_t_coaching]', N'U') IS NULL
+            BEGIN
+                CREATE TABLE [dbo].[tbl_t_coaching] (
+                    [id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    [foto] NVARCHAR(500) NULL,
+                    [tanggal] DATETIME NOT NULL,
+                    [waktu] TIME NOT NULL,
+                    [nama] NVARCHAR(150) NOT NULL,
+                    [nik] NVARCHAR(50) NOT NULL,
+                    [departemen] NVARCHAR(150) NULL,
+                    [area] NVARCHAR(150) NULL,
+                    [lokasi] NVARCHAR(150) NULL,
+                    [detil_lokasi] NVARCHAR(250) NULL,
+                    [tema] NVARCHAR(100) NULL,
+                    [feedback] NVARCHAR(MAX) NULL,
+                    [komitmen] NVARCHAR(MAX) NULL,
+                    [perusahaan_id] INT NULL,
+                    [is_deleted] BIT NOT NULL DEFAULT 0,
+                    [created_at] DATETIME NOT NULL DEFAULT GETDATE()
+                );
+            END
+
+            IF OBJECT_ID(N'[dbo].[tbl_t_coaching_participant]', N'U') IS NULL
+            BEGIN
+                CREATE TABLE [dbo].[tbl_t_coaching_participant] (
+                    [id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    [coaching_id] INT NOT NULL,
+                    [nik] NVARCHAR(50) NOT NULL,
+                    [nama] NVARCHAR(150) NOT NULL,
+                    CONSTRAINT [FK_tbl_t_coaching_participant_tbl_t_coaching] FOREIGN KEY ([coaching_id]) REFERENCES [dbo].[tbl_t_coaching] ([id]) ON DELETE CASCADE
+                );
+            END
+
+            -- Add non-clustered composite indexes to prevent execution timeouts on safety calculations
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_hazard_report_nik_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_hazard_report'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_hazard_report_nik_is_deleted_created_at
+                ON tbl_t_hazard_report (nik, is_deleted, created_at);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_inspection_nik_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_inspection'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_inspection_nik_is_deleted_created_at
+                ON tbl_t_inspection (nik, is_deleted, created_at);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_safety_talk_nik_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_safety_talk'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_safety_talk_nik_is_deleted_created_at
+                ON tbl_t_safety_talk (nik, is_deleted, created_at);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_p5m_nik_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_p5m'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_p5m_nik_is_deleted_created_at
+                ON tbl_t_p5m (nik, is_deleted, created_at);
+            END
+        ");
+     } catch {
         // Ignored, columns might already exist
     }
 }

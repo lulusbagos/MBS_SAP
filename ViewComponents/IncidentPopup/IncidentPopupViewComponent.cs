@@ -23,12 +23,9 @@ namespace MBS_SAP.ViewComponents
                 return Content(string.Empty);
             }
 
-            var sevenDaysAgo = DateTime.Now.AddDays(-7);
-
             var incident = await _context.IncidentNewsList
-                .Where(i => i.IsPublished && (i.TanggalKejadian ?? i.CreatedAt) >= sevenDaysAgo)
-                .OrderByDescending(i => (i.TanggalKejadian ?? i.CreatedAt))
-                .ThenByDescending(i => i.Id)
+                .Where(i => i.IsPublished)
+                .OrderByDescending(i => i.Id)
                 .FirstOrDefaultAsync<IncidentNews>();
             return View(incident);
         }

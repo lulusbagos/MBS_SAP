@@ -32,6 +32,8 @@ namespace MBS_SAP.Models
 
         public bool IsActive { get; set; } = true;
 
+        public bool IsDeleted { get; set; } = false;
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public List<AttendanceRecord> AttendanceRecords { get; set; } = new List<AttendanceRecord>();

@@ -21,25 +21,48 @@
             <input type="hidden" name="id" value="@Model.Id" />
 
             <div class="row">
-                <div class="col-md-8 form-group-sap">
+                <div class="col-md-6 form-group-sap">
                     <label class="form-label-sap">Judul Insiden <span class="text-danger">*</span></label>
                     <input type="text" name="judul" class="input-sap" required maxlength="300" value="@Model.Judul" />
                 </div>
-                <div class="col-md-4 form-group-sap">
+                <div class="col-md-3 form-group-sap">
+                    <label class="form-label-sap">Perusahaan / Company</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-building input-sap-icon"></i>
+                        <select name="perusahaanId" class="input-sap" required>
+                            <option value="" disabled>Pilih Perusahaan...</option>
+                            @foreach (var comp in ViewBag.Companies as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+                            {
+                                if (comp.Selected)
+                                {
+                                    <option value="@comp.Value" selected>@comp.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@comp.Value">@comp.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3 form-group-sap">
                     <label class="form-label-sap">Kategori</label>
-                    <select name="kategori" class="input-sap" required>
-                        @foreach (var item in categories)
-                        {
-                            if (item.Selected)
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-tag input-sap-icon"></i>
+                        <select name="kategori" class="input-sap" required>
+                            @foreach (var item in categories)
                             {
-                                <option value="@item.Value" selected>@item.Text</option>
+                                if (item.Selected)
+                                {
+                                    <option value="@item.Value" selected>@item.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
                             }
-                            else
-                            {
-                                <option value="@item.Value">@item.Text</option>
-                            }
-                        }
-                    </select>
+                        </select>
+                    </div>
                 </div>
             </div>
 

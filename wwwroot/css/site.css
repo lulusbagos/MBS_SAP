@@ -1134,6 +1134,7 @@ select.input-sap option:hover, select.input-sap option:focus {
 .history-badge.actionplan { background-color: rgba(var(--color-green-rgb), 0.15); color: var(--color-green); }
 .history-badge.safetytalk { background-color: rgba(244, 63, 94, 0.15); color: #f43f5e; }
 .history-badge.p5m { background-color: rgba(168, 85, 247, 0.15); color: #a855f7; }
+.history-badge.coaching { background-color: rgba(124, 58, 237, 0.15); color: #c084fc; }
 
 .history-details h7 {
     display: block;

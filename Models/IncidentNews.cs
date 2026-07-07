@@ -26,6 +26,8 @@ namespace MBS_SAP.Models
         [MaxLength(100)]
         public string? Kategori { get; set; } // Ringan, Sedang, Berat, Fatal
 
+        public int? PerusahaanId { get; set; }
+
         [Required]
         [MaxLength(150)]
         public string DibuatOleh { get; set; } = string.Empty;

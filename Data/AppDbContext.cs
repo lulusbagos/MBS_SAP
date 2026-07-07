@@ -31,6 +31,8 @@ namespace MBS_SAP.Data
         public DbSet<IncidentNews> IncidentNewsList { get; set; } = null!;
         public DbSet<AttendanceEvent> AttendanceEvents { get; set; } = null!;
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; } = null!;
+        public DbSet<Coaching> Coachings { get; set; } = null!;
+        public DbSet<CoachingParticipant> CoachingParticipants { get; set; } = null!;
 
         // View entities
         public DbSet<KaryawanView> Karyawans { get; set; } = null!;
@@ -40,6 +42,7 @@ namespace MBS_SAP.Data
         public DbSet<PerusahaanHierarchyRelationView> PerusahaanHierarchyRelations { get; set; } = null!;
         public DbSet<DepartemenView> Departemens { get; set; } = null!;
         public DbSet<JabatanView> Jabatans { get; set; } = null!;
+        public DbSet<KaryawanJabatanMappingPreviewView> KaryawanJabatanMappings { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -128,6 +131,12 @@ namespace MBS_SAP.Data
                 .HasForeignKey(r => r.AttendanceEventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Coaching>()
+                .ToTable("tbl_t_coaching");
+
+            modelBuilder.Entity<CoachingParticipant>()
+                .ToTable("tbl_t_coaching_participant");
+
             // View mappings
             modelBuilder.Entity<KaryawanView>()
                 .ToView("vw_karyawan")
@@ -157,6 +166,10 @@ namespace MBS_SAP.Data
                 .ToView("vw_jabatan")
                 .HasKey(j => j.JabatanId);
 
+            modelBuilder.Entity<KaryawanJabatanMappingPreviewView>()
+                .ToView("vw_r_karyawan_jabatan_mapping_preview")
+                .HasKey(k => k.KaryawanId);
+
             // Apply snake_case column names mapping
             foreach (var entity in modelBuilder.Model.GetEntityTypes())
             {
@@ -175,6 +188,7 @@ namespace MBS_SAP.Data
             if (input == "NoNik") return "no_nik";
             if (input == "NoKtp") return "no_ktp";
             if (input == "Hp1") return "hp_1";
+            if (input == "RJabatanId") return "r_jabatan_id";
 
             var startUnderscore = System.Text.RegularExpressions.Regex.Replace(input, @"([a-z0-9])([A-Z])", "$1_$2");
             return startUnderscore.ToLower();

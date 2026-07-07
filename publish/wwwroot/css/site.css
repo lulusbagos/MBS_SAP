@@ -335,6 +335,29 @@ html, body {
     transition: color var(--transition-normal);
 }
 
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.brand-title {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--text-sidebar-brand);
+    letter-spacing: 0.6px;
+    transition: color var(--transition-normal);
+}
+
+.brand-subtitle {
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    transition: color var(--transition-normal);
+}
+
 .sidebar-menu {
     display: flex;
     flex-direction: column;

@@ -379,6 +379,12 @@ namespace MBS_SAP.Controllers
             var report = await _context.HazardReports.FindAsync(id);
             if (report == null || report.IsDeleted) return NotFound();
 
+            if (string.Equals(report.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["ErrorMessage"] = "Laporan hazard yang sudah berstatus Closed tidak dapat dihapus.";
+                return RedirectToAction(nameof(Index));
+            }
+
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
             if (report.Nik != userNik && !User.IsInRole("Admin"))
             {

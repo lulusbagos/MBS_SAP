@@ -59,17 +59,39 @@
                 </div>
             </div>
 
-            <div class="form-group-sap">
-                <label class="form-label-sap">Kategori Insiden</label>
-                <select name="kategori" class="input-sap" required>
-                    <option value="Near Miss" selected>🟢 Near Miss</option>
-                    <option value="Property Damaged">🟩 Property Damaged</option>
-                    <option value="First Aid Injury">🔵 First Aid Injury</option>
-                    <option value="Medical Treatment Injury">🟣 Medical Treatment Injury</option>
-                    <option value="Ringan">🟡 RINGAN</option>
-                    <option value="Berat">🟠 BERAT</option>
-                    <option value="Mati">⚫ MATI</option>
-                </select>
+            <div class="row">
+                <div class="col-md-6 form-group-sap">
+                    <label class="form-label-sap">Perusahaan / Company</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-building input-sap-icon"></i>
+                        <select name="perusahaanId" class="input-sap" required>
+                            <option value="" disabled selected>Pilih Perusahaan...</option>
+                            @foreach (var comp in ViewBag.Companies as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+                            {
+                                <option value="@comp.Value">@comp.Text</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6 form-group-sap">
+                    <label class="form-label-sap">Kategori Insiden</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-tag input-sap-icon"></i>
+                        <select name="kategori" class="input-sap" required>
+                            @foreach (var cat in ViewBag.IncidentCategories as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>())
+                            {
+                                if (cat.Selected)
+                                {
+                                    <option value="@cat.Value" selected>@cat.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@cat.Value">@cat.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <div class="form-group-sap">

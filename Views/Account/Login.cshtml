@@ -4,6 +4,13 @@
 }
 
 <div class="login-wrapper">
+    <!-- Dynamic Mesh Glow Background -->
+    <div class="login-bg-glow-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
     <div class="login-container">
         <div class="d-flex justify-content-end mb-3 animate-fade-in">
             <button id="themeToggle" class="btn-navbar-action" title="Ganti Tema">
@@ -84,6 +91,94 @@
 </div>
 
 <style>
+/* Dynamic glowing mesh backdrop */
+.login-bg-glow-blobs {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    z-index: 0;
+    pointer-events: none;
+}
+body.light-theme .login-bg-glow-blobs {
+    background: radial-gradient(circle at 50% 50%, #f8fafc 0%, #e2e8f0 100%);
+}
+body.dark-theme .login-bg-glow-blobs {
+    background: radial-gradient(circle at 50% 50%, #0f172a 0%, #020617 100%);
+}
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.32;
+    animation: floatBlob 20s infinite alternate ease-in-out;
+}
+    @@media (max-width: 768px) {
+        .blob {
+            filter: blur(50px);
+            opacity: 0.22;
+        }
+    }
+.blob-1 {
+    width: 350px;
+    height: 350px;
+    background: #38bdf8; /* primary blue */
+    top: -80px;
+    left: -80px;
+    animation-duration: 18s;
+}
+.blob-2 {
+    width: 450px;
+    height: 450px;
+    background: #ec4899; /* pink-red */
+    bottom: -120px;
+    right: -80px;
+    animation-duration: 22s;
+    animation-delay: -4s;
+}
+.blob-3 {
+    width: 250px;
+    height: 250px;
+    background: #8b5cf6; /* purple */
+    top: 35%;
+    left: 45%;
+    animation-duration: 15s;
+    animation-delay: -8s;
+}
+@string.Empty@@keyframes floatBlob {
+    0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+    33% { transform: translate(70px, 80px) scale(1.15) rotate(120deg); }
+    66% { transform: translate(-50px, 60px) scale(0.85) rotate(240deg); }
+    100% { transform: translate(0, 0) scale(1) rotate(360deg); }
+}
+
+/* Animations for staggered entry */
+.animate-fade-in {
+    opacity: 0;
+    animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.animate-fade-up {
+    opacity: 0;
+    transform: translateY(45px) scale(0.96);
+    animation: fadeInUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.delay-1 { animation-delay: 0.12s; }
+.delay-2 { animation-delay: 0.24s; }
+
+@string.Empty@@keyframes fadeIn {
+    to { opacity: 1; }
+}
+@string.Empty@@keyframes fadeInUp {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Interactive elements */
+.login-container {
+    position: relative;
+    z-index: 10;
+}
 .login-logo-container {
     margin-bottom: 20px;
     display: flex;
@@ -91,21 +186,100 @@
     align-items: center;
 }
 .login-logo-img {
-    height: 200px;
+    height: 180px;
     max-width: 100%;
     object-fit: contain;
-    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
-    transition: transform 0.3s ease;
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.25));
+    animation: floatLogo 4.5s ease-in-out infinite;
 }
-.login-logo-img:hover {
-    transform: scale(1.05);
+@string.Empty@@keyframes floatLogo {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-16px) scale(1.05); }
 }
+
+.login-brand h4 {
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: 0.5px;
+    background: linear-gradient(to right, #38bdf8, #8b5cf6, #ec4899, #38bdf8);
+    background-size: 300% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: shineText 5.5s linear infinite;
+    margin-bottom: 4px;
+}
+body.light-theme .login-brand h4 {
+    background: linear-gradient(to right, #0284c7, #7c3aed, #db2777, #0284c7);
+    background-size: 300% auto;
+    color: transparent;
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+@string.Empty@@keyframes shineText {
+    to { background-position: 300% center; }
+}
+
+.login-card {
+    position: relative;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    transition: transform 0.1s ease-out, box-shadow 0.3s ease, border-color 0.3s ease;
+    transform-style: preserve-3d;
+    overflow: hidden;
+}
+.login-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: inherit;
+    background: radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(56, 189, 248, 0.08), transparent 50%);
+    z-index: 1;
+    pointer-events: none;
+}
+.login-card form, .login-card .screen-title {
+    position: relative;
+    z-index: 5;
+}
+.login-card:hover {
+    border-color: rgba(56, 189, 248, 0.25);
+    box-shadow: 0 24px 48px rgba(56, 189, 248, 0.12);
+}
+
+.input-sap-wrapper {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.input-sap-wrapper:focus-within {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 24px rgba(56, 189, 248, 0.45);
+    background: rgba(56, 189, 248, 0.05) !important;
+    transform: translateY(-2px);
+}
+
+.btn-sap-primary {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    border-radius: 12px !important;
+}
+.btn-sap-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(14, 165, 233, 0.35);
+}
+.btn-sap-primary:active {
+    transform: translateY(0);
+}
+
 .splash-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     z-index: 9999;
     display: flex;
     justify-content: center;
@@ -119,7 +293,7 @@
 .splash-content {
     animation: zoomInSplash 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
-@@keyframes zoomInSplash {
+@string.Empty@@keyframes zoomInSplash {
     0% { transform: scale(0.7) translateY(20px); opacity: 0; }
     100% { transform: scale(1) translateY(0); opacity: 1; }
 }
@@ -146,4 +320,57 @@
         }, 50);
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> MEMPROSES...';
     });
+
+    // Desktop Interactive Cursor Animations
+    if (window.matchMedia('(hover: hover)').matches) {
+        // 1. 3D Tilt Card & Spotlight Glow
+        const card = document.querySelector('.login-card');
+        if (card) {
+            card.addEventListener('mousemove', function(e) {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = -(y - centerY) / 25; // max 12 degrees
+                const rotateY = (x - centerX) / 25;
+                
+                card.style.transform = 'perspective(1000px) rotateX(' + rotateX + 'deg) rotateY(' + rotateY + 'deg) scale3d(1.01, 1.01, 1.01)';
+                card.style.setProperty('--mouse-x', x + 'px');
+                card.style.setProperty('--mouse-y', y + 'px');
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+            });
+        }
+
+        // 2. Background Blob Cursor Attractor (Damped Lag Follower)
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let blobX = window.innerWidth / 2;
+        let blobY = window.innerHeight / 2;
+        
+        window.addEventListener('mousemove', function(e) {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        function animateCursorBlob() {
+            const blob = document.querySelector('.blob-3');
+            if (blob) {
+                // Smooth interpolation (lerp)
+                blobX += (mouseX - blobX) * 0.04;
+                blobY += (mouseY - blobY) * 0.04;
+                
+                blob.style.left = (blobX - 125) + 'px';
+                blob.style.top = (blobY - 125) + 'px';
+                blob.style.animation = 'none'; // bypass keyframe float
+            }
+            requestAnimationFrame(animateCursorBlob);
+        }
+        
+        animateCursorBlob();
+    }
 </script>

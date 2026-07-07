@@ -6,7 +6,7 @@
 @foreach (var item in Model)
 {
     var delayClass = "delay-" + (loopIndex > 6 ? 6 : loopIndex);
-    <div class="timeline-card animate-fade-up @delayClass">
+    <div class="timeline-card animate-fade-up @delayClass" data-type="@item.ItemType">
         <!-- Header Post -->
         <div class="pt-3 pb-2 px-3 d-flex justify-content-between align-items-start">
             <div class="d-flex align-items-center">
@@ -154,10 +154,12 @@
                 <div class="meta-grid">
                     @if (!string.IsNullOrEmpty(item.Area))
                     {
-                        <div class="meta-item" title="Area">
-                            <i class="bi bi-geo-alt-fill text-primary"></i>
+                        var areaLabel = item.ItemType == "P2h" ? "Unit" : "Area";
+                        var areaIcon = item.ItemType == "P2h" ? "bi-truck" : "bi-geo-alt-fill";
+                        <div class="meta-item" title="@areaLabel">
+                            <i class="bi @areaIcon text-primary"></i>
                             <div>
-                                <div class="meta-item-label">Area</div>
+                                <div class="meta-item-label">@areaLabel</div>
                                 <div class="meta-item-value">@item.Area</div>
                             </div>
                         </div>
@@ -199,7 +201,9 @@
                         <i class="bi bi-shield-check text-primary" style="font-size: 14px;"></i>
                         <span class="fw-bold" style="font-size: 12px; color: var(--text-main);">Hasil Pemeriksaan Unit</span>
                     </div>
-                    <p class="mb-0 text-muted" style="font-size: 13px; line-height: 1.5; font-family: var(--font-body);">@item.Content</p>
+                    <div class="p-2.5 rounded" style="background: rgba(255,255,255,0.015); border: 1px solid var(--border-color); font-size: 13px; color: var(--text-muted); line-height: 1.5; white-space: pre-line;">
+                        @item.Content
+                    </div>
                 </div>
             }
             else if (item.ItemType == "Hazard")
@@ -223,14 +227,36 @@
                 </div>
             }
 
-            @if (!string.IsNullOrEmpty(item.FotoUrl))
+            @{
+                var hasFoto1 = !string.IsNullOrEmpty(item.FotoUrl);
+                var hasFoto2 = !string.IsNullOrEmpty(item.FotoPerbaikanUrl);
+            }
+
+            @if (hasFoto1 || hasFoto2)
             {
                 var isAdminUser = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase);
                 if (isAdminUser)
                 {
-                    <div class="feed-image-container">
-                        <img src="@item.FotoUrl" class="feed-image" alt="Foto Laporan" />
-                    </div>
+                    if (hasFoto1 && hasFoto2)
+                    {
+                        <div class="feed-image-grid-two">
+                            <div class="feed-image-item-wrapper">
+                                <img src="@item.FotoUrl" class="feed-image-grid-img" alt="Foto Temuan" style="cursor: pointer;" onclick="viewFullImage('@item.FotoUrl')" />
+                                <span class="feed-image-badge-label bg-danger text-white">Sebelum</span>
+                            </div>
+                            <div class="feed-image-item-wrapper">
+                                <img src="@item.FotoPerbaikanUrl" class="feed-image-grid-img" alt="Foto Perbaikan" style="cursor: pointer;" onclick="viewFullImage('@item.FotoPerbaikanUrl')" />
+                                <span class="feed-image-badge-label bg-success text-white">Sesudah</span>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        var singleFotoUrl = hasFoto1 ? item.FotoUrl : item.FotoPerbaikanUrl;
+                        <div class="feed-image-container">
+                            <img src="@singleFotoUrl" class="feed-image" alt="Foto Laporan" style="cursor: pointer;" onclick="viewFullImage('@singleFotoUrl')" />
+                        </div>
+                    }
                 }
                 else
                 {

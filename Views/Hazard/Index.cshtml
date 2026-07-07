@@ -208,6 +208,12 @@
                         <input type="hidden" id="departemenPja" name="departemenPja" />
                     </div>
 
+                    <!-- Recent PJAs Quick Selection -->
+                    <div id="recentPjasContainer" class="mt-2 d-none">
+                        <div class="text-white-50 mb-1" style="font-size: 10px; font-weight: 600;"><i class="bi bi-clock-history me-1"></i>PJA TERAKHIR DIGUNAKAN:</div>
+                        <div id="recentPjasList" class="d-flex flex-wrap gap-1"></div>
+                    </div>
+
                     <!-- Selected PJA Card -->
                     <div id="selectedPjaCard" class="d-none mt-3" style="background: var(--bg-body); border-radius: 12px; padding: 12px; border: 1px solid var(--border-color);">
                         <div class="d-flex align-items-center gap-3">
@@ -232,9 +238,12 @@
                             <h6 class="mb-1 text-white" style="font-weight: 700; font-size: 14px;">Ambil Foto / Pilih File</h6>
                             <span class="text-muted" style="font-size: 11px;">Mendukung input kamera langsung</span>
                         </div>
-                        <div id="imagePreviewContainer" class="d-none">
+                        <div id="imagePreviewContainer" class="d-none position-relative">
                             <img id="imagePreview" src="" alt="Preview" style="max-width: 100%; max-height: 120px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--border-color);" />
-                            <div style="font-size: 12px; color: var(--color-primary); font-weight: 600;"><i class="bi bi-arrow-repeat me-1"></i>Ganti Gambar</div>
+                            <div class="d-flex justify-content-center gap-3">
+                                <div style="font-size: 12px; color: var(--color-primary); font-weight: 600;"><i class="bi bi-arrow-repeat me-1"></i>Ganti Gambar</div>
+                                <div id="btnRemovePhoto" style="font-size: 12px; color: var(--color-red); font-weight: 600;" onclick="removeSelectedPhoto(event)"><i class="bi bi-trash3-fill me-1"></i>Hapus Foto</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -251,6 +260,29 @@
                 <h6 class="text-white" style="font-weight: 700;"><i class="bi bi-clock-history me-2" style="color: var(--color-primary);"></i>Histori Laporan 7 Hari Terakhir</h6>
             </div>
             
+            <!-- Search & Filter Bar -->
+            <div class="card-sap mb-3 p-3 bg-dark-card border-0">
+                <div class="input-sap-wrapper mb-2">
+                    <i class="bi bi-search input-sap-icon" style="top: 14px;"></i>
+                    <input type="text" id="historySearchInput" class="input-sap" placeholder="Cari lokasi, area, temuan, atau pelapor..." style="padding-left: 42px; font-size: 13px;" />
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center" style="font-size: 11px;">
+                    <span class="text-muted fw-bold me-1">Status:</span>
+                    <button type="button" class="filter-btn-status active" data-filter-status="all">Semua</button>
+                    <button type="button" class="filter-btn-status" data-filter-status="open">Open</button>
+                    <button type="button" class="filter-btn-status" data-filter-status="closed">Closed</button>
+                    
+                    <span class="text-muted fw-bold ms-auto me-1">Risiko:</span>
+                    <select id="filterRisk" class="filter-select-risk">
+                        <option value="all">Semua Risiko</option>
+                        <option value="Rendah">Rendah</option>
+                        <option value="Sedang">Sedang</option>
+                        <option value="Tinggi">Tinggi</option>
+                        <option value="Ekstrim">Ekstrim</option>
+                    </select>
+                </div>
+            </div>
+
             @if (Model == null || !Model.Any())
             {
                 <div class="card-sap text-center py-4 text-muted">
@@ -261,17 +293,39 @@
             else
             {
                 <div style="display: flex; flex-direction: column; gap: 12px;">
-                    @{ int loopIndex = 1; }
+                    @{ 
+                        int loopIndex = 1; 
+                        var currentUserNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                        var isAdmin = User.IsInRole("Admin");
+                    }
                     @foreach (var item in Model)
                     {
                         var delayClass = "delay-" + (loopIndex > 6 ? 6 : loopIndex);
-                        <div class="card-sap animate-fade-in @delayClass @(item.TingkatResiko == "Ekstrim" || item.TingkatResiko == "Tinggi" ? "border-red-accent" : item.TingkatResiko == "Sedang" ? "border-orange-accent" : "border-primary-accent") mb-0">
+                        var isCreatorOrAdmin = item.Nik == currentUserNik || isAdmin;
+                        <div class="card-sap animate-fade-in @delayClass @(item.TingkatResiko == "Ekstrim" || item.TingkatResiko == "Tinggi" ? "border-red-accent" : item.TingkatResiko == "Sedang" ? "border-orange-accent" : "border-primary-accent") @(string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase) ? "hazard-card-closed" : "") mb-0" data-status="@(item.StatusTemuan ?? "Open")" data-risk="@(item.TingkatResiko ?? "Rendah")" data-search-text="@(($"{item.Lokasi} {item.Area} {item.Nama} {item.Temuan}").ToLower())">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="history-badge @(item.KategoriBahaya != null && item.KategoriBahaya.Contains("Tindakan") ? "hazard" : "inspection")" style="width: 28px; height: 28px; font-size: 14px;">
                                         <i class="bi @(item.KategoriBahaya != null && item.KategoriBahaya.Contains("Tindakan") ? "bi-person-fill-exclamation" : "bi-exclamation-triangle-fill")"></i>
                                     </div>
-                                    <span style="font-weight: 700; font-size: 13px;">@(item.Lokasi ?? item.Area ?? "Unknown Location")</span>
+                                    <span style="font-weight: 700; font-size: 13px;">
+                                        @{
+                                            bool isGps = false;
+                                            string mapsUrl = "";
+                                            if (!string.IsNullOrEmpty(item.Lokasi)) {
+                                                var parts = item.Lokasi.Split(',');
+                                                if (parts.Length == 2 && double.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out _) && double.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out _)) {
+                                                    isGps = true;
+                                                    mapsUrl = $"https://www.google.com/maps/search/?api=1&query={Uri.EscapeDataString(item.Lokasi.Trim())}";
+                                                }
+                                            }
+                                        }
+                                        @(item.Lokasi ?? item.Area ?? "Unknown Location")
+                                        @if (isGps)
+                                        {
+                                            <a href="@mapsUrl" target="_blank" class="ms-1 text-primary" title="Buka di Google Maps" style="font-size: 12px; display: inline-flex; align-items: center;"><i class="bi bi-geo-alt-fill text-warning ms-1"></i></a>
+                                        }
+                                    </span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="status-badge @(item.StatusTemuan != null ? item.StatusTemuan.ToLower() : "open")">@item.StatusTemuan</span>
@@ -280,15 +334,21 @@
                                             <i class="bi bi-three-dots-vertical"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
-                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editHazard(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
-                                            @if (!string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase))
+                                            @if (isCreatorOrAdmin)
                                             {
-                                                <li><a class="dropdown-item text-success" href="javascript:void(0)" onclick="openCloseHazard(@item.Id, '@((item.NikPja ?? string.Empty).Replace("'", "\\'"))', '@((item.Pja ?? string.Empty).Replace("'", "\\'"))')"><i class="bi bi-check2-circle me-2"></i>Close Hazard</a></li>
+                                                <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editHazard(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
+                                                @if (!string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    <li><a class="dropdown-item text-success" href="javascript:void(0)" onclick="openCloseHazard(@item.Id, '@((item.NikPja ?? string.Empty).Replace("'", "\\'"))', '@((item.Pja ?? string.Empty).Replace("'", "\\'"))')"><i class="bi bi-check2-circle me-2"></i>Close Hazard</a></li>
+                                                }
                                             }
                                             <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="generateHazardPdf(@item.Id, 'download', event)"><i class="bi bi-file-earmark-pdf-fill me-2 text-danger"></i>Download PDF</a></li>
                                             <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="generateHazardPdf(@item.Id, 'share', event)"><i class="bi bi-share-fill me-2 text-info"></i>Share PDF</a></li>
-                                            <li><hr class="dropdown-divider border-secondary"></li>
-                                            <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteHazard(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus Laporan</a></li>
+                                            @if (isCreatorOrAdmin && !string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <li><hr class="dropdown-divider border-secondary"></li>
+                                                <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteHazard(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus Laporan</a></li>
+                                            }
                                         </ul>
                                     </div>
                                 </div>
@@ -300,9 +360,12 @@
 
                             @if (!string.IsNullOrEmpty(item.FotoTemuan))
                             {
+                                var displayPath = item.FotoTemuan.StartsWith("http") 
+                                    ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoTemuan) 
+                                    : item.FotoTemuan;
                                 <div class="mb-2">
-                                    <a href="@item.FotoTemuan" target="_blank">
-                                        <img src="@item.FotoTemuan" alt="Attachment" style="max-height: 80px; border-radius: 6px; border: 1px solid var(--border-color);" />
+                                    <a href="@displayPath" target="_blank">
+                                        <img src="@displayPath" alt="Attachment" style="max-height: 80px; border-radius: 6px; border: 1px solid var(--border-color);" />
                                     </a>
                                 </div>
                             }
@@ -394,6 +457,22 @@
 
 @section Scripts {
     <script>
+        $(document).ready(function() {
+            $('#hazardForm').on('submit', function(e) {
+                var perbaikan = $('#perbaikan').val().trim();
+                var nikPja = $('#nikPja').val().trim();
+                var pjaName = $('#pja').val().trim();
+                
+                // If the user hasn't filled Tindakan Perbaikan AND hasn't assigned a PJA
+                if (perbaikan === '' && nikPja === '' && pjaName === '') {
+                    var confirmMsg = "Anda yakin hazard ini tidak di-close (Tindakan Perbaikan kosong) atau dilaporkan ke PJA terkait?\n\nHazard ini akan berstatus OPEN tanpa penanggung jawab dan dapat menjadi overdue hazard bagi perusahaan Anda.";
+                    if (!confirm(confirmMsg)) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            });
+        });
         function openCloseHazard(id, nikPja, pjaName) {
             $('#closeHazardId').val(id);
             $('#closeHazardNote').val('');
@@ -595,6 +674,17 @@
             $('#pjaSearchInput').val('');
             $('#pjaSearchInput').parent().hide();
             $('#lintasPerusahaanToggle').closest('.d-flex').hide();
+            $('#recentPjasContainer').addClass('d-none');
+            
+            // Save to localStorage
+            saveRecentPja({
+                nik: nik,
+                nama: nama,
+                jabatan: jabatan,
+                dept: dept,
+                perusahaan: perusahaan,
+                companyOnly: companyOnly
+            });
         }
 
         function cancelEditHazard() {
@@ -682,6 +772,7 @@
             $('#selectedPjaCard').addClass('d-none');
             $('#pjaSearchInput').parent().show();
             $('#lintasPerusahaanToggle').closest('.d-flex').show();
+            renderRecentPjas();
             $('#pjaSearchInput').focus();
         }
 
@@ -836,15 +927,132 @@
             });
         }
 
-        let hazardFormSubmitting = false;
+        function removeSelectedPhoto(event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            $('#photoInput').val('');
+            $('#imagePreview').attr('src', '');
+            $('#imagePreviewContainer').addClass('d-none');
+            $('#uploadPlaceholder').show();
+        }
+
+        const RECENT_PJAS_KEY = 'mbs_sap_recent_pjas';
+
+        function saveRecentPja(pja) {
+            try {
+                let list = JSON.parse(localStorage.getItem(RECENT_PJAS_KEY) || '[]');
+                list = list.filter(item => item.nik !== pja.nik);
+                list.unshift(pja);
+                list = list.slice(0, 3);
+                localStorage.setItem(RECENT_PJAS_KEY, JSON.stringify(list));
+                renderRecentPjas();
+            } catch (e) {
+                console.error('Error saving recent PJA', e);
+            }
+        }
+
+        function renderRecentPjas() {
+            try {
+                const list = JSON.parse(localStorage.getItem(RECENT_PJAS_KEY) || '[]');
+                const container = $('#recentPjasContainer');
+                const listContainer = $('#recentPjasList');
+                
+                if (list.length === 0) {
+                    container.addClass('d-none');
+                    return;
+                }
+                
+                listContainer.empty();
+                list.forEach(function(item) {
+                    const badgeClass = item.companyOnly ? 'btn-outline-warning' : 'btn-outline-success';
+                    const btn = $(`
+                        <button type="button" class="btn btn-sm ${badgeClass} py-0 px-2 text-truncate" style="max-width: 130px; font-size: 9px; border-radius: 6px; color: white;" title="${item.nama}">
+                            ${item.nama}
+                        </button>
+                    `);
+                    btn.on('click', function(e) {
+                        e.preventDefault();
+                        selectPja(item.nik, item.nama, item.jabatan, item.dept, item.perusahaan, item.companyOnly);
+                    });
+                    listContainer.append(btn);
+                });
+                container.removeClass('d-none');
+            } catch (e) {
+                console.error('Error rendering recent PJAs', e);
+            }
+        }
+
+        // Client-side Search and Filter logic
+        let currentStatusFilter = 'all';
+        let currentRiskFilter = 'all';
+        let currentSearchQuery = '';
+
+        function applyHistoryFilters() {
+            let visibleCount = 0;
+            $('.card-sap[data-status]').each(function() {
+                const card = $(this);
+                const status = card.data('status').toLowerCase();
+                const risk = card.data('risk');
+                const searchText = card.data('search-text') || '';
+
+                const matchesStatus = (currentStatusFilter === 'all') || (status === currentStatusFilter);
+                const matchesRisk = (currentRiskFilter === 'all') || (risk === currentRiskFilter);
+                const matchesSearch = (currentSearchQuery === '') || searchText.includes(currentSearchQuery);
+
+                if (matchesStatus && matchesRisk && matchesSearch) {
+                    card.show();
+                    visibleCount++;
+                } else {
+                    card.hide();
+                }
+            });
+
+            let emptyMsg = $('#emptyHistoryMsg');
+            if (visibleCount === 0) {
+                if (!emptyMsg.length) {
+                    $('.card-sap[data-status]').parent().append(`
+                        <div id="emptyHistoryMsg" class="card-sap text-center py-4 text-muted">
+                            <i class="bi bi-search d-block mb-2" style="font-size: 32px;"></i>
+                            Tidak ada laporan hazard yang cocok dengan filter pencarian.
+                        </div>
+                    `);
+                } else {
+                    emptyMsg.show();
+                }
+            } else {
+                if (emptyMsg.length) {
+                    emptyMsg.hide();
+                }
+            }
+        }
 
         $(document).ready(function() {
             loadAreas();
+            renderRecentPjas();
             
             // Auto fetch GPS if creating new hazard
             if (!$('#hazardId').val()) {
                 getLocation();
             }
+
+            // Bind filters
+            $('#historySearchInput').on('input', function() {
+                currentSearchQuery = $(this).val().toLowerCase().trim();
+                applyHistoryFilters();
+            });
+
+            $('.filter-btn-status').on('click', function() {
+                $('.filter-btn-status').removeClass('active');
+                $(this).addClass('active');
+                currentStatusFilter = $(this).data('filter-status');
+                applyHistoryFilters();
+            });
+
+            $('#filterRisk').on('change', function() {
+                currentRiskFilter = $(this).val();
+                applyHistoryFilters();
+            });
 
             // Prevent double submission
             $('#hazardForm').on('submit', function() {
@@ -1215,6 +1423,73 @@
             background: #b91c1c;
             color: white;
             border-color: #b91c1c;
+        }
+        .hazard-card-closed {
+            opacity: 0.6;
+            filter: grayscale(50%);
+            background-color: rgba(var(--color-primary-rgb), 0.02) !important;
+            border-color: var(--border-color) !important;
+        }
+        .hazard-card-closed:hover {
+            opacity: 0.95;
+            filter: none;
+            transition: opacity 0.2s ease, filter 0.2s ease;
+        }
+        .filter-btn-status {
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 700;
+            font-size: 11px;
+            padding: 5px 14px;
+            border-radius: 12px;
+            transition: var(--transition-fast);
+        }
+        .filter-btn-status:hover {
+            color: var(--color-primary);
+            border-color: var(--color-primary);
+            background-color: rgba(var(--color-primary-rgb), 0.05);
+        }
+        .filter-btn-status.active[data-filter-status="all"] {
+            background-color: var(--color-primary) !important;
+            border-color: var(--color-primary) !important;
+            color: var(--text-contrast) !important;
+        }
+        .filter-btn-status.active[data-filter-status="open"] {
+            background-color: var(--color-orange) !important;
+            border-color: var(--color-orange) !important;
+            color: var(--text-contrast) !important;
+        }
+        .filter-btn-status.active[data-filter-status="closed"] {
+            background-color: var(--color-green) !important;
+            border-color: var(--color-green) !important;
+            color: var(--text-contrast) !important;
+        }
+        .filter-select-risk {
+            background-color: var(--bg-layout) !important;
+            border: 1px solid var(--border-color) !important;
+            color: var(--text-main) !important;
+            font-size: 11px;
+            border-radius: 8px;
+            padding: 4px 28px 4px 10px;
+            width: auto;
+            display: inline-block;
+            transition: var(--transition-fast);
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2364748b' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 10px;
+            font-weight: 700;
+        }
+        .filter-select-risk:focus {
+            outline: none;
+            border-color: var(--color-primary) !important;
+            box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.15) !important;
+        }
+        body.light-theme .filter-select-risk option {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
         }
     </style>
 }

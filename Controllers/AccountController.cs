@@ -167,18 +167,23 @@ namespace MBS_SAP.Controllers
             }
 
             // Status karyawan di ONE DB MITRA menjadi acuan utama aktivasi akun login.
-            if (karyawanMaster != null)
+            // Wajib terdaftar di ONE DB MITRA
+            if (karyawanMaster == null)
             {
-                if (!karyawanMaster.StatusAktif)
-                {
-                    ModelState.AddModelError("Nrp", "Akun tidak dapat digunakan karena status karyawan sudah non aktif di ONE DB MITRA.");
-                    return View();
-                }
-
-                idPerusahaan ??= karyawanMaster.IdPerusahaan;
-                idDepartemen ??= karyawanMaster.IdDepartemen;
-                idJabatan ??= karyawanMaster.IdJabatan;
+                ModelState.AddModelError("Nrp", "Akun tidak dapat digunakan karena NIK tidak terdaftar di ONE DB MITRA.");
+                return View();
             }
+
+            // Wajib berstatus aktif di ONE DB MITRA
+            if (!karyawanMaster.StatusAktif)
+            {
+                ModelState.AddModelError("Nrp", "Akun tidak dapat digunakan karena status karyawan sudah non aktif di ONE DB MITRA.");
+                return View();
+            }
+
+            idPerusahaan ??= karyawanMaster.IdPerusahaan;
+            idDepartemen ??= karyawanMaster.IdDepartemen;
+            idJabatan ??= karyawanMaster.IdJabatan;
 
             if (string.IsNullOrEmpty(fullName))
             {
@@ -236,6 +241,14 @@ namespace MBS_SAP.Controllers
                 }
             }
 
+            // Resolve PasswordHash for claim
+            var claimPassword = overridePwd?.KataSandi;
+            if (string.IsNullOrEmpty(claimPassword))
+            {
+                var pg = await _context.Penggunas.FirstOrDefaultAsync(p => p.Username == nrp && p.IsAktif);
+                claimPassword = pg?.KataSandi ?? "123456";
+            }
+
             // Sign in claims
             var claims = new List<Claim>
             {
@@ -245,7 +258,8 @@ namespace MBS_SAP.Controllers
                 new Claim("Company", companyName),
                 new Claim("Department", deptName),
                 new Claim("JobTitle", jobTitle),
-                new Claim("CompanyId", idPerusahaan?.ToString() ?? "0")
+                new Claim("CompanyId", idPerusahaan?.ToString() ?? "0"),
+                new Claim("PasswordHash", claimPassword)
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -272,6 +286,7 @@ namespace MBS_SAP.Controllers
                     Perusahaan = companyName,
                     IdPerusahaan = idPerusahaan,
                     Role = NormalizeRole(role, "Operator"),
+                    KaryawanId = karyawanMaster?.IdKaryawan,
                     LastLogin = DateTime.Now
                 };
                 _context.AppUsers.Add(appUser);
@@ -282,6 +297,7 @@ namespace MBS_SAP.Controllers
                 appUser.Departemen = deptName;
                 appUser.Perusahaan = companyName;
                 appUser.IdPerusahaan = idPerusahaan;
+                appUser.KaryawanId = karyawanMaster?.IdKaryawan;
                 if (string.IsNullOrEmpty(appUser.Role))
                 {
                     appUser.Role = NormalizeRole(role, "Operator");
@@ -422,6 +438,27 @@ namespace MBS_SAP.Controllers
             }
 
             await _context.SaveChangesAsync();
+
+            // Re-sign in the user with the updated PasswordHash claim to keep current browser logged in
+            if (User.Identity is ClaimsIdentity identity)
+            {
+                var existingClaim = identity.FindFirst("PasswordHash");
+                if (existingClaim != null)
+                {
+                    identity.RemoveClaim(existingClaim);
+                }
+                identity.AddClaim(new Claim("PasswordHash", newPassword));
+
+                await HttpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(identity),
+                    new AuthenticationProperties
+                    {
+                        IsPersistent = true,
+                        ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8)
+                    });
+            }
+
             ViewData["Success"] = "Password berhasil diubah!";
             return View();
         }
@@ -433,9 +470,9 @@ namespace MBS_SAP.Controllers
             if (nrp == null) return RedirectToAction("Login");
 
             var overridePwd = await _context.PasswordOverrides.FirstOrDefaultAsync(p => p.Nrp == nrp);
-            
             var pengguna = await _context.Penggunas.FirstOrDefaultAsync(p => p.Username == nrp);
             var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == nrp);
+
             var personal = karyawan != null ? await _context.Personals.FirstOrDefaultAsync(p => p.IdPersonal == karyawan.IdPersonal) : null;
             
             int? deptId = pengguna?.DepartemenId ?? karyawan?.IdDepartemen;

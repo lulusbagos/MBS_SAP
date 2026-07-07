@@ -22,6 +22,9 @@ namespace MBS_SAP.Models
 
         public int? IdPerusahaan { get; set; }
 
+        [Column("karyawan_id")]
+        public int? KaryawanId { get; set; }
+
         public DateTime LastLogin { get; set; }
 
         /// <summary>Custom role override: Admin / Operator (null = use default from vw_pengguna)</summary>

@@ -38,16 +38,8 @@ namespace MBS_SAP.Services
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                var now = DateTime.Now;
-                var nextMidnight = now.Date.AddDays(1);
-                var delay = nextMidnight - now;
-
-                if (delay < TimeSpan.FromSeconds(1))
-                {
-                    delay = TimeSpan.FromSeconds(1);
-                }
-
-                _logger.LogInformation("Postgres replication scheduler waiting until {NextRun}.", nextMidnight);
+                var delay = TimeSpan.FromHours(3);
+                _logger.LogInformation("Postgres replication scheduler waiting 3 hours (next run around {NextRun}).", DateTime.Now.Add(delay));
 
                 try
                 {
@@ -63,7 +55,7 @@ namespace MBS_SAP.Services
                     break;
                 }
 
-                await RunDailySyncAsync(stoppingToken);
+                await RunPeriodicSyncAsync(stoppingToken);
             }
         }
 
@@ -88,11 +80,11 @@ namespace MBS_SAP.Services
             await RunReplicationAsync(lookbackDays, "initial", cancellationToken);
         }
 
-        private async Task RunDailySyncAsync(CancellationToken cancellationToken)
+        private async Task RunPeriodicSyncAsync(CancellationToken cancellationToken)
         {
-            const int lookbackDays = 90;
-            _logger.LogInformation("Starting scheduled midnight postgres replication with lookback {LookbackDays} days.", lookbackDays);
-            await RunReplicationAsync(lookbackDays, "daily", cancellationToken);
+            const int lookbackDays = 3;
+            _logger.LogInformation("Starting scheduled 3-hourly postgres replication with lookback {LookbackDays} days.", lookbackDays);
+            await RunReplicationAsync(lookbackDays, "periodic", cancellationToken);
         }
 
         private async Task RunReplicationAsync(int lookbackDays, string mode, CancellationToken cancellationToken)
@@ -111,18 +103,37 @@ namespace MBS_SAP.Services
                 var dedupResult = await RunHazardDedupCleanupAsync(scope.ServiceProvider, cancellationToken);
 
                 _logger.LogInformation(
-                    "Postgres replication {Mode} completed. Hazard +{HazardInserted} ~{HazardUpdated} (dup {HazardSkipped}, company {HazardSkippedCompany}), " +
-                    "Inspection +{InspectionInserted} ~{InspectionUpdated} (dup {InspectionSkipped}, company {InspectionSkippedCompany}), " +
+                    "Postgres replication {Mode} completed. " +
+                    "Hazard +{HazardInserted} ~{HazardUpdated} (dup {HazardSkipped}), " +
+                    "Inspection +{InspectionInserted} ~{InspectionUpdated} (dup {InspectionSkipped}), " +
+                    "Coaching +{CoachingInserted} ~{CoachingUpdated} (dup {CoachingSkipped}), " +
+                    "Observation +{ObservationInserted} ~{ObservationUpdated} (dup {ObservationSkipped}), " +
+                    "P2H +{P2hInserted} ~{P2hUpdated} (dup {P2hSkipped}), " +
+                    "P5M +{P5mInserted} ~{P5mUpdated} (dup {P5mSkipped}), " +
+                    "SafetyTalk +{SafetyTalkInserted} ~{SafetyTalkUpdated} (dup {SafetyTalkSkipped}), " +
                     "hazard dedup cleaned {DedupCleanedRows} rows, lookback {LookbackDays} days.",
                     mode,
                     result.HazardInserted,
                     result.HazardUpdated,
                     result.HazardSkipped,
-                    result.HazardSkippedCompany,
                     result.InspectionInserted,
                     result.InspectionUpdated,
                     result.InspectionSkipped,
-                    result.InspectionSkippedCompany,
+                    result.CoachingInserted,
+                    result.CoachingUpdated,
+                    result.CoachingSkipped,
+                    result.ObservationInserted,
+                    result.ObservationUpdated,
+                    result.ObservationSkipped,
+                    result.P2hInserted,
+                    result.P2hUpdated,
+                    result.P2hSkipped,
+                    result.P5mInserted,
+                    result.P5mUpdated,
+                    result.P5mSkipped,
+                    result.SafetyTalkInserted,
+                    result.SafetyTalkUpdated,
+                    result.SafetyTalkSkipped,
                     dedupResult,
                     result.LookbackDays);
             }

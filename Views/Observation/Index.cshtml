@@ -2,6 +2,8 @@
 @{
     ViewData["Title"] = "Observasi - SAP";
     var editModel = ViewBag.EditModel as MBS_SAP.Models.Observation ?? new MBS_SAP.Models.Observation();
+    var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var isAdmin = User.IsInRole("Admin");
 }
 
 <div class="animate-fade-in">
@@ -281,16 +283,19 @@
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="badge @resultBadgeClass rounded-pill px-2 py-1 fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">@item.HasilObservasi</span>
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                            <i class="bi bi-three-dots-vertical"></i>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
-                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editObservation(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
-                                            <li><hr class="dropdown-divider border-secondary"></li>
-                                            <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteObservation(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus Laporan</a></li>
-                                        </ul>
-                                    </div>
+                                    @if (item.Nik == userNik || isAdmin)
+                                    {
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
+                                                <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editObservation(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
+                                                <li><hr class="dropdown-divider border-secondary"></li>
+                                                <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteObservation(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus Laporan</a></li>
+                                            </ul>
+                                        </div>
+                                    }
                                 </div>
                             </div>
                             

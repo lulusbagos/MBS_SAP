@@ -49,3 +49,7 @@ wwwroot/uploads/**/*
 ## Miscellaneous
 .DS_Store
 Thumbs.db
+
+## Videos
+wwwroot/video/*.mp4
+publish/wwwroot/video/*.mp4

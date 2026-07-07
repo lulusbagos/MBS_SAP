@@ -35,6 +35,35 @@ namespace MBS_SAP.Controllers
                 }
             }
 
+            string? kategoriPengawas = null;
+            int targetHazardReport = 2;
+            int targetInspeksi = 1;
+            int targetSafetyTalk = 1;
+            int targetObservasi = 0;
+            int targetCoaching = 0;
+            int targetP5m = 1;
+
+            if (hasUserNik)
+            {
+                var currentKaryawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik != null && k.NoNik.Trim() == userNik && k.StatusAktif);
+                if (currentKaryawan != null)
+                {
+                    var targetMapping = await _context.KaryawanJabatanMappings.FirstOrDefaultAsync(m => m.KaryawanId == currentKaryawan.IdKaryawan);
+                    if (targetMapping != null)
+                    {
+                        kategoriPengawas = targetMapping.KategoriPengawas;
+                        targetHazardReport = targetMapping.TargetHazardReport ?? 2;
+                        targetInspeksi = targetMapping.TargetInspeksi ?? 1;
+                        targetSafetyTalk = targetMapping.TargetSafetyTalk ?? 1;
+                        targetObservasi = targetMapping.TargetObservasi ?? 0;
+                        targetCoaching = targetMapping.TargetCoaching ?? 0;
+                        // p5m tidak ada di view, gunakan default 1
+                        targetP5m = 1;
+                    }
+                }
+            }
+            ViewData["KategoriPengawas"] = kategoriPengawas;
+
             ViewData["HeaderTitle"] = "Portal K3 MBS";
             ViewData["ActiveTab"] = "Home";
 
@@ -57,7 +86,9 @@ namespace MBS_SAP.Controllers
                 .Where(s => !s.IsDeleted && hasUserNik && s.Nik == userNik);
             var p5mQuery = _context.P5ms
                 .Where(p => !p.IsDeleted && hasUserNik && p.Nik == userNik);
-
+            var coachingQuery = _context.Coachings
+                .Where(c => !c.IsDeleted && hasUserNik && (c.Nik == userNik || _context.CoachingParticipants.Any(p => p.CoachingId == c.Id && p.Nik == userNik)));
+ 
             var totalHazards    = await hazardQuery.CountAsync();
             var openHazards     = await hazardQuery.CountAsync(h => h.StatusTemuan == "Open");
             var closedHazards   = await hazardQuery.CountAsync(h => h.StatusTemuan == "Closed");
@@ -65,63 +96,31 @@ namespace MBS_SAP.Controllers
             var totalActionPlans  = await actionPlanQuery.CountAsync();
             var totalSafetyTalks  = await safetyTalkQuery.CountAsync();
             var totalP5ms         = await p5mQuery.CountAsync();
+            var totalCoachings    = await coachingQuery.CountAsync();
 
-            // Kepatuhan berbasis target mingguan:
-            // Minimal 1 aktivitas gabungan per minggu (rolling 4 minggu).
-            var startOfToday = DateTime.Today;
-            var startOfCurrentWeek = startOfToday.AddDays(-((int)startOfToday.DayOfWeek + 6) % 7); // Monday-based
-            var startOfWindow = startOfCurrentWeek.AddDays(-21); // 4 weeks window
-            var endOfWindowExclusive = startOfCurrentWeek.AddDays(7);
+            var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            
+            var thisMonthHazards = await hazardQuery.CountAsync(h => h.CreatedAt >= startOfMonth);
+            var thisMonthInspections = await inspectionQuery.CountAsync(i => i.CreatedAt >= startOfMonth);
+            var thisMonthSafetyTalks = await safetyTalkQuery.CountAsync(s => s.CreatedAt >= startOfMonth);
+            var thisMonthP5ms = await p5mQuery.CountAsync(p => p.CreatedAt >= startOfMonth);
+            var thisMonthCoachings = await coachingQuery.CountAsync(c => c.CreatedAt >= startOfMonth);
+            
+            // Assume observasi is not in the dashboard queries yet, or we add it? We don't have observasiQuery.
+            // But we can just use the ones we have for the Monthly Score.
+            var observationQuery = _context.Observations.Where(o => !o.IsDeleted && hasUserNik && o.Nik == userNik);
+            var thisMonthObservations = await observationQuery.CountAsync(o => o.Date >= startOfMonth);
+            var totalObservations = await observationQuery.CountAsync();
+ 
+            int myTotalMonthTarget = targetHazardReport + targetInspeksi + targetSafetyTalk + targetP5m + targetObservasi + targetCoaching;
+            int myTotalThisMonth = thisMonthHazards + thisMonthInspections + thisMonthSafetyTalks + thisMonthP5ms + thisMonthObservations + thisMonthCoachings;
 
-            var hazardDates = await hazardQuery
-                .Where(h => h.CreatedAt >= startOfWindow && h.CreatedAt < endOfWindowExclusive)
-                .Select(h => h.CreatedAt)
-                .ToListAsync();
-
-            var inspectionDates = await inspectionQuery
-                .Where(i => i.CreatedAt >= startOfWindow && i.CreatedAt < endOfWindowExclusive)
-                .Select(i => i.CreatedAt)
-                .ToListAsync();
-
-            var actionPlanDates = await actionPlanQuery
-                .Where(a => a.CreatedAt >= startOfWindow && a.CreatedAt < endOfWindowExclusive)
-                .Select(a => a.CreatedAt)
-                .ToListAsync();
-
-            var safetyTalkDates = await safetyTalkQuery
-                .Where(s => s.CreatedAt >= startOfWindow && s.CreatedAt < endOfWindowExclusive)
-                .Select(s => s.CreatedAt)
-                .ToListAsync();
-
-            var p5mDates = await p5mQuery
-                .Where(p => p.CreatedAt >= startOfWindow && p.CreatedAt < endOfWindowExclusive)
-                .Select(p => p.CreatedAt)
-                .ToListAsync();
-
-            var allActivityDates = hazardDates
-                .Concat(inspectionDates)
-                .Concat(actionPlanDates)
-                .Concat(safetyTalkDates)
-                .Concat(p5mDates)
-                .ToList();
-
-            var weeklyCounts = allActivityDates
-                .GroupBy(d => $"{ISOWeek.GetYear(d)}-{ISOWeek.GetWeekOfYear(d)}")
-                .ToDictionary(g => g.Key, g => g.Count());
-
-            int targetWeeks = 4;
-            int compliantWeeks = 0;
-            for (int i = 0; i < targetWeeks; i++)
+            int complianceScore = 0;
+            if (myTotalMonthTarget > 0)
             {
-                var weekDate = startOfCurrentWeek.AddDays(-7 * i);
-                var weekKey = $"{ISOWeek.GetYear(weekDate)}-{ISOWeek.GetWeekOfYear(weekDate)}";
-                if (weeklyCounts.TryGetValue(weekKey, out var countInWeek) && countInWeek >= 1)
-                {
-                    compliantWeeks++;
-                }
+                complianceScore = (int)Math.Round((double)myTotalThisMonth / myTotalMonthTarget * 100.0, MidpointRounding.AwayFromZero);
+                if (complianceScore > 100) complianceScore = 100;
             }
-
-            int complianceScore = (int)Math.Round((double)compliantWeeks / targetWeeks * 100.0, MidpointRounding.AwayFromZero);
 
             ViewData["TotalHazards"] = totalHazards;
             ViewData["OpenHazards"] = openHazards;
@@ -130,9 +129,27 @@ namespace MBS_SAP.Controllers
             ViewData["TotalActionPlans"] = totalActionPlans;
             ViewData["TotalSafetyTalks"] = totalSafetyTalks;
             ViewData["TotalP5ms"] = totalP5ms;
+            ViewData["TotalObservations"] = totalObservations;
+            ViewData["TotalCoachings"] = totalCoachings;
+            
+            // Send specific targets and achievements for display
             ViewData["ComplianceScore"] = complianceScore;
-            ViewData["CompliantWeeks"] = compliantWeeks;
-            ViewData["TargetWeeks"] = targetWeeks;
+            ViewData["MyTotalThisMonth"] = myTotalThisMonth;
+            ViewData["MyTotalMonthTarget"] = myTotalMonthTarget;
+            
+            ViewData["ThisMonthHazards"] = thisMonthHazards;
+            ViewData["ThisMonthInspections"] = thisMonthInspections;
+            ViewData["ThisMonthSafetyTalks"] = thisMonthSafetyTalks;
+            ViewData["ThisMonthP5ms"] = thisMonthP5ms;
+            ViewData["ThisMonthObservations"] = thisMonthObservations;
+            ViewData["ThisMonthCoachings"] = thisMonthCoachings;
+
+            ViewData["TargetHazard"] = targetHazardReport;
+            ViewData["TargetInspeksi"] = targetInspeksi;
+            ViewData["TargetSafetyTalk"] = targetSafetyTalk;
+            ViewData["TargetP5m"] = targetP5m;
+            ViewData["TargetObservasi"] = targetObservasi;
+            ViewData["TargetCoaching"] = targetCoaching;
 
             // Load recent history items — difilter akun login
             var recentHazards = await hazardQuery
@@ -200,12 +217,26 @@ namespace MBS_SAP.Controllers
                     User = p.Nama
                 }).ToListAsync();
 
+            var recentCoachings = await coachingQuery
+                .OrderByDescending(c => c.CreatedAt)
+                .Take(2)
+                .Select(c => new RecentActivityViewModel
+                {
+                    Type = "Coaching",
+                    Title = "Coaching: " + (c.Tema ?? "Pembinaan"),
+                    Description = c.Feedback ?? "",
+                    Date = c.CreatedAt,
+                    Status = "Completed",
+                    User = c.Nama
+                }).ToListAsync();
+
             // Merge and sort activities
             var recentActivities = recentHazards
                 .Concat(recentInspections)
                 .Concat(recentActionPlans)
                 .Concat(recentSafetyTalks)
                 .Concat(recentP5ms)
+                .Concat(recentCoachings)
                 .OrderByDescending(a => a.Date)
                 .Take(6)
                 .ToList();

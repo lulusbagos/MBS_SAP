@@ -1,35 +1,47 @@
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using System;
 
-var connStr = "Server=172.16.1.93;Database=DB_SAP;User Id=sa;Password=technical.indexim.123;TrustServerCertificate=True;MultipleActiveResultSets=True;";
+var pgConnStr = "Host=172.16.1.96;Port=5432;Database=sysinteg_indexsafe2;Username=postgres;Password=index.123;";
 
-var sql = @"
-SELECT TOP 10 * FROM (
-SELECT 'Hazard' as Tipe, Id, Nama, Tanggal, Waktu, created_at, is_deleted FROM tbl_t_hazard_report WHERE Tanggal > '2026-07-03'
-UNION ALL
-SELECT 'Inspection', Id, Nama, Tanggal, Waktu, created_at, is_deleted FROM tbl_t_inspection WHERE Tanggal > '2026-07-03'
-UNION ALL
-SELECT 'ActionPlan', Id, Nama, Tanggal, Waktu, created_at, is_deleted FROM tbl_t_action_plan WHERE Tanggal > '2026-07-03'
-UNION ALL
-SELECT 'SafetyTalk', Id, Nama, Tanggal, Waktu, created_at, is_deleted FROM tbl_t_safety_talk WHERE Tanggal > '2026-07-03'
-UNION ALL
-SELECT 'P5M', Id, Nama, Tanggal, Waktu, created_at, is_deleted FROM tbl_t_p5m WHERE Tanggal > '2026-07-03'
-UNION ALL
-SELECT 'Observation', Id, Nama, Date, Date, created_at, is_deleted FROM tbl_t_observation WHERE Date > '2026-07-03'
-) as AllItems
-WHERE is_deleted = 0
-ORDER BY created_at DESC;
-";
+using var connPg = new NpgsqlConnection(pgConnStr);
+connPg.Open();
 
-using var conn = new SqlConnection(connStr);
-conn.Open();
-
-using var cmd = new SqlCommand(sql, conn);
-using var reader = cmd.ExecuteReader();
-
-while (reader.Read())
+void CheckView(string viewName, string photoCol)
 {
-    Console.WriteLine($"[{reader["Tipe"]}] ID: {reader["Id"]}, Nama: {reader["Nama"]}, Tanggal: {reader["Tanggal"]:yyyy-MM-dd}, Waktu: {reader["Waktu"]}, CreatedAt: {reader["created_at"]:yyyy-MM-dd HH:mm:ss}");
+    Console.WriteLine($"\n=== CHECKING {viewName} ({photoCol}) ===");
+    try
+    {
+        using var cmd = new NpgsqlCommand($"SELECT COUNT(*) FROM public.{viewName} WHERE {photoCol} IS NOT NULL AND {photoCol} <> ''", connPg);
+        var total = cmd.ExecuteScalar();
+        Console.WriteLine($"Total records with photos: {total}");
+
+        using var cmdLocal = new NpgsqlCommand($@"
+            SELECT COUNT(*) FROM public.{viewName} 
+            WHERE {photoCol} IS NOT NULL 
+              AND ({photoCol} LIKE '%/private/var/mobile%' 
+                   OR {photoCol} LIKE '%/data/user/0%' 
+                   OR {photoCol} LIKE '%/cache/%'
+                   OR {photoCol} LIKE '%/tmp/%')", connPg);
+        var local = cmdLocal.ExecuteScalar();
+        Console.WriteLine($"Records with local mobile paths: {local}");
+
+        if (Convert.ToInt32(total) > 0)
+        {
+            using var cmdSample = new NpgsqlCommand($"SELECT {photoCol} FROM public.{viewName} WHERE {photoCol} IS NOT NULL AND {photoCol} <> '' LIMIT 2", connPg);
+            using var reader = cmdSample.ExecuteReader();
+            while (reader.Read())
+            {
+                Console.WriteLine($"- Sample: '{reader[photoCol]}'");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error: {ex.Message}");
+    }
 }
 
-
+CheckView("vw_coachingdetail", "foto");
+CheckView("vw_p5mdetail", "foto");
+CheckView("vw_hazardreportdetail", "foto_temuan");
+CheckView("vw_observationdetail", "foto");

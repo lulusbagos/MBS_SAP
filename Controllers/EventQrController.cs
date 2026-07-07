@@ -32,6 +32,7 @@ namespace MBS_SAP.Controllers
             var now = DateTime.Now;
             var events = await _context.AttendanceEvents
                 .AsNoTracking()
+                .Where(e => !e.IsDeleted)
                 .OrderByDescending(e => e.StartAt)
                 .Select(e => new EventQrRowViewModel
                 {
@@ -78,6 +79,7 @@ namespace MBS_SAP.Controllers
 
                 var events = await _context.AttendanceEvents
                     .AsNoTracking()
+                    .Where(e => !e.IsDeleted)
                     .OrderByDescending(e => e.StartAt)
                     .Select(e => new EventQrRowViewModel
                     {
@@ -122,7 +124,7 @@ namespace MBS_SAP.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleActive(int id)
         {
-            var ev = await _context.AttendanceEvents.FirstOrDefaultAsync(x => x.Id == id);
+            var ev = await _context.AttendanceEvents.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
             if (ev == null)
             {
                 TempData["ErrorMessage"] = "Event tidak ditemukan.";
@@ -142,7 +144,7 @@ namespace MBS_SAP.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RegenerateQr(int id)
         {
-            var ev = await _context.AttendanceEvents.FirstOrDefaultAsync(x => x.Id == id);
+            var ev = await _context.AttendanceEvents.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
             if (ev == null)
             {
                 TempData["ErrorMessage"] = "Event tidak ditemukan.";
@@ -159,7 +161,7 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
-            var ev = await _context.AttendanceEvents.FirstOrDefaultAsync(x => x.Id == id);
+            var ev = await _context.AttendanceEvents.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
             if (ev == null)
             {
                 TempData["ErrorMessage"] = "Event tidak ditemukan.";
@@ -199,7 +201,7 @@ namespace MBS_SAP.Controllers
                 return View(form);
             }
 
-            var ev = await _context.AttendanceEvents.FirstOrDefaultAsync(x => x.Id == form.Id);
+            var ev = await _context.AttendanceEvents.FirstOrDefaultAsync(x => x.Id == form.Id && !x.IsDeleted);
             if (ev == null)
             {
                 TempData["ErrorMessage"] = "Event tidak ditemukan.";
@@ -222,9 +224,7 @@ namespace MBS_SAP.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var ev = await _context.AttendanceEvents
-                .Include(e => e.AttendanceRecords)
-                .FirstOrDefaultAsync(x => x.Id == id);
+            var ev = await _context.AttendanceEvents.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
 
             if (ev == null)
             {
@@ -232,18 +232,17 @@ namespace MBS_SAP.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            _context.AttendanceRecords.RemoveRange(ev.AttendanceRecords);
-            _context.AttendanceEvents.Remove(ev);
+            ev.IsDeleted = true;
             await _context.SaveChangesAsync();
 
-            TempData["SuccessMessage"] = "Event dan seluruh catatan kehadiran berhasil dihapus.";
+            TempData["SuccessMessage"] = "Event berhasil dihapus.";
             return RedirectToAction(nameof(Index));
         }
 
         [HttpGet]
         public async Task<IActionResult> ExportAttendance(int id)
         {
-            var ev = await _context.AttendanceEvents.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+            var ev = await _context.AttendanceEvents.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
             if (ev == null)
             {
                 TempData["ErrorMessage"] = "Event tidak ditemukan.";
@@ -441,7 +440,7 @@ namespace MBS_SAP.Controllers
         {
             var ev = await _context.AttendanceEvents
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == id);
+                .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
 
             if (ev == null)
             {
@@ -485,7 +484,7 @@ namespace MBS_SAP.Controllers
                     employeeByNik.TryGetValue((r.Nik ?? string.Empty).Trim(), out var emp);
                     return new EventAttendanceAttendeeViewModel
                     {
-                        Nik = r.Nik,
+                        Nik = r.Nik ?? emp?.Nik ?? "-",
                         Nama = !string.IsNullOrWhiteSpace(r.Nama) ? r.Nama! : emp?.Nama ?? "-",
                         Jabatan = !string.IsNullOrWhiteSpace(r.Jabatan) ? r.Jabatan! : emp?.Jabatan ?? "-",
                         Departemen = emp?.Departemen ?? "-",

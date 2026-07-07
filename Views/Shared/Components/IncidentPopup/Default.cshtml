@@ -1,4 +1,5 @@
 @model MBS_SAP.Models.IncidentNews
+@inject MBS_SAP.Data.AppDbContext DbContext
 @{
     // If there is no recent incident, render nothing
     if (Model == null)
@@ -7,6 +8,13 @@
     }
     var konten = Model.Konten ?? "";
     var excerpt = konten.Length > 200 ? (konten.Substring(0, 200) + "…") : konten;
+
+    string? companyName = null;
+    if (Model.PerusahaanId.HasValue)
+    {
+        var comp = DbContext.Perusahaans.FirstOrDefault(c => c.PerusahaanId == Model.PerusahaanId.Value);
+        companyName = comp?.NamaPerusahaan;
+    }
 
     // Kategori badge color mapping
     var kategoriColor = (Model.Kategori ?? "").ToLower() switch
@@ -272,9 +280,16 @@
                             @Model.Lokasi
                         </span>
                     }
+                    @if (!string.IsNullOrEmpty(companyName))
+                    {
+                        <span>
+                            <i class="bi bi-building me-1" style="color: #38bdf8;"></i>
+                            @companyName
+                        </span>
+                    }
                     <span>
                         <i class="bi bi-person-fill me-1" style="color: #a78bfa;"></i>
-                        @Model.DibuatOleh
+                        Ditulis oleh @Model.DibuatOleh
                     </span>
                 </div>
 

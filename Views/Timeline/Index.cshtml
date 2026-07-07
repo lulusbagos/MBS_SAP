@@ -258,6 +258,50 @@
         transform: scale(1.015);
     }
 
+    /* Two-image Grid */
+    .feed-image-grid-two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 16px;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .feed-image-item-wrapper {
+        position: relative;
+        aspect-ratio: 4 / 3;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        background-color: rgba(255, 255, 255, 0.01);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .feed-image-grid-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+    .feed-image-item-wrapper:hover .feed-image-grid-img {
+        transform: scale(1.05);
+    }
+    .feed-image-badge-label {
+        position: absolute;
+        bottom: 8px;
+        left: 8px;
+        background: rgba(0, 0, 0, 0.7);
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        pointer-events: none;
+    }
+
     /* Animation delay list */
     .timeline-feed .animate-fade-up {
         opacity: 0;
@@ -277,11 +321,98 @@
             transform: translateY(0);
         }
     }
+
+    /* Filter buttons */
+    .btn-filter-feed {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        border-radius: 20px;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    }
+    .btn-filter-feed:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text-main);
+    }
+    .btn-filter-feed.active {
+        background: var(--color-primary);
+        color: #fff;
+        border-color: var(--color-primary);
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+    }
+    body.light-theme .btn-filter-feed {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        color: #64748b;
+    }
+    body.light-theme .btn-filter-feed.active {
+        background: var(--color-primary);
+        color: #fff;
+        border-color: var(--color-primary);
+    }
+
+    /* Stats Dashboard */
+    .stat-pill {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        transition: all 0.25s ease;
+    }
+    .stat-pill:hover {
+        background: rgba(255, 255, 255, 0.05);
+        transform: translateY(-1px);
+        border-color: rgba(56, 189, 248, 0.12);
+    }
+    .stat-icon i {
+        font-size: 16px;
+    }
+    .stat-num {
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--text-main);
+        line-height: 1.1;
+    }
+    .stat-lbl {
+        font-size: 9px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-top: 2px;
+    }
+    body.light-theme .stat-pill {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+    
+    /* Scrollbar hide helper */
+    .scrollbar-hidden::-webkit-scrollbar {
+        display: none;
+    }
+    .scrollbar-hidden {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
 </style>
 
 <div class="container-fluid py-4" style="max-width: 600px; margin: 0 auto;">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold mb-0" style="color: var(--text-main); font-family: var(--font-heading);"><i class="bi bi-rss-fill me-2 text-primary"></i>SafeFeed</h4>
+    </div>
+
+
+    <!-- Category Filter Pills -->
+    <div class="d-flex gap-2 overflow-auto pb-2 mb-4 scrollbar-hidden" style="white-space: nowrap;">
+        <button class="btn btn-filter-feed active" data-filter="all">Semua</button>
+        <button class="btn btn-filter-feed" data-filter="Hazard">⚠️ Hazard</button>
+        <button class="btn btn-filter-feed" data-filter="P2h">🚗 P2H</button>
+        <button class="btn btn-filter-feed" data-filter="SafetyTalk">📣 Safety Talk</button>
+        <button class="btn btn-filter-feed" data-filter="P5m">👥 P5M</button>
+        <button class="btn btn-filter-feed" data-filter="Inspection">📋 Inspeksi</button>
+        <button class="btn btn-filter-feed" data-filter="Observation">👁️ Observasi</button>
     </div>
 
     <div class="timeline-feed">
@@ -304,6 +435,20 @@
             <div id="timelineEnd" class="text-center text-muted py-3 d-none" style="font-size: 12px;">Semua aktivitas sudah dimuat.</div>
             <div id="timelineSentinel" style="height: 1px;"></div>
         }
+    </div>
+</div>
+
+<!-- Modal Full Image Preview -->
+<div class="modal fade" id="timelineImageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background: rgba(0, 0, 0, 0.95); border: 1px solid rgba(255,255,255,0.15); border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <img id="timelineModalImage" src="" class="img-fluid" style="max-height: 80vh; border-radius: 8px; object-fit: contain;" />
+            </div>
+        </div>
     </div>
 </div>
 
@@ -340,7 +485,18 @@
                     const hasMoreHeader = (response.headers.get('X-Has-More') || '0') === '1';
 
                     if (html && html.trim().length > 0) {
-                        $timelineItems.append(html);
+                        var $newCards = $(html);
+                        $timelineItems.append($newCards);
+                        
+                        var currentFilter = $('.btn-filter-feed.active').data('filter');
+                        if (currentFilter !== 'all') {
+                            $newCards.each(function() {
+                                var card = $(this);
+                                if (card.hasClass('timeline-card') && card.data('type') !== currentFilter) {
+                                    card.hide();
+                                }
+                            });
+                        }
                     }
 
                     timelineSkip += itemCount;
@@ -368,6 +524,21 @@
 
                 observer.observe(timelineSentinel);
             }
+
+            // Filter stream items
+            $(document).on('click', '.btn-filter-feed', function() {
+                var filterBtn = $(this);
+                $('.btn-filter-feed').removeClass('active');
+                filterBtn.addClass('active');
+
+                var filterValue = filterBtn.data('filter');
+                if (filterValue === 'all') {
+                    $('.timeline-card').fadeIn(150);
+                } else {
+                    $('.timeline-card').hide();
+                    $('.timeline-card[data-type="' + filterValue + '"]').fadeIn(150);
+                }
+            });
 
             // Like action (delegated for dynamic cards)
             $(document).on('click', '.btn-like', function() {
@@ -467,6 +638,12 @@
                 
                 alert('Tautan timeline berhasil disalin ke clipboard!');
             }
+        }
+
+        function viewFullImage(url) {
+            var modal = new bootstrap.Modal(document.getElementById('timelineImageModal'));
+            document.getElementById('timelineModalImage').src = url;
+            modal.show();
         }
     </script>
 }

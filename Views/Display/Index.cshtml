@@ -2,531 +2,1775 @@
     Layout = null;
 }
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>K3 Timeline - PT INDEXIM COALINDO</title>
+    <title>Mari Berbudaya Safety â€” PT INDEXIM COALINDO</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
     <style>
-        body {
-            background-color: #f1f5f9;
-            font-family: 'Inter', sans-serif;
-            color: #0f172a;
-            margin: 0;
-            padding: 0;
-            padding-bottom: 80px;
+    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    :root {
+        --bg:          #0f172a; /* Slate 900 */
+        --bg-card:     #1e293b; /* Slate 800 */
+        --panel:       #1e293b;
+        --border:      #334155; /* Slate 700 */
+        --brutal-brd:  #020617; /* Slate 950 */
+        --txt:         #f8fafc;
+        --muted:       #94a3b8;
+        --blue:        #38bdf8;
+        --green:       #10b981;
+        --red:         #ef4444;
+        --amber:       #f59e0b;
+        --purple:      #a855f7;
+        --pink:        #ec4899;
+        --teal:        #14b8a6;
+        --r:           16px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        background: var(--bg);
+        background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        background-size: 24px 24px;
+        font-family: 'Outfit', sans-serif;
+        color: var(--txt);
+        height: 100vh;
+        overflow: hidden;
+        position: relative;
+    }0%, rgba(14, 116, 144, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 70% 70%, rgba(88, 28, 135, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(30, 58, 138, 0.12) 0%, transparent 45%),
+            radial-gradient(circle at 20% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 45%);
+        animation: rotateBg 45s linear infinite;
+        z-index: -1;
+        pointer-events: none;
+    }
+
+    @@keyframes rotateBg {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       OUTER GRID: HEADER + BODY
+    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .tv {
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        height: 100vh;
+        padding: 14px;
+        gap: 12px;
+    }
+
+    /* Scrolling Marquee */
+    .running-text-wrap {
+        background: var(--panel);
+        border: 2px solid var(--brutal-brd);
+        border-radius: var(--r);
+        padding: 8px 16px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        box-shadow: 6px 6px 0px var(--brutal-brd);
+        gap: 14px;
+        height: 48px;
+    }
+    .marquee-container {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+        height: 20px;
+        display: flex;
+        align-items: center;
+    }
+    .marquee-text {
+        white-space: nowrap;
+        position: absolute;
+        padding-left: 100%;
+        animation: scrollMarquee 45s linear infinite;
+        font-size: 13px;
+        font-weight: 600;
+        color: #f1f5f9;
+        letter-spacing: 0.5px;
+        will-change: transform;
+    }
+    @@keyframes scrollMarquee {
+        0%   { transform: translate3d(0, 0, 0); }
+        100% { transform: translate3d(-100%, 0, 0); }
+    }
+
+    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       HEADER
+    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .tv-hdr {
+        background: var(--panel);
+        border: 2px solid var(--brutal-brd);
+        border-radius: var(--r);
+        padding: 10px 22px;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        box-shadow: 6px 6px 0px var(--brutal-brd);
+    }
+
+    .hdr-brand { display: flex; align-items: center; gap: 12px; }
+
+    .hdr-icon {
+        width: 44px; height: 44px; border-radius: 50%;
+        background: linear-gradient(135deg, #0ea5e9, #6366f1);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; color: #fff;
+        box-shadow: 0 0 20px rgba(56,189,248,.45);
+        animation: iconPulse 3.5s ease-in-out infinite;
+    }
+    @@keyframes iconPulse {
+        0%,100% { box-shadow: 0 0 14px rgba(56,189,248,.35); }
+        50%      { box-shadow: 0 0 32px rgba(56,189,248,.75); }
+    }
+
+    .hdr-title   { font-size: 21px; font-weight: 900; background: linear-gradient(90deg,#38bdf8,#c084fc,#f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: .4px; }
+    .hdr-sub     { font-size: 10px; color: var(--muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-top: 1px; }
+
+    .hdr-center  { text-align: center; }
+    .refresh-badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.2);
+        border-radius: 8px; padding: 5px 13px;
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+        animation: badgeGlow 3s infinite ease-in-out;
+    }
+    .refresh-label { font-size: 11px; font-weight: 800; color: #34d399; letter-spacing: 0.5px; }
+    .refresh-countdown { font-size: 10px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+
+    /* Sonar ping red live dot */
+    .sonar-ping {
+        position: relative;
+        display: inline-block;
+        width: 8px; height: 8px;
+        background-color: #ef4444;
+        border-radius: 50%;
+    }
+    .sonar-ping::after {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        border-radius: 50%;
+        background-color: #ef4444;
+        animation: sonar 2s infinite ease-out;
+    }
+    @@keyframes sonar {
+        0% { transform: scale(1); opacity: 0.8; }
+        100% { transform: scale(3.5); opacity: 0; }
+    }
+
+    @@keyframes badgeGlow {
+        0%, 100% { box-shadow: 0 0 10px rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); }
+        50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.38); border-color: rgba(16, 185, 129, 0.5); }
+    }
+
+    .hdr-clock { text-align: right; }
+    .clock-time { font-size: 27px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+    .clock-date { font-size: 10px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+
+    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       BODY GRID: LEFT ANALYTICS | RIGHT FEED
+    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .tv-body {
+        display: grid;
+        grid-template-columns: 40% 1fr;
+        gap: 12px;
+        overflow: hidden;
+    }
+
+    /* â”€â”€ LEFT COLUMN â”€â”€ */
+    .left-col {
+        display: grid;
+        grid-template-rows: auto 1.4fr 1fr;
+        gap: 12px;
+        overflow: hidden;
+    }
+
+    /* Rotating Chart Panel Slides */
+    .chart-slide {
+        position: absolute; inset: 0;
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.6s ease, transform 0.6s ease;
+        transform: scale(0.97);
+    }
+    .chart-slide.active {
+        opacity: 1; pointer-events: auto;
+        transform: scale(1);
+    }
+    .chart-dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: rgba(255,255,255,0.18); cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-block;
+    }
+    .chart-dot.active {
+        background: var(--blue);
+        box-shadow: 0 0 8px var(--blue);
+        width: 14px; border-radius: 3px;
+    }
+
+    /* â”€â”€ Panel â”€â”€ */
+    .panel {
+        background: var(--panel);
+        backdrop-filter: blur(24px);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 4px 4px 0px var(--border);
+    }
+
+    /* ──────────────── Section Header ──────────────── */
+    .sec-hdr {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 10px; font-weight: 800;
+        text-transform: uppercase; letter-spacing: .8px;
+        color: var(--muted); margin-bottom: 10px; flex-shrink: 0;
+    }
+    .sec-hdr i { font-size: 12px; }
+
+    /* ──────────────── KPI Cards ──────────────── */
+    .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+
+    .kpi {
+        background: var(--bg);
+        border: 2px solid var(--brutal-brd);
+        border-radius: 10px;
+        padding: 9px 6px;
+        text-align: center;
+        box-shadow: 3px 3px 0px var(--brutal-brd);
+    }
+    .kpi-lbl { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 3px; }
+    .kpi-val { font-size: 20px; font-weight: 900; line-height: 1; }
+    .kpi-target { font-size: 8px; color: var(--muted); margin-top: 1px; }
+
+    /* â”€â”€ Chart containers â”€â”€ */
+    .chart-wrap { flex: 1; position: relative; min-height: 0; }
+
+    /* â”€â”€ Company panels with tabs â”€â”€ */
+    .tab-row {
+        display: flex; gap: 6px; margin-bottom: 10px; flex-shrink: 0;
+    }
+    .tab-btn {
+        flex: 1; padding: 5px 4px;
+        background: var(--bg); border: 2px solid var(--border);
+        border-radius: 8px; font-size: 9.5px; font-weight: 800;
+        color: var(--muted); cursor: pointer; text-transform: uppercase;
+        letter-spacing: .4px; transition: all .25s ease;
+    }
+    .tab-btn.active {
+        background: rgba(56,189,248,.12);
+        border-color: #38bdf8;
+        color: #38bdf8;
+    }
+    .tab-pane { display: none; flex: 1; overflow-y: auto; flex-direction: column; gap: 6px; }
+    .tab-pane.active { display: flex; }
+    .tab-pane::-webkit-scrollbar { width: 4px; }
+    .tab-pane::-webkit-scrollbar-thumb { background: rgba(255,255,255,.07); border-radius: 2px; }
+
+    /* â”€â”€ Company Row â”€â”€ */
+    .co-row {
+        display: flex; align-items: center; gap: 8px;
+        background: var(--bg);
+        border: 2px solid var(--border);
+        border-radius: 9px;
+        padding: 8px 10px; flex-shrink: 0;
+    }
+    .co-rank {
+        width: 22px; height: 22px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10px; font-weight: 900; color: #000; flex-shrink: 0;
+    }
+    .co-name { font-size: 11.5px; font-weight: 700; color: #fff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .co-bar-wrap { width: 80px; height: 5px; background: rgba(255,255,255,.06); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+    .co-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+    .co-pct { font-size: 13px; font-weight: 900; flex-shrink: 0; text-align: right; }
+    .co-detail { font-size: 8.5px; color: var(--muted); text-align: right; }
+
+    /* â”€â”€ Stagnant pill â”€â”€ */
+    .stagnant-tag {
+        font-size: 8px; font-weight: 800; padding: 2px 6px;
+        background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.22);
+        color: #f87171; border-radius: 4px; flex-shrink: 0;
+    }
+
+    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       RIGHT COLUMN â€” SAFEFEED GRID
+    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .right-col { display: grid; grid-template-rows: 1.55fr 1fr; gap: 12px; overflow: hidden; }
+
+    .feed-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0; }
+    .feed-title-txt { font-size: 13.5px; font-weight: 900; display: flex; align-items: center; gap: 8px; }
+
+    .feed-grid {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 10px;
+        align-content: start;
+        padding-right: 2px;
+    }
+    .feed-grid::-webkit-scrollbar { width: 4px; }
+    .feed-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,.07); border-radius: 2px; }
+
+    /* Feed Card */
+    .fcard {
+        background: var(--bg);
+        border: 2px solid var(--brutal-brd);
+        border-radius: 11px;
+        overflow: hidden;
+        display: flex; flex-direction: column;
+        box-shadow: 4px 4px 0px var(--brutal-brd);
+    }
+    .fcard.is-new {
+        animation: cardIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @@keyframes cardIn {
+        from { 
+            opacity: 0; 
+            transform: translateY(24px) scale(0.96); 
+            filter: blur(4px);
+            border-color: rgba(56, 189, 248, 0.6);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
         }
-        .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        to { 
+            opacity: 1; 
+            transform: translateY(0) scale(1);
+            filter: blur(0);
         }
-        .header h4 {
-            font-weight: 800;
-            margin: 0;
-            background: linear-gradient(135deg, #0f172a, #475569);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .feed-container {
-            max-width: 500px;
-            margin: 20px auto;
-            padding: 0 10px;
-        }
-        .post-card {
-            background: #fff;
-            border-radius: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-            overflow: hidden;
-            border: 1px solid rgba(0,0,0,0.02);
-            transition: transform 0.3s ease;
-            animation: fadeIn 0.5s ease-out;
-        }
-        .post-card.new-arrival {
-            animation: fadeIn 0.5s ease-out, pulseNew 1.2s ease-out;
-        }
-        @@keyframes pulseNew {
-            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.45); }
-            100% { box-shadow: 0 0 0 16px rgba(59, 130, 246, 0); }
-        }
-        @@keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .post-header {
-            padding: 16px;
-            display: flex;
-            align-items: center;
-        }
-        .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid #e2e8f0;
-            margin-right: 12px;
-        }
-        .user-info h6 {
-            margin: 0;
-            font-weight: 700;
-            font-size: 14px;
-            color: #1e293b;
-        }
-        .user-info span {
-            font-size: 11px;
-            color: #64748b;
-        }
-        .status-badge {
-            margin-left: auto;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 4px 8px;
-            border-radius: 10px;
-            text-transform: uppercase;
-        }
-        .status-open { background: rgba(244, 63, 94, 0.1); color: #f43f5e; }
-        .status-closed { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
-        .status-neutral { background: rgba(56, 189, 248, 0.1); color: #0284c7; }
-        
-        .post-media {
-            width: 100%;
-            max-height: 500px;
-            object-fit: cover;
-            background-color: #f8fafc;
-            border-top: 1px solid #f1f5f9;
-            border-bottom: 1px solid #f1f5f9;
-        }
-        
-        .post-actions {
-            padding: 12px 16px;
-            display: flex;
-            gap: 16px;
-        }
-        .action-btn {
-            background: none;
-            border: none;
-            padding: 0;
-            color: #0f172a;
-            font-size: 24px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .action-btn:hover {
-            transform: scale(1.1);
-        }
-        .action-btn.liked {
-            color: #f43f5e;
-            animation: pop 0.3s ease;
-        }
-        @@keyframes pop {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.3); }
-            100% { transform: scale(1); }
-        }
-        
-        .post-likes {
-            padding: 0 16px;
-            font-weight: 700;
-            font-size: 13px;
-            margin-bottom: 6px;
-        }
-        
-        .post-caption {
-            padding: 0 16px;
-            font-size: 13px;
-            margin-bottom: 8px;
-        }
-        .post-caption span.type-tag {
-            font-weight: 700;
-            color: #0284c7;
-            margin-right: 4px;
-        }
-        
-        .post-comments {
-            padding: 0 16px 12px;
-            font-size: 13px;
-            color: #475569;
-        }
-        .comment-item {
-            margin-bottom: 4px;
-        }
-        .comment-name {
-            font-weight: 700;
-            color: #1e293b;
-            margin-right: 4px;
-        }
-        
-        .comment-input-area {
-            padding: 12px 16px;
-            border-top: 1px solid #f1f5f9;
-            display: flex;
-            align-items: center;
-        }
-        .comment-input {
-            flex-grow: 1;
-            border: none;
-            background: transparent;
-            font-size: 13px;
-            outline: none;
-        }
-        .comment-submit {
-            color: #0284c7;
-            font-weight: 700;
-            font-size: 13px;
-            background: none;
-            border: none;
-            padding: 0;
-            cursor: pointer;
-        }
-        .comment-submit:disabled {
-            color: #cbd5e1;
-        }
-        
-        .post-time {
-            padding: 0 16px 16px;
-            font-size: 10px;
-            color: #94a3b8;
-            text-transform: uppercase;
-        }
-        .meta-line {
-            font-size: 11px;
-            color: #64748b;
-        }
-        .risk-badge {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 4px 8px;
-            border-radius: 10px;
-            color: #fff;
-            text-transform: uppercase;
-        }
+    }
+    .fcard-img { width: 100%; height: 148px; object-fit: cover; display: block; background: #0f172a; }
+    .fcard-noimg { width: 100%; height: 148px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.015); color: rgba(255,255,255,.1); font-size: 28px; }
+    .fcard-body { padding: 9px 11px 11px; display: flex; flex-direction: column; gap: 6px; }
+    .fcard-user { display: flex; align-items: center; gap: 7px; }
+    .fcard-avatar { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(56,189,248,.35); flex-shrink: 0; }
+    .fcard-uname { font-size: 11.5px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fcard-uloc  { font-size: 9px; color: var(--muted); }
+    .fcard-badges { display: flex; gap: 4px; flex-wrap: wrap; }
+    .bgt { padding: 2px 5px; border-radius: 4px; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+    .bgt-type   { background: rgba(56,189,248,.1);   color: #38bdf8; }
+    .bgt-closed { background: rgba(16,185,129,.13); color: #34d399; border: 1px solid rgba(16,185,129,.2); }
+    .bgt-open   { background: rgba(239,68,68,.13);  color: #f87171; border: 1px solid rgba(239,68,68,.2); }
+    .bgt-progres{ background: rgba(245,158,11,.13); color: #fbbf24; border: 1px solid rgba(245,158,11,.2); }
+    .fcard-ttl  { font-size: 11.5px; font-weight: 700; color: #fff; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+    /* Skeleton */
+    .skel { background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.04); border-radius: 11px; height: 210px; position: relative; overflow: hidden; }
+    .skel::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.04), transparent); animation: shimmer 1.6s infinite; }
+    @@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       NOTIFICATION POPUP
+    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       PREMIUM NOTIFICATION CARD
+    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    .notif-card {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 440px;
+        background: var(--bg-card);
+        border: 2px solid var(--brutal-brd);
+        border-radius: 16px;
+        z-index: 10000;
+        box-shadow: 8px 8px 0px var(--brutal-brd);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transform: translateX(120%) scale(0.9);
+        opacity: 0;
+        transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: none;
+    }
+    .notif-card.show {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+    }
+    .notif-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .notif-card-body {
+        display: grid;
+        grid-template-columns: 130px 1fr;
+        gap: 14px;
+        padding: 16px;
+    }
+    .notif-card-img {
+        width: 130px;
+        height: 130px;
+        object-fit: cover;
+        border-radius: 10px;
+        background: #0f172a;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .notif-card-noimg {
+        width: 130px;
+        height: 130px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.01);
+        border: 1px dashed rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        color: rgba(255, 255, 255, 0.12);
+        font-size: 28px;
+    }
+    .notif-card-content {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        justify-content: center;
+    }
+    .notif-card-progress {
+        height: 4px;
+        background: rgba(255, 255, 255, 0.05);
+        position: relative;
+    }
+    .notif-card-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #38bdf8, #818cf8);
+        width: 0%;
+        transition: none;
+    }
+
+    /* â”€â”€ Initials Avatar â”€â”€ */
+    .fcard-avatar-initials {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 800;
+        color: #fff;
+        flex-shrink: 0;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        box-shadow: inset 0 0 4px rgba(255,255,255,0.25);
+    }
+
+    /* Screen flash */
+    .screen-flash { position: fixed; inset: 0; background: #38bdf8; z-index: 9999; opacity: 0; pointer-events: none; }
+    .screen-flash.flash { animation: flashAnim 1.2s ease-out; }
+    @@keyframes flashAnim { 0%{opacity:0} 25%{opacity:.18} 100%{opacity:0} }
+
+    /* â”€â”€ Update overlay â”€â”€ */
+    .update-toast {
+        position: fixed; top: 24px; right: 24px;
+        background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.3);
+        border-radius: 10px; padding: 10px 16px;
+        display: flex; align-items: center; gap: 8px;
+        font-size: 12px; font-weight: 700; color: #34d399;
+        z-index: 9000; opacity: 0; transform: translateY(-8px);
+        transition: all .35s ease;
+        pointer-events: none;
+    }
+    .update-toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Audio unlock badge pulse anim */
+    @@keyframes pulseAlert {
+        0% { transform: scale(1); box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35); }
+        50% { transform: scale(1.04); box-shadow: 0 8px 36px rgba(239, 68, 68, 0.6); }
+        100% { transform: scale(1); box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35); }
+    }
     </style>
 </head>
 <body>
+<div class="screen-flash" id="screenFlash"></div>
+<div class="update-toast" id="updateToast">
+    <i class="bi bi-arrow-clockwise"></i> <span id="updateToastMsg">Data diperbarui</span>
+</div>
 
-    <header class="header">
-        <h4><i class="bi bi-shield-fill-check me-2" style="color: #a855f7;"></i>K3 Timeline</h4>
-    </header>
+<!-- Floating Audio Warning Badge -->
+<div id="audioUnlockBadge" style="position: fixed; bottom: 24px; left: 24px; z-index: 10000; display: none; background: rgba(239, 68, 68, 0.95); color: #fff; padding: 12px 18px; border-radius: 10px; font-weight: 700; font-size: 12.5px; cursor: pointer; border: 1px solid rgba(239, 68, 68, 0.55); align-items: center; gap: 10px; font-family: 'Outfit', sans-serif; backdrop-filter: blur(8px); animation: pulseAlert 2s infinite; transition: all 0.3s ease;">
+    <i class="bi bi-volume-mute-fill" style="font-size: 16px;"></i>
+    <span>ðŸ”‡ Suara Terblokir! Klik di sini untuk aktifkan audio</span>
+</div>
 
-    <div class="feed-container" id="feedContainer">
-        <div class="text-center mt-5">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="text-muted mt-3">Memuat aktivitas K3...</p>
-        </div>
-    </div>
+<div class="tv">
 
-    <!-- Login Prompt Modal for Guests -->
-    <div class="modal fade" id="guestModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="border-radius: 20px; border: none;">
-                <div class="modal-body p-4 text-center">
-                    <h5 style="font-weight: 800; margin-bottom: 16px;">Tulis Nama Anda</h5>
-                    <p class="text-muted" style="font-size: 13px;">Anda mengakses sebagai publik. Silakan masukkan nama Anda untuk berkomentar.</p>
-                    <input type="text" id="guestNameInput" class="form-control mb-3" placeholder="Nama Anda..." style="border-radius: 12px; background: #f1f5f9; border: none; padding: 12px 16px;" />
-                    <button class="btn btn-primary w-100" style="border-radius: 12px; padding: 12px; font-weight: 700;" onclick="saveGuestName()">Simpan & Komentar</button>
-                    <button class="btn btn-light w-100 mt-2" style="border-radius: 12px; padding: 12px; font-weight: 700;" data-bs-dismiss="modal">Batal</button>
-                </div>
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• HEADER â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <header class="tv-hdr">
+        <div class="hdr-brand">
+            <img src="~/images/logo_mbs.png" style="height: 38px; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.3)); margin-right: 4px;" alt="MBS Logo" />
+            <div>
+                <div class="hdr-title">Mari Berbudaya Safety</div>
+                <div class="hdr-sub">PT INDEXIM COALINDO â€” K3 Command Center</div>
             </div>
         </div>
-    </div>
 
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        let currentFeedData = "";
-        let currentTopItemKey = "";
-        let pendingCommentAction = null;
-        let isUserTyping = false;
 
-        document.addEventListener('focusin', function(e) {
-            if(e.target && e.target.classList.contains('comment-input')) {
-                isUserTyping = true;
-            }
-        });
-        
-        document.addEventListener('focusout', function(e) {
-            if(e.target && e.target.classList.contains('comment-input')) {
-                setTimeout(() => { isUserTyping = false; }, 500); // delay release
-            }
-        });
+        <div class="hdr-center">
+            <div class="refresh-badge">
+                <span class="sonar-ping"></span>
+                <span class="refresh-label">LIVE REALTIME</span>
+            </div>
+            <div class="refresh-countdown" id="nextRefreshLabel">Refresh berikutnya: --</div>
+        </div>
 
-        function timeAgo(dateString) {
-            const date = new Date(dateString);
-            const seconds = Math.floor((new Date() - date) / 1000);
+        <div class="hdr-clock">
+            <div class="clock-time" id="liveClock">--:--:--</div>
+            <div class="clock-date" id="liveDate">--</div>
+        </div>
+    </header>
+
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• BODY â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="tv-body">
+
+        <!-- â”€â”€ LEFT COLUMN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+        <div class="left-col">
+
+            <!-- KPI Row -->
+            <div class="panel" style="padding: 12px 14px;">
+                <div class="kpi-row">
+                    <div class="kpi">
+                        <div class="kpi-lbl">Karyawan</div>
+                        <div class="kpi-val" id="kv-kar" style="color:var(--blue)">-</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi-lbl">Target Bulan</div>
+                        <div class="kpi-val" id="kv-tgt" style="color:var(--amber)">-</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi-lbl">Realisasi</div>
+                        <div class="kpi-val" id="kv-real" style="color:var(--green)">-</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi-lbl">Hazard Open</div>
+                        <div class="kpi-val" id="kv-open" style="color:var(--red)">-</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi-lbl">Close Rate</div>
+                        <div class="kpi-val" id="kv-close" style="color:var(--teal)">-</div>
+                        <div class="kpi-target">% closed</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi-lbl">Hari Kerja Aman</div>
+                        <div class="kpi-val" id="kv-safe-days" style="color:#10b981">-</div>
+                        <div class="kpi-target">Zero Incident</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dynamic Rotating Chart Panel -->
+            <div class="panel" style="position:relative; display:flex; flex-direction:column; overflow:hidden;">
+                <div class="sec-hdr" style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:10px;">
+                    <span id="rotatingChartTitle">
+                        <i class="bi bi-bar-chart-fill" style="color:var(--blue)"></i> Pencapaian Per Kategori SAP
+                    </span>
+                    <div style="display:flex; gap:5px; align-items:center;" id="chartIndicatorDots">
+                        <span class="chart-dot active" onclick="setChartIndex(0)"></span>
+                        <span class="chart-dot"        onclick="setChartIndex(1)"></span>
+                        <span class="chart-dot"        onclick="setChartIndex(2)"></span>
+                        <span class="chart-dot"        onclick="setChartIndex(3)"></span>
+                        <span class="chart-dot"        onclick="setChartIndex(4)"></span>
+                    </div>
+                </div>
+                <div class="chart-wrap" style="flex:1; position:relative; min-height:0;">
+                    <div class="chart-slide active" id="slide-chart-1">
+                        <canvas id="chartSap"></canvas>
+                    </div>
+                    <div class="chart-slide" id="slide-chart-2">
+                        <canvas id="chartDonut"></canvas>
+                    </div>
+                    <div class="chart-slide" id="slide-chart-3">
+                        <canvas id="chartRisks"></canvas>
+                    </div>
+                    <div class="chart-slide" id="slide-chart-4">
+                        <canvas id="chartStatus"></canvas>
+                    </div>
+                    <div class="chart-slide" id="slide-chart-5">
+                        <canvas id="chartToday"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Company Rankings Panel -->
+            <div class="panel">
+                <div class="tab-row">
+                    <button class="tab-btn active" onclick="switchTab('fastest',this)">ðŸš€ Tercepat</button>
+                    <button class="tab-btn"        onclick="switchTab('stagnant',this)">ðŸ”´ Belum Gerak</button>
+                    <button class="tab-btn"        onclick="switchTab('all',this)">ðŸ“‹ Semua</button>
+                </div>
+
+                <div class="tab-pane active" id="tab-fastest"></div>
+                <div class="tab-pane"        id="tab-stagnant"></div>
+                <div class="tab-pane"        id="tab-all"></div>
+            </div>
+
+        </div><!-- /left-col -->
+
+        <!-- â”€â”€ RIGHT COLUMN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+        <div class="right-col">
             
-            let interval = seconds / 31536000;
-            if (interval > 1) return Math.floor(interval) + " tahun yang lalu";
-            interval = seconds / 2592000;
-            if (interval > 1) return Math.floor(interval) + " bulan yang lalu";
-            interval = seconds / 86400;
-            if (interval > 1) return Math.floor(interval) + " hari yang lalu";
-            interval = seconds / 3600;
-            if (interval > 1) return Math.floor(interval) + " jam yang lalu";
-            interval = seconds / 60;
-            if (interval > 1) return Math.floor(interval) + " menit yang lalu";
-            return "Baru saja";
-        }
+            <!-- SafeFeed Photo Highlights (approx 61%) -->
+            <div class="panel" style="padding:14px 16px;">
+                <div class="feed-hdr" style="margin-bottom: 6px;">
+                    <div class="feed-title-txt" style="display: flex; align-items: center; gap: 8px;">
+                        <i class="bi bi-images" style="color:var(--blue); font-size:17px;"></i>
+                        <span>SAFEFEED â€” Aktivitas & Perbaikan K3</span>
+                        <span id="feedPageIndicator" style="font-size: 9.5px; color: var(--blue); font-weight: 800; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25); padding: 2px 8px; border-radius: 6px; display: none;"></span>
+                    </div>
+                    <div style="font-size:10.5px; color:var(--muted);" id="feedCount">Memuat...</div>
+                </div>
 
-        function getStatusClass(status) {
-            if(status.toLowerCase() === 'open') return 'status-open';
-            if(status.toLowerCase() === 'closed' || status.toLowerCase() === 'selesai') return 'status-closed';
-            return 'status-neutral';
-        }
+                <div class="tab-row feed-tabs" style="margin-bottom: 12px; flex-shrink: 0;">
+                    <button class="tab-btn active" id="btn-feed-highlight" onclick="setFeedFilter('highlight')">ðŸ“· Highlight</button>
+                    <button class="tab-btn"        id="btn-feed-open"      onclick="setFeedFilter('open')">ðŸ”´ Open</button>
+                    <button class="tab-btn"        id="btn-feed-progres"   onclick="setFeedFilter('progres')">ðŸŸ¡ Progres</button>
+                    <button class="tab-btn"        id="btn-feed-closed"    onclick="setFeedFilter('closed')">ðŸŸ¢ Closed</button>
+                </div>
 
-        function getStatusLabel(item) {
-            const status = (item.status || '').toLowerCase();
+                <div class="feed-grid" id="feedGrid">
+                    <div class="skel"></div><div class="skel"></div>
+                    <div class="skel"></div><div class="skel"></div>
+                    <div class="skel"></div><div class="skel"></div>
+                </div>
+            </div>
 
-            if ((item.type || '').toLowerCase() === 'observation') {
-                if (status === 'violation') return 'VIOLATION';
-                if (status === 'improvement') return 'IMPROVEMENT';
-                return 'POSITIVE';
-            }
-
-            if ((item.type || '').toLowerCase() === 'p2h') {
-                return status === 'good' ? 'AMAN (GOOD)' : 'ADA TEMUAN (NOT GOOD)';
-            }
-
-            if (status === 'progres') return 'PROGRES';
-            if (status === 'open') return 'OPEN';
-            return 'CLOSED';
-        }
-
-        function getRiskBadgeStyle(riskLevel) {
-            const risk = (riskLevel || '').toLowerCase();
-            if (risk === 'ekstrim') return 'background:#b91c1c;';
-            if (risk === 'tinggi') return 'background:#f43f5e;';
-            if (risk === 'sedang') return 'background:#f97316;';
-            return 'background:#22c55e;';
-        }
-
-        function renderFeed(data, hasNewTopItem) {
-            const container = document.getElementById('feedContainer');
-            let html = '';
-
-            data.forEach((item, index) => {
-                // Determine if user has liked locally (for guest experience)
-                const isLikedLocally = localStorage.getItem(`liked_${item.type}_${item.id}`) === 'true';
-                
-                let commentsHtml = '';
-                if(item.comments && item.comments.length > 0) {
-                    item.comments.slice(-3).forEach(c => { // show last 3
-                        commentsHtml += `<div class="comment-item"><span class="comment-name">${c.name}</span> ${c.text}</div>`;
-                    });
-                    if(item.comments.length > 3) {
-                        commentsHtml = `<div class="text-muted mb-1" style="font-size: 11px;">Lihat semua ${item.comments.length} komentar</div>` + commentsHtml;
-                    }
-                }
-
-                html += `
-                    <div class="post-card ${hasNewTopItem && index === 0 ? 'new-arrival' : ''}" id="post-${item.type}-${item.id}">
-                        <div class="post-header">
-                            <img src="${item.userProfilePic}" class="avatar" alt="Avatar">
-                            <div class="user-info">
-                                <h6>${item.name}</h6>
-                                <span>${item.area || item.location || 'General Area'} • ${item.department || 'All Dept'}</span>
-                                ${item.location ? `<div class="meta-line"><i class="bi bi-geo-alt-fill"></i> ${item.location}</div>` : ''}
+            <!-- Additional Analytics & RHR Locations (approx 39%) -->
+            <div class="panel" style="padding:14px 16px; display:grid; grid-template-columns: 1.2fr 1.1fr 1fr; gap:14px; overflow:hidden;">
+                <!-- Section 1: RHR Ratios -->
+                <div style="display:flex; flex-direction:column; justify-content:space-between;">
+                    <div class="sec-hdr">
+                        <i class="bi bi-shield-slash-fill" style="color:var(--red)"></i> Indikator Resiko & Kepatuhan (RHR)
+                    </div>
+                    <div class="d-flex flex-column gap-2 justify-content-center" style="flex:1;">
+                        <!-- RRI -->
+                        <div>
+                            <div class="d-flex justify-content-between mb-1" style="font-size:10.5px;">
+                                <span style="font-weight:700;">Risk Reduction Index (RRI)</span>
+                                <span id="lbl-rri" style="font-weight:900; color:var(--green)">0%</span>
                             </div>
-                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-                                <span class="status-badge ${getStatusClass(item.status)}">${getStatusLabel(item)}</span>
-                                <span class="status-badge status-neutral">${(item.type || '').toUpperCase()}</span>
-                                ${item.riskLevel ? `<span class="risk-badge" style="${getRiskBadgeStyle(item.riskLevel)}"><i class="bi bi-shield-fill-exclamation me-1"></i>${item.riskLevel}</span>` : ''}
+                            <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                                <div id="bar-rri" style="height:100%; width:0%; background:linear-gradient(90deg, var(--red), var(--green)); transition: width 1s ease;"></div>
                             </div>
                         </div>
-                        
-                        ${item.imageUrl ? `<img src="${item.imageUrl}" class="post-media" alt="Post media">` : ''}
-                        
-                        <div class="post-actions">
-                            <button class="action-btn ${isLikedLocally ? 'liked' : ''}" onclick="toggleLike('${item.type}', ${item.id}, this)">
-                                <i class="bi ${isLikedLocally ? 'bi-heart-fill' : 'bi-heart'}"></i>
-                            </button>
-                            <button class="action-btn" onclick="document.getElementById('input-${item.type}-${item.id}').focus()">
-                                <i class="bi bi-chat"></i>
-                            </button>
-                            <button class="action-btn" onclick="sharePost('${item.title}')">
-                                <i class="bi bi-send"></i>
-                            </button>
+                        <!-- Compliance Risk -->
+                        <div>
+                            <div class="d-flex justify-content-between mb-1" style="font-size:10.5px;">
+                                <span style="font-weight:700;">Kepatuhan Resiko Tinggi</span>
+                                <span id="lbl-comp-risk" style="font-weight:900; color:var(--blue)">0%</span>
+                            </div>
+                            <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                                <div id="bar-comp-risk" style="height:100%; width:0%; background:linear-gradient(90deg, var(--amber), var(--blue)); transition: width 1s ease;"></div>
+                            </div>
                         </div>
-                        
-                        <div class="post-likes">
-                            <span id="like-count-${item.type}-${item.id}">${item.likesCount}</span> suka
-                        </div>
-                        
-                        <div class="post-caption">
-                            <span class="fw-bold me-1">${item.name}</span>
-                            ${item.title ? `<span class="fw-semibold">${item.title}${item.description ? ' - ' : ''}</span>` : ''}
-                            <span>${item.description || ''}</span>
-                            ${item.category ? `<div class="mt-1"><span class="text-primary" style="font-size: 12px; font-weight: 500;">#${String(item.category).replaceAll(' ', '')}</span></div>` : ''}
-                        </div>
-                        
-                        <div class="post-comments" id="comments-${item.type}-${item.id}">
-                            ${commentsHtml}
-                        </div>
-                        
-                        <div class="post-time">${timeAgo(item.createdAt)}</div>
-                        
-                        <div class="comment-input-area">
-                            <input type="text" id="input-${item.type}-${item.id}" class="comment-input" placeholder="Tambahkan komentar..." onkeyup="checkInput(this, '${item.type}', ${item.id})">
-                            <button class="comment-submit" id="btn-${item.type}-${item.id}" disabled onclick="postComment('${item.type}', ${item.id})">Kirim</button>
+                        <!-- Weekly Pct -->
+                        <div>
+                            <div class="d-flex justify-content-between mb-1" style="font-size:10.5px;">
+                                <span style="font-weight:700;">Realisasi Target Mingguan</span>
+                                <span id="lbl-weekly-pct" style="font-weight:900; color:var(--purple)">0%</span>
+                            </div>
+                            <div style="height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;">
+                                <div id="bar-weekly-pct" style="height:100%; width:0%; background:linear-gradient(90deg, var(--blue), var(--purple)); transition: width 1s ease;"></div>
+                            </div>
                         </div>
                     </div>
-                `;
-            });
+                </div>
 
-            if(html === '') html = '<div class="text-center mt-5 text-muted">Belum ada aktivitas.</div>';
-            container.innerHTML = html;
-        }
+                <!-- Section 2: Top Locations -->
+                <div style="display:flex; flex-direction:column;">
+                    <div class="sec-hdr">
+                        <i class="bi bi-geo-alt-fill" style="color:var(--amber)"></i> Top Area Temuan Terbanyak
+                    </div>
+                    <div id="location-list" class="d-flex flex-column gap-2 justify-content-center" style="flex:1;">
+                        <div style="font-size:11px; color:var(--muted); text-align:center;">Memuat data...</div>
+                    </div>
+                </div>
 
-        async function fetchFeed() {
-            // Do not override if user is typing
-            if (isUserTyping) return;
+                <!-- Section 3: Radar/Polar Area Visualizer -->
+                <div style="display:flex; flex-direction:column;">
+                    <div class="sec-hdr">
+                        <i class="bi bi-pie-chart-fill" style="color:var(--pink)"></i> Visualisasi Rasio Area
+                    </div>
+                    <div class="chart-wrap" style="flex:1; min-height:0;">
+                        <canvas id="chartLocations"></canvas>
+                    </div>
+                </div>
+            </div>
 
-            try {
-                const response = await fetch('/Display/GetLatestFeed');
-                const data = await response.json();
-                const nextTopItemKey = data && data.length > 0 ? `${data[0].type}_${data[0].id}_${data[0].createdAt}` : '';
-                
-                // Compare to prevent annoying re-renders if nothing changed
-                const dataStr = JSON.stringify(data);
-                if (dataStr !== currentFeedData) {
-                    const hasNewTopItem = currentTopItemKey !== '' && nextTopItemKey !== '' && nextTopItemKey !== currentTopItemKey;
-                    currentFeedData = dataStr;
-                    currentTopItemKey = nextTopItemKey;
-                    renderFeed(data, hasNewTopItem);
+        </div>
 
-                    if (hasNewTopItem) {
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+    </div><!-- /tv-body -->
+
+    <!-- Running Text Footer -->
+    <footer class="running-text-wrap">
+        <div style="background: linear-gradient(135deg, #ef4444, #e11d48); color: #fff; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; padding: 4px 10px; border-radius: 6px; box-shadow: 0 0 12px rgba(239,68,68,0.4); display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+            <span class="sonar-ping" style="background-color: #fff; width: 6px; height: 6px;"></span>
+            INFO K3 LATEST
+        </div>
+        <div class="marquee-container">
+            <div id="marqueeText" class="marquee-text">
+                Memuat pengumuman keselamatan...
+            </div>
+        </div>
+    </footer>
+</div><!-- /tv -->
+
+<!-- Modern Premium Notification Card -->
+<div class="notif-card" id="notifPopup">
+    <div class="notif-card-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <i class="bi bi-bell-fill text-warning animate-bounce"></i>
+            <span style="font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;" id="notifTypeHeader">Laporan K3 Baru</span>
+        </div>
+        <div style="font-size: 8.5px; font-weight: 800; background: rgba(16, 185, 129, 0.12); color: #34d399; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">LIVE</div>
+    </div>
+    <div class="notif-card-body">
+        <div id="notifImgContainer"></div>
+        <div class="notif-card-content">
+            <div style="font-size: 11px; color: var(--muted); font-weight: 600;" id="notifUserLoc"></div>
+            <div style="font-size: 13px; font-weight: 800; color: #fff; line-height: 1.3;" id="notifTitle"></div>
+            <div style="font-size: 11px; color: var(--muted); line-height: 1.4;" id="notifDesc"></div>
+        </div>
+    </div>
+    <div class="notif-card-progress">
+        <div class="notif-card-progress-bar" id="notifProgressBar"></div>
+    </div>
+</div>
+
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   AUDIO
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+const alertSound = new Audio('/notifikasi/freesound_community-plopp-84863.mp3');
+
+function beep() {
+    // Reset playback position to allow overlapping playbacks
+    alertSound.currentTime = 0;
+    alertSound.play()
+        .then(() => {
+            // Successfully played, hide warning badge
+            const badge = document.getElementById('audioUnlockBadge');
+            if (badge) badge.style.display = 'none';
+        })
+        .catch(e => {
+            console.warn("Failed to play sound: ", e);
+            // Autoplay blocked - show the unlock badge
+            const badge = document.getElementById('audioUnlockBadge');
+            if (badge) badge.style.display = 'flex';
+        });
+}
+
+function unlockAudio() {
+    alertSound.currentTime = 0;
+    alertSound.play()
+        .then(() => {
+            const badge = document.getElementById('audioUnlockBadge');
+            if (badge) badge.style.display = 'none';
+            console.log("Audio unlocked successfully.");
+        })
+        .catch(e => console.warn("Could not unlock audio yet:", e));
+}
+
+// Attach event listeners to unlock audio
+document.addEventListener('DOMContentLoaded', () => {
+    const badge = document.getElementById('audioUnlockBadge');
+    if (badge) {
+        badge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            unlockAudio();
+        });
+    }
+    
+    // Unlock on the very first click anywhere on the page
+    document.addEventListener('click', function unlockOnFirstClick() {
+        unlockAudio();
+        document.removeEventListener('click', unlockOnFirstClick);
+    }, { once: true });
+});
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   CLOCK
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function tickClock() {
+    const n = new Date();
+    document.getElementById('liveClock').innerText = n.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    document.getElementById('liveDate').innerText  = n.toLocaleDateString('id-ID',  { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+setInterval(tickClock, 1000); tickClock();
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   COUNTDOWN TIMER
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+const DATA_INTERVAL_S  = 30;   // fetch data every 30 sec
+const PAGE_RELOAD_MIN  = 15;   // full page reload every 15 min
+
+let nextDataAt    = Date.now() + DATA_INTERVAL_S * 1000;
+let pageReloadAt  = Date.now() + PAGE_RELOAD_MIN * 60 * 1000;
+
+function updateCountdown() {
+    const secsLeft = Math.max(0, Math.round((nextDataAt - Date.now()) / 1000));
+    document.getElementById('nextRefreshLabel').innerText =
+        secsLeft > 0
+            ? `Refresh berikutnya: ${secsLeft}s`
+            : 'Memperbarui...';
+
+    const pageLeft = Math.round((pageReloadAt - Date.now()) / 1000);
+    if (pageLeft <= 0) location.reload();
+}
+setInterval(updateCountdown, 1000); updateCountdown();
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   CHARTS
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+Chart.defaults.font.family = 'Outfit';
+const TICK = '#94a3b8';
+const GRID = 'rgba(255,255,255,0.045)';
+
+let cSap = null, cDonut = null, cLoc = null, cRisks = null, cStatus = null, cToday = null;
+
+function buildCharts() {
+    /* SAP Category Horizontal Bar */
+    const ctx1 = document.getElementById('chartSap').getContext('2d');
+    const sapGradTarget = ctx1.createLinearGradient(300, 0, 0, 0);
+    sapGradTarget.addColorStop(0, 'rgba(255,255,255,.12)');
+    sapGradTarget.addColorStop(1, 'rgba(255,255,255,.03)');
+
+    cSap = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: ['Hazard Report', 'Inspeksi', 'Safety Talk', 'Observasi', 'Coaching/P5M'],
+            datasets: [
+                {
+                    label: 'Target',
+                    data: [0,0,0,0,0],
+                    backgroundColor: sapGradTarget,
+                    borderColor: 'rgba(255,255,255,.18)',
+                    borderWidth: 1, borderRadius: 4,
+                    borderSkipped: false
+                },
+                {
+                    label: 'Realisasi',
+                    data: [0,0,0,0,0],
+                    backgroundColor: ['#ef4444','#38bdf8','#a855f7','#14b8a6','#10b981'],
+                    borderRadius: 4,
+                    borderSkipped: false
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#e2e8f0', font: { weight: 'bold', size: 11 }, boxWidth: 10, padding: 14 } },
+                tooltip: {
+                    backgroundColor: 'rgba(5,8,18,.95)',
+                    borderColor: 'rgba(56,189,248,.3)', borderWidth: 1,
+                    callbacks: {
+                        label: ctx => {
+                            const ds = ctx.chart.data.datasets;
+                            if (ctx.datasetIndex === 1) {
+                                const tgt = ds[0].data[ctx.dataIndex];
+                                const pct = tgt > 0 ? Math.round(ctx.raw / tgt * 100) : 0;
+                                return ` ${ctx.raw} (${pct}% dari target ${tgt})`;
+                            }
+                            return ` ${ctx.raw}`;
+                        }
                     }
                 }
-            } catch (error) {
-                console.error("Error fetching feed:", error);
-            }
-        }
-
-        function toggleLike(type, id, btn) {
-            const icon = btn.querySelector('i');
-            const isLiked = icon.classList.contains('bi-heart-fill');
-            const countSpan = document.getElementById(`like-count-${type}-${id}`);
-            let count = parseInt(countSpan.innerText);
-
-            if(isLiked) {
-                // Unlike locally
-                icon.classList.remove('bi-heart-fill');
-                icon.classList.add('bi-heart');
-                btn.classList.remove('liked');
-                count--;
-                localStorage.setItem(`liked_${type}_${id}`, 'false');
-            } else {
-                // Like
-                icon.classList.remove('bi-heart');
-                icon.classList.add('bi-heart-fill');
-                btn.classList.add('liked');
-                count++;
-                localStorage.setItem(`liked_${type}_${id}`, 'true');
-                
-                // Send to server
-                fetch('/Display/AddLike', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ type: type, id: id })
-                });
-            }
-            countSpan.innerText = count;
-        }
-
-        function checkInput(input, type, id) {
-            const btn = document.getElementById(`btn-${type}-${id}`);
-            btn.disabled = input.value.trim() === '';
-            
-            if(event.key === 'Enter' && !btn.disabled) {
-                postComment(type, id);
-            }
-        }
-
-        function postComment(type, id) {
-            const input = document.getElementById(`input-${type}-${id}`);
-            const text = input.value.trim();
-            if(!text) return;
-
-            // Check if user is logged in natively (since this is public page, we rely on local storage for guest name)
-            // The server knows if they are logged in via cookies. If they aren't, the server uses GuestName.
-            const guestName = localStorage.getItem('GuestName');
-            
-            // If they aren't logged in AND don't have a guest name locally, prompt them
-            const isLoggedIn = '@User.Identity?.IsAuthenticated.ToString().ToLower()' === 'true';
-            
-            if(!isLoggedIn && !guestName) {
-                pendingCommentAction = { type, id, text };
-                const modal = new bootstrap.Modal(document.getElementById('guestModal'));
-                modal.show();
-                return;
-            }
-
-            executeCommentPost(type, id, text, guestName);
-            input.value = '';
-            document.getElementById(`btn-${type}-${id}`).disabled = true;
-        }
-
-        function saveGuestName() {
-            const name = document.getElementById('guestNameInput').value.trim();
-            if(name) {
-                localStorage.setItem('GuestName', name);
-                const modal = bootstrap.Modal.getInstance(document.getElementById('guestModal'));
-                modal.hide();
-                
-                if(pendingCommentAction) {
-                    executeCommentPost(pendingCommentAction.type, pendingCommentAction.id, pendingCommentAction.text, name);
-                    const input = document.getElementById(`input-${pendingCommentAction.type}-${pendingCommentAction.id}`);
-                    if(input) input.value = '';
-                    pendingCommentAction = null;
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { color: TICK, font: { weight:'bold' } },
+                    grid:  { color: GRID }
+                },
+                y: {
+                    ticks: { color: '#e2e8f0', font: { weight:'bold', size: 11 } },
+                    grid:  { display: false }
                 }
             }
         }
+    });
 
-        async function executeCommentPost(type, id, text, guestName) {
-            // Optimistic UI update
-            const commentsContainer = document.getElementById(`comments-${type}-${id}`);
-            const displayName = guestName || '@(User.Identity?.Name ?? "Anda")';
-            commentsContainer.innerHTML += `<div class="comment-item"><span class="comment-name">${displayName}</span> ${text}</div>`;
+    /* Donut chart */
+    const ctx2 = document.getElementById('chartDonut').getContext('2d');
+    cDonut = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'Observasi', 'P5M'],
+            datasets: [{
+                data: [0,0,0,0,0],
+                backgroundColor: ['#ef4444','#38bdf8','#a855f7','#14b8a6','#10b981'],
+                borderWidth: 2, borderColor: '#050810',
+                hoverOffset: 6
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: { color: '#e2e8f0', font: { weight:'bold', size: 11 }, boxWidth: 10, padding: 10 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(5,8,18,.95)',
+                    borderColor: 'rgba(56,189,248,.3)', borderWidth: 1,
+                    callbacks: {
+                        label: ctx => {
+                            const total = ctx.dataset.data.reduce((a,b) => a+b, 0);
+                            const pct = total > 0 ? Math.round(ctx.raw / total * 100) : 0;
+                            return ` ${ctx.raw} laporan (${pct}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '65%'
+        }
+    });
 
-            // Server send
-            await fetch('/Display/AddComment', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ type: type, id: id, text: text, guestName: guestName })
-            });
-            
-            // Force data refresh next tick
-            currentFeedData = "";
+    /* Polar area locations chart */
+    const ctx3 = document.getElementById('chartLocations').getContext('2d');
+    cLoc = new Chart(ctx3, {
+        type: 'polarArea',
+        data: {
+            labels: [],
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    'rgba(245, 158, 11, 0.75)', // amber
+                    'rgba(56, 189, 248, 0.75)', // blue
+                    'rgba(16, 185, 129, 0.75)', // green
+                    'rgba(168, 85, 247, 0.75)', // purple
+                    'rgba(236, 72, 153, 0.75)'  // pink
+                ],
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.08)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                r: {
+                    ticks: { display: false },
+                    grid: { color: 'rgba(255, 255, 255, 0.045)' },
+                    angleLines: { color: 'rgba(255, 255, 255, 0.045)' }
+                }
+            }
+        }
+    });
+
+    /* Risk Levels Bar Chart */
+    const ctx4 = document.getElementById('chartRisks').getContext('2d');
+    cRisks = new Chart(ctx4, {
+        type: 'bar',
+        data: {
+            labels: ['Extreme / Kritis', 'High / Tinggi', 'Medium / Sedang', 'Low / Rendah'],
+            datasets: [{
+                label: 'Jumlah Temuan',
+                data: [0, 0, 0, 0],
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.85)',  // red
+                    'rgba(245, 158, 11, 0.85)', // orange/amber
+                    'rgba(56, 189, 248, 0.85)', // blue
+                    'rgba(16, 185, 129, 0.85)'  // green
+                ],
+                borderColor: [
+                    '#ef4444',
+                    '#f59e0b',
+                    '#38bdf8',
+                    '#10b981'
+                ],
+                borderWidth: 1.5,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    ticks: { color: TICK, font: { weight: 'bold', size: 10.5 } },
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: TICK, font: { weight: 'bold' } },
+                    grid: { color: GRID }
+                }
+            }
+        }
+    });
+
+    /* Status Temuan Chart (Stacked Bar) */
+    const ctx5 = document.getElementById('chartStatus').getContext('2d');
+    cStatus = new Chart(ctx5, {
+        type: 'bar',
+        data: {
+            labels: ['Hazard Report', 'Action Plan'],
+            datasets: [
+                {
+                    label: 'Open',
+                    data: [0, 0],
+                    backgroundColor: 'rgba(239, 68, 68, 0.85)', // red
+                    borderColor: '#ef4444',
+                    borderWidth: 1,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Progres',
+                    data: [0, 0],
+                    backgroundColor: 'rgba(245, 158, 11, 0.85)', // amber
+                    borderColor: '#f59e0b',
+                    borderWidth: 1,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Closed',
+                    data: [0, 0],
+                    backgroundColor: 'rgba(16, 185, 129, 0.85)', // green
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#e2e8f0', font: { weight: 'bold', size: 11 }, boxWidth: 10, padding: 14 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(5,8,18,.95)',
+                    borderColor: 'rgba(56,189,248,.3)', borderWidth: 1
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: { color: TICK, font: { weight: 'bold' } },
+                    grid: { color: GRID }
+                },
+                y: {
+                    stacked: true,
+                    ticks: { color: '#e2e8f0', font: { weight: 'bold', size: 11 } },
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    /* Today's Submissions Bar Chart */
+    const ctx6 = document.getElementById('chartToday').getContext('2d');
+    cToday = new Chart(ctx6, {
+        type: 'bar',
+        data: {
+            labels: ['Hazard', 'P2H', 'P5M', 'Inspeksi', 'Observasi', 'Safety Talk'],
+            datasets: [{
+                label: 'Laporan Hari Ini',
+                data: [0, 0, 0, 0, 0, 0],
+                backgroundColor: [
+                    'rgba(239, 68, 68, 0.85)',  // Hazard: red
+                    'rgba(129, 140, 248, 0.85)', // P2H: indigo
+                    'rgba(16, 185, 129, 0.85)',  // P5M: green
+                    'rgba(56, 189, 248, 0.85)',  // Inspeksi: blue
+                    'rgba(20, 184, 166, 0.85)',  // Observasi: teal
+                    'rgba(168, 85, 247, 0.85)'   // Safety Talk: purple
+                ],
+                borderColor: [
+                    '#ef4444',
+                    '#818cf8',
+                    '#10b981',
+                    '#38bdf8',
+                    '#14b8a6',
+                    '#a855f7'
+                ],
+                borderWidth: 1.5,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(5,8,18,.95)',
+                    borderColor: 'rgba(56,189,248,.3)', borderWidth: 1
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: TICK, font: { weight: 'bold', size: 10.5 } },
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: TICK, font: { weight: 'bold', precision: 0 } },
+                    grid: { color: GRID }
+                }
+            }
+        }
+    });
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   TABS
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function switchTab(id, btn) {
+    document.querySelectorAll('.tab-row .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + id).classList.add('active');
+
+    const index = rankTabs.indexOf(id);
+    if (index !== -1) currentRankTab = index;
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   RENDER COMPANY ROW
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+const RANK_COLORS = ['#fbbf24','#d1d5db','#d97706','#6b7280','#6b7280'];
+
+function companyRowHtml(c, idx, mode) {
+    const pct    = c.percentage ?? c.Percentage ?? 0;
+    const real   = c.realization ?? c.Realization ?? 0;
+    const tgt    = c.target ?? c.Target ?? 0;
+    const name   = c.companyName ?? c.CompanyName ?? '-';
+    const fill   = Math.min(pct, 100);
+    const color  = pct >= 100 ? '#10b981' : pct >= 50 ? '#38bdf8' : pct > 0 ? '#f59e0b' : '#ef4444';
+    const rankClr= RANK_COLORS[idx] ?? '#6b7280';
+
+    let extra = '';
+    if (mode === 'stagnant') {
+        extra = `<span class="stagnant-tag">Belum ada laporan</span>`;
+    }
+
+    return `
+    <div class="co-row">
+        <span class="co-rank" style="background:${rankClr};">${idx+1}</span>
+        <div style="flex:1;min-width:0;">
+            <div class="co-name">${name}</div>
+            <div class="co-bar-wrap">
+                <div class="co-bar-fill" style="width:${fill}%;background:${color};"></div>
+            </div>
+        </div>
+        ${extra}
+        <div>
+            <div class="co-pct" style="color:${color};">${pct}%</div>
+            <div class="co-detail">${real} / ${tgt}</div>
+        </div>
+    </div>`;
+}
+
+function renderCompanyTabs(data) {
+    const fastest  = data.fastestCompanies  || [];
+    const stagnant = data.stagnantCompanies || [];
+    const all      = data.allCompanies      || [];
+
+    document.getElementById('tab-fastest').innerHTML =
+        fastest.length
+            ? fastest.map((c,i) => companyRowHtml(c, i, 'fastest')).join('')
+            : '<div style="font-size:11px;color:var(--muted);text-align:center;padding:16px;">Belum ada data.</div>';
+
+    document.getElementById('tab-stagnant').innerHTML =
+        stagnant.length
+            ? stagnant.map((c,i) => companyRowHtml(c, i, 'stagnant')).join('')
+            : '<div style="font-size:11px;color:var(--muted);text-align:center;padding:16px;">ðŸŽ‰ Semua mitra sudah bergerak!</div>';
+
+    document.getElementById('tab-all').innerHTML =
+        all.length
+            ? all.map((c,i) => companyRowHtml(c, i, 'all')).join('')
+            : '<div style="font-size:11px;color:var(--muted);text-align:center;padding:16px;">Belum ada data.</div>';
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   FETCH PERFORMANCE
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+async function fetchPerformance() {
+    try {
+        const res  = await fetch('/Display/GetCompanyPerformance');
+        if (!res.ok) return;
+        const d = await res.json();
+
+        // KPI
+        document.getElementById('kv-kar').innerText   = d.totalKaryawan   ?? '-';
+        document.getElementById('kv-tgt').innerText   = d.monthlyTarget   ?? '-';
+        document.getElementById('kv-real').innerText  = d.monthlyRealization ?? '-';
+        document.getElementById('kv-open').innerText  = d.totalOpenHazards ?? '-';
+        document.getElementById('kv-close').innerText = (d.complianceClose ?? 0) + '%';
+        
+        // Zero Incident Safe Days
+        const safeDaysEl = document.getElementById('kv-safe-days');
+        if (safeDaysEl) {
+            safeDaysEl.innerText = (d.safeDays ?? 0) + ' HARI';
         }
 
-        function sharePost(title) {
-            if (navigator.share) {
-                navigator.share({
-                    title: title,
-                    text: 'Lihat pembaruan K3 ini di Portal PT INDEXIM COALINDO',
-                    url: window.location.href
-                });
-            } else {
-                alert("Salin tautan ini untuk membagikan: " + window.location.href);
+        // Running Text Marquee
+        const marqueeEl = document.getElementById('marqueeText');
+        if (marqueeEl && d.marqueeText) {
+            if (marqueeEl.innerText !== d.marqueeText) {
+                marqueeEl.innerText = d.marqueeText;
             }
         }
 
-        // Init
-        fetchFeed();
-        setInterval(fetchFeed, 10000); // Auto-update every 10 seconds
-    </script>
+        // SAP bar chart
+        if (cSap) {
+            cSap.data.datasets[0].data = [
+                d.targetHazard    ?? 0,
+                d.targetInspeksi  ?? 0,
+                d.targetSafetyTalk?? 0,
+                d.targetObs       ?? 0,
+                d.targetCoaching  ?? 0
+            ];
+            cSap.data.datasets[1].data = [
+                d.monthHazards    ?? 0,
+                d.monthInspections?? 0,
+                d.monthSafetyTalks?? 0,
+                d.monthObs        ?? 0,
+                d.monthP5ms       ?? 0
+            ];
+            cSap.update('active');
+        }
+
+        // Donut
+        if (cDonut) {
+            cDonut.data.datasets[0].data = [
+                d.monthHazards    ?? 0,
+                d.monthInspections?? 0,
+                d.monthSafetyTalks?? 0,
+                d.monthObs        ?? 0,
+                d.monthP5ms       ?? 0
+            ];
+            cDonut.update('active');
+        }
+
+        // Update RHR indicators
+        const rriVal = d.rri ?? 0;
+        document.getElementById('lbl-rri').innerText = rriVal + '%';
+        document.getElementById('bar-rri').style.width = rriVal + '%';
+
+        const compRiskVal = d.complianceRisk ?? 0;
+        document.getElementById('lbl-comp-risk').innerText = compRiskVal + '%';
+        document.getElementById('bar-comp-risk').style.width = compRiskVal + '%';
+
+        const wTarget = d.weeklyTarget ?? 0;
+        const wReal = d.weeklyRealization ?? 0;
+        const weeklyPct = wTarget > 0 ? Math.min(Math.round((wReal / wTarget) * 100), 100) : 0;
+        document.getElementById('lbl-weekly-pct').innerText = weeklyPct + '%';
+        document.getElementById('bar-weekly-pct').style.width = weeklyPct + '%';
+
+        // Render Top Areas/Locations list
+        const locs = d.topLocations || [];
+        const locList = document.getElementById('location-list');
+        if (locs.length === 0) {
+            locList.innerHTML = '<div style="font-size:11px; color:var(--muted); text-align:center;">Belum ada data temuan.</div>';
+        } else {
+            let maxCount = Math.max(...locs.map(l => l.count), 1);
+            locList.innerHTML = locs.map((l, i) => {
+                const colors = ['var(--amber)', 'var(--blue)', 'var(--green)', 'var(--purple)', 'var(--pink)'];
+                const color = colors[i] || 'var(--blue)';
+                const pct = Math.round((l.count / maxCount) * 100);
+                return `
+                <div>
+                    <div class="d-flex justify-content-between" style="font-size:10.5px; font-weight:700;">
+                        <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${l.locationName}</span>
+                        <span>${l.count} temuan</span>
+                    </div>
+                    <div style="height:4px; background:rgba(255,255,255,0.04); border-radius:2px; margin-top:2px; overflow:hidden;">
+                        <div style="height:100%; width:${pct}%; background:${color}; border-radius:2px; transition:width 1s ease;"></div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Update Location Polar Chart
+        if (cLoc) {
+            cLoc.data.labels = locs.map(l => l.locationName);
+            cLoc.data.datasets[0].data = locs.map(l => l.count);
+            cLoc.update('active');
+        }
+
+        // Update Risks Chart
+        if (cRisks) {
+            cRisks.data.datasets[0].data = [
+                d.riskExtreme ?? 0,
+                d.riskHigh    ?? 0,
+                d.riskMedium  ?? 0,
+                d.riskLow     ?? 0
+            ];
+            cRisks.update('active');
+        }
+
+        // Update Status Chart
+        if (cStatus) {
+            cStatus.data.datasets[0].data = [
+                d.totalOpenHazards    ?? 0,
+                d.totalOpenActionPlans  ?? 0
+            ];
+            cStatus.data.datasets[1].data = [
+                d.totalProgresHazards  ?? 0,
+                d.totalProgresActionPlans ?? 0
+            ];
+            cStatus.data.datasets[2].data = [
+                d.totalClosedHazards  ?? 0,
+                d.totalClosedActionPlans ?? 0
+            ];
+            cStatus.update('active');
+        }
+
+        // Update Today's Submissions Chart
+        if (cToday) {
+            cToday.data.datasets[0].data = [
+                d.todayHazards     ?? 0,
+                d.todayP2h         ?? 0,
+                d.todayP5ms        ?? 0,
+                d.todayInspections ?? 0,
+                d.todayObservations?? 0,
+                d.todaySafetyTalks ?? 0
+            ];
+            cToday.update('active');
+        }
+
+        renderCompanyTabs(d);
+
+    } catch(e) {
+        console.warn('Performance fetch error:', e);
+    }
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   FEED
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+let lastTopKey = '', isFirstLoad = true;
+let rawFeedItems = [];
+let currentFeedFilter = 'highlight';
+let feedRotationInterval = null;
+let currentFeedPage = 0;
+const feedPageSize = 10;
+
+function statusClass(s) {
+    const v = (s||'').toLowerCase();
+    if (v === 'closed' || v === 'selesai' || v === 'good') return 'bgt-closed';
+    if (v.includes('progres') || v.includes('progress') || v.includes('progress')) return 'bgt-progres';
+    return 'bgt-open';
+}
+
+function getCardBackupBgAndIcon(type) {
+    const t = (type || '').toLowerCase();
+    if (t === 'hazard') {
+        return {
+            bg: 'linear-gradient(135deg, #450a0a, #7f1d1d)',
+            icon: 'bi-exclamation-triangle-fill',
+            color: '#ef4444'
+        };
+    } else if (t === 'inspection' || t === 'inspeksi') {
+        return {
+            bg: 'linear-gradient(135deg, #172554, #1e3a8a)',
+            icon: 'bi-clipboard2-check-fill',
+            color: '#38bdf8'
+        };
+    } else if (t === 'actionplan') {
+        return {
+            bg: 'linear-gradient(135deg, #451a03, #78350f)',
+            icon: 'bi-tools',
+            color: '#fbbf24'
+        };
+    } else if (t === 'safetytalk') {
+        return {
+            bg: 'linear-gradient(135deg, #3b0764, #581c87)',
+            icon: 'bi-megaphone-fill',
+            color: '#c084fc'
+        };
+    } else if (t === 'observation') {
+        return {
+            bg: 'linear-gradient(135deg, #042f2e, #115e59)',
+            icon: 'bi-eye-fill',
+            color: '#14b8a6'
+        };
+    } else if (t === 'p5m') {
+        return {
+            bg: 'linear-gradient(135deg, #022c22, #064e3b)',
+            icon: 'bi-chat-left-text-fill',
+            color: '#10b981'
+        };
+    } else {
+        return {
+            bg: 'linear-gradient(135deg, #1e1b4b, #312e81)',
+            icon: 'bi-truck',
+            color: '#818cf8'
+        };
+    }
+}
+
+async function fetchFeed() {
+    try {
+        const res = await fetch('/Display/GetLatestFeed');
+        if (!res.ok) return;
+        const items = await res.json();
+        if (!items || !items.length) return;
+
+        rawFeedItems = items;
+
+        const topKey = `${items[0].type}_${items[0].id}_${items[0].createdAt}`;
+        if (topKey !== lastTopKey) {
+            const hasNew = !isFirstLoad && lastTopKey !== '';
+            lastTopKey = topKey;
+            if (hasNew) triggerNewAlert(items[0]);
+            renderFeed(items);
+        } else if (isFirstLoad) {
+            renderFeed(items);
+        }
+        isFirstLoad = false;
+    } catch(e) {
+        console.warn('Feed fetch error:', e);
+    }
+}
+
+function setFeedFilter(filter) {
+    currentFeedFilter = filter;
+    currentFeedPage = 0;
+    document.querySelectorAll('.feed-tabs .tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.id === `btn-feed-${filter}`);
+    });
+    renderFeed(rawFeedItems);
+}
+
+function renderFeed(items) {
+    const grid = document.getElementById('feedGrid');
+    
+    if (feedRotationInterval) {
+        clearInterval(feedRotationInterval);
+        feedRotationInterval = null;
+    }
+
+    let filteredItems = [];
+    if (currentFeedFilter === 'highlight') {
+        const seenKeys = new Set();
+        items.forEach(item => {
+            if (!item.imageUrl) return;
+            const key = (item.nik || item.name || '').trim().toLowerCase();
+            if (!seenKeys.has(key)) {
+                seenKeys.add(key);
+                filteredItems.push(item);
+            }
+        });
+    } else if (currentFeedFilter === 'open') {
+        filteredItems = items.filter(item => {
+            const s = (item.status || '').toLowerCase();
+            return s === 'open' || s === 'not_good';
+        });
+    } else if (currentFeedFilter === 'progres') {
+        filteredItems = items.filter(item => {
+            const s = (item.status || '').toLowerCase();
+            return s.includes('progres') || s.includes('progress');
+        });
+    } else if (currentFeedFilter === 'closed') {
+        filteredItems = items.filter(item => {
+            const s = (item.status || '').toLowerCase();
+            return s === 'closed' || s === 'selesai' || s === 'good';
+        });
+    }
+
+    const totalItems = filteredItems.length;
+    if (totalItems === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 48px 16px; color: var(--muted); font-size: 11.5px; font-weight: 500;"><i class="bi bi-info-circle" style="font-size: 20px; display: block; margin-bottom: 8px;"></i>Tidak ada aktivitas K3 yang sesuai filter ini.</div>';
+        document.getElementById('feedCount').innerText = '0 aktivitas';
+        document.getElementById('feedPageIndicator').style.display = 'none';
+        return;
+    }
+
+    const totalPages = Math.ceil(totalItems / feedPageSize);
+    if (currentFeedPage >= totalPages) {
+        currentFeedPage = 0;
+    }
+
+    function displayPage(pageIdx) {
+        grid.style.opacity = '0';
+        grid.style.transition = 'opacity 0.4s ease';
+
+        setTimeout(() => {
+            grid.innerHTML = '';
+            const start = pageIdx * feedPageSize;
+            const end = Math.min(start + feedPageSize, totalItems);
+            const pageItems = filteredItems.slice(start, end);
+
+            pageItems.forEach(item => {
+                const id  = `fc-${item.type}-${item.id}`;
+                const sc  = statusClass(item.status);
+                const backup = getCardBackupBgAndIcon(item.type);
+
+                const card = document.createElement('div');
+                card.className = 'fcard';
+                card.id = id;
+
+                let imgHTML = '';
+                if (item.imageUrl) {
+                    imgHTML = `<img src="${item.imageUrl}" class="fcard-img" loading="lazy"
+                                   onerror="this.outerHTML='<div class=fcard-noimg style=\\'background: ${backup.bg}; color: ${backup.color}\\'>&nbsp;<i class=\\'bi ${backup.icon}\\'></i></div>'" />`;
+                } else {
+                    imgHTML = `<div class="fcard-noimg" style="background: ${backup.bg}; color: ${backup.color}; font-size: 32px; display: flex; align-items: center; justify-content: center;">
+                                   <i class="bi ${backup.icon}"></i>
+                               </div>`;
+                }
+
+                const companyText = item.companyName ? ` &bull; ðŸ¢ ${item.companyName}` : '';
+
+                card.innerHTML = `
+                    ${imgHTML}
+                    <div class="fcard-body">
+                        <div class="fcard-user">
+                            <div class="fcard-avatar-initials" style="background-color: ${getAvatarColor(item.name)}">
+                                ${getInitials(item.name)}
+                            </div>
+                            <div style="min-width: 0; flex: 1;">
+                                <div class="fcard-uname">${item.name||'User'}</div>
+                                <div class="fcard-uloc" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.area||item.location||'General'}${companyText}">
+                                    ${item.area||item.location||'General'}${companyText}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="fcard-badges">
+                            <span class="bgt bgt-type">${(item.type||'').toUpperCase()}</span>
+                            <span class="bgt ${sc}">${item.status||'OPEN'}</span>
+                        </div>
+                        <div class="fcard-ttl">${item.title}</div>
+                    </div>`;
+
+                grid.appendChild(card);
+            });
+
+            if (totalPages > 1) {
+                const indicator = document.getElementById('feedPageIndicator');
+                indicator.innerText = `HALAMAN ${pageIdx + 1}/${totalPages}`;
+                indicator.style.display = 'inline-block';
+            } else {
+                document.getElementById('feedPageIndicator').style.display = 'none';
+            }
+
+            grid.style.opacity = '1';
+        }, 400);
+    }
+
+    displayPage(currentFeedPage);
+
+    if (totalItems > feedPageSize) {
+        feedRotationInterval = setInterval(() => {
+            currentFeedPage = (currentFeedPage + 1) % totalPages;
+            displayPage(currentFeedPage);
+        }, 8000);
+    } else {
+        document.getElementById('feedPageIndicator').style.display = 'none';
+    }
+
+    let countText = '';
+    if (currentFeedFilter === 'highlight') {
+        countText = `${totalItems} highlight aktivitas K3`;
+    } else {
+        countText = `${totalItems} aktivitas K3 (${currentFeedFilter.toUpperCase()})`;
+    }
+    document.getElementById('feedCount').innerText = countText;
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   AVATAR INITIALS UTILITIES
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function getInitials(name) {
+    if (!name) return '??';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + (parts[1][0] || '')).toUpperCase();
+}
+
+function getAvatarColor(name) {
+    const colors = ['#38bdf8', '#10b981', '#f59e0b', '#a855f7', '#ec4899', '#14b8a6', '#f43f5e'];
+    let hash = 0;
+    const clean = name || '';
+    for (let i = 0; i < clean.length; i++) {
+        hash = clean.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const idx = Math.abs(hash) % colors.length;
+    return colors[idx];
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   NEW ITEM ALERT
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+function triggerNewAlert(item) {
+    beep();
+    
+    // Screen Flash Anim
+    const f = document.getElementById('screenFlash');
+    f.classList.add('flash'); 
+    setTimeout(() => f.classList.remove('flash'), 1200);
+
+    // Color code based on type
+    const colors = {
+        'hazard': '#ef4444',
+        'inspection': '#38bdf8',
+        'inspeksi': '#38bdf8',
+        'safetytalk': '#a855f7',
+        'p5m': '#10b981',
+        'observation': '#14b8a6'
+    };
+    const notifColor = colors[(item.type || '').toLowerCase()] || '#38bdf8';
+
+    // Populate data
+    document.getElementById('notifTypeHeader').innerText = `Laporan K3 Baru: ${(item.type || 'Kegiatan')}`;
+    document.getElementById('notifUserLoc').innerHTML = 
+        `<span style="color:#fff; font-weight:700;">${item.name || 'Karyawan'}</span> 
+         (${item.nik || '-'}) &bull; ðŸ“ ${item.area || item.location || 'General'}`;
+    document.getElementById('notifTitle').innerText = item.title || 'Aktivitas K3';
+    
+    // Description text (truncated)
+    const descText = item.description || '';
+    document.getElementById('notifDesc').innerText = descText.length > 80 ? descText.substring(0, 80) + '...' : descText;
+
+    // Image container
+    const imgContainer = document.getElementById('notifImgContainer');
+    const backup = getCardBackupBgAndIcon(item.type);
+    if (item.imageUrl) {
+        imgContainer.innerHTML = `<img src="${item.imageUrl}" class="notif-card-img" 
+                                       onerror="this.outerHTML='<div class=notif-card-noimg style=\\'background: ${backup.bg}; color: ${backup.color}; border: none; font-size: 36px; display: flex; align-items: center; justify-content: center;\\'><i class=\\'bi ${backup.icon}\\'></i></div>'" />`;
+    } else {
+        imgContainer.innerHTML = 
+            `<div class="notif-card-noimg" style="background: ${backup.bg}; color: ${backup.color}; border: none; font-size: 36px; display: flex; align-items: center; justify-content: center;">
+                <i class="bi ${backup.icon}"></i>
+             </div>`;
+    }
+
+    // Set custom neon glow & border color for card
+    const p = document.getElementById('notifPopup');
+    p.style.border = `1px solid ${notifColor}`;
+    p.style.boxShadow = `0 20px 50px rgba(0,0,0,0.8), 0 0 35px ${notifColor}4D`;
+
+    // Progress Bar reset and animation
+    const progressBar = document.getElementById('notifProgressBar');
+    progressBar.style.transition = 'none';
+    progressBar.style.width = '100%';
+    progressBar.style.background = `linear-gradient(90deg, ${notifColor}, #fff)`;
+
+    // Show popup
+    p.classList.add('show');
+
+    // Start progress bar shrink animation
+    setTimeout(() => {
+        progressBar.style.transition = 'width 6s linear';
+        progressBar.style.width = '0%';
+    }, 50);
+
+    // Hide after 6 seconds
+    setTimeout(() => {
+        p.classList.remove('show');
+    }, 6000);
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   UPDATE TOAST HELPER
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+let toastTimer = null;
+function showUpdateToast(msg) {
+    const t = document.getElementById('updateToast');
+    document.getElementById('updateToastMsg').innerText = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   AUTO REFRESH LOOP  (DATA: every 30s, PAGE: every 15min)
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+async function refreshAll() {
+    await Promise.all([fetchPerformance(), fetchFeed()]);
+    showUpdateToast('Data diperbarui â€” ' + new Date().toLocaleTimeString('id-ID'));
+    nextDataAt = Date.now() + DATA_INTERVAL_S * 1000;
+}
+
+// Initial load
+buildCharts();
+refreshAll();
+
+// Data polling: every 30 seconds
+setInterval(refreshAll, DATA_INTERVAL_S * 1000);
+
+// Page hard reload: every 15 minutes (to prevent memory leaks on TV)
+setTimeout(() => location.reload(), PAGE_RELOAD_MIN * 60 * 1000);
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   AUTO ROTATION LOOPS (TV Display Mode)
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+// 1. Chart Slide Rotation (Every 10 seconds)
+let currentChartIdx = 0;
+const chartTitles = [
+    '<i class="bi bi-bar-chart-fill" style="color:var(--blue)"></i> Pencapaian Per Kategori SAP â€” Bulan Ini',
+    '<i class="bi bi-pie-chart-fill" style="color:var(--purple)"></i> Distribusi Aktivitas Laporan K3',
+    '<i class="bi bi-shield-exclamation" style="color:var(--red)"></i> Distribusi Tingkat Risiko Laporan K3',
+    '<i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Status Temuan & Action Plan (Open vs Closed)',
+    '<i class="bi bi-calendar-event" style="color:var(--amber)"></i> Laporan K3 Masuk Hari Ini'
+];
+
+function setChartIndex(idx) {
+    currentChartIdx = idx;
+    // Update indicator dots
+    document.querySelectorAll('.chart-dot').forEach((d, i) => {
+        d.classList.toggle('active', i === idx);
+    });
+    // Update slides visibility
+    document.querySelectorAll('.chart-slide').forEach((s, i) => {
+        s.classList.toggle('active', i === idx);
+    });
+    // Update title
+    document.getElementById('rotatingChartTitle').innerHTML = chartTitles[idx];
+}
+
+function rotateCharts() {
+    const nextIdx = (currentChartIdx + 1) % 5;
+    setChartIndex(nextIdx);
+}
+setInterval(rotateCharts, 10000);
+
+// 2. Company Rankings Tab Rotation (Every 8 seconds)
+let currentRankTab = 0;
+const rankTabs = ['fastest', 'stagnant', 'all'];
+
+function rotateRankings() {
+    currentRankTab = (currentRankTab + 1) % rankTabs.length;
+    const tabId = rankTabs[currentRankTab];
+    const buttons = document.querySelectorAll('.tab-row .tab-btn');
+    if (buttons && buttons[currentRankTab]) {
+        // Simple manual switch
+        document.querySelectorAll('.tab-row .tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        buttons[currentRankTab].classList.add('active');
+        document.getElementById('tab-' + tabId).classList.add('active');
+    }
+}
+setInterval(rotateRankings, 8000);
+</script>
 </body>
 </html>

@@ -32,6 +32,7 @@ namespace MBS_SAP.Models
         public string? TingkatResiko { get; set; } // Rendah / Sedang / Tinggi / Ekstrim (Hazard only)
         
         public string? FotoUrl { get; set; }
+        public string? FotoPerbaikanUrl { get; set; }
         public string? FotoDiriUrl { get; set; } // For SafetyTalk
         
         public int LikesCount { get; set; }

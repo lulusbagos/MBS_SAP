@@ -174,6 +174,7 @@ namespace MBS_SAP.Controllers
                     Content = h.Temuan,
                     Status = hazardStatus,
                     FotoUrl = h.FotoTemuan,
+                    FotoPerbaikanUrl = linkedAp?.FotoPerbaikan,
                     TingkatResiko = h.TingkatResiko
                 });
             }
@@ -238,7 +239,8 @@ namespace MBS_SAP.Controllers
                     Kategori = a.KategoriTemuan,
                     Content = a.Perbaikan,
                     Status = a.Status,
-                    FotoUrl = a.FotoPerbaikan ?? a.FotoTemuan
+                    FotoUrl = a.FotoTemuan,
+                    FotoPerbaikanUrl = a.FotoPerbaikan
                 });
             }
 
@@ -349,9 +351,10 @@ namespace MBS_SAP.Controllers
                 {
                 }
 
-                string contentText = defectCount == 0
+                string contentText = $"Unit: {r.Merek} (KM: {r.Kilometer})\n" +
+                    (defectCount == 0
                     ? "Kondisi unit: SEMUA BAIK"
-                    : $"Kondisi unit: DITEMUKAN {defectCount} TEMUAN KERUSAKAN ({string.Join(", ", defects)})";
+                    : $"Kondisi unit: DITEMUKAN {defectCount} TEMUAN KERUSAKAN ({string.Join(", ", defects)})");
 
                 timelineList.Add(new TimelineViewModel
                 {
@@ -365,7 +368,7 @@ namespace MBS_SAP.Controllers
                     Waktu = r.Waktu,
                     CreatedAt = ToEventMoment(r.Tanggal, r.Waktu, r.CreatedAt),
                     Area = r.NoLambung,
-                    Lokasi = $"{r.Merek} (KM: {r.Kilometer})",
+                    Lokasi = null,
                     Kategori = r.JenisKendaraan,
                     Title = "Pemeriksaan Kendaraan Harian (P2H)",
                     Status = defectCount == 0 ? "GOOD" : "NOT_GOOD",

@@ -1,0 +1,555 @@
+@model IEnumerable<MBS_SAP.Models.Coaching>
+@{
+    ViewData["Title"] = "Coaching & Pembinaan - SAP";
+    var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var isAdmin = User.IsInRole("Admin");
+    var minDate = DateTime.Today.AddDays(-7).ToString("yyyy-MM-dd");
+    var maxDate = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
+}
+
+<style>
+    .suggestion-item:hover {
+        background-color: rgba(124, 58, 237, 0.4);
+    }
+</style>
+
+<div class="animate-fade-in pb-4">
+    <!-- Header with Banner -->
+    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #7c3aed, #a855f7); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
+            <!-- Decorative circle -->
+            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            
+            <i class="bi bi-people-fill text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px; letter-spacing: 0.5px;">COACHING & PEMBINAAN</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Dokumentasikan sesi pembinaan dan sharing knowledge dengan tim.</p>
+        </div>
+    </div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(16, 185, 129, 0.15); color: #10b981; border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Hybrid Grid Layout: Form and List side-by-side on laptop, stacked on mobile -->
+    <div class="form-responsive-row">
+        
+        <!-- Form Column -->
+        <div class="card-sap border-purple-accent">
+            <form asp-controller="Coaching" asp-action="Submit" method="post" enctype="multipart/form-data" id="coachingForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="coachingId" name="id" value="" />
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0" style="font-weight: 700; color: var(--text-main);" id="formTitle"><i class="bi bi-people-fill me-2" style="color: #a855f7;"></i>Catat Sesi Coaching Baru</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnCancelEdit" onclick="cancelEditCoaching()">
+                        <i class="bi bi-x-circle me-1"></i> Batal Edit
+                    </button>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="tanggal">Tanggal Kegiatan</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-calendar-event-fill input-sap-icon"></i>
+                            <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" min="@minDate" max="@maxDate" required />
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="waktuStr">Waktu Mulai</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-clock-fill input-sap-icon"></i>
+                            <input type="time" id="waktuStr" name="waktuStr" class="input-sap" value="@DateTime.Now.ToString("HH:mm")" required />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="area">Area Utama</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-geo-alt-fill input-sap-icon"></i>
+                            <select id="area" name="area" class="input-sap" required>
+                                <option value="" disabled selected>Pilih Area...</option>
+                                @if (ViewBag.Areas != null)
+                                {
+                                    foreach (var area in ViewBag.Areas)
+                                    {
+                                        <option value="@area.NamaArea">@area.NamaArea</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="lokasi">Lokasi Spesifik</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-geo-fill input-sap-icon"></i>
+                            <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Klik ikon target di kanan untuk mengambil lokasi GPS..." style="padding-right: 40px;" readonly required />
+                            <button type="button" class="btn btn-link p-0 position-absolute" id="btnGetLocation" style="right: 12px; top: 10px; color: #a855f7;" onclick="getLocation()" title="Ambil Lokasi GPS">
+                                <i class="bi bi-crosshair"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted" style="font-size: 10px;">Klik ikon target untuk menggunakan GPS</small>
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="detilLokasi">Detail Lokasi</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-compass-fill input-sap-icon"></i>
+                        <input type="text" id="detilLokasi" name="detilLokasi" class="input-sap" placeholder="Misal: Kantor Workshop Utama" />
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="tema">Tema Coaching</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-chat-quote-fill input-sap-icon"></i>
+                        <select id="tema" name="tema" class="input-sap" required>
+                            <option value="" disabled selected>Pilih Tema...</option>
+                            <option value="Pembinaan">Pembinaan</option>
+                            <option value="Sharing Knowledge">Sharing Knowledge</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Search and Add Trainee Selector -->
+                <div class="form-group-sap position-relative">
+                    <label class="form-label-sap">Pilih Peserta Coaching (Trainee)</label>
+                    <div class="input-sap-wrapper mb-2">
+                        <i class="bi bi-search input-sap-icon"></i>
+                        <input type="text" id="traineeSearchInput" class="input-sap" placeholder="Ketik nama atau NIK peserta..." autocomplete="off" onfocus="showTraineeSuggestions()" />
+                        <div id="traineeSuggestions" class="d-none" style="position: absolute; left: 0; right: 0; top: 100%; max-height: 200px; overflow-y: auto; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.25); padding: 4px;">
+                        </div>
+                    </div>
+
+                    <!-- Selected Trainees Container -->
+                    <div id="selectedTraineesContainer" class="d-flex flex-wrap gap-2 p-3 mb-2" style="border: 1px solid var(--border-color); border-radius: 12px; min-height: 54px; background: rgba(0,0,0,0.25); align-items: center;">
+                        <span class="text-muted" id="noTraineesLabel" style="font-size: 13px;">Belum ada peserta yang dipilih. Ketik & pilih dari hasil pencarian di atas.</span>
+                    </div>
+                    <small class="text-muted" style="font-size: 10px;">Pilih satu atau lebih karyawan perusahaan Anda yang menerima coaching dengan memilih hasil pencarian</small>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="feedback">Umpan Balik (Feedback)</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-chat-left-text-fill input-sap-icon" style="top: 14px;"></i>
+                        <textarea id="feedback" name="feedback" class="input-sap" rows="3" placeholder="Masukkan umpan balik atau respons peserta..." style="padding-left: 42px;"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="komitmen">Komitmen Bersama</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-shield-fill-check input-sap-icon" style="top: 14px;"></i>
+                        <textarea id="komitmen" name="komitmen" class="input-sap" rows="3" placeholder="Masukkan rencana aksi atau komitmen pasca coaching..." style="padding-left: 42px;"></textarea>
+                    </div>
+                </div>
+
+                <!-- Event Photo -->
+                <div class="form-group-sap mb-4">
+                    <label class="form-label-sap">Foto Kegiatan Coaching</label>
+                    <input type="file" id="fotoInput" name="foto" accept="image/*" capture="environment" class="d-none" onchange="previewFoto(this)" />
+                    <div class="upload-card" onclick="document.getElementById('fotoInput').click()" style="padding: 24px 12px; border-color: rgba(168, 85, 247, 0.4);">
+                        <div id="fotoPlaceholder">
+                            <i class="bi bi-camera-fill text-purple" style="font-size: 24px; color: #a855f7;"></i>
+                            <span class="d-block" style="font-size: 12px; font-weight: 700; margin-top: 4px; color: var(--text-main);">Unggah Foto Coaching</span>
+                        </div>
+                        <div id="fotoPreviewContainer" class="d-none">
+                            <img id="fotoPreview" src="" alt="Preview" style="max-width: 100%; max-height: 120px; border-radius: 6px;" />
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-sap-primary w-100 py-3" style="background-color: #7c3aed; border-color: #6d28d9;">
+                    <i class="bi bi-check-circle-fill me-2"></i> SIMPAN COACHING
+                </button>
+            </form>
+        </div>
+
+        <!-- History/List Column -->
+        <div>
+            <div class="history-header mb-3">
+                <h6 style="font-weight: 700; color: var(--text-main);"><i class="bi bi-card-list me-2" style="color: #a855f7;"></i>Log Coaching & Pembinaan</h6>
+            </div>
+            
+            @if (Model == null || !Model.Any())
+            {
+                <div class="card-sap text-center py-4 text-muted">
+                    <i class="bi bi-inbox-fill d-block mb-2" style="font-size: 32px;"></i>
+                    Belum ada sesi coaching tercatat.
+                </div>
+            }
+            else
+            {
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    @foreach (var item in Model)
+                    {
+                        <div class="card-sap border-purple-accent mb-0">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="badge" style="background-color: rgba(124, 58, 237, 0.15); color: #c084fc; font-size: 10px; padding: 4px 8px; border-radius: 6px;">@item.Tema</span>
+                                    <span class="d-block" style="font-weight: 700; font-size: 14px; margin-top: 4px; color: var(--text-main);"><i class="bi bi-geo-alt-fill me-1 text-muted"></i>@(item.Lokasi ?? item.Area ?? "General")</span>
+                                </div>
+                                <span class="status-badge approved" style="font-size: 9px; background-color: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                    Selesai
+                                </span>
+                            </div>
+
+                            <div style="font-size: 12px; margin: 8px 0; color: var(--text-muted);">
+                                <div><strong>Coach:</strong> @item.Nama (@item.Nik)</div>
+                                <div class="mt-1">
+                                    <strong>Peserta (@item.Participants.Count):</strong>
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        @foreach (var p in item.Participants)
+                                        {
+                                            <span class="badge" style="background-color: var(--border-color); color: var(--text-main); font-size: 10px; font-weight: 500; padding: 4px 8px; border-radius: 6px;">@p.Nama</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(item.Feedback))
+                            {
+                                <div style="font-size: 11px; color: var(--text-muted); background-color: var(--bg-layout); padding: 8px; border-radius: 6px; margin: 8px 0; border-left: 3px solid #7c3aed; white-space: pre-line;">
+                                    <strong>Umpan Balik:</strong><br />@item.Feedback
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(item.Komitmen))
+                            {
+                                <div style="font-size: 11px; color: var(--text-muted); background-color: var(--bg-layout); padding: 8px; border-radius: 6px; margin: 8px 0; border-left: 3px solid #10b981; white-space: pre-line;">
+                                    <strong>Komitmen:</strong><br />@item.Komitmen
+                                </div>
+                            }
+
+                            <!-- Photo -->
+                            @if (!string.IsNullOrEmpty(item.Foto))
+                            {
+                                <div class="my-2">
+                                    <a href="@item.Foto" target="_blank">
+                                        <img src="@item.Foto" alt="Coaching Photo" style="max-height: 60px; border-radius: 4px; border: 1px solid var(--border-color);" />
+                                    </a>
+                                </div>
+                            }
+
+                            <div class="d-flex justify-content-between align-items-center pt-2 mt-2" style="border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span><i class="bi bi-building me-1"></i>@item.Departemen</span>
+                                    @if (item.Nik == userNik || isAdmin)
+                                    {
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
+                                                <li><a class="dropdown-item" href="javascript:void(0)" style="color: var(--text-main);" onclick="editCoaching(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
+                                                <li><hr class="dropdown-divider border-secondary"></li>
+                                                <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteCoaching(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus Laporan</a></li>
+                                            </ul>
+                                        </div>
+                                    }
+                                </div>
+                                <span><i class="bi bi-clock me-1"></i>@item.Tanggal.ToString("dd MMM yyyy") @item.Waktu.ToString(@"hh\:mm")</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function previewFoto(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('fotoPreview').src = e.target.result;
+                    document.getElementById('fotoPlaceholder').classList.add('d-none');
+                    document.getElementById('fotoPreviewContainer').classList.remove('d-none');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        const allEmployees = [
+            @if (ViewBag.EmployeeList != null)
+            {
+                foreach (var emp in ViewBag.EmployeeList)
+                {
+                    @: { nik: "@emp.NoNik", name: "@Html.Raw(emp.NamaLengkap)" },
+                }
+            }
+        ];
+
+        let selectedTrainees = [];
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function showTraineeSuggestions() {
+            filterTraineeSuggestions();
+        }
+
+        function filterTraineeSuggestions() {
+            const input = document.getElementById('traineeSearchInput');
+            const query = input.value.toLowerCase().trim();
+            const suggestions = document.getElementById('traineeSuggestions');
+            
+            // Require at least 3 characters before showing suggestions
+            if (query.length < 3) {
+                suggestions.classList.add('d-none');
+                return;
+            }
+            
+            const matches = allEmployees.filter(emp => 
+                emp.name.toLowerCase().includes(query) || 
+                emp.nik.toLowerCase().includes(query)
+            );
+
+            if (matches.length === 0) {
+                suggestions.innerHTML = '<div class="text-muted p-2" style="font-size: 13px;">Karyawan tidak ditemukan</div>';
+            } else {
+                suggestions.innerHTML = matches.map(emp => `
+                    <div class="suggestion-item p-2" style="cursor: pointer; border-radius: 6px; font-size: 13px; color: var(--text-main);" onclick="addTrainee('${emp.nik}', '${escapeHtml(emp.name)}')">
+                        <strong>${emp.name}</strong> <span style="color: var(--text-muted);">(${emp.nik})</span>
+                    </div>
+                `).join('');
+            }
+            suggestions.classList.remove('d-none');
+        }
+
+        function addTrainee(nik, name) {
+            if (selectedTrainees.some(t => t.nik === nik)) {
+                document.getElementById('traineeSearchInput').value = '';
+                document.getElementById('traineeSuggestions').classList.add('d-none');
+                return;
+            }
+
+            selectedTrainees.push({ nik: nik, name: name });
+            renderTraineeChips();
+
+            document.getElementById('traineeSearchInput').value = '';
+            document.getElementById('traineeSuggestions').classList.add('d-none');
+        }
+
+        function removeTrainee(nik) {
+            selectedTrainees = selectedTrainees.filter(t => t.nik !== nik);
+            renderTraineeChips();
+        }
+
+        function renderTraineeChips() {
+            const container = document.getElementById('selectedTraineesContainer');
+
+            if (selectedTrainees.length === 0) {
+                container.innerHTML = `<span class="text-muted" id="noTraineesLabel" style="font-size: 13px;">Belum ada peserta yang dipilih. Ketik & pilih dari hasil pencarian di atas.</span>`;
+            } else {
+                container.innerHTML = selectedTrainees.map(t => `
+                    <div class="badge d-flex align-items-center gap-2 py-2 px-3" style="background-color: rgba(124, 58, 237, 0.12); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 20px; font-size: 12px; color: var(--text-main);">
+                        <span><strong style="color: #7c3aed;">${escapeHtml(t.name)}</strong> <span style="color: var(--text-muted); font-weight: normal;">(${t.nik})</span></span>
+                        <i class="bi bi-x-circle-fill text-danger" style="cursor: pointer; font-size: 14px;" onclick="removeTrainee('${t.nik}')" title="Hapus"></i>
+                        <input type="hidden" name="selectedParticipants" value="${t.nik}" />
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Close suggestions dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const container = document.getElementById('traineeSuggestions');
+            const input = document.getElementById('traineeSearchInput');
+            if (container && input && e.target !== input && !container.contains(e.target)) {
+                container.classList.add('d-none');
+            }
+        });
+
+        // Keyup handler
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('traineeSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', filterTraineeSuggestions);
+            }
+        });
+
+        // Geolocation Function
+        function getLocation() {
+            var btn = document.getElementById('btnGetLocation');
+            var input = document.getElementById('lokasi');
+            var detailInput = document.getElementById('detilLokasi');
+
+            function buildSpecificLocationLabel(payload) {
+                if (!payload) return '';
+                const addr = payload.address || {};
+                const candidates = [
+                    addr.road,
+                    addr.path,
+                    addr.neighbourhood,
+                    addr.suburb,
+                    addr.village,
+                    addr.hamlet,
+                    addr.city_district,
+                    addr.city,
+                    addr.county,
+                    addr.state
+                ];
+                const compact = candidates
+                    .filter(function(x) { return typeof x === 'string' && x.trim().length > 0; })
+                    .slice(0, 4)
+                    .join(', ');
+
+                return compact || (typeof payload.display_name === 'string' ? payload.display_name : '');
+            }
+
+            async function fillSpecificLocation(lat, lon) {
+                if (!detailInput) return;
+                try {
+                    const endpoint = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon) + '&zoom=18&addressdetails=1';
+                    const response = await fetch(endpoint, { headers: { 'Accept': 'application/json' } });
+                    if (!response.ok) return;
+                    const json = await response.json();
+                    const resolved = buildSpecificLocationLabel(json);
+                    if (resolved) {
+                        detailInput.value = resolved;
+                    }
+                } catch (e) {
+                    // Fail silently
+                }
+            }
+            
+            if (navigator.geolocation) {
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 14px; height: 14px;"></span>';
+                navigator.geolocation.getCurrentPosition(async function(position) {
+                    var lat = position.coords.latitude.toFixed(6);
+                    var lon = position.coords.longitude.toFixed(6);
+                    input.value = lat + ", " + lon;
+                    await fillSpecificLocation(lat, lon);
+                    btn.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+                }, function(error) {
+                    alert('Gagal mendapatkan lokasi GPS: ' + error.message);
+                    btn.innerHTML = '<i class="bi bi-crosshair text-danger"></i>';
+                }, {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                });
+            } else {
+                alert("Geolocation tidak didukung oleh browser ini.");
+            }
+        }
+
+        function cancelEditCoaching() {
+            $('#coachingForm')[0].reset();
+            $('#coachingId').val('');
+            $('#formTitle').html('<i class="bi bi-people-fill me-2" style="color: #a855f7;"></i>Catat Sesi Coaching Baru');
+            $('#btnCancelEdit').addClass('d-none');
+            
+            // Reset image preview
+            $('#fotoPreview').attr('src', '');
+            $('#fotoPreviewContainer').addClass('d-none');
+            $('#fotoPlaceholder').removeClass('d-none');
+
+            // Reset trainees
+            selectedTrainees = [];
+            renderTraineeChips();
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function editCoaching(id) {
+            $.get('/Coaching/GetData/' + id, function(data) {
+                if (data) {
+                    cancelEditCoaching(); // reset first
+                    $('#coachingId').val(data.id);
+                    
+                    if (data.tanggal) $('#tanggal').val(data.tanggal.split('T')[0]);
+                    if (data.waktu) $('#waktuStr').val(data.waktu.substring(0, 5));
+                    
+                    $('#area').val(data.area).change();
+                    $('#lokasi').val(data.lokasi);
+                    $('#detilLokasi').val(data.detilLokasi);
+                    $('#tema').val(data.tema).change();
+                    $('#feedback').val(data.feedback);
+                    $('#komitmen').val(data.komitmen);
+
+                    // Check selected participants
+                    selectedTrainees = [];
+                    if (data.participants && data.participants.length > 0) {
+                        data.participants.forEach(function(nik) {
+                            const emp = allEmployees.find(e => e.nik === nik);
+                            const name = emp ? emp.name : "Karyawan";
+                            selectedTrainees.push({ nik: nik, name: name });
+                        });
+                    }
+                    renderTraineeChips();
+
+                    $('#formTitle').html('<i class="bi bi-pencil-square me-2" style="color: #a855f7;"></i>Edit Laporan Coaching');
+                    $('#btnCancelEdit').removeClass('d-none');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }).fail(function() {
+                alert("Gagal mengambil data coaching. Laporan mungkin sudah dihapus.");
+            });
+        }
+
+        function deleteCoaching(id) {
+            if (confirm("Apakah Anda yakin ingin menghapus laporan coaching ini?")) {
+                var form = $('<form action="/Coaching/Delete/' + id + '" method="post">' +
+                             '<input type="hidden" name="__RequestVerificationToken" value="' + $('input[name="__RequestVerificationToken"]').val() + '" />' +
+                             '</form>');
+                $('body').append(form);
+                form.submit();
+            }
+        }
+
+        $(document).ready(function() {
+            // Auto fetch GPS location on page load
+            getLocation();
+
+            // Prevent double submission & enforce validations
+            $('#coachingForm').on('submit', function(e) {
+                var coachingId = $('#coachingId').val();
+                var fotoInput = document.getElementById('fotoInput');
+                
+                // Verify at least one participant is selected
+                if (selectedTrainees.length === 0) {
+                    alert("Silakan pilih minimal satu peserta coaching!");
+                    e.preventDefault();
+                    return false;
+                }
+
+                // If it is a new coaching session, photo is mandatory
+                if (!coachingId && (!fotoInput.files || fotoInput.files.length === 0)) {
+                    alert("Foto bukti kegiatan coaching wajib diunggah!");
+                    e.preventDefault();
+                    return false;
+                }
+
+                var btn = $(this).find('button[type="submit"]');
+                if (btn.prop('disabled')) {
+                    return false;
+                }
+                btn.prop('disabled', true);
+                btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');
+                return true;
+            });
+        });
+    </script>
+}

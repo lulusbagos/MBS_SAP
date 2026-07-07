@@ -40,7 +40,7 @@ namespace MBS_SAP.Controllers
             }
 
             var ev = await _context.AttendanceEvents
-                .FirstOrDefaultAsync(x => x.QrToken == token);
+                .FirstOrDefaultAsync(x => x.QrToken == token && !x.IsDeleted);
 
             if (ev == null)
             {

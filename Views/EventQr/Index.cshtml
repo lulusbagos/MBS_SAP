@@ -270,6 +270,87 @@
         border-color: var(--color-red) !important;
     }
 
+    .filter-tab {
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+        background: rgba(255, 255, 255, 0.01);
+        padding: 8px 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .filter-tab:hover {
+        border-color: rgba(255, 255, 255, 0.15);
+        color: var(--text-main);
+    }
+    .filter-tab.active {
+        background: rgba(56, 189, 248, 0.12);
+        border-color: rgba(56, 189, 248, 0.3);
+        color: var(--color-primary);
+    }
+    .event-table-container {
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.01);
+        overflow: hidden;
+    }
+    .event-table-responsive {
+        width: 100%;
+        overflow-x: auto;
+    }
+    .event-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: var(--text-main);
+        font-size: 13px;
+    }
+    .event-table th {
+        padding: 14px 16px;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid var(--border-color);
+        font-family: 'Outfit', sans-serif;
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        text-align: left;
+    }
+    .event-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        vertical-align: middle;
+    }
+    .event-table tr:last-child td {
+        border-bottom: none;
+    }
+    .event-table tr {
+        transition: background 0.15s ease;
+    }
+    .event-table tr:hover {
+        background: rgba(255, 255, 255, 0.015);
+    }
+    .event-table tr.filtered-out {
+        display: none !important;
+    }
+    .event-name-cell {
+        font-weight: 700;
+        color: var(--text-main);
+        font-size: 14px;
+        margin: 0;
+    }
+    .event-desc-sub {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin: 2px 0 0;
+        max-width: 250px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
     @@media (max-width: 1200px) {
         .eventqr-grid {
             grid-template-columns: 1fr;
@@ -359,67 +440,147 @@
                 <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--color-green); font-size: 10px;">@Model.Events.Count Event</span>
             </header>
             <div class="eventqr-card-body">
-                <div class="eventqr-list">
-                    @if (Model.Events.Count == 0)
-                    {
-                        <div class="event-empty">
-                            <i class="bi bi-calendar-x d-block mb-2" style="font-size: 32px; color: var(--text-muted);"></i>
-                            Belum ada event absensi. Buat event baru melalui formulir di sebelah kiri.
+                <!-- Search & Filters -->
+                <div class="row g-3 mb-4 align-items-center">
+                    <div class="col-md-7">
+                        <div class="input-group">
+                            <span class="input-group-text" style="background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 12px 0 0 12px; border-right: none;">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" id="searchEventInput" class="form-control" placeholder="Cari nama event atau lokasi..." style="background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); color: var(--text-main); font-size: 13px; border-radius: 0 12px 12px 0; padding: 10px 14px; border-left: none;" />
                         </div>
-                    }
-                    else
-                    {
-                        foreach (var ev in Model.Events)
-                        {
-                            var qrUrl = $"{baseUrl}/QrAttendance/Scan/{ev.QrToken}";
-                            <article class="event-row">
-                                <div class="event-meta">
-                                    <h4>@ev.EventName</h4>
-                                    <p><i class="bi bi-geo-alt-fill"></i>@(string.IsNullOrWhiteSpace(ev.EventLocation) ? "Lokasi belum diisi" : ev.EventLocation)</p>
-                                    <p><i class="bi bi-clock-fill"></i>@ev.StartAt.ToString("dd MMM yyyy hh:mm tt") - @ev.EndAt.ToString("hh:mm tt") WITA</p>
-                                    @if (!string.IsNullOrWhiteSpace(ev.EventDescription))
-                                    {
-                                        <p><i class="bi bi-chat-left-text-fill"></i>@ev.EventDescription</p>
-                                    }
-                                    <div class="event-badges">
-                                        <span class="event-badge @(ev.IsActive ? "active" : "inactive")">@(ev.IsActive ? "Aktif" : "Nonaktif")</span>
-                                        <span class="event-badge count">@ev.TotalAttendees Karyawan Hadir</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="event-actions">
-                                    <button type="button" class="event-btn event-btn-success" data-bs-toggle="modal" data-bs-target="#qrModal" data-name="@ev.EventName" data-url="@qrUrl">
-                                        <i class="bi bi-qr-code-scan"></i>Lihat QR
-                                    </button>
-                                    
-                                    <a class="event-btn event-btn-info" asp-action="Attendance" asp-route-id="@ev.Id"><i class="bi bi-tv"></i>Monitor Layar</a>
-                                    
-                                    <a class="event-btn" asp-action="ExportAttendance" asp-route-id="@ev.Id" style="color: var(--color-green); border-color: rgba(16, 185, 129, 0.25); background: rgba(16, 185, 129, 0.05);"><i class="bi-file-earmark-excel-fill"></i>Unduh Excel</a>
-                                    
-                                    <a class="event-btn" asp-action="Edit" asp-route-id="@ev.Id"><i class="bi bi-pencil-square"></i>Edit Event</a>
-
-                                    <form asp-action="ToggleActive" method="post" style="grid-column: span 1; width:100%;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@ev.Id" />
-                                        <button type="submit" style="width: 100%;"><i class="bi bi-power"></i>@(ev.IsActive ? "Nonaktifkan" : "Aktifkan")</button>
-                                    </form>
-
-                                    <form asp-action="RegenerateQr" method="post" style="grid-column: span 1; width:100%;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@ev.Id" />
-                                        <button type="submit" style="width: 100%;"><i class="bi bi-arrow-repeat"></i>Reset QR</button>
-                                    </form>
-
-                                    <form asp-action="Delete" method="post" style="grid-column: span 2; width: 100%;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus event ini beserta seluruh catatan kehadiran? Tindakan ini tidak dapat dibatalkan.');">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@ev.Id" />
-                                        <button type="submit" class="event-btn-danger" style="width: 100%;"><i class="bi bi-trash-fill"></i>Hapus Event</button>
-                                    </form>
-                                </div>
-                            </article>
-                        }
-                    }
+                    </div>
+                    <div class="col-md-5 d-flex justify-content-md-end gap-2">
+                        <button type="button" class="filter-tab active" data-filter="all">Semua</button>
+                        <button type="button" class="filter-tab" data-filter="active">Aktif</button>
+                        <button type="button" class="filter-tab" data-filter="inactive">Nonaktif</button>
+                    </div>
                 </div>
+
+                @if (Model.Events.Count == 0)
+                {
+                    <div class="event-empty">
+                        <i class="bi bi-calendar-x d-block mb-2" style="font-size: 32px; color: var(--text-muted);"></i>
+                        Belum ada event absensi. Buat event baru melalui formulir di sebelah kiri.
+                    </div>
+                }
+                else
+                {
+                    <div class="event-table-container">
+                        <div class="event-table-responsive">
+                            <table class="event-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px; text-align: center;">No</th>
+                                        <th>Nama Event</th>
+                                        <th>Lokasi</th>
+                                        <th>Jadwal (WITA)</th>
+                                        <th style="width: 90px; text-align: center;">Status</th>
+                                        <th style="width: 120px; text-align: center;">Hadir</th>
+                                        <th style="width: 110px; text-align: center;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="eventTableBody">
+                                    @{
+                                        int index = 1;
+                                        foreach (var ev in Model.Events)
+                                        {
+                                            var qrUrl = $"{baseUrl}/QrAttendance/Scan/{ev.QrToken}";
+                                            <tr class="event-table-row" data-name="@ev.EventName.ToLower()" data-location="@(ev.EventLocation?.ToLower() ?? "")" data-active="@(ev.IsActive ? "true" : "false")">
+                                                <td style="color: var(--text-muted); font-weight: 600; text-align: center;">@index</td>
+                                                <td>
+                                                    <div class="event-name-cell">@ev.EventName</div>
+                                                    @if (!string.IsNullOrWhiteSpace(ev.EventDescription))
+                                                    {
+                                                        <div class="event-desc-sub" title="@ev.EventDescription">@ev.EventDescription</div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="event-desc-sub" style="font-style: italic;">Tidak ada deskripsi</div>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (string.IsNullOrWhiteSpace(ev.EventLocation))
+                                                    {
+                                                        <span class="text-muted" style="font-style: italic; font-size: 12px;">Lokasi belum diisi</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span style="font-weight: 500;"><i class="bi bi-geo-alt-fill text-primary me-1" style="font-size: 12px;"></i>@ev.EventLocation</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <div style="font-weight: 500; font-size: 12px;"><i class="bi bi-calendar-event text-info me-1" style="font-size: 12px;"></i>@ev.StartAt.ToString("dd MMM yyyy")</div>
+                                                    <div class="text-muted" style="font-size: 11px; margin-top: 2px;"><i class="bi bi-clock me-1" style="font-size: 11px;"></i>@ev.StartAt.ToString("HH:mm") - @ev.EndAt.ToString("HH:mm") WITA</div>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <span class="event-badge @(ev.IsActive ? "active" : "inactive")" style="display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 9px; font-weight: 800;">
+                                                        @(ev.IsActive ? "Aktif" : "Nonaktif")
+                                                    </span>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <span class="badge" style="background: rgba(56, 189, 248, 0.1); color: var(--color-primary); border: 1px solid rgba(56, 189, 248, 0.2); font-weight: 700; padding: 4px 8px; border-radius: 8px;">
+                                                        @ev.TotalAttendees Karyawan
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                                        <!-- Quick QR Button -->
+                                                        <button type="button" class="btn btn-sm btn-outline-success border-0 px-2 py-1" data-bs-toggle="modal" data-bs-target="#qrModal" data-name="@ev.EventName" data-url="@qrUrl" title="Lihat QR Code" style="border-radius: 6px; background: rgba(16, 185, 129, 0.05); color: var(--color-green);">
+                                                            <i class="bi bi-qr-code" style="font-size: 14px;"></i>
+                                                        </button>
+                                                        <!-- Quick Excel Button -->
+                                                        <a class="btn btn-sm btn-outline-success border-0 px-2 py-1" asp-action="ExportAttendance" asp-route-id="@ev.Id" title="Unduh Excel" style="border-radius: 6px; background: rgba(16, 185, 129, 0.05); color: var(--color-green);">
+                                                            <i class="bi bi-file-earmark-excel-fill" style="font-size: 14px;"></i>
+                                                        </a>
+                                                        
+                                                        <!-- Dropdown for More Options -->
+                                                        <div class="dropdown">
+                                                            <button class="btn btn-sm btn-link border-0 text-white-50 px-2 py-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-radius: 6px; background: rgba(255,255,255,0.03); text-decoration: none;">
+                                                                <i class="bi bi-three-dots-vertical" style="font-size: 14px; color: var(--text-muted);"></i>
+                                                            </button>
+                                                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="border: 1px solid var(--border-color); background: var(--bg-card); box-shadow: 0 10px 25px rgba(0,0,0,0.3); border-radius: 12px; font-size: 13px;">
+                                                                <li><a class="dropdown-item" asp-action="Attendance" asp-route-id="@ev.Id"><i class="bi bi-tv me-2 text-info"></i>Monitor Layar</a></li>
+                                                                <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@ev.Id"><i class="bi bi-pencil-square me-2 text-warning"></i>Edit Event</a></li>
+                                                                <li>
+                                                                    <form asp-action="ToggleActive" method="post" style="display:inline;">
+                                                                        @Html.AntiForgeryToken()
+                                                                        <input type="hidden" name="id" value="@ev.Id" />
+                                                                        <button type="submit" class="dropdown-item"><i class="bi bi-power me-2 text-primary"></i>@(ev.IsActive ? "Nonaktifkan" : "Aktifkan")</button>
+                                                                    </form>
+                                                                </li>
+                                                                <li>
+                                                                    <form asp-action="RegenerateQr" method="post" style="display:inline;">
+                                                                        @Html.AntiForgeryToken()
+                                                                        <input type="hidden" name="id" value="@ev.Id" />
+                                                                        <button type="submit" class="dropdown-item"><i class="bi bi-arrow-repeat me-2 text-secondary"></i>Reset QR</button>
+                                                                    </form>
+                                                                </li>
+                                                                <li><hr class="dropdown-divider" style="border-color: var(--border-color);"></li>
+                                                                <li>
+                                                                    <form asp-action="Delete" method="post" style="display:inline;" onsubmit="return confirm('PENTING: Pastikan Anda telah mengunduh/mendownload data absensi terlebih dahulu sebelum menghapus event ini, karena seluruh data catatan kehadiran akan hilang secara permanen.\n\nApakah Anda yakin ingin menghapus event ini?');">
+                                                                        @Html.AntiForgeryToken()
+                                                                        <input type="hidden" name="id" value="@ev.Id" />
+                                                                        <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash-fill me-2"></i>Hapus Event</button>
+                                                                    </form>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            index++;
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                            <div id="noEventFound" class="event-empty" style="display: none; border: none; background: transparent; padding: 40px 20px;">
+                                <i class="bi bi-search d-block mb-2" style="font-size: 32px; color: var(--text-muted);"></i>
+                                Tidak ada event yang cocok dengan kriteria pencarian atau penyaringan.
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
         </section>
     </div>
@@ -495,6 +656,66 @@
                 } catch {
                     alert('Gagal copy link QR.');
                 }
+            });
+
+            // Client-side search and filtering
+            const searchInput = document.getElementById('searchEventInput');
+            const filterTabs = document.querySelectorAll('.filter-tab');
+            const rows = document.querySelectorAll('.event-table-row');
+            const noEventFound = document.getElementById('noEventFound');
+            const tableElement = document.querySelector('.event-table');
+
+            function filterTable() {
+                const query = searchInput?.value.toLowerCase().trim() || '';
+                const activeTab = document.querySelector('.filter-tab.active');
+                const statusFilter = activeTab?.getAttribute('data-filter') || 'all';
+                let visibleCount = 0;
+
+                rows.forEach(row => {
+                    const name = row.getAttribute('data-name') || '';
+                    const location = row.getAttribute('data-location') || '';
+                    const isActiveStr = row.getAttribute('data-active') || 'true';
+                    const isActive = isActiveStr === 'true';
+
+                    // Match Search Query
+                    const matchesSearch = name.includes(query) || location.includes(query);
+
+                    // Match Status Filter
+                    let matchesStatus = true;
+                    if (statusFilter === 'active') {
+                        matchesStatus = isActive;
+                    } else if (statusFilter === 'inactive') {
+                        matchesStatus = !isActive;
+                    }
+
+                    if (matchesSearch && matchesStatus) {
+                        row.classList.remove('filtered-out');
+                        visibleCount++;
+                    } else {
+                        row.classList.add('filtered-out');
+                    }
+                });
+
+                // Show/hide empty state
+                if (noEventFound && tableElement) {
+                    if (visibleCount === 0) {
+                        tableElement.style.display = 'none';
+                        noEventFound.style.display = 'block';
+                    } else {
+                        tableElement.style.display = 'table';
+                        noEventFound.style.display = 'none';
+                    }
+                }
+            }
+
+            searchInput?.addEventListener('input', filterTable);
+
+            filterTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    filterTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    filterTable();
+                });
             });
         })();
     </script>
