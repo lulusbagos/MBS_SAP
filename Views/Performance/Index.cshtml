@@ -1572,13 +1572,13 @@
                                     <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                         @if (ViewBag.UserEmpDeptRank != null)
                                         {
-                                            <span style="font-size: 11px; font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(56, 189, 248, 0.3); color: #e0f2fe;">
+                                            <span style="font-size: 11px; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(0,0,0,0.1); color: #1e293b; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                                                 <i class="bi bi-person-badge"></i> Rank Saya di Dept: #@ViewBag.UserEmpDeptRank / @ViewBag.UserEmpDeptTotalCount
                                             </span>
                                         }
                                         @if (ViewBag.UserEmpCompanyRank != null)
                                         {
-                                            <span style="font-size: 11px; font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(56, 189, 248, 0.3); color: #e0f2fe;">
+                                            <span style="font-size: 11px; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(0,0,0,0.1); color: #1e293b; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                                                 <i class="bi bi-building"></i> Rank Saya di Perusahaan: #@ViewBag.UserEmpCompanyRank / @ViewBag.UserEmpCompanyTotalCount
                                             </span>
                                         }
@@ -1614,13 +1614,13 @@
                                     <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                                         @if (ViewBag.UserEmpDeptRank != null)
                                         {
-                                            <span style="font-size: 11px; font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(56, 189, 248, 0.3); color: #e0f2fe;">
+                                            <span style="font-size: 11px; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(0,0,0,0.1); color: #1e293b; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                                                 <i class="bi bi-person-badge"></i> Rank Saya di Dept: #@ViewBag.UserEmpDeptRank / @ViewBag.UserEmpDeptTotalCount
                                             </span>
                                         }
                                         @if (ViewBag.UserEmpCompanyRank != null)
                                         {
-                                            <span style="font-size: 11px; font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(56, 189, 248, 0.3); color: #e0f2fe;">
+                                            <span style="font-size: 11px; font-weight: 700; background: #ffffff; padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(0,0,0,0.1); color: #1e293b; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                                                 <i class="bi bi-building"></i> Rank Saya di Perusahaan: #@ViewBag.UserEmpCompanyRank / @ViewBag.UserEmpCompanyTotalCount
                                             </span>
                                         }
@@ -2788,12 +2788,7 @@
                                                 <th>YTD Total</th>
                                                 <th>MTD Total</th>
                                                 <th>WEEK Total</th>
-                                                <th>Hazard</th>
-                                                <th>Inspeksi</th>
-                                                <th>S.Talk</th>
-                                                <th>Observasi</th>
-                                                <th>Coaching</th>
-                                                <th style="background-color: #78350f; color: #ffffff; border-left: 2px solid #b45309;">P5M *</th>
+                                                <th>YTD Hazard</th><th>YTD Inspeksi</th><th>YTD S.Talk</th><th>YTD Observasi</th><th>YTD Coaching</th><th style="background-color: #78350f; color: #ffffff; border-left: 2px solid #b45309;">YTD P5M *</th>
                                                 <th style="text-align: center;">Aksi</th>
                                             </tr>
                                         </thead>
@@ -2858,6 +2853,179 @@
 <!-- Charts & Tabs Handling Script -->
 @section Scripts {
 <script>
+    const deptModal = document.getElementById('deptAchievementModal');
+    const deptRows = document.getElementById('deptAchievementRows');
+    const deptTitle = document.getElementById('deptAchievementTitle');
+    const deptCloseBtn = document.getElementById('deptAchievementClose');
+
+    const empModal = document.getElementById('employeeDetailModal');
+    const empRows = document.getElementById('employeeDetailRows');
+    const empTitle = document.getElementById('employeeDetailTitle');
+    const empCloseBtn = document.getElementById('employeeDetailClose');
+    const empLoading = document.getElementById('employeeLoading');
+    const empTableContainer = document.getElementById('employeeTableContainer');
+
+    let currentCompanyId = null;
+
+    function getAchievementColor(rate) {
+        const val = Number(rate);
+        if (val >= 90) return '#16a34a'; // Green
+        if (val >= 60) return '#ca8a04'; // Yellow
+        if (val >= 30) return '#ea580c'; // Orange
+        return '#dc2626'; // Red
+    }
+
+    function closeDeptModal() {
+        if (!deptModal) return;
+        deptModal.classList.remove('show');
+        deptModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function closeEmpModal() {
+        if (!empModal) return;
+        empModal.classList.remove('show');
+        empModal.setAttribute('aria-hidden', 'true');
+    }
+
+    window.viewEmployeeDetails = function(deptName, companyIdOverride) {
+        if (!empModal || !empRows || !empTitle || !empLoading || !empTableContainer) return;
+        const cid = companyIdOverride || currentCompanyId;
+
+        empTitle.textContent = 'Detail Karyawan & Target MTD - ' + deptName;
+        
+        empLoading.classList.remove('d-none');
+        empTableContainer.classList.add('d-none');
+        
+        empModal.classList.add('show');
+        empModal.setAttribute('aria-hidden', 'false');
+
+        const url = '/Performance/GetDepartmentEmployees?companyId=' + cid + '&departmentName=' + encodeURIComponent(deptName);
+        fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error('Gagal mengambil data');
+                return res.json();
+            })
+            .then(data => {
+                empLoading.classList.add('d-none');
+                empTableContainer.classList.remove('d-none');
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    empRows.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Tidak ada data karyawan aktif.</td></tr>';
+                } else {
+                    empRows.innerHTML = data.map((item, idx) => {
+                        const name = item.karyawanName || '-';
+                        const nik = item.karyawanNik || '-';
+                        const jabatan = item.jabatanName || '-';
+                        
+                        const mtd = Number(item.mtdAchievementRate || 0).toFixed(1);
+                        const hazard = item.mtdHazardCount + ' / ' + item.targetHazardMtd;
+                        const inspeksi = item.mtdInspeksiCount + ' / ' + item.targetInspeksiMtd;
+                        const safetyTalk = item.mtdSafetyTalkCount + ' / ' + item.targetSafetyTalkMtd;
+                        const observasi = item.mtdObservasiCount + ' / ' + item.targetObservasiMtd;
+                        const coaching = item.mtdCoachingCount + ' / ' + item.targetCoachingMtd;
+                        const p5m = item.mtdP5mCount + ' / ' + item.targetP5mMtd;
+                        
+                        return '<tr>' +
+                            '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
+                            '<td><div class="fw-bold" style="color: #334155;">' + name + '</div><div style="font-size: 10px; color: #64748b;">' + nik + '</div></td>' +
+                            '<td>' + jabatan + '</td>' +
+                            '<td class="fw-bold" style="color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
+                            '<td>' + hazard + '</td>' +
+                            '<td>' + inspeksi + '</td>' +
+                            '<td>' + safetyTalk + '</td>' +
+                            '<td>' + observasi + '</td>' +
+                            '<td>' + coaching + '</td>' +
+                            '<td style="background-color: #fffbeb; border-left: 2px solid #f59e0b;">' + p5m + '</td>' +
+                        '</tr>';
+                    }).join('');
+                }
+            })
+            .catch(err => {
+                empLoading.classList.add('d-none');
+                empTableContainer.classList.remove('d-none');
+                empRows.innerHTML = '<tr><td colspan="10" class="text-center text-danger">Terjadi kesalahan saat memuat data.</td></tr>';
+                console.error(err);
+            });
+    };
+
+    window.openDeptModal = function(companyId, companyName, deptData) {
+        currentCompanyId = companyId;
+        if (!deptModal || !deptRows || !deptTitle) return;
+
+        deptTitle.textContent = 'Pencapaian Per Departemen - ' + (companyName || 'Perusahaan');
+
+        if (!Array.isArray(deptData) || deptData.length === 0) {
+            deptRows.innerHTML = '<tr><td colspan="13" class="text-center text-muted">Belum ada data departemen.</td></tr>';
+        } else {
+            const sortedDeptData = deptData.slice().sort(function(a, b) {
+                const ytdA = Number(a.ytdAchievementRate || a.YtdAchievementRate || 0);
+                const ytdB = Number(b.ytdAchievementRate || b.YtdAchievementRate || 0);
+                return ytdB - ytdA;
+            });
+            
+            deptRows.innerHTML = sortedDeptData.map(function (item, idx) {
+                const deptName = String(item.departmentName || item.DepartmentName || '-');
+                const employeeCount = Number(item.employeeCount || item.EmployeeCount || 0);
+                const ytd = Number(item.ytdAchievementRate || item.YtdAchievementRate || 0).toFixed(1);
+                const mtd = Number(item.mtdAchievementRate || item.MtdAchievementRate || 0).toFixed(1);
+                const week = Number(item.weeklyAchievementRate || item.WeeklyAchievementRate || 0).toFixed(1);
+                const hRate = Number(item.ytdHazardRate || item.YtdHazardRate || 0).toFixed(1);
+                const iRate = Number(item.ytdInspeksiRate || item.YtdInspeksiRate || 0).toFixed(1);
+                const stRate = Number(item.ytdSafetyTalkRate || item.YtdSafetyTalkRate || 0).toFixed(1);
+                const oRate = Number(item.ytdObservasiRate || item.YtdObservasiRate || 0).toFixed(1);
+                const cRate = Number(item.ytdCoachingRate || item.YtdCoachingRate || 0).toFixed(1);
+                const p5mRate = Number(item.ytdP5mRate || item.YtdP5mRate || 0).toFixed(1);
+
+                return '<tr>' +
+                    '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
+                    '<td class="fw-bold" style="color: #334155;">' + deptName + '</td>' +
+                    '<td>' + employeeCount + '</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(ytd) + ';">' + ytd + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(week) + ';">' + week + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(hRate) + ';">' + hRate + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(iRate) + ';">' + iRate + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(stRate) + ';">' + stRate + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(oRate) + ';">' + oRate + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(cRate) + ';">' + cRate + '%</td>' +
+                    '<td class="dept-achievement-rate fw-bold" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: ' + getAchievementColor(p5mRate) + ';">' + p5mRate + '%</td>' +
+                    '<td style="text-align: center;">' +
+                        '<button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600;" onclick="viewEmployeeDetails(\'' + deptName.replace(/'/g, "\\'\") + '\')">' +
+                            'Ranking <i class="bi bi-chevron-right ms-1"></i>' +
+                        '</button>' +
+                    '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        deptModal.classList.add('show');
+        deptModal.setAttribute('aria-hidden', 'false');
+    };
+
+    // Close buttons binding
+    document.addEventListener("DOMContentLoaded", function () {
+        const dCloseBtn = document.getElementById('deptAchievementClose');
+        const eCloseBtn = document.getElementById('employeeDetailClose');
+        const dModal = document.getElementById('deptAchievementModal');
+        const eModal = document.getElementById('employeeDetailModal');
+
+        dCloseBtn?.addEventListener('click', closeDeptModal);
+        dModal?.addEventListener('click', function (e) {
+            const target = e.target;
+            if (target && target.getAttribute && target.getAttribute('data-dept-close') === 'true') {
+                closeDeptModal();
+            }
+        });
+
+        eCloseBtn?.addEventListener('click', closeEmpModal);
+        eModal?.addEventListener('click', function (e) {
+            const target = e.target;
+            if (target && target.getAttribute && target.getAttribute('data-emp-close') === 'true') {
+                closeEmpModal();
+            }
+        });
+    });
+
     function ensureHierarchySectionDetached() {
         const hierarchySection = document.getElementById('sectionHierarchy');
         const companySection = document.getElementById('sectionCompany');
@@ -2908,181 +3076,7 @@
             return;
         }
 
-        const deptModal = document.getElementById('deptAchievementModal');
-        const deptRows = document.getElementById('deptAchievementRows');
-        const deptTitle = document.getElementById('deptAchievementTitle');
-        const deptCloseBtn = document.getElementById('deptAchievementClose');
-
-        const empModal = document.getElementById('employeeDetailModal');
-        const empRows = document.getElementById('employeeDetailRows');
-        const empTitle = document.getElementById('employeeDetailTitle');
-        const empCloseBtn = document.getElementById('employeeDetailClose');
-        const empLoading = document.getElementById('employeeLoading');
-        const empTableContainer = document.getElementById('employeeTableContainer');
-
-        let currentCompanyId = null;
-
-        function getAchievementColor(rate) {
-            const val = Number(rate);
-            if (val >= 90) return '#16a34a'; // Green
-            if (val >= 60) return '#ca8a04'; // Yellow
-            if (val >= 30) return '#ea580c'; // Orange
-            return '#dc2626'; // Red
-        }
-
-        function closeDeptModal() {
-            if (!deptModal) return;
-            deptModal.classList.remove('show');
-            deptModal.setAttribute('aria-hidden', 'true');
-        }
-
-        function closeEmpModal() {
-            if (!empModal) return;
-            empModal.classList.remove('show');
-            empModal.setAttribute('aria-hidden', 'true');
-        }
-
-        function openDeptModal(companyId, companyName, deptData) {
-            currentCompanyId = companyId;
-            if (!deptModal || !deptRows || !deptTitle) return;
-
-            deptTitle.textContent = 'Pencapaian Per Departemen - ' + (companyName || 'Perusahaan');
-
-            if (!Array.isArray(deptData) || deptData.length === 0) {
-                deptRows.innerHTML = '<tr><td colspan="13" class="text-center text-muted">Belum ada data departemen.</td></tr>';
-            } else {
-                const sortedDeptData = deptData.slice().sort(function(a, b) {
-                    const ytdA = Number(a.ytdAchievementRate || a.YtdAchievementRate || 0);
-                    const ytdB = Number(b.ytdAchievementRate || b.YtdAchievementRate || 0);
-                    return ytdB - ytdA;
-                });
-                
-                deptRows.innerHTML = sortedDeptData.map(function (item, idx) {
-                    const deptName = String(item.departmentName || item.DepartmentName || '-');
-                    const employeeCount = Number(item.employeeCount || item.EmployeeCount || 0);
-                    const ytd = Number(item.ytdAchievementRate || item.YtdAchievementRate || 0).toFixed(1);
-                    const mtd = Number(item.mtdAchievementRate || item.MtdAchievementRate || 0).toFixed(1);
-                    const week = Number(item.weeklyAchievementRate || item.WeeklyAchievementRate || 0).toFixed(1);
-                    const hRate = Number(item.ytdHazardRate || item.YtdHazardRate || 0).toFixed(1);
-                    const iRate = Number(item.ytdInspeksiRate || item.YtdInspeksiRate || 0).toFixed(1);
-                    const stRate = Number(item.ytdSafetyTalkRate || item.YtdSafetyTalkRate || 0).toFixed(1);
-                    const oRate = Number(item.ytdObservasiRate || item.YtdObservasiRate || 0).toFixed(1);
-                    const cRate = Number(item.ytdCoachingRate || item.YtdCoachingRate || 0).toFixed(1);
-                    const p5mRate = Number(item.ytdP5mRate || item.YtdP5mRate || 0).toFixed(1);
-
-                    return '<tr>' +
-                        '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
-                        '<td class="fw-bold" style="color: #334155;">' + deptName + '</td>' +
-                        '<td>' + employeeCount + '</td>' +
-                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(ytd) + ';">' + ytd + '%</td>' +
-                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(mtd) + ';">' + mtd + '%</td>' +
-                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(week) + ';">' + week + '%</td>' +
-                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(hRate) + ';">' + hRate + '%</td>' +
-                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(iRate) + ';">' + iRate + '%</td>' +
-                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(stRate) + ';">' + stRate + '%</td>' +
-                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(oRate) + ';">' + oRate + '%</td>' +
-                        '<td class="dept-achievement-rate fw-bold" style="color: ' + getAchievementColor(cRate) + ';">' + cRate + '%</td>' +
-                        '<td class="dept-achievement-rate fw-bold" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: ' + getAchievementColor(p5mRate) + ';">' + p5mRate + '%</td>' +
-                        '<td style="text-align: center;">' +
-                            '<button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600;" onclick="viewEmployeeDetails(\'' + deptName.replace(/'/g, "\\'") + '\')">' +
-                                'Ranking <i class="bi bi-chevron-right ms-1"></i>' +
-                            '</button>' +
-                        '</td>' +
-                        '</tr>';
-                }).join('');
-            }
-
-            deptModal.classList.add('show');
-            deptModal.setAttribute('aria-hidden', 'false');
-        }
-
-        window.viewEmployeeDetails = function(deptName, companyIdOverride) {
-            if (!empModal || !empRows || !empTitle || !empLoading || !empTableContainer) return;
-            const cid = companyIdOverride || currentCompanyId;
-
-            empTitle.textContent = 'Detail Karyawan & Target MTD - ' + deptName;
-            
-            empLoading.classList.remove('d-none');
-            empTableContainer.classList.add('d-none');
-            
-            empModal.classList.add('show');
-            empModal.setAttribute('aria-hidden', 'false');
-
-            const url = `/Performance/GetDepartmentEmployees?companyId=${cid}&departmentName=${encodeURIComponent(deptName)}`;
-            fetch(url)
-                .then(res => {
-                    if (!res.ok) throw new Error('Gagal mengambil data');
-                    return res.json();
-                })
-                .then(data => {
-                    empLoading.classList.add('d-none');
-                    empTableContainer.classList.remove('d-none');
-
-                    if (!Array.isArray(data) || data.length === 0) {
-                        empRows.innerHTML = '<tr><td colspan="10" class="text-center text-muted">Tidak ada data karyawan aktif.</td></tr>';
-                    } else {
-                        empRows.innerHTML = data.map((item, idx) => {
-                            const name = item.karyawanName || '-';
-                            const nik = item.nik || '-';
-                            const comp = Number(item.complianceRate || 0).toFixed(1);
-                            
-                            const h = item.hazard || { target: 0, actual: 0 };
-                            const i = item.inspeksi || { target: 0, actual: 0 };
-                            const st = item.safetyTalk || { target: 0, actual: 0 };
-                            const o = item.observasi || { target: 0, actual: 0 };
-                            const c = item.coaching || { target: 0, actual: 0 };
-                            const p5 = item.p5m || { target: 0, actual: 0 };
-
-                            const totalTgt = item.mtdTotalTarget || 0;
-                            const totalAct = item.mtdTotalActual || 0;
-
-                            const compColor = getAchievementColor(comp);
-                            
-                            const hPerc = h.target > 0 ? (h.actual / h.target) * 100 : (h.actual > 0 ? 100 : 0);
-                            const iPerc = i.target > 0 ? (i.actual / i.target) * 100 : (i.actual > 0 ? 100 : 0);
-                            const stPerc = st.target > 0 ? (st.actual / st.target) * 100 : (st.actual > 0 ? 100 : 0);
-                            const oPerc = o.target > 0 ? (o.actual / o.target) * 100 : (o.actual > 0 ? 100 : 0);
-                            const cPerc = c.target > 0 ? (c.actual / c.target) * 100 : (c.actual > 0 ? 100 : 0);
-                            const p5Perc = p5.target > 0 ? (p5.actual / p5.target) * 100 : (p5.actual > 0 ? 100 : 0);
-
-                            return '<tr>' +
-                                '<td class="text-muted fw-bold">' + (idx + 1) + '</td>' +
-                                '<td class="fw-bold" style="color: #334155;">' + name + '</td>' +
-                                '<td>' + nik + '</td>' +
-                                '<td class="text-center fw-bold" style="color: ' + compColor + ';">' + comp + '%<br/><small class="text-muted" style="font-weight: 500;">' + totalAct + ' / ' + totalTgt + '</small></td>' +
-                                '<td class="text-center fw-bold" style="color: ' + getAchievementColor(hPerc) + ';">' + h.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + h.target + '</span></td>' +
-                                '<td class="text-center fw-bold" style="color: ' + getAchievementColor(iPerc) + ';">' + i.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + i.target + '</span></td>' +
-                                '<td class="text-center fw-bold" style="color: ' + getAchievementColor(stPerc) + ';">' + st.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + st.target + '</span></td>' +
-                                '<td class="text-center fw-bold" style="color: ' + getAchievementColor(oPerc) + ';">' + o.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + o.target + '</span></td>' +
-                                '<td class="text-center fw-bold" style="color: ' + getAchievementColor(cPerc) + ';">' + c.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + c.target + '</span></td>' +
-                                '<td class="text-center fw-bold" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: ' + getAchievementColor(p5Perc) + ';">' + p5.actual + ' <span class="text-muted" style="font-weight: normal; font-size: 11px;">/ ' + p5.target + '</span></td>' +
-                                '</tr>';
-                        }).join('');
-                    }
-                })
-                .catch(err => {
-                    console.error(err);
-                    empLoading.classList.add('d-none');
-                    empTableContainer.classList.remove('d-none');
-                    empRows.innerHTML = '<tr><td colspan="10" class="text-center text-danger">Gagal memuat data karyawan.</td></tr>';
-                });
-        };
-
-        deptCloseBtn?.addEventListener('click', closeDeptModal);
-        deptModal?.addEventListener('click', function (e) {
-            const target = e.target;
-            if (target && target.getAttribute && target.getAttribute('data-dept-close') === 'true') {
-                closeDeptModal();
-            }
-        });
-
-        empCloseBtn?.addEventListener('click', closeEmpModal);
-        empModal?.addEventListener('click', function (e) {
-            const target = e.target;
-            if (target && target.getAttribute && target.getAttribute('data-emp-close') === 'true') {
-                closeEmpModal();
-            }
-        });
+        
 
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
@@ -4290,3 +4284,6 @@
     });
 </script>
 }
+
+
+

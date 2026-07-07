@@ -139,6 +139,7 @@ namespace MBS_SAP.Controllers
 
                 // MTD target = monthly target directly from mapping view
                 int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0, p5mTar = 1;
+                string jabatanName = "-";
                 if (mappingsDict.TryGetValue(k.IdKaryawan, out var m))
                 {
                     hTar = m.TargetHazardReport ?? 2;
@@ -146,6 +147,7 @@ namespace MBS_SAP.Controllers
                     stTar = m.TargetSafetyTalk ?? 1;
                     obsTar = m.TargetObservasi ?? 0;
                     cTar = m.TargetCoaching ?? 0;
+                    jabatanName = m.NamaJabatanStandar ?? m.NamaJabatanExisting ?? "-";
                 }
 
                 int mtdTgtH = hTar;
@@ -178,6 +180,7 @@ namespace MBS_SAP.Controllers
                     karyawanName = k.NamaLengkap,
                     nik = nik,
                     departmentName = k.NamaDepartemen,
+                    jabatanName = jabatanName,
                     mtdTotalTarget = totalTgt,
                     mtdTotalActual = totalAct,
                     complianceRate = compliance,
