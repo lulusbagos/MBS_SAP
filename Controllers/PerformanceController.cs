@@ -38,10 +38,20 @@ namespace MBS_SAP.Controllers
                 companyId = null;
             }
 
-            var allCompanies = await _context.Perusahaans.Where(p => p.StatusAktif).ToListAsync();
+            // Exclude companies that should not be part of the SAP system at all
+            var allCompanies = await _context.Perusahaans
+                .Where(p => p.StatusAktif && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
+                .ToListAsync();
+
             var allowedCompanyIds = new HashSet<int>();
             if (companyId.HasValue)
             {
+                // If the user's own company is excluded, return empty scope
+                if (ExcludedCompanies.IsExcluded(companyId.Value))
+                {
+                    return (companyId, allowedCompanyIds);
+                }
+
                 allowedCompanyIds.Add(companyId.Value);
 
                 void GetDescendants(int parentId)
@@ -69,6 +79,12 @@ namespace MBS_SAP.Controllers
             if (scopeCompanyId.HasValue && !allowedCompanyIds.Contains(companyId))
             {
                 return Forbid();
+            }
+
+            // Block excluded companies
+            if (ExcludedCompanies.IsExcluded(companyId))
+            {
+                return Json(new List<object>());
             }
 
             var startOfYear = new DateTime(DateTime.Today.Year, 1, 1);
@@ -586,7 +602,9 @@ namespace MBS_SAP.Controllers
                                         .ToListAsync();
 
             // 6. Leaderboard Perusahaan
-            var allKaryawans = await _context.Karyawans.Where(k => k.StatusAktif).ToListAsync();
+            var allKaryawans = await _context.Karyawans
+                .Where(k => k.StatusAktif && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan))
+                .ToListAsync();
 
             var mappingsDict = new Dictionary<int, KaryawanJabatanMappingPreviewView>();
             foreach (var m in targetMappingCompany)
@@ -1296,37 +1314,37 @@ namespace MBS_SAP.Controllers
 
             var hierarchyHazardRows = await _context.HazardReports
                 .AsNoTracking()
-                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.CreatedAt >= startOfYear)
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(h.PerusahaanId!.Value))
                 .Select(h => new { CompanyId = h.PerusahaanId!.Value, h.Nik, h.CreatedAt })
                 .ToListAsync();
 
             var hierarchyInspectionRows = await _context.Inspections
                 .AsNoTracking()
-                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && i.CreatedAt >= startOfYear)
+                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && i.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(i.PerusahaanId!.Value))
                 .Select(i => new { CompanyId = i.PerusahaanId!.Value, i.Nik, i.CreatedAt })
                 .ToListAsync();
 
             var hierarchySafetyTalkRows = await _context.SafetyTalks
                 .AsNoTracking()
-                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && s.CreatedAt >= startOfYear)
+                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && s.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(s.PerusahaanId!.Value))
                 .Select(s => new { CompanyId = s.PerusahaanId!.Value, s.Nik, s.CreatedAt })
                 .ToListAsync();
 
             var hierarchyP5mRows = await _context.P5ms
                 .AsNoTracking()
-                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && p.CreatedAt >= startOfYear)
+                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && p.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(p.PerusahaanId!.Value))
                 .Select(p => new { CompanyId = p.PerusahaanId!.Value, p.Nik, p.CreatedAt })
                 .ToListAsync();
 
             var hierarchyCoachingRows = await _context.Coachings
                 .AsNoTracking()
-                .Where(c => !c.IsDeleted && c.PerusahaanId.HasValue && c.CreatedAt >= startOfYear)
+                .Where(c => !c.IsDeleted && c.PerusahaanId.HasValue && c.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(c.PerusahaanId!.Value))
                 .Select(c => new { CompanyId = c.PerusahaanId!.Value, c.Nik, c.CreatedAt })
                 .ToListAsync();
 
             var hierarchyObservationRows = await (from o in _context.Observations
                                                   join k in _context.Karyawans on o.Nik equals k.NoNik
-                                                  where !o.IsDeleted && o.CreatedAt >= startOfYear && k.IdPerusahaan > 0
+                                                  where !o.IsDeleted && o.CreatedAt >= startOfYear && k.IdPerusahaan > 0 && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan)
                                                   select new { CompanyId = k.IdPerusahaan, o.Nik, o.CreatedAt })
                                                  .AsNoTracking()
                                                  .ToListAsync();

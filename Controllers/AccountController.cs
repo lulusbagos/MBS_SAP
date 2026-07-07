@@ -181,6 +181,13 @@ namespace MBS_SAP.Controllers
                 return View();
             }
 
+            // Cek perusahaan yang dikecualikan dari sistem SAP
+            if (ExcludedCompanies.IsExcluded(karyawanMaster.IdPerusahaan))
+            {
+                ModelState.AddModelError("Nrp", "Akun tidak dapat digunakan pada sistem ini.");
+                return View();
+            }
+
             idPerusahaan ??= karyawanMaster.IdPerusahaan;
             idDepartemen ??= karyawanMaster.IdDepartemen;
             idJabatan ??= karyawanMaster.IdJabatan;
