@@ -10,10 +10,21 @@ using System.Threading.Tasks;
 
 namespace MBS_SAP.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class AdminController : Controller
     {
         private readonly AppDbContext _context;
+        private static readonly string[] AllowedWorksheetNames =
+        {
+            "Hazard",
+            "Inspection",
+            "Observation",
+            "Coaching",
+            "Safety Talk",
+            "P5M"
+        };
+        private const long MaxExcelUploadBytes = 10 * 1024 * 1024;
+        private const int MaxRowsPerSheet = 5000;
 
         public AdminController(AppDbContext context)
         {
@@ -75,6 +86,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadExcel(IFormFile excelFile)
         {
             if (excelFile == null || excelFile.Length == 0)
@@ -89,18 +101,45 @@ namespace MBS_SAP.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            if (excelFile.Length > MaxExcelUploadBytes)
+            {
+                TempData["ErrorMessage"] = "Ukuran file Excel maksimal 10 MB.";
+                return RedirectToAction(nameof(Index));
+            }
+
             int addedHazards = 0, addedInspections = 0, addedActionPlans = 0, addedSafetyTalks = 0, addedP5m = 0;
             int skippedHazards = 0, skippedInspections = 0, skippedActionPlans = 0, skippedSafetyTalks = 0, skippedP5m = 0;
 
             try
             {
                 using var stream = excelFile.OpenReadStream();
+                if (!IsZipBasedExcel(stream))
+                {
+                    TempData["ErrorMessage"] = "File tidak valid. Pastikan file benar-benar Excel .xlsx.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                stream.Position = 0;
                 using var wb = new XLWorkbook(stream);
+
+                var worksheetCount = wb.Worksheets.Count;
+                if (worksheetCount == 0 || worksheetCount > AllowedWorksheetNames.Length)
+                {
+                    TempData["ErrorMessage"] = "Workbook tidak valid atau jumlah sheet tidak sesuai template.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                if (wb.Worksheets.Any(w => !AllowedWorksheetNames.Contains(w.Name, StringComparer.OrdinalIgnoreCase)))
+                {
+                    TempData["ErrorMessage"] = "Ditemukan sheet yang tidak diizinkan. Gunakan template resmi upload.";
+                    return RedirectToAction(nameof(Index));
+                }
 
                 // 1. Hazard
                 var wsHazard = wb.Worksheets.FirstOrDefault(w => w.Name.Equals("Hazard", StringComparison.OrdinalIgnoreCase));
                 if (wsHazard != null)
                 {
+                    EnsureWorksheetRowLimit(wsHazard);
                     foreach (var row in wsHazard.RowsUsed().Skip(2)) // Data starts at row 3 (if header at row 2)
                     {
                         var nik = GetString(row, 5);
@@ -187,6 +226,7 @@ namespace MBS_SAP.Controllers
                 var wsInsp = wb.Worksheets.FirstOrDefault(w => w.Name.Equals("Inspection", StringComparison.OrdinalIgnoreCase));
                 if (wsInsp != null)
                 {
+                    EnsureWorksheetRowLimit(wsInsp);
                     foreach (var row in wsInsp.RowsUsed().Skip(2)) // Data starts at row 3
                     {
                         var nik = GetString(row, 4);
@@ -262,6 +302,7 @@ namespace MBS_SAP.Controllers
                 var wsSt = wb.Worksheets.FirstOrDefault(w => w.Name.Equals("Safety Talk", StringComparison.OrdinalIgnoreCase));
                 if (wsSt != null)
                 {
+                    EnsureWorksheetRowLimit(wsSt);
                     foreach (var row in wsSt.RowsUsed().Skip(2))
                     {
                         var nik = GetString(row, 6);
@@ -297,6 +338,7 @@ namespace MBS_SAP.Controllers
                 var wsP5 = wb.Worksheets.FirstOrDefault(w => w.Name.Equals("P5M", StringComparison.OrdinalIgnoreCase));
                 if (wsP5 != null)
                 {
+                    EnsureWorksheetRowLimit(wsP5);
                     foreach (var row in wsP5.RowsUsed().Skip(2))
                     {
                         var nik = GetString(row, 5);
@@ -364,7 +406,7 @@ namespace MBS_SAP.Controllers
         {
             var cell = row.Cell(col);
             if (cell.IsEmpty()) return null;
-            return cell.Value.ToString()?.Trim();
+            return SanitizeExcelString(cell.Value.ToString());
         }
         
         private DateTime? GetDate(IXLRow row, int col)
@@ -385,6 +427,65 @@ namespace MBS_SAP.Controllers
             string? s = cell.Value.ToString();
             if (!string.IsNullOrEmpty(s) && TimeSpan.TryParse(s, out var ts)) return ts;
             return null;
+        }
+
+        private static bool IsZipBasedExcel(System.IO.Stream stream)
+        {
+            if (!stream.CanRead || !stream.CanSeek || stream.Length < 4)
+            {
+                return false;
+            }
+
+            long originalPosition = stream.Position;
+            try
+            {
+                Span<byte> signature = stackalloc byte[4];
+                stream.Position = 0;
+                int read = stream.Read(signature);
+                return read == 4
+                    && signature[0] == 0x50
+                    && signature[1] == 0x4B
+                    && signature[2] == 0x03
+                    && signature[3] == 0x04;
+            }
+            finally
+            {
+                stream.Position = originalPosition;
+            }
+        }
+
+        private static void EnsureWorksheetRowLimit(IXLWorksheet worksheet)
+        {
+            int usedRows = worksheet.RowsUsed().Count();
+            if (usedRows > MaxRowsPerSheet)
+            {
+                throw new InvalidOperationException($"Sheet '{worksheet.Name}' melebihi batas {MaxRowsPerSheet} baris.");
+            }
+        }
+
+        private static string? SanitizeExcelString(string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return null;
+            }
+
+            var sanitized = new string(input
+                .Trim()
+                .Where(ch => !char.IsControl(ch) || ch == '\r' || ch == '\n' || ch == '\t')
+                .ToArray());
+
+            if (string.IsNullOrWhiteSpace(sanitized))
+            {
+                return null;
+            }
+
+            if (sanitized[0] == '=' || sanitized[0] == '+' || sanitized[0] == '-' || sanitized[0] == '@')
+            {
+                sanitized = "'" + sanitized;
+            }
+
+            return sanitized;
         }
     }
 }
