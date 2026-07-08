@@ -1,0 +1,618 @@
+@using MBS_SAP.Controllers
+@{
+    ViewData["Title"] = "League Safety Accountability Program";
+    var companies = ViewBag.Companies as List<MBS_SAP.Models.PerusahaanView> ?? new List<MBS_SAP.Models.PerusahaanView>();
+    var selectedCompanyId = (int)(ViewBag.SelectedCompanyId ?? 0);
+    var companyName = ViewBag.CompanyName as string ?? "";
+    var deptAchievements = ViewBag.DepartmentAchievements as List<DepartmentAchievementViewModel> ?? new List<DepartmentAchievementViewModel>();
+    var employees = ViewBag.Employees;
+    var isIndexim = companyName.ToUpper().Contains("INDEXIM");
+}
+
+@functions {
+    public string GetDeptInitials(string name) {
+        if (string.IsNullOrEmpty(name)) return "GEN";
+        var clean = new string(name.Where(c => char.IsLetterOrDigit(c) || char.IsWhiteSpace(c)).ToArray()).Trim();
+        var words = clean.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length >= 2) {
+            return (words[0][0].ToString() + words[1][0].ToString()).ToUpper();
+        }
+        return (clean.Length >= 2 ? clean.Substring(0, 2) : clean).ToUpper();
+    }
+
+    public string GetDeptColor(string name) {
+        if (string.IsNullOrEmpty(name)) return "#1e3a8a";
+        int hash = 0;
+        foreach (char c in name) {
+            hash = c + ((hash << 5) - hash);
+        }
+        var colors = new[] {
+            "#1e3a8a", "#b91c1c", "#047857", "#6d28d9", "#a21caf",
+            "#c2410c", "#0369a1", "#15803d", "#be123c", "#4d7c0f"
+        };
+        int idx = Math.Abs(hash) % colors.Length;
+        return colors[idx];
+    }
+
+    public Microsoft.AspNetCore.Html.IHtmlContent GetFormDotsHtml(double h, double i, double st, double o, double c) {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(GetDotHtml(h, "Hazard"));
+        sb.Append(GetDotHtml(i, "Inspeksi"));
+        sb.Append(GetDotHtml(st, "Safety Talk"));
+        sb.Append(GetDotHtml(o, "Observasi"));
+        sb.Append(GetDotHtml(c, "Coaching"));
+        return new Microsoft.AspNetCore.Html.HtmlString(sb.ToString());
+    }
+
+    private string GetDotHtml(double val, string programName) {
+        if (val >= 100) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Tercapai (100%+) - WIN\">W</span>";
+        if (val >= 50) return $"<span class=\"league-form-dot dot-d\" title=\"{programName} Sebagian (50%-99%) - DRAW\">D</span>";
+        return $"<span class=\"league-form-dot dot-l\" title=\"{programName} Kurang (<50%) - LOSS\">L</span>";
+    }
+
+    public Microsoft.AspNetCore.Html.IHtmlContent GetEmpFormDotsHtml(int hAct, int hTgt, int iAct, int iTgt, int stAct, int stTgt, int oAct, int oTgt, int cAct, int cTgt) {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(GetEmpDotHtml(hAct, hTgt, "Hazard"));
+        sb.Append(GetEmpDotHtml(iAct, iTgt, "Inspeksi"));
+        sb.Append(GetEmpDotHtml(stAct, stTgt, "Safety Talk"));
+        sb.Append(GetEmpDotHtml(oAct, oTgt, "Observasi"));
+        sb.Append(GetEmpDotHtml(cAct, cTgt, "Coaching"));
+        return new Microsoft.AspNetCore.Html.HtmlString(sb.ToString());
+    }
+
+    private string GetEmpDotHtml(int act, int tgt, string programName) {
+        if (tgt == 0) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Bebas Target - WIN\">W</span>";
+        double rate = ((double)act / tgt) * 100;
+        if (rate >= 100) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Tercapai - WIN\">W</span>";
+        if (rate >= 50) return $"<span class=\"league-form-dot dot-d\" title=\"{programName} Sebagian - DRAW\">D</span>";
+        return $"<span class=\"league-form-dot dot-l\" title=\"{programName} Kurang - LOSS\">L</span>";
+    }
+
+    public string GetRateColor(double rate) {
+        if (rate >= 90) return "#16a34a";
+        if (rate >= 60) return "#ca8a04";
+        if (rate >= 30) return "#ea580c";
+        return "#dc2626";
+    }
+}
+
+<style>
+    .league-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        background: #ffffff;
+        box-shadow: 0 10px 25px rgba(2, 6, 23, 0.04);
+        overflow: hidden;
+    }
+    .league-banner {
+        background: linear-gradient(135deg, #1e293b, #0f172a);
+        color: #ffffff;
+        padding: 24px;
+        border-radius: 16px;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .league-banner-pattern {
+        position: absolute;
+        inset: 0;
+        opacity: 0.05;
+        background-image: radial-gradient(#ffffff 2px, transparent 2px);
+        background-size: 16px 16px;
+    }
+    .league-title-main {
+        font-weight: 850;
+        font-size: 24px;
+        letter-spacing: -0.5px;
+        text-transform: uppercase;
+        margin: 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .league-table-wrap {
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #ffffff;
+    }
+    .league-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 13px;
+    }
+    .league-table th {
+        background: #1e293b;
+        color: #ffffff;
+        font-weight: 700;
+        padding: 12px 14px;
+        text-align: center;
+        border-bottom: 2px solid #0f172a;
+    }
+    .league-table th.align-left, .league-table td.align-left {
+        text-align: left;
+    }
+    .league-table td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #e2e8f0;
+        vertical-align: middle;
+        font-weight: 500;
+    }
+    .league-tr-champions {
+        border-left: 4px solid #10b981;
+        background-color: rgba(16, 185, 129, 0.02);
+    }
+    .league-tr-champions:hover {
+        background-color: rgba(16, 185, 129, 0.06) !important;
+    }
+    .league-tr-relegation {
+        border-left: 4px solid #ef4444;
+        background-color: rgba(239, 68, 68, 0.02);
+    }
+    .league-tr-relegation:hover {
+        background-color: rgba(239, 68, 68, 0.06) !important;
+    }
+    .league-tr-normal {
+        border-left: 4px solid #cbd5e1;
+    }
+    .league-tr-normal:hover {
+        background-color: #f8fafc;
+    }
+    .league-rank-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 8px;
+        min-width: 32px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 11px;
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+    }
+    .league-rank-champions {
+        background: #d1fae5;
+        color: #065f46;
+        border-color: #a7f3d0;
+    }
+    .league-rank-relegation {
+        background: #fee2e2;
+        color: #991b1b;
+        border-color: #fca5a5;
+    }
+    .football-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 30px;
+        color: #ffffff;
+        font-weight: 850;
+        font-size: 9px;
+        clip-path: polygon(0% 0%, 100% 0%, 100% 70%, 50% 100%, 0% 70%);
+        margin-right: 10px;
+        border: 1.5px solid #ffffff;
+        vertical-align: middle;
+        text-transform: uppercase;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        text-shadow: 1px 1px 0px rgba(0,0,0,0.3);
+    }
+    .league-form-dot {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        font-weight: 800;
+        font-size: 9px;
+        color: #ffffff;
+        margin-right: 2px;
+        text-transform: uppercase;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .dot-w { background: #10b981; }
+    .dot-d { background: #f59e0b; }
+    .dot-l { background: #ef4444; }
+
+    .btn-club-filter {
+        transition: all 0.2s ease-in-out;
+    }
+    .btn-club-filter:hover {
+        transform: translateX(3px);
+    }
+    .legend-box {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 14px 16px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        font-size: 11px;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+        color: #475569;
+    }
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+    .top-scorers-header {
+        background: #0f172a;
+        color: #ffffff;
+        padding: 16px;
+        font-weight: 800;
+        font-size: 16px;
+        text-transform: uppercase;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    @@media (max-width: 768px) {
+        .league-title-main {
+            font-size: 18px;
+        }
+        .league-table th, .league-table td {
+            padding: 8px 6px;
+            font-size: 11px;
+        }
+        .football-badge {
+            width: 20px;
+            height: 24px;
+            font-size: 8px;
+            margin-right: 4px;
+        }
+        .league-form-dot {
+            width: 15px;
+            height: 15px;
+            font-size: 8px;
+            margin-right: 1px;
+        }
+    }
+</style>
+
+<div class="animate-fade-in pb-4">
+    <!-- Header Selector -->
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-3 mb-4">
+        <div>
+            <h4 class="mb-1" style="font-weight: 800; color: var(--text-main);">League Standings</h4>
+            <p class="text-muted mb-0" style="font-size: 13px;">Klasemen Kepatuhan Safety Accountability Program Berbasis Perusahaan.</p>
+        </div>
+        <div style="min-width: 240px;">
+            <label class="form-label text-muted fw-bold mb-1" style="font-size: 11px;">PILIH PERUSAHAAN</label>
+            <select class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 14px;" onchange="location.href='?companyId=' + this.value;">
+                @foreach (var c in companies)
+                {
+                    if (c.PerusahaanId == selectedCompanyId)
+                    {
+                        <option value="@c.PerusahaanId" selected>@c.NamaPerusahaan</option>
+                    }
+                    else
+                    {
+                        <option value="@c.PerusahaanId">@c.NamaPerusahaan</option>
+                    }
+                }
+            </select>
+        </div>
+    </div>
+
+    <!-- Sports Scoreboard Banner -->
+    <div class="league-banner">
+        <div class="league-banner-pattern"></div>
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center position-relative" style="z-index: 1;">
+            <div class="d-flex align-items-center gap-3 mb-3 mb-md-0">
+                @if (isIndexim)
+                {
+                    <img src="/images/logo_indexim.png" style="height: 48px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
+                }
+                <div>
+                    <h2 class="league-title-main">League Safety Accountability Program</h2>
+                    <div style="font-size: 13px; font-weight: 600; color: #a1a1aa; margin-top: 2px;">
+                        Kategori Klasemen Utama &bull; @companyName
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <span class="badge bg-success px-3 py-2" style="border-radius: 8px; font-size: 11px; font-weight: 700;">
+                    <i class="bi bi-calendar-event me-1"></i> Bulan Ini (MTD)
+                </span>
+                <a href="/Performance/Index" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 11px; font-weight: 700; padding: 6px 12px;">
+                    <i class="bi bi-diagram-3 me-1"></i> Org Chart
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left: Club Standings (Departments) -->
+        <div class="col-xl-7">
+            <div class="league-card p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0" style="font-weight: 800; color: #0f172a;"><i class="bi bi-shield-shaded me-2 text-primary"></i>Klasemen Klub (Departemen)</h5>
+                    <span class="badge bg-primary px-2 py-1" style="font-size: 10px; font-weight: 700;">@deptAchievements.Count KLUB</span>
+                </div>
+
+                <div class="table-responsive league-table-wrap mb-3">
+                    <table class="league-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Pos</th>
+                                <th class="align-left">Klub (Departemen)</th>
+                                <th style="width: 80px;">Skuad</th>
+                                <th style="width: 100px; background-color: #1e3a8a;">PTS (Compliance %)</th>
+                                <th style="width: 120px;">Form (5 Laga)</th>
+                                <th style="width: 60px;">HZ</th>
+                                <th style="width: 60px;">IP</th>
+                                <th style="width: 60px;">ST</th>
+                                <th style="width: 60px;">OB</th>
+                                <th style="width: 60px;">CC</th>
+                                <th style="width: 65px; background-color: #78350f;">P5M *</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!deptAchievements.Any())
+                            {
+                                <tr>
+                                    <td colspan="11" class="text-center text-muted py-4">Belum ada data klub terdaftar.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                int idx = 0;
+                                foreach (var dept in deptAchievements)
+                                {
+                                    idx++;
+                                    var rowClass = "league-tr-normal";
+                                    var rankClass = "";
+                                    var rankText = idx.ToString();
+
+                                    if (idx <= 3)
+                                    {
+                                        rowClass = "league-tr-champions";
+                                        rankClass = "league-rank-champions";
+                                        if (idx == 1) rankText = "🥇 1";
+                                        else if (idx == 2) rankText = "🥈 2";
+                                        else if (idx == 3) rankText = "🥉 3";
+                                    }
+                                    else if (idx >= deptAchievements.Count - 2 && deptAchievements.Count > 5)
+                                    {
+                                        rowClass = "league-tr-relegation";
+                                        rankClass = "league-rank-relegation";
+                                    }
+
+                                    var shieldColor = GetDeptColor(dept.DepartmentName);
+                                    var initials = GetDeptInitials(dept.DepartmentName);
+
+                                    <tr class="@rowClass" style="cursor: pointer;" onclick="filterPlayerTable('@dept.DepartmentName.Replace("'", "\\'")');">
+                                        <td class="text-center">
+                                            <div class="league-rank-pill @rankClass">@rankText</div>
+                                        </td>
+                                        <td class="align-left">
+                                            <div class="football-badge" style="background-color: @shieldColor;">@initials</div>
+                                            <span class="fw-bold" style="color: #334155;">@dept.DepartmentName</span>
+                                        </td>
+                                        <td class="text-center">@dept.EmployeeCount</td>
+                                        <td class="text-center fw-bold" style="color: @GetRateColor(dept.MtdAchievementRate); background-color: rgba(30, 58, 138, 0.03);">@dept.MtdAchievementRate%</td>
+                                        <td class="text-center" style="white-space: nowrap;">
+                                            @GetFormDotsHtml(dept.MtdHazardRate, dept.MtdInspeksiRate, dept.MtdSafetyTalkRate, dept.MtdObservasiRate, dept.MtdCoachingRate)
+                                        </td>
+                                        <td class="text-center">@dept.MtdHazardRate%</td>
+                                        <td class="text-center">@dept.MtdInspeksiRate%</td>
+                                        <td class="text-center">@dept.MtdSafetyTalkRate%</td>
+                                        <td class="text-center">@dept.MtdObservasiRate%</td>
+                                        <td class="text-center">@dept.MtdCoachingRate%</td>
+                                        <td class="text-center" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: @GetRateColor(dept.MtdP5mRate);">@dept.MtdP5mRate%</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="legend-box">
+                    <div class="legend-item">
+                        <div class="legend-dot dot-w"></div>
+                        <span>Zona Champions (Peringkat 1-3)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #cbd5e1;"></div>
+                        <span>Zona Aman (Tengah)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot dot-l"></div>
+                        <span>Zona Relegasi / Pembinaan (3 Bawah)</span>
+                    </div>
+                </div>
+                <span class="text-muted mt-2 d-block" style="font-size: 11px; font-style: italic; line-height: 1.4;">
+                    * Klik baris Departemen di atas untuk langsung menyaring daftar skuad pemain di samping/bawah secara instan.
+                </span>
+            </div>
+        </div>
+
+        <!-- Right: Player details / Squad Standings -->
+        <div class="col-xl-5" id="squadSection">
+            <div class="league-card">
+                <div class="top-scorers-header">
+                    <span><i class="bi bi-people-fill me-2"></i>Skuad Pemain K3</span>
+                    <button type="button" class="btn btn-sm btn-outline-light d-none" id="resetFilterBtn" onclick="resetPlayerFilter();" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 2px 8px;">
+                        <i class="bi bi-x-circle me-1"></i> Tampilkan Semua
+                    </button>
+                </div>
+                
+                <div class="p-3">
+                    <div class="alert alert-info py-2 px-3 mb-3 border-0 d-flex align-items-center gap-2" id="filterAlert" style="border-radius: 8px; font-size: 12px; background-color: #f0f9ff; color: #0369a1;">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <span id="filterAlertText">Menampilkan seluruh daftar pemain perusahaan.</span>
+                    </div>
+
+                    <div class="table-responsive league-table-wrap" style="max-height: 520px; overflow-y: auto;">
+                        <table class="league-table">
+                            <thead>
+                                <tr style="position: sticky; top: 0; z-index: 10;">
+                                    <th style="width: 50px; background: #0f172a;">Pos</th>
+                                    <th class="align-left" style="background: #0f172a;">Pemain</th>
+                                    <th style="width: 90px; background: #0f172a;">PTS %</th>
+                                    <th style="width: 110px; background: #0f172a;">Form (5 Program)</th>
+                                    <th style="background: #0f172a; width: 80px;">Rincian</th>
+                                </tr>
+                            </thead>
+                            <tbody id="playerTableBody">
+                                @if (employees == null || employees.Count == 0)
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">Tidak ada data pemain.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    int empIdx = 0;
+                                    foreach (var emp in employees)
+                                    {
+                                        empIdx++;
+                                        var rowClass = "league-tr-normal";
+                                        var rankClass = "";
+                                        var rankText = empIdx.ToString();
+
+                                        if (empIdx <= 3)
+                                        {
+                                            rowClass = "league-tr-champions";
+                                            rankClass = "league-rank-champions";
+                                            if (empIdx == 1) rankText = "🥇 1";
+                                            else if (empIdx == 2) rankText = "🥈 2";
+                                            else if (empIdx == 3) rankText = "🥉 3";
+                                        }
+
+                                        var zeroTarget = (emp.mtdTotalTarget == 0);
+                                        var rowStyle = zeroTarget ? "background-color: #f0fdf4;" : "";
+
+                                        <tr class="@rowClass player-row" style="@rowStyle" data-dept="@emp.departmentName">
+                                            <td class="text-center">
+                                                <div class="league-rank-pill @rankClass" style="font-size: 9px; min-width: 26px;">@rankText</div>
+                                            </td>
+                                            <td class="align-left">
+                                                <div class="fw-bold" style="color: #334155; font-size: 13px;">@emp.name</div>
+                                                <div style="font-size: 10px; color: #64748b;">
+                                                    @emp.nik &bull; <span class="badge bg-light text-dark py-0" style="font-size: 9px;">@emp.departmentName</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-center fw-bold" style="color: @GetRateColor(emp.complianceRate); font-size: 13px;">@emp.complianceRate%</td>
+                                            <td class="text-center" style="white-space: nowrap;">
+                                                @GetEmpFormDotsHtml(emp.hazard.actual, emp.hazard.target, emp.inspeksi.actual, emp.inspeksi.target, emp.safetyTalk.actual, emp.safetyTalk.target, emp.observasi.actual, emp.observasi.target, emp.coaching.actual, emp.coaching.target)
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 10px;" type="button" data-bs-toggle="collapse" data-bs-target="#detail-@emp.nik" aria-expanded="false">
+                                                    Detail <i class="bi bi-chevron-down ms-1"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr class="collapse player-row" id="detail-@emp.nik" data-dept="@emp.departmentName" style="background-color: #f8fafc;">
+                                            <td colspan="5" class="p-3">
+                                                <div class="p-2 border rounded bg-white">
+                                                    <div class="fw-bold text-dark mb-2" style="font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+                                                        Aktivitas K3 Bulan Ini (Realisasi / Target)
+                                                    </div>
+                                                    <div class="row text-center g-2" style="font-size: 11px;">
+                                                        <div class="col-4 col-sm-2">
+                                                            <div class="text-muted">Hazard</div>
+                                                            <div class="fw-bold">@emp.hazard.actual / @emp.hazard.target</div>
+                                                        </div>
+                                                        <div class="col-4 col-sm-2">
+                                                            <div class="text-muted">Inspeksi</div>
+                                                            <div class="fw-bold">@emp.inspeksi.actual / @emp.inspeksi.target</div>
+                                                        </div>
+                                                        <div class="col-4 col-sm-2">
+                                                            <div class="text-muted">S. Talk</div>
+                                                            <div class="fw-bold">@emp.safetyTalk.actual / @emp.safetyTalk.target</div>
+                                                        </div>
+                                                        <div class="col-4 col-sm-2">
+                                                            <div class="text-muted">Observasi</div>
+                                                            <div class="fw-bold">@emp.observasi.actual / @emp.observasi.target</div>
+                                                        </div>
+                                                        <div class="col-4 col-sm-2">
+                                                            <div class="text-muted">Coaching</div>
+                                                            <div class="fw-bold">@emp.coaching.actual / @emp.coaching.target</div>
+                                                        </div>
+                                                        <div class="col-4 col-sm-2 bg-light rounded" style="border-left: 2px solid #f59e0b;">
+                                                            <div class="text-muted">P5M *</div>
+                                                            <div class="fw-bold text-warning-emphasis">@emp.p5m.actual / @emp.p5m.target</div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-muted mt-2" style="font-size: 9px;">
+                                                        Jabatan: @emp.jabatanName
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function filterPlayerTable(deptName) {
+        const rows = document.querySelectorAll('.player-row');
+        const alertBox = document.getElementById('filterAlert');
+        const alertText = document.getElementById('filterAlertText');
+        const resetBtn = document.getElementById('resetFilterBtn');
+
+        let matchCount = 0;
+
+        rows.forEach(row => {
+            const rowDept = row.getAttribute('data-dept');
+            if (rowDept === deptName) {
+                row.classList.remove('d-none');
+                matchCount++;
+            } else {
+                row.classList.add('d-none');
+            }
+        });
+
+        // Update alert layout
+        alertBox.style.backgroundColor = '#ecfdf5';
+        alertBox.style.color = '#047857';
+        alertText.innerHTML = 'Menampilkan Skuad Klub <strong>' + deptName + '</strong> (' + (matchCount / 2) + ' Pemain)';
+        resetBtn.classList.remove('d-none');
+
+        // Smooth scroll to squad section
+        const squadSec = document.getElementById('squadSection');
+        if (squadSec) {
+            squadSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function resetPlayerFilter() {
+        const rows = document.querySelectorAll('.player-row');
+        const alertBox = document.getElementById('filterAlert');
+        const alertText = document.getElementById('filterAlertText');
+        const resetBtn = document.getElementById('resetFilterBtn');
+
+        rows.forEach(row => {
+            row.classList.remove('d-none');
+            // Hide collapse details by default
+            if (row.classList.contains('collapse')) {
+                row.classList.remove('show');
+            }
+        });
+
+        alertBox.style.backgroundColor = '#f0f9ff';
+        alertBox.style.color = '#0369a1';
+        alertText.innerHTML = 'Menampilkan seluruh daftar pemain perusahaan.';
+        resetBtn.classList.add('d-none');
+    }
+</script>
