@@ -183,6 +183,7 @@ namespace MBS_SAP.Controllers
                     nik = nik,
                     departmentName = k.NamaDepartemen,
                     jabatanName = jabatanName,
+                    companyId = companyId,
                     mtdTotalTarget = totalTgt,
                     mtdTotalActual = totalAct,
                     complianceRate = compliance,
@@ -2064,57 +2065,89 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> League(int? companyId = null)
+        public async Task<IActionResult> League(int? companyId = null, string mode = "dept")
         {
             ViewData["HeaderTitle"] = "League SAP";
             ViewData["ActiveTab"] = "Performance";
+            ViewBag.Mode = mode; // "dept" or "company"
 
             var (resolvedCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
-            var companies = await _context.Perusahaans
-                .Where(p => p.StatusAktif && (resolvedCompanyId == null || allowedCompanyIds.Contains(p.PerusahaanId)))
+            var isAdmin = User.IsInRole("Admin");
+            var jobTitle = User.FindFirst("JobTitle")?.Value;
+            var department = User.FindFirst("Department")?.Value;
+            bool isSafetyRole = CheckIsSafetyRole(jobTitle, department, isAdmin);
+
+            // Fetch all active companies
+            var allCompanies = await _context.Perusahaans
+                .Where(p => p.StatusAktif)
                 .OrderBy(p => p.NamaPerusahaan)
                 .ToListAsync();
 
-            if (companies == null || !companies.Any())
+            List<PerusahaanView> allowedCompanies;
+            if (isAdmin || isSafetyRole)
+            {
+                allowedCompanies = allCompanies;
+            }
+            else
+            {
+                allowedCompanies = allCompanies
+                    .Where(p => resolvedCompanyId == null || p.PerusahaanId == resolvedCompanyId)
+                    .ToList();
+            }
+
+            if (allowedCompanies == null || !allowedCompanies.Any())
             {
                 return RedirectToAction("Index", "Home");
             }
 
-            int selectedCompanyId = companyId ?? (resolvedCompanyId ?? companies.First().PerusahaanId);
-            var selectedCompany = companies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? companies.First();
+            int selectedCompanyId = companyId ?? (resolvedCompanyId ?? allowedCompanies.First().PerusahaanId);
+            
+            // Security check: Non-admins cannot inspect other companies' internal dept list
+            if (!isAdmin && !isSafetyRole && selectedCompanyId != resolvedCompanyId)
+            {
+                selectedCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
+            }
 
-            ViewBag.Companies = companies;
+            var selectedCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? allowedCompanies.First();
+
+            ViewBag.Companies = allowedCompanies;
             ViewBag.SelectedCompanyId = selectedCompany.PerusahaanId;
             ViewBag.CompanyName = selectedCompany.NamaPerusahaan;
 
-            var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId);
-            
-            var deptAchievements = employees
-                .GroupBy(e => (string)e.departmentName)
-                .Select(g => {
-                    int employeeCount = g.Count();
-                    
-                    int totalTarget = g.Sum(e => (int)e.mtdTotalTarget);
-                    int totalActual = g.Sum(e => (int)e.mtdTotalActual);
-                    
-                    int hAct = g.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
-                    int hTgt = g.Sum(e => (int)e.hazard.target);
-                    
-                    int iAct = g.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
-                    int iTgt = g.Sum(e => (int)e.inspeksi.target);
-                    
-                    int stAct = g.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
-                    int stTgt = g.Sum(e => (int)e.safetyTalk.target);
-                    
-                    int oAct = g.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
-                    int oTgt = g.Sum(e => (int)e.observasi.target);
-                    
-                    int cAct = g.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
-                    int cTgt = g.Sum(e => (int)e.coaching.target);
-                    
-                    int p5mAct = g.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
-                    int p5mTgt = g.Sum(e => (int)e.p5m.target);
-                    
+            if (mode == "company")
+            {
+                // Liga Antar Company: Compare all companies
+                var companyStandings = new List<dynamic>();
+                var allEmployees = new List<dynamic>();
+
+                foreach (var comp in allCompanies)
+                {
+                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId);
+                    if (!compEmps.Any()) continue;
+
+                    allEmployees.AddRange(compEmps);
+
+                    int totalTarget = compEmps.Sum(e => (int)e.mtdTotalTarget);
+                    int totalActual = compEmps.Sum(e => (int)e.mtdTotalActual);
+
+                    int hAct = compEmps.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
+                    int hTgt = compEmps.Sum(e => (int)e.hazard.target);
+
+                    int iAct = compEmps.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
+                    int iTgt = compEmps.Sum(e => (int)e.inspeksi.target);
+
+                    int stAct = compEmps.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
+                    int stTgt = compEmps.Sum(e => (int)e.safetyTalk.target);
+
+                    int oAct = compEmps.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
+                    int oTgt = compEmps.Sum(e => (int)e.observasi.target);
+
+                    int cAct = compEmps.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
+                    int cTgt = compEmps.Sum(e => (int)e.coaching.target);
+
+                    int p5mAct = compEmps.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
+                    int p5mTgt = compEmps.Sum(e => (int)e.p5m.target);
+
                     double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
                     double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : 0;
                     double iRate = iTgt > 0 ? Math.Min(100.0, Math.Round((double)iAct / iTgt * 100.0, 1)) : 0;
@@ -2122,11 +2155,11 @@ namespace MBS_SAP.Controllers
                     double oRate = oTgt > 0 ? Math.Min(100.0, Math.Round((double)oAct / oTgt * 100.0, 1)) : 0;
                     double cRate = cTgt > 0 ? Math.Min(100.0, Math.Round((double)cAct / cTgt * 100.0, 1)) : 0;
                     double p5mRate = p5mTgt > 0 ? Math.Min(100.0, Math.Round((double)p5mAct / p5mTgt * 100.0, 1)) : 0;
-                    
-                    return new DepartmentAchievementViewModel
-                    {
-                        DepartmentName = g.Key,
-                        EmployeeCount = employeeCount,
+
+                    companyStandings.Add(new {
+                        CompanyId = comp.PerusahaanId,
+                        CompanyName = comp.NamaPerusahaan,
+                        EmployeeCount = compEmps.Count,
                         MtdAchievementRate = mtdRate,
                         MtdHazardRate = hRate,
                         MtdInspeksiRate = iRate,
@@ -2134,32 +2167,111 @@ namespace MBS_SAP.Controllers
                         MtdObservasiRate = oRate,
                         MtdCoachingRate = cRate,
                         MtdP5mRate = p5mRate
-                    };
+                    });
+                }
+
+                ViewBag.CompanyStandings = companyStandings.OrderByDescending(x => (double)x.MtdAchievementRate).ToList();
+
+                // Non-admin can only see their own squad players even in global league mode
+                var sortedEmployees = allEmployees
+                    .Where(e => isAdmin || isSafetyRole || (int)e.companyId == resolvedCompanyId)
+                    .Select(e => new {
+                        name = (string)e.karyawanName,
+                        nik = (string)e.nik,
+                        departmentName = (string)e.departmentName,
+                        jabatanName = (string)e.jabatanName,
+                        complianceRate = (double)e.complianceRate,
+                        mtdTotalTarget = (int)e.mtdTotalTarget,
+                        hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
+                        inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
+                        safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
+                        observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
+                        coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
+                        p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                    })
+                    .OrderBy(e => e.mtdTotalTarget == 0 ? 1 : 0)
+                    .ThenByDescending(e => e.complianceRate)
+                    .ToList();
+
+                ViewBag.Employees = sortedEmployees;
+            }
+            else
+            {
+                // Liga Internal: Departments
+                var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId);
+                
+                var deptAchievements = employees
+                    .GroupBy(e => (string)e.departmentName)
+                    .Select(g => {
+                        int employeeCount = g.Count();
+                        
+                        int totalTarget = g.Sum(e => (int)e.mtdTotalTarget);
+                        int totalActual = g.Sum(e => (int)e.mtdTotalActual);
+                        
+                        int hAct = g.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
+                        int hTgt = g.Sum(e => (int)e.hazard.target);
+                        
+                        int iAct = g.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
+                        int iTgt = g.Sum(e => (int)e.inspeksi.target);
+                        
+                        int stAct = g.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
+                        int stTgt = g.Sum(e => (int)e.safetyTalk.target);
+                        
+                        int oAct = g.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
+                        int oTgt = g.Sum(e => (int)e.observasi.target);
+                        
+                        int cAct = g.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
+                        int cTgt = g.Sum(e => (int)e.coaching.target);
+                        
+                        int p5mAct = g.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
+                        int p5mTgt = g.Sum(e => (int)e.p5m.target);
+                        
+                        double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
+                        double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : 0;
+                        double iRate = iTgt > 0 ? Math.Min(100.0, Math.Round((double)iAct / iTgt * 100.0, 1)) : 0;
+                        double stRate = stTgt > 0 ? Math.Min(100.0, Math.Round((double)stAct / stTgt * 100.0, 1)) : 0;
+                        double oRate = oTgt > 0 ? Math.Min(100.0, Math.Round((double)oAct / oTgt * 100.0, 1)) : 0;
+                        double cRate = cTgt > 0 ? Math.Min(100.0, Math.Round((double)cAct / cTgt * 100.0, 1)) : 0;
+                        double p5mRate = p5mTgt > 0 ? Math.Min(100.0, Math.Round((double)p5mAct / p5mTgt * 100.0, 1)) : 0;
+                        
+                        return new DepartmentAchievementViewModel
+                        {
+                            DepartmentName = g.Key,
+                            EmployeeCount = employeeCount,
+                            MtdAchievementRate = mtdRate,
+                            MtdHazardRate = hRate,
+                            MtdInspeksiRate = iRate,
+                            MtdSafetyTalkRate = stRate,
+                            MtdObservasiRate = oRate,
+                            MtdCoachingRate = cRate,
+                            MtdP5mRate = p5mRate
+                        };
+                    })
+                    .OrderByDescending(d => d.MtdAchievementRate)
+                    .ToList();
+
+                ViewBag.DepartmentAchievements = deptAchievements;
+
+                var sortedEmployees = employees.Select(e => new {
+                    name = (string)e.karyawanName,
+                    nik = (string)e.nik,
+                    departmentName = (string)e.departmentName,
+                    jabatanName = (string)e.jabatanName,
+                    complianceRate = (double)e.complianceRate,
+                    mtdTotalTarget = (int)e.mtdTotalTarget,
+                    hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
+                    inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
+                    safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
+                    observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
+                    coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
+                    p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
                 })
-                .OrderByDescending(d => d.MtdAchievementRate)
+                .OrderBy(e => e.mtdTotalTarget == 0 ? 1 : 0)
+                .ThenByDescending(e => e.complianceRate)
                 .ToList();
 
-            ViewBag.DepartmentAchievements = deptAchievements;
-            
-            var sortedEmployees = employees.Select(e => new {
-                name = (string)e.karyawanName,
-                nik = (string)e.nik,
-                departmentName = (string)e.departmentName,
-                jabatanName = (string)e.jabatanName,
-                complianceRate = (double)e.complianceRate,
-                mtdTotalTarget = (int)e.mtdTotalTarget,
-                hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
-                inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
-                safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
-                observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
-                coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
-                p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
-            })
-            .OrderBy(e => e.mtdTotalTarget == 0 ? 1 : 0)
-            .ThenByDescending(e => e.complianceRate)
-            .ToList();
-
-            ViewBag.Employees = sortedEmployees;
+                ViewBag.Employees = sortedEmployees;
+            }
 
             return View();
         }
