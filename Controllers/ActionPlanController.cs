@@ -42,11 +42,16 @@ namespace MBS_SAP.Controllers
 
             var query = _context.ActionPlans.Where(r => !r.IsDeleted);
 
-            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin)
+            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin, kecuali jika ditugaskan langsung ke user)
             if (companyId.HasValue)
             {
                 var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
-                query = query.Where(r => r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value));
+                query = query.Where(r =>
+                    (r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value)) ||
+                    r.Nik == userNik ||
+                    r.NikPja == userNik ||
+                    r.NikPic == userNik
+                );
             }
 
             // Non-Admin hanya melihat yang terkait dengannya langsung
@@ -94,6 +99,7 @@ namespace MBS_SAP.Controllers
             var canUpdate = User.IsInRole("Admin")
                             || (!string.IsNullOrWhiteSpace(userNik) && plan.Nik == userNik)
                             || (!string.IsNullOrWhiteSpace(userNik) && !string.IsNullOrWhiteSpace(plan.NikPja) && plan.NikPja == userNik)
+                            || (!string.IsNullOrWhiteSpace(userNik) && !string.IsNullOrWhiteSpace(plan.NikPic) && plan.NikPic == userNik)
                             || (string.IsNullOrWhiteSpace(plan.NikPja) && plan.PerusahaanId.HasValue && userCompanyId.HasValue && plan.PerusahaanId == userCompanyId);
 
             if (!canUpdate)

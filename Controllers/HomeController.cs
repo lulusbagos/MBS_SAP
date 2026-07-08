@@ -81,7 +81,7 @@ namespace MBS_SAP.Controllers
             var inspectionQuery = _context.Inspections
                 .Where(i => !i.IsDeleted && hasUserNik && i.Nik == userNik);
             var actionPlanQuery = _context.ActionPlans
-                .Where(a => !a.IsDeleted && hasUserNik && (a.Nik == userNik || a.NikPja == userNik));
+                .Where(a => !a.IsDeleted && hasUserNik && (a.Nik == userNik || a.NikPja == userNik || a.NikPic == userNik));
             var safetyTalkQuery = _context.SafetyTalks
                 .Where(s => !s.IsDeleted && hasUserNik && s.Nik == userNik);
             var p5mQuery = _context.P5ms
@@ -128,13 +128,35 @@ namespace MBS_SAP.Controllers
                 ThisMonth = g.Sum(o => o.Date >= startOfMonth ? 1 : 0)
             }).FirstOrDefaultAsync();
 
+            var closedAssignedHazardCredits = await actionPlanQuery
+                .Where(a => a.Status == "Closed"
+                    && a.TanggalPerbaikan != null
+                    && a.TanggalPerbaikan >= startOfMonth
+                    && a.ItemSap != null
+                    && a.ItemSap.StartsWith("hazard:")
+                    && a.Nik != userNik)
+                .Select(a => a.ItemSap!)
+                .Distinct()
+                .CountAsync();
+
+            var closedAssignedInspectionCredits = await actionPlanQuery
+                .Where(a => a.Status == "Closed"
+                    && a.TanggalPerbaikan != null
+                    && a.TanggalPerbaikan >= startOfMonth
+                    && a.ItemSap != null
+                    && a.ItemSap.StartsWith("inspection:")
+                    && a.Nik != userNik)
+                .Select(a => a.ItemSap!)
+                .Distinct()
+                .CountAsync();
+
             var totalHazards = hazardStats?.Total ?? 0;
             var openHazards = hazardStats?.Open ?? 0;
             var closedHazards = hazardStats?.Closed ?? 0;
-            var thisMonthHazards = hazardStats?.ThisMonth ?? 0;
+            var thisMonthHazards = (hazardStats?.ThisMonth ?? 0) + closedAssignedHazardCredits;
 
             var totalInspections = inspectionStats?.Total ?? 0;
-            var thisMonthInspections = inspectionStats?.ThisMonth ?? 0;
+            var thisMonthInspections = (inspectionStats?.ThisMonth ?? 0) + closedAssignedInspectionCredits;
 
             var totalActionPlans = actionPlanStats?.Total ?? 0;
 

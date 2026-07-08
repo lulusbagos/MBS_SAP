@@ -45,10 +45,14 @@ namespace MBS_SAP.Controllers
 
             var query = _context.HazardReports.Where(r => !r.IsDeleted);
 
-            // Tampilkan data berdasarkan perusahaan user saat ini (strict per company)
+            // Tampilkan data berdasarkan perusahaan user saat ini (strict per company, kecuali jika ditugaskan langsung ke user)
             if (companyId.HasValue)
             {
-                query = query.Where(r => r.PerusahaanId == companyId.Value);
+                query = query.Where(r =>
+                    r.PerusahaanId == companyId.Value ||
+                    r.Nik == userNik ||
+                    r.NikPja == userNik
+                );
             }
 
             // Non-Admin hanya melihat miliknya sendiri atau yang ditugaskan kepadanya
@@ -365,10 +369,11 @@ namespace MBS_SAP.Controllers
             var report = await _context.HazardReports.FindAsync(id);
             if (report == null || report.IsDeleted) return NotFound();
 
-            // Pastikan user hanya bisa akses data milik perusahaannya
+            // Pastikan user hanya bisa akses data milik perusahaannya, kecuali jika dia adalah pencipta atau ditunjuk sebagai PJA
             var companyIdStr = User.FindFirst("CompanyId")?.Value;
             int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
-            if (userCompanyId.HasValue)
+            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (userCompanyId.HasValue && report.Nik != userNik && report.NikPja != userNik)
             {
                 if (report.PerusahaanId != userCompanyId.Value)
                     return Unauthorized();

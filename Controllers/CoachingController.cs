@@ -40,20 +40,9 @@ namespace MBS_SAP.Controllers
             var areas = await _context.MasterAreas.OrderBy(a => a.NamaArea).ToListAsync();
             ViewBag.Areas = areas;
 
-            // Load accessible companies for participant company filter
-            List<int> accessibleIds;
-            if (companyId.HasValue)
-            {
-                accessibleIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
-            }
-            else
-            {
-                // Admin/no-company: all active companies
-                accessibleIds = await _context.Perusahaans.Where(p => p.StatusAktif).Select(p => p.PerusahaanId).ToListAsync();
-            }
-
+            // Load all active companies for participant company filter
             var companyList = await _context.Perusahaans
-                .Where(p => p.StatusAktif && accessibleIds.Contains(p.PerusahaanId))
+                .Where(p => p.StatusAktif)
                 .OrderBy(p => p.NamaPerusahaan)
                 .Select(p => new { p.PerusahaanId, p.NamaPerusahaan })
                 .ToListAsync();
@@ -286,16 +275,8 @@ namespace MBS_SAP.Controllers
             var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
             int? userCompanyId = int.TryParse(userCompanyIdStr, out var ucid) && ucid > 0 ? ucid : null;
 
-            // Determine accessible companies
-            List<int> accessibleIds;
-            if (userCompanyId.HasValue)
-            {
-                accessibleIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
-            }
-            else
-            {
-                accessibleIds = await _context.Perusahaans.Where(p => p.StatusAktif).Select(p => p.PerusahaanId).ToListAsync();
-            }
+            // Determine all active companies
+            var activeCompanyIds = await _context.Perusahaans.Where(p => p.StatusAktif).Select(p => p.PerusahaanId).ToListAsync();
 
             var term = q.Trim().ToLower();
 
@@ -303,7 +284,7 @@ namespace MBS_SAP.Controllers
                            join p in _context.Personals on k.IdPersonal equals p.IdPersonal
                            join c in _context.Perusahaans on k.IdPerusahaan equals c.PerusahaanId into cg
                            from c in cg.DefaultIfEmpty()
-                           where k.StatusAktif && accessibleIds.Contains(k.IdPerusahaan)
+                           where k.StatusAktif && activeCompanyIds.Contains(k.IdPerusahaan)
                                  && (p.NamaLengkap.ToLower().Contains(term) || k.NoNik.ToLower().Contains(term))
                            select new
                            {

@@ -154,15 +154,20 @@
                         </div>
                     </div>
 
-                    <!-- Search input -->
-                    <div class="input-sap-wrapper mb-2" style="position: relative;">
-                        <i class="bi bi-search input-sap-icon"></i>
-                        <input type="text" id="traineeSearchInput" class="input-sap" placeholder="Ketik nama atau NIK peserta (min 2 karakter)..." autocomplete="off" />
-                        <span id="traineeSearchSpinner" class="d-none" style="position: absolute; right: 12px; top: 10px;">
-                            <span class="spinner-border spinner-border-sm text-purple" style="width:14px;height:14px;border-color:#a855f7;border-right-color:transparent;" role="status"></span>
-                        </span>
-                        <div id="traineeSuggestions" class="d-none" style="position: absolute; left: 0; right: 0; top: 100%; max-height: 220px; overflow-y: auto; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.25); padding: 4px;">
+                    <!-- Search input and button -->
+                    <div class="d-flex gap-2 mb-2">
+                        <div class="input-sap-wrapper flex-grow-1 mb-0" style="position: relative;">
+                            <i class="bi bi-search input-sap-icon"></i>
+                            <input type="text" id="traineeSearchInput" class="input-sap" placeholder="Ketik nama atau NIK peserta (min 2 karakter)..." autocomplete="off" />
+                            <span id="traineeSearchSpinner" class="d-none" style="position: absolute; right: 12px; top: 10px;">
+                                <span class="spinner-border spinner-border-sm text-purple" style="width:14px;height:14px;border-color:#a855f7;border-right-color:transparent;" role="status"></span>
+                            </span>
+                            <div id="traineeSuggestions" class="d-none" style="position: absolute; left: 0; right: 0; top: 100%; max-height: 220px; overflow-y: auto; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.25); padding: 4px;">
+                            </div>
                         </div>
+                        <button type="button" id="btnSearchTrainee" class="btn btn-sap-primary px-3" style="background-color: #7c3aed; border-color: #6d28d9; border-radius: 12px;" onclick="filterTraineeSuggestions()">
+                            <i class="bi bi-search"></i>
+                        </button>
                     </div>
 
                     <!-- Selected Trainees Container -->
@@ -435,6 +440,13 @@
                 });
                 searchInput.addEventListener('focus', function() {
                     if (this.value.trim().length >= 2) filterTraineeSuggestions();
+                });
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        clearTimeout(searchDebounceTimer);
+                        filterTraineeSuggestions();
+                    }
                 });
             }
             if (companyFilter) {
