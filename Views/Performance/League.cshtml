@@ -146,11 +146,21 @@
         background-color: rgba(16, 185, 129, 0.06) !important;
     }
     .league-tr-relegation {
-        border-left: 4px solid #ef4444;
-        background-color: rgba(239, 68, 68, 0.02);
+        border-left: 4px solid #ef4444 !important;
+        background-color: #fef2f2 !important;
     }
     .league-tr-relegation:hover {
-        background-color: rgba(239, 68, 68, 0.06) !important;
+        background-color: #fee2e2 !important;
+    }
+    .league-tr-no-movement {
+        border-left: 4px solid #64748b !important;
+        background-color: #f1f5f9 !important;
+    }
+    .league-tr-no-movement td {
+        color: #64748b !important;
+    }
+    .league-tr-no-movement:hover {
+        background-color: #e2e8f0 !important;
     }
     .league-tr-normal {
         border-left: 4px solid #cbd5e1;
@@ -180,6 +190,11 @@
         background: #fee2e2;
         color: #991b1b;
         border-color: #fca5a5;
+    }
+    .league-rank-no-movement {
+        background: #e2e8f0;
+        color: #475569;
+        border-color: #cbd5e1;
     }
     .football-badge {
         display: inline-flex;
@@ -389,7 +404,12 @@
                                         var rankClass = "";
                                         var rankText = idx.ToString();
 
-                                        if (idx <= 3)
+                                        if (comp.MtdAchievementRate == 0)
+                                        {
+                                            rowClass = "league-tr-no-movement";
+                                            rankClass = "league-rank-no-movement";
+                                        }
+                                        else if (idx <= 3)
                                         {
                                             rowClass = "league-tr-champions";
                                             rankClass = "league-rank-champions";
@@ -435,6 +455,10 @@
                         <div class="legend-item">
                             <div class="legend-dot" style="background: #cbd5e1;"></div>
                             <span>Zona Aman (Tengah)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: #64748b;"></div>
+                            <span>Tidak Ada Pergerakan (0%)</span>
                         </div>
                     </div>
                     <span class="text-muted mt-2 d-block" style="font-size: 11px; font-style: italic; line-height: 1.4;">
@@ -484,7 +508,12 @@
                                         var rankClass = "";
                                         var rankText = idx.ToString();
 
-                                        if (idx <= 3)
+                                        if (dept.MtdAchievementRate == 0)
+                                        {
+                                            rowClass = "league-tr-no-movement";
+                                            rankClass = "league-rank-no-movement";
+                                        }
+                                        else if (idx <= 3)
                                         {
                                             rowClass = "league-tr-champions";
                                             rankClass = "league-rank-champions";
@@ -540,6 +569,10 @@
                             <div class="legend-dot dot-l"></div>
                             <span>Zona Relegasi / Pembinaan (3 Bawah)</span>
                         </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: #64748b;"></div>
+                            <span>Tidak Ada Pergerakan (0%)</span>
+                        </div>
                     </div>
                     <span class="text-muted mt-2 d-block" style="font-size: 11px; font-style: italic; line-height: 1.4;">
                         * Klik baris Departemen di atas untuk langsung menyaring daftar skuad pemain di samping/bawah secara instan.
@@ -591,8 +624,14 @@
                                         var rowClass = "league-tr-normal";
                                         var rankClass = "";
                                         var rankText = empIdx.ToString();
+                                        var zeroTarget = (emp.mtdTotalTarget == 0);
 
-                                        if (empIdx <= 3)
+                                        if (emp.complianceRate == 0 && !zeroTarget)
+                                        {
+                                            rowClass = "league-tr-no-movement";
+                                            rankClass = "league-rank-no-movement";
+                                        }
+                                        else if (empIdx <= 3)
                                         {
                                             rowClass = "league-tr-champions";
                                             rankClass = "league-rank-champions";
@@ -600,8 +639,12 @@
                                             else if (empIdx == 2) rankText = "🥈 2";
                                             else if (empIdx == 3) rankText = "🥉 3";
                                         }
+                                        else if (empIdx >= employees.Count - 2 && employees.Count > 5)
+                                        {
+                                            rowClass = "league-tr-relegation";
+                                            rankClass = "league-rank-relegation";
+                                        }
 
-                                        var zeroTarget = (emp.mtdTotalTarget == 0);
                                         var rowStyle = zeroTarget ? "background-color: #f0fdf4;" : "";
 
                                         <tr class="@rowClass player-row" style="@rowStyle" data-dept="@emp.departmentName">
