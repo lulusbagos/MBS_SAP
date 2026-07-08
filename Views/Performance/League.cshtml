@@ -334,11 +334,22 @@
                     </div>
                 </div>
             </div>
-            <div class="d-flex gap-2">
-                <span class="badge bg-success px-3 py-2" style="border-radius: 8px; font-size: 11px; font-weight: 700;">
+            <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center">
+                <!-- UEFA Anthem Audio Element -->
+                <audio id="anthemAudio" loop>
+                    <source src="/music/UEFA Champions League Anthem.mp3" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+
+                <!-- Floating Anthem control button -->
+                <button id="musicToggleBtn" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 11px; font-weight: 700; padding: 6px 12px; height: 31px; display: inline-flex; align-items: center; transition: all 0.2s;">
+                    <i id="musicIcon" class="bi bi-volume-mute-fill me-1"></i> <span id="musicText">Play Anthem</span>
+                </button>
+
+                <span class="badge bg-success px-3 py-2" style="border-radius: 8px; font-size: 11px; font-weight: 700; height: 31px; display: inline-flex; align-items: center;">
                     <i class="bi bi-calendar-event me-1"></i> Bulan Ini (MTD)
                 </span>
-                <a href="/Performance/Index" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 11px; font-weight: 700; padding: 6px 12px;">
+                <a href="/Performance/Index" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 11px; font-weight: 700; padding: 6px 12px; height: 31px; display: inline-flex; align-items: center;">
                     <i class="bi bi-diagram-3 me-1"></i> Org Chart
                 </a>
             </div>
@@ -767,4 +778,58 @@
         alertText.innerHTML = 'Menampilkan seluruh daftar pemain perusahaan.';
         resetBtn.classList.add('d-none');
     }
+
+    // UEFA Champions League Anthem Autoplay and controls
+    document.addEventListener('DOMContentLoaded', function () {
+        const audio = document.getElementById('anthemAudio');
+        const toggleBtn = document.getElementById('musicToggleBtn');
+        const icon = document.getElementById('musicIcon');
+        const text = document.getElementById('musicText');
+
+        if (!audio || !toggleBtn || !icon || !text) return;
+
+        let isPlaying = false;
+
+        function playAnthem() {
+            audio.play().then(() => {
+                isPlaying = true;
+                icon.className = 'bi bi-volume-up-fill me-1';
+                text.textContent = 'Mute Anthem';
+                toggleBtn.classList.remove('btn-outline-light');
+                toggleBtn.classList.add('btn-light', 'text-dark', 'fw-bold');
+            }).catch(err => {
+                console.log("Autoplay blocked. Waiting for first interaction to unlock...", err);
+            });
+        }
+
+        // 1. Attempt immediate autoplay
+        playAnthem();
+
+        // 2. Fallback unlock on first interaction (click / keydown)
+        function unlockAutoplay() {
+            if (!isPlaying) {
+                playAnthem();
+                document.removeEventListener('click', unlockAutoplay);
+                document.removeEventListener('keydown', unlockAutoplay);
+            }
+        }
+        document.addEventListener('click', unlockAutoplay);
+        document.addEventListener('keydown', unlockAutoplay);
+
+        // 3. Manual toggle buttons
+        toggleBtn.addEventListener('click', function (e) {
+            e.stopPropagation(); // Stop click bubbling to doc unlock handler
+            if (isPlaying) {
+                audio.play().then(() => { audio.pause(); }); // Fix some browser promise states
+                audio.pause();
+                isPlaying = false;
+                icon.className = 'bi bi-volume-mute-fill me-1';
+                text.textContent = 'Play Anthem';
+                toggleBtn.classList.remove('btn-light', 'text-dark', 'fw-bold');
+                toggleBtn.classList.add('btn-outline-light');
+            } else {
+                playAnthem();
+            }
+        });
+    });
 </script>
