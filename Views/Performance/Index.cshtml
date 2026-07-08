@@ -3029,6 +3029,45 @@
         return '#dc2626'; // Red
     }
 
+    function getFormDot(rate) {
+        const val = Number(rate);
+        if (val >= 100) return '<span class="league-form-dot dot-w" title="Target Tercapai (100%+) - WIN">W</span>';
+        if (val >= 50) return '<span class="league-form-dot dot-d" title="Target Sebagian (50%-99%) - DRAW">D</span>';
+        return '<span class="league-form-dot dot-l" title="Target Rendah (<50%) - LOSS">L</span>';
+    }
+
+    function getEmpFormDot(actual, target) {
+        if (target === 0) {
+            return '<span class="league-form-dot dot-w" title="Bebas Target (Tercapai) - WIN">W</span>';
+        }
+        const rate = (actual / target) * 100;
+        if (rate >= 100) return '<span class="league-form-dot dot-w" title="Target Tercapai - WIN">W</span>';
+        if (rate >= 50) return '<span class="league-form-dot dot-d" title="Target Sebagian - DRAW">D</span>';
+        return '<span class="league-form-dot dot-l" title="Target Kurang - LOSS">L</span>';
+    }
+
+    function getDeptBadgeColor(deptName) {
+        let hash = 0;
+        for (let i = 0; i < deptName.length; i++) {
+            hash = deptName.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const colors = [
+            '#1e3a8a', '#b91c1c', '#047857', '#6d28d9', '#a21caf',
+            '#c2410c', '#0369a1', '#15803d', '#be123c', '#4d7c0f'
+        ];
+        const idx = Math.abs(hash) % colors.length;
+        return colors[idx];
+    }
+
+    function getDeptInitials(deptName) {
+        const cleanName = deptName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+        const words = cleanName.split(/\s+/);
+        if (words.length >= 2) {
+            return (words[0][0] + words[1][0]).toUpperCase();
+        }
+        return cleanName.substring(0, 2).toUpperCase();
+    }
+
     function closeDeptModal() {
         if (!deptModal) return;
         deptModal.classList.remove('show');
