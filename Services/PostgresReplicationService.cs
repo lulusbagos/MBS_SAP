@@ -846,7 +846,6 @@ namespace MBS_SAP.Services
 
                     if (hasChanges)
                     {
-                        _context.P5ms.Update(existingP5m);
                         result.P5mUpdated++;
                     }
                     else
@@ -925,7 +924,6 @@ namespace MBS_SAP.Services
 
                     if (hasChanges)
                     {
-                        _context.SafetyTalks.Update(existingTalk);
                         result.SafetyTalkUpdated++;
                     }
                     else
