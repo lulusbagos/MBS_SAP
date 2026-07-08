@@ -1292,19 +1292,25 @@
     .dept-achievement-modal {
         position: fixed;
         inset: 0;
-        display: none;
+        display: flex;
         align-items: center;
         justify-content: center;
         z-index: 1100;
         padding: 8px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease-out;
     }
     .dept-achievement-modal.show {
-        display: flex;
+        opacity: 1;
+        pointer-events: auto;
     }
     .dept-achievement-backdrop {
         position: absolute;
         inset: 0;
         background: rgba(2, 6, 23, 0.55);
+        backdrop-filter: blur(4px);
+        transition: backdrop-filter 0.2s ease-out;
     }
     .dept-achievement-dialog {
         position: relative;
@@ -1314,8 +1320,13 @@
         border-radius: 14px;
         border: 1px solid #cbd5e1;
         background: #ffffff;
-        box-shadow: 0 18px 44px rgba(2, 6, 23, 0.28);
+        box-shadow: 0 20px 50px rgba(2, 6, 23, 0.3);
         z-index: 1;
+        transform: scale(0.96);
+        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .dept-achievement-modal.show .dept-achievement-dialog {
+        transform: scale(1);
     }
     .dept-achievement-header {
         display: flex;
