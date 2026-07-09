@@ -104,10 +104,13 @@
                         <i class="bi bi-newspaper" style="color: #f43f5e;"></i>
                         <span>Insiden</span>
                     </a>
-                    <a asp-controller="Admin" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Admin" ? "active" : "")">
-                        <i class="bi bi-cloud-arrow-up-fill text-success"></i>
-                        <span>Upload Data</span>
-                    </a>
+                    @if (isAdminUser)
+                    {
+                        <a asp-controller="Admin" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Admin" ? "active" : "")">
+                            <i class="bi bi-cloud-arrow-up-fill text-success"></i>
+                            <span>Upload Data</span>
+                        </a>
+                    }
                     @if (isAdminUser)
                     {
                         <a asp-controller="EventQr" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "EventQrAdmin" ? "active" : "")">
