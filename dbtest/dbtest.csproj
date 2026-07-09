@@ -13,4 +13,8 @@
     <PackageReference Include="System.Data.SqlClient" Version="4.9.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MBS_SAP.csproj" />
+  </ItemGroup>
+
 </Project>

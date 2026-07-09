@@ -188,9 +188,9 @@ namespace MBS_SAP.Controllers
                 return View();
             }
 
-            idPerusahaan ??= karyawanMaster.IdPerusahaan;
-            idDepartemen ??= karyawanMaster.IdDepartemen;
-            idJabatan ??= karyawanMaster.IdJabatan;
+            idPerusahaan = karyawanMaster.IdPerusahaan;
+            idDepartemen = karyawanMaster.IdDepartemen ?? idDepartemen;
+            idJabatan = karyawanMaster.IdJabatan ?? idJabatan;
 
             if (string.IsNullOrEmpty(fullName))
             {
@@ -482,9 +482,9 @@ namespace MBS_SAP.Controllers
 
             var personal = karyawan != null ? await _context.Personals.FirstOrDefaultAsync(p => p.IdPersonal == karyawan.IdPersonal) : null;
             
-            int? deptId = pengguna?.DepartemenId ?? karyawan?.IdDepartemen;
-            int? compId = pengguna?.PerusahaanId ?? karyawan?.IdPerusahaan;
-            int? jabId = pengguna?.JabatanId ?? karyawan?.IdJabatan;
+            int? deptId = karyawan?.IdDepartemen ?? pengguna?.DepartemenId;
+            int? compId = karyawan?.IdPerusahaan ?? pengguna?.PerusahaanId;
+            int? jabId = karyawan?.IdJabatan ?? pengguna?.JabatanId;
 
             var dept = deptId.HasValue ? await _context.Departemens.FirstOrDefaultAsync(d => d.DepartemenId == deptId) : null;
             var comp = compId.HasValue ? await _context.Perusahaans.FirstOrDefaultAsync(c => c.PerusahaanId == compId) : null;
