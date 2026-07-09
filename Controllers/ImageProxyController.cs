@@ -3,13 +3,41 @@ using Microsoft.AspNetCore.Authorization;
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace MBS_SAP.Controllers
 {
     [Authorize]
     public class ImageProxyController : Controller
     {
+        private static readonly string CacheDirectory = @"C:\MinePermitFiles\MBS\ImageProxyCache";
+
+        public ImageProxyController()
+        {
+            if (!Directory.Exists(CacheDirectory))
+            {
+                try
+                {
+                    Directory.CreateDirectory(CacheDirectory);
+                }
+                catch { }
+            }
+        }
+
+        private string GetCacheFilePath(string url)
+        {
+            using (var md5 = MD5.Create())
+            {
+                var hashBytes = md5.ComputeHash(Encoding.UTF8.GetBytes(url));
+                var hashStr = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+                return Path.Combine(CacheDirectory, hashStr + ".dat");
+            }
+        }
+
         [HttpGet]
+        [ResponseCache(Duration = 604800, Location = ResponseCacheLocation.Any, NoStore = false)]
         public async Task<IActionResult> Get(string url)
         {
             if (string.IsNullOrWhiteSpace(url))
@@ -27,6 +55,12 @@ namespace MBS_SAP.Controllers
 
             try
             {
+                var cachePath = GetCacheFilePath(url);
+                if (System.IO.File.Exists(cachePath))
+                {
+                    return PhysicalFile(cachePath, "image/jpeg");
+                }
+
                 // Bypass SSL certificate check in case internal server certificate is self-signed/invalid
                 var handler = new HttpClientHandler
                 {
@@ -34,7 +68,7 @@ namespace MBS_SAP.Controllers
                 };
                 
                 using var client = new HttpClient(handler);
-                client.Timeout = TimeSpan.FromSeconds(10);
+                client.Timeout = TimeSpan.FromSeconds(15);
 
                 var response = await client.GetAsync(url);
                 if (!response.IsSuccessStatusCode)
@@ -43,9 +77,18 @@ namespace MBS_SAP.Controllers
                 }
 
                 var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/jpeg";
-                var stream = await response.Content.ReadAsStreamAsync();
+                var imageBytes = await response.Content.ReadAsByteArrayAsync();
                 
-                return File(stream, contentType);
+                try
+                {
+                    await System.IO.File.WriteAllBytesAsync(cachePath, imageBytes);
+                }
+                catch
+                {
+                    // Ignore cache write errors
+                }
+                
+                return File(imageBytes, contentType);
             }
             catch (Exception)
             {
