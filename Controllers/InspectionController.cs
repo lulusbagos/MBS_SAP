@@ -40,7 +40,8 @@ namespace MBS_SAP.Controllers
             var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
             int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
 
-            IQueryable<Inspection> query = _context.Inspections.Where(i => !i.IsDeleted);
+            var satuBulanLalu = DateTime.Now.AddMonths(-1);
+            IQueryable<Inspection> query = _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= satuBulanLalu);
 
             // Filter berdasarkan perusahaan (berlaku untuk Admin maupun non-Admin)
             if (userCompanyId.HasValue)

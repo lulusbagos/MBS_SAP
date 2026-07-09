@@ -43,7 +43,8 @@ namespace MBS_SAP.Controllers
             var companyIdStr = User.FindFirst("CompanyId")?.Value;
             int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
 
-            var query = _context.HazardReports.Where(r => !r.IsDeleted);
+            var satuBulanLalu = DateTime.Now.AddMonths(-1);
+            var query = _context.HazardReports.Where(r => !r.IsDeleted && r.CreatedAt >= satuBulanLalu);
 
             // Tampilkan data berdasarkan perusahaan user saat ini (strict per company, kecuali jika ditugaskan langsung ke user)
             if (companyId.HasValue)

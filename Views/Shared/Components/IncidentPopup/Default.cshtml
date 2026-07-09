@@ -232,7 +232,8 @@
             <div class="position-relative">
                 @if (!string.IsNullOrEmpty(Model.GambarUrl))
                 {
-                    <img src="@Model.GambarUrl" class="incident-popup-img" alt="@Model.Judul" />
+                    var proxyUrl = Model.GambarUrl.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(Model.GambarUrl) : Model.GambarUrl;
+                    <img src="@proxyUrl" class="incident-popup-img" alt="@Model.Judul" />
                     <div class="incident-popup-img-overlay"></div>
                 }
                 else

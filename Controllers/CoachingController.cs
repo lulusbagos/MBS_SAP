@@ -50,7 +50,8 @@ namespace MBS_SAP.Controllers
             ViewBag.CompanyList = companyList;
             ViewBag.UserCompanyId = companyId;
 
-            var query = _context.Coachings.Include(c => c.Participants).Where(c => !c.IsDeleted);
+            var satuBulanLalu = DateTime.Now.AddMonths(-1);
+            var query = _context.Coachings.Include(c => c.Participants).Where(c => !c.IsDeleted && c.CreatedAt >= satuBulanLalu);
 
             // Apply hierarchy filtering
             if (companyId.HasValue)

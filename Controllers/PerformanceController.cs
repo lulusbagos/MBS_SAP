@@ -2313,8 +2313,11 @@ namespace MBS_SAP.Controllers
             if (string.IsNullOrWhiteSpace(path)) return null;
             var normalized = path.Trim();
             if (normalized.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
-                normalized.StartsWith("/", StringComparison.Ordinal))
+                normalized.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return "/ImageProxy/Get?url=" + Uri.EscapeDataString(normalized);
+            }
+            if (normalized.StartsWith("/", StringComparison.Ordinal))
             {
                 return normalized;
             }

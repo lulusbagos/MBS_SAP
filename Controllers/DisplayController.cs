@@ -311,6 +311,14 @@ namespace MBS_SAP.Controllers
                 .Where(ap => !ap.IsDeleted && ap.ItemSap != null && ap.ItemSap.StartsWith("hazard:"))
                 .ToListAsync();
 
+            string? ProxyUrl(string? url)
+            {
+                if (string.IsNullOrEmpty(url)) return url;
+                if (url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    return "/ImageProxy/Get?url=" + Uri.EscapeDataString(url);
+                return url;
+            }
+
             foreach(var p in p5ms)
                 feed.Add(new TimelineItem {
                     Id = p.Id,
@@ -324,7 +332,7 @@ namespace MBS_SAP.Controllers
                     Title = "Laporan P5M",
                     Description = string.IsNullOrWhiteSpace(p.Keterangan) ? p.Catatan : p.Keterangan,
                     Status = "Closed",
-                    ImageUrl = p.FotoKegiatan,
+                    ImageUrl = ProxyUrl(p.FotoKegiatan),
                     CreatedAt = p.CreatedAt
                 });
             
@@ -352,7 +360,7 @@ namespace MBS_SAP.Controllers
                     Title = "Laporan Hazard",
                     Description = h.Temuan,
                     Status = hazardStatus,
-                    ImageUrl = h.FotoTemuan,
+                    ImageUrl = ProxyUrl(h.FotoTemuan),
                     CreatedAt = h.CreatedAt
                 });
             }
@@ -403,7 +411,7 @@ namespace MBS_SAP.Controllers
                     Title = "Action Plan",
                     Description = string.IsNullOrWhiteSpace(a.Perbaikan) ? a.RencanaPerbaikan : a.Perbaikan,
                     Status = a.Status,
-                    ImageUrl = a.FotoPerbaikan ?? a.FotoTemuan,
+                    ImageUrl = ProxyUrl(a.FotoPerbaikan ?? a.FotoTemuan),
                     CreatedAt = a.CreatedAt
                 });
             
@@ -420,7 +428,7 @@ namespace MBS_SAP.Controllers
                     Title = "Safety Talk",
                     Description = s.Keterangan,
                     Status = "Closed",
-                    ImageUrl = s.FotoKegiatan,
+                    ImageUrl = ProxyUrl(s.FotoKegiatan),
                     CreatedAt = s.CreatedAt
                 });
 
@@ -437,7 +445,7 @@ namespace MBS_SAP.Controllers
                     Title = "Observasi Lapangan",
                     Description = $"Kegiatan yang diamati: {o.KegiatanYangDiamati}. Keterangan: {o.Keterangan}",
                     Status = o.HasilObservasi ?? string.Empty,
-                    ImageUrl = o.FotoUrl,
+                    ImageUrl = ProxyUrl(o.FotoUrl),
                     CreatedAt = o.CreatedAt
                 });
 
@@ -496,7 +504,7 @@ namespace MBS_SAP.Controllers
                     Title = "Pemeriksaan Kendaraan Harian (P2H)", 
                     Description = descText, 
                     Status = defectCount == 0 ? "GOOD" : "NOT_GOOD", 
-                    ImageUrl = r.FotoSpeedometer, 
+                    ImageUrl = ProxyUrl(r.FotoSpeedometer),
                     CreatedAt = r.CreatedAt 
                 });
             }

@@ -235,19 +235,21 @@
                             <div class="row g-2 mb-3">
                                 @if (!string.IsNullOrEmpty(item.FotoTemuan))
                                 {
+                                    var proxyFotoTemuan = item.FotoTemuan.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoTemuan) : item.FotoTemuan;
                                     <div class="col-6">
                                         <span class="d-block text-muted mb-1" style="font-size: 10px; font-weight: 600;">FOTO TEMUAN (BEFORE)</span>
-                                        <a href="@item.FotoTemuan" target="_blank">
-                                            <img src="@item.FotoTemuan" alt="Before" class="img-fluid rounded border" style="max-height: 100px; object-fit: cover; width: 100%;" />
+                                        <a href="@proxyFotoTemuan" target="_blank">
+                                            <img src="@proxyFotoTemuan" alt="Before" class="img-fluid rounded border" style="max-height: 100px; object-fit: cover; width: 100%;" />
                                         </a>
                                     </div>
                                 }
                                 @if (!string.IsNullOrEmpty(item.FotoPerbaikan))
                                 {
+                                    var proxyFotoPerbaikan = item.FotoPerbaikan.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoPerbaikan) : item.FotoPerbaikan;
                                     <div class="col-6">
                                         <span class="d-block text-muted mb-1" style="font-size: 10px; font-weight: 600;">FOTO PERBAIKAN (AFTER)</span>
-                                        <a href="@item.FotoPerbaikan" target="_blank">
-                                            <img src="@item.FotoPerbaikan" alt="After" class="img-fluid rounded border" style="max-height: 100px; object-fit: cover; width: 100%;" />
+                                        <a href="@proxyFotoPerbaikan" target="_blank">
+                                            <img src="@proxyFotoPerbaikan" alt="After" class="img-fluid rounded border" style="max-height: 100px; object-fit: cover; width: 100%;" />
                                         </a>
                                     </div>
                                 }

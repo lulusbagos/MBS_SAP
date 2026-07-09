@@ -93,7 +93,8 @@
                 <div class="mb-3">
                     <label class="form-label-sap">Ilustrasi Saat Ini</label>
                     <div>
-                        <img src="@Model.GambarUrl" alt="Ilustrasi @Model.Judul" style="max-width: 280px; width: 100%; border-radius: 12px; border: 1px solid var(--border-color);" />
+                        @{ var proxyUrl = Model.GambarUrl.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(Model.GambarUrl) : Model.GambarUrl; }
+                        <img src="@proxyUrl" alt="Ilustrasi @Model.Judul" style="max-width: 280px; width: 100%; border-radius: 12px; border: 1px solid var(--border-color);" />
                     </div>
                 </div>
             }

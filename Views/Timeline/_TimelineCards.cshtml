@@ -13,7 +13,8 @@
                 <div class="position-relative d-inline-flex me-2">
                     @if (!string.IsNullOrEmpty(item.FotoDiriUrl))
                     {
-                        <img src="@item.FotoDiriUrl" class="rounded-circle shadow-sm" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid var(--color-primary);" alt="Profile" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                        var proxyFotoDiriUrl = item.FotoDiriUrl.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoDiriUrl) : item.FotoDiriUrl;
+                        <img src="@proxyFotoDiriUrl" class="rounded-circle shadow-sm" style="width: 40px; height: 40px; object-fit: cover; border: 2px solid var(--color-primary);" alt="Profile" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
                         <div class="rounded-circle shadow-sm" style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--color-primary, #3b82f6), #1d4ed8); color: white; font-weight: bold; font-size: 14px; display: none; align-items: center; justify-content: center;">
                             @(string.IsNullOrEmpty(item.Nama) ? "?" : item.Nama.Substring(0, 1).ToUpper())
                         </div>
@@ -239,13 +240,15 @@
                 {
                     if (hasFoto1 && hasFoto2)
                     {
+                        var proxyFotoUrl = item.FotoUrl.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoUrl) : item.FotoUrl;
+                        var proxyFotoPerbaikanUrl = item.FotoPerbaikanUrl.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoPerbaikanUrl) : item.FotoPerbaikanUrl;
                         <div class="feed-image-grid-two">
                             <div class="feed-image-item-wrapper">
-                                <img src="@item.FotoUrl" class="feed-image-grid-img" alt="Foto Temuan" style="cursor: pointer;" onclick="viewFullImage('@item.FotoUrl')" />
+                                <img src="@proxyFotoUrl" class="feed-image-grid-img" alt="Foto Temuan" style="cursor: pointer;" onclick="viewFullImage('@proxyFotoUrl')" />
                                 <span class="feed-image-badge-label bg-danger text-white">Sebelum</span>
                             </div>
                             <div class="feed-image-item-wrapper">
-                                <img src="@item.FotoPerbaikanUrl" class="feed-image-grid-img" alt="Foto Perbaikan" style="cursor: pointer;" onclick="viewFullImage('@item.FotoPerbaikanUrl')" />
+                                <img src="@proxyFotoPerbaikanUrl" class="feed-image-grid-img" alt="Foto Perbaikan" style="cursor: pointer;" onclick="viewFullImage('@proxyFotoPerbaikanUrl')" />
                                 <span class="feed-image-badge-label bg-success text-white">Sesudah</span>
                             </div>
                         </div>
@@ -253,8 +256,9 @@
                     else
                     {
                         var singleFotoUrl = hasFoto1 ? item.FotoUrl : item.FotoPerbaikanUrl;
+                        var proxySingleFotoUrl = singleFotoUrl.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(singleFotoUrl) : singleFotoUrl;
                         <div class="feed-image-container">
-                            <img src="@singleFotoUrl" class="feed-image" alt="Foto Laporan" style="cursor: pointer;" onclick="viewFullImage('@singleFotoUrl')" />
+                            <img src="@proxySingleFotoUrl" class="feed-image" alt="Foto Laporan" style="cursor: pointer;" onclick="viewFullImage('@proxySingleFotoUrl')" />
                         </div>
                     }
                 }

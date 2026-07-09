@@ -139,7 +139,8 @@
         <div class="detail-img-container">
             @if (!string.IsNullOrEmpty(Model.GambarUrl))
             {
-                <img src="@Model.GambarUrl" alt="@Model.Judul" class="detail-img" />
+                var proxyUrl = Model.GambarUrl.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(Model.GambarUrl) : Model.GambarUrl;
+                <img src="@proxyUrl" alt="@Model.Judul" class="detail-img" />
             }
             else
             {

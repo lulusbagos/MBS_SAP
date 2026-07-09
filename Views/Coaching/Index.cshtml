@@ -273,9 +273,10 @@
                             <!-- Photo -->
                             @if (!string.IsNullOrEmpty(item.Foto))
                             {
+                                var proxyFoto = item.Foto.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.Foto) : item.Foto;
                                 <div class="my-2">
-                                    <a href="@item.Foto" target="_blank">
-                                        <img src="@item.Foto" alt="Coaching Photo" style="max-height: 60px; border-radius: 4px; border: 1px solid var(--border-color);" />
+                                    <a href="@proxyFoto" target="_blank">
+                                        <img src="@proxyFoto" alt="Coaching Photo" style="max-height: 60px; border-radius: 4px; border: 1px solid var(--border-color);" />
                                     </a>
                                 </div>
                             }

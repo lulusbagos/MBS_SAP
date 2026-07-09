@@ -75,8 +75,9 @@ namespace MBS_SAP.Controllers
             if (page < 1) page = 1;
             if (pageSize < 5) pageSize = 20;
 
+            var satuBulanLalu = DateTime.Now.AddMonths(-1);
             var query = _context.IncidentNewsList
-                .Where(i => i.IsPublished)
+                .Where(i => i.IsPublished && i.CreatedAt >= satuBulanLalu)
                 .OrderByDescending(i => i.Id);
 
             var totalItems = await query.CountAsync();

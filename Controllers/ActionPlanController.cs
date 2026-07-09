@@ -40,7 +40,8 @@ namespace MBS_SAP.Controllers
             int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
             var isAdmin = User.IsInRole("Admin");
 
-            var query = _context.ActionPlans.Where(r => !r.IsDeleted);
+            var satuBulanLalu = DateTime.Now.AddMonths(-1);
+            var query = _context.ActionPlans.Where(r => !r.IsDeleted && r.CreatedAt >= satuBulanLalu);
 
             // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin, kecuali jika ditugaskan langsung ke user)
             if (companyId.HasValue)

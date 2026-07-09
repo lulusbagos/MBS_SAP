@@ -97,7 +97,8 @@ namespace MBS_SAP.Controllers
             var isAdmin = User.IsInRole("Admin");
             var companyScopedNiks = await GetCurrentCompanyNiksAsync();
 
-            var query = _context.P2hReports.Where(r => !r.IsDeleted);
+            var satuBulanLalu = DateTime.Now.AddMonths(-1);
+            var query = _context.P2hReports.Where(r => !r.IsDeleted && r.CreatedAt >= satuBulanLalu);
 
             // Batasi histori berdasarkan perusahaan user aktif (strict company scope).
             if (companyScopedNiks.Count == 0)

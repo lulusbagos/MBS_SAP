@@ -32,7 +32,8 @@ namespace MBS_SAP.Controllers
             var isAdmin = User.IsInRole("Admin");
             var companyScopedNiks = await GetCurrentCompanyNiksAsync();
 
-            var query = _context.Observations.Where(r => !r.IsDeleted);
+            var satuBulanLalu = DateTime.Now.AddMonths(-1);
+            var query = _context.Observations.Where(r => !r.IsDeleted && r.CreatedAt >= satuBulanLalu);
 
             // Batasi data observasi berdasarkan perusahaan user aktif (strict company scope).
             if (companyScopedNiks.Count == 0)

@@ -340,7 +340,8 @@
                 <div class="newest-body">
                     @if (!string.IsNullOrWhiteSpace(newest.GambarUrl))
                     {
-                        <img src="@newest.GambarUrl" alt="@newest.Judul" class="newest-image" />
+                        var proxyUrl = newest.GambarUrl.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(newest.GambarUrl) : newest.GambarUrl;
+                        <img src="@proxyUrl" alt="@newest.Judul" class="newest-image" />
                     }
                     else
                     {
