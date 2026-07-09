@@ -69,6 +69,11 @@
                 </div>
 
                 <div id="qrReader"></div>
+                
+                <div id="zoomContainer" style="display: none;" class="mt-3 px-2">
+                    <label for="zoomSlider" class="form-label" style="font-size: 13px; color: var(--text-muted); font-weight: 600;"><i class="bi bi-zoom-in me-1"></i> Zoom Kamera</label>
+                    <input type="range" class="form-range" id="zoomSlider" min="1" max="1" step="0.1" value="1">
+                </div>
 
                 <div class="d-grid gap-2 mt-4" style="display: grid; grid-template-columns: 1fr 1fr;">
                     <button type="button" id="startScanBtn" class="btn-sap-primary w-100 py-3" style="font-size: 14px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 700; border: none; padding: 12px;"><i class="bi bi-play-circle me-2"></i>Mulai Scan</button>
@@ -178,6 +183,40 @@
 
                     isRunning = true;
                     setStatus('ok', 'Scanner aktif. Arahkan kamera ke QR event.');
+
+                    // Enable Zoom if supported by the device
+                    setTimeout(function() {
+                        try {
+                            const track = scanner.getRunningTrack();
+                            if (track) {
+                                const capabilities = track.getCapabilities();
+                                if (capabilities && capabilities.zoom) {
+                                    const zoomContainer = document.getElementById('zoomContainer');
+                                    const zoomSlider = document.getElementById('zoomSlider');
+                                    if (zoomContainer && zoomSlider) {
+                                        zoomContainer.style.display = 'block';
+                                        zoomSlider.min = capabilities.zoom.min;
+                                        zoomSlider.max = capabilities.zoom.max;
+                                        zoomSlider.step = capabilities.zoom.step || 0.1;
+                                        zoomSlider.value = track.getSettings().zoom || capabilities.zoom.min;
+                                        
+                                        // Remove old listeners to avoid multiple binding if started multiple times
+                                        const newSlider = zoomSlider.cloneNode(true);
+                                        zoomSlider.parentNode.replaceChild(newSlider, zoomSlider);
+                                        
+                                        newSlider.addEventListener('input', function() {
+                                            track.applyConstraints({
+                                                advanced: [{ zoom: parseFloat(this.value) }]
+                                            });
+                                        });
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Zoom not supported or could not be initialized:', e);
+                        }
+                    }, 500);
+
                 } catch {
                     setStatus('err', 'Gagal mengakses kamera. Cek izin browser atau perangkat kamera.');
                 }
@@ -188,6 +227,8 @@
                 try {
                     await scanner.stop();
                     await scanner.clear();
+                    const zoomContainer = document.getElementById('zoomContainer');
+                    if (zoomContainer) zoomContainer.style.display = 'none';
                 } catch {
                 }
                 isRunning = false;
