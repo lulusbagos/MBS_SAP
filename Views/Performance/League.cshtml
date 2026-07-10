@@ -342,6 +342,146 @@
         max-height: none !important;
         overflow-y: visible !important;
     }
+    
+    /* Squad Podium styles */
+    .squad-podium {
+        display: none;
+    }
+    
+    #squadSection.is-fullscreen .squad-podium {
+        display: flex !important;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 12px;
+        margin-bottom: 24px;
+        padding: 24px 16px;
+        background: linear-gradient(135deg, #1e293b, #0f172a);
+        border-radius: 16px;
+        color: #ffffff;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .podium-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 30%;
+        max-width: 220px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .podium-avatar {
+        font-size: 28px;
+        margin-bottom: 4px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+    
+    .podium-name {
+        font-weight: 800;
+        font-size: 13px;
+        line-height: 1.2;
+        color: #ffffff;
+        margin-top: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+    
+    .podium-dept {
+        font-size: 10px;
+        color: #94a3b8;
+        font-weight: 600;
+        margin-bottom: 6px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+    }
+    
+    .podium-rate {
+        font-weight: 850;
+        font-size: 14px;
+        padding: 2px 8px;
+        border-radius: 20px;
+        margin-bottom: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    
+    .podium-block {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 24px;
+        color: rgba(255, 255, 255, 0.25);
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        text-shadow: 1px 1px 0px rgba(0,0,0,0.2);
+    }
+    
+    /* Podium Colors & Heights */
+    .podium-gold .podium-block {
+        height: 80px;
+        background: linear-gradient(180deg, #eab308, #ca8a04);
+        border: 2px solid #fef08a;
+        border-bottom: none;
+        color: #fef08a;
+    }
+    .podium-gold .podium-rate {
+        background-color: #fef08a;
+        color: #854d0e;
+    }
+    .podium-gold {
+        transform: scale(1.05);
+        z-index: 2;
+    }
+    
+    .podium-silver .podium-block {
+        height: 60px;
+        background: linear-gradient(180deg, #94a3b8, #475569);
+        border: 2px solid #e2e8f0;
+        border-bottom: none;
+        color: #e2e8f0;
+    }
+    .podium-silver .podium-rate {
+        background-color: #e2e8f0;
+        color: #334155;
+    }
+    
+    .podium-bronze .podium-block {
+        height: 45px;
+        background: linear-gradient(180deg, #b45309, #78350f);
+        border: 2px solid #fed7aa;
+        border-bottom: none;
+        color: #fed7aa;
+    }
+    .podium-bronze .podium-rate {
+        background-color: #fed7aa;
+        color: #7c2d12;
+    }
+    
+    @@media (max-width: 576px) {
+        .podium-name {
+            font-size: 11px;
+        }
+        .podium-avatar {
+            font-size: 20px;
+        }
+        .podium-rate {
+            font-size: 11px;
+            padding: 1px 6px;
+        }
+        .podium-block {
+            font-size: 18px;
+        }
+        .podium-gold .podium-block { height: 60px; }
+        .podium-silver .podium-block { height: 45px; }
+        .podium-bronze .podium-block { height: 35px; }
+    }
 </style>
 
 <div class="animate-fade-in pb-4">
@@ -649,6 +789,9 @@
                         <button type="button" class="btn btn-sm btn-outline-light d-none" id="resetFilterBtn" onclick="resetPlayerFilter();" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px;">
                             <i class="bi bi-x-circle me-1"></i> Tampilkan Semua
                         </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" id="downloadExcelBtn" onclick="downloadSquadExcel();" title="Ekspor ke Excel (CSV)" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
+                            <i class="bi bi-file-earmark-excel" id="excelIcon"></i> <span class="d-none d-md-inline ms-1">Download Excel</span>
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-light" id="toggleAllDetailsBtn" onclick="toggleAllDetails();" title="Tampilkan Semua Rincian Kepatuhan" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
                             <i class="bi bi-eye" id="detailsIcon"></i> <span class="d-none d-md-inline ms-1" id="detailsText">Buka Rincian</span>
                         </button>
@@ -662,6 +805,10 @@
                 </div>
                 
                 <div class="p-3">
+                    <div class="squad-podium" id="squadPodium">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+
                     <div class="alert alert-info py-2 px-3 mb-3 border-0 d-flex align-items-center gap-2" id="filterAlert" style="border-radius: 8px; font-size: 12px; background-color: #f0f9ff; color: #0369a1;">
                         <i class="bi bi-info-circle-fill"></i>
                         <span id="filterAlertText">Menampilkan seluruh daftar pemain perusahaan.</span>
@@ -815,6 +962,11 @@
         const squadSec = document.getElementById('squadSection');
         if (squadSec) {
             squadSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Update podium if fullscreen
+            if (squadSec.classList.contains('is-fullscreen')) {
+                updatePodium();
+            }
         }
     }
 
@@ -847,6 +999,12 @@
             detailsBtn.title = 'Tampilkan Semua Rincian Kepatuhan';
             detailsBtn.classList.remove('btn-light', 'text-dark', 'fw-bold');
             detailsBtn.classList.add('btn-outline-light');
+        }
+
+        // Update podium if fullscreen
+        const squadSec = document.getElementById('squadSection');
+        if (squadSec && squadSec.classList.contains('is-fullscreen')) {
+            updatePodium();
         }
     }
 
@@ -883,6 +1041,7 @@
         document.body.classList.toggle('squad-fullscreen-active', isFullscreen);
         
         if (isFullscreen) {
+            updatePodium();
             icon.className = 'bi bi-fullscreen-exit';
             text.textContent = 'Layar Normal';
             btn.title = 'Keluar dari Layar Penuh';
@@ -941,6 +1100,189 @@
             btn.title = 'Tampilkan Semua Rincian Kepatuhan';
             btn.classList.remove('btn-light', 'text-dark', 'fw-bold');
             btn.classList.add('btn-outline-light');
+        }
+    }
+
+    function updatePodium() {
+        const rows = document.querySelectorAll('#playerTableBody tr.player-row:not(.collapse)');
+        const visibleRows = Array.from(rows).filter(row => !row.classList.contains('d-none'));
+        const podiumContainer = document.getElementById('squadPodium');
+        
+        if (!podiumContainer) return;
+        
+        const topPlayers = [];
+        for (let i = 0; i < visibleRows.length; i++) {
+            if (topPlayers.length >= 3) break;
+            
+            const nameEl = visibleRows[i].querySelector('.fw-bold');
+            if (!nameEl) continue;
+            
+            const name = nameEl.textContent.trim();
+            const deptBadge = visibleRows[i].querySelector('.badge');
+            const dept = deptBadge ? deptBadge.textContent.trim() : '';
+            
+            const cells = visibleRows[i].getElementsByTagName('td');
+            if (cells.length < 3) continue;
+            const rate = cells[2].textContent.trim();
+            
+            topPlayers.push({ name, dept, rate });
+        }
+        
+        if (topPlayers.length === 0) {
+            podiumContainer.style.display = 'none';
+            return;
+        }
+        
+        let html = '';
+        
+        // 2nd Place (Silver)
+        if (topPlayers.length >= 2) {
+            html += `
+            <div class="podium-step podium-silver">
+                <div class="podium-avatar">🥈</div>
+                <div class="podium-name" title="${topPlayers[1].name}">${topPlayers[1].name}</div>
+                <div class="podium-dept" title="${topPlayers[1].dept}">${topPlayers[1].dept}</div>
+                <div class="podium-rate">${topPlayers[1].rate}</div>
+                <div class="podium-block">2</div>
+            </div>`;
+        } else {
+            html += `
+            <div class="podium-step podium-silver" style="opacity: 0.3;">
+                <div class="podium-avatar">🥈</div>
+                <div class="podium-name">-</div>
+                <div class="podium-dept">-</div>
+                <div class="podium-rate">0%</div>
+                <div class="podium-block">2</div>
+            </div>`;
+        }
+        
+        // 1st Place (Gold)
+        if (topPlayers.length >= 1) {
+            html += `
+            <div class="podium-step podium-gold">
+                <div class="podium-avatar">🏆 🥇</div>
+                <div class="podium-name" title="${topPlayers[0].name}">${topPlayers[0].name}</div>
+                <div class="podium-dept" title="${topPlayers[0].dept}">${topPlayers[0].dept}</div>
+                <div class="podium-rate">${topPlayers[0].rate}</div>
+                <div class="podium-block">1</div>
+            </div>`;
+        }
+        
+        // 3rd Place (Bronze)
+        if (topPlayers.length >= 3) {
+            html += `
+            <div class="podium-step podium-bronze">
+                <div class="podium-avatar">🥉</div>
+                <div class="podium-name" title="${topPlayers[2].name}">${topPlayers[2].name}</div>
+                <div class="podium-dept" title="${topPlayers[2].dept}">${topPlayers[2].dept}</div>
+                <div class="podium-rate">${topPlayers[2].rate}</div>
+                <div class="podium-block">3</div>
+            </div>`;
+        } else {
+            html += `
+            <div class="podium-step podium-bronze" style="opacity: 0.3;">
+                <div class="podium-avatar">🥉</div>
+                <div class="podium-name">-</div>
+                <div class="podium-dept">-</div>
+                <div class="podium-rate">0%</div>
+                <div class="podium-block">3</div>
+            </div>`;
+        }
+        
+        podiumContainer.innerHTML = html;
+    }
+
+    function downloadSquadExcel() {
+        const rows = document.querySelectorAll('#playerTableBody tr.player-row:not(.collapse)');
+        const visibleRows = Array.from(rows).filter(row => !row.classList.contains('d-none'));
+        
+        if (visibleRows.length === 0) {
+            alert('Tidak ada data untuk diekspor.');
+            return;
+        }
+        
+        let csvContent = "";
+        
+        // Header
+        const headers = ["Peringkat", "Nama Karyawan", "NIK", "Departemen", "Compliance Rate (%)", "Hazard Actual", "Hazard Target", "Inspeksi Actual", "Inspeksi Target", "Safety Talk Actual", "Safety Talk Target", "Observasi Actual", "Observasi Target", "Coaching Actual", "Coaching Target", "P5M Actual", "P5M Target"];
+        csvContent += headers.join(",") + "\r\n";
+        
+        // Rows data
+        visibleRows.forEach((row) => {
+            const rankEl = row.querySelector('.league-rank-pill');
+            let rank = rankEl ? rankEl.textContent.trim() : '';
+            rank = rank.replace(/[^\d]/g, '');
+            
+            const nameEl = row.querySelector('.fw-bold');
+            const name = nameEl ? nameEl.textContent.trim().replace(/"/g, '""') : '';
+            
+            const subTextEl = row.querySelector('div[style*="font-size: 10px"]');
+            let nik = '';
+            let dept = '';
+            if (subTextEl) {
+                const parts = subTextEl.textContent.split('•');
+                if (parts.length >= 1) nik = parts[0].trim();
+                const badgeEl = subTextEl.querySelector('.badge');
+                if (badgeEl) dept = badgeEl.textContent.trim().replace(/"/g, '""');
+            }
+            
+            const cells = row.getElementsByTagName('td');
+            let rate = '';
+            if (cells.length >= 3) {
+                rate = cells[2].textContent.replace('%', '').trim();
+            }
+            
+            let hzAct = 0, hzTgt = 0, ipAct = 0, ipTgt = 0, stAct = 0, stTgt = 0, obAct = 0, obTgt = 0, ccAct = 0, ccTgt = 0, p5mAct = 0, p5mTgt = 0;
+            const detailRow = document.getElementById('detail-' + nik);
+            if (detailRow) {
+                const valueDivs = detailRow.querySelectorAll('.fw-bold');
+                if (valueDivs.length >= 6) {
+                    const hzParts = valueDivs[0].textContent.split('/');
+                    if (hzParts.length === 2) { hzAct = hzParts[0].trim(); hzTgt = hzParts[1].trim(); }
+                    
+                    const ipParts = valueDivs[1].textContent.split('/');
+                    if (ipParts.length === 2) { ipAct = ipParts[0].trim(); ipTgt = ipParts[1].trim(); }
+                    
+                    const stParts = valueDivs[2].textContent.split('/');
+                    if (stParts.length === 2) { stAct = stParts[0].trim(); stTgt = stParts[1].trim(); }
+                    
+                    const obParts = valueDivs[3].textContent.split('/');
+                    if (obParts.length === 2) { obAct = obParts[0].trim(); obTgt = obParts[1].trim(); }
+                    
+                    const ccParts = valueDivs[4].textContent.split('/');
+                    if (ccParts.length === 2) { ccAct = ccParts[0].trim(); ccTgt = ccParts[1].trim(); }
+                    
+                    const p5mParts = valueDivs[5].textContent.split('/');
+                    if (p5mParts.length === 2) { p5mAct = p5mParts[0].trim(); p5mTgt = p5mParts[1].trim(); }
+                }
+            }
+            
+            const line = [
+                rank,
+                `"${name}"`,
+                `"${nik}"`,
+                `"${dept}"`,
+                rate,
+                hzAct, hzTgt,
+                ipAct, ipTgt,
+                stAct, stTgt,
+                obAct, obTgt,
+                ccAct, ccTgt,
+                p5mAct, p5mTgt
+            ];
+            csvContent += line.join(",") + "\r\n";
+        });
+        
+        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Skuad_Pemain_K3_${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     }
 
