@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
 <style>
     #hitsafeLeafletMap {
@@ -172,6 +173,15 @@
         object-fit: cover;
     }
 
+    .hitsafe-popup-photo.hitsafe-blurred-photo {
+        filter: blur(10px);
+        transition: filter 0.3s ease;
+    }
+
+    .hitsafe-popup-photo.hitsafe-blurred-photo:hover {
+        filter: none;
+    }
+
     .hitsafe-user-marker-icon {
         width: 30px;
         height: 30px;
@@ -189,13 +199,13 @@
 
     .hitsafe-toolbar {
         display: grid;
-        grid-template-columns: repeat(6, minmax(100px, 1fr));
+        grid-template-columns: repeat(7, minmax(100px, 1fr));
         gap: 10px;
         margin-bottom: 12px;
     }
     @@media (max-width: 1200px) {
         .hitsafe-toolbar {
-            grid-template-columns: repeat(3, minmax(100px, 1fr));
+            grid-template-columns: repeat(4, minmax(100px, 1fr));
         }
     }
 
@@ -2009,9 +2019,39 @@
                     <input id="hitsafeFilterKeyword" class="hitsafe-filter" type="text" placeholder="Cari area/nama/detail..." />
                     <button id="hitsafeFilterReset" type="button" class="hitsafe-filter" style="background: #0f172a; color: #f8fafc; border-color: #1e293b;">Reset Filter</button>
                     <button id="hitsafeLocateBtn" type="button" class="hitsafe-filter" style="background: #0f172a; color: #f8fafc; border-color: #1e293b; transition: all 0.2s ease;"><i class="bi bi-crosshair"></i> Lokasi Saya</button>
+                    <button id="hitsafeHeatmapToggle" type="button" class="hitsafe-filter" style="background: #0f172a; color: #f8fafc; border-color: #1e293b; transition: all 0.2s ease;"><i class="bi bi-fire text-danger"></i> Mode Heatmap</button>
                 </div>
 
-                <div id="hitsafeLeafletMap"></div>
+                <div style="position: relative;">
+                    <div id="hitsafeLeafletMap"></div>
+                    <!-- Floating Legend for Heatmap Mode -->
+                    <div id="hitsafeHeatmapLegend" style="display: none; position: absolute; bottom: 20px; right: 20px; z-index: 1000; background: rgba(15, 23, 42, 0.95); border: 1.5px solid #334155; border-radius: 10px; padding: 10px; color: #f8fafc; font-size: 11px; width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); pointer-events: none;">
+                        <div style="font-weight: 800; margin-bottom: 6px; text-transform: uppercase; color: #38bdf8;">Kepadatan Hazard</div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: red;"></span>
+                                <span>Tinggi (Sangat Rawan)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: yellow;"></span>
+                                <span>Sedang (Waspada)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: lime;"></span>
+                                <span>Rendah (Aman)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Floating Danger Zones Dashboard Panel -->
+                    <div id="hitsafeDangerZonesPanel" style="display: none; position: absolute; top: 20px; right: 20px; z-index: 1000; background: rgba(15, 23, 42, 0.95); border: 1.5px solid #334155; border-radius: 12px; padding: 12px; color: #f8fafc; font-size: 11px; width: 220px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); max-height: 250px; overflow-y: auto;">
+                        <div style="font-weight: 850; margin-bottom: 8px; text-transform: uppercase; color: #f43f5e; display: flex; align-items: center; gap: 6px;">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span>Zona Bahaya (≥ 69% Hazard)</span>
+                        </div>
+                        <div id="hitsafeDangerZonesList" style="display: flex; flex-direction: column; gap: 6px;">
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -3732,7 +3772,8 @@
         const _hitSafeInspectionPointsRaw = @Html.Raw(Json.Serialize(ViewBag.InspectionPoints ?? new List<object>()));
         const _hitSafeP5mPointsRaw = @Html.Raw(Json.Serialize(ViewBag.P5mPoints ?? new List<object>()));
         const _hitSafeSafetyTalkPointsRaw = @Html.Raw(Json.Serialize(ViewBag.SafetyTalkPoints ?? new List<object>()));
-        const _hitSafeCanViewPhoto = @(canViewGeoPhoto ? "true" : "false");
+        const _hitSafeIsAdmin = @(ViewBag.IsAdmin == true ? "true" : "false");
+        const _hitSafeCanViewPhoto = true;
 
         window._initCompanyCharts = function() {
             if (window._companyChartsInitialized) return;
@@ -4000,6 +4041,8 @@
         let hitSafeAnchorLayer = null;
         let hitSafeReportLayer = null;
         let hitSafeClusterLayer = null;
+        let hitSafeHeatLayer = null;
+        let hitSafeHeatmapMode = false;
         let hitSafeUserMarker = null;
         let hitSafeUserAccuracyCircle = null;
         let hitSafeGeolocAttempted = false;
@@ -4244,6 +4287,31 @@
                 });
             }
 
+            const heatmapToggle = document.getElementById('hitsafeHeatmapToggle');
+            if (heatmapToggle) {
+                heatmapToggle.addEventListener('click', function() {
+                    hitSafeHeatmapMode = !hitSafeHeatmapMode;
+                    const legendEl = document.getElementById('hitsafeHeatmapLegend');
+
+                    if (hitSafeHeatmapMode) {
+                        heatmapToggle.classList.add('btn-danger', 'text-white');
+                        heatmapToggle.style.background = '#dc2626';
+                        heatmapToggle.style.color = '#ffffff';
+                        heatmapToggle.style.borderColor = '#b91c1c';
+                        heatmapToggle.innerHTML = '<i class="bi bi-fire text-white"></i> Mode Pin';
+                        if (legendEl) legendEl.style.display = 'block';
+                    } else {
+                        heatmapToggle.classList.remove('btn-danger', 'text-white');
+                        heatmapToggle.style.background = '#0f172a';
+                        heatmapToggle.style.color = '#f8fafc';
+                        heatmapToggle.style.borderColor = '#1e293b';
+                        heatmapToggle.innerHTML = '<i class="bi bi-fire text-danger"></i> Mode Heatmap';
+                        if (legendEl) legendEl.style.display = 'none';
+                    }
+                    applyHitSafeFiltersAndRender(false);
+                });
+            }
+
             hitSafeFiltersInitialized = true;
         }
 
@@ -4278,8 +4346,9 @@
                 ? '<div class="hitsafe-popup-detail"><strong>' + meta.detailLabel + ':</strong><br>' + escapeHtml(point.detail) + '</div>'
                 : '';
 
+            const photoClass = _hitSafeIsAdmin ? 'hitsafe-popup-photo' : 'hitsafe-popup-photo hitsafe-blurred-photo';
             const photoBlock = (_hitSafeCanViewPhoto && point.photoUrl)
-                ? '<div class="hitsafe-popup-photo-wrap"><img class="hitsafe-popup-photo" src="' + escapeHtml(point.photoUrl) + '" alt="Foto laporan" loading="lazy" /></div>'
+                ? '<div class="hitsafe-popup-photo-wrap"><img class="' + photoClass + '" src="' + escapeHtml(point.photoUrl) + '" alt="Foto laporan" loading="lazy" /></div>'
                 : '';
 
             return [
@@ -4307,41 +4376,157 @@
             if (hitSafeClusterLayer) {
                 hitSafeClusterLayer.clearLayers();
             }
+            if (hitSafeHeatLayer && hitSafeMap) {
+                hitSafeMap.removeLayer(hitSafeHeatLayer);
+                hitSafeHeatLayer = null;
+            }
 
             hitSafeFilteredPoints = filterHitSafePoints();
             const bounds = [];
 
-            hitSafeFilteredPoints.forEach(function(point) {
-                const popup = buildPointPopup(point.type, point);
-                const markerColors = {
-                    hazard: '#f43f5e',
-                    inspection: '#3b82f6',
-                    p5m: '#10b981',
-                    safetytalk: '#f59e0b'
-                };
-                const markerColor = markerColors[point.type] || '#3b82f6';
-                const marker = L.marker([point.lat, point.lon], {
-                    icon: L.divIcon({
-                        className: 'hitsafe-map-pin-wrapper',
-                        html: '<span style="display:block;width:14px;height:14px;border-radius:50%;border:2px solid #ffffff;background:' + markerColor + ';box-shadow:0 0 0 1px rgba(15,23,42,0.7);"></span>',
-                        iconSize: [14, 14],
-                        iconAnchor: [7, 7]
-                    })
-                }).bindPopup(popup, {
-                    maxWidth: 320,
-                    className: 'hitsafe-popup-shell'
+            if (hitSafeHeatmapMode) {
+                const heatPoints = [];
+                hitSafeFilteredPoints.forEach(function(point) {
+                    bounds.push([point.lat, point.lon]);
+                    if (point.type === 'hazard') {
+                        let weight = 0.5;
+                        const risk = String(point.resiko || '').toLowerCase();
+                        if (risk.includes('extreme') || risk.includes('ekstrem') || risk.includes('sangat berat') || risk.includes('kritis')) {
+                            weight = 1.0;
+                        } else if (risk.includes('high') || risk.includes('tinggi') || risk.includes('berat')) {
+                            weight = 0.8;
+                        } else if (risk.includes('medium') || risk.includes('sedang')) {
+                            weight = 0.5;
+                        } else {
+                            weight = 0.2;
+                        }
+                        heatPoints.push([point.lat, point.lon, weight]);
+                    }
                 });
 
-                hitSafeMarkerByKey.set(point.key, marker);
-
-                if (hitSafeClusterLayer) {
-                    hitSafeClusterLayer.addLayer(marker);
-                } else {
-                    marker.addTo(hitSafeReportLayer);
+                if (typeof L.heatLayer === 'function') {
+                    hitSafeHeatLayer = L.heatLayer(heatPoints, {
+                        radius: 35,
+                        blur: 20,
+                        maxZoom: 18
+                    }).addTo(hitSafeMap);
                 }
+            } else {
+                hitSafeFilteredPoints.forEach(function(point) {
+                    const popup = buildPointPopup(point.type, point);
+                    const markerColors = {
+                        hazard: '#f43f5e',
+                        inspection: '#3b82f6',
+                        p5m: '#10b981',
+                        safetytalk: '#f59e0b'
+                    };
+                    const markerColor = markerColors[point.type] || '#3b82f6';
+                    const marker = L.marker([point.lat, point.lon], {
+                        icon: L.divIcon({
+                            className: 'hitsafe-map-pin-wrapper',
+                            html: '<span style="display:block;width:14px;height:14px;border-radius:50%;border:2px solid #ffffff;background:' + markerColor + ';box-shadow:0 0 0 1px rgba(15,23,42,0.7);"></span>',
+                            iconSize: [14, 14],
+                            iconAnchor: [7, 7]
+                        })
+                    }).bindPopup(popup, {
+                        maxWidth: 320,
+                        className: 'hitsafe-popup-shell'
+                    });
 
-                bounds.push([point.lat, point.lon]);
-            });
+                    hitSafeMarkerByKey.set(point.key, marker);
+
+                    if (hitSafeClusterLayer) {
+                        hitSafeClusterLayer.addLayer(marker);
+                    } else {
+                        marker.addTo(hitSafeReportLayer);
+                    }
+
+                    bounds.push([point.lat, point.lon]);
+                });
+            }
+
+            // Calculate and display Danger Zones (Hazard >= 69%) in the floating panel
+            const dangerPanel = document.getElementById('hitsafeDangerZonesPanel');
+            const dangerList = document.getElementById('hitsafeDangerZonesList');
+            if (dangerPanel && dangerList) {
+                dangerList.innerHTML = '';
+                const dangerAreas = [];
+
+                // Group filtered points by area name
+                const areaGroups = new Map();
+                hitSafeFilteredPoints.forEach(function(point) {
+                    if (!point.area) return;
+                    const areaKey = point.area.trim().toLowerCase();
+                    if (!areaGroups.has(areaKey)) {
+                        areaGroups.set(areaKey, { name: point.area, points: [] });
+                    }
+                    areaGroups.get(areaKey).points.push(point);
+                });
+
+                areaGroups.forEach(function(group) {
+                    const total = group.points.length;
+                    if (total < 2) return;
+
+                    const hazardsCount = group.points.filter(p => p.type === 'hazard').length;
+                    const hazardPercent = (hazardsCount / total) * 100;
+
+                    if (hazardPercent >= 69) {
+                        dangerAreas.push({
+                            name: group.name,
+                            percent: Math.round(hazardPercent),
+                            hazards: hazardsCount,
+                            total: total,
+                            points: group.points
+                        });
+                    }
+                });
+
+                if (dangerAreas.length > 0) {
+                    dangerPanel.style.display = 'block';
+                    dangerAreas.forEach(function(area) {
+                        const item = document.createElement('div');
+                        item.style.padding = '8px';
+                        item.style.background = 'rgba(244, 63, 94, 0.08)';
+                        item.style.border = '1px solid rgba(244, 63, 94, 0.3)';
+                        item.style.borderRadius = '8px';
+                        item.style.cursor = 'pointer';
+                        item.style.marginBottom = '4px';
+                        item.style.transition = 'all 0.2s';
+                        item.className = 'danger-zone-item';
+                        item.innerHTML = '<div style="font-weight:700; color:#f8fafc; font-size:11px; margin-bottom:2px;">' + escapeHtml(area.name) + '</div>' +
+                                         '<div style="color:#f43f5e; font-weight:800; font-size:10px; display:flex; align-items:center; gap:4px;">' +
+                                         '<span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#f43f5e;"></span>' +
+                                         'Rawan (' + area.percent + '% Hazard)</div>' +
+                                         '<div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">' + area.hazards + ' dari ' + area.total + ' laporan</div>';
+
+                        item.addEventListener('mouseenter', function() {
+                            item.style.background = 'rgba(244, 63, 94, 0.2)';
+                            item.style.borderColor = 'rgba(244, 63, 94, 0.5)';
+                        });
+                        item.addEventListener('mouseleave', function() {
+                            item.style.background = 'rgba(244, 63, 94, 0.08)';
+                            item.style.borderColor = 'rgba(244, 63, 94, 0.3)';
+                        });
+
+                        item.addEventListener('click', function() {
+                            let sumLat = 0, sumLon = 0;
+                            area.points.forEach(p => {
+                                sumLat += p.lat;
+                                sumLon += p.lon;
+                            });
+                            const avgLat = sumLat / area.total;
+                            const avgLon = sumLon / area.total;
+                            if (hitSafeMap) {
+                                hitSafeMap.flyTo([avgLat, avgLon], 15);
+                            }
+                        });
+
+                        dangerList.appendChild(item);
+                    });
+                } else {
+                    dangerPanel.style.display = 'none';
+                }
+            }
 
             return {
                 count: bounds.length,

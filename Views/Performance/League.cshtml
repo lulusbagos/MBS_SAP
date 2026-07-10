@@ -294,6 +294,54 @@
             margin-right: 1px;
         }
     }
+    
+    /* Fullscreen Squad Section & Screenshot Mode */
+    .top-scorers-header {
+        background: #0f172a;
+        color: #ffffff;
+        padding: 12px 16px;
+        font-weight: 800;
+        font-size: 15px;
+        text-transform: uppercase;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    body.squad-fullscreen-active {
+        overflow: hidden !important;
+    }
+    #squadSection.is-fullscreen {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 2000 !important;
+        background: #f8fafc !important;
+        overflow-y: auto !important;
+        padding: 24px !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+    }
+    #squadSection.is-fullscreen .league-card {
+        max-width: 1300px;
+        margin: 0 auto;
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    }
+    #squadSection.is-fullscreen .table-responsive.league-table-wrap:not(.is-fullheight-active) {
+        max-height: calc(100vh - 170px) !important;
+        overflow-y: auto !important;
+    }
+    #squadSection.is-fullheight-active .table-responsive.league-table-wrap {
+        max-height: none !important;
+        overflow-y: visible !important;
+    }
 </style>
 
 <div class="animate-fade-in pb-4">
@@ -597,9 +645,20 @@
             <div class="league-card">
                 <div class="top-scorers-header">
                     <span><i class="bi bi-people-fill me-2"></i>Skuad Pemain K3</span>
-                    <button type="button" class="btn btn-sm btn-outline-light d-none" id="resetFilterBtn" onclick="resetPlayerFilter();" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 2px 8px;">
-                        <i class="bi bi-x-circle me-1"></i> Tampilkan Semua
-                    </button>
+                    <div class="d-flex flex-wrap align-items-center gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-light d-none" id="resetFilterBtn" onclick="resetPlayerFilter();" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px;">
+                            <i class="bi bi-x-circle me-1"></i> Tampilkan Semua
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" id="toggleAllDetailsBtn" onclick="toggleAllDetails();" title="Tampilkan Semua Rincian Kepatuhan" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
+                            <i class="bi bi-eye" id="detailsIcon"></i> <span class="d-none d-md-inline ms-1" id="detailsText">Buka Rincian</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" id="toggleFullHeightBtn" onclick="toggleSquadHeight();" title="Tinggi Penuh (Buka Scroll untuk Screenshot)" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
+                            <i class="bi bi-arrows-angle-expand" id="heightIcon"></i> <span class="d-none d-md-inline ms-1" id="heightText">Tinggi Penuh</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" id="toggleFullscreenBtn" onclick="toggleSquadFullscreen();" title="Layar Penuh (Fokus Mode)" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
+                            <i class="bi bi-fullscreen" id="fullscreenIcon"></i> <span class="d-none d-md-inline ms-1" id="fullscreenText">Layar Penuh</span>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="p-3">
@@ -777,6 +836,112 @@
         alertBox.style.color = '#0369a1';
         alertText.innerHTML = 'Menampilkan seluruh daftar pemain perusahaan.';
         resetBtn.classList.add('d-none');
+
+        // Reset details toggle button state
+        const detailsBtn = document.getElementById('toggleAllDetailsBtn');
+        const detailsIcon = document.getElementById('detailsIcon');
+        const detailsText = document.getElementById('detailsText');
+        if (detailsBtn && detailsIcon && detailsText) {
+            detailsIcon.className = 'bi bi-eye';
+            detailsText.textContent = 'Buka Rincian';
+            detailsBtn.title = 'Tampilkan Semua Rincian Kepatuhan';
+            detailsBtn.classList.remove('btn-light', 'text-dark', 'fw-bold');
+            detailsBtn.classList.add('btn-outline-light');
+        }
+    }
+
+    function toggleSquadHeight() {
+        const squadSec = document.getElementById('squadSection');
+        const btn = document.getElementById('toggleFullHeightBtn');
+        const icon = document.getElementById('heightIcon');
+        const text = document.getElementById('heightText');
+        
+        const isFullHeight = squadSec.classList.toggle('is-fullheight-active');
+        
+        if (isFullHeight) {
+            icon.className = 'bi bi-arrows-angle-contract';
+            text.textContent = 'Normal';
+            btn.title = 'Kembali ke Tinggi Normal';
+            btn.classList.remove('btn-outline-light');
+            btn.classList.add('btn-light', 'text-dark', 'fw-bold');
+        } else {
+            icon.className = 'bi bi-arrows-angle-expand';
+            text.textContent = 'Tinggi Penuh';
+            btn.title = 'Tinggi Penuh (Buka Scroll untuk Screenshot)';
+            btn.classList.remove('btn-light', 'text-dark', 'fw-bold');
+            btn.classList.add('btn-outline-light');
+        }
+    }
+
+    function toggleSquadFullscreen() {
+        const squadSec = document.getElementById('squadSection');
+        const btn = document.getElementById('toggleFullscreenBtn');
+        const icon = document.getElementById('fullscreenIcon');
+        const text = document.getElementById('fullscreenText');
+        
+        const isFullscreen = squadSec.classList.toggle('is-fullscreen');
+        document.body.classList.toggle('squad-fullscreen-active', isFullscreen);
+        
+        if (isFullscreen) {
+            icon.className = 'bi bi-fullscreen-exit';
+            text.textContent = 'Layar Normal';
+            btn.title = 'Keluar dari Layar Penuh';
+            btn.classList.remove('btn-outline-light');
+            btn.classList.add('btn-light', 'text-dark', 'fw-bold');
+        } else {
+            icon.className = 'bi bi-fullscreen';
+            text.textContent = 'Layar Penuh';
+            btn.title = 'Layar Penuh (Fokus Mode)';
+            btn.classList.remove('btn-light', 'text-dark', 'fw-bold');
+            btn.classList.add('btn-outline-light');
+        }
+    }
+
+    function toggleAllDetails() {
+        const squadSec = document.getElementById('squadSection');
+        const details = squadSec.querySelectorAll('tr.collapse.player-row');
+        const btn = document.getElementById('toggleAllDetailsBtn');
+        const icon = document.getElementById('detailsIcon');
+        const text = document.getElementById('detailsText');
+        
+        let anyHidden = false;
+        details.forEach(d => {
+            if (!d.classList.contains('d-none') && !d.classList.contains('show')) {
+                anyHidden = true;
+            }
+        });
+        
+        details.forEach(d => {
+            if (!d.classList.contains('d-none')) {
+                if (anyHidden) {
+                    d.classList.add('show');
+                } else {
+                    d.classList.remove('show');
+                }
+            }
+        });
+        
+        const detailBtns = squadSec.querySelectorAll('button[data-bs-toggle="collapse"]');
+        detailBtns.forEach(b => {
+            const parentRow = b.closest('tr');
+            if (parentRow && !parentRow.classList.contains('d-none')) {
+                b.setAttribute('aria-expanded', anyHidden ? 'true' : 'false');
+            }
+        });
+        
+        if (anyHidden) {
+            icon.className = 'bi bi-eye-slash';
+            text.textContent = 'Tutup Rincian';
+            btn.title = 'Sembunyikan Semua Detail Rincian';
+            btn.classList.remove('btn-outline-light');
+            btn.classList.add('btn-light', 'text-dark', 'fw-bold');
+        } else {
+            icon.className = 'bi bi-eye';
+            text.textContent = 'Buka Rincian';
+            btn.title = 'Tampilkan Semua Rincian Kepatuhan';
+            btn.classList.remove('btn-light', 'text-dark', 'fw-bold');
+            btn.classList.add('btn-outline-light');
+        }
     }
 
     // UEFA Champions League Anthem Autoplay and controls

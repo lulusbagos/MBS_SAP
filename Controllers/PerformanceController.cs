@@ -72,6 +72,51 @@ namespace MBS_SAP.Controllers
             return (companyId, allowedCompanyIds);
         }
 
+        private async Task<(int? companyId, HashSet<int> allowedCompanyIds)> ResolveMapCompanyScopeAsync()
+        {
+            var compIdStr = User.FindFirst("CompanyId")?.Value;
+            int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
+            var isAdmin = User.IsInRole("Admin");
+
+            // For map, ONLY Admins can see all.
+            // Non-admins (including isSafetyRole) can only see their own company and children.
+            if (isAdmin)
+            {
+                companyId = null;
+            }
+
+            var allCompanies = await _context.Perusahaans
+                .Where(p => p.StatusAktif && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
+                .ToListAsync();
+
+            var allowedCompanyIds = new HashSet<int>();
+            if (companyId.HasValue)
+            {
+                if (ExcludedCompanies.IsExcluded(companyId.Value))
+                {
+                    return (companyId, allowedCompanyIds);
+                }
+
+                allowedCompanyIds.Add(companyId.Value);
+
+                void GetDescendants(int parentId)
+                {
+                    var children = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
+                    foreach (var childId in children)
+                    {
+                        if (allowedCompanyIds.Add(childId))
+                        {
+                            GetDescendants(childId);
+                        }
+                    }
+                }
+
+                GetDescendants(companyId.Value);
+            }
+
+            return (companyId, allowedCompanyIds);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetDepartmentEmployees(int companyId, string departmentName)
         {
@@ -1996,8 +2041,8 @@ namespace MBS_SAP.Controllers
             ViewBag.CompanyHierarchyActualActiveCount = activeCompanyNameById.Count;
             ViewBag.CompanyHierarchyRenderedCount = CollectHierarchyIds(rootNodes).Count;
 
-            var canViewGeoPhotos = User.IsInRole("Admin");
-            var geoSafetyData = await BuildGeoSafetyRadarDataAsync(companyId, allowedCompanyIds, Request.Query["area"].FirstOrDefault()?.Trim(), canViewGeoPhotos);
+            var (mapCompanyId, mapAllowedCompanyIds) = await ResolveMapCompanyScopeAsync();
+            var geoSafetyData = await BuildGeoSafetyRadarDataAsync(mapCompanyId, mapAllowedCompanyIds, Request.Query["area"].FirstOrDefault()?.Trim(), true);
 
             ViewBag.HazardPoints = geoSafetyData.HazardPoints;
             ViewBag.InspectionPoints = geoSafetyData.InspectionPoints;
@@ -2280,9 +2325,8 @@ namespace MBS_SAP.Controllers
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public async Task<IActionResult> GetGeoSafetyRadar(string? area = null)
         {
-            var (companyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
-            var canViewGeoPhotos = User.IsInRole("Admin");
-            var geoSafetyData = await BuildGeoSafetyRadarDataAsync(companyId, allowedCompanyIds, area?.Trim(), canViewGeoPhotos);
+            var (mapCompanyId, mapAllowedCompanyIds) = await ResolveMapCompanyScopeAsync();
+            var geoSafetyData = await BuildGeoSafetyRadarDataAsync(mapCompanyId, mapAllowedCompanyIds, area?.Trim(), true);
 
             return Json(new
             {
