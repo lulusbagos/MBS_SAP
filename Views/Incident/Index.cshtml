@@ -1,7 +1,7 @@
 @model IEnumerable<MBS_SAP.Models.IncidentNews>
 @{
     ViewData["Title"] = "Data Insiden";
-    bool isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
+    bool isAdmin = User.IsInRole("Admin");
     var incidents = Model.ToList();
     int currentPage = (int)(ViewBag.CurrentPage ?? 1);
     int totalPages = (int)(ViewBag.TotalPages ?? 1);

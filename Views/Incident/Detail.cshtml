@@ -1,7 +1,7 @@
 @model MBS_SAP.Models.IncidentNews
 @{
     ViewData["Title"] = Model.Judul;
-    bool isAdmin = (bool)(ViewData["IsAdmin"] ?? false);
+    bool isAdmin = User.IsInRole("Admin");
     
     var sevClass = (Model.Kategori?.ToLower()) switch
     {
