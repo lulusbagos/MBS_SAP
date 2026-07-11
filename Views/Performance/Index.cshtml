@@ -1967,15 +1967,19 @@
                             </div>
                         }
 
-                        @if ((ViewBag.TargetCoaching ?? 0) > 0)
+                        @if ((ViewBag.TargetCoaching ?? 0) > 0 || ViewBag.MyCoachingsMonth > 0)
                         {
                             <div>
                                 <div class="d-flex justify-content-between mb-1" style="font-size: 12px; font-weight: 700;">
                                     <span>Coaching</span>
-                                    <span>0 / @ViewBag.TargetCoaching Kali</span>
+                                    <span>Actual : @ViewBag.MyCoachingsMonth | Target : @ViewBag.TargetCoaching</span>
                                 </div>
                                 <div class="progress-achievement" style="height: 10px;">
-                                    <div class="progress-bar" style="width: 0%; background-color: #0d9488;"></div>
+                                    @{
+                                        double targetCoachingDouble = (double)(ViewBag.TargetCoaching ?? 0);
+                                        double percentCoaching = targetCoachingDouble > 0 ? Math.Min((double)(ViewBag.MyCoachingsMonth ?? 0) / targetCoachingDouble * 100.0, 100.0) : 0.0;
+                                    }
+                                    <div class="progress-bar" style="width: @(percentCoaching)%; background-color: #0d9488;"></div>
                                 </div>
                             </div>
                         }
@@ -2488,12 +2492,12 @@
                 </div>
             </div>
 
-            <!-- Kategori Bahaya (KTA vs TTA) -->
+            <!-- Kategori Bahaya (TTA vs KTA) -->
             <div class="col-12 col-md-6">
                 <div class="premium-card">
                     <div class="premium-header">
                         <i class="bi bi-exclamation-circle-fill text-warning" style="font-size: 16px; color: #fbbf24 !important;"></i>
-                        <h6 class="premium-title">Kategori Temuan Hazard (KTA vs TTA)</h6>
+                        <h6 class="premium-title">Kategori Temuan Hazard (TTA vs KTA)</h6>
                     </div>
                     <div class="premium-body">
                         <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
@@ -3860,13 +3864,13 @@
                 });
             }
 
-            // Inisialisasi Kategori Bahaya (KTA vs TTA) secara lazy
+            // Inisialisasi Kategori Bahaya (TTA vs KTA) secara lazy
             const ctxKategori = document.getElementById('chartKategoriBahaya');
             if (ctxKategori) {
                 new Chart(ctxKategori.getContext('2d'), {
                     type: 'doughnut',
                     data: {
-                        labels: ['Tindakan Tidak Aman (KTA)', 'Kondisi Tidak Aman (TTA)'],
+                        labels: ['Tindakan Tidak Aman (TTA)', 'Kondisi Tidak Aman (KTA)'],
                         datasets: [{
                             data: [@ViewBag.UnsafeActCount, @ViewBag.UnsafeConditionCount],
                             backgroundColor: ['rgba(245, 158, 11, 0.85)', 'rgba(59, 130, 246, 0.85)'],

@@ -701,13 +701,13 @@
                 });
             }
 
-            // Inisialisasi Kategori Bahaya (KTA vs TTA) secara lazy
+            // Inisialisasi Kategori Bahaya (TTA vs KTA) secara lazy
             const ctxKategori = document.getElementById('chartKategoriBahaya');
             if (ctxKategori) {
                 new Chart(ctxKategori.getContext('2d'), {
                     type: 'doughnut',
                     data: {
-                        labels: ['Tindakan Tidak Aman (KTA)', 'Kondisi Tidak Aman (TTA)'],
+                        labels: ['Tindakan Tidak Aman (TTA)', 'Kondisi Tidak Aman (KTA)'],
                         datasets: [{
                             data: [1, 1],
                             backgroundColor: ['rgba(245, 158, 11, 0.85)', 'rgba(59, 130, 246, 0.85)'],
