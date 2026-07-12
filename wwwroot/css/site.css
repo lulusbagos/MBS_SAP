@@ -297,29 +297,8 @@ html, body {
     flex-direction: column;
     min-height: 0;
     padding: 24px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+    overflow: hidden;
     transition: background-color var(--transition-normal), border-color var(--transition-normal);
-}
-
-.sidebar::-webkit-scrollbar {
-    width: 6px;
-}
-
-.sidebar::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.sidebar::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.35);
-    border-radius: 999px;
-}
-
-.sidebar::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.5);
 }
 
 .sidebar-brand {
@@ -389,6 +368,28 @@ html, body {
     flex: 1;
     min-height: 0;
     padding-right: 6px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.35);
+    border-radius: 999px;
+}
+
+.sidebar-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
 }
 
 .menu-item {
@@ -422,6 +423,7 @@ html, body {
 .sidebar-footer {
     border-top: 1px solid var(--border-color);
     padding-top: 16px;
+    margin-top: 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1610,4 +1612,18 @@ body.light-theme .dropdown-item.text-white {
 }
 body.light-theme .dropdown-divider {
     border-color: #e2e8f0 !important;
+}
+
+/* Custom Validation Styles */
+.input-sap.is-invalid {
+    border-color: #ef4444 !important;
+    background-color: rgba(239, 68, 68, 0.05) !important;
+    box-shadow: 0 0 0 1px #ef4444 !important;
+}
+.sap-err-msg {
+    color: #ef4444 !important;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 4px;
+    display: block;
 }

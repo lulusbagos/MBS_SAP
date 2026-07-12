@@ -60,4 +60,58 @@
             </button>
         </form>
     </div>
+
+    <div class="card-sap border-primary-accent mt-4">
+        <form asp-controller="Admin" asp-action="DownloadReport" method="get" data-download-form>
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom" style="border-color: var(--border-color) !important;">
+                <h5 class="mb-0 text-white" style="font-weight: 700;"><i class="bi bi-file-earmark-arrow-down me-2 text-success"></i>Download Report SAP (Dengan Foto)</h5>
+            </div>
+
+            <div class="form-group-sap mb-4">
+                <label class="form-label-sap" for="sapType">Jenis SAP</label>
+                <div class="input-sap-wrapper">
+                    <i class="bi bi-file-earmark-spreadsheet input-sap-icon"></i>
+                    <select id="sapType" name="sapType" class="input-sap" required>
+                        <option value="">-- Pilih Jenis SAP --</option>
+                        <option value="hazard">Hazard Report (Foto Temuan)</option>
+                        <option value="inspection">Inspection (Lampiran Foto)</option>
+                        <option value="actionplan">Action Plan (Foto Temuan & Perbaikan)</option>
+                        <option value="safetytalk">Safety Talk (Foto Diri & Kegiatan)</option>
+                        <option value="p5m">P5M (Foto Kegiatan)</option>
+                        <option value="observation">Observation (Foto)</option>
+                        <option value="coaching">Coaching (Foto Kegiatan)</option>
+                        <option value="p2h">P2H (Foto Speedometer)</option>
+                    </select>
+                </div>
+                <small class="text-muted mt-2 d-block" style="font-size: 11px;">
+                    Excel yang diunduh akan otomatis menyertakan foto/gambar secara tersemat (embedded) di dalam kolom foto.
+                </small>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="form-group-sap">
+                        <label class="form-label-sap" for="startDate">Tanggal Mulai</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-calendar-event input-sap-icon"></i>
+                            <input type="date" id="startDate" name="startDate" class="input-sap" value="@(new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).ToString("yyyy-MM-dd"))" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="form-group-sap">
+                        <label class="form-label-sap" for="endDate">Tanggal Selesai</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-calendar-event input-sap-icon"></i>
+                            <input type="date" id="endDate" name="endDate" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-sap-primary w-100 py-3">
+                <i class="bi bi-cloud-arrow-down-fill me-2"></i> DOWNLOAD REPORT EXCEL
+            </button>
+        </form>
+    </div>
 </div>

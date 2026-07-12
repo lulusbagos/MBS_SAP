@@ -97,12 +97,12 @@
                         <label class="form-label-sap" for="lokasi">Lokasi Spesifik</label>
                         <div class="input-sap-wrapper">
                             <i class="bi bi-geo-fill input-sap-icon"></i>
-                            <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Klik ikon target di kanan untuk mengambil lokasi GPS..." style="padding-right: 40px;" readonly required />
+                            <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Masukkan lokasi spesifik / Klik ikon GPS di kanan..." style="padding-right: 40px;" required />
                             <button type="button" class="btn btn-link p-0 position-absolute" id="btnGetLocation" style="right: 12px; top: 10px; color: #a855f7;" onclick="getLocation()" title="Ambil Lokasi GPS">
                                 <i class="bi bi-crosshair"></i>
                             </button>
                         </div>
-                        <small class="text-muted" style="font-size: 10px;">Klik ikon target untuk menggunakan GPS</small>
+                        <small class="text-muted" style="font-size: 10px;">GPS otomatis mengambil kordinat Anda atau Anda bisa mengetiknya secara manual.</small>
                     </div>
                 </div>
 
@@ -606,17 +606,70 @@
                 var coachingId = $('#coachingId').val();
                 var fotoInput = document.getElementById('fotoInput');
                 
+                // Custom validation
+                let isValid = true;
+                let firstInvalid = null;
+                
+                $('#coachingForm').find('.is-invalid').removeClass('is-invalid');
+                $('#coachingForm').find('.sap-err-msg').remove();
+
+                const fieldsToValidate = {
+                    'tanggal': 'Tanggal',
+                    'waktuStr': 'Waktu',
+                    'area': 'Area Utama',
+                    'lokasi': 'Lokasi Spesifik',
+                    'kategori': 'Kategori Coaching',
+                    'materi': 'Materi / Topik',
+                    'catatan': 'Catatan Pembahasan'
+                };
+
+                // Validate visible input/select/textarea
+                $('#coachingForm').find('input[required]:visible, select[required]:visible, textarea[required]:visible').each(function() {
+                    const $el = $(this);
+                    const id = $el.attr('id') || $el.attr('name');
+                    const val = $el.val();
+                    
+                    if (!val || val.toString().trim() === '') {
+                        isValid = false;
+                        $el.addClass('is-invalid');
+                        if (!firstInvalid) firstInvalid = $el;
+                        
+                        const labelName = fieldsToValidate[id] || $el.closest('.form-group-sap').find('label').text() || 'Field';
+                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${labelName.replace(':', '').replace('*', '').trim()} wajib diisi.</span>`;
+                        
+                        const $wrapper = $el.closest('.input-sap-wrapper');
+                        if ($wrapper.length) {
+                            $wrapper.after(errHtml);
+                        } else {
+                            $el.after(errHtml);
+                        }
+                    }
+                });
+
                 // Verify at least one participant is selected
                 if (selectedTrainees.length === 0) {
+                    isValid = false;
                     alert("Silakan pilih minimal satu peserta coaching!");
-                    e.preventDefault();
-                    return false;
+                    $('#traineeSearchInput').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#traineeSearchInput');
+                    $('#traineeSearchInput').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Peserta coaching wajib dipilih.</span>');
                 }
 
                 // If it is a new coaching session, photo is mandatory
                 if (!coachingId && (!fotoInput.files || fotoInput.files.length === 0)) {
-                    alert("Foto bukti kegiatan coaching wajib diunggah!");
+                    isValid = false;
+                    $(fotoInput).addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $(fotoInput);
+                    $(fotoInput).closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti kegiatan coaching wajib diunggah.</span>');
+                }
+
+                if (!isValid) {
                     e.preventDefault();
+                    if (firstInvalid) {
+                        $('html, body').animate({
+                            scrollTop: firstInvalid.offset().top - 120
+                        }, 300);
+                    }
                     return false;
                 }
 

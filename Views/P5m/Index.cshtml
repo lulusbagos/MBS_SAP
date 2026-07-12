@@ -71,11 +71,12 @@
                         <label class="form-label-sap" for="lokasi">Lokasi Spesifik / Koordinat GPS</label>
                         <div class="input-sap-wrapper d-flex position-relative">
                             <i class="bi bi-geo-alt-fill input-sap-icon"></i>
-                            <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Ketuk GPS di kanan untuk koordinat..." style="padding-right: 54px;" readonly required />
+                            <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Masukkan lokasi spesifik / Klik GPS di kanan..." style="padding-right: 54px;" required />
                             <button type="button" class="btn btn-sm position-absolute end-0 top-0 h-100 d-flex align-items-center justify-content-center" style="border-radius: 0 14px 14px 0; width: 48px; border: none; border-left: 1px solid var(--border-color); background: rgba(56, 189, 248, 0.1); color: var(--color-primary); cursor: pointer;" onclick="getGPSLocation()" title="Dapatkan Koordinat GPS">
                                 <i class="bi bi-crosshair" style="font-size: 18px;"></i>
                             </button>
                         </div>
+                        <small class="text-muted" style="font-size: 10px; display: block; margin-top: 4px;">GPS otomatis mengambil kordinat Anda atau Anda bisa mengetiknya secara manual.</small>
                     </div>
                 </div>
 
@@ -426,11 +427,62 @@
             }
 
             // Prevent double submission
-            $('#p5mForm').on('submit', function() {
+            $('#p5mForm').on('submit', function(e) {
                 var btn = $(this).find('button[type="submit"]');
                 if (btn.prop('disabled')) {
                     return false;
                 }
+
+                // Custom validation
+                let isValid = true;
+                let firstInvalid = null;
+                
+                $('#p5mForm').find('.is-invalid').removeClass('is-invalid');
+                $('#p5mForm').find('.sap-err-msg').remove();
+
+                const fieldsToValidate = {
+                    'tanggal': 'Tanggal',
+                    'waktuStr': 'Waktu',
+                    'area': 'Area Utama',
+                    'lokasi': 'Lokasi Spesifik',
+                    'topik': 'Topik',
+                    'judul': 'Judul P5M',
+                    'keterangan': 'Catatan / Deskripsi'
+                };
+
+                // Validate visible input/select/textarea
+                $('#p5mForm').find('input[required]:visible, select[required]:visible, textarea[required]:visible').each(function() {
+                    const $el = $(this);
+                    const id = $el.attr('id') || $el.attr('name');
+                    const val = $el.val();
+                    
+                    if (!val || val.toString().trim() === '') {
+                        isValid = false;
+                        $el.addClass('is-invalid');
+                        if (!firstInvalid) firstInvalid = $el;
+                        
+                        const labelName = fieldsToValidate[id] || $el.closest('.form-group-sap').find('label').text() || 'Field';
+                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${labelName.replace(':', '').replace('*', '').trim()} wajib diisi.</span>`;
+                        
+                        const $wrapper = $el.closest('.input-sap-wrapper');
+                        if ($wrapper.length) {
+                            $wrapper.after(errHtml);
+                        } else {
+                            $el.after(errHtml);
+                        }
+                    }
+                });
+
+                if (!isValid) {
+                    e.preventDefault();
+                    if (firstInvalid) {
+                        $('html, body').animate({
+                            scrollTop: firstInvalid.offset().top - 120
+                        }, 300);
+                    }
+                    return false;
+                }
+
                 btn.prop('disabled', true);
                 var originalText = btn.html();
                 btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');

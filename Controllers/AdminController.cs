@@ -1,12 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using MBS_SAP.Data;
 using MBS_SAP.Models;
+using MBS_SAP.Services;
 using ClosedXML.Excel;
+using ClosedXML.Excel.Drawings;
 using System;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace MBS_SAP.Controllers
 {
@@ -14,6 +21,7 @@ namespace MBS_SAP.Controllers
     public class AdminController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly CompanyHierarchyService _companyHierarchyService;
         private static readonly string[] AllowedWorksheetNames =
         {
             "Hazard",
@@ -26,9 +34,10 @@ namespace MBS_SAP.Controllers
         private const long MaxExcelUploadBytes = 10 * 1024 * 1024;
         private const int MaxRowsPerSheet = 5000;
 
-        public AdminController(AppDbContext context)
+        public AdminController(AppDbContext context, CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
+            _companyHierarchyService = companyHierarchyService;
         }
 
         public IActionResult Index()
@@ -487,5 +496,572 @@ namespace MBS_SAP.Controllers
 
             return sanitized;
         }
+
+        // ============================================================
+        // Download Report with Embedded Photos
+        // ============================================================
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadReport(string sapType, DateTime? startDate, DateTime? endDate)
+        {
+            if (string.IsNullOrEmpty(sapType))
+            {
+                TempData["ErrorMessage"] = "Pilih jenis SAP terlebih dahulu.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            var start = startDate ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var end = endDate ?? DateTime.Now.Date;
+
+            // Company hierarchy filter
+            List<int>? allowedIds = null;
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            if (int.TryParse(companyIdStr, out var cid) && cid > 0)
+            {
+                allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(cid);
+            }
+
+            try
+            {
+                using var wb = new XLWorkbook();
+                string fileName;
+
+                switch (sapType.ToLower())
+                {
+                    case "hazard":
+                        await BuildHazardSheet(wb, start, end, allowedIds);
+                        fileName = $"Report_Hazard_{start:yyyyMMdd}_{end:yyyyMMdd}.xlsx";
+                        break;
+                    case "inspection":
+                        await BuildInspectionSheet(wb, start, end, allowedIds);
+                        fileName = $"Report_Inspection_{start:yyyyMMdd}_{end:yyyyMMdd}.xlsx";
+                        break;
+                    case "actionplan":
+                        await BuildActionPlanSheet(wb, start, end, allowedIds);
+                        fileName = $"Report_ActionPlan_{start:yyyyMMdd}_{end:yyyyMMdd}.xlsx";
+                        break;
+                    case "safetytalk":
+                        await BuildSafetyTalkSheet(wb, start, end, allowedIds);
+                        fileName = $"Report_SafetyTalk_{start:yyyyMMdd}_{end:yyyyMMdd}.xlsx";
+                        break;
+                    case "p5m":
+                        await BuildP5mSheet(wb, start, end, allowedIds);
+                        fileName = $"Report_P5M_{start:yyyyMMdd}_{end:yyyyMMdd}.xlsx";
+                        break;
+                    case "observation":
+                        await BuildObservationSheet(wb, start, end, allowedIds);
+                        fileName = $"Report_Observation_{start:yyyyMMdd}_{end:yyyyMMdd}.xlsx";
+                        break;
+                    case "coaching":
+                        await BuildCoachingSheet(wb, start, end, allowedIds);
+                        fileName = $"Report_Coaching_{start:yyyyMMdd}_{end:yyyyMMdd}.xlsx";
+                        break;
+                    case "p2h":
+                        await BuildP2hSheet(wb, start, end, allowedIds);
+                        fileName = $"Report_P2H_{start:yyyyMMdd}_{end:yyyyMMdd}.xlsx";
+                        break;
+                    default:
+                        TempData["ErrorMessage"] = "Jenis SAP tidak valid.";
+                        return RedirectToAction(nameof(Index));
+                }
+
+                using var stream = new MemoryStream();
+                wb.SaveAs(stream);
+                return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = "Gagal membuat report: " + ex.Message;
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        // --- Image download helper ---
+        private static async Task<byte[]?> DownloadImageBytes(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return null;
+
+            // Only allow known image servers
+            if (!url.StartsWith("https://apiis.idcapps.net/", StringComparison.OrdinalIgnoreCase) &&
+                !url.StartsWith("http://apiis.idcapps.net/", StringComparison.OrdinalIgnoreCase) &&
+                !url.StartsWith("http://172.16.1.96/", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            try
+            {
+                var handler = new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true
+                };
+                using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
+                var response = await client.GetAsync(url);
+                if (!response.IsSuccessStatusCode) return null;
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void EmbedImage(IXLWorksheet ws, int row, int col, byte[]? imageBytes, string name)
+        {
+            if (imageBytes == null || imageBytes.Length == 0) return;
+
+            try
+            {
+                using var ms = new MemoryStream(imageBytes);
+                var pic = ws.AddPicture(ms, $"{name}_{row}_{col}")
+                    .MoveTo(ws.Cell(row, col))
+                    .WithSize(120, 90);
+                ws.Row(row).Height = 70;
+                ws.Column(col).Width = 18;
+            }
+            catch
+            {
+                // If image embedding fails, just put URL text
+            }
+        }
+
+        private static void StyleReportHeader(IXLWorksheet ws, int headerRow, int colCount)
+        {
+            var range = ws.Range(headerRow, 1, headerRow, colCount);
+            range.Style.Font.Bold = true;
+            range.Style.Font.FontColor = XLColor.White;
+            range.Style.Fill.BackgroundColor = XLColor.FromHtml("#0284c7");
+            range.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            range.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            range.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            range.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            ws.SheetView.FreezeRows(headerRow);
+        }
+
+        // --- Sheet builders ---
+
+        private async Task BuildHazardSheet(XLWorkbook wb, DateTime start, DateTime end, List<int>? allowedIds)
+        {
+            var query = _context.HazardReports.AsNoTracking()
+                .Where(h => !h.IsDeleted && h.Tanggal >= start && h.Tanggal <= end);
+            if (allowedIds != null)
+                query = query.Where(h => h.PerusahaanId.HasValue && allowedIds.Contains(h.PerusahaanId.Value));
+
+            var data = await query.OrderByDescending(h => h.Tanggal).ThenByDescending(h => h.Waktu).ToListAsync();
+
+            var ws = wb.Worksheets.Add("Hazard Report");
+            var headers = new[] { "No", "Foto Temuan", "Tanggal", "Waktu", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Temuan", "Kategori Bahaya", "Jenis Bahaya", "Jenis Ketidaksesuaian", "Tingkat Resiko", "Perbaikan", "Tindakan Perbaikan", "PJA", "NIK PJA", "Departemen PJA", "Status Temuan" };
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cell(1, i + 1).Value = headers[i];
+            StyleReportHeader(ws, 1, headers.Length);
+
+            for (int i = 0; i < data.Count; i++)
+            {
+                var r = data[i];
+                int row = i + 2;
+                ws.Cell(row, 1).Value = i + 1;
+                // Col 2: Foto - embedded below
+                ws.Cell(row, 3).Value = r.Tanggal;
+                ws.Cell(row, 3).Style.DateFormat.Format = "yyyy-MM-dd";
+                ws.Cell(row, 4).Value = r.Waktu;
+                ws.Cell(row, 4).Style.NumberFormat.Format = "hh:mm";
+                ws.Cell(row, 5).Value = r.Nama;
+                ws.Cell(row, 6).Value = r.Nik;
+                ws.Cell(row, 7).Value = r.Departemen ?? "";
+                ws.Cell(row, 8).Value = r.Area ?? "";
+                ws.Cell(row, 9).Value = r.Lokasi ?? "";
+                ws.Cell(row, 10).Value = r.DetilLokasi ?? "";
+                ws.Cell(row, 11).Value = r.Temuan;
+                ws.Cell(row, 12).Value = r.KategoriBahaya ?? "";
+                ws.Cell(row, 13).Value = r.JenisBahaya ?? "";
+                ws.Cell(row, 14).Value = r.JenisKetidaksesuaian ?? "";
+                ws.Cell(row, 15).Value = r.TingkatResiko ?? "";
+                ws.Cell(row, 16).Value = r.Perbaikan ?? "";
+                ws.Cell(row, 17).Value = r.TindakanPerbaikan ?? "";
+                ws.Cell(row, 18).Value = r.Pja ?? "";
+                ws.Cell(row, 19).Value = r.NikPja ?? "";
+                ws.Cell(row, 20).Value = r.DepartemenPja ?? "";
+                ws.Cell(row, 21).Value = r.StatusTemuan;
+
+                var imgBytes = await DownloadImageBytes(r.FotoTemuan);
+                if (imgBytes != null)
+                    EmbedImage(ws, row, 2, imgBytes, "hazard");
+                else
+                    ws.Cell(row, 2).Value = r.FotoTemuan ?? "";
+            }
+
+            ws.Columns().AdjustToContents();
+            if (ws.Column(2).Width < 18) ws.Column(2).Width = 18;
+        }
+
+        private async Task BuildInspectionSheet(XLWorkbook wb, DateTime start, DateTime end, List<int>? allowedIds)
+        {
+            var query = _context.Inspections.AsNoTracking()
+                .Where(i => !i.IsDeleted && i.Tanggal >= start && i.Tanggal <= end);
+            if (allowedIds != null)
+                query = query.Where(i => i.PerusahaanId.HasValue && allowedIds.Contains(i.PerusahaanId.Value));
+
+            var data = await query.OrderByDescending(i => i.Tanggal).ThenByDescending(i => i.Waktu).ToListAsync();
+
+            var ws = wb.Worksheets.Add("Inspection");
+            var headers = new[] { "No", "Tanggal", "Waktu", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Jenis Inspeksi", "PJA", "NIK PJA", "Departemen PJA", "Catatan", "Lampiran Foto" };
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cell(1, i + 1).Value = headers[i];
+            StyleReportHeader(ws, 1, headers.Length);
+
+            for (int i = 0; i < data.Count; i++)
+            {
+                var r = data[i];
+                int row = i + 2;
+                ws.Cell(row, 1).Value = i + 1;
+                ws.Cell(row, 2).Value = r.Tanggal;
+                ws.Cell(row, 2).Style.DateFormat.Format = "yyyy-MM-dd";
+                ws.Cell(row, 3).Value = r.Waktu;
+                ws.Cell(row, 3).Style.NumberFormat.Format = "hh:mm";
+                ws.Cell(row, 4).Value = r.Nama;
+                ws.Cell(row, 5).Value = r.Nik;
+                ws.Cell(row, 6).Value = r.Departemen ?? "";
+                ws.Cell(row, 7).Value = r.Area ?? "";
+                ws.Cell(row, 8).Value = r.Lokasi ?? "";
+                ws.Cell(row, 9).Value = r.DetilLokasi ?? "";
+                ws.Cell(row, 10).Value = r.JenisInspeksi;
+                ws.Cell(row, 11).Value = r.Pja ?? "";
+                ws.Cell(row, 12).Value = r.NikPja ?? "";
+                ws.Cell(row, 13).Value = r.DepartemenPja ?? "";
+                ws.Cell(row, 14).Value = r.Catatan ?? "";
+
+                // Parse LampiranJson for photo URLs
+                if (!string.IsNullOrEmpty(r.LampiranJson))
+                {
+                    try
+                    {
+                        var urls = JsonSerializer.Deserialize<List<string>>(r.LampiranJson);
+                        if (urls != null && urls.Count > 0)
+                        {
+                            var imgBytes = await DownloadImageBytes(urls[0]);
+                            if (imgBytes != null)
+                                EmbedImage(ws, row, 15, imgBytes, "inspection");
+                            else
+                                ws.Cell(row, 15).Value = string.Join("; ", urls);
+                        }
+                    }
+                    catch
+                    {
+                        ws.Cell(row, 15).Value = r.LampiranJson;
+                    }
+                }
+            }
+
+            ws.Columns().AdjustToContents();
+            if (ws.Column(15).Width < 18) ws.Column(15).Width = 18;
+        }
+
+        private async Task BuildActionPlanSheet(XLWorkbook wb, DateTime start, DateTime end, List<int>? allowedIds)
+        {
+            var query = _context.ActionPlans.AsNoTracking()
+                .Where(a => !a.IsDeleted && a.Tanggal >= start && a.Tanggal <= end);
+            if (allowedIds != null)
+                query = query.Where(a => a.PerusahaanId.HasValue && allowedIds.Contains(a.PerusahaanId.Value));
+
+            var data = await query.OrderByDescending(a => a.Tanggal).ThenByDescending(a => a.Waktu).ToListAsync();
+
+            var ws = wb.Worksheets.Add("Action Plan");
+            var headers = new[] { "No", "Foto Temuan", "Foto Perbaikan", "Tanggal", "Waktu", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Item SAP", "Kategori Temuan", "Detil Temuan", "Status", "PJA", "NIK PJA", "Departemen PJA", "PIC", "NIK PIC", "Departemen PIC", "Rencana Perbaikan", "Tgl Rencana Perbaikan", "Perbaikan", "Tgl Perbaikan", "Overdue", "Alasan Overdue" };
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cell(1, i + 1).Value = headers[i];
+            StyleReportHeader(ws, 1, headers.Length);
+
+            for (int i = 0; i < data.Count; i++)
+            {
+                var r = data[i];
+                int row = i + 2;
+                ws.Cell(row, 1).Value = i + 1;
+                // Col 2,3: Foto Temuan / Perbaikan
+                ws.Cell(row, 4).Value = r.Tanggal;
+                ws.Cell(row, 4).Style.DateFormat.Format = "yyyy-MM-dd";
+                ws.Cell(row, 5).Value = r.Waktu;
+                ws.Cell(row, 5).Style.NumberFormat.Format = "hh:mm";
+                ws.Cell(row, 6).Value = r.Nama;
+                ws.Cell(row, 7).Value = r.Nik;
+                ws.Cell(row, 8).Value = r.Departemen ?? "";
+                ws.Cell(row, 9).Value = r.Area ?? "";
+                ws.Cell(row, 10).Value = r.Lokasi ?? "";
+                ws.Cell(row, 11).Value = r.DetilLokasi ?? "";
+                ws.Cell(row, 12).Value = r.ItemSap ?? "";
+                ws.Cell(row, 13).Value = r.KategoriTemuan ?? "";
+                ws.Cell(row, 14).Value = r.DetilTemuan ?? "";
+                ws.Cell(row, 15).Value = r.Status;
+                ws.Cell(row, 16).Value = r.Pja ?? "";
+                ws.Cell(row, 17).Value = r.NikPja ?? "";
+                ws.Cell(row, 18).Value = r.DepartemenPja ?? "";
+                ws.Cell(row, 19).Value = r.Pic ?? "";
+                ws.Cell(row, 20).Value = r.NikPic ?? "";
+                ws.Cell(row, 21).Value = r.DepartemenPic ?? "";
+                ws.Cell(row, 22).Value = r.RencanaPerbaikan ?? "";
+                if (r.TanggalRencanaPerbaikan.HasValue)
+                {
+                    ws.Cell(row, 23).Value = r.TanggalRencanaPerbaikan.Value;
+                    ws.Cell(row, 23).Style.DateFormat.Format = "yyyy-MM-dd";
+                }
+                ws.Cell(row, 24).Value = r.Perbaikan ?? "";
+                if (r.TanggalPerbaikan.HasValue)
+                {
+                    ws.Cell(row, 25).Value = r.TanggalPerbaikan.Value;
+                    ws.Cell(row, 25).Style.DateFormat.Format = "yyyy-MM-dd";
+                }
+                ws.Cell(row, 26).Value = r.Overdue ?? "";
+                ws.Cell(row, 27).Value = r.AlasanOverdue ?? "";
+
+                var imgTemuan = await DownloadImageBytes(r.FotoTemuan);
+                if (imgTemuan != null)
+                    EmbedImage(ws, row, 2, imgTemuan, "ap_temuan");
+                else
+                    ws.Cell(row, 2).Value = r.FotoTemuan ?? "";
+
+                var imgPerbaikan = await DownloadImageBytes(r.FotoPerbaikan);
+                if (imgPerbaikan != null)
+                    EmbedImage(ws, row, 3, imgPerbaikan, "ap_perbaikan");
+                else
+                    ws.Cell(row, 3).Value = r.FotoPerbaikan ?? "";
+            }
+
+            ws.Columns().AdjustToContents();
+            if (ws.Column(2).Width < 18) ws.Column(2).Width = 18;
+            if (ws.Column(3).Width < 18) ws.Column(3).Width = 18;
+        }
+
+        private async Task BuildSafetyTalkSheet(XLWorkbook wb, DateTime start, DateTime end, List<int>? allowedIds)
+        {
+            var query = _context.SafetyTalks.AsNoTracking()
+                .Where(s => !s.IsDeleted && s.Tanggal >= start && s.Tanggal <= end);
+            if (allowedIds != null)
+                query = query.Where(s => s.PerusahaanId.HasValue && allowedIds.Contains(s.PerusahaanId.Value));
+
+            var data = await query.OrderByDescending(s => s.Tanggal).ThenByDescending(s => s.Waktu).ToListAsync();
+
+            var ws = wb.Worksheets.Add("Safety Talk");
+            var headers = new[] { "No", "Foto Diri", "Foto Kegiatan", "Tanggal", "Waktu", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Judul", "Keterangan" };
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cell(1, i + 1).Value = headers[i];
+            StyleReportHeader(ws, 1, headers.Length);
+
+            for (int i = 0; i < data.Count; i++)
+            {
+                var r = data[i];
+                int row = i + 2;
+                ws.Cell(row, 1).Value = i + 1;
+                ws.Cell(row, 4).Value = r.Tanggal;
+                ws.Cell(row, 4).Style.DateFormat.Format = "yyyy-MM-dd";
+                ws.Cell(row, 5).Value = r.Waktu;
+                ws.Cell(row, 5).Style.NumberFormat.Format = "hh:mm";
+                ws.Cell(row, 6).Value = r.Nama;
+                ws.Cell(row, 7).Value = r.Nik;
+                ws.Cell(row, 8).Value = r.Departemen ?? "";
+                ws.Cell(row, 9).Value = r.Area ?? "";
+                ws.Cell(row, 10).Value = r.Lokasi ?? "";
+                ws.Cell(row, 11).Value = r.DetilLokasi ?? "";
+                ws.Cell(row, 12).Value = r.Judul ?? "";
+                ws.Cell(row, 13).Value = r.Keterangan ?? "";
+
+                var imgDiri = await DownloadImageBytes(r.FotoDiri);
+                if (imgDiri != null)
+                    EmbedImage(ws, row, 2, imgDiri, "st_diri");
+                else
+                    ws.Cell(row, 2).Value = r.FotoDiri ?? "";
+
+                var imgKegiatan = await DownloadImageBytes(r.FotoKegiatan);
+                if (imgKegiatan != null)
+                    EmbedImage(ws, row, 3, imgKegiatan, "st_kegiatan");
+                else
+                    ws.Cell(row, 3).Value = r.FotoKegiatan ?? "";
+            }
+
+            ws.Columns().AdjustToContents();
+            if (ws.Column(2).Width < 18) ws.Column(2).Width = 18;
+            if (ws.Column(3).Width < 18) ws.Column(3).Width = 18;
+        }
+
+        private async Task BuildP5mSheet(XLWorkbook wb, DateTime start, DateTime end, List<int>? allowedIds)
+        {
+            var query = _context.P5ms.AsNoTracking()
+                .Where(p => !p.IsDeleted && p.Tanggal >= start && p.Tanggal <= end);
+            if (allowedIds != null)
+                query = query.Where(p => p.PerusahaanId.HasValue && allowedIds.Contains(p.PerusahaanId.Value));
+
+            var data = await query.OrderByDescending(p => p.Tanggal).ThenByDescending(p => p.Waktu).ToListAsync();
+
+            var ws = wb.Worksheets.Add("P5M");
+            var headers = new[] { "No", "Foto Kegiatan", "Tanggal", "Waktu", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Topik", "Judul", "Keterangan", "List Pertanyaan", "Jawaban", "Catatan" };
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cell(1, i + 1).Value = headers[i];
+            StyleReportHeader(ws, 1, headers.Length);
+
+            for (int i = 0; i < data.Count; i++)
+            {
+                var r = data[i];
+                int row = i + 2;
+                ws.Cell(row, 1).Value = i + 1;
+                ws.Cell(row, 3).Value = r.Tanggal;
+                ws.Cell(row, 3).Style.DateFormat.Format = "yyyy-MM-dd";
+                ws.Cell(row, 4).Value = r.Waktu;
+                ws.Cell(row, 4).Style.NumberFormat.Format = "hh:mm";
+                ws.Cell(row, 5).Value = r.Nama;
+                ws.Cell(row, 6).Value = r.Nik;
+                ws.Cell(row, 7).Value = r.Departemen ?? "";
+                ws.Cell(row, 8).Value = r.Area ?? "";
+                ws.Cell(row, 9).Value = r.Lokasi ?? "";
+                ws.Cell(row, 10).Value = r.DetilLokasi ?? "";
+                ws.Cell(row, 11).Value = r.Topik ?? "";
+                ws.Cell(row, 12).Value = r.Judul ?? "";
+                ws.Cell(row, 13).Value = r.Keterangan ?? "";
+                ws.Cell(row, 14).Value = r.ListPertanyaan ?? "";
+                ws.Cell(row, 15).Value = r.Jawaban ?? "";
+                ws.Cell(row, 16).Value = r.Catatan ?? "";
+
+                var imgBytes = await DownloadImageBytes(r.FotoKegiatan);
+                if (imgBytes != null)
+                    EmbedImage(ws, row, 2, imgBytes, "p5m");
+                else
+                    ws.Cell(row, 2).Value = r.FotoKegiatan ?? "";
+            }
+
+            ws.Columns().AdjustToContents();
+            if (ws.Column(2).Width < 18) ws.Column(2).Width = 18;
+        }
+
+        private async Task BuildObservationSheet(XLWorkbook wb, DateTime start, DateTime end, List<int>? allowedIds)
+        {
+            var query = _context.Observations.AsNoTracking()
+                .Where(o => !o.IsDeleted && o.Date >= start && o.Date <= end);
+            // Observation has no PerusahaanId, skip company filter
+
+            var data = await query.OrderByDescending(o => o.Date).ToListAsync();
+
+            var ws = wb.Worksheets.Add("Observation");
+            var headers = new[] { "No", "Foto", "Tanggal", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Kegiatan Yang Diamati", "Departemen Yang Diamati", "Dokumen Pendukung", "Resiko Kritis", "Tingkat Resiko", "Perihal Yang Diamati", "Hasil Observasi", "Keterangan" };
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cell(1, i + 1).Value = headers[i];
+            StyleReportHeader(ws, 1, headers.Length);
+
+            for (int i = 0; i < data.Count; i++)
+            {
+                var r = data[i];
+                int row = i + 2;
+                ws.Cell(row, 1).Value = i + 1;
+                ws.Cell(row, 3).Value = r.Date;
+                ws.Cell(row, 3).Style.DateFormat.Format = "yyyy-MM-dd";
+                ws.Cell(row, 4).Value = r.Nama;
+                ws.Cell(row, 5).Value = r.Nik;
+                ws.Cell(row, 6).Value = r.Departemen;
+                ws.Cell(row, 7).Value = r.Area;
+                ws.Cell(row, 8).Value = r.Lokasi;
+                ws.Cell(row, 9).Value = r.DetilLokasi ?? "";
+                ws.Cell(row, 10).Value = r.KegiatanYangDiamati ?? "";
+                ws.Cell(row, 11).Value = r.DepartemenYangDiamati ?? "";
+                ws.Cell(row, 12).Value = r.DokumenPendukung ?? "";
+                ws.Cell(row, 13).Value = r.ResikoKritis ?? "";
+                ws.Cell(row, 14).Value = r.TingkatResiko ?? "";
+                ws.Cell(row, 15).Value = r.PerihalYangDiamati ?? "";
+                ws.Cell(row, 16).Value = r.HasilObservasi ?? "";
+                ws.Cell(row, 17).Value = r.Keterangan ?? "";
+
+                var imgBytes = await DownloadImageBytes(r.FotoUrl);
+                if (imgBytes != null)
+                    EmbedImage(ws, row, 2, imgBytes, "obs");
+                else
+                    ws.Cell(row, 2).Value = r.FotoUrl ?? "";
+            }
+
+            ws.Columns().AdjustToContents();
+            if (ws.Column(2).Width < 18) ws.Column(2).Width = 18;
+        }
+
+        private async Task BuildCoachingSheet(XLWorkbook wb, DateTime start, DateTime end, List<int>? allowedIds)
+        {
+            var query = _context.Coachings.AsNoTracking()
+                .Where(c => !c.IsDeleted && c.Tanggal >= start && c.Tanggal <= end);
+            if (allowedIds != null)
+                query = query.Where(c => c.PerusahaanId.HasValue && allowedIds.Contains(c.PerusahaanId.Value));
+
+            var data = await query.OrderByDescending(c => c.Tanggal).ThenByDescending(c => c.Waktu).ToListAsync();
+
+            var ws = wb.Worksheets.Add("Coaching");
+            var headers = new[] { "No", "Foto Kegiatan", "Tanggal", "Waktu", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Tema", "Feedback", "Komitmen" };
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cell(1, i + 1).Value = headers[i];
+            StyleReportHeader(ws, 1, headers.Length);
+
+            for (int i = 0; i < data.Count; i++)
+            {
+                var r = data[i];
+                int row = i + 2;
+                ws.Cell(row, 1).Value = i + 1;
+                ws.Cell(row, 3).Value = r.Tanggal;
+                ws.Cell(row, 3).Style.DateFormat.Format = "yyyy-MM-dd";
+                ws.Cell(row, 4).Value = r.Waktu;
+                ws.Cell(row, 4).Style.NumberFormat.Format = "hh:mm";
+                ws.Cell(row, 5).Value = r.Nama;
+                ws.Cell(row, 6).Value = r.Nik;
+                ws.Cell(row, 7).Value = r.Departemen ?? "";
+                ws.Cell(row, 8).Value = r.Area ?? "";
+                ws.Cell(row, 9).Value = r.Lokasi ?? "";
+                ws.Cell(row, 10).Value = r.DetilLokasi ?? "";
+                ws.Cell(row, 11).Value = r.Tema ?? "";
+                ws.Cell(row, 12).Value = r.Feedback ?? "";
+                ws.Cell(row, 13).Value = r.Komitmen ?? "";
+
+                var imgBytes = await DownloadImageBytes(r.Foto);
+                if (imgBytes != null)
+                    EmbedImage(ws, row, 2, imgBytes, "coaching");
+                else
+                    ws.Cell(row, 2).Value = r.Foto ?? "";
+            }
+
+            ws.Columns().AdjustToContents();
+            if (ws.Column(2).Width < 18) ws.Column(2).Width = 18;
+        }
+
+        private async Task BuildP2hSheet(XLWorkbook wb, DateTime start, DateTime end, List<int>? allowedIds)
+        {
+            var query = _context.P2hReports.AsNoTracking()
+                .Where(p => !p.IsDeleted && p.Tanggal >= start && p.Tanggal <= end);
+            // P2hReport has no PerusahaanId
+
+            var data = await query.OrderByDescending(p => p.Tanggal).ThenByDescending(p => p.Waktu).ToListAsync();
+
+            var ws = wb.Worksheets.Add("P2H");
+            var headers = new[] { "No", "Foto Speedometer", "Tanggal", "Waktu", "Nama", "NIK", "Jenis Kendaraan", "No Lambung", "Kilometer", "Merek", "Simper/Kimper" };
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cell(1, i + 1).Value = headers[i];
+            StyleReportHeader(ws, 1, headers.Length);
+
+            for (int i = 0; i < data.Count; i++)
+            {
+                var r = data[i];
+                int row = i + 2;
+                ws.Cell(row, 1).Value = i + 1;
+                ws.Cell(row, 3).Value = r.Tanggal;
+                ws.Cell(row, 3).Style.DateFormat.Format = "yyyy-MM-dd";
+                ws.Cell(row, 4).Value = r.Waktu;
+                ws.Cell(row, 4).Style.NumberFormat.Format = "hh:mm";
+                ws.Cell(row, 5).Value = r.Nama;
+                ws.Cell(row, 6).Value = r.Nik;
+                ws.Cell(row, 7).Value = r.JenisKendaraan;
+                ws.Cell(row, 8).Value = r.NoLambung;
+                ws.Cell(row, 9).Value = r.Kilometer;
+                ws.Cell(row, 10).Value = r.Merek;
+                ws.Cell(row, 11).Value = r.SimperKimper;
+
+                var imgBytes = await DownloadImageBytes(r.FotoSpeedometer);
+                if (imgBytes != null)
+                    EmbedImage(ws, row, 2, imgBytes, "p2h");
+                else
+                    ws.Cell(row, 2).Value = r.FotoSpeedometer ?? "";
+            }
+
+            ws.Columns().AdjustToContents();
+            if (ws.Column(2).Width < 18) ws.Column(2).Width = 18;
+        }
     }
 }
+
