@@ -1,10 +1,10 @@
 @{
-    ViewData["Title"] = "Admin Area - Bulk Upload";
+    ViewData["Title"] = "Admin Control Center";
 }
 
 <div class="animate-fade-in">
-    <div class="screen-title">Admin Area</div>
-    <p class="screen-subtitle">Upload data pelaporan secara massal menggunakan file Excel (.xlsx)</p>
+    <div class="screen-title"><i class="bi bi-shield-lock-fill text-primary me-2"></i>Admin Control Center</div>
+    <p class="screen-subtitle">Kelola integrasi data, unggah berkas massal, dan unduh laporan SAP dengan dokumentasi lengkap.</p>
 
     @if (TempData["SuccessMessage"] != null)
     {
@@ -22,96 +22,125 @@
         </div>
     }
 
-    <div class="card-sap border-primary-accent">
-        <div class="mb-4">
-            <a asp-controller="Admin" asp-action="DownloadTemplate" class="btn btn-outline-success w-100 py-2 fw-bold" style="border-radius: 12px;">
-                <i class="bi bi-file-earmark-spreadsheet-fill me-2"></i> Unduh Template Kolom Excel
-            </a>
-        </div>
-
-        <div class="mb-4 pb-4 border-bottom" style="border-color: var(--border-color) !important;">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0 text-white" style="font-weight: 700;"><i class="bi bi-database-up me-2 text-warning"></i>Replikasi Dari PostgreSQL</h5>
-            </div>
-            <div class="alert alert-info border-0 mb-0" role="alert" style="background-color: rgba(56, 189, 248, 0.15); color: #38bdf8; border-radius: 12px;">
-                <i class="bi bi-clock-history me-2"></i>
-                Replikasi berjalan otomatis. Saat aplikasi start: tarik data dari awal tahun sampai hari ini. Setiap jam 00:00: tarik data 1 hari terakhir.
-            </div>
-        </div>
-
-        <form asp-controller="Admin" asp-action="UploadExcel" method="post" enctype="multipart/form-data">
-            <div class="d-flex justify-content-between align-items-center mb-4 pt-3 border-top" style="border-color: var(--border-color) !important;">
-                <h5 class="mb-0 text-white" style="font-weight: 700;"><i class="bi bi-upload me-2 text-primary"></i>Upload Bulk Excel</h5>
-            </div>
-            
-            <div class="form-group-sap mb-4">
-                <label class="form-label-sap" for="excelFile">File Excel (SAP.xlsx)</label>
-                <div class="input-sap-wrapper">
-                    <i class="bi bi-upload input-sap-icon"></i>
-                    <input type="file" id="excelFile" name="excelFile" class="input-sap" accept=".xlsx" style="padding-top: 10px;" required />
-                </div>
-                <small class="text-muted mt-2 d-block" style="font-size: 11px;">
-                    Pastikan file memiliki sheet: <strong>HAZARD REPORT, INSPECTION, ACTION PLAN, SAFETY TALK, P5M</strong>
-                </small>
-            </div>
-
-            <button type="submit" class="btn btn-sap-primary w-100 py-3">
-                <i class="bi bi-cloud-arrow-up-fill me-2"></i> MULAI UPLOAD DATA
-            </button>
-        </form>
-    </div>
-
-    <div class="card-sap border-primary-accent mt-4">
-        <form asp-controller="Admin" asp-action="DownloadReport" method="get" data-download-form>
-            <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom" style="border-color: var(--border-color) !important;">
-                <h5 class="mb-0 text-white" style="font-weight: 700;"><i class="bi bi-file-earmark-arrow-down me-2 text-success"></i>Download Report SAP (Dengan Foto)</h5>
-            </div>
-
-            <div class="form-group-sap mb-4">
-                <label class="form-label-sap" for="sapType">Jenis SAP</label>
-                <div class="input-sap-wrapper">
-                    <i class="bi bi-file-earmark-spreadsheet input-sap-icon"></i>
-                    <select id="sapType" name="sapType" class="input-sap" required>
-                        <option value="">-- Pilih Jenis SAP --</option>
-                        <option value="hazard">Hazard Report (Foto Temuan)</option>
-                        <option value="inspection">Inspection (Lampiran Foto)</option>
-                        <option value="actionplan">Action Plan (Foto Temuan & Perbaikan)</option>
-                        <option value="safetytalk">Safety Talk (Foto Diri & Kegiatan)</option>
-                        <option value="p5m">P5M (Foto Kegiatan)</option>
-                        <option value="observation">Observation (Foto)</option>
-                        <option value="coaching">Coaching (Foto Kegiatan)</option>
-                        <option value="p2h">P2H (Foto Speedometer)</option>
-                    </select>
-                </div>
-                <small class="text-muted mt-2 d-block" style="font-size: 11px;">
-                    Excel yang diunduh akan otomatis menyertakan foto/gambar secara tersemat (embedded) di dalam kolom foto.
-                </small>
-            </div>
-
-            <div class="row">
-                <div class="col-md-6 mb-4">
-                    <div class="form-group-sap">
-                        <label class="form-label-sap" for="startDate">Tanggal Mulai</label>
-                        <div class="input-sap-wrapper">
-                            <i class="bi bi-calendar-event input-sap-icon"></i>
-                            <input type="date" id="startDate" name="startDate" class="input-sap" value="@(new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).ToString("yyyy-MM-dd"))" required />
+    <div class="row g-4">
+        <!-- Left Column: Status, Synchronization, and Templates -->
+        <div class="col-lg-4">
+            <div class="card-sap border-primary-accent h-100 d-flex flex-column justify-content-between" style="gap: 20px;">
+                <div>
+                    <h5 class="mb-3 text-white fw-bold"><i class="bi bi-arrow-repeat me-2 text-warning"></i>Sinkronisasi Database</h5>
+                    <p class="text-muted" style="font-size: 13px; line-height: 1.6; margin-bottom: 20px;">
+                        Aplikasi ini terhubung secara otomatis dengan database PostgreSQL utama PT INDEXIM COALINDO untuk pembaruan data berkala.
+                    </p>
+                    
+                    <div class="alert border-0 mb-0" role="alert" style="background-color: rgba(56, 189, 248, 0.1); color: #38bdf8; border-radius: 12px; font-size: 12px; line-height: 1.6;">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-clock-history mt-0.5" style="font-size: 14px;"></i>
+                            <div>
+                                <strong class="text-white d-block mb-1">Jadwal Sinkronisasi:</strong>
+                                • Penarikan data kumulatif (awal tahun s/d hari ini) berjalan setiap sistem dijalankan.<br>
+                                • Sinkronisasi rutin otomatis berjalan setiap hari pukul 00:00 WITA.
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 mb-4">
-                    <div class="form-group-sap">
-                        <label class="form-label-sap" for="endDate">Tanggal Selesai</label>
-                        <div class="input-sap-wrapper">
-                            <i class="bi bi-calendar-event input-sap-icon"></i>
-                            <input type="date" id="endDate" name="endDate" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
-                        </div>
+
+                <div class="pt-3 border-top" style="border-color: var(--border-color) !important;">
+                    <h6 class="text-white mb-2" style="font-size: 12.5px; font-weight: 600;"><i class="bi bi-info-circle me-1 text-info"></i>Alat Impor Data:</h6>
+                    <p class="text-muted mb-3" style="font-size: 11.5px; line-height: 1.4;">
+                        Unduh template kolom sebelum melakukan impor data massal untuk menghindari kesalahan struktur data.
+                    </p>
+                    <a asp-controller="Admin" asp-action="DownloadTemplate" class="btn btn-outline-success w-100 py-2.5 fw-bold" style="border-radius: 12px; font-size: 13px;">
+                        <i class="bi bi-file-earmark-spreadsheet-fill me-2"></i> Unduh Template Excel (.xlsx)
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Operations (Upload & Download) -->
+        <div class="col-lg-8">
+            <div class="row g-4">
+                <!-- Card 1: Import Data Massal -->
+                <div class="col-12">
+                    <div class="card-sap border-primary-accent">
+                        <form asp-controller="Admin" asp-action="UploadExcel" method="post" enctype="multipart/form-data">
+                            <h5 class="mb-2 text-white fw-bold"><i class="bi bi-cloud-arrow-up-fill me-2 text-primary"></i>Unggah Data Massal (Bulk Import)</h5>
+                            <p class="text-muted mb-4" style="font-size: 13px;">
+                                Impor berkas data pelaporan SAP baru secara massal melalui file template spreadsheet yang telah diisi.
+                            </p>
+                            
+                            <div class="form-group-sap mb-4">
+                                <label class="form-label-sap" for="excelFile">Pilih Berkas Spreadsheet Excel (.xlsx)</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-file-earmark-arrow-up input-sap-icon"></i>
+                                    <input type="file" id="excelFile" name="excelFile" class="input-sap" accept=".xlsx" style="padding-top: 10px;" required />
+                                </div>
+                                <small class="text-muted mt-2 d-block" style="font-size: 11px;">
+                                    Struktur tabel wajib memiliki tab sheet: <strong>Hazard, Inspection, Action Plan, Safety Talk, P5M</strong>
+                                </small>
+                            </div>
+
+                            <button type="submit" class="btn btn-sap-primary w-100 py-3 font-weight-bold" style="font-size: 14px; border-radius: 12px;">
+                                <i class="bi bi-cloud-arrow-up-fill me-2"></i> MULAI PROSES IMPOR
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Card 2: Export Laporan dengan Foto -->
+                <div class="col-12">
+                    <div class="card-sap border-primary-accent">
+                        <form asp-controller="Admin" asp-action="DownloadReport" method="get" data-download-form>
+                            <h5 class="mb-2 text-white fw-bold"><i class="bi bi-file-earmark-arrow-down-fill me-2 text-success"></i>Unduh Laporan SAP (Ekspor Dengan Foto)</h5>
+                            <p class="text-muted mb-4" style="font-size: 13px;">
+                                Ekspor data pelaporan ke berkas Excel dengan gambar dokumentasi lapangan yang disematkan langsung secara otomatis.
+                            </p>
+
+                            <div class="form-group-sap mb-4">
+                                <label class="form-label-sap" for="sapType">Jenis Pelaporan SAP</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-file-earmark-spreadsheet input-sap-icon"></i>
+                                    <select id="sapType" name="sapType" class="input-sap" required>
+                                        <option value="">-- Pilih Jenis Pelaporan SAP --</option>
+                                        <option value="hazard">Hazard Report (Foto Temuan)</option>
+                                        <option value="inspection">Inspection (Lampiran Foto)</option>
+                                        <option value="actionplan">Action Plan (Foto Temuan & Perbaikan)</option>
+                                        <option value="safetytalk">Safety Talk (Foto Diri & Kegiatan)</option>
+                                        <option value="p5m">P5M (Foto Kegiatan)</option>
+                                        <option value="observation">Observation (Foto)</option>
+                                        <option value="coaching">Coaching (Foto Kegiatan)</option>
+                                        <option value="p2h">P2H (Foto Speedometer)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-4">
+                                    <div class="form-group-sap">
+                                        <label class="form-label-sap" for="startDate">Tanggal Mulai</label>
+                                        <div class="input-sap-wrapper">
+                                            <i class="bi bi-calendar-event input-sap-icon"></i>
+                                            <input type="date" id="startDate" name="startDate" class="input-sap" value="@(new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).ToString("yyyy-MM-dd"))" required />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <div class="form-group-sap">
+                                        <label class="form-label-sap" for="endDate">Tanggal Selesai</label>
+                                        <div class="input-sap-wrapper">
+                                            <i class="bi bi-calendar-event input-sap-icon"></i>
+                                            <input type="date" id="endDate" name="endDate" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-sap-primary w-100 py-3 font-weight-bold" style="font-size: 14px; border-radius: 12px;">
+                                <i class="bi bi-cloud-arrow-down-fill me-2"></i> DOWNLOAD LAPORAN EXCEL
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
-
-            <button type="submit" class="btn btn-sap-primary w-100 py-3">
-                <i class="bi bi-cloud-arrow-down-fill me-2"></i> DOWNLOAD REPORT EXCEL
-            </button>
-        </form>
+        </div>
     </div>
 </div>
