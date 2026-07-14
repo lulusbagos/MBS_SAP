@@ -16,6 +16,9 @@
 
     var mainconComparison = (ViewBag.MainconGroupComparison as List<MBS_SAP.Controllers.MainconGroupComparisonViewModel> ?? new List<MBS_SAP.Controllers.MainconGroupComparisonViewModel>())!;
     var mostActiveSubcon = ViewBag.MostActiveSubcon as MBS_SAP.Controllers.MostActiveSubconViewModel;
+    var mainconLabelsJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        mainconComparison.Select(x => x.MainconName.Replace("PT ", "").Split(' '))
+    ));
 }
 
 <style>
@@ -352,7 +355,7 @@
                 new Chart(ctxMaincon2d, {
                     type: 'bar',
                     data: {
-                        labels: [@Html.Raw(string.Join(",", mainconComparison!.Select(x => $"['{string.Join("','", x.MainconName.Replace("PT ", "").Split(' '))}'"])))],
+                        labels: @mainconLabelsJson,
                         datasets: [
                             {
                                 label: 'Overall',
