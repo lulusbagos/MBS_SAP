@@ -168,6 +168,69 @@
         width: 250px;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
     }
+
+    /* Premium Card and Hover Design */
+    .premium-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+        backdrop-filter: blur(12px);
+        position: relative;
+    }
+    .premium-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #10b981, #3b82f6, #6366f1);
+        z-index: 10;
+    }
+    .premium-header {
+        padding: 22px 26px;
+        border-bottom: 1.5px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.01);
+    }
+    .premium-title {
+        font-family: 'Outfit', 'Inter', sans-serif;
+        color: var(--text-main);
+        font-weight: 700;
+        font-size: 16px;
+        letter-spacing: 0.5px;
+        margin: 0;
+        display: flex;
+        align-items: center;
+    }
+    .premium-badge {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 6px 14px;
+        border-radius: 30px;
+        background: linear-gradient(135deg, rgba(2, 132, 199, 0.1), rgba(56, 189, 248, 0.1));
+        color: #0284c7;
+        border: 1px solid rgba(2, 132, 199, 0.2);
+    }
+    .maincon-item {
+        background: var(--bg-card);
+        border: 1.5px solid var(--border-color);
+        border-radius: 16px;
+        padding: 20px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+        position: relative;
+    }
+    .maincon-item:hover {
+        border-color: #3b82f6;
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px -10px rgba(59, 130, 246, 0.2);
+    }
 </style>
 
 <div class="animate-fade-in pb-5">
@@ -210,16 +273,16 @@
         <div class="row g-4 mb-4">
             <!-- Left Card: Maincon Group Comparison -->
             <div class="col-12">
-                <div class="report-card h-100 mb-0" style="border-color: #0284c7; box-shadow: 5px 5px 0px #0284c7;">
-                    <div class="report-header d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #0284c7; background: rgba(2, 132, 199, 0.05);">
-                        <h5 class="report-title text-white font-outfit">
-                            <i class="bi bi-bar-chart-line-fill me-2" style="color: #38bdf8;"></i>Perbandingan Kepatuhan Maincon Utama (MTD Group)
+                <div class="premium-card h-100 mb-0">
+                    <div class="premium-header">
+                        <h5 class="premium-title">
+                            <i class="bi bi-bar-chart-line-fill me-2 text-primary" style="font-size: 18px;"></i>Perbandingan Kepatuhan Maincon Utama (MTD Group)
                         </h5>
-                        <span class="badge text-white" style="font-size: 11px; padding: 6px 12px; border-radius: 8px; background-color: #0284c7;">
+                        <span class="premium-badge">
                             Maincon + Subkontraktor
                         </span>
                     </div>
-                    <div class="report-body p-4">
+                    <div class="premium-body p-4">
                         <div class="row g-4">
                             <!-- Left Column: The Grouped Bar Chart -->
                             <div class="col-lg-7 col-md-12">
@@ -234,25 +297,25 @@
                                     @foreach (var item in mainconComparison)
                                     {
                                         <div class="col-md-12">
-                                            <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.02); border: 1.5px solid var(--border-color); position: relative;">
-                                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <div class="fw-extrabold text-white" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                                        <i class="bi bi-building-fill text-info me-1"></i> @item.MainconName
+                                            <div class="maincon-item">
+                                                <div class="d-flex justify-content-between align-items-center mb-2.5">
+                                                    <div class="fw-bold" style="font-size: 13.5px; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Outfit', sans-serif;">
+                                                        <i class="bi bi-building-fill text-primary me-1.5"></i>@item.MainconName
                                                     </div>
-                                                    <span class="badge" style="background-color: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); font-weight: 800; font-size: 12px;">
+                                                    <span class="badge" style="background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.25); font-weight: 800; font-size: 11.5px; border-radius: 8px; padding: 5px 10px;">
                                                         Kepatuhan: @item.OverallComplianceRate%
                                                     </span>
                                                 </div>
                                                 
                                                 <!-- Employee count and subcons details -->
-                                                <div class="d-flex flex-wrap gap-3 mb-3" style="font-size: 11.5px;">
+                                                <div class="d-flex flex-wrap gap-3 mb-3" style="font-size: 11.5px; color: var(--text-muted);">
                                                     <div>
-                                                        <i class="bi bi-people-fill text-muted me-1"></i>
-                                                        <span class="text-white fw-bold">@item.EmployeesWithTargetCount.ToString("N0")</span> / @item.TotalEmployees.ToString("N0") Karyawan
+                                                        <i class="bi bi-people-fill me-1"></i>
+                                                        <span class="fw-bold" style="color: var(--text-main);">@item.EmployeesWithTargetCount.ToString("N0")</span> / @item.TotalEmployees.ToString("N0") Karyawan
                                                     </div>
                                                     <div class="position-relative" style="cursor: pointer;">
-                                                        <i class="bi bi-diagram-3-fill text-muted me-1"></i>
-                                                        <span class="text-white fw-bold text-decoration-underline" id="subcon-trigger-@item.MainconId">@item.ChildCompanyNames.Count</span> Anak
+                                                        <i class="bi bi-diagram-3-fill me-1"></i>
+                                                        <span class="fw-bold text-decoration-underline" style="color: var(--text-main);" id="subcon-trigger-@item.MainconId">@item.ChildCompanyNames.Count</span> Anak
                                                         <div class="subcon-tooltip" id="subcon-tooltip-@item.MainconId">
                                                             <div class="fw-bold text-info mb-1" style="font-size:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:4px;">List Subkontraktor:</div>
                                                             @if (item.ChildCompanyNames.Any())
@@ -291,37 +354,37 @@
                                                         </div>
                                                     </div>
                                                 </div>
-
+ 
                                                 <!-- SAP Breakdown metrics -->
-                                                <div class="d-flex justify-content-between align-items-center gap-1 mt-2 text-center" style="background: rgba(255,255,255,0.01); padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                                                <div class="d-flex justify-content-between align-items-center gap-1 mt-2.5 text-center" style="background: var(--bg-body); padding: 12px 8px; border-radius: 12px; border: 1.5px solid var(--border-color);">
                                                     <div style="flex: 1;">
-                                                        <div class="text-muted" style="font-size: 8.5px; font-weight: 700; text-transform: uppercase;">Hazard</div>
-                                                        <div class="fw-extrabold mt-1 text-white" style="font-size: 11px;">@item.HazardComplianceRate%</div>
-                                                        <div class="text-muted" style="font-size: 8px; opacity:0.6;">@item.ActualHazard/@item.TargetHazard</div>
+                                                        <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Hazard</div>
+                                                        <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #6366f1;">@item.HazardComplianceRate%</div>
+                                                        <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualHazard/@item.TargetHazard</div>
                                                     </div>
-                                                    <div style="width: 1px; height: 25px; background: rgba(255,255,255,0.08);"></div>
+                                                    <div style="width: 1px; height: 28px; background: var(--border-color);"></div>
                                                     <div style="flex: 1;">
-                                                        <div class="text-muted" style="font-size: 8.5px; font-weight: 700; text-transform: uppercase;">Inspeksi</div>
-                                                        <div class="fw-extrabold mt-1 text-white" style="font-size: 11px;">@item.InspeksiComplianceRate%</div>
-                                                        <div class="text-muted" style="font-size: 8px; opacity:0.6;">@item.ActualInspeksi/@item.TargetInspeksi</div>
+                                                        <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Inspeksi</div>
+                                                        <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #3b82f6;">@item.InspeksiComplianceRate%</div>
+                                                        <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualInspeksi/@item.TargetInspeksi</div>
                                                     </div>
-                                                    <div style="width: 1px; height: 25px; background: rgba(255,255,255,0.08);"></div>
+                                                    <div style="width: 1px; height: 28px; background: var(--border-color);"></div>
                                                     <div style="flex: 1;">
-                                                        <div class="text-muted" style="font-size: 8.5px; font-weight: 700; text-transform: uppercase;">Safety Talk</div>
-                                                        <div class="fw-extrabold mt-1 text-white" style="font-size: 11px;">@item.SafetyTalkComplianceRate%</div>
-                                                        <div class="text-muted" style="font-size: 8px; opacity:0.6;">@item.ActualSafetyTalk/@item.TargetSafetyTalk</div>
+                                                        <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">S-Talk</div>
+                                                        <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #d97706;">@item.SafetyTalkComplianceRate%</div>
+                                                        <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualSafetyTalk/@item.TargetSafetyTalk</div>
                                                     </div>
-                                                    <div style="width: 1px; height: 25px; background: rgba(255,255,255,0.08);"></div>
+                                                    <div style="width: 1px; height: 28px; background: var(--border-color);"></div>
                                                     <div style="flex: 1;">
-                                                        <div class="text-muted" style="font-size: 8.5px; font-weight: 700; text-transform: uppercase;">Observasi</div>
-                                                        <div class="fw-extrabold mt-1 text-white" style="font-size: 11px;">@item.ObservasiComplianceRate%</div>
-                                                        <div class="text-muted" style="font-size: 8px; opacity:0.6;">@item.ActualObservasi/@item.TargetObservasi</div>
+                                                        <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Observasi</div>
+                                                        <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #ec4899;">@item.ObservasiComplianceRate%</div>
+                                                        <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualObservasi/@item.TargetObservasi</div>
                                                     </div>
-                                                    <div style="width: 1px; height: 25px; background: rgba(255,255,255,0.08);"></div>
+                                                    <div style="width: 1px; height: 28px; background: var(--border-color);"></div>
                                                     <div style="flex: 1;">
-                                                        <div class="text-muted" style="font-size: 8.5px; font-weight: 700; text-transform: uppercase;">Coaching</div>
-                                                        <div class="fw-extrabold mt-1 text-white" style="font-size: 11px;">@item.CoachingComplianceRate%</div>
-                                                        <div class="text-muted" style="font-size: 8px; opacity:0.6;">@item.ActualCoaching/@item.TargetCoaching</div>
+                                                        <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Coaching</div>
+                                                        <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #a855f7;">@item.CoachingComplianceRate%</div>
+                                                        <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualCoaching/@item.TargetCoaching</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -352,6 +415,22 @@
             const ctxMaincon = document.getElementById('mainconComparisonChart');
             if (ctxMaincon) {
                 const ctxMaincon2d = ctxMaincon.getContext('2d');
+
+                // Dynamic gradients for premium visuals
+                const createGrad = (cStart, cEnd) => {
+                    const gradient = ctxMaincon2d.createLinearGradient(0, 0, 0, 360);
+                    gradient.addColorStop(0, cStart);
+                    gradient.addColorStop(1, cEnd);
+                    return gradient;
+                };
+
+                const overallGrad = createGrad('rgba(16, 185, 129, 0.95)', 'rgba(5, 150, 105, 0.6)');
+                const hazardGrad = createGrad('rgba(99, 102, 241, 0.95)', 'rgba(79, 70, 229, 0.6)');
+                const inspeksiGrad = createGrad('rgba(59, 130, 246, 0.95)', 'rgba(37, 99, 235, 0.6)');
+                const safetyTalkGrad = createGrad('rgba(245, 158, 11, 0.95)', 'rgba(217, 119, 6, 0.6)');
+                const observasiGrad = createGrad('rgba(236, 72, 153, 0.95)', 'rgba(219, 39, 119, 0.6)');
+                const coachingGrad = createGrad('rgba(168, 85, 247, 0.95)', 'rgba(147, 51, 234, 0.6)');
+
                 new Chart(ctxMaincon2d, {
                     type: 'bar',
                     data: {
@@ -360,50 +439,62 @@
                             {
                                 label: 'Overall',
                                 data: [@string.Join(",", mainconComparison!.Select(x => x.OverallComplianceRate))],
-                                backgroundColor: '#10b981',
-                                borderColor: '#10b981',
-                                borderWidth: 1,
-                                borderRadius: 4
+                                backgroundColor: overallGrad,
+                                hoverBackgroundColor: '#059669',
+                                borderRadius: 6,
+                                borderWidth: 0,
+                                barPercentage: 0.85,
+                                categoryPercentage: 0.6
                             },
                             {
                                 label: 'Hazard',
                                 data: [@string.Join(",", mainconComparison!.Select(x => x.HazardComplianceRate))],
-                                backgroundColor: '#6366f1',
-                                borderColor: '#6366f1',
-                                borderWidth: 1,
-                                borderRadius: 4
+                                backgroundColor: hazardGrad,
+                                hoverBackgroundColor: '#4f46e5',
+                                borderRadius: 6,
+                                borderWidth: 0,
+                                barPercentage: 0.85,
+                                categoryPercentage: 0.6
                             },
                             {
                                 label: 'Inspeksi',
                                 data: [@string.Join(",", mainconComparison!.Select(x => x.InspeksiComplianceRate))],
-                                backgroundColor: '#3b82f6',
-                                borderColor: '#3b82f6',
-                                borderWidth: 1,
-                                borderRadius: 4
+                                backgroundColor: inspeksiGrad,
+                                hoverBackgroundColor: '#2563eb',
+                                borderRadius: 6,
+                                borderWidth: 0,
+                                barPercentage: 0.85,
+                                categoryPercentage: 0.6
                             },
                             {
                                 label: 'Safety Talk',
                                 data: [@string.Join(",", mainconComparison!.Select(x => x.SafetyTalkComplianceRate))],
-                                backgroundColor: '#eab308',
-                                borderColor: '#eab308',
-                                borderWidth: 1,
-                                borderRadius: 4
+                                backgroundColor: safetyTalkGrad,
+                                hoverBackgroundColor: '#d97706',
+                                borderRadius: 6,
+                                borderWidth: 0,
+                                barPercentage: 0.85,
+                                categoryPercentage: 0.6
                             },
                             {
                                 label: 'Observasi',
                                 data: [@string.Join(",", mainconComparison!.Select(x => x.ObservasiComplianceRate))],
-                                backgroundColor: '#ec4899',
-                                borderColor: '#ec4899',
-                                borderWidth: 1,
-                                borderRadius: 4
+                                backgroundColor: observasiGrad,
+                                hoverBackgroundColor: '#db2777',
+                                borderRadius: 6,
+                                borderWidth: 0,
+                                barPercentage: 0.85,
+                                categoryPercentage: 0.6
                             },
                             {
                                 label: 'Coaching',
                                 data: [@string.Join(",", mainconComparison!.Select(x => x.CoachingComplianceRate))],
-                                backgroundColor: '#a855f7',
-                                borderColor: '#a855f7',
-                                borderWidth: 1,
-                                borderRadius: 4
+                                backgroundColor: coachingGrad,
+                                hoverBackgroundColor: '#9333ea',
+                                borderRadius: 6,
+                                borderWidth: 0,
+                                barPercentage: 0.85,
+                                categoryPercentage: 0.6
                             }
                         ]
                     },
@@ -412,15 +503,30 @@
                         maintainAspectRatio: false,
                         plugins: {
                             legend: {
+                                position: 'top',
+                                align: 'end',
                                 labels: {
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    padding: 16,
                                     color: labelColor,
-                                    font: { size: 9, weight: 'bold' }
+                                    font: { size: 10, weight: '700', family: "'Outfit', 'Inter', sans-serif" }
                                 }
                             },
                             tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                                titleColor: '#fff',
+                                titleFont: { size: 12, weight: 'bold', family: "'Outfit', sans-serif" },
+                                bodyColor: '#cbd5e1',
+                                bodyFont: { size: 11, family: "'Inter', sans-serif" },
+                                borderColor: 'rgba(255, 255, 255, 0.1)',
+                                borderWidth: 1,
+                                padding: 12,
+                                cornerRadius: 12,
+                                boxPadding: 6,
                                 callbacks: {
                                     label: function(context) {
-                                        return context.dataset.label + ': ' + context.raw + '%';
+                                        return ' ' + context.dataset.label + ': ' + context.raw + '%';
                                     }
                                 }
                             }
@@ -428,15 +534,24 @@
                         scales: {
                             x: {
                                 grid: { display: false },
-                                ticks: { color: labelColor, font: { size: 9, weight: 'bold' } }
+                                ticks: { 
+                                    color: labelColor, 
+                                    font: { size: 9.5, weight: '700', family: "'Outfit', sans-serif" },
+                                    padding: 8
+                                }
                             },
                             y: {
                                 min: 0,
                                 max: 100,
-                                grid: { color: gridColor },
+                                grid: { 
+                                    color: gridColor,
+                                    borderDash: [5, 5],
+                                    drawBorder: false
+                                },
                                 ticks: { 
                                     color: labelColor, 
-                                    font: { size: 10 },
+                                    font: { size: 10, weight: '500' },
+                                    padding: 8,
                                     callback: function(value) { return value + '%'; }
                                 }
                             }
