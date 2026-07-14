@@ -616,6 +616,7 @@
                         <span class="chart-dot"        onclick="setChartIndex(2)"></span>
                         <span class="chart-dot"        onclick="setChartIndex(3)"></span>
                         <span class="chart-dot"        onclick="setChartIndex(4)"></span>
+                        <span class="chart-dot"        onclick="setChartIndex(5)"></span>
                     </div>
                 </div>
                 <div class="chart-wrap" style="flex:1; position:relative; min-height:0;">
@@ -633,6 +634,9 @@
                     </div>
                     <div class="chart-slide" id="slide-chart-5">
                         <canvas id="chartToday"></canvas>
+                    </div>
+                    <div class="chart-slide" id="slide-chart-6">
+                        <canvas id="chartMainconCompliance"></canvas>
                     </div>
                 </div>
             </div>
@@ -946,7 +950,7 @@ Chart.defaults.font.size = 11;
 const TICK = '#cbd5e1';
 const GRID = 'rgba(255,255,255,0.12)';
 
-let cSap = null, cDonut = null, cLoc = null, cRisks = null, cStatus = null, cToday = null;
+let cSap = null, cDonut = null, cLoc = null, cRisks = null, cStatus = null, cToday = null, cMainconCompliance = null;
 
 function buildCharts() {
     /* SAP Category Horizontal Bar */
@@ -1244,6 +1248,73 @@ function buildCharts() {
             }
         }
     });
+
+    /* Maincon Subcon Active vs Inactive Percentages Stacked/Grouped Bar Chart */
+    const ctxMainconComp = document.getElementById('chartMainconCompliance').getContext('2d');
+    cMainconCompliance = new Chart(ctxMainconComp, {
+        type: 'bar',
+        data: {
+            labels: ['UDU', 'KPP', 'MGE'],
+            datasets: [
+                {
+                    label: 'Aktif',
+                    data: [0, 0, 0],
+                    backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                    borderColor: '#10b981',
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Belum Bergerak',
+                    data: [0, 0, 0],
+                    backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                    borderColor: '#ef4444',
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#cbd5e1',
+                        font: { weight: 'bold' }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(5,8,18,.95)',
+                    borderColor: 'rgba(56,189,248,.3)',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            return ' ' + context.dataset.label + ': ' + context.raw + '%';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#cbd5e1', font: { weight: 'bold', size: 12 } },
+                    grid: { display: false }
+                },
+                y: {
+                    min: 0,
+                    max: 100,
+                    ticks: {
+                        color: '#cbd5e1',
+                        font: { weight: 'bold', size: 11 },
+                        callback: function(value) { return value + '%'; }
+                    },
+                    grid: { color: 'rgba(255,255,255,0.15)' }
+                }
+            }
+        }
+    });
 }
 
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1466,6 +1537,16 @@ async function fetchPerformance() {
                 d.todayCoachings   ?? 0
             ];
             cToday.update('active');
+        }
+
+        // Update Maincon Subcon Active vs Inactive Chart
+        if (cMainconCompliance && d.mainconSubconCompliance) {
+            const activePcts = d.mainconSubconCompliance.map(x => x.activePercentage ?? x.ActivePercentage ?? 0);
+            const inactivePcts = d.mainconSubconCompliance.map(x => x.inactivePercentage ?? x.InactivePercentage ?? 0);
+            
+            cMainconCompliance.data.datasets[0].data = activePcts;
+            cMainconCompliance.data.datasets[1].data = inactivePcts;
+            cMainconCompliance.update('active');
         }
 
         renderCompanyTabs(d);
@@ -1842,7 +1923,8 @@ const chartTitles = [
     '<i class="bi bi-pie-chart-fill" style="color:var(--purple)"></i> Distribusi Aktivitas Laporan K3',
     '<i class="bi bi-shield-exclamation" style="color:var(--red)"></i> Distribusi Tingkat Risiko Laporan K3',
     '<i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Status Temuan & Action Plan (Open vs Closed)',
-    '<i class="bi bi-calendar-event" style="color:var(--amber)"></i> Laporan K3 Masuk Hari Ini'
+    '<i class="bi bi-calendar-event" style="color:var(--amber)"></i> Laporan K3 Masuk Hari Ini',
+    '<i class="bi bi-diagram-3-fill" style="color:var(--teal)"></i> Keaktifan Subkontraktor MTD Group (% Aktif vs % Belum Bergerak)'
 ];
 
 function setChartIndex(idx) {
@@ -1860,7 +1942,7 @@ function setChartIndex(idx) {
 }
 
 function rotateCharts() {
-    const nextIdx = (currentChartIdx + 1) % 5;
+    const nextIdx = (currentChartIdx + 1) % 6;
     setChartIndex(nextIdx);
 }
 setInterval(rotateCharts, 10000);

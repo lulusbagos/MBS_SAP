@@ -236,6 +236,72 @@ namespace MBS_SAP.Controllers
                     ? string.Join("   •   ", runningTexts)
                     : "Utamakan Keselamatan dan Kesehatan Kerja (K3) — Budayakan Safety di Setiap Langkah Kita!   •   Zero Incident is Our Target!   •   Mulai dengan Aman, Bekerja dengan Aman, Pulang dengan Selamat!";
 
+                // ── MTD Group Maincon Subcon Activity calculations ────────────────
+                var mainconNames = new[] { "UNGGUL DINAMIKA UTAMA", "KALIMANTAN PRIMA PERSADA", "MEGA GLOBAL ENERGY" };
+                var mainconList = new List<PerusahaanView>();
+                foreach (var mName in mainconNames)
+                {
+                    var found = await _context.Perusahaans.AsNoTracking()
+                        .FirstOrDefaultAsync(p => p.StatusAktif && p.NamaPerusahaan != null && p.NamaPerusahaan.Contains(mName));
+                    if (found != null)
+                    {
+                        mainconList.Add(found);
+                    }
+                }
+
+                var mainconSubconComplianceList = new List<object>();
+                var startOfMonthMaincon = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+                foreach (var mcon in mainconList)
+                {
+                    var childIdsFromRelations = await _context.PerusahaanHierarchyRelations.AsNoTracking()
+                        .Where(r => r.ParentCompanyId == mcon.PerusahaanId && r.ChildIsActive == true && r.ChildCompanyId.HasValue)
+                        .Select(r => r.ChildCompanyId!.Value)
+                        .ToListAsync();
+
+                    var childIdsFromDirectParent = await _context.Perusahaans.AsNoTracking()
+                        .Where(p => p.PerusahaanIndukId == mcon.PerusahaanId && p.StatusAktif)
+                        .Select(p => p.PerusahaanId)
+                        .ToListAsync();
+
+                    var subconIds = childIdsFromRelations.Concat(childIdsFromDirectParent).Distinct().ToList();
+
+                    var subconsActiveCount = 0;
+                    var subconsInactiveCount = 0;
+
+                    foreach (var sId in subconIds)
+                    {
+                        bool hasData = 
+                            await _context.HazardReports.AnyAsync(x => !x.IsDeleted && x.PerusahaanId == sId && x.CreatedAt >= startOfMonthMaincon) ||
+                            await _context.Inspections.AnyAsync(x => !x.IsDeleted && x.PerusahaanId == sId && x.CreatedAt >= startOfMonthMaincon) ||
+                            await _context.SafetyTalks.AnyAsync(x => !x.IsDeleted && x.PerusahaanId == sId && x.CreatedAt >= startOfMonthMaincon) ||
+                            await _context.Coachings.AnyAsync(x => !x.IsDeleted && x.PerusahaanId == sId && x.CreatedAt >= startOfMonthMaincon) ||
+                            await _context.Observations.AnyAsync(o => !o.IsDeleted && o.CreatedAt >= startOfMonthMaincon && _context.Karyawans.Any(k => k.NoNik == o.Nik && k.IdPerusahaan == sId));
+
+                        if (hasData)
+                        {
+                            subconsActiveCount++;
+                        }
+                        else
+                        {
+                            subconsInactiveCount++;
+                        }
+                    }
+
+                    int totalSubcons = subconIds.Count;
+                    double activePct = totalSubcons > 0 ? Math.Round((double)subconsActiveCount / totalSubcons * 100.0, 1) : 0;
+                    double inactivePct = totalSubcons > 0 ? Math.Round((double)subconsInactiveCount / totalSubcons * 100.0, 1) : 0;
+
+                    mainconSubconComplianceList.Add(new {
+                        MainconName = mcon.NamaPerusahaan ?? "Unknown",
+                        TotalSubcons = totalSubcons,
+                        ActiveCount = subconsActiveCount,
+                        InactiveCount = subconsInactiveCount,
+                        ActivePercentage = activePct,
+                        InactivePercentage = inactivePct
+                    });
+                }
+
                 return Json(new {
                     totalKaryawan,
                     totalOpenHazards,
@@ -283,7 +349,8 @@ namespace MBS_SAP.Controllers
                     todayObservations,
                     todaySafetyTalks,
                     todayCoachings,
-                    monthCoachings
+                    monthCoachings,
+                    mainconSubconCompliance = mainconSubconComplianceList
                 });
             }
             catch (Exception ex)

@@ -1,8 +1,5 @@
 using System;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
-using MBS_SAP.Data;
-using MBS_SAP.Models;
+using System.IO;
 
 namespace dbtest
 {
@@ -10,45 +7,31 @@ namespace dbtest
     {
         static void Main(string[] args)
         {
-            var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-            optionsBuilder.UseSqlServer("Server=172.16.1.93;Database=DB_SAP;User Id=sa;Password=technical.indexim.123;TrustServerCertificate=True;MultipleActiveResultSets=True;");
+            var filePath = @"d:\4. PROJECT\2. Web\MBS_SAP\Views\Display\Index.cshtml";
+            Console.WriteLine("=== SEARCHING Index.cshtml CHART UPDATES ===");
 
-            using (var context = new AppDbContext(optionsBuilder.Options))
+            if (!File.Exists(filePath))
             {
-                Console.WriteLine("=== RELATIONSHIPS IN tbl_r_perusahaan FOR MGE (Parent ID = 5) ===");
-                
-                try
+                Console.WriteLine("File not found!");
+                return;
+            }
+
+            string content;
+            using (var reader = new StreamReader(filePath, true))
+            {
+                content = reader.ReadToEnd();
+            }
+
+            var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                if (i > 780) // JS scripts start after line 780
                 {
-                    var sql = @"
-                        SELECT r.id, r.id_parent, r.id_perusahaan, r.status_aktif, 
-                               p.nama_perusahaan as child_name
-                        FROM ONE_DB_MITRA.dbo.tbl_r_perusahaan r
-                        LEFT JOIN ONE_DB_MITRA.dbo.tbl_m_perusahaan p ON p.id = r.id_perusahaan
-                        WHERE r.id_parent = 5 AND r.deleted_at IS NULL";
-                        
-                    var conn = context.Database.GetDbConnection();
-                    conn.Open();
-                    using (var cmd = conn.CreateCommand())
+                    if (line.Contains("cSap.update") || line.Contains("cToday.update") || line.Contains("updateCharts") || line.Contains("cSap.data"))
                     {
-                        cmd.CommandText = sql;
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            int count = 0;
-                            while (reader.Read())
-                            {
-                                Console.WriteLine($"ID={reader["id"]}, Parent={reader["id_parent"]}, Child={reader["id_perusahaan"]} ({reader["child_name"]}), Status={reader["status_aktif"]}");
-                                count++;
-                            }
-                            if (count == 0)
-                            {
-                                Console.WriteLine("No relationship records found in tbl_r_perusahaan for parent ID = 5.");
-                            }
-                        }
+                        Console.WriteLine($"Line {i + 1}: {line.Trim()}");
                     }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Error: " + ex.Message);
                 }
             }
         }
