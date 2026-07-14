@@ -3033,6 +3033,7 @@ namespace MBS_SAP.Controllers
                 .FirstOrDefault();
 
             ViewBag.MostActiveSubcon = mostActiveSubcon;
+            ViewBag.AllSubconStats = allSubconStats.OrderByDescending(s => s.ComplianceRate).ThenByDescending(s => s.TotalSubmissions).ToList();
             ViewBag.MainconGroupComparison = mainconGroupComparisonList;
 
             return View(paginatedEmployees);
