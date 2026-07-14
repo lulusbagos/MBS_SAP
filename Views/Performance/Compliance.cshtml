@@ -219,14 +219,14 @@
                     <div class="report-body p-4">
                         <div class="row g-4">
                             <!-- Left Column: The Grouped Bar Chart -->
-                            <div class="col-md-6">
-                                <div style="height: 320px; position: relative;">
+                            <div class="col-lg-7 col-md-12">
+                                <div style="height: 380px; position: relative;">
                                     <canvas id="mainconComparisonChart"></canvas>
                                 </div>
                             </div>
 
                             <!-- Right Column: Comparative Grid Details -->
-                            <div class="col-md-6">
+                            <div class="col-lg-5 col-md-12">
                                 <div class="row g-3">
                                     @foreach (var item in mainconComparison)
                                     {
@@ -339,6 +339,12 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            // Ambil warna text & border dari theme agar grafik kontras di light/dark mode
+            const rootStyle = getComputedStyle(document.documentElement);
+            const labelColor = rootStyle.getPropertyValue('--text-main').trim() || '#334155';
+            const mutedColor = rootStyle.getPropertyValue('--text-muted').trim() || '#64748b';
+            const gridColor = rootStyle.getPropertyValue('--border-color').trim() || 'rgba(0, 0, 0, 0.08)';
+
             // Chart 4: Maincon Group Comparison (Grouped Bar Chart)
             const ctxMaincon = document.getElementById('mainconComparisonChart');
             if (ctxMaincon) {
@@ -346,7 +352,7 @@
                 new Chart(ctxMaincon2d, {
                     type: 'bar',
                     data: {
-                        labels: [@Html.Raw(string.Join(",", mainconComparison!.Select(x => $"'{x.MainconName.Replace("PT ", "")}'")))],
+                        labels: [@Html.Raw(string.Join(",", mainconComparison!.Select(x => $"['{string.Join("','", x.MainconName.Replace("PT ", "").Split(' '))}'"])))],
                         datasets: [
                             {
                                 label: 'Overall',
@@ -404,7 +410,7 @@
                         plugins: {
                             legend: {
                                 labels: {
-                                    color: '#94a3b8',
+                                    color: labelColor,
                                     font: { size: 9, weight: 'bold' }
                                 }
                             },
@@ -419,14 +425,14 @@
                         scales: {
                             x: {
                                 grid: { display: false },
-                                ticks: { color: '#94a3b8', font: { size: 9, weight: 'bold' } }
+                                ticks: { color: labelColor, font: { size: 9, weight: 'bold' } }
                             },
                             y: {
                                 min: 0,
                                 max: 100,
-                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                grid: { color: gridColor },
                                 ticks: { 
-                                    color: '#94a3b8', 
+                                    color: labelColor, 
                                     font: { size: 10 },
                                     callback: function(value) { return value + '%'; }
                                 }
