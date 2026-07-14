@@ -473,7 +473,7 @@
                         datasets: [
                             {
                                 label: 'Overall',
-                                data: [@string.Join(",", mainconComparison!.Select(x => x.OverallComplianceRate))],
+                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.OverallComplianceRate))),
                                 backgroundColor: overallGrad,
                                 hoverBackgroundColor: '#059669',
                                 borderRadius: 6,
@@ -483,7 +483,7 @@
                             },
                             {
                                 label: 'Hazard',
-                                data: [@string.Join(",", mainconComparison!.Select(x => x.HazardComplianceRate))],
+                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.HazardComplianceRate))),
                                 backgroundColor: hazardGrad,
                                 hoverBackgroundColor: '#4f46e5',
                                 borderRadius: 6,
@@ -493,7 +493,7 @@
                             },
                             {
                                 label: 'Inspeksi',
-                                data: [@string.Join(",", mainconComparison!.Select(x => x.InspeksiComplianceRate))],
+                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.InspeksiComplianceRate))),
                                 backgroundColor: inspeksiGrad,
                                 hoverBackgroundColor: '#2563eb',
                                 borderRadius: 6,
@@ -503,7 +503,7 @@
                             },
                             {
                                 label: 'Safety Talk',
-                                data: [@string.Join(",", mainconComparison!.Select(x => x.SafetyTalkComplianceRate))],
+                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.SafetyTalkComplianceRate))),
                                 backgroundColor: safetyTalkGrad,
                                 hoverBackgroundColor: '#d97706',
                                 borderRadius: 6,
@@ -513,7 +513,7 @@
                             },
                             {
                                 label: 'Observasi',
-                                data: [@string.Join(",", mainconComparison!.Select(x => x.ObservasiComplianceRate))],
+                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.ObservasiComplianceRate))),
                                 backgroundColor: observasiGrad,
                                 hoverBackgroundColor: '#db2777',
                                 borderRadius: 6,
@@ -523,7 +523,7 @@
                             },
                             {
                                 label: 'Coaching',
-                                data: [@string.Join(",", mainconComparison!.Select(x => x.CoachingComplianceRate))],
+                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.CoachingComplianceRate))),
                                 backgroundColor: coachingGrad,
                                 hoverBackgroundColor: '#9333ea',
                                 borderRadius: 6,
