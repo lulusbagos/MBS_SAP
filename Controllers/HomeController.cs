@@ -35,6 +35,68 @@ namespace MBS_SAP.Controllers
                 }
             }
 
+            bool showRosterPopup = false;
+            if (hasUserNik)
+            {
+                var latestRoster = await _context.Rosters
+                    .Where(r => r.Nik == userNik)
+                    .OrderByDescending(r => r.AkhirCuti)
+                    .FirstOrDefaultAsync();
+
+                // Trigger popup if roster is unset/empty OR if today is after the active cycle (expired)
+                showRosterPopup = (latestRoster == null) || (DateTime.Today > latestRoster.AkhirCuti);
+
+                var rosterHistory = await _context.Rosters
+                    .Where(r => r.Nik == userNik)
+                    .OrderByDescending(r => r.AkhirCuti)
+                    .ToListAsync();
+                ViewData["RosterHistory"] = rosterHistory;
+
+                var mitraRoster = await _context.MitraRosters
+                    .FirstOrDefaultAsync(r => r.NoNik == userNik);
+                if (mitraRoster != null)
+                {
+                    ViewData["MitraHariOnsite"] = mitraRoster.HariOnsite;
+                    ViewData["MitraHariOffsite"] = mitraRoster.HariOffsite;
+                }
+
+                // Smart prefilling of roster dates in the form
+                if (latestRoster != null)
+                {
+                    if (latestRoster.AkhirCuti >= DateTime.Today)
+                    {
+                        // Currently running: edit mode (can edit running roster)
+                        ViewData["RosterAwalDinas"] = latestRoster.AwalDinas.ToString("yyyy-MM-dd");
+                        ViewData["RosterAkhirDinas"] = latestRoster.AkhirDinas.ToString("yyyy-MM-dd");
+                        ViewData["RosterAwalCuti"] = latestRoster.AwalCuti.ToString("yyyy-MM-dd");
+                        ViewData["RosterAkhirCuti"] = latestRoster.AkhirCuti.ToString("yyyy-MM-dd");
+                        ViewData["IsEditMode"] = true;
+                    }
+                    else
+                    {
+                        // Finished / past roster: cannot be edited. Prefill with new cycle dates.
+                        var nextAwalDinas = latestRoster.AkhirCuti.AddDays(1);
+                        int onsiteDays = (mitraRoster != null && mitraRoster.HariOnsite.HasValue) ? mitraRoster.HariOnsite.Value : 42;
+                        int offsiteDays = (mitraRoster != null && mitraRoster.HariOffsite.HasValue) ? mitraRoster.HariOffsite.Value : 14;
+
+                        var nextAkhirDinas = nextAwalDinas.AddDays(onsiteDays - 1);
+                        var nextAwalCuti = nextAkhirDinas.AddDays(1);
+                        var nextAkhirCuti = nextAwalCuti.AddDays(offsiteDays - 1);
+
+                        ViewData["RosterAwalDinas"] = nextAwalDinas.ToString("yyyy-MM-dd");
+                        ViewData["RosterAkhirDinas"] = nextAkhirDinas.ToString("yyyy-MM-dd");
+                        ViewData["RosterAwalCuti"] = nextAwalCuti.ToString("yyyy-MM-dd");
+                        ViewData["RosterAkhirCuti"] = nextAkhirCuti.ToString("yyyy-MM-dd");
+                        ViewData["IsEditMode"] = false;
+                    }
+                }
+                else
+                {
+                    ViewData["IsEditMode"] = false;
+                }
+            }
+            ViewData["ShowRosterPopup"] = showRosterPopup;
+
             string? kategoriPengawas = null;
             int targetHazardReport = 2;
             int targetInspeksi = 1;

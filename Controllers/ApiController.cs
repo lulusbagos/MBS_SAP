@@ -733,6 +733,131 @@ ORDER BY nama_perusahaan";
 
             return Ok(new { message = "Area berhasil dihapus." });
         }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveRoster([FromBody] RosterSaveRequest req)
+        {
+            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(userNik))
+            {
+                return Unauthorized("NIK tidak ditemukan.");
+            }
+
+            // Allowed for all companies during testing / usage
+
+            if (req == null || 
+                !DateTime.TryParse(req.AwalDinas, out DateTime awalDinas) ||
+                !DateTime.TryParse(req.AkhirDinas, out DateTime akhirDinas) ||
+                !DateTime.TryParse(req.AwalCuti, out DateTime awalCuti) ||
+                !DateTime.TryParse(req.AkhirCuti, out DateTime akhirCuti))
+            {
+                return BadRequest("Format tanggal tidak valid.");
+            }
+
+            // Validasi urutan tanggal
+            if (awalDinas > akhirDinas)
+            {
+                return BadRequest("Tanggal awal dinas tidak boleh lebih besar dari akhir dinas.");
+            }
+            if (akhirDinas >= awalCuti)
+            {
+                return BadRequest("Tanggal akhir dinas harus lebih kecil dari awal cuti.");
+            }
+            if (awalCuti > akhirCuti)
+            {
+                return BadRequest("Tanggal awal cuti tidak boleh lebih besar dari akhir cuti.");
+            }
+
+            // Validasi durasi terhadap ONE_DB_MITRA.dbo.vw_m_roster jika ada (dengan toleransi pergeseran)
+            var mitraRoster = await _context.MitraRosters.FirstOrDefaultAsync(m => m.NoNik == userNik);
+            if (mitraRoster != null && mitraRoster.HariOnsite.HasValue && mitraRoster.HariOffsite.HasValue)
+            {
+                int expectedOnsite = mitraRoster.HariOnsite.Value;
+                int expectedOffsite = mitraRoster.HariOffsite.Value;
+
+                int actualOnsite = (akhirDinas - awalDinas).Days + 1;
+                int actualOffsite = (akhirCuti - awalCuti).Days + 1;
+
+                // Toleransi dinas: +/- 14 hari (2 minggu)
+                if (Math.Abs(actualOnsite - expectedOnsite) > 14)
+                {
+                    return BadRequest($"Durasi dinas (onsite) Anda ({actualOnsite} hari) menyimpang lebih dari 14 hari dari ketentuan database OneEv ({expectedOnsite} hari).");
+                }
+
+                // Toleransi cuti: +/- 7 hari (1 minggu)
+                if (Math.Abs(actualOffsite - expectedOffsite) > 7)
+                {
+                    return BadRequest($"Durasi cuti (offsite) Anda ({actualOffsite} hari) menyimpang lebih dari 7 hari dari ketentuan database OneEv ({expectedOffsite} hari).");
+                }
+
+                if ((awalCuti - akhirDinas).Days != 1)
+                {
+                    return BadRequest("Masa cuti harus dimulai tepat 1 hari setelah masa dinas aktif berakhir.");
+                }
+            }
+
+            // Cari roster terbaru dari user
+            var latestRoster = await _context.Rosters
+                .Where(r => r.Nik == userNik)
+                .OrderByDescending(r => r.AkhirCuti)
+                .FirstOrDefaultAsync();
+
+            // Validasi fleksibilitas pergeseran jadwal (maju/mundur maks 14 hari / 2 minggu)
+            int activeRosterId = (latestRoster != null && latestRoster.AkhirCuti >= DateTime.Today) ? latestRoster.Id : 0;
+            var previousRoster = await _context.Rosters
+                .Where(r => r.Nik == userNik && r.Id != activeRosterId)
+                .OrderByDescending(r => r.AkhirCuti)
+                .FirstOrDefaultAsync();
+
+            if (previousRoster != null)
+            {
+                DateTime expectedStart = previousRoster.AkhirCuti.AddDays(1);
+                int shiftDays = (awalDinas - expectedStart).Days;
+
+                if (Math.Abs(shiftDays) > 14)
+                {
+                    string direction = shiftDays > 0 ? "maju" : "mundur";
+                    return BadRequest($"Tanggal mulai dinas Anda hanya diperbolehkan maju/mundur maksimal 14 hari dari jadwal seharusnya ({expectedStart:dd MMM yyyy}). Anda mencoba {direction} {Math.Abs(shiftDays)} hari.");
+                }
+            }
+
+            // Jika roster terakhir ada dan belum expired (atau kita mau update roster yang sedang berjalan),
+            // kita update roster tersebut. Jika tidak, buat baru.
+            if (latestRoster != null && latestRoster.AkhirCuti >= DateTime.Today)
+            {
+                latestRoster.AwalDinas = awalDinas;
+                latestRoster.AkhirDinas = akhirDinas;
+                latestRoster.AwalCuti = awalCuti;
+                latestRoster.AkhirCuti = akhirCuti;
+                latestRoster.UpdatedAt = DateTime.Now;
+                _context.Rosters.Update(latestRoster);
+            }
+            else
+            {
+                var newRoster = new Roster
+                {
+                    Nik = userNik,
+                    AwalDinas = awalDinas,
+                    AkhirDinas = akhirDinas,
+                    AwalCuti = awalCuti,
+                    AkhirCuti = akhirCuti,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
+                _context.Rosters.Add(newRoster);
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Roster berhasil disimpan." });
+        }
+    }
+
+    public class RosterSaveRequest
+    {
+        public string AwalDinas { get; set; } = string.Empty;
+        public string AkhirDinas { get; set; } = string.Empty;
+        public string AwalCuti { get; set; } = string.Empty;
+        public string AkhirCuti { get; set; } = string.Empty;
     }
 
     public class ReassignRequest

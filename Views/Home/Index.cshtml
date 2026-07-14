@@ -165,6 +165,14 @@
                 </a>
             }
 
+            <a href="#" class="btn-action-card animate-pop-in delay-6" data-bs-toggle="modal" data-bs-target="#rosterSettingsModal">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #a855f7, #c084fc); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
+                    <i class="bi bi-calendar3" style="font-size: 20px; color: white;"></i>
+                </div>
+                <span style="font-weight: 700; font-size: 13px;">Roster Kerja</span>
+                <span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; font-size: 10px; font-weight: 600;" id="rosterStatusBadge">Atur Roster</span>
+            </a>
+
             <a asp-controller="Incident" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
                 <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #dc2626, #f43f5e); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
                     <i class="bi bi-newspaper" style="font-size: 20px; color: white;"></i>
@@ -219,5 +227,487 @@
             </div>
         }
         </div>
-    </div>
 </div>
+</div>
+
+</div>
+<!-- Roster Settings Modal -->
+    <style>
+        /* Custom modal backdrop overrides to prevent darkening the screen too much */
+        .modal-backdrop.show {
+            opacity: 0.4 !important;
+        }
+
+        .roster-modal-content {
+            background: var(--bg-card) !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 24px !important;
+            overflow: hidden;
+        }
+        .roster-header-banner {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.15));
+            border-bottom: 1px solid var(--border-color);
+            padding: 24px 20px;
+            text-align: center;
+            position: relative;
+        }
+        .roster-header-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #a855f7, #3b82f6);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 26px;
+            box-shadow: 0 8px 20px rgba(168, 85, 247, 0.3);
+            margin-bottom: 14px;
+        }
+        .roster-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        body.light-theme .roster-card {
+            background: rgba(15, 23, 42, 0.01);
+        }
+        .roster-card:hover {
+            border-color: rgba(168, 85, 247, 0.3);
+            transform: translateY(-2px);
+        }
+        .roster-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .roster-date-input {
+            background: var(--bg-app) !important;
+            border: 1.5px solid var(--border-color) !important;
+            color: var(--text-main) !important;
+            border-radius: 12px !important;
+            padding: 10px 14px !important;
+            width: 100%;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+        }
+        .roster-date-input:focus {
+            border-color: var(--color-primary) !important;
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+            outline: none;
+        }
+        .roster-info-box {
+            background: rgba(56, 189, 248, 0.06);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            gap: 12px;
+            align-items: start;
+            margin-bottom: 20px;
+        }
+        .roster-info-box i {
+            font-size: 18px;
+            color: var(--color-primary);
+        }
+        .roster-info-box p {
+            font-size: 11px;
+            color: var(--text-main);
+            line-height: 1.5;
+            margin: 0;
+            opacity: 0.85;
+        }
+        .btn-roster-save {
+            background: linear-gradient(135deg, #a855f7, #3b82f6) !important;
+            border: none !important;
+            border-radius: 12px !important;
+            padding: 10px 24px !important;
+            font-weight: 700 !important;
+            color: white !important;
+            font-size: 13px !important;
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25) !important;
+            transition: all 0.2s ease !important;
+        }
+        .btn-roster-save:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(168, 85, 247, 0.4) !important;
+        }
+        .btn-roster-cancel {
+            background: var(--border-color) !important;
+            border: 1px solid var(--border-color) !important;
+            color: var(--text-muted) !important;
+            border-radius: 12px !important;
+            padding: 10px 20px !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
+            transition: all 0.2s ease !important;
+        }
+        .btn-roster-cancel:hover {
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: var(--text-main) !important;
+        }
+        body.light-theme .btn-roster-cancel:hover {
+            background: rgba(0, 0, 0, 0.05) !important;
+        }
+    </style>
+
+    <div class="modal fade" id="rosterSettingsModal" tabindex="-1" aria-labelledby="rosterSettingsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content roster-modal-content">
+                <div class="roster-header-banner">
+                    <div class="roster-header-icon">
+                        <i class="bi bi-calendar-check-fill"></i>
+                    </div>
+                    <h5 style="font-weight: 800; color: var(--text-main); margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        Pengaturan Roster
+                        @if (ViewData["IsEditMode"] is bool edit && edit)
+                        {
+                            <span style="font-size: 9.5px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Edit Roster Aktif</span>
+                        }
+                        else
+                        {
+                            <span style="font-size: 9.5px; background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Siklus Roster Baru</span>
+                        }
+                    </h5>
+                    <p style="font-size: 11.5px; color: var(--text-muted); max-width: 340px; margin: 0 auto;">Sesuaikan siklus dinas dan cuti Anda untuk sinkronisasi target program keselamatan.</p>
+                    <button type="button" class="btn-close position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 20px; right: 20px; filter: invert(var(--text-contrast));"></button>
+                </div>
+                
+                <div class="modal-body" style="padding: 20px; max-height: calc(100vh - 200px); overflow-y: auto;">
+                    <form id="rosterSettingsForm">
+                        <div id="rosterFormAlert" class="alert alert-danger d-none" style="font-size: 12px; border-radius: 12px; padding: 10px 14px;"></div>
+
+                        <!-- Trial Banner Notice -->
+                        <div style="background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 2px solid #f59e0b; border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.05);">
+                            <span style="font-size: 9px; background: #f59e0b; color: #ffffff; padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px;">Uji Coba / Trial</span>
+                            <h5 style="color: #78350f; font-weight: 850; font-size: 13px; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
+                                Masa Trial Perhitungan Safety Accountability Program By Roster
+                            </h5>
+                        </div>
+                        
+                        <!-- Warning Compliance Notice -->
+                        <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: start;">
+                            <i class="bi bi-exclamation-triangle-fill" style="color: #f59e0b; font-size: 18px; line-height: 1;"></i>
+                            <div>
+                                <h6 style="color: #f59e0b; font-weight: 800; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">Sinkronisasi Roster OneEv & MBS</h6>
+                                <p style="color: var(--text-main); font-size: 11px; margin: 0; line-height: 1.5; opacity: 0.9;">
+                                    Seting roster Anda di aplikasi OneEv (Rencana: <strong>@(ViewData["MitraHariOnsite"] ?? "42") hari Dinas</strong> / <strong>@(ViewData["MitraHariOffsite"] ?? "14") hari Cuti</strong>). Pastikan seting roster Anda sesuai dengan aktual lapangan. Segala tindak pelanggaran akan tercatat di system kami.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Dinas Section Card -->
+                        <div class="roster-card">
+                            <h6 style="font-size: 11.5px; font-weight: 800; color: var(--color-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                <i class="bi bi-geo-alt-fill"></i> Periode Dinas (Onsite)
+                            </h6>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="roster-label">Mulai Dinas</label>
+                                    <input type="date" class="roster-date-input" id="awalDinas" name="awalDinas" value="@ViewData["RosterAwalDinas"]" required />
+                                </div>
+                                <div class="col-6">
+                                    <label class="roster-label">Akhir Dinas</label>
+                                    <input type="date" class="roster-date-input" id="akhirDinas" name="akhirDinas" value="@ViewData["RosterAkhirDinas"]" required />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cuti Section Card -->
+                        <div class="roster-card">
+                            <h6 style="font-size: 11.5px; font-weight: 800; color: var(--color-orange); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                <i class="bi bi-airplane-fill"></i> Periode Roster (Cuti)
+                            </h6>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="roster-label">Mulai Cuti</label>
+                                    <input type="date" class="roster-date-input" id="awalCuti" name="awalCuti" value="@ViewData["RosterAwalCuti"]" required />
+                                </div>
+                                <div class="col-6">
+                                    <label class="roster-label">Akhir Cuti</label>
+                                    <input type="date" class="roster-date-input" id="akhirCuti" name="akhirCuti" value="@ViewData["RosterAkhirCuti"]" required />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info Box Notice -->
+                        <div class="roster-info-box" style="margin-bottom: 24px;">
+                            <i class="bi bi-info-circle-fill"></i>
+                            <p>Target K3 bulanan Anda wajib dipenuhi secara proporsional sesuai jumlah hari dinas aktif (onsite). Saat cuti, target program ditiadakan.</p>
+                        </div>
+
+                        <!-- Roster History Section -->
+                        <div class="roster-card" style="margin-bottom: 0; padding-top: 14px; background: rgba(255,255,255,0.01);">
+                            <h6 style="font-size: 11.5px; font-weight: 800; color: var(--text-main); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <i class="bi bi-clock-history" style="color: #a855f7;"></i> Riwayat Pengaturan Roster
+                            </h6>
+                            
+                            @{
+                                var historyList = ViewData["RosterHistory"] as List<MBS_SAP.Models.Roster>;
+                            }
+                            @if (historyList == null || !historyList.Any())
+                            {
+                                <div class="text-center py-3 text-muted" style="font-size: 11px;">
+                                    Belum ada riwayat pengaturan roster tercatat.
+                                </div>
+                            }
+                            else
+                            {
+                                <div style="max-height: 160px; overflow-y: auto; padding-right: 4px;">
+                                    <div class="table-responsive" style="overflow-x: hidden;">
+                                        <table class="table table-borderless" style="font-size: 11px; margin-bottom: 0; color: var(--text-main);">
+                                            <thead>
+                                                <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-weight: 700;">
+                                                    <th class="ps-0" style="padding-bottom: 6px;">Periode Dinas</th>
+                                                    <th style="padding-bottom: 6px;">Periode Cuti</th>
+                                                    <th class="text-end pe-0" style="padding-bottom: 6px;">Diatur Pada</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var h in historyList)
+                                                {
+                                                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.02);">
+                                                        <td class="ps-0 py-2">
+                                                            <div class="fw-bold">@h.AwalDinas.ToString("dd MMM") - @h.AkhirDinas.ToString("dd MMM yy")</div>
+                                                            <div class="text-muted" style="font-size: 10px;">@((h.AkhirDinas - h.AwalDinas).Days + 1) hari dinas</div>
+                                                        </td>
+                                                        <td class="py-2">
+                                                            <div class="fw-bold" style="color: var(--color-orange);">@h.AwalCuti.ToString("dd MMM") - @h.AkhirCuti.ToString("dd MMM yy")</div>
+                                                            <div class="text-muted" style="font-size: 10px;">@((h.AkhirCuti - h.AwalCuti).Days + 1) hari cuti</div>
+                                                        </td>
+                                                        <td class="text-end pe-0 py-2 text-muted" style="font-size: 10px; vertical-align: middle;">
+                                                            @h.CreatedAt.ToString("dd/MM/yy HH:mm")
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="modal-footer" style="border-top: 1px solid var(--border-color); padding: 16px 20px; background: rgba(0,0,0,0.05);">
+                    <button type="button" class="btn btn-roster-cancel" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" id="btnSaveRoster" class="btn btn-roster-save">Simpan Roster</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @section Scripts {
+        <script>
+            $(document).ready(function() {
+                // Auto-trigger popup if configured by backend, taking care not to overlap with incident popup
+                @if (ViewData["ShowRosterPopup"] is bool show && show)
+                {
+                    <text>
+                    setTimeout(function() {
+                        // Cek apakah user sudah menolak popup hari ini untuk menghindari pop-up berulang setiap refresh
+                        const todayStr = new Date().toDateString();
+                        if (localStorage.getItem('roster_popup_dismissed_date') === todayStr) {
+                            return; // Jangan tampilkan jika sudah di-dismiss hari ini
+                        }
+
+                        var $incidentModal = $('#incidentPopupModal');
+                        if ($incidentModal.length) {
+                            var incidentId = $incidentModal.attr('data-incident-id');
+                            var incidentShown = sessionStorage.getItem('incident_popup_shown');
+                            
+                            // Jika pop up insiden akan muncul (belum pernah ditampilkan di session ini),
+                            // jangan tampilkan roster popup dulu. Tunggu sampai insiden modal di-hide.
+                            if (incidentId && incidentShown !== incidentId) {
+                                $incidentModal.on('hidden.bs.modal', function() {
+                                    showRosterModal();
+                                });
+                                return; // Keluar, jangan show roster modal sekarang
+                            }
+                        }
+                        
+                        // Jika tidak ada pop up insiden, langsung tampilkan roster modal
+                        showRosterModal();
+                    }, 500);
+
+                    function showRosterModal() {
+                        var rosterModal = new bootstrap.Modal(document.getElementById('rosterSettingsModal'), {
+                            backdrop: 'static',
+                            keyboard: false
+                        });
+                        rosterModal.show();
+                    }
+                    </text>
+                }
+
+                function updateRosterStatusLabel() {
+                    const awalDinas = $('#awalDinas').val();
+                    const akhirDinas = $('#akhirDinas').val();
+                    const awalCuti = $('#awalCuti').val();
+                    const akhirCuti = $('#akhirCuti').val();
+                    
+                    if (awalDinas && akhirDinas && awalCuti && akhirCuti) {
+                        const today = new Date();
+                        today.setHours(0,0,0,0);
+                        const endCuti = new Date(akhirCuti);
+                        endCuti.setHours(0,0,0,0);
+                        
+                        if (endCuti >= today) {
+                            $('#rosterStatusBadge').text('Aktif').css({
+                                'background-color': 'rgba(16, 185, 129, 0.15)',
+                                'color': '#10b981'
+                            });
+                        } else {
+                            $('#rosterStatusBadge').text('Expired').css({
+                                'background-color': 'rgba(244, 63, 94, 0.15)',
+                                'color': '#f43f5e'
+                            });
+                        }
+                    } else {
+                        $('#rosterStatusBadge').text('Belum Set').css({
+                            'background-color': 'rgba(245, 158, 11, 0.15)',
+                            'color': '#f59e0b'
+                        });
+                    }
+                }
+                
+                updateRosterStatusLabel();
+
+                $('#btnSaveRoster').on('click', function() {
+                    const alertContainer = $('#rosterFormAlert');
+                    alertContainer.addClass('d-none').text('');
+
+                    const awalDinasVal = $('#awalDinas').val();
+                    const akhirDinasVal = $('#akhirDinas').val();
+                    const awalCutiVal = $('#awalCuti').val();
+                    const akhirCutiVal = $('#akhirCuti').val();
+
+                    if (!awalDinasVal || !akhirDinasVal || !awalCutiVal || !akhirCutiVal) {
+                        alertContainer.removeClass('d-none')
+                            .removeClass('alert-success')
+                            .addClass('alert-danger')
+                            .css({
+                                'background-color': 'rgba(244, 63, 94, 0.12)',
+                                'border-color': 'rgba(244, 63, 94, 0.2)',
+                                'color': 'var(--color-red)'
+                            })
+                            .text('Semua tanggal wajib diisi!');
+                        return;
+                    }
+
+                    const awalDinas = new Date(awalDinasVal);
+                    const akhirDinas = new Date(akhirDinasVal);
+                    const awalCuti = new Date(awalCutiVal);
+                    const akhirCuti = new Date(akhirCutiVal);
+
+                    if (awalDinas > akhirDinas) {
+                        alertContainer.removeClass('d-none')
+                            .removeClass('alert-success')
+                            .addClass('alert-danger')
+                            .css({
+                                'background-color': 'rgba(244, 63, 94, 0.12)',
+                                'border-color': 'rgba(244, 63, 94, 0.2)',
+                                'color': 'var(--color-red)'
+                            })
+                            .text('Tanggal awal dinas tidak boleh melebihi akhir dinas.');
+                        return;
+                    }
+                    if (akhirDinas >= awalCuti) {
+                        alertContainer.removeClass('d-none')
+                            .removeClass('alert-success')
+                            .addClass('alert-danger')
+                            .css({
+                                'background-color': 'rgba(244, 63, 94, 0.12)',
+                                'border-color': 'rgba(244, 63, 94, 0.2)',
+                                'color': 'var(--color-red)'
+                            })
+                            .text('Tanggal akhir dinas harus sebelum awal cuti.');
+                        return;
+                    }
+                    if (awalCuti > akhirCuti) {
+                        alertContainer.removeClass('d-none')
+                            .removeClass('alert-success')
+                            .addClass('alert-danger')
+                            .css({
+                                'background-color': 'rgba(244, 63, 94, 0.12)',
+                                'border-color': 'rgba(244, 63, 94, 0.2)',
+                                'color': 'var(--color-red)'
+                            })
+                            .text('Tanggal awal cuti tidak boleh melebihi akhir cuti.');
+                        return;
+                    }
+
+                    const btn = $(this);
+                    const originalText = btn.text();
+                    btn.prop('disabled', true).text('Menyimpan...');
+
+                    const requestData = {
+                        awalDinas: awalDinasVal,
+                        akhirDinas: akhirDinasVal,
+                        awalCuti: awalCutiVal,
+                        akhirCuti: akhirCutiVal
+                    };
+
+                    $.ajax({
+                        url: '/Api/SaveRoster',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(requestData),
+                        success: function(response) {
+                            window.rosterSavedSuccess = true;
+                            localStorage.removeItem('roster_popup_dismissed_date');
+                            alertContainer.removeClass('d-none')
+                                .removeClass('alert-danger')
+                                .addClass('alert-success')
+                                .css({
+                                    'background-color': 'rgba(16, 185, 129, 0.15)',
+                                    'border-color': 'rgba(16, 185, 129, 0.2)',
+                                    'color': '#10b981'
+                                })
+                                .text(response.message || 'Roster berhasil disimpan!');
+
+                            setTimeout(function() {
+                                const modalEl = document.getElementById('rosterSettingsModal');
+                                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                                if (modalInstance) {
+                                    modalInstance.hide();
+                                }
+                                updateRosterStatusLabel();
+                                window.location.reload();
+                            }, 1000);
+                        },
+                        error: function(xhr) {
+                            btn.prop('disabled', false).text(originalText);
+                            const errorMsg = xhr.responseJSON?.message || xhr.responseText || 'Gagal menyimpan roster. Coba lagi.';
+                            alertContainer.removeClass('d-none')
+                                .removeClass('alert-success')
+                                .addClass('alert-danger')
+                                .css({
+                                    'background-color': 'rgba(244, 63, 94, 0.12)',
+                                    'border-color': 'rgba(244, 63, 94, 0.2)',
+                                    'color': 'var(--color-red)'
+                                })
+                                .text(errorMsg);
+                        }
+                    });
+                });
+
+                // Simpan status ditolak jika modal roster ditutup tanpa disimpan
+                $('#rosterSettingsModal').on('hidden.bs.modal', function () {
+                    if (!window.rosterSavedSuccess) {
+                        const todayStr = new Date().toDateString();
+                        localStorage.setItem('roster_popup_dismissed_date', todayStr);
+                    }
+                });
+            });
+        </script>
+    }

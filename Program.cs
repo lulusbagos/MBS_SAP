@@ -150,6 +150,20 @@ using (var scope = app.Services.CreateScope())
                 );
             END
 
+            IF OBJECT_ID(N'[dbo].[tbl_m_roster]', N'U') IS NULL
+            BEGIN
+                CREATE TABLE [dbo].[tbl_m_roster] (
+                    [id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    [nik] NVARCHAR(50) NOT NULL,
+                    [awal_dinas] DATE NOT NULL,
+                    [akhir_dinas] DATE NOT NULL,
+                    [awal_cuti] DATE NOT NULL,
+                    [akhir_cuti] DATE NOT NULL,
+                    [created_at] DATETIME NOT NULL DEFAULT GETDATE(),
+                    [updated_at] DATETIME NULL
+                );
+            END
+
             -- Add non-clustered composite indexes to prevent execution timeouts on safety calculations
             IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_hazard_report_nik_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_hazard_report'))
             BEGIN

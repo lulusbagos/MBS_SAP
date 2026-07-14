@@ -616,6 +616,7 @@
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
                                                 <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editInspection(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Inspeksi</a></li>
+                                                <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="openReassignModal(@item.Id, 'Inspection')"><i class="bi bi-person-lines-fill me-2 text-warning"></i>Alihkan PJA</a></li>
                                                 <li><hr class="dropdown-divider border-secondary"></li>
                                                 <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteInspection(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus Inspeksi</a></li>
                                             </ul>

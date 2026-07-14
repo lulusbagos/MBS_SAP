@@ -1,0 +1,1052 @@
+@model IEnumerable<MBS_SAP.Controllers.ComplianceEmployeeViewModel>
+@{
+    ViewData["Title"] = "Laporan Kepatuhan SAP";
+    var companies = ViewBag.Companies as List<MBS_SAP.Models.PerusahaanView> ?? new List<MBS_SAP.Models.PerusahaanView>();
+    var departments = ViewBag.Departments as List<string> ?? new List<string>();
+    int selectedCompanyId = ViewBag.SelectedCompanyId ?? 0;
+    string selectedDeptName = ViewBag.SelectedDepartmentName ?? "";
+    
+    // Pagination data
+    int currentPage = ViewBag.CurrentPage ?? 1;
+    int totalPages = ViewBag.TotalPages ?? 1;
+    int totalCount = ViewBag.TotalCount ?? 0;
+    int pageSize = ViewBag.PageSize ?? 50;
+    int startRow = ((currentPage - 1) * pageSize) + 1;
+    int endRow = Math.Min(currentPage * pageSize, totalCount);
+
+    var mainconComparison = (ViewBag.MainconGroupComparison as List<MBS_SAP.Controllers.MainconGroupComparisonViewModel> ?? new List<MBS_SAP.Controllers.MainconGroupComparisonViewModel>())!;
+    var mostActiveSubcon = ViewBag.MostActiveSubcon as MBS_SAP.Controllers.MostActiveSubconViewModel;
+}
+
+<style>
+    .report-card {
+        background: var(--bg-card);
+        border: 2px solid #1e293b;
+        border-radius: 16px;
+        box-shadow: 5px 5px 0px #1e293b;
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+    .report-header {
+        background: var(--bg-card);
+        padding: 16px 20px;
+        border-bottom: 2px solid #1e293b;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .report-title {
+        color: var(--text-main);
+        font-weight: 800;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0;
+    }
+    .report-body {
+        padding: 20px;
+    }
+    .tab-btn {
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+        outline: none;
+    }
+    .tab-active {
+        background: var(--color-primary) !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+    }
+    .tab-inactive {
+        background: transparent !important;
+        color: var(--text-muted) !important;
+    }
+    .compliance-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+    }
+    .compliance-table thead th {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        padding: 12px 14px;
+        border: none;
+        text-align: center;
+    }
+    .compliance-table thead th.align-left {
+        text-align: left;
+    }
+    .compliance-row {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        transition: background 0.15s ease;
+    }
+    .compliance-row:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+    .compliance-row td {
+        padding: 14px;
+        vertical-align: middle;
+        font-size: 13px;
+        color: var(--text-main);
+        border: none;
+        text-align: center;
+    }
+    .compliance-row td.align-left {
+        text-align: left;
+    }
+    .compliance-row td:first-child { border-radius: 12px 0 0 12px; }
+    .compliance-row td:last-child { border-radius: 0 12px 12px 0; }
+    
+    .compliance-badge {
+        font-size: 10px;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 8px;
+        display: inline-block;
+    }
+    .badge-success-sap {
+        background: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .badge-danger-sap {
+        background: rgba(244, 63, 94, 0.15);
+        color: #f43f5e;
+        border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+    .badge-neutral-sap {
+        background: rgba(100, 116, 139, 0.15);
+        color: #94a3b8;
+        border: 1px solid rgba(100, 116, 139, 0.3);
+    }
+    
+    .prog-cell {
+        font-weight: 700;
+        font-size: 12px;
+    }
+    .prog-ok {
+        color: #22c55e;
+    }
+    .prog-warn {
+        color: #f43f5e;
+    }
+    .prog-neutral {
+        color: #94a3b8;
+    }
+    
+    .progress-achievement {
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(255,255,255,0.1);
+        overflow: hidden;
+        width: 80px;
+        margin: 4px auto 0;
+    }
+    .subcon-tooltip {
+        display: none;
+        position: absolute;
+        bottom: 25px;
+        left: 0;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1.5px solid rgba(255, 255, 255, 0.1);
+        padding: 10px 14px;
+        border-radius: 12px;
+        z-index: 100;
+        width: 250px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+</style>
+
+<div class="animate-fade-in pb-5">
+
+    <!-- Header Banner -->
+    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #0284c7, #0369a1); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
+            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <i class="bi bi-bar-chart-line-fill text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px;">PENCAPAIAN KINERJA SAP</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Pantau kepatuhan target mingguan dan statistik bahaya perusahaan secara real-time.</p>
+        </div>
+    </div>
+
+    <!-- Tabs Toggle (Redirects back to main page or keeps active) -->
+    <div class="d-flex justify-content-center mb-4">
+        <div style="background: var(--bg-card); border: 1.5px solid var(--border-color); padding: 4px; border-radius: 12px; display: inline-flex; gap: 4px; flex-wrap: wrap; justify-content: center;">
+            <button class="tab-btn px-4 py-2 tab-inactive" id="tabMy" onclick="window.location.href='/Performance?tab=my'">
+                <i class="bi bi-person-badge-fill me-1"></i> Pencapaian Saya
+            </button>
+            <button class="tab-btn px-4 py-2 tab-inactive" id="tabCompany" onclick="window.location.href='/Performance?tab=company'">
+                <i class="bi bi-building-fill me-1"></i> Kinerja Perusahaan
+            </button>
+            <button class="tab-btn px-4 py-2 tab-inactive" id="tabHitSafe" onclick="window.location.href='/Performance?tab=hitsafe'">
+                <i class="bi bi-geo-alt-fill me-1"></i> Safe Map
+            </button>
+            <button class="tab-btn px-4 py-2 tab-inactive" id="tabHierarchy" onclick="window.location.href='/Performance?tab=hierarchy'">
+                <i class="bi bi-diagram-3-fill me-1"></i> Hirarki Perusahaan
+            </button>
+            <button class="tab-btn px-4 py-2 tab-active" id="tabCompliance" onclick="void(0)">
+                <i class="bi bi-file-earmark-text-fill me-1"></i> Laporan Kepatuhan
+            </button>
+            <button class="tab-btn px-4 py-2 tab-inactive" id="tabMaincon" onclick="window.location.href='/Performance/MainconPerformance'">
+                <i class="bi bi-building-fill-gear me-1"></i> Performa Maincon
+            </button>
+        </div>
+    </div>
+
+    <!-- Maincon Group Comparison & Spotlight Row -->
+    @if (mainconComparison != null && mainconComparison.Any())
+    {
+        <div class="row g-4 mb-4">
+            <!-- Left Card: Maincon Group Comparison -->
+            <div class="col-lg-8">
+                <div class="report-card h-100 mb-0" style="border-color: #0284c7; box-shadow: 5px 5px 0px #0284c7;">
+                    <div class="report-header d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #0284c7; background: rgba(2, 132, 199, 0.05);">
+                        <h5 class="report-title text-white font-outfit">
+                            <i class="bi bi-bar-chart-line-fill me-2" style="color: #38bdf8;"></i>Perbandingan Kepatuhan Maincon Utama (MTD Group)
+                        </h5>
+                        <span class="badge text-white" style="font-size: 11px; padding: 6px 12px; border-radius: 8px; background-color: #0284c7;">
+                            Maincon + Subkontraktor
+                        </span>
+                    </div>
+                    <div class="report-body p-4">
+                        <div class="row g-4">
+                            <!-- Left Column: The Grouped Bar Chart -->
+                            <div class="col-md-6">
+                                <div style="height: 320px; position: relative;">
+                                    <canvas id="mainconComparisonChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Comparative Grid Details -->
+                            <div class="col-md-6">
+                                <div class="row g-3">
+                                    @foreach (var item in mainconComparison)
+                                    {
+                                        <div class="col-md-12">
+                                            <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.02); border: 1.5px solid var(--border-color); position: relative;">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <div class="fw-extrabold text-white" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                        <i class="bi bi-building-fill text-info me-1"></i> @item.MainconName
+                                                    </div>
+                                                    <span class="badge" style="background-color: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); font-weight: 800; font-size: 12px;">
+                                                        Kepatuhan: @item.OverallComplianceRate%
+                                                    </span>
+                                                </div>
+                                                
+                                                <!-- Employee count and subcons details -->
+                                                <div class="d-flex flex-wrap gap-3 mb-3" style="font-size: 11.5px;">
+                                                    <div>
+                                                        <i class="bi bi-people-fill text-muted me-1"></i>
+                                                        <span class="text-white fw-bold">@item.EmployeesWithTargetCount.ToString("N0")</span> / @item.TotalEmployees.ToString("N0") Karyawan
+                                                    </div>
+                                                    <div class="position-relative" style="cursor: pointer;">
+                                                        <i class="bi bi-diagram-3-fill text-muted me-1"></i>
+                                                        <span class="text-white fw-bold text-decoration-underline" id="subcon-trigger-@item.MainconId">@item.ChildCompanyNames.Count</span> Anak
+                                                        <div class="subcon-tooltip" id="subcon-tooltip-@item.MainconId">
+                                                            <div class="fw-bold text-info mb-1" style="font-size:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:4px;">List Subkontraktor:</div>
+                                                            @if (item.ChildCompanyNames.Any())
+                                                            {
+                                                                <ul class="list-unstyled mb-0" style="font-size:10.5px; max-height:120px; overflow-y:auto; line-height:1.4;">
+                                                                    @foreach (var sub in item.ChildCompanyNames)
+                                                                    {
+                                                                        <li class="text-white-50 py-0.5"><i class="bi bi-chevron-right text-info" style="font-size: 8px;"></i> @sub</li>
+                                                                    }
+                                                                </ul>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-muted" style="font-size:10.5px;">Tidak ada anak perusahaan</span>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                    <div class="position-relative" style="cursor: pointer;">
+                                                        <i class="bi bi-x-circle-fill text-danger me-1"></i>
+                                                        <span class="text-danger fw-bold text-decoration-underline" id="uncompliant-trigger-@item.MainconId">@item.UncompliantChildCompanyNames.Count</span> Inaktif
+                                                        <div class="subcon-tooltip" id="uncompliant-tooltip-@item.MainconId" style="border-color: #ef4444;">
+                                                            <div class="fw-bold text-danger mb-1" style="font-size:10px; border-bottom:1px solid rgba(239, 68, 68, 0.2); padding-bottom:4px;">Subkontraktor Tanpa Pergerakan:</div>
+                                                            @if (item.UncompliantChildCompanyNames.Any())
+                                                            {
+                                                                <ul class="list-unstyled mb-0" style="font-size:10.5px; max-height:120px; overflow-y:auto; line-height:1.4;">
+                                                                    @foreach (var sub in item.UncompliantChildCompanyNames)
+                                                                    {
+                                                                        <li class="text-white-50 py-0.5"><i class="bi bi-x-circle text-danger" style="font-size: 8px;"></i> @sub</li>
+                                                                    }
+                                                                </ul>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="text-success" style="font-size:10.5px;"><i class="bi bi-check-circle-fill me-1"></i> Semua subkontraktor aktif</span>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- SAP Breakdown metrics -->
+                                                <div class="d-flex justify-content-between align-items-center gap-1 mt-2 text-center" style="background: rgba(255,255,255,0.01); padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                                                    <div style="flex: 1;">
+                                                        <div class="text-muted" style="font-size: 8.5px; font-weight: 700; text-transform: uppercase;">Hazard</div>
+                                                        <div class="fw-extrabold mt-1 text-white" style="font-size: 11px;">@item.HazardComplianceRate%</div>
+                                                        <div class="text-muted" style="font-size: 8px; opacity:0.6;">@item.ActualHazard/@item.TargetHazard</div>
+                                                    </div>
+                                                    <div style="width: 1px; height: 25px; background: rgba(255,255,255,0.08);"></div>
+                                                    <div style="flex: 1;">
+                                                        <div class="text-muted" style="font-size: 8.5px; font-weight: 700; text-transform: uppercase;">Inspeksi</div>
+                                                        <div class="fw-extrabold mt-1 text-white" style="font-size: 11px;">@item.InspeksiComplianceRate%</div>
+                                                        <div class="text-muted" style="font-size: 8px; opacity:0.6;">@item.ActualInspeksi/@item.TargetInspeksi</div>
+                                                    </div>
+                                                    <div style="width: 1px; height: 25px; background: rgba(255,255,255,0.08);"></div>
+                                                    <div style="flex: 1;">
+                                                        <div class="text-muted" style="font-size: 8.5px; font-weight: 700; text-transform: uppercase;">Safety Talk</div>
+                                                        <div class="fw-extrabold mt-1 text-white" style="font-size: 11px;">@item.SafetyTalkComplianceRate%</div>
+                                                        <div class="text-muted" style="font-size: 8px; opacity:0.6;">@item.ActualSafetyTalk/@item.TargetSafetyTalk</div>
+                                                    </div>
+                                                    <div style="width: 1px; height: 25px; background: rgba(255,255,255,0.08);"></div>
+                                                    <div style="flex: 1;">
+                                                        <div class="text-muted" style="font-size: 8.5px; font-weight: 700; text-transform: uppercase;">Observasi</div>
+                                                        <div class="fw-extrabold mt-1 text-white" style="font-size: 11px;">@item.ObservasiComplianceRate%</div>
+                                                        <div class="text-muted" style="font-size: 8px; opacity:0.6;">@item.ActualObservasi/@item.TargetObservasi</div>
+                                                    </div>
+                                                    <div style="width: 1px; height: 25px; background: rgba(255,255,255,0.08);"></div>
+                                                    <div style="flex: 1;">
+                                                        <div class="text-muted" style="font-size: 8.5px; font-weight: 700; text-transform: uppercase;">Coaching</div>
+                                                        <div class="fw-extrabold mt-1 text-white" style="font-size: 11px;">@item.CoachingComplianceRate%</div>
+                                                        <div class="text-muted" style="font-size: 8px; opacity:0.6;">@item.ActualCoaching/@item.TargetCoaching</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Card: Spotlight Most Active Subcon -->
+            <div class="col-lg-4">
+                <div class="report-card h-100 mb-0" style="border-color: #f59e0b; box-shadow: 5px 5px 0px #f59e0b; background: linear-gradient(135deg, #1e1b4b, #0f172a);">
+                    <div class="report-header d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #f59e0b; background: rgba(245, 158, 11, 0.05);">
+                        <h5 class="report-title text-white">
+                            <i class="bi bi-crown-fill me-2" style="color: #f59e0b; text-shadow: 0 0 10px rgba(245,158,11,0.5);"></i>Subkontraktor Teraktif (MTD)
+                        </h5>
+                        <span class="badge text-white" style="font-size: 11px; padding: 6px 12px; border-radius: 8px; background-color: #f59e0b;">
+                            Spotlight
+                        </span>
+                    </div>
+                    <div class="report-body p-4 d-flex flex-column justify-content-between" style="min-height: 380px;">
+                        @if (mostActiveSubcon != null)
+                        {
+                            <div>
+                                <!-- Company Name Spotlight -->
+                                <div class="p-3 rounded mb-3 text-center" style="background: rgba(245, 158, 11, 0.08); border: 1.5px dashed rgba(245, 158, 11, 0.3);">
+                                    <h4 class="fw-extrabold text-warning mb-1" style="font-size: 18px; text-transform: uppercase; text-shadow: 0 0 8px rgba(245,158,11,0.2);">
+                                        @mostActiveSubcon.PerusahaanName.Replace("PT ", "")
+                                    </h4>
+                                    <div class="text-muted" style="font-size: 11.5px; letter-spacing: 0.5px;">
+                                        Grup Maincon: <span class="text-white-50 fw-bold">@mostActiveSubcon.ParentCompanyName</span>
+                                    </div>
+                                </div>
+
+                                <!-- Key Stats Spotlight Grid -->
+                                <div class="row g-2 text-center mb-3">
+                                    <div class="col-6">
+                                        <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
+                                            <div class="text-muted" style="font-size: 10px; text-transform: uppercase;">Kepatuhan</div>
+                                            <h3 class="fw-extrabold text-success mt-1 mb-0" style="font-size: 24px;">@mostActiveSubcon.ComplianceRate%</h3>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
+                                            <div class="text-muted" style="font-size: 10px; text-transform: uppercase;">Total Input</div>
+                                            <h3 class="fw-extrabold text-info mt-1 mb-0" style="font-size: 24px;">@mostActiveSubcon.TotalSubmissions.ToString("N0")</h3>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Detailed Stats list -->
+                                <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255,255,255,0.03);">
+                                    <div class="d-flex justify-content-between align-items-center mb-2" style="font-size: 12px;">
+                                        <span class="text-muted">Karyawan Ber-Target:</span>
+                                        <span class="text-white fw-bold">@mostActiveSubcon.EmployeesWithTarget.ToString("N0") / @mostActiveSubcon.TotalEmployees.ToString("N0") Orang</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center" style="font-size: 12px;">
+                                        <span class="text-muted">Status Kepatuhan:</span>
+                                        <span class="badge bg-success-accent text-success fw-bold" style="font-size: 10px; padding: 3px 8px;">AKTIF BERPRESTASI</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Progress Visual -->
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1.5" style="font-size: 11px;">
+                                    <span class="text-muted fw-bold">PROGRESS KEPATUHAN</span>
+                                    <span class="text-warning fw-bold">@mostActiveSubcon.ComplianceRate%</span>
+                                </div>
+                                <div class="progress" style="height: 10px; background-color: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar" style="width: @mostActiveSubcon.ComplianceRate%;" aria-valuenow="@mostActiveSubcon.ComplianceRate" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-5 my-auto text-muted">
+                                <i class="bi bi-exclamation-circle" style="font-size: 32px;"></i>
+                                <div class="mt-2" style="font-size: 13px;">Tidak ada data subkontraktor aktif.</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Filter Panel -->
+    <div class="card-sap border-primary-accent mb-4">
+        <form method="GET" action="/Performance/Compliance" id="complianceFilterForm">
+            <input type="hidden" name="page" value="1" />
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label-sap" for="companyId">Perusahaan</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-building-fill input-sap-icon"></i>
+                        <select name="companyId" id="companyId" class="input-sap" onchange="this.form.submit()">
+                            @foreach (var c in companies)
+                            {
+                                if (c.PerusahaanId == selectedCompanyId)
+                                {
+                                    <option value="@c.PerusahaanId" selected>@c.NamaPerusahaan</option>
+                                }
+                                else
+                                {
+                                    <option value="@c.PerusahaanId">@c.NamaPerusahaan</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label-sap" for="departmentName">Departemen</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-diagram-2-fill input-sap-icon"></i>
+                        <select name="departmentName" id="departmentName" class="input-sap" onchange="this.form.submit()">
+                            <option value="">-- Semua Departemen --</option>
+                            @foreach (var d in departments)
+                            {
+                                if (d == selectedDeptName)
+                                {
+                                    <option value="@d" selected>@d</option>
+                                }
+                                else
+                                {
+                                    <option value="@d">@d</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-secondary w-100 py-2.5" style="border-radius: 12px; height: 45px; font-weight: 700; font-size: 13px;">
+                        <i class="bi bi-funnel-fill me-1"></i> Saring
+                    </button>
+                    @if (User.IsInRole("Admin") || User.FindFirst("JobTitle")?.Value?.Contains("Safety") == true || User.FindFirst("Department")?.Value?.Contains("Safety") == true)
+                    {
+                        <a href="/Performance/DownloadUncompliantReport?range=month" class="btn btn-success w-100 py-2.5 d-flex align-items-center justify-content-center gap-1" style="border-radius: 12px; height: 45px; font-weight: 700; font-size: 13px; background: linear-gradient(135deg, #10b981, #059669); border: none;">
+                            <i class="bi bi-file-earmark-excel-fill"></i> Ekspor Excel
+                        </a>
+                    }
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Script Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    @{
+        int activeEmps = ViewBag.ActiveEmployeesCount ?? 0;
+        int fullyCompliant = ViewBag.FullyCompliantCount ?? 0;
+        int participating = ViewBag.ParticipatingCount ?? 0;
+        int inactive = ViewBag.InactiveCount ?? 0;
+
+        int tH = ViewBag.TargetH ?? 0; int aH = ViewBag.ActualH ?? 0;
+        int tI = ViewBag.TargetI ?? 0; int aI = ViewBag.ActualI ?? 0;
+        int tS = ViewBag.TargetS ?? 0; int aS = ViewBag.ActualS ?? 0;
+        int tO = ViewBag.TargetO ?? 0; int aO = ViewBag.ActualO ?? 0;
+        int tC = ViewBag.TargetC ?? 0; int aC = ViewBag.ActualC ?? 0;
+
+        int ageCrit = ViewBag.AgeCritical ?? 0;
+        int ageWarn = ViewBag.AgeWarning ?? 0;
+        int ageN = ViewBag.AgeNew ?? 0;
+        int totalOpenHaz = ViewBag.TotalOpenHazards ?? 0;
+
+        int totalP2h = ViewBag.TotalP2h ?? 0;
+        int critP2h = ViewBag.CriticalP2hDefects ?? 0;
+        int simperViolations = ViewBag.SimperViolations ?? 0;
+
+        double fullyRate = activeEmps > 0 ? Math.Round((double)fullyCompliant / activeEmps * 100.0, 1) : 0;
+        double partRate = activeEmps > 0 ? Math.Round((double)participating / activeEmps * 100.0, 1) : 0;
+        double inactiveRate = activeEmps > 0 ? Math.Round((double)inactive / activeEmps * 100.0, 1) : 0;
+
+        var deptStats = ViewBag.DeptActionPlanStats as List<MBS_SAP.Controllers.ComplianceGroupStatViewModel> ?? new List<MBS_SAP.Controllers.ComplianceGroupStatViewModel>();
+        var areaStats = ViewBag.AreaActionPlanStats as List<MBS_SAP.Controllers.ComplianceGroupStatViewModel> ?? new List<MBS_SAP.Controllers.ComplianceGroupStatViewModel>();
+    }
+
+    <!-- KPI Cards Row -->
+    <div class="row g-3 mb-4">
+        <!-- Card 1: Karyawan Compliance -->
+        <div class="col-md-4">
+            <div class="report-card mb-0 h-100" style="background: linear-gradient(135deg, #1e1b4b, #0f172a); border-color: #312e81; box-shadow: 5px 5px 0px #312e81;">
+                <div class="report-body p-4 d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 1px;">Kepatuhan Karyawan MTD</div>
+                        <h3 class="fw-extrabold text-white mt-1 mb-2" style="font-size: 26px;">@fullyRate%</h3>
+                        <div style="font-size: 12px; color: #a5b4fc;">
+                            <span class="text-success fw-bold"><i class="bi bi-person-fill-check"></i> @fullyCompliant</span> Patuh | 
+                            <span class="text-warning fw-bold"><i class="bi bi-person-fill-exclamation"></i> @participating</span> Partisipasi
+                        </div>
+                    </div>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px; background: rgba(99, 102, 241, 0.15); border: 1.5px solid #6366f1;">
+                        <i class="bi bi-people-fill" style="font-size: 24px; color: #818cf8;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Backlog Hazards -->
+        <div class="col-md-4">
+            <div class="report-card mb-0 h-100" style="background: linear-gradient(135deg, #450a0a, #0f172a); border-color: #7f1d1d; box-shadow: 5px 5px 0px #7f1d1d;">
+                <div class="report-body p-4 d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 1px;">Temuan Hazard Terbuka</div>
+                        <h3 class="fw-extrabold text-white mt-1 mb-2" style="font-size: 26px;">@totalOpenHaz</h3>
+                        <div style="font-size: 12px; color: #fca5a5;">
+                            <span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> @ageCrit</span> Overdue | 
+                            <span class="text-warning fw-bold"><i class="bi bi-clock-history"></i> @ageWarn</span> Warning
+                        </div>
+                    </div>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px; background: rgba(239, 68, 68, 0.15); border: 1.5px solid #ef4444;">
+                        <i class="bi bi-cone-striped" style="font-size: 24px; color: #f87171;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: P2H Kelayakan Kendaraan -->
+        <div class="col-md-4">
+            <div class="report-card mb-0 h-100" style="background: linear-gradient(135deg, #064e3b, #0f172a); border-color: #065f46; box-shadow: 5px 5px 0px #065f46;">
+                <div class="report-body p-4 d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted fw-bold text-uppercase" style="font-size: 11px; letter-spacing: 1px;">Laporan P2H & SIMPER</div>
+                        <h3 class="fw-extrabold text-white mt-1 mb-2" style="font-size: 26px;">@totalP2h</h3>
+                        <div style="font-size: 12px; color: #a7f3d0;">
+                            <span class="text-danger fw-bold"><i class="bi bi-wrench-adjustable-circle-fill"></i> @critP2h Defect Kritis</span>
+                            @if (simperViolations > 0)
+                            {
+                                <span class="text-warning fw-bold ms-1">| <i class="bi bi-shield-fill-exclamation"></i> @simperViolations No-SIMPER</span>
+                            }
+                            else
+                            {
+                                <span class="text-success fw-bold ms-1">| <i class="bi bi-shield-fill-check"></i> Operator Aman</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px; background: rgba(16, 185, 129, 0.15); border: 1.5px solid #10b981;">
+                        <i class="bi bi-truck" style="font-size: 24px; color: #34d399;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-3 mb-4">
+        <!-- Chart 1: Kepatuhan Kategori SAP (Bar) -->
+        <div class="col-lg-6">
+            <div class="report-card mb-0 h-100">
+                <div class="report-header">
+                    <h5 class="report-title"><i class="bi bi-bar-chart-fill me-2" style="color: #6366f1;"></i>Pencapaian vs Target SAP (MTD)</h5>
+                </div>
+                <div class="report-body p-3" style="min-height: 280px; position: relative;">
+                    <canvas id="sapCategoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 2: Doughnut Charts -->
+        <div class="col-lg-6">
+            <div class="report-card mb-0 h-100">
+                <div class="report-header">
+                    <h5 class="report-title"><i class="bi bi-pie-chart-fill me-2" style="color: #10b981;"></i>Distribusi Kepatuhan & Backlog</h5>
+                </div>
+                <div class="report-body p-3 d-flex justify-content-around align-items-center flex-wrap" style="min-height: 280px; gap: 15px;">
+                    <!-- Sub-Chart 1: Employee Compliance Doughnut -->
+                    <div class="text-center" style="width: 190px;">
+                        <div class="fw-bold mb-2 text-muted" style="font-size: 11px;">Partisipasi Karyawan</div>
+                        <div style="height: 160px; position: relative; margin: 0 auto;">
+                            <canvas id="employeeComplianceChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Sub-Chart 2: Hazard Age Doughnut -->
+                    <div class="text-center" style="width: 190px;">
+                        <div class="fw-bold mb-2 text-muted" style="font-size: 11px;">Umur Hazard Terbuka</div>
+                        <div style="height: 160px; position: relative; margin: 0 auto;">
+                            <canvas id="hazardAgeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Chart 1: SAP Category (Bar Chart)
+            const ctxSap = document.getElementById('sapCategoryChart').getContext('2d');
+            new Chart(ctxSap, {
+                type: 'bar',
+                data: {
+                    labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'Observasi', 'Coaching'],
+                    datasets: [
+                        {
+                            label: 'Target',
+                            data: [@tH, @tI, @tS, @tO, @tC],
+                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            borderColor: '#475569',
+                            borderWidth: 1.5,
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Realisasi (Capped)',
+                            data: [@aH, @aI, @aS, @aO, @aC],
+                            backgroundColor: '#6366f1',
+                            borderColor: '#818cf8',
+                            borderWidth: 1.5,
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#94a3b8',
+                                font: { size: 11, weight: 'bold' }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8', font: { size: 10 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8', font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+
+            // Chart 2: Employee Compliance (Doughnut Chart)
+            const ctxEmp = document.getElementById('employeeComplianceChart').getContext('2d');
+            new Chart(ctxEmp, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Patuh 100%', 'Partisipasi (>0%)', 'Pasif (0%)'],
+                    datasets: [{
+                        data: [@fullyCompliant, @participating, @inactive],
+                        backgroundColor: ['#10b981', '#eab308', '#f43f5e'],
+                        borderColor: '#0f172a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    cutout: '65%'
+                }
+            });
+
+            // Chart 3: Hazard Age (Doughnut Chart)
+            const ctxHaz = document.getElementById('hazardAgeChart').getContext('2d');
+            new Chart(ctxHaz, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Critical (>30d)', 'Warning (8-30d)', 'Baru (0-7d)'],
+                    datasets: [{
+                        data: [@ageCrit, @ageWarn, @ageN],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                        borderColor: '#0f172a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    cutout: '65%'
+                }
+            });
+
+            // Chart 4: Maincon Group Comparison (Grouped Bar Chart)
+            const ctxMaincon = document.getElementById('mainconComparisonChart');
+            if (ctxMaincon) {
+                const ctxMaincon2d = ctxMaincon.getContext('2d');
+                new Chart(ctxMaincon2d, {
+                    type: 'bar',
+                    data: {
+                        labels: [@Html.Raw(string.Join(",", mainconComparison!.Select(x => $"'{x.MainconName.Replace("PT ", "")}'")))],
+                        datasets: [
+                            {
+                                label: 'Overall',
+                                data: [@string.Join(",", mainconComparison!.Select(x => x.OverallComplianceRate))],
+                                backgroundColor: '#10b981',
+                                borderColor: '#10b981',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Hazard',
+                                data: [@string.Join(",", mainconComparison!.Select(x => x.HazardComplianceRate))],
+                                backgroundColor: '#6366f1',
+                                borderColor: '#6366f1',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Inspeksi',
+                                data: [@string.Join(",", mainconComparison!.Select(x => x.InspeksiComplianceRate))],
+                                backgroundColor: '#3b82f6',
+                                borderColor: '#3b82f6',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Safety Talk',
+                                data: [@string.Join(",", mainconComparison!.Select(x => x.SafetyTalkComplianceRate))],
+                                backgroundColor: '#eab308',
+                                borderColor: '#eab308',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Observasi',
+                                data: [@string.Join(",", mainconComparison!.Select(x => x.ObservasiComplianceRate))],
+                                backgroundColor: '#ec4899',
+                                borderColor: '#ec4899',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Coaching',
+                                data: [@string.Join(",", mainconComparison!.Select(x => x.CoachingComplianceRate))],
+                                backgroundColor: '#a855f7',
+                                borderColor: '#a855f7',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#94a3b8',
+                                    font: { size: 9, weight: 'bold' }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.raw + '%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8', font: { size: 9, weight: 'bold' } }
+                            },
+                            y: {
+                                min: 0,
+                                max: 100,
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { 
+                                    color: '#94a3b8', 
+                                    font: { size: 10 },
+                                    callback: function(value) { return value + '%'; }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Subcon tooltips hover bindings
+            @foreach (var m in mainconComparison!)
+            {
+                <text>
+                const trigger_@(m.MainconId) = document.getElementById("subcon-trigger-@(m.MainconId)");
+                const tooltip_@(m.MainconId) = document.getElementById("subcon-tooltip-@(m.MainconId)");
+                if (trigger_@(m.MainconId) && tooltip_@(m.MainconId)) {
+                    const parentNode = trigger_@(m.MainconId).parentElement;
+                    parentNode.addEventListener("mouseenter", function() {
+                        tooltip_@(m.MainconId).style.display = "block";
+                    });
+                    parentNode.addEventListener("mouseleave", function() {
+                        tooltip_@(m.MainconId).style.display = "none";
+                    });
+                }
+
+                const untrigger_@(m.MainconId) = document.getElementById("uncompliant-trigger-@(m.MainconId)");
+                const untooltip_@(m.MainconId) = document.getElementById("uncompliant-tooltip-@(m.MainconId)");
+                if (untrigger_@(m.MainconId) && untooltip_@(m.MainconId)) {
+                    const parentNode = untrigger_@(m.MainconId).parentElement;
+                    parentNode.addEventListener("mouseenter", function() {
+                        untooltip_@(m.MainconId).style.display = "block";
+                    });
+                    parentNode.addEventListener("mouseleave", function() {
+                        untooltip_@(m.MainconId).style.display = "none";
+                    });
+                }
+                </text>
+            }
+        });
+    </script>
+
+    <!-- Action Plan Compliance Stats Row -->
+    <div class="row g-3 mb-4">
+        <!-- Dept Stats Card -->
+        <div class="col-md-6">
+            <div class="report-card h-100 mb-0">
+                <div class="report-header">
+                    <h5 class="report-title">
+                        <i class="bi bi-diagram-3-fill me-2" style="color: var(--color-red);"></i>Top 5 Departemen (Banyak Open Action Plan)
+                    </h5>
+                </div>
+                <div class="report-body p-3">
+                    @if (!deptStats.Any())
+                    {
+                        <div class="text-center py-4 text-muted" style="font-size: 13px;">Tidak ada data temuan.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle text-start mb-0" style="font-size: 12px; color: var(--text-main);">
+                                <thead>
+                                    <tr class="text-muted" style="border-bottom: 2px solid #1e293b;">
+                                        <th>Departemen</th>
+                                        <th class="text-center">Total</th>
+                                        <th class="text-center">Open</th>
+                                        <th class="text-center">Closed</th>
+                                        <th class="text-center">Penyelesaian</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in deptStats)
+                                    {
+                                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                            <td class="fw-bold py-2">@item.GroupName</td>
+                                            <td class="text-center">@item.TotalCreated</td>
+                                            <td class="text-center text-danger fw-bold">@item.OpenCount</td>
+                                            <td class="text-center text-success">@item.ClosedCount</td>
+                                            <td class="text-center">
+                                                <span class="fw-bold @(item.ClosureRate >= 80 ? "text-success" : (item.ClosureRate >= 50 ? "text-warning" : "text-danger"))">@item.ClosureRate%</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Area Stats Card -->
+        <div class="col-md-6">
+            <div class="report-card h-100 mb-0">
+                <div class="report-header">
+                    <h5 class="report-title">
+                        <i class="bi bi-geo-alt-fill me-2" style="color: var(--color-red);"></i>Top 5 Area (Banyak Open Action Plan)
+                    </h5>
+                </div>
+                <div class="report-body p-3">
+                    @if (!areaStats.Any())
+                    {
+                        <div class="text-center py-4 text-muted" style="font-size: 13px;">Tidak ada data temuan.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle text-start mb-0" style="font-size: 12px; color: var(--text-main);">
+                                <thead>
+                                    <tr class="text-muted" style="border-bottom: 2px solid #1e293b;">
+                                        <th>Area</th>
+                                        <th class="text-center">Total</th>
+                                        <th class="text-center">Open</th>
+                                        <th class="text-center">Closed</th>
+                                        <th class="text-center">Penyelesaian</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in areaStats)
+                                    {
+                                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                            <td class="fw-bold py-2">@item.GroupName</td>
+                                            <td class="text-center">@item.TotalCreated</td>
+                                            <td class="text-center text-danger fw-bold">@item.OpenCount</td>
+                                            <td class="text-center text-success">@item.ClosedCount</td>
+                                            <td class="text-center">
+                                                <span class="fw-bold @(item.ClosureRate >= 80 ? "text-success" : (item.ClosureRate >= 50 ? "text-warning" : "text-danger"))">@item.ClosureRate%</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @{
+        var subcons = ViewBag.SubconComplianceList as List<MBS_SAP.Controllers.CompanyLeaderboardViewModel> ?? new List<MBS_SAP.Controllers.CompanyLeaderboardViewModel>();
+    }
+
+    @if (subcons.Any())
+    {
+        var hasMovementSubcons = subcons.Where(s => s.TotalSubmissions > 0).ToList();
+        var noMovementSubcons = subcons.Where(s => s.TotalSubmissions == 0).ToList();
+
+        <!-- Subcontractor Compliance Card -->
+        <div class="report-card mb-4">
+            <div class="report-header">
+                <h5 class="report-title">
+                    <i class="bi bi-trophy-fill me-2" style="color: #fbbf24;"></i>Kinerja Kepatuhan Subkontraktor (MTD)
+                </h5>
+                <span class="badge bg-secondary-sap text-white" style="font-size: 11px; padding: 6px 12px; border-radius: 8px;">
+                    Total: @subcons.Count Subkontraktor
+                </span>
+            </div>
+            
+            <div class="report-body p-3">
+                <div class="row g-3">
+                    <!-- Left: Subcons with movement -->
+                    <div class="col-lg-6">
+                        <div class="p-3 rounded h-100" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--border-color);">
+                            <h6 class="fw-bold mb-3 text-success d-flex align-items-center gap-2" style="font-size: 13px;">
+                                <i class="bi bi-check-circle-fill"></i> Ada Pergerakan Pengisian (@hasMovementSubcons.Count)
+                            </h6>
+                            @if (!hasMovementSubcons.Any())
+                            {
+                                <div class="text-center py-4 text-muted" style="font-size: 12px;">Tidak ada data.</div>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle text-start mb-0" style="font-size: 12px; color: var(--text-main);">
+                                        <thead>
+                                            <tr class="text-muted" style="border-bottom: 2px solid #1e293b;">
+                                                <th style="width: 50px;">CLID</th>
+                                                <th>Nama Subkontraktor</th>
+                                                <th class="text-center">Karyawan</th>
+                                                <th class="text-center">Realisasi/Tgt</th>
+                                                <th class="text-center">Pencapaian</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var item in hasMovementSubcons.OrderByDescending(s => s.AchievementRate))
+                                            {
+                                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                                    <td class="fw-bold">`@item.CompanyId`</td>
+                                                    <td class="fw-bold text-white">@item.CompanyName</td>
+                                                    <td class="text-center">@item.ActiveEmployees</td>
+                                                    <td class="text-center">@item.TotalSubmissions / @item.TargetSubmissions</td>
+                                                    <td class="text-center">
+                                                        <span class="badge badge-success-sap fw-bold">@item.AchievementRate%</span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Right: Subcons with no movement -->
+                    <div class="col-lg-6">
+                        <div class="p-3 rounded h-100" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--border-color);">
+                            <h6 class="fw-bold mb-3 text-danger d-flex align-items-center gap-2" style="font-size: 13px;">
+                                <i class="bi bi-x-circle-fill"></i> Tanpa Pergerakan / Kosong (@noMovementSubcons.Count)
+                            </h6>
+                            @if (!noMovementSubcons.Any())
+                            {
+                                <div class="text-center py-4 text-success fw-semibold" style="font-size: 12px;">
+                                    <i class="bi bi-emoji-smile me-1"></i> Hebat! Semua subkontraktor memiliki pergerakan pengisian.
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle text-start mb-0" style="font-size: 12px; color: var(--text-main);">
+                                        <thead>
+                                            <tr class="text-muted" style="border-bottom: 2px solid #1e293b;">
+                                                <th style="width: 50px;">CLID</th>
+                                                <th>Nama Subkontraktor</th>
+                                                <th class="text-center">Karyawan</th>
+                                                <th class="text-center">Realisasi/Tgt</th>
+                                                <th class="text-center">Pencapaian</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var item in noMovementSubcons)
+                                            {
+                                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                                    <td class="fw-bold">`@item.CompanyId`</td>
+                                                    <td class="fw-bold" style="opacity: 0.75;">@item.CompanyName</td>
+                                                    <td class="text-center text-muted">@item.ActiveEmployees</td>
+                                                    <td class="text-center text-muted">@item.TotalSubmissions / @item.TargetSubmissions</td>
+                                                    <td class="text-center">
+                                                        <span class="badge badge-danger-sap fw-bold">@item.AchievementRate%</span>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+</div>

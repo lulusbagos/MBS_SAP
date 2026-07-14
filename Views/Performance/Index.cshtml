@@ -1681,6 +1681,12 @@
             <button class="tab-btn px-4 py-2 tab-inactive" id="tabHierarchy" onclick="switchTab('hierarchy')">
                 <i class="bi bi-diagram-3-fill me-1"></i> Hirarki Perusahaan
             </button>
+            <button class="tab-btn px-4 py-2 tab-inactive" id="tabCompliance" onclick="window.location.href='/Performance/Compliance'">
+                <i class="bi bi-file-earmark-text-fill me-1"></i> Laporan Kepatuhan
+            </button>
+            <button class="tab-btn px-4 py-2 tab-inactive" id="tabMaincon" onclick="window.location.href='/Performance/MainconPerformance'">
+                <i class="bi bi-building-fill-gear me-1"></i> Performa Maincon
+            </button>
         </div>
     </div>
 
@@ -3622,6 +3628,12 @@
 
         if (typeof window.initHierarchyUI === 'function') {
             window.initHierarchyUI();
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const activeTabParam = urlParams.get('tab');
+        if (activeTabParam) {
+            switchTab(activeTabParam);
         }
 
         // Safe high-contrast theme detection

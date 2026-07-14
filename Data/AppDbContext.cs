@@ -33,6 +33,8 @@ namespace MBS_SAP.Data
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; } = null!;
         public DbSet<Coaching> Coachings { get; set; } = null!;
         public DbSet<CoachingParticipant> CoachingParticipants { get; set; } = null!;
+        public DbSet<Roster> Rosters { get; set; } = null!;
+        public DbSet<MitraRosterView> MitraRosters { get; set; } = null!;
 
         // View entities
         public DbSet<KaryawanView> Karyawans { get; set; } = null!;
@@ -137,6 +139,10 @@ namespace MBS_SAP.Data
             modelBuilder.Entity<CoachingParticipant>()
                 .ToTable("tbl_t_coaching_participant");
 
+            modelBuilder.Entity<Roster>()
+                .ToTable("tbl_m_roster")
+                .HasKey(r => r.Id);
+
             // View mappings
             modelBuilder.Entity<KaryawanView>()
                 .ToView("vw_karyawan")
@@ -169,6 +175,10 @@ namespace MBS_SAP.Data
             modelBuilder.Entity<KaryawanJabatanMappingPreviewView>()
                 .ToView("vw_r_karyawan_jabatan_mapping_preview")
                 .HasKey(k => k.KaryawanId);
+
+            modelBuilder.Entity<MitraRosterView>()
+                .ToSqlQuery("SELECT karyawan_id, no_nik, hari_onsite, hari_offsite FROM ONE_DB_MITRA.dbo.vw_m_roster")
+                .HasKey(r => r.KaryawanId);
 
             // Apply snake_case column names mapping
             foreach (var entity in modelBuilder.Model.GetEntityTypes())

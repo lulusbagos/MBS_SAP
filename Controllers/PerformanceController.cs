@@ -130,8 +130,11 @@ namespace MBS_SAP.Controllers
             return Json(result);
         }
 
-        private async Task<List<dynamic>> GetEmployeesComplianceData(int companyId, string departmentNameFilter = null)
+        private async Task<List<dynamic>> GetEmployeesComplianceData(int companyId, string? departmentNameFilter = null)
         {
+            // Set transaction isolation level to READ UNCOMMITTED to prevent deadlocks/timeouts on heavy tables
+            await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
+
             // Block excluded companies
             if (ExcludedCompanies.IsExcluded(companyId))
             {
@@ -2236,6 +2239,7 @@ namespace MBS_SAP.Controllers
                     })
                     .OrderBy(e => e.mtdTotalTarget == 0 ? 1 : 0)
                     .ThenByDescending(e => e.complianceRate)
+                    .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                     .ToList();
 
                 ViewBag.Employees = sortedEmployees;
@@ -2313,12 +2317,899 @@ namespace MBS_SAP.Controllers
                 })
                 .OrderBy(e => e.mtdTotalTarget == 0 ? 1 : 0)
                 .ThenByDescending(e => e.complianceRate)
+                .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                 .ToList();
 
                 ViewBag.Employees = sortedEmployees;
             }
 
             return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Compliance(int? companyId = null, string? departmentName = null, int page = 1)
+        {
+            // Set transaction isolation level to READ UNCOMMITTED to prevent deadlocks/timeouts on heavy tables
+            await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
+
+            ViewData["HeaderTitle"] = "Pencapaian SAP";
+            ViewData["ActiveTab"] = "Performance";
+
+            var (resolvedCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
+            var isAdmin = User.IsInRole("Admin");
+            var jobTitle = User.FindFirst("JobTitle")?.Value;
+            var department = User.FindFirst("Department")?.Value;
+            bool isSafetyRole = CheckIsSafetyRole(jobTitle, department, isAdmin);
+
+            // Fetch all active companies
+            var allCompanies = await _context.Perusahaans
+                .Where(p => p.StatusAktif && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
+                .OrderBy(p => p.NamaPerusahaan)
+                .ToListAsync();
+
+            List<PerusahaanView> allowedCompanies;
+            if (isAdmin || isSafetyRole)
+            {
+                allowedCompanies = allCompanies;
+            }
+            else
+            {
+                allowedCompanies = allCompanies
+                    .Where(p => resolvedCompanyId == null || p.PerusahaanId == resolvedCompanyId)
+                    .ToList();
+            }
+
+            ViewBag.Companies = allowedCompanies;
+
+            if (allowedCompanies == null || !allowedCompanies.Any())
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            int selectedCompanyId = companyId ?? (resolvedCompanyId ?? allowedCompanies.First().PerusahaanId);
+            ViewBag.SelectedCompanyId = selectedCompanyId;
+
+            // Fetch all active departments for this selected company to show in filter
+            var departments = await (from k in _context.Karyawans
+                                     join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId
+                                     where k.IdPerusahaan == selectedCompanyId && k.StatusAktif == true
+                                     select d.NamaDepartemen)
+                                     .Distinct()
+                                     .OrderBy(d => d)
+                                     .ToListAsync();
+            ViewBag.Departments = departments;
+            ViewBag.SelectedDepartmentName = departmentName;
+
+            // Fetch compliance data
+            var rawData = await GetEmployeesComplianceData(selectedCompanyId, departmentName);
+
+            // Map dynamic list to strongly typed model
+            var employees = new List<ComplianceEmployeeViewModel>();
+            foreach (var item in rawData)
+            {
+                var emp = new ComplianceEmployeeViewModel
+                {
+                    KaryawanName = item.karyawanName ?? string.Empty,
+                    Nik = item.nik ?? string.Empty,
+                    DepartmentName = item.departmentName ?? string.Empty,
+                    JabatanName = item.jabatanName ?? string.Empty,
+                    CompanyId = item.companyId,
+                    MtdTotalTarget = item.mtdTotalTarget,
+                    MtdTotalActual = item.mtdTotalActual,
+                    ComplianceRate = item.complianceRate,
+                    Hazard = new ComplianceItemDetail { Target = item.hazard.target, Actual = item.hazard.actual },
+                    Inspeksi = new ComplianceItemDetail { Target = item.inspeksi.target, Actual = item.inspeksi.actual },
+                    SafetyTalk = new ComplianceItemDetail { Target = item.safetyTalk.target, Actual = item.safetyTalk.actual },
+                    Observasi = new ComplianceItemDetail { Target = item.observasi.target, Actual = item.observasi.actual },
+                    Coaching = new ComplianceItemDetail { Target = item.coaching.target, Actual = item.coaching.actual },
+                    P5m = new ComplianceItemDetail { Target = item.p5m.target, Actual = item.p5m.actual }
+                };
+                employees.Add(emp);
+            }
+
+            int pageSize = 50;
+            int totalCount = employees.Count;
+            var paginatedEmployees = employees
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            ViewBag.TotalCount = totalCount;
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            // 1. Action Plans by Department (creator's department)
+            var actionPlanDeptStats = await _context.ActionPlans
+                .Where(a => !a.IsDeleted && a.PerusahaanId == selectedCompanyId)
+                .GroupBy(a => a.Departemen ?? "Lain-lain")
+                .Select(g => new ComplianceGroupStatViewModel
+                {
+                    GroupName = g.Key,
+                    TotalCreated = g.Count(),
+                    OpenCount = g.Count(a => a.Status == "Open"),
+                    ClosedCount = g.Count(a => a.Status == "Closed")
+                })
+                .OrderByDescending(s => s.OpenCount)
+                .Take(5)
+                .ToListAsync();
+
+            // 2. Action Plans by Area
+            var actionPlanAreaStats = await _context.ActionPlans
+                .Where(a => !a.IsDeleted && a.PerusahaanId == selectedCompanyId && a.Area != null && a.Area != "")
+                .GroupBy(a => a.Area!)
+                .Select(g => new ComplianceGroupStatViewModel
+                {
+                    GroupName = g.Key,
+                    TotalCreated = g.Count(),
+                    OpenCount = g.Count(a => a.Status == "Open"),
+                    ClosedCount = g.Count(a => a.Status == "Closed")
+                })
+                .OrderByDescending(s => s.OpenCount)
+                .Take(5)
+                .ToListAsync();
+
+            ViewBag.DeptActionPlanStats = actionPlanDeptStats;
+            ViewBag.AreaActionPlanStats = actionPlanAreaStats;
+
+            // 3. Subcontractor Achievements
+            var childCompanies = await _context.Perusahaans
+                .Where(p => p.PerusahaanIndukId == selectedCompanyId && p.StatusAktif)
+                .OrderBy(p => p.NamaPerusahaan)
+                .ToListAsync();
+
+            var subconComplianceList = new List<CompanyLeaderboardViewModel>();
+
+            if (childCompanies.Any())
+            {
+                var childCompanyIds = childCompanies.Select(p => p.PerusahaanId).ToList();
+
+                var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+                var allChildKaryawans = await _context.Karyawans
+                    .Where(k => k.StatusAktif && childCompanyIds.Contains(k.IdPerusahaan))
+                    .ToListAsync();
+
+                var allChildKaryawanIds = allChildKaryawans.Select(k => k.IdKaryawan).ToList();
+
+                var targets = await _context.KaryawanJabatanMappings
+                    .Where(m => allChildKaryawanIds.Contains(m.KaryawanId))
+                    .ToListAsync();
+                var targetsDict = targets.ToDictionary(m => m.KaryawanId);
+
+                var hazards = await _context.HazardReports
+                    .Where(h => !h.IsDeleted && childCompanyIds.Contains(h.PerusahaanId ?? 0) && h.CreatedAt >= startOfMonth)
+                    .Select(h => new { h.PerusahaanId, h.Nik })
+                    .ToListAsync();
+
+                var inspections = await _context.Inspections
+                    .Where(i => !i.IsDeleted && childCompanyIds.Contains(i.PerusahaanId ?? 0) && i.CreatedAt >= startOfMonth)
+                    .Select(i => new { i.PerusahaanId, i.Nik })
+                    .ToListAsync();
+
+                var safetyTalks = await _context.SafetyTalks
+                    .Where(s => !s.IsDeleted && childCompanyIds.Contains(s.PerusahaanId ?? 0) && s.CreatedAt >= startOfMonth)
+                    .Select(s => new { s.PerusahaanId, s.Nik })
+                    .ToListAsync();
+
+                var p5ms = await _context.P5ms
+                    .Where(p => !p.IsDeleted && childCompanyIds.Contains(p.PerusahaanId ?? 0) && p.CreatedAt >= startOfMonth)
+                    .Select(p => new { p.PerusahaanId, p.Nik })
+                    .ToListAsync();
+
+                var coachingCreators = await _context.Coachings
+                    .Where(co => !co.IsDeleted && childCompanyIds.Contains(co.PerusahaanId ?? 0) && co.CreatedAt >= startOfMonth)
+                    .Select(co => new { co.PerusahaanId, co.Nik })
+                    .ToListAsync();
+
+                var coachingParticipants = await _context.CoachingParticipants
+                    .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && childCompanyIds.Contains(p.Coaching.PerusahaanId ?? 0) && p.Coaching.CreatedAt >= startOfMonth)
+                    .Select(p => new { PerusahaanId = p.Coaching!.PerusahaanId, p.Nik })
+                    .ToListAsync();
+
+                var coachings = coachingCreators.Concat(coachingParticipants).ToList();
+
+                var observations = await (from o in _context.Observations
+                                          join k in _context.Karyawans on o.Nik equals k.NoNik
+                                          where !o.IsDeleted && o.CreatedAt >= startOfMonth && childCompanyIds.Contains(k.IdPerusahaan)
+                                          select new { PerusahaanId = (int?)k.IdPerusahaan, o.Nik })
+                                          .ToListAsync();
+
+                foreach (var sub in childCompanies)
+                {
+                    var companyEmps = allChildKaryawans.Where(k => k.IdPerusahaan == sub.PerusahaanId).ToList();
+                    int empCount = companyEmps.Count;
+
+                    int companyMtdTarget = 0;
+                    int companyMtdActual = 0;
+
+                    if (empCount > 0)
+                    {
+                        var subHaz = hazards.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
+                        var subIns = inspections.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
+                        var subSt = safetyTalks.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
+                        var subP5m = p5ms.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
+                        var subCoa = coachings.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
+                        var subObs = observations.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
+
+                        var hazByNik = subHaz.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                        var insByNik = subIns.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                        var stByNik = subSt.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                        var p5mByNik = subP5m.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                        var coaByNik = subCoa.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                        var obsByNik = subObs.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+                        foreach (var emp in companyEmps)
+                        {
+                            var nik = (emp.NoNik ?? string.Empty).Trim();
+                            int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0;
+                            if (targetsDict.TryGetValue(emp.IdKaryawan, out var t))
+                            {
+                                hTar = t.TargetHazardReport ?? 2;
+                                insTar = t.TargetInspeksi ?? 1;
+                                stTar = t.TargetSafetyTalk ?? 1;
+                                obsTar = t.TargetObservasi ?? 0;
+                                cTar = t.TargetCoaching ?? 0;
+                            }
+
+                            int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
+                            int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
+                            int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
+                            int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
+                            int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
+
+                            int cappedH = Math.Min(actH, hTar);
+                            int cappedI = Math.Min(actI, insTar);
+                            int cappedST = Math.Min(actST, stTar);
+                            int cappedO = Math.Min(actO, obsTar);
+                            int cappedC = Math.Min(actC, cTar);
+
+                            companyMtdTarget += (hTar + insTar + stTar + obsTar + cTar);
+                            companyMtdActual += (cappedH + cappedI + cappedST + cappedO + cappedC);
+                        }
+                    }
+
+                    double achievementRate = companyMtdTarget > 0 ? Math.Min(100.0, Math.Round((double)companyMtdActual / companyMtdTarget * 100.0, 1)) : 0.0;
+
+                    subconComplianceList.Add(new CompanyLeaderboardViewModel
+                    {
+                        CompanyId = sub.PerusahaanId,
+                        CompanyName = sub.NamaPerusahaan ?? "Unknown",
+                        ActiveEmployees = empCount,
+                        TotalSubmissions = companyMtdActual,
+                        TargetSubmissions = companyMtdTarget,
+                        AchievementRate = achievementRate
+                    });
+                }
+            }
+
+            ViewBag.SubconComplianceList = subconComplianceList;
+
+            // 4. Group Detailed Compliance Metrics (Maincon + its Subcons)
+            var startOfMonthM = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var relatedCompanyIds = new List<int> { selectedCompanyId };
+            relatedCompanyIds.AddRange(childCompanies.Select(c => c.PerusahaanId));
+
+            var activeKaryawans = await _context.Karyawans
+                .Where(k => k.StatusAktif && relatedCompanyIds.Contains(k.IdPerusahaan))
+                .ToListAsync();
+
+            var activeKaryawanIds = activeKaryawans.Select(k => k.IdKaryawan).ToList();
+
+            var targetsList = await _context.KaryawanJabatanMappings
+                .Where(m => activeKaryawanIds.Contains(m.KaryawanId))
+                .ToListAsync();
+            var groupTargetsDict = targetsList.ToDictionary(m => m.KaryawanId);
+
+            var groupHazards = await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && relatedCompanyIds.Contains(h.PerusahaanId.Value) && h.CreatedAt >= startOfMonthM)
+                .Select(h => new { h.PerusahaanId, h.Nik })
+                .ToListAsync();
+
+            var groupInspections = await _context.Inspections
+                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && relatedCompanyIds.Contains(i.PerusahaanId.Value) && i.CreatedAt >= startOfMonthM)
+                .Select(i => new { i.PerusahaanId, i.Nik })
+                .ToListAsync();
+
+            var groupSafetyTalks = await _context.SafetyTalks
+                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && relatedCompanyIds.Contains(s.PerusahaanId.Value) && s.CreatedAt >= startOfMonthM)
+                .Select(s => new { s.PerusahaanId, s.Nik })
+                .ToListAsync();
+
+            var groupP5ms = await _context.P5ms
+                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && relatedCompanyIds.Contains(p.PerusahaanId.Value) && p.CreatedAt >= startOfMonthM)
+                .Select(p => new { p.PerusahaanId, p.Nik })
+                .ToListAsync();
+
+            var groupCoachingCreators = await _context.Coachings
+                .Where(co => !co.IsDeleted && co.PerusahaanId.HasValue && relatedCompanyIds.Contains(co.PerusahaanId.Value) && co.CreatedAt >= startOfMonthM)
+                .Select(co => new { co.PerusahaanId, co.Nik })
+                .ToListAsync();
+
+            var groupCoachingParticipants = await _context.CoachingParticipants
+                .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId.HasValue && relatedCompanyIds.Contains(p.Coaching.PerusahaanId.Value) && p.Coaching.CreatedAt >= startOfMonthM)
+                .Select(p => new { PerusahaanId = p.Coaching!.PerusahaanId, p.Nik })
+                .ToListAsync();
+
+            var groupCoachings = groupCoachingCreators.Concat(groupCoachingParticipants).ToList();
+
+            var groupObservations = await (from o in _context.Observations
+                                           join k in _context.Karyawans on o.Nik equals k.NoNik
+                                           where !o.IsDeleted && o.CreatedAt >= startOfMonthM && relatedCompanyIds.Contains(k.IdPerusahaan)
+                                           select new { PerusahaanId = (int?)k.IdPerusahaan, o.Nik })
+                                           .ToListAsync();
+
+            var gHazByNik = groupHazards.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+            var gInsByNik = groupInspections.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+            var gStByNik = groupSafetyTalks.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+            var gP5mByNik = groupP5ms.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+            var gCoaByNik = groupCoachings.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+            var gObsByNik = groupObservations.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+            int fullyCompliantCount = 0;
+            int participatingCount = 0;
+            int inactiveCount = 0;
+
+            int targetH = 0, actualH = 0;
+            int targetI = 0, actualI = 0;
+            int targetS = 0, actualS = 0;
+            int targetO = 0, actualO = 0;
+            int targetC = 0, actualC = 0;
+
+            foreach (var emp in activeKaryawans)
+            {
+                var nik = (emp.NoNik ?? string.Empty).Trim();
+                int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0;
+                if (groupTargetsDict.TryGetValue(emp.IdKaryawan, out var t))
+                {
+                    hTar = t.TargetHazardReport ?? 2;
+                    insTar = t.TargetInspeksi ?? 1;
+                    stTar = t.TargetSafetyTalk ?? 1;
+                    obsTar = t.TargetObservasi ?? 0;
+                    cTar = t.TargetCoaching ?? 0;
+                }
+
+                int actH = string.IsNullOrEmpty(nik) ? 0 : (gHazByNik.TryGetValue(nik, out var ah) ? ah : 0);
+                int actI = string.IsNullOrEmpty(nik) ? 0 : (gInsByNik.TryGetValue(nik, out var ai) ? ai : 0);
+                int actST = string.IsNullOrEmpty(nik) ? 0 : (gStByNik.TryGetValue(nik, out var ast) ? ast : 0);
+                int actO = string.IsNullOrEmpty(nik) ? 0 : (gObsByNik.TryGetValue(nik, out var ao) ? ao : 0);
+                int actC = string.IsNullOrEmpty(nik) ? 0 : (gCoaByNik.TryGetValue(nik, out var ac) ? ac : 0);
+
+                int cappedH = Math.Min(actH, hTar);
+                int cappedI = Math.Min(actI, insTar);
+                int cappedST = Math.Min(actST, stTar);
+                int cappedO = Math.Min(actO, obsTar);
+                int cappedC = Math.Min(actC, cTar);
+
+                int empTarget = hTar + insTar + stTar + obsTar + cTar;
+                int empActual = cappedH + cappedI + cappedST + cappedO + cappedC;
+
+                if (empTarget > 0)
+                {
+                    if (empActual >= empTarget)
+                    {
+                        fullyCompliantCount++;
+                    }
+                    else if (empActual > 0)
+                    {
+                        participatingCount++;
+                    }
+                    else
+                    {
+                        inactiveCount++;
+                    }
+                }
+                else
+                {
+                    inactiveCount++;
+                }
+
+                targetH += hTar; actualH += cappedH;
+                targetI += insTar; actualI += cappedI;
+                targetS += stTar; actualS += cappedST;
+                targetO += obsTar; actualO += cappedO;
+                targetC += cTar; actualC += cappedC;
+            }
+
+            // Hazard age distribution
+            var openHazards = await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && relatedCompanyIds.Contains(h.PerusahaanId.Value) && h.StatusTemuan == "Open")
+                .Select(h => h.Tanggal)
+                .ToListAsync();
+
+            int ageCritical = 0; // > 30 days
+            int ageWarning = 0;  // 8-30 days
+            int ageNew = 0;      // 0-7 days
+
+            var today = DateTime.Today;
+            foreach (var dt in openHazards)
+            {
+                var days = (today - dt).TotalDays;
+                if (days > 30) ageCritical++;
+                else if (days > 7) ageWarning++;
+                else ageNew++;
+            }
+
+            // P2H Kelayakan Kendaraan
+            var companyNiksList = activeKaryawans.Select(k => k.NoNik).Where(n => !string.IsNullOrEmpty(n)).ToList();
+            var p2hReports = await _context.P2hReports
+                .Where(r => !r.IsDeleted && r.Tanggal >= startOfMonthM && companyNiksList.Contains(r.Nik))
+                .Select(r => new { r.GolA_Json, r.SimperKimper })
+                .ToListAsync();
+
+            int totalP2h = p2hReports.Count;
+            int criticalP2hDefects = p2hReports.Count(r => r.GolA_Json != null && r.GolA_Json.Contains("NOT_GOOD"));
+            int simperViolations = p2hReports.Count(r => r.SimperKimper == "TIDAK");
+
+            ViewBag.ActiveEmployeesCount = activeKaryawans.Count;
+            ViewBag.FullyCompliantCount = fullyCompliantCount;
+            ViewBag.ParticipatingCount = participatingCount;
+            ViewBag.InactiveCount = inactiveCount;
+
+            ViewBag.TargetH = targetH; ViewBag.ActualH = actualH;
+            ViewBag.TargetI = targetI; ViewBag.ActualI = actualI;
+            ViewBag.TargetS = targetS; ViewBag.ActualS = actualS;
+            ViewBag.TargetO = targetO; ViewBag.ActualO = actualO;
+            ViewBag.TargetC = targetC; ViewBag.ActualC = actualC;
+
+            ViewBag.AgeCritical = ageCritical;
+            ViewBag.AgeWarning = ageWarning;
+            ViewBag.AgeNew = ageNew;
+            ViewBag.TotalOpenHazards = openHazards.Count;
+
+            ViewBag.TotalP2h = totalP2h;
+            ViewBag.CriticalP2hDefects = criticalP2hDefects;
+            ViewBag.SimperViolations = simperViolations;
+
+            // 5. Maincon Group Comparison Calculation
+            var mainconNames = new[] { "UNGGUL DINAMIKA UTAMA", "KALIMANTAN PRIMA PERSADA", "MEGA GLOBAL ENERGY" };
+            var mainconList = new List<PerusahaanView>();
+            foreach (var mName in mainconNames)
+            {
+                var found = await _context.Perusahaans.AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.StatusAktif && p.NamaPerusahaan != null && p.NamaPerusahaan.Contains(mName));
+                if (found != null)
+                {
+                    mainconList.Add(found);
+                }
+            }
+
+            var startOfMonthMaincon = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var mainconGroupComparisonList = new List<MainconGroupComparisonViewModel>();
+            var allSubconStats = new List<MostActiveSubconViewModel>();
+
+            foreach (var mcon in mainconList)
+            {
+                var subcons = await _context.Perusahaans.AsNoTracking()
+                    .Where(p => p.PerusahaanIndukId == mcon.PerusahaanId && p.StatusAktif)
+                    .OrderBy(p => p.NamaPerusahaan)
+                    .ToListAsync();
+
+                var relatedCompanies = new List<PerusahaanView> { mcon };
+                relatedCompanies.AddRange(subcons);
+
+                var companyIds = relatedCompanies.Select(rc => rc.PerusahaanId).ToList();
+
+                // Batch retrieval for employees
+                var allGroupKaryawans = await _context.Karyawans.AsNoTracking()
+                    .Where(k => k.StatusAktif && companyIds.Contains(k.IdPerusahaan))
+                    .ToListAsync();
+                
+                var allGroupKaryawanIds = allGroupKaryawans.Select(k => k.IdKaryawan).ToList();
+                var allGroupTargets = await _context.KaryawanJabatanMappings.AsNoTracking()
+                    .Where(m => allGroupKaryawanIds.Contains(m.KaryawanId))
+                    .ToDictionaryAsync(m => m.KaryawanId);
+
+                // Fetch MTD actual logs
+                var allGroupHazards = await _context.HazardReports.AsNoTracking()
+                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && companyIds.Contains(h.PerusahaanId.Value) && h.CreatedAt >= startOfMonthMaincon)
+                    .Select(h => new { PerusahaanId = h.PerusahaanId.Value, h.Nik })
+                    .ToListAsync();
+
+                var allGroupInspections = await _context.Inspections.AsNoTracking()
+                    .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && companyIds.Contains(i.PerusahaanId.Value) && i.CreatedAt >= startOfMonthMaincon)
+                    .Select(i => new { PerusahaanId = i.PerusahaanId.Value, i.Nik })
+                    .ToListAsync();
+
+                var allGroupSafetyTalks = await _context.SafetyTalks.AsNoTracking()
+                    .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && companyIds.Contains(s.PerusahaanId.Value) && s.CreatedAt >= startOfMonthMaincon)
+                    .Select(s => new { PerusahaanId = s.PerusahaanId.Value, s.Nik })
+                    .ToListAsync();
+
+                var allGroupCoachingCreators = await _context.Coachings.AsNoTracking()
+                    .Where(co => !co.IsDeleted && co.PerusahaanId.HasValue && companyIds.Contains(co.PerusahaanId.Value) && co.CreatedAt >= startOfMonthMaincon)
+                    .Select(co => new { PerusahaanId = co.PerusahaanId.Value, co.Nik })
+                    .ToListAsync();
+
+                var allGroupCoachingParticipants = await _context.CoachingParticipants.AsNoTracking()
+                    .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId.HasValue && companyIds.Contains(p.Coaching.PerusahaanId.Value) && p.Coaching.CreatedAt >= startOfMonthMaincon)
+                    .Select(p => new { PerusahaanId = p.Coaching!.PerusahaanId.Value, p.Nik })
+                    .ToListAsync();
+
+                var allGroupCoachings = allGroupCoachingCreators.Concat(allGroupCoachingParticipants).ToList();
+
+                var allGroupObservations = await (from o in _context.Observations.AsNoTracking()
+                                                   join k in _context.Karyawans.AsNoTracking() on o.Nik equals k.NoNik
+                                                   where !o.IsDeleted && o.CreatedAt >= startOfMonthMaincon && companyIds.Contains(k.IdPerusahaan)
+                                                   select new { PerusahaanId = k.IdPerusahaan, o.Nik })
+                                                   .ToListAsync();
+
+                int totalGroupEmployees = allGroupKaryawans.Count;
+                int employeesWithTargetCount = 0;
+                int totalTargetH = 0, totalActualH = 0;
+                int totalTargetI = 0, totalActualI = 0;
+                int totalTargetS = 0, totalActualS = 0;
+                int totalTargetO = 0, totalActualO = 0;
+                int totalTargetC = 0, totalActualC = 0;
+
+                var hazByNik = allGroupHazards.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var insByNik = allGroupInspections.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var stByNik = allGroupSafetyTalks.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var coaByNik = allGroupCoachings.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var obsByNik = allGroupObservations.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+                foreach (var emp in allGroupKaryawans)
+                {
+                    var nik = (emp.NoNik ?? string.Empty).Trim();
+                    int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0;
+                    if (allGroupTargets.TryGetValue(emp.IdKaryawan, out var t))
+                    {
+                        hTar = t.TargetHazardReport ?? 2;
+                        insTar = t.TargetInspeksi ?? 1;
+                        stTar = t.TargetSafetyTalk ?? 1;
+                        obsTar = t.TargetObservasi ?? 0;
+                        cTar = t.TargetCoaching ?? 0;
+                    }
+
+                    if (hTar + insTar + stTar + obsTar + cTar > 0)
+                    {
+                        employeesWithTargetCount++;
+                    }
+
+                    int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
+                    int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
+                    int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
+                    int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
+                    int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
+
+                    int cappedH = Math.Min(actH, hTar);
+                    int cappedI = Math.Min(actI, insTar);
+                    int cappedST = Math.Min(actST, stTar);
+                    int cappedO = Math.Min(actO, obsTar);
+                    int cappedC = Math.Min(actC, cTar);
+
+                    totalTargetH += hTar; totalActualH += cappedH;
+                    totalTargetI += insTar; totalActualI += cappedI;
+                    totalTargetS += stTar; totalActualS += cappedST;
+                    totalTargetO += obsTar; totalActualO += cappedO;
+                    totalTargetC += cTar; totalActualC += cappedC;
+                }
+
+                // Subcon calculations
+                foreach (var sub in subcons)
+                {
+                    var subKaryawans = allGroupKaryawans.Where(k => k.IdPerusahaan == sub.PerusahaanId).ToList();
+                    int subTargetH = 0, subActualH = 0;
+                    int subTargetI = 0, subActualI = 0;
+                    int subTargetS = 0, subActualS = 0;
+                    int subTargetO = 0, subActualO = 0;
+                    int subTargetC = 0, subActualC = 0;
+                    int subEmpsWithTarget = 0;
+
+                    foreach (var emp in subKaryawans)
+                    {
+                        var nik = (emp.NoNik ?? string.Empty).Trim();
+                        int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0;
+                        if (allGroupTargets.TryGetValue(emp.IdKaryawan, out var t))
+                        {
+                            hTar = t.TargetHazardReport ?? 2;
+                            insTar = t.TargetInspeksi ?? 1;
+                            stTar = t.TargetSafetyTalk ?? 1;
+                            obsTar = t.TargetObservasi ?? 0;
+                            cTar = t.TargetCoaching ?? 0;
+                        }
+
+                        if (hTar + insTar + stTar + obsTar + cTar > 0)
+                        {
+                            subEmpsWithTarget++;
+                        }
+
+                        int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
+                        int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
+                        int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
+                        int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
+                        int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
+
+                        int cappedH = Math.Min(actH, hTar);
+                        int cappedI = Math.Min(actI, insTar);
+                        int cappedST = Math.Min(actST, stTar);
+                        int cappedO = Math.Min(actO, obsTar);
+                        int cappedC = Math.Min(actC, cTar);
+
+                        subTargetH += hTar; subActualH += cappedH;
+                        subTargetI += insTar; subActualI += cappedI;
+                        subTargetS += stTar; subActualS += cappedST;
+                        subTargetO += obsTar; subActualO += cappedO;
+                        subTargetC += cTar; subActualC += cappedC;
+                    }
+
+                    int subTargetTotal = subTargetH + subTargetI + subTargetS + subTargetO + subTargetC;
+                    int subActualTotal = subActualH + subActualI + subActualS + subActualO + subActualC;
+
+                    int subRawSubmissions = 
+                        allGroupHazards.Count(x => x.PerusahaanId == sub.PerusahaanId) +
+                        allGroupInspections.Count(x => x.PerusahaanId == sub.PerusahaanId) +
+                        allGroupSafetyTalks.Count(x => x.PerusahaanId == sub.PerusahaanId) +
+                        allGroupCoachings.Count(x => x.PerusahaanId == sub.PerusahaanId) +
+                        allGroupObservations.Count(x => x.PerusahaanId == sub.PerusahaanId);
+
+                    if (subEmpsWithTarget > 0)
+                    {
+                        allSubconStats.Add(new MostActiveSubconViewModel
+                        {
+                            PerusahaanId = sub.PerusahaanId,
+                            PerusahaanName = sub.NamaPerusahaan ?? "Unknown",
+                            ParentCompanyName = mcon.NamaPerusahaan ?? "Unknown",
+                            TotalEmployees = subKaryawans.Count,
+                            EmployeesWithTarget = subEmpsWithTarget,
+                            ComplianceRate = subTargetTotal > 0 ? Math.Round((double)subActualTotal / subTargetTotal * 100.0, 1) : 0,
+                            TotalSubmissions = subRawSubmissions
+                        });
+                    }
+                }
+
+                int totalGroupTarget = totalTargetH + totalTargetI + totalTargetS + totalTargetO + totalTargetC;
+                int totalGroupActual = totalActualH + totalActualI + totalActualS + totalActualO + totalActualC;
+
+                var uncompliantSubs = new List<string>();
+                foreach (var sub in subcons)
+                {
+                    int subActualCount = 
+                        allGroupHazards.Count(x => x.PerusahaanId == sub.PerusahaanId) +
+                        allGroupInspections.Count(x => x.PerusahaanId == sub.PerusahaanId) +
+                        allGroupSafetyTalks.Count(x => x.PerusahaanId == sub.PerusahaanId) +
+                        allGroupCoachings.Count(x => x.PerusahaanId == sub.PerusahaanId) +
+                        allGroupObservations.Count(x => x.PerusahaanId == sub.PerusahaanId);
+
+                    if (subActualCount == 0)
+                    {
+                        uncompliantSubs.Add(sub.NamaPerusahaan ?? "Unknown");
+                    }
+                }
+
+                var compVm = new MainconGroupComparisonViewModel
+                {
+                    MainconId = mcon.PerusahaanId,
+                    MainconName = mcon.NamaPerusahaan ?? "Unknown",
+                    TotalEmployees = totalGroupEmployees,
+                    EmployeesWithTargetCount = employeesWithTargetCount,
+                    ChildCompanyNames = subcons.Select(s => s.NamaPerusahaan ?? "Unknown").ToList(),
+                    UncompliantChildCompanyNames = uncompliantSubs,
+                    OverallComplianceRate = totalGroupTarget > 0 ? Math.Round((double)totalGroupActual / totalGroupTarget * 100.0, 1) : 0,
+                    HazardComplianceRate = totalTargetH > 0 ? Math.Round((double)totalActualH / totalTargetH * 100.0, 1) : 0,
+                    InspeksiComplianceRate = totalTargetI > 0 ? Math.Round((double)totalActualI / totalTargetI * 100.0, 1) : 0,
+                    SafetyTalkComplianceRate = totalTargetS > 0 ? Math.Round((double)totalActualS / totalTargetS * 100.0, 1) : 0,
+                    ObservasiComplianceRate = totalTargetO > 0 ? Math.Round((double)totalActualO / totalTargetO * 100.0, 1) : 0,
+                    CoachingComplianceRate = totalTargetC > 0 ? Math.Round((double)totalActualC / totalTargetC * 100.0, 1) : 0,
+                    
+                    TargetHazard = totalTargetH, ActualHazard = totalActualH,
+                    TargetInspeksi = totalTargetI, ActualInspeksi = totalActualI,
+                    TargetSafetyTalk = totalTargetS, ActualSafetyTalk = totalActualS,
+                    TargetObservasi = totalTargetO, ActualObservasi = totalActualO,
+                    TargetCoaching = totalTargetC, ActualCoaching = totalActualC
+                };
+
+                mainconGroupComparisonList.Add(compVm);
+            }
+
+            var mostActiveSubcon = allSubconStats
+                .OrderByDescending(s => s.ComplianceRate)
+                .ThenByDescending(s => s.TotalSubmissions)
+                .FirstOrDefault();
+
+            ViewBag.MostActiveSubcon = mostActiveSubcon;
+            ViewBag.MainconGroupComparison = mainconGroupComparisonList;
+
+            return View(paginatedEmployees);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> MainconPerformance()
+        {
+            ViewData["HeaderTitle"] = "Performa Perusahaan Utama";
+            ViewData["ActiveTab"] = "Performance";
+
+            await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
+
+            var mainconNames = new[] { "UNGGUL DINAMIKA UTAMA", "KALIMANTAN PRIMA PERSADA", "MEGA GLOBAL ENERGY" };
+            var mainconList = new List<PerusahaanView>();
+            foreach (var mName in mainconNames)
+            {
+                var found = await _context.Perusahaans.AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.StatusAktif && p.NamaPerusahaan != null && p.NamaPerusahaan.Contains(mName));
+                if (found != null)
+                {
+                    mainconList.Add(found);
+                }
+            }
+
+            var startOfMonthMaincon = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var reportList = new List<MainconPerformanceReportViewModel>();
+
+            foreach (var mcon in mainconList)
+            {
+                var subcons = await _context.Perusahaans.AsNoTracking()
+                    .Where(p => p.PerusahaanIndukId == mcon.PerusahaanId && p.StatusAktif)
+                    .OrderBy(p => p.NamaPerusahaan)
+                    .ToListAsync();
+
+                var relatedCompanies = new List<PerusahaanView> { mcon };
+                relatedCompanies.AddRange(subcons);
+
+                var companyIds = relatedCompanies.Select(rc => rc.PerusahaanId).ToList();
+
+                // Batch retrieval for employees
+                var allGroupKaryawans = await _context.Karyawans.AsNoTracking()
+                    .Where(k => k.StatusAktif && companyIds.Contains(k.IdPerusahaan))
+                    .ToListAsync();
+                
+                var allGroupKaryawanIds = allGroupKaryawans.Select(k => k.IdKaryawan).ToList();
+                var allGroupTargets = await _context.KaryawanJabatanMappings.AsNoTracking()
+                    .Where(m => allGroupKaryawanIds.Contains(m.KaryawanId))
+                    .ToDictionaryAsync(m => m.KaryawanId);
+
+                // Fetch MTD actual logs
+                var allGroupHazards = await _context.HazardReports.AsNoTracking()
+                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && companyIds.Contains(h.PerusahaanId.Value) && h.CreatedAt >= startOfMonthMaincon)
+                    .Select(h => new { PerusahaanId = h.PerusahaanId.Value, h.Nik })
+                    .ToListAsync();
+
+                var allGroupInspections = await _context.Inspections.AsNoTracking()
+                    .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && companyIds.Contains(i.PerusahaanId.Value) && i.CreatedAt >= startOfMonthMaincon)
+                    .Select(i => new { PerusahaanId = i.PerusahaanId.Value, i.Nik })
+                    .ToListAsync();
+
+                var allGroupSafetyTalks = await _context.SafetyTalks.AsNoTracking()
+                    .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && companyIds.Contains(s.PerusahaanId.Value) && s.CreatedAt >= startOfMonthMaincon)
+                    .Select(s => new { PerusahaanId = s.PerusahaanId.Value, s.Nik })
+                    .ToListAsync();
+
+                var allGroupCoachingCreators = await _context.Coachings.AsNoTracking()
+                    .Where(co => !co.IsDeleted && co.PerusahaanId.HasValue && companyIds.Contains(co.PerusahaanId.Value) && co.CreatedAt >= startOfMonthMaincon)
+                    .Select(co => new { PerusahaanId = co.PerusahaanId.Value, co.Nik })
+                    .ToListAsync();
+
+                var allGroupCoachingParticipants = await _context.CoachingParticipants.AsNoTracking()
+                    .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId.HasValue && companyIds.Contains(p.Coaching.PerusahaanId.Value) && p.Coaching.CreatedAt >= startOfMonthMaincon)
+                    .Select(p => new { PerusahaanId = p.Coaching!.PerusahaanId.Value, p.Nik })
+                    .ToListAsync();
+
+                var allGroupCoachings = allGroupCoachingCreators.Concat(allGroupCoachingParticipants).ToList();
+
+                var allGroupObservations = await (from o in _context.Observations.AsNoTracking()
+                                                   join k in _context.Karyawans.AsNoTracking() on o.Nik equals k.NoNik
+                                                   where !o.IsDeleted && o.CreatedAt >= startOfMonthMaincon && companyIds.Contains(k.IdPerusahaan)
+                                                   select new { PerusahaanId = k.IdPerusahaan, o.Nik })
+                                                   .ToListAsync();
+
+                var hazByNik = allGroupHazards.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var insByNik = allGroupInspections.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var stByNik = allGroupSafetyTalks.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var coaByNik = allGroupCoachings.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                var obsByNik = allGroupObservations.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+                var report = new MainconPerformanceReportViewModel
+                {
+                    MainconId = mcon.PerusahaanId,
+                    MainconName = mcon.NamaPerusahaan ?? "Unknown"
+                };
+
+                int groupTargetH = 0, groupActualH = 0;
+                int groupTargetI = 0, groupActualI = 0;
+                int groupTargetS = 0, groupActualS = 0;
+                int groupTargetO = 0, groupActualO = 0;
+                int groupTargetC = 0, groupActualC = 0;
+                int groupEmpsWithTarget = 0;
+
+                foreach (var company in relatedCompanies)
+                {
+                    var compKaryawans = allGroupKaryawans.Where(k => k.IdPerusahaan == company.PerusahaanId).ToList();
+                    int compTargetH = 0, compActualH = 0;
+                    int compTargetI = 0, compActualI = 0;
+                    int compTargetS = 0, compActualS = 0;
+                    int compTargetO = 0, compActualO = 0;
+                    int compTargetC = 0, compActualC = 0;
+                    int compEmpsWithTarget = 0;
+
+                    foreach (var emp in compKaryawans)
+                    {
+                        var nik = (emp.NoNik ?? string.Empty).Trim();
+                        int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0;
+                        if (allGroupTargets.TryGetValue(emp.IdKaryawan, out var t))
+                        {
+                            hTar = t.TargetHazardReport ?? 2;
+                            insTar = t.TargetInspeksi ?? 1;
+                            stTar = t.TargetSafetyTalk ?? 1;
+                            obsTar = t.TargetObservasi ?? 0;
+                            cTar = t.TargetCoaching ?? 0;
+                        }
+
+                        if (hTar + insTar + stTar + obsTar + cTar > 0)
+                        {
+                            compEmpsWithTarget++;
+                        }
+
+                        int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
+                        int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
+                        int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
+                        int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
+                        int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
+
+                        int cappedH = Math.Min(actH, hTar);
+                        int cappedI = Math.Min(actI, insTar);
+                        int cappedST = Math.Min(actST, stTar);
+                        int cappedO = Math.Min(actO, obsTar);
+                        int cappedC = Math.Min(actC, cTar);
+
+                        compTargetH += hTar; compActualH += cappedH;
+                        compTargetI += insTar; compActualI += cappedI;
+                        compTargetS += stTar; compActualS += cappedST;
+                        compTargetO += obsTar; compActualO += cappedO;
+                        compTargetC += cTar; compActualC += cappedC;
+                    }
+
+                    int compTargetTotal = compTargetH + compTargetI + compTargetS + compTargetO + compTargetC;
+                    int compActualTotal = compActualH + compActualI + compActualS + compActualO + compActualC;
+
+                    int compRawSubmissions = 
+                        allGroupHazards.Count(x => x.PerusahaanId == company.PerusahaanId) +
+                        allGroupInspections.Count(x => x.PerusahaanId == company.PerusahaanId) +
+                        allGroupSafetyTalks.Count(x => x.PerusahaanId == company.PerusahaanId) +
+                        allGroupCoachings.Count(x => x.PerusahaanId == company.PerusahaanId) +
+                        allGroupObservations.Count(x => x.PerusahaanId == company.PerusahaanId);
+
+                    report.SubconPerformances.Add(new SubconPerformanceViewModel
+                    {
+                        PerusahaanId = company.PerusahaanId,
+                        PerusahaanName = company.NamaPerusahaan ?? "Unknown",
+                        IsMaincon = company.PerusahaanId == mcon.PerusahaanId,
+                        TotalEmployees = compKaryawans.Count,
+                        EmployeesWithTarget = compEmpsWithTarget,
+                        OverallComplianceRate = compTargetTotal > 0 ? Math.Round((double)compActualTotal / compTargetTotal * 100.0, 1) : 0,
+                        TotalSubmissions = compRawSubmissions,
+                        ActualHazard = compActualH, TargetHazard = compTargetH,
+                        ActualInspeksi = compActualI, TargetInspeksi = compTargetI,
+                        ActualSafetyTalk = compActualS, TargetSafetyTalk = compTargetS,
+                        ActualObservasi = compActualO, TargetObservasi = compTargetO,
+                        ActualCoaching = compActualC, TargetCoaching = compTargetC
+                    });
+
+                    groupTargetH += compTargetH; groupActualH += compActualH;
+                    groupTargetI += compTargetI; groupActualI += compActualI;
+                    groupTargetS += compTargetS; groupActualS += compActualS;
+                    groupTargetO += compTargetO; groupActualO += compActualO;
+                    groupTargetC += compTargetC; groupActualC += compActualC;
+                    groupEmpsWithTarget += compEmpsWithTarget;
+                }
+
+                int totalGroupTarget = groupTargetH + groupTargetI + groupTargetS + groupTargetO + groupTargetC;
+                int totalGroupActual = groupActualH + groupActualI + groupActualS + groupActualO + groupActualC;
+
+                report.TotalEmployees = allGroupKaryawans.Count;
+                report.EmployeesWithTarget = groupEmpsWithTarget;
+                report.OverallComplianceRate = totalGroupTarget > 0 ? Math.Round((double)totalGroupActual / totalGroupTarget * 100.0, 1) : 0;
+                report.TotalSubmissions = allGroupHazards.Count + allGroupInspections.Count + allGroupSafetyTalks.Count + allGroupCoachings.Count + allGroupObservations.Count;
+
+                report.HazardRate = groupTargetH > 0 ? Math.Round((double)groupActualH / groupTargetH * 100.0, 1) : 0;
+                report.InspeksiRate = groupTargetI > 0 ? Math.Round((double)groupActualI / groupTargetI * 100.0, 1) : 0;
+                report.SafetyTalkRate = groupTargetS > 0 ? Math.Round((double)groupActualS / groupTargetS * 100.0, 1) : 0;
+                report.ObservasiRate = groupTargetO > 0 ? Math.Round((double)groupActualO / groupTargetO * 100.0, 1) : 0;
+                report.CoachingRate = groupTargetC > 0 ? Math.Round((double)groupActualC / groupTargetC * 100.0, 1) : 0;
+
+                reportList.Add(report);
+            }
+
+            return View(reportList);
         }
 
         [HttpGet]
@@ -2931,5 +3822,116 @@ namespace MBS_SAP.Controllers
         public double MtdP5mRate { get; set; }
         public double MtdObservasiRate { get; set; }
         public double MtdCoachingRate { get; set; }
+    }
+
+    public class ComplianceEmployeeViewModel
+    {
+        public string KaryawanName { get; set; } = string.Empty;
+        public string Nik { get; set; } = string.Empty;
+        public string DepartmentName { get; set; } = string.Empty;
+        public string JabatanName { get; set; } = string.Empty;
+        public int CompanyId { get; set; }
+        public int MtdTotalTarget { get; set; }
+        public int MtdTotalActual { get; set; }
+        public double ComplianceRate { get; set; }
+        public ComplianceItemDetail Hazard { get; set; } = new();
+        public ComplianceItemDetail Inspeksi { get; set; } = new();
+        public ComplianceItemDetail SafetyTalk { get; set; } = new();
+        public ComplianceItemDetail Observasi { get; set; } = new();
+        public ComplianceItemDetail Coaching { get; set; } = new();
+        public ComplianceItemDetail P5m { get; set; } = new();
+    }
+
+    public class ComplianceItemDetail
+    {
+        public int Target { get; set; }
+        public int Actual { get; set; }
+    }
+
+    public class ComplianceGroupStatViewModel
+    {
+        public string GroupName { get; set; } = string.Empty;
+        public int TotalCreated { get; set; }
+        public int OpenCount { get; set; }
+        public int ClosedCount { get; set; }
+        public double ClosureRate => TotalCreated > 0 ? Math.Round((double)ClosedCount / TotalCreated * 100.0, 1) : 0;
+    }
+
+    public class MainconGroupComparisonViewModel
+    {
+        public int MainconId { get; set; }
+        public string MainconName { get; set; } = string.Empty;
+        public int TotalEmployees { get; set; }
+        public int EmployeesWithTargetCount { get; set; }
+        public List<string> ChildCompanyNames { get; set; } = new();
+        public List<string> UncompliantChildCompanyNames { get; set; } = new();
+        public double OverallComplianceRate { get; set; }
+        public double HazardComplianceRate { get; set; }
+        public double InspeksiComplianceRate { get; set; }
+        public double SafetyTalkComplianceRate { get; set; }
+        public double ObservasiComplianceRate { get; set; }
+        public double CoachingComplianceRate { get; set; }
+
+        public int TargetHazard { get; set; }
+        public int ActualHazard { get; set; }
+        public int TargetInspeksi { get; set; }
+        public int ActualInspeksi { get; set; }
+        public int TargetSafetyTalk { get; set; }
+        public int ActualSafetyTalk { get; set; }
+        public int TargetObservasi { get; set; }
+        public int ActualObservasi { get; set; }
+        public int TargetCoaching { get; set; }
+        public int ActualCoaching { get; set; }
+    }
+
+    public class MostActiveSubconViewModel
+    {
+        public int PerusahaanId { get; set; }
+        public string PerusahaanName { get; set; } = string.Empty;
+        public string ParentCompanyName { get; set; } = string.Empty;
+        public int TotalEmployees { get; set; }
+        public int EmployeesWithTarget { get; set; }
+        public double ComplianceRate { get; set; }
+        public int TotalSubmissions { get; set; }
+    }
+
+    public class MainconPerformanceReportViewModel
+    {
+        public int MainconId { get; set; }
+        public string MainconName { get; set; } = string.Empty;
+        public int TotalEmployees { get; set; }
+        public int EmployeesWithTarget { get; set; }
+        public double OverallComplianceRate { get; set; }
+        public int TotalSubmissions { get; set; }
+        
+        public double HazardRate { get; set; }
+        public double InspeksiRate { get; set; }
+        public double SafetyTalkRate { get; set; }
+        public double ObservasiRate { get; set; }
+        public double CoachingRate { get; set; }
+
+        public List<SubconPerformanceViewModel> SubconPerformances { get; set; } = new();
+    }
+
+    public class SubconPerformanceViewModel
+    {
+        public int PerusahaanId { get; set; }
+        public string PerusahaanName { get; set; } = string.Empty;
+        public bool IsMaincon { get; set; }
+        public int TotalEmployees { get; set; }
+        public int EmployeesWithTarget { get; set; }
+        public double OverallComplianceRate { get; set; }
+        public int TotalSubmissions { get; set; }
+
+        public int ActualHazard { get; set; }
+        public int TargetHazard { get; set; }
+        public int ActualInspeksi { get; set; }
+        public int TargetInspeksi { get; set; }
+        public int ActualSafetyTalk { get; set; }
+        public int TargetSafetyTalk { get; set; }
+        public int ActualObservasi { get; set; }
+        public int TargetObservasi { get; set; }
+        public int ActualCoaching { get; set; }
+        public int TargetCoaching { get; set; }
     }
 }

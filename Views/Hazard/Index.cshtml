@@ -342,6 +342,10 @@
                                                     <li><a class="dropdown-item text-success" href="javascript:void(0)" onclick="openCloseHazard(@item.Id, '@((item.NikPja ?? string.Empty).Replace("'", "\\'"))', '@((item.Pja ?? string.Empty).Replace("'", "\\'"))')"><i class="bi bi-check2-circle me-2"></i>Close Hazard</a></li>
                                                 }
                                             }
+                                            @if (!string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="openReassignModal(@item.Id, 'Hazard')"><i class="bi bi-person-lines-fill me-2 text-warning"></i>Alihkan PJA</a></li>
+                                            }
                                             <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="generateHazardPdf(@item.Id, 'download', event)"><i class="bi bi-file-earmark-pdf-fill me-2 text-danger"></i>Download PDF</a></li>
                                             <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="generateHazardPdf(@item.Id, 'share', event)"><i class="bi bi-share-fill me-2 text-info"></i>Share PDF</a></li>
                                             @if (isCreatorOrAdmin && !string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase))

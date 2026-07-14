@@ -819,6 +819,15 @@
 
                 if (photoMissing) {
                     e.preventDefault();
+                    if (firstInvalid) {
+                        $('html, body').animate({
+                            scrollTop: firstInvalid.offset().top - 120
+                        }, 300);
+                    }
+                    return false;
+                }
+            });
+
         function toggleDefectPhoto(category, index, status) {
             const wrapper = document.getElementById(`photo_wrapper_${category}_${index}`);
             const input = document.getElementById(`photo_input_${category}_${index}`);
