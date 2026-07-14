@@ -2147,7 +2147,7 @@ namespace MBS_SAP.Controllers
             else
             {
                 allowedCompanies = allCompanies
-                    .Where(p => resolvedCompanyId == null || p.PerusahaanId == resolvedCompanyId)
+                    .Where(p => allowedCompanyIds.Contains(p.PerusahaanId))
                     .ToList();
             }
 
@@ -2158,13 +2158,35 @@ namespace MBS_SAP.Controllers
 
             int selectedCompanyId = companyId ?? (resolvedCompanyId ?? allowedCompanies.First().PerusahaanId);
             
-            // Security check: Non-admins cannot inspect other companies' internal dept list
-            if (!isAdmin && !isSafetyRole && selectedCompanyId != resolvedCompanyId)
+            // Security check: Non-admins cannot inspect other companies' internal dept list unless allowed by scope
+            if (!isAdmin && !isSafetyRole && !allowedCompanyIds.Contains(selectedCompanyId))
             {
                 selectedCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
             }
 
             var selectedCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? allowedCompanies.First();
+
+            // FILTER dropdown list to only show the selected company and its child companies (subcons)
+            var dropdownCompanyIds = new HashSet<int> { selectedCompany.PerusahaanId };
+            var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+            
+            void GetDescendants(int parentId)
+            {
+                var childrenFromParentId = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
+                var childrenFromRelations = relations.Where(r => r.ParentCompanyId == parentId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
+                var children = childrenFromParentId.Concat(childrenFromRelations).Distinct().ToList();
+
+                foreach (var childId in children)
+                {
+                    if (dropdownCompanyIds.Add(childId))
+                    {
+                        GetDescendants(childId);
+                    }
+                }
+            }
+            GetDescendants(selectedCompany.PerusahaanId);
+
+            allowedCompanies = allowedCompanies.Where(c => dropdownCompanyIds.Contains(c.PerusahaanId)).ToList();
 
             ViewBag.Companies = allowedCompanies;
             ViewBag.SelectedCompanyId = selectedCompany.PerusahaanId;
