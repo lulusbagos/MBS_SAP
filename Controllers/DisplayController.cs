@@ -272,11 +272,11 @@ namespace MBS_SAP.Controllers
                     foreach (var sId in subconIds)
                     {
                         bool hasData = 
-                            await _context.HazardReports.AnyAsync(x => !x.IsDeleted && x.PerusahaanId == sId && x.CreatedAt >= startOfMonthMaincon) ||
-                            await _context.Inspections.AnyAsync(x => !x.IsDeleted && x.PerusahaanId == sId && x.CreatedAt >= startOfMonthMaincon) ||
-                            await _context.SafetyTalks.AnyAsync(x => !x.IsDeleted && x.PerusahaanId == sId && x.CreatedAt >= startOfMonthMaincon) ||
-                            await _context.Coachings.AnyAsync(x => !x.IsDeleted && x.PerusahaanId == sId && x.CreatedAt >= startOfMonthMaincon) ||
-                            await _context.Observations.AnyAsync(o => !o.IsDeleted && o.CreatedAt >= startOfMonthMaincon && _context.Karyawans.Any(k => k.NoNik == o.Nik && k.IdPerusahaan == sId));
+                            monthHazardsByCompany.Contains(sId) ||
+                            monthInspectionsByCompany.Contains(sId) ||
+                            monthSafetyTalksByCompany.Contains(sId) ||
+                            monthCoachingsByCompany.Contains(sId) ||
+                            monthObservationsByCompany.Contains(sId);
 
                         if (hasData)
                         {
