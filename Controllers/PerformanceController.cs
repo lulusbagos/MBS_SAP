@@ -2170,6 +2170,37 @@ namespace MBS_SAP.Controllers
             var dropdownCompanyIds = new HashSet<int> { selectedCompany.PerusahaanId };
             var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
             
+            // Check if selected company has children
+            var hasChildren = allCompanies.Any(c => c.PerusahaanIndukId == selectedCompany.PerusahaanId) || 
+                              relations.Any(r => r.ParentCompanyId == selectedCompany.PerusahaanId);
+            
+            int rootId = selectedCompany.PerusahaanId;
+            if (!hasChildren)
+            {
+                // If it has no children, set root to its parent so we show parent and siblings
+                var directParentId = selectedCompany.PerusahaanIndukId;
+                var relationParentId = relations.FirstOrDefault(r => r.ChildCompanyId == selectedCompany.PerusahaanId && r.ParentCompanyId.HasValue)?.ParentCompanyId;
+                int? parentId = (directParentId != null && directParentId > 0) ? directParentId : relationParentId;
+                if (parentId.HasValue && parentId > 0)
+                {
+                    rootId = parentId.Value;
+                    dropdownCompanyIds.Add(rootId);
+                }
+            }
+
+            // Also, always allow going back to the parent of the current root
+            var rootCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == rootId);
+            if (rootCompany != null)
+            {
+                var directParentId = rootCompany.PerusahaanIndukId;
+                var relationParentId = relations.FirstOrDefault(r => r.ChildCompanyId == rootId && r.ParentCompanyId.HasValue)?.ParentCompanyId;
+                int? rootParentId = (directParentId != null && directParentId > 0) ? directParentId : relationParentId;
+                if (rootParentId.HasValue && rootParentId > 0)
+                {
+                    dropdownCompanyIds.Add(rootParentId.Value);
+                }
+            }
+            
             void GetDescendants(int parentId)
             {
                 var childrenFromParentId = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
@@ -2184,7 +2215,7 @@ namespace MBS_SAP.Controllers
                     }
                 }
             }
-            GetDescendants(selectedCompany.PerusahaanId);
+            GetDescendants(rootId);
 
             allowedCompanies = allowedCompanies.Where(c => dropdownCompanyIds.Contains(c.PerusahaanId)).ToList();
 
