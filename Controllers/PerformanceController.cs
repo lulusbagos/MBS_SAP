@@ -2834,7 +2834,7 @@ namespace MBS_SAP.Controllers
                                                    select new { PerusahaanId = k.IdPerusahaan, o.Nik })
                                                    .ToListAsync();
 
-                int totalGroupEmployees = allGroupKaryawans.Count;
+                int totalGroupEmployees = 0;
                 int employeesWithTargetCount = 0;
                 int totalTargetH = 0, totalActualH = 0;
                 int totalTargetI = 0, totalActualI = 0;
@@ -2851,20 +2851,23 @@ namespace MBS_SAP.Controllers
                 foreach (var emp in allGroupKaryawans)
                 {
                     var nik = (emp.NoNik ?? string.Empty).Trim();
-                    int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0;
+                    int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0;
                     if (allGroupTargets.TryGetValue(emp.IdKaryawan, out var t))
                     {
-                        hTar = t.TargetHazardReport ?? 2;
-                        insTar = t.TargetInspeksi ?? 1;
-                        stTar = t.TargetSafetyTalk ?? 1;
+                        hTar = t.TargetHazardReport ?? 0;
+                        insTar = t.TargetInspeksi ?? 0;
+                        stTar = t.TargetSafetyTalk ?? 0;
                         obsTar = t.TargetObservasi ?? 0;
                         cTar = t.TargetCoaching ?? 0;
                     }
 
-                    if (hTar + insTar + stTar + obsTar + cTar > 0)
+                    if (hTar + insTar + stTar + obsTar + cTar == 0)
                     {
-                        employeesWithTargetCount++;
+                        continue;
                     }
+
+                    totalGroupEmployees++;
+                    employeesWithTargetCount++;
 
                     int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
                     int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
@@ -2899,20 +2902,22 @@ namespace MBS_SAP.Controllers
                     foreach (var emp in subKaryawans)
                     {
                         var nik = (emp.NoNik ?? string.Empty).Trim();
-                        int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0;
+                        int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0;
                         if (allGroupTargets.TryGetValue(emp.IdKaryawan, out var t))
                         {
-                            hTar = t.TargetHazardReport ?? 2;
-                            insTar = t.TargetInspeksi ?? 1;
-                            stTar = t.TargetSafetyTalk ?? 1;
+                            hTar = t.TargetHazardReport ?? 0;
+                            insTar = t.TargetInspeksi ?? 0;
+                            stTar = t.TargetSafetyTalk ?? 0;
                             obsTar = t.TargetObservasi ?? 0;
                             cTar = t.TargetCoaching ?? 0;
                         }
 
-                        if (hTar + insTar + stTar + obsTar + cTar > 0)
+                        if (hTar + insTar + stTar + obsTar + cTar == 0)
                         {
-                            subEmpsWithTarget++;
+                            continue;
                         }
+
+                        subEmpsWithTarget++;
 
                         int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
                         int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
