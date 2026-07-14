@@ -231,6 +231,43 @@
         transform: translateY(-3px);
         box-shadow: 0 12px 28px -10px rgba(59, 130, 246, 0.2);
     }
+    
+    /* Responsive SAP Breakdown Grid */
+    .sap-breakdown-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        background: var(--bg-body);
+        padding: 12px 8px;
+        border-radius: 12px;
+        border: 1.5px solid var(--border-color);
+        text-align: center;
+        gap: 4px;
+        margin-top: 10px;
+    }
+    .sap-cell {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .sap-cell:not(:last-child) {
+        border-right: 1.5px solid var(--border-color);
+    }
+    @@media (max-width: 768px) {
+        .sap-breakdown-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px 8px;
+        }
+        .sap-cell:not(:last-child) {
+            border-right: none;
+        }
+        .sap-cell {
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+    }
 </style>
 
 <div class="animate-fade-in pb-5">
@@ -356,32 +393,28 @@
                                                 </div>
  
                                                 <!-- SAP Breakdown metrics -->
-                                                <div class="d-flex justify-content-between align-items-center gap-1 mt-2.5 text-center" style="background: var(--bg-body); padding: 12px 8px; border-radius: 12px; border: 1.5px solid var(--border-color);">
-                                                    <div style="flex: 1;">
+                                                <div class="sap-breakdown-grid">
+                                                    <div class="sap-cell">
                                                         <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Hazard</div>
                                                         <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #6366f1;">@item.HazardComplianceRate%</div>
                                                         <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualHazard/@item.TargetHazard</div>
                                                     </div>
-                                                    <div style="width: 1px; height: 28px; background: var(--border-color);"></div>
-                                                    <div style="flex: 1;">
+                                                    <div class="sap-cell">
                                                         <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Inspeksi</div>
                                                         <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #3b82f6;">@item.InspeksiComplianceRate%</div>
                                                         <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualInspeksi/@item.TargetInspeksi</div>
                                                     </div>
-                                                    <div style="width: 1px; height: 28px; background: var(--border-color);"></div>
-                                                    <div style="flex: 1;">
+                                                    <div class="sap-cell">
                                                         <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">S-Talk</div>
                                                         <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #d97706;">@item.SafetyTalkComplianceRate%</div>
                                                         <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualSafetyTalk/@item.TargetSafetyTalk</div>
                                                     </div>
-                                                    <div style="width: 1px; height: 28px; background: var(--border-color);"></div>
-                                                    <div style="flex: 1;">
+                                                    <div class="sap-cell">
                                                         <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Observasi</div>
                                                         <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #ec4899;">@item.ObservasiComplianceRate%</div>
                                                         <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualObservasi/@item.TargetObservasi</div>
                                                     </div>
-                                                    <div style="width: 1px; height: 28px; background: var(--border-color);"></div>
-                                                    <div style="flex: 1;">
+                                                    <div class="sap-cell">
                                                         <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Coaching</div>
                                                         <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #a855f7;">@item.CoachingComplianceRate%</div>
                                                         <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualCoaching/@item.TargetCoaching</div>
@@ -406,10 +439,12 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             // Ambil warna text & border dari theme agar grafik kontras di light/dark mode
-            const rootStyle = getComputedStyle(document.documentElement);
-            const labelColor = rootStyle.getPropertyValue('--text-main').trim() || '#334155';
-            const mutedColor = rootStyle.getPropertyValue('--text-muted').trim() || '#64748b';
-            const gridColor = rootStyle.getPropertyValue('--border-color').trim() || 'rgba(0, 0, 0, 0.08)';
+            const bodyColor = getComputedStyle(document.body).color || '#1e293b';
+            const labelColor = bodyColor;
+            
+            // Deteksi jika tema aktif adalah dark mode untuk menentukan kontras kisi/gridline
+            const isDarkTheme = bodyColor.includes('255') || bodyColor.includes('f8') || bodyColor.includes('fa') || bodyColor.includes('ff');
+            const gridColor = isDarkTheme ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)';
 
             // Chart 4: Maincon Group Comparison (Grouped Bar Chart)
             const ctxMaincon = document.getElementById('mainconComparisonChart');
@@ -510,7 +545,7 @@
                                     pointStyle: 'circle',
                                     padding: 16,
                                     color: labelColor,
-                                    font: { size: 10, weight: '700', family: "'Outfit', 'Inter', sans-serif" }
+                                    font: { size: 11, weight: '700', family: "'Outfit', 'Inter', sans-serif" }
                                 }
                             },
                             tooltip: {
@@ -536,7 +571,7 @@
                                 grid: { display: false },
                                 ticks: { 
                                     color: labelColor, 
-                                    font: { size: 9.5, weight: '700', family: "'Outfit', sans-serif" },
+                                    font: { size: 11, weight: '800', family: "'Outfit', sans-serif" },
                                     padding: 8
                                 }
                             },
@@ -550,7 +585,7 @@
                                 },
                                 ticks: { 
                                     color: labelColor, 
-                                    font: { size: 10, weight: '500' },
+                                    font: { size: 11, weight: '700' },
                                     padding: 8,
                                     callback: function(value) { return value + '%'; }
                                 }
