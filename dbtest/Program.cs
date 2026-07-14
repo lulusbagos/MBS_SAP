@@ -3,8 +3,6 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using MBS_SAP.Data;
 using MBS_SAP.Models;
-using System.IO;
-using System.Collections.Generic;
 
 namespace dbtest
 {
@@ -17,58 +15,41 @@ namespace dbtest
 
             using (var context = new AppDbContext(optionsBuilder.Options))
             {
-                var parent = context.Perusahaans.FirstOrDefault(p => p.NamaPerusahaan.Contains("INDEXIM COALINDO") || p.NamaPerusahaan.Contains("PT. INDEXIM COALINDO"));
-                if (parent == null) {
-                    Console.WriteLine("Parent company not found!");
-                    return;
-                }
-
-                Console.WriteLine($"Parent Found: {parent.NamaPerusahaan} (ID: {parent.PerusahaanId})");
-
-                var members = context.Perusahaans.Where(p => p.PerusahaanIndukId == parent.PerusahaanId && p.StatusAktif).ToList();
-                Console.WriteLine($"Found {members.Count} active member companies.");
-
-                var neverLoggedIn = new List<string>();
-                var noData = new List<string>();
-
-                foreach (var member in members)
+                Console.WriteLine("=== RELATIONSHIPS IN tbl_r_perusahaan FOR MGE (Parent ID = 5) ===");
+                
+                try
                 {
-                    bool hasUsersLogged = context.AppUsers.Any(u => u.IdPerusahaan == member.PerusahaanId);
-                    if (!hasUsersLogged)
-                    {
-                        neverLoggedIn.Add(member.NamaPerusahaan ?? "Unknown");
-                    }
-                    else
-                    {
-                        bool hasData = 
-                            context.HazardReports.Any(x => x.PerusahaanId == member.PerusahaanId) ||
-                            context.Inspections.Any(x => x.PerusahaanId == member.PerusahaanId) ||
-                            context.ActionPlans.Any(x => x.PerusahaanId == member.PerusahaanId) ||
-                            context.SafetyTalks.Any(x => x.PerusahaanId == member.PerusahaanId) ||
-                            context.P5ms.Any(x => x.PerusahaanId == member.PerusahaanId) ||
-                            context.Observations.Any(x => x.Nik != null && context.AppUsers.Any(u => u.Nik == x.Nik && u.IdPerusahaan == member.PerusahaanId)) ||
-                            context.Coachings.Any(x => x.PerusahaanId == member.PerusahaanId) ||
-                            context.P2hReports.Any(x => x.Nik != null && context.AppUsers.Any(u => u.Nik == x.Nik && u.IdPerusahaan == member.PerusahaanId));
+                    var sql = @"
+                        SELECT r.id, r.id_parent, r.id_perusahaan, r.status_aktif, 
+                               p.nama_perusahaan as child_name
+                        FROM ONE_DB_MITRA.dbo.tbl_r_perusahaan r
+                        LEFT JOIN ONE_DB_MITRA.dbo.tbl_m_perusahaan p ON p.id = r.id_perusahaan
+                        WHERE r.id_parent = 5 AND r.deleted_at IS NULL";
                         
-                        if (!hasData)
+                    var conn = context.Database.GetDbConnection();
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = sql;
+                        using (var reader = cmd.ExecuteReader())
                         {
-                            noData.Add(member.NamaPerusahaan ?? "Unknown");
+                            int count = 0;
+                            while (reader.Read())
+                            {
+                                Console.WriteLine($"ID={reader["id"]}, Parent={reader["id_parent"]}, Child={reader["id_perusahaan"]} ({reader["child_name"]}), Status={reader["status_aktif"]}");
+                                count++;
+                            }
+                            if (count == 0)
+                            {
+                                Console.WriteLine("No relationship records found in tbl_r_perusahaan for parent ID = 5.");
+                            }
                         }
                     }
                 }
-
-                using (var writer = new StreamWriter("output.md"))
+                catch (Exception ex)
                 {
-                    writer.WriteLine("### 🔴 Perusahaan yang TIDAK PERNAH LOGIN sama sekali");
-                    neverLoggedIn.Sort();
-                    foreach (var c in neverLoggedIn) writer.WriteLine("- " + c);
-                    writer.WriteLine("");
-                    writer.WriteLine("### 🟡 Perusahaan yang SUDAH LOGIN tetapi BELUM ADA DATA sama sekali");
-                    noData.Sort();
-                    foreach (var c in noData) writer.WriteLine("- " + c);
+                    Console.WriteLine("Error: " + ex.Message);
                 }
-
-                Console.WriteLine("Done. Output written to output.md");
             }
         }
     }

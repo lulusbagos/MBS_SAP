@@ -23,21 +23,25 @@ namespace MBS_SAP.Services
         {
             var accessibleIds = new List<int> { rootCompanyId };
             var allCompanies = await _context.Perusahaans.AsNoTracking().Where(p => p.StatusAktif).ToListAsync();
+            var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
 
-            FindChildrenRecursively(rootCompanyId, allCompanies, accessibleIds);
+            FindChildrenRecursively(rootCompanyId, allCompanies, relations, accessibleIds);
 
             return accessibleIds.Distinct().ToList();
         }
 
-        private void FindChildrenRecursively(int parentId, List<PerusahaanView> allCompanies, List<int> accessibleIds)
+        private void FindChildrenRecursively(int parentId, List<PerusahaanView> allCompanies, List<PerusahaanHierarchyRelationView> relations, List<int> accessibleIds)
         {
-            var children = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
+            var childrenFromParentId = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
+            var childrenFromRelations = relations.Where(r => r.ParentCompanyId == parentId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
+            var children = childrenFromParentId.Concat(childrenFromRelations).Distinct().ToList();
+
             foreach (var childId in children)
             {
                 if (!accessibleIds.Contains(childId))
                 {
                     accessibleIds.Add(childId);
-                    FindChildrenRecursively(childId, allCompanies, accessibleIds);
+                    FindChildrenRecursively(childId, allCompanies, relations, accessibleIds);
                 }
             }
         }

@@ -42,6 +42,7 @@ namespace MBS_SAP.Controllers
             var allCompanies = await _context.Perusahaans
                 .Where(p => p.StatusAktif && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
                 .ToListAsync();
+            var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
 
             var allowedCompanyIds = new HashSet<int>();
             if (companyId.HasValue)
@@ -56,7 +57,10 @@ namespace MBS_SAP.Controllers
 
                 void GetDescendants(int parentId)
                 {
-                    var children = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
+                    var childrenFromParentId = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
+                    var childrenFromRelations = relations.Where(r => r.ParentCompanyId == parentId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
+                    var children = childrenFromParentId.Concat(childrenFromRelations).Distinct().ToList();
+
                     foreach (var childId in children)
                     {
                         if (allowedCompanyIds.Add(childId))
@@ -88,6 +92,7 @@ namespace MBS_SAP.Controllers
             var allCompanies = await _context.Perusahaans
                 .Where(p => p.StatusAktif && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
                 .ToListAsync();
+            var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
 
             var allowedCompanyIds = new HashSet<int>();
             if (companyId.HasValue)
@@ -101,7 +106,10 @@ namespace MBS_SAP.Controllers
 
                 void GetDescendants(int parentId)
                 {
-                    var children = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
+                    var childrenFromParentId = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
+                    var childrenFromRelations = relations.Where(r => r.ParentCompanyId == parentId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
+                    var children = childrenFromParentId.Concat(childrenFromRelations).Distinct().ToList();
+
                     foreach (var childId in children)
                     {
                         if (allowedCompanyIds.Add(childId))
@@ -2780,8 +2788,20 @@ namespace MBS_SAP.Controllers
 
             foreach (var mcon in mainconList)
             {
-                var subcons = await _context.Perusahaans.AsNoTracking()
+                var childIdsFromRelations = await _context.PerusahaanHierarchyRelations.AsNoTracking()
+                    .Where(r => r.ParentCompanyId == mcon.PerusahaanId && r.ChildIsActive == true && r.ChildCompanyId.HasValue)
+                    .Select(r => r.ChildCompanyId!.Value)
+                    .ToListAsync();
+
+                var childIdsFromDirectParent = await _context.Perusahaans.AsNoTracking()
                     .Where(p => p.PerusahaanIndukId == mcon.PerusahaanId && p.StatusAktif)
+                    .Select(p => p.PerusahaanId)
+                    .ToListAsync();
+
+                var allChildIds = childIdsFromRelations.Concat(childIdsFromDirectParent).Distinct().ToList();
+
+                var subcons = await _context.Perusahaans.AsNoTracking()
+                    .Where(p => allChildIds.Contains(p.PerusahaanId) && p.StatusAktif)
                     .OrderBy(p => p.NamaPerusahaan)
                     .ToListAsync();
 
