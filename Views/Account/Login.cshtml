@@ -29,6 +29,7 @@
             <h5 class="mb-4 text-center screen-title" style="font-size: 24px;">Masuk Aplikasi</h5>
             
             <form asp-controller="Account" asp-action="Login" method="post" autocomplete="off">
+                <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
                 <div class="form-group-sap">
                     <label class="form-label-sap" for="nrp">NRP / NIK</label>
                     <div class="input-sap-wrapper">

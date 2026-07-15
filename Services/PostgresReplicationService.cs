@@ -1092,7 +1092,7 @@ ORDER BY date, time, code;";
                     Tanggal: tanggal,
                     Waktu: waktu,
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
-                    Nik: GetString(reader, "employee_nik") ?? "UNKNOWN",
+                    Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
                     CompanyName: GetString(reader, "employee_company"),
                     Area: GetString(reader, "area_name"),
@@ -1108,7 +1108,7 @@ ORDER BY date, time, code;";
                     Perbaikan: GetString(reader, "repair"),
                     TindakanPerbaikan: GetString(reader, "repair_remark"),
                     Pja: GetString(reader, "pja_name"),
-                    NikPja: GetString(reader, "pja_nik"),
+                    NikPja: MapNikNullable(GetString(reader, "pja_nik")),
                     DepartemenPja: GetString(reader, "pja_departemen"),
                     StatusTemuan: NormalizeHazardStatus(GetString(reader, "status")),
                     FotoTemuan: GetString(reader, "foto_temuan"),
@@ -1168,7 +1168,7 @@ ORDER BY date, time, code;";
                     Tanggal: tanggal,
                     Waktu: waktu,
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
-                    Nik: GetString(reader, "employee_nik") ?? "UNKNOWN",
+                    Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
                     CompanyName: GetString(reader, "employee_company"),
                     Area: GetString(reader, "area_name"),
@@ -1178,7 +1178,7 @@ ORDER BY date, time, code;";
                         ? category!
                         : (!string.IsNullOrWhiteSpace(title) ? title! : "General"),
                     Pja: GetString(reader, "pja_name"),
-                    NikPja: GetString(reader, "pja_nik"),
+                    NikPja: MapNikNullable(GetString(reader, "pja_nik")),
                     DepartemenPja: GetString(reader, "pja_departemen"),
                     Catatan: GetString(reader, "remark"),
                     LampiranJson: null,
@@ -1233,9 +1233,9 @@ ORDER BY date, time, code;";
                     Tanggal: tanggal,
                     Waktu: waktu,
                     TrainerNama: GetString(reader, "trainer_name") ?? "Unknown",
-                    TrainerNik: GetString(reader, "trainer_nik") ?? "UNKNOWN",
+                    TrainerNik: MapNik(GetString(reader, "trainer_nik")),
                     EmployeeNama: GetString(reader, "employee_name") ?? "Unknown",
-                    EmployeeNik: GetString(reader, "employee_nik") ?? "UNKNOWN",
+                    EmployeeNik: MapNik(GetString(reader, "employee_nik")),
                     EmployeeDepartemen: GetString(reader, "employee_departemen"),
                     EmployeeCompany: GetString(reader, "employee_company"),
                     Area: GetString(reader, "area_name"),
@@ -1294,7 +1294,7 @@ ORDER BY date, time, code;";
                     Tanggal: tanggal,
                     Waktu: waktu,
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
-                    Nik: GetString(reader, "employee_nik") ?? "UNKNOWN",
+                    Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
                     CompanyName: GetString(reader, "employee_company"),
                     Area: GetString(reader, "area_name"),
@@ -1367,7 +1367,7 @@ ORDER BY date, time, code;";
                     Tanggal: tanggal,
                     Waktu: waktu,
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
-                    Nik: GetString(reader, "employee_nik") ?? "UNKNOWN",
+                    Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
                     CompanyName: GetString(reader, "employee_company"),
                     JenisKendaraan: GetString(reader, "vehicle_type") ?? "LIGHT VEHICLE",
@@ -1427,7 +1427,7 @@ ORDER BY date, time, code;";
                     Tanggal: tanggal,
                     Waktu: waktu,
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
-                    Nik: GetString(reader, "employee_nik") ?? "UNKNOWN",
+                    Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
                     CompanyName: GetString(reader, "employee_company"),
                     DetilLokasi: GetString(reader, "location_detail"),
@@ -1484,7 +1484,7 @@ ORDER BY date, time, code;";
                     Tanggal: tanggal,
                     Waktu: waktu,
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
-                    Nik: GetString(reader, "employee_nik") ?? "UNKNOWN",
+                    Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
                     CompanyName: GetString(reader, "employee_company"),
                     Area: GetString(reader, "area_name"),
@@ -1497,6 +1497,22 @@ ORDER BY date, time, code;";
                 ));
             }
             return data;
+        }
+
+        private static string MapNik(string? nik)
+        {
+            if (string.IsNullOrWhiteSpace(nik)) return "UNKNOWN";
+            var clean = nik.Trim();
+            if (clean == "18071690163") return "25031691104";
+            return clean;
+        }
+
+        private static string? MapNikNullable(string? nik)
+        {
+            if (string.IsNullOrWhiteSpace(nik)) return null;
+            var clean = nik.Trim();
+            if (clean == "18071690163") return "25031691104";
+            return clean;
         }
 
         private static string NormalizeHazardStatus(string? sourceStatus)

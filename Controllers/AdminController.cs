@@ -65,28 +65,46 @@ namespace MBS_SAP.Controllers
 
             var wsHazard = wb.Worksheets.Add("Hazard");
             wsHazard.Cell(1, 1).Value = "Filter diterapkan:\n(Contoh Filter)";
-            wsHazard.Cell(2, 1).InsertData(new[] { new[] { "Foto Temuan", "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Kategori Temuan", "Temuan", "Kategori Bahaya", "Jenis Bahaya", "Jenis Ketidaksesuaian", "Tingkat Resiko", "Perbaikan", "Tindakan Perbaikan", "PJA", "NIK PJA", "Departemen PJA", "Status Temuan", "PIC", "NIK PIC", "Departemen PIC", "Rencana Perbaikan", "Tanggal Rencana Perbaikan", "Perbaikan", "Tanggal Perbaikan", "Overdue", "Alasan Overdue", "Foto Perbaikan" } });
+            wsHazard.Cell(2, 1).InsertData(new object[][] {
+                new object[] { "Foto Temuan", "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Kategori Temuan", "Temuan", "Kategori Bahaya", "Jenis Bahaya", "Jenis Ketidaksesuaian", "Tingkat Resiko", "Perbaikan", "Tindakan Perbaikan", "PJA", "NIK PJA", "Departemen PJA", "Status Temuan", "PIC", "NIK PIC", "Departemen PIC", "Rencana Perbaikan", "Tanggal Rencana Perbaikan", "Perbaikan", "Tanggal Perbaikan", "Overdue", "Alasan Overdue", "Foto Perbaikan" },
+                new object[] { "http://apiis.idcapps.net/uploads/example_hazard.jpg", new DateTime(2026, 7, 15), new TimeSpan(8, 30, 0), "Budi Santoso (CONTOH)", "CONTOH01", "Safety", "Pit Area", "Ramp A", "Samping Pos Pantau 2", "KTA", "Ditemukan ceceran oli di jalan ramp", "Fisik", "Kimia", "KTA", "Medium", "Diberi pasir/tanah penyerap", "Melakukan pembersihan berkala", "Andi Pratama", "PJA01", "Operation", "Open", "Joko Susilo", "PIC01", "Maintenance", "Pembersihan area ceceran", new DateTime(2026, 7, 16), "", "", "No", "", "" }
+            });
             StyleHeader(wsHazard, 2);
 
             var wsInsp = wb.Worksheets.Add("Inspection");
             wsInsp.Cell(1, 1).Value = "Filter diterapkan:\n(Contoh Filter)";
-            wsInsp.Cell(3, 1).InsertData(new[] { new[] { "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Jenis Inspeksi", "PJA", "NIK PJA", "Departemen PJA", "Kategori Temuan", "Detil Temuan", "Status", "PIC", "NIK PIC", "Departemen PIC", "Rencana Perbaikan", "Tanggal Rencana Perbaikan", "Perbaikan", "Tanggal Perbaikan", "Overdue", "Alasan Overdue", "Foto Temuan", "Foto Perbaikan" } });
+            wsInsp.Cell(3, 1).InsertData(new object[][] {
+                new object[] { "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Jenis Inspeksi", "PJA", "NIK PJA", "Departemen PJA", "Kategori Temuan", "Detil Temuan", "Status", "PIC", "NIK PIC", "Departemen PIC", "Rencana Perbaikan", "Tanggal Rencana Perbaikan", "Perbaikan", "Tanggal Perbaikan", "Overdue", "Alasan Overdue", "Foto Temuan", "Foto Perbaikan" },
+                new object[] { new DateTime(2026, 7, 15), new TimeSpan(9, 0, 0), "Budi Santoso (CONTOH)", "CONTOH01", "Safety", "Pit Area", "Ramp A", "Samping Pos Pantau 2", "Inspeksi Bersama", "Andi Pratama", "PJA01", "Operation", "KTA", "Ceceran oli di area workshop", "Open", "Joko Susilo", "PIC01", "Maintenance", "Pembersihan ceceran oli", new DateTime(2026, 7, 16), "", "", "No", "", "http://apiis.idcapps.net/uploads/example_inspection.jpg", "" }
+            });
             StyleHeader(wsInsp, 3);
 
             var wsObs = wb.Worksheets.Add("Observation");
-            wsObs.Cell(3, 1).InsertData(new[] { new[] { "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Kegiatan Yang Diamati", "Departemen Yang Diamati", "Dokumen Pendukung", "Resiko Kritis", "Tingkat Resiko", "Perihal Yang Diamati", "Hasil Observasi" } });
+            wsObs.Cell(3, 1).InsertData(new object[][] {
+                new object[] { "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Kegiatan Yang Diamati", "Departemen Yang Diamati", "Dokumen Pendukung", "Resiko Kritis", "Tingkat Resiko", "Perihal Yang Diamati", "Hasil Observasi" },
+                new object[] { new DateTime(2026, 7, 15), new TimeSpan(10, 0, 0), "Budi Santoso (CONTOH)", "CONTOH01", "Safety", "Pit Area", "Ramp A", "Samping Pos Pantau 2", "Pengelasan tanpa kacamata pelindung", "Maintenance", "JSA Pengelasan", "Cidera Mata", "High", "Alat Pelindung Diri (APD)", "Pekerja langsung menggunakan kacamata pelindung" }
+            });
             StyleHeader(wsObs, 3);
 
             var wsCoach = wb.Worksheets.Add("Coaching");
-            wsCoach.Cell(3, 1).InsertData(new[] { new[] { "Foto Kegiatan", "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Tema", "Judul", "Feedback" } });
+            wsCoach.Cell(3, 1).InsertData(new object[][] {
+                new object[] { "Foto Kegiatan", "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Tema", "Judul", "Feedback" },
+                new object[] { "http://apiis.idcapps.net/uploads/example_coaching.jpg", new DateTime(2026, 7, 15), new TimeSpan(11, 0, 0), "Budi Santoso (CONTOH)", "CONTOH01", "Safety", "Pit Area", "Ramp A", "Samping Pos Pantau 2", "Pentingnya APD", "Coaching APD Las", "Pekerja menyadari bahaya bekerja tanpa APD" }
+            });
             StyleHeader(wsCoach, 3);
 
             var wsSt = wb.Worksheets.Add("Safety Talk");
-            wsSt.Cell(3, 1).InsertData(new[] { new[] { "Foto Diri", "Foto Kegiatan", "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Judul", "Keterangan" } });
+            wsSt.Cell(3, 1).InsertData(new object[][] {
+                new object[] { "Foto Diri", "Foto Kegiatan", "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Judul", "Keterangan" },
+                new object[] { "http://apiis.idcapps.net/uploads/example_self.jpg", "http://apiis.idcapps.net/uploads/example_safetytalk.jpg", new DateTime(2026, 7, 15), new TimeSpan(7, 30, 0), "Budi Santoso (CONTOH)", "CONTOH01", "Safety", "Pit Area", "Ramp A", "Samping Pos Pantau 2", "Sosialisasi JSA & APD", "Penjelasan JSA sebelum mulai bekerja" }
+            });
             StyleHeader(wsSt, 3);
 
             var wsP5 = wb.Worksheets.Add("P5M");
-            wsP5.Cell(3, 1).InsertData(new[] { new[] { "Foto Kegiatan", "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Topik", "Judul", "Keterangan", "List Pertanyaan", "Jawaban", "Catatan" } });
+            wsP5.Cell(3, 1).InsertData(new object[][] {
+                new object[] { "Foto Kegiatan", "Tanggal", "Time", "Nama", "NIK", "Departemen", "Area", "Lokasi", "Detil Lokasi", "Topik", "Judul", "Keterangan", "List Pertanyaan", "Jawaban", "Catatan" },
+                new object[] { "http://apiis.idcapps.net/uploads/example_p5m.jpg", new DateTime(2026, 7, 15), new TimeSpan(7, 0, 0), "Budi Santoso (CONTOH)", "CONTOH01", "Safety", "Pit Area", "Ramp A", "Samping Pos Pantau 2", "Safety First", "P5M Pagi", "Briefing pagi aspek keselamatan kerja", "Apakah APD dalam kondisi layak pakai?", "Ya, semua layak pakai", "Seluruh kru siap bekerja" }
+            });
             StyleHeader(wsP5, 3);
 
             using var stream = new System.IO.MemoryStream();
@@ -154,6 +172,7 @@ namespace MBS_SAP.Controllers
                         var nik = GetString(row, 5);
                         var tanggal = GetDate(row, 2);
                         if (string.IsNullOrEmpty(nik) || !tanggal.HasValue) continue;
+                        if (nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
 
                         string temuan = GetString(row, 11) ?? "-";
                         if (!_context.HazardReports.Any(h => h.Nik == nik && h.Tanggal == tanggal.Value.Date && h.Temuan == temuan))
@@ -241,6 +260,7 @@ namespace MBS_SAP.Controllers
                         var nik = GetString(row, 4);
                         var tanggal = GetDate(row, 1);
                         if (string.IsNullOrEmpty(nik) || !tanggal.HasValue) continue;
+                        if (nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
 
                         string jenis = GetString(row, 9) ?? "-";
                         if (!_context.Inspections.Any(i => i.Nik == nik && i.Tanggal == tanggal.Value.Date && i.JenisInspeksi == jenis))
@@ -317,6 +337,7 @@ namespace MBS_SAP.Controllers
                         var nik = GetString(row, 6);
                         var tanggal = GetDate(row, 3);
                         if (string.IsNullOrEmpty(nik) || !tanggal.HasValue) continue;
+                        if (nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
 
                         string judul = GetString(row, 11) ?? "-";
                         if (!_context.SafetyTalks.Any(s => s.Nik == nik && s.Tanggal == tanggal.Value.Date && s.Judul == judul))
@@ -353,6 +374,7 @@ namespace MBS_SAP.Controllers
                         var nik = GetString(row, 5);
                         var tanggal = GetDate(row, 2);
                         if (string.IsNullOrEmpty(nik) || !tanggal.HasValue) continue;
+                        if (nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
 
                         string judul = GetString(row, 11) ?? "-";
                         string pertanyaan = GetString(row, 13) ?? "";

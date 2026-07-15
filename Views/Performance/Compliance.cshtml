@@ -273,6 +273,24 @@
             border: 1px solid var(--border-color);
         }
     }
+    
+    /* Program Item Styling */
+    .program-card-item {
+        background: rgba(255, 255, 255, 0.015);
+        border: 1.5px solid var(--border-color);
+        border-radius: 12px;
+        padding: 12px 14px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .program-card-item:hover {
+        border-color: rgba(59, 130, 246, 0.5);
+        background: rgba(255, 255, 255, 0.035);
+        transform: translateY(-1px);
+    }
 </style>
 
 <div class="animate-fade-in pb-5">
@@ -306,6 +324,132 @@
             <button class="tab-btn px-4 py-2 tab-active" id="tabCompliance" onclick="void(0)">
                 <i class="bi bi-file-earmark-text-fill me-1"></i> Laporan Kepatuhan
             </button>
+        </div>
+    </div>
+
+
+
+    <!-- KPI Summary Row -->
+    @{
+        int totalTarget = (ViewBag.TargetH ?? 0) + (ViewBag.TargetI ?? 0) + (ViewBag.TargetS ?? 0) + (ViewBag.TargetO ?? 0) + (ViewBag.TargetC ?? 0);
+        int totalActual = (ViewBag.ActualH ?? 0) + (ViewBag.ActualI ?? 0) + (ViewBag.ActualS ?? 0) + (ViewBag.ActualO ?? 0) + (ViewBag.ActualC ?? 0);
+        double totalComplianceRate = totalTarget > 0 ? Math.Round((double)totalActual / totalTarget * 100.0, 1) : 0.0;
+        double progressComplianceRate = Math.Min(totalComplianceRate, 100.0);
+        
+        string statusText = "Perlu Peningkatan";
+        string statusColor = "#f43f5e";
+        if (totalComplianceRate >= 85.0) { statusText = "Sangat Baik"; statusColor = "#22c55e"; }
+        else if (totalComplianceRate >= 50.0) { statusText = "Cukup Baik"; statusColor = "#f59e0b"; }
+    }
+    
+    <div class="row g-4 mb-4">
+        <!-- KPI card 1: Ringkasan Kepatuhan -->
+        <div class="col-lg-4 col-md-12">
+            <div class="report-card premium-card h-100 mb-0 d-flex flex-column justify-content-between p-4" style="background: var(--bg-card); position: relative; overflow: hidden;">
+                <div style="position: absolute; right: -20px; bottom: -20px; font-size: 130px; color: rgba(255,255,255,0.02); pointer-events: none; transform: rotate(-15deg);">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div>
+                    <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 8px;">
+                        Kepatuhan SAP MTD Group
+                    </div>
+                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                        <span style="font-size: 46px; font-weight: 900; color: @(totalComplianceRate >= 85.0 ? "#22c55e" : (totalComplianceRate >= 50.0 ? "#f59e0b" : "#f43f5e")); font-family: 'Outfit', sans-serif;">
+                            @totalComplianceRate%
+                        </span>
+                        <span class="badge" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: @statusColor; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 6px;">
+                            @statusText
+                        </span>
+                    </div>
+                    <div class="text-muted" style="font-size: 13px; line-height: 1.5; margin-bottom: 20px;">
+                        Total realisasi submisi terhadap target bulanan program wajib (Hazard, Inspeksi, Safety Talk, Observasi, Coaching) dari seluruh karyawan aktif ber-target.
+                    </div>
+                </div>
+                
+                <div style="border-top: 1.5px solid var(--border-color); padding-top: 16px;">
+                    <div class="d-flex justify-content-between mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">
+                        <span>Realisasi Submisi</span>
+                        <span>@totalActual / @totalTarget</span>
+                    </div>
+                    <div class="progress" style="height: 8px; border-radius: 4px; background: rgba(255,255,255,0.05); overflow: hidden;">
+                        <div class="progress-bar" role="progressbar" style="width: @progressComplianceRate%; background: linear-gradient(90deg, #10b981, #3b82f6); border-radius: 4px;" aria-valuenow="@progressComplianceRate" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI card 2: Detail Program & Gap -->
+        <div class="col-lg-8 col-md-12">
+            <div class="report-card premium-card h-100 mb-0 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="premium-title" style="font-size: 15px; margin: 0;">
+                        <i class="bi bi-grid-fill text-primary me-2"></i>Target & Gap Kepatuhan Program Wajib
+                    </h5>
+                    <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25); font-weight: 700; font-size: 10.5px; border-radius: 6px; padding: 4px 8px;">
+                        MTD Actual vs Target
+                    </span>
+                </div>
+                
+                <div class="row g-3">
+                    @{
+                        var programsList = new[] {
+                            new { Name = "Hazard Report", Target = ViewBag.TargetH ?? 0, Actual = ViewBag.ActualH ?? 0, Icon = "bi-shield-exclamation", Color = "#6366f1" },
+                            new { Name = "Inspeksi", Target = ViewBag.TargetI ?? 0, Actual = ViewBag.ActualI ?? 0, Icon = "bi-check2-square", Color = "#3b82f6" },
+                            new { Name = "Safety Talk", Target = ViewBag.TargetS ?? 0, Actual = ViewBag.ActualS ?? 0, Icon = "bi-chat-left-quote-fill", Color = "#d97706" },
+                            new { Name = "Observasi", Target = ViewBag.TargetO ?? 0, Actual = ViewBag.ActualO ?? 0, Icon = "bi-eye-fill", Color = "#ec4899" },
+                            new { Name = "Coaching", Target = ViewBag.TargetC ?? 0, Actual = ViewBag.ActualC ?? 0, Icon = "bi-person-lines-fill", Color = "#a855f7" }
+                        };
+                    }
+                    
+                    @foreach (var prog in programsList)
+                    {
+                        double rawRate = prog.Target > 0 ? Math.Round((double)prog.Actual / prog.Target * 100.0, 1) : 0.0;
+                        double pRate = Math.Min(rawRate, 100.0);
+                        double gap = rawRate < 100.0 ? Math.Round(100.0 - rawRate, 1) : 0.0;
+                        
+                        <div class="col-md-6 col-12">
+                            <div class="program-card-item">
+                                <div class="d-flex justify-content-between align-items-center mb-1.5">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 28px; height: 28px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); color: @prog.Color;">
+                                            <i class="bi @prog.Icon" style="font-size: 13px;"></i>
+                                        </div>
+                                        <span class="fw-bold" style="font-size: 12.5px; color: var(--text-main);">@prog.Name</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="fw-bold" style="font-size: 12.5px; color: var(--text-main);">@prog.Actual / @prog.Target</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="flex-grow-1">
+                                        <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.05); overflow: hidden;">
+                                            <div class="progress-bar" role="progressbar" style="width: @pRate%; background-color: @prog.Color;" aria-valuenow="@pRate" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                    <span class="fw-bold" style="font-size: 11.5px; color: @prog.Color; width: 42px; text-align: right;">@rawRate%</span>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center mt-2" style="font-size: 10px; border-top: 1px dashed rgba(255,255,255,0.04); padding-top: 6px;">
+                                    <span class="text-muted">Kekurangan Target (Gap)</span>
+                                    @if (gap > 0.0)
+                                    {
+                                        <span class="badge" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.2); font-weight: 700; font-size: 9px; padding: 2px 6px;">
+                                            Kurang @gap%
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge" style="background: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.2); font-weight: 700; font-size: 9px; padding: 2px 6px;">
+                                            <i class="bi bi-check-circle-fill me-1"></i> Terpenuhi
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
         </div>
     </div>
 
@@ -509,6 +653,93 @@
 
         </div>
     }
+
+    <!-- SAP Program Fulfillment Summary Card -->
+    @{
+        var sapPrograms = ViewBag.SapPrograms as dynamic[] ?? Array.Empty<dynamic>();
+        int totalBerTarget = ViewBag.TotalCount ?? 0;
+    }
+    <div class="report-card premium-card mt-4">
+        <div class="report-header premium-header d-flex justify-content-between align-items-center">
+            <h5 class="premium-title">
+                <i class="bi bi-bar-chart-fill me-2 text-primary" style="font-size: 18px;"></i>Pencapaian per Program SAP
+            </h5>
+            <span class="badge" style="background: rgba(59,130,246,0.1); color: #3b82f6; border: 1px solid rgba(59,130,246,0.25); font-weight: 700; font-size: 11px; padding: 5px 10px; border-radius: 8px;">
+                <i class="bi bi-people-fill me-1"></i>@totalBerTarget Karyawan Ber-Target
+            </span>
+        </div>
+        <div class="report-body">
+            <div class="row g-3">
+                @foreach (var prog in sapPrograms)
+                {
+                    int withTarget = (int)prog.WithTarget;
+                    int fulfilled  = (int)prog.Fulfilled;
+                    int progActual = (int)prog.TotalActual;
+                    int progTarget = (int)prog.TotalTarget;
+                    double pctFulfilled = withTarget > 0 ? Math.Round((double)fulfilled / withTarget * 100.0, 1) : 0.0;
+                    double pctSubmission = progTarget > 0 ? Math.Round((double)progActual / progTarget * 100.0, 1) : 0.0;
+                    double barWidth = Math.Min(pctFulfilled, 100.0);
+                    string accentColor = (string)prog.Color;
+                    string badgeColor = pctFulfilled >= 80 ? "#22c55e" : (pctFulfilled >= 50 ? "#f59e0b" : "#f43f5e");
+                    string badgeBg    = pctFulfilled >= 80 ? "rgba(34,197,94,0.1)" : (pctFulfilled >= 50 ? "rgba(245,158,11,0.1)" : "rgba(244,63,94,0.1)");
+                    string badgeBorder= pctFulfilled >= 80 ? "rgba(34,197,94,0.25)" : (pctFulfilled >= 50 ? "rgba(245,158,11,0.25)" : "rgba(244,63,94,0.25)");
+                    string notFulfilled = $"{withTarget - fulfilled} karyawan belum terpenuhi";
+
+                    <div class="col-lg-4 col-md-6 col-12">
+                        <div class="program-card-item" style="border: 1.5px solid rgba(255,255,255,0.05); border-radius: 14px; padding: 18px 20px; background: var(--bg-card); position: relative; overflow: hidden; transition: box-shadow 0.2s;">
+                            <!-- background glow icon -->
+                            <div style="position: absolute; right: -12px; bottom: -12px; font-size: 80px; color: @accentColor; opacity: 0.04; pointer-events: none;">
+                                <i class="bi @prog.Icon"></i>
+                            </div>
+                            <!-- header row -->
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div style="width: 34px; height: 34px; border-radius: 10px; background: @accentColor + '18'; border: 1.5px solid @accentColor + '33'; display: flex; align-items: center; justify-content: center; color: @accentColor;">
+                                        <i class="bi @prog.Icon" style="font-size: 15px;"></i>
+                                    </div>
+                                    <span style="font-size: 13px; font-weight: 800; color: var(--text-main);">@prog.Name</span>
+                                </div>
+                                <span class="badge" style="background: @badgeBg; color: @badgeColor; border: 1px solid @badgeBorder; font-weight: 800; font-size: 12px; padding: 4px 9px; border-radius: 7px;">
+                                    @pctFulfilled%
+                                </span>
+                            </div>
+
+                            <!-- big metric -->
+                            <div class="mb-1" style="font-size: 28px; font-weight: 900; color: @accentColor; font-family: 'Outfit', sans-serif; letter-spacing: -1px;">
+                                @fulfilled <span style="font-size: 14px; font-weight: 600; color: var(--text-muted);">/ @withTarget karyawan</span>
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px;">
+                                karyawan sudah mengisi (min. 1 submisi MTD)
+                            </div>
+
+                            <!-- progress bar: % fulfilled employees -->
+                            <div style="height: 7px; border-radius: 4px; background: rgba(255,255,255,0.05); overflow: hidden; margin-bottom: 10px;">
+                                <div style="width: @barWidth%; height: 100%; background: @accentColor; border-radius: 4px; transition: width 0.5s ease;"></div>
+                            </div>
+
+                            <!-- submission totals -->
+                            <div class="d-flex justify-content-between" style="font-size: 11px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 10px;">
+                                <span class="text-muted">Total Submisi MTD</span>
+                                <span style="font-weight: 700; color: var(--text-main);">@progActual / @progTarget &nbsp;<span style="color: @(pctSubmission >= 100 ? "#22c55e" : "#f59e0b"); font-weight: 800;">(@pctSubmission%)</span></span>
+                            </div>
+                            @if (withTarget - fulfilled > 0)
+                            {
+                                <div style="font-size: 10px; color: #f43f5e; margin-top: 5px; text-align: right;">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>@(withTarget - fulfilled) karyawan belum mengisi
+                                </div>
+                            }
+                            else if (withTarget > 0)
+                            {
+                                <div style="font-size: 10px; color: #22c55e; margin-top: 5px; text-align: right;">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Semua karyawan sudah mengisi
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
 
     <!-- Script Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

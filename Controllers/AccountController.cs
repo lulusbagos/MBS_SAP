@@ -26,14 +26,19 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Login()
+        public async Task<IActionResult> Login(string? returnUrl = null)
         {
             if (User.Identity?.IsAuthenticated == true)
             {
+                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                {
+                    return Redirect(returnUrl);
+                }
                 return RedirectToAction("Index", "Home");
             }
             ViewData["HideHeader"] = true;
             ViewData["HideNav"] = true;
+            ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
 
@@ -48,7 +53,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Login(string nrp, string password, bool rememberMe = false)
+        public async Task<IActionResult> Login(string nrp, string password, string? returnUrl = null, bool rememberMe = false)
         {
             ViewData["HideHeader"] = true;
             ViewData["HideNav"] = true;
@@ -314,6 +319,10 @@ namespace MBS_SAP.Controllers
             }
             await _context.SaveChangesAsync();
 
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
             return RedirectToAction("Index", "Home");
         }
 

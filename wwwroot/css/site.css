@@ -139,6 +139,21 @@ body.light-theme .btn-option {
     border-radius: 12px !important;
 }
 
+body.light-theme .btn-option.safe:hover, body.light-theme .btn-option.safe.active {
+    background-color: var(--color-green) !important;
+    color: var(--text-contrast) !important;
+}
+
+body.light-theme .btn-option.hazard:hover, body.light-theme .btn-option.hazard.active {
+    background-color: var(--color-red) !important;
+    color: white !important;
+}
+
+body.light-theme .btn-option.na:hover, body.light-theme .btn-option.na.active {
+    background-color: var(--text-muted) !important;
+    color: var(--text-contrast) !important;
+}
+
 body.light-theme .upload-card {
     border-color: #cbd5e1 !important;
     background-color: #f8fafc !important;

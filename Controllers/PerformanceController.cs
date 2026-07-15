@@ -196,16 +196,21 @@ namespace MBS_SAP.Controllers
                 if (string.IsNullOrEmpty(nik)) continue;
 
                 // MTD target = monthly target directly from mapping view
-                int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0, p5mTar = 1;
+                int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0, p5mTar = 1;
                 string jabatanName = "-";
                 if (mappingsDict.TryGetValue(k.IdKaryawan, out var m))
                 {
-                    hTar = m.TargetHazardReport ?? 2;
-                    insTar = m.TargetInspeksi ?? 1;
-                    stTar = m.TargetSafetyTalk ?? 1;
+                    hTar = m.TargetHazardReport ?? 0;
+                    insTar = m.TargetInspeksi ?? 0;
+                    stTar = m.TargetSafetyTalk ?? 0;
                     obsTar = m.TargetObservasi ?? 0;
                     cTar = m.TargetCoaching ?? 0;
                     jabatanName = m.NamaJabatanStandar ?? m.NamaJabatanExisting ?? "-";
+                }
+
+                if (hTar + insTar + stTar + obsTar + cTar == 0)
+                {
+                    continue;
                 }
 
                 int mtdTgtH = hTar;
@@ -2217,7 +2222,8 @@ namespace MBS_SAP.Controllers
             }
             GetDescendants(rootId);
 
-            allowedCompanies = allowedCompanies.Where(c => dropdownCompanyIds.Contains(c.PerusahaanId)).ToList();
+            // Do not filter the dropdown options by dropdownCompanyIds, so that all allowed companies (e.g. 172 companies for Indexim Coalindo or Admin) are always selectable.
+            // allowedCompanies = allowedCompanies.Where(c => dropdownCompanyIds.Contains(c.PerusahaanId)).ToList();
 
             ViewBag.Companies = allowedCompanies;
             ViewBag.SelectedCompanyId = selectedCompany.PerusahaanId;
@@ -2441,31 +2447,32 @@ namespace MBS_SAP.Controllers
             ViewBag.Departments = departments;
             ViewBag.SelectedDepartmentName = departmentName;
 
-            // Fetch compliance data
-            var rawData = await GetEmployeesComplianceData(selectedCompanyId, departmentName);
-
-            // Map dynamic list to strongly typed model
+            // Fetch compliance data from ALL allowed companies (no company filter)
             var employees = new List<ComplianceEmployeeViewModel>();
-            foreach (var item in rawData)
+            foreach (var company in allowedCompanies)
             {
-                var emp = new ComplianceEmployeeViewModel
+                if (ExcludedCompanies.IsExcluded(company.PerusahaanId)) continue;
+                var rawData = await GetEmployeesComplianceData(company.PerusahaanId, null);
+                foreach (var item in rawData)
                 {
-                    KaryawanName = item.karyawanName ?? string.Empty,
-                    Nik = item.nik ?? string.Empty,
-                    DepartmentName = item.departmentName ?? string.Empty,
-                    JabatanName = item.jabatanName ?? string.Empty,
-                    CompanyId = item.companyId,
-                    MtdTotalTarget = item.mtdTotalTarget,
-                    MtdTotalActual = item.mtdTotalActual,
-                    ComplianceRate = item.complianceRate,
-                    Hazard = new ComplianceItemDetail { Target = item.hazard.target, Actual = item.hazard.actual },
-                    Inspeksi = new ComplianceItemDetail { Target = item.inspeksi.target, Actual = item.inspeksi.actual },
-                    SafetyTalk = new ComplianceItemDetail { Target = item.safetyTalk.target, Actual = item.safetyTalk.actual },
-                    Observasi = new ComplianceItemDetail { Target = item.observasi.target, Actual = item.observasi.actual },
-                    Coaching = new ComplianceItemDetail { Target = item.coaching.target, Actual = item.coaching.actual },
-                    P5m = new ComplianceItemDetail { Target = item.p5m.target, Actual = item.p5m.actual }
-                };
-                employees.Add(emp);
+                    employees.Add(new ComplianceEmployeeViewModel
+                    {
+                        KaryawanName  = item.karyawanName ?? string.Empty,
+                        Nik           = item.nik ?? string.Empty,
+                        DepartmentName= item.departmentName ?? string.Empty,
+                        JabatanName   = item.jabatanName ?? string.Empty,
+                        CompanyId     = item.companyId,
+                        MtdTotalTarget= item.mtdTotalTarget,
+                        MtdTotalActual= item.mtdTotalActual,
+                        ComplianceRate= item.complianceRate,
+                        Hazard    = new ComplianceItemDetail { Target = item.hazard.target,     Actual = item.hazard.actual },
+                        Inspeksi  = new ComplianceItemDetail { Target = item.inspeksi.target,   Actual = item.inspeksi.actual },
+                        SafetyTalk= new ComplianceItemDetail { Target = item.safetyTalk.target, Actual = item.safetyTalk.actual },
+                        Observasi = new ComplianceItemDetail { Target = item.observasi.target,  Actual = item.observasi.actual },
+                        Coaching  = new ComplianceItemDetail { Target = item.coaching.target,   Actual = item.coaching.actual },
+                        P5m       = new ComplianceItemDetail { Target = item.p5m.target,        Actual = item.p5m.actual }
+                    });
+                }
             }
 
             int pageSize = 50;
@@ -2479,6 +2486,56 @@ namespace MBS_SAP.Controllers
             ViewBag.CurrentPage = page;
             ViewBag.PageSize = pageSize;
             ViewBag.TotalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            // Per-program stats: "sudah mengisi" = actual >= 1 (minimal 1 submisi)
+            ViewBag.SapPrograms = new[]
+            {
+                new {
+                    Name = "Hazard Report",
+                    Icon = "bi-shield-exclamation",
+                    Color = "#6366f1",
+                    WithTarget  = employees.Count(e => e.Hazard.Target > 0),
+                    Fulfilled   = employees.Count(e => e.Hazard.Target > 0 && e.Hazard.Actual >= 1),
+                    TotalActual = employees.Sum(e => e.Hazard.Actual),
+                    TotalTarget = employees.Sum(e => e.Hazard.Target)
+                },
+                new {
+                    Name = "Inspeksi",
+                    Icon = "bi-check2-square",
+                    Color = "#3b82f6",
+                    WithTarget  = employees.Count(e => e.Inspeksi.Target > 0),
+                    Fulfilled   = employees.Count(e => e.Inspeksi.Target > 0 && e.Inspeksi.Actual >= 1),
+                    TotalActual = employees.Sum(e => e.Inspeksi.Actual),
+                    TotalTarget = employees.Sum(e => e.Inspeksi.Target)
+                },
+                new {
+                    Name = "Safety Talk",
+                    Icon = "bi-chat-left-quote-fill",
+                    Color = "#d97706",
+                    WithTarget  = employees.Count(e => e.SafetyTalk.Target > 0),
+                    Fulfilled   = employees.Count(e => e.SafetyTalk.Target > 0 && e.SafetyTalk.Actual >= 1),
+                    TotalActual = employees.Sum(e => e.SafetyTalk.Actual),
+                    TotalTarget = employees.Sum(e => e.SafetyTalk.Target)
+                },
+                new {
+                    Name = "Observasi",
+                    Icon = "bi-eye-fill",
+                    Color = "#ec4899",
+                    WithTarget  = employees.Count(e => e.Observasi.Target > 0),
+                    Fulfilled   = employees.Count(e => e.Observasi.Target > 0 && e.Observasi.Actual >= 1),
+                    TotalActual = employees.Sum(e => e.Observasi.Actual),
+                    TotalTarget = employees.Sum(e => e.Observasi.Target)
+                },
+                new {
+                    Name = "Coaching",
+                    Icon = "bi-person-lines-fill",
+                    Color = "#a855f7",
+                    WithTarget  = employees.Count(e => e.Coaching.Target > 0),
+                    Fulfilled   = employees.Count(e => e.Coaching.Target > 0 && e.Coaching.Actual >= 1),
+                    TotalActual = employees.Sum(e => e.Coaching.Actual),
+                    TotalTarget = employees.Sum(e => e.Coaching.Target)
+                }
+            };
 
             // 1. Action Plans by Department (creator's department)
             var actionPlanDeptStats = await _context.ActionPlans
@@ -2603,14 +2660,19 @@ namespace MBS_SAP.Controllers
                         foreach (var emp in companyEmps)
                         {
                             var nik = (emp.NoNik ?? string.Empty).Trim();
-                            int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0;
+                            int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0;
                             if (targetsDict.TryGetValue(emp.IdKaryawan, out var t))
                             {
-                                hTar = t.TargetHazardReport ?? 2;
-                                insTar = t.TargetInspeksi ?? 1;
-                                stTar = t.TargetSafetyTalk ?? 1;
+                                hTar = t.TargetHazardReport ?? 0;
+                                insTar = t.TargetInspeksi ?? 0;
+                                stTar = t.TargetSafetyTalk ?? 0;
                                 obsTar = t.TargetObservasi ?? 0;
                                 cTar = t.TargetCoaching ?? 0;
+                            }
+
+                            if (hTar + insTar + stTar + obsTar + cTar == 0)
+                            {
+                                continue;
                             }
 
                             int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
@@ -2646,10 +2708,10 @@ namespace MBS_SAP.Controllers
 
             ViewBag.SubconComplianceList = subconComplianceList;
 
-            // 4. Group Detailed Compliance Metrics (Maincon + its Subcons)
+            // 4. Group Detailed Compliance Metrics (all allowed companies)
             var startOfMonthM = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-            var relatedCompanyIds = new List<int> { selectedCompanyId };
-            relatedCompanyIds.AddRange(childCompanies.Select(c => c.PerusahaanId));
+            // Use ALL allowed company IDs so the KPI aggregates across every employee with a target
+            var relatedCompanyIds = allowedCompanies.Select(c => c.PerusahaanId).ToList();
 
             var activeKaryawans = await _context.Karyawans
                 .Where(k => k.StatusAktif && relatedCompanyIds.Contains(k.IdPerusahaan))
@@ -2720,14 +2782,19 @@ namespace MBS_SAP.Controllers
             foreach (var emp in activeKaryawans)
             {
                 var nik = (emp.NoNik ?? string.Empty).Trim();
-                int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0;
+                int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0;
                 if (groupTargetsDict.TryGetValue(emp.IdKaryawan, out var t))
                 {
-                    hTar = t.TargetHazardReport ?? 2;
-                    insTar = t.TargetInspeksi ?? 1;
-                    stTar = t.TargetSafetyTalk ?? 1;
+                    hTar = t.TargetHazardReport ?? 0;
+                    insTar = t.TargetInspeksi ?? 0;
+                    stTar = t.TargetSafetyTalk ?? 0;
                     obsTar = t.TargetObservasi ?? 0;
                     cTar = t.TargetCoaching ?? 0;
+                }
+
+                if (hTar + insTar + stTar + obsTar + cTar == 0)
+                {
+                    continue;
                 }
 
                 int actH = string.IsNullOrEmpty(nik) ? 0 : (gHazByNik.TryGetValue(nik, out var ah) ? ah : 0);
@@ -2765,11 +2832,11 @@ namespace MBS_SAP.Controllers
                     inactiveCount++;
                 }
 
-                targetH += hTar; actualH += cappedH;
-                targetI += insTar; actualI += cappedI;
-                targetS += stTar; actualS += cappedST;
-                targetO += obsTar; actualO += cappedO;
-                targetC += cTar; actualC += cappedC;
+                targetH += hTar; actualH += actH;
+                targetI += insTar; actualI += actI;
+                targetS += stTar; actualS += actST;
+                targetO += obsTar; actualO += actO;
+                targetC += cTar; actualC += actC;
             }
 
             // Hazard age distribution
