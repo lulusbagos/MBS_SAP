@@ -2943,27 +2943,27 @@ namespace MBS_SAP.Controllers
                 // Fetch MTD actual logs
                 var allGroupHazards = await _context.HazardReports.AsNoTracking()
                     .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && companyIds.Contains(h.PerusahaanId.Value) && h.CreatedAt >= startOfMonthMaincon)
-                    .Select(h => new { PerusahaanId = h.PerusahaanId.Value, h.Nik })
+                    .Select(h => new { PerusahaanId = h.PerusahaanId ?? 0, h.Nik })
                     .ToListAsync();
 
                 var allGroupInspections = await _context.Inspections.AsNoTracking()
                     .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && companyIds.Contains(i.PerusahaanId.Value) && i.CreatedAt >= startOfMonthMaincon)
-                    .Select(i => new { PerusahaanId = i.PerusahaanId.Value, i.Nik })
+                    .Select(i => new { PerusahaanId = i.PerusahaanId ?? 0, i.Nik })
                     .ToListAsync();
 
                 var allGroupSafetyTalks = await _context.SafetyTalks.AsNoTracking()
                     .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && companyIds.Contains(s.PerusahaanId.Value) && s.CreatedAt >= startOfMonthMaincon)
-                    .Select(s => new { PerusahaanId = s.PerusahaanId.Value, s.Nik })
+                    .Select(s => new { PerusahaanId = s.PerusahaanId ?? 0, s.Nik })
                     .ToListAsync();
 
                 var allGroupCoachingCreators = await _context.Coachings.AsNoTracking()
                     .Where(co => !co.IsDeleted && co.PerusahaanId.HasValue && companyIds.Contains(co.PerusahaanId.Value) && co.CreatedAt >= startOfMonthMaincon)
-                    .Select(co => new { PerusahaanId = co.PerusahaanId.Value, co.Nik })
+                    .Select(co => new { PerusahaanId = co.PerusahaanId ?? 0, co.Nik })
                     .ToListAsync();
 
                 var allGroupCoachingParticipants = await _context.CoachingParticipants.AsNoTracking()
                     .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId.HasValue && companyIds.Contains(p.Coaching.PerusahaanId.Value) && p.Coaching.CreatedAt >= startOfMonthMaincon)
-                    .Select(p => new { PerusahaanId = p.Coaching!.PerusahaanId.Value, p.Nik })
+                    .Select(p => new { PerusahaanId = p.Coaching!.PerusahaanId ?? 0, p.Nik })
                     .ToListAsync();
 
                 var allGroupCoachings = allGroupCoachingCreators.Concat(allGroupCoachingParticipants).ToList();

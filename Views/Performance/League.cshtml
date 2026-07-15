@@ -5,7 +5,7 @@
     var selectedCompanyId = (int)(ViewBag.SelectedCompanyId ?? 0);
     var companyName = ViewBag.CompanyName as string ?? "";
     var deptAchievements = ViewBag.DepartmentAchievements as List<DepartmentAchievementViewModel> ?? new List<DepartmentAchievementViewModel>();
-    var employees = ViewBag.Employees;
+    var employees = ViewBag.Employees as System.Collections.ICollection;
     var isIndexim = companyName.ToUpper().Contains("INDEXIM");
 }
 
@@ -835,7 +835,7 @@
                                 else
                                 {
                                     int empIdx = 0;
-                                    foreach (var emp in employees)
+                                    foreach (dynamic emp in employees)
                                     {
                                         empIdx++;
                                         var rowClass = "league-tr-normal";

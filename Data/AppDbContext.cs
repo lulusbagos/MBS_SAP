@@ -176,6 +176,10 @@ namespace MBS_SAP.Data
                 .ToView("vw_r_karyawan_jabatan_mapping_preview")
                 .HasKey(k => k.KaryawanId);
 
+            modelBuilder.Entity<KaryawanJabatanMappingPreviewView>()
+                .Property(k => k.ConfidenceScore)
+                .HasPrecision(18, 2);
+
             modelBuilder.Entity<MitraRosterView>()
                 .ToSqlQuery("SELECT karyawan_id, no_nik, hari_onsite, hari_offsite FROM ONE_DB_MITRA.dbo.vw_m_roster")
                 .HasKey(r => r.KaryawanId);
