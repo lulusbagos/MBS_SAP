@@ -724,7 +724,7 @@
 
             function shouldSkipClickLock(element) {
                 const $el = $(element);
-                return $el.is('[type="submit"], [data-allow-multi-click="true"], [data-bs-toggle], .dropdown-toggle, .btn-close, .menu-item, .nav-item-bottom, .custom-select-trigger');
+                return $el.is('[type="submit"], [data-allow-multi-click="true"], [data-bs-toggle], .dropdown-toggle, .btn-close, .menu-item, .nav-item-bottom, .custom-select-trigger, .btn-option');
             }
 
             $(document).on('click', 'button, a.btn, [data-prevent-double-click="true"]', function(e) {
