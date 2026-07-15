@@ -176,3 +176,19 @@ Administrasi via halaman `/Admin/Index` web saat ini perlu dikembangkan fitur ma
    - Jika pengguna masih membuka aplikasi versi lama (misalnya `1.1.0`), server akan menolak sinkronisasi API dan mengembalikan instruksi **Wajib Update**.
    - UI aplikasi mobile langsung menampilkan layar blokir dengan tautan unduh APK/Update Store yang baru.
 
+---
+
+## 7. Desain Estetika & Tema UI (UI Aesthetics & Theme)
+
+Untuk memberikan kesan yang bersih, profesional, dan konsisten dengan aplikasi web, desain visual aplikasi mobile mengikuti panduan estetika berikut:
+
+- **Tema Utama: Light Mode (Clean White)**:
+  - Tampilan pertama saat pengguna membuka aplikasi dan masuk ke layar login **wajib menggunakan tema terang/putih** (Light Mode), bukan tema gelap (Dark Mode).
+  - Background utama menggunakan warna putih bersih atau abu-abu sangat muda (misal: `#FFFFFF` atau `#F8FAFC`).
+- **Skema Warna Aksen (Accent Colors)**:
+  - Menggunakan warna biru korporat profesional (misal: `#0284c7` atau `#005691`) untuk tombol utama, header, dan elemen navigasi aktif, selaras dengan identitas visual MBS SAP Web.
+  - Teks utama menggunakan warna abu-abu gelap/hitam (misal: `#0F172A` atau `#1E293B`) untuk memastikan keterbacaan yang tinggi (*high contrast*).
+- **Aesthetic Card Design**:
+  - Pelaporan di dashboard SafeFeed menggunakan desain card dengan batas halus (*subtle borders*) atau bayangan tipis (*soft shadows*) untuk memberikan kedalaman native mobile yang premium.
+
+
