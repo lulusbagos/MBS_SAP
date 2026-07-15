@@ -139,3 +139,40 @@ Untuk mendukung aplikasi mobile, backend ASP.NET Core perlu menyediakan/mengopti
 ### Fase 4: Pengujian & Rilis (Minggu 10-12)
 - Uji coba lapangan (UAT) di blind spot area tambang.
 - Publikasi ke Google Play Store (Internal/Closed Beta Testing) dan Apple TestFlight.
+
+---
+
+## 6. Manajemen Akses & Keamanan dari Sisi Server (Server-Side Access Control)
+
+Karena aplikasi mobile didistribusikan secara eksternal (menggunakan file APK/IPA atau rilis Store), diperlukan mekanisme pengamanan dan pemblokiran akses terpusat langsung dari Dashboard Web Server (Admin Panel). 
+
+### 6.1. Mekanisme Kontrol Akses Server-Side
+```mermaid
+flowchart TD
+    App[Mobile App Launch] -->|1. Request Handshake/Verify| API[Server API]
+    API -->|2. Cek Status Karyawan & Versi| DB[(Database Server)]
+    DB --> C1{Status Karyawan Aktif?}
+    DB --> C2{Versi App Diblokir?}
+    
+    C1 -->|Tidak| BlockUser[Kirim Respon 401 Unauthorized -> Force Logout]
+    C2 -->|Ya| BlockVersion[Kirim Respon 403 Forbidden -> Tampilkan Layar Wajib Update]
+    
+    C1 -->|Ya| CheckPass[Lolos Pemeriksaan]
+    C2 -->|Tidak| CheckPass
+    CheckPass -->|3. Izinkan Sinkronisasi| Sync[Sync Berjalan Normal]
+```
+
+### 6.2. Fitur Keamanan pada Web Dashboard Admin
+Administrasi via halaman `/Admin/Index` web saat ini perlu dikembangkan fitur manajemen mobile sebagai berikut:
+
+1. **User Active/Inactive Toggle (Tombol Nonaktifkan User)**:
+   - Jika status karyawan diatur ke `Inactive` (tidak aktif) pada server, seluruh token JWT di handphone otomatis ditolak (kembali `401 Unauthorized`).
+   - Aplikasi mobile akan otomatis melakukan **force logout** dan menghapus seluruh local draf/cache jika menerima kode respon tersebut.
+2. **Device / Mobile Session Management (Manajemen Sesi Perangkat)**:
+   - Dashboard Admin menampilkan daftar perangkat aktif (Device ID, tipe HP, NIK user, dan tanggal login terakhir).
+   - Admin dapat mengeklik tombol **"Revoke Access" / "Putuskan Sesi"** untuk menghapus validitas token perangkat tersebut (misalnya jika HP hilang atau user resign).
+3. **App Version & Kill Switch (Kendali Versi Aplikasi)**:
+   - Halaman administrasi web dapat mengatur versi aplikasi minimum (misalnya versi `1.2.0`).
+   - Jika pengguna masih membuka aplikasi versi lama (misalnya `1.1.0`), server akan menolak sinkronisasi API dan mengembalikan instruksi **Wajib Update**.
+   - UI aplikasi mobile langsung menampilkan layar blokir dengan tautan unduh APK/Update Store yang baru.
+
