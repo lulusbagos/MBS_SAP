@@ -418,6 +418,7 @@ namespace MBS_SAP.Controllers
             };
         }
 
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Index()
         {
             ViewData["HeaderTitle"] = "Pencapaian SAP";
