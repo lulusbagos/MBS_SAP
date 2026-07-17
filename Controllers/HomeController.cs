@@ -248,7 +248,7 @@ namespace MBS_SAP.Controllers
                 int myTotalMonthTarget = targetHazardReport + targetInspeksi + targetSafetyTalk + targetObservasi + targetCoaching;
                 int myTotalThisMonth = cappedActH + cappedActI + cappedActST + cappedActO + cappedActC;
 
-                int complianceScore = 0;
+                int complianceScore = 100;
                 if (myTotalMonthTarget > 0)
                 {
                     complianceScore = (int)Math.Round((double)myTotalThisMonth / myTotalMonthTarget * 100.0, MidpointRounding.AwayFromZero);

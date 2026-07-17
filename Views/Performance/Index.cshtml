@@ -10,7 +10,7 @@
 
     // Individual progress calculations
     int myTotalMonthTarget = ViewBag.MyTotalMonthTarget ?? 4;
-    double myMonthlyProgress = myTotalMonthTarget > 0 ? (double)ViewBag.MyTotalMonth / (double)myTotalMonthTarget * 100.0 : 0.0;
+    double myMonthlyProgress = myTotalMonthTarget > 0 ? (double)ViewBag.MyTotalMonth / (double)myTotalMonthTarget * 100.0 : 100.0;
     myMonthlyProgress = Math.Min(myMonthlyProgress, 100.0);
     int myWeeklyTarget = ViewBag.MyWeeklyTarget ?? 0;
     bool isMyWeekCompliant = myTotalMonthTarget == 0 || ViewBag.MyTotalWeek >= myWeeklyTarget;
