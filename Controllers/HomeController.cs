@@ -143,58 +143,47 @@ namespace MBS_SAP.Controllers
                     .Select(r => r.Pesan)
                     .ToListAsync();
 
-                // Query dashboard berbasis akun login (NIK), bukan agregasi perusahaan.
-                var hazardQuery = _context.HazardReports
-                    .Where(h => !h.IsDeleted && h.Nik == userNik);
-                var inspectionQuery = _context.Inspections
-                    .Where(i => !i.IsDeleted && i.Nik == userNik);
-                var actionPlanQuery = _context.ActionPlans
-                    .Where(a => !a.IsDeleted && (a.Nik == userNik || a.NikPja == userNik || a.NikPic == userNik));
-                var safetyTalkQuery = _context.SafetyTalks
-                    .Where(s => !s.IsDeleted && s.Nik == userNik);
-                var p5mQuery = _context.P5ms
-                    .Where(p => !p.IsDeleted && p.Nik == userNik);
-                var coachingQuery = _context.Coachings
-                    .Where(c => !c.IsDeleted && (c.Nik == userNik || _context.CoachingParticipants.Any(p => p.CoachingId == c.Id && p.Nik == userNik)));
-     
+                // Query dashboard berbasis akun login (NIK) dengan filter rentang waktu 6 bulan terakhir untuk mengoptimalkan kinerja.
                 var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-                var observationQuery = _context.Observations.Where(o => !o.IsDeleted && o.Nik == userNik);
+                var lookbackDate = startOfMonth.AddMonths(-6);
 
-                var hazardStats = await hazardQuery.GroupBy(x => 1).Select(g => new {
-                    Total = g.Count(),
-                    Open = g.Sum(h => h.StatusTemuan == "Open" ? 1 : 0),
-                    Closed = g.Sum(h => h.StatusTemuan == "Closed" ? 1 : 0),
-                    ThisMonth = g.Sum(h => h.Tanggal >= startOfMonth ? 1 : 0)
-                }).FirstOrDefaultAsync();
+                var hazardQuery = _context.HazardReports
+                    .Where(h => !h.IsDeleted && h.Nik == userNik && h.CreatedAt >= lookbackDate);
+                var inspectionQuery = _context.Inspections
+                    .Where(i => !i.IsDeleted && i.Nik == userNik && i.CreatedAt >= lookbackDate);
+                var actionPlanQuery = _context.ActionPlans
+                    .Where(a => !a.IsDeleted && (a.Nik == userNik || a.NikPja == userNik || a.NikPic == userNik) && a.CreatedAt >= lookbackDate);
+                var safetyTalkQuery = _context.SafetyTalks
+                    .Where(s => !s.IsDeleted && s.Nik == userNik && s.CreatedAt >= lookbackDate);
+                var p5mQuery = _context.P5ms
+                    .Where(p => !p.IsDeleted && p.Nik == userNik && p.CreatedAt >= lookbackDate);
+                var coachingQuery = _context.Coachings
+                    .Where(c => !c.IsDeleted && (c.Nik == userNik || _context.CoachingParticipants.Any(p => p.CoachingId == c.Id && p.Nik == userNik)) && c.CreatedAt >= lookbackDate);
+                var observationQuery = _context.Observations
+                    .Where(o => !o.IsDeleted && o.Nik == userNik && o.CreatedAt >= lookbackDate);
 
-                var inspectionStats = await inspectionQuery.GroupBy(x => 1).Select(g => new {
-                    Total = g.Count(),
-                    ThisMonth = g.Sum(i => i.Tanggal >= startOfMonth ? 1 : 0)
-                }).FirstOrDefaultAsync();
+                // Performa tinggi: Menggunakan CountAsync secara langsung daripada GroupBy(1) yang menghasilkan subquery SQL kompleks dan lambat.
+                int thisMonthHazardsCount = await hazardQuery.CountAsync(h => h.Tanggal >= startOfMonth);
+                int openHazardsCount = await hazardQuery.CountAsync(h => h.StatusTemuan == "Open");
+                int closedHazardsCount = await hazardQuery.CountAsync(h => h.StatusTemuan == "Closed");
+                int totalHazardsCount = openHazardsCount + closedHazardsCount;
 
-                var actionPlanStats = await actionPlanQuery.GroupBy(x => 1).Select(g => new {
-                    Total = g.Count()
-                }).FirstOrDefaultAsync();
+                int thisMonthInspectionsCount = await inspectionQuery.CountAsync(i => i.Tanggal >= startOfMonth);
+                int totalInspectionsCount = await inspectionQuery.CountAsync();
 
-                var safetyTalkStats = await safetyTalkQuery.GroupBy(x => 1).Select(g => new {
-                    Total = g.Count(),
-                    ThisMonth = g.Sum(s => s.Tanggal >= startOfMonth ? 1 : 0)
-                }).FirstOrDefaultAsync();
+                int totalActionPlansCount = await actionPlanQuery.CountAsync();
 
-                var p5mStats = await p5mQuery.GroupBy(x => 1).Select(g => new {
-                    Total = g.Count(),
-                    ThisMonth = g.Sum(p => p.Tanggal >= startOfMonth ? 1 : 0)
-                }).FirstOrDefaultAsync();
+                int thisMonthSafetyTalksCount = await safetyTalkQuery.CountAsync(s => s.Tanggal >= startOfMonth);
+                int totalSafetyTalksCount = await safetyTalkQuery.CountAsync();
 
-                var coachingStats = await coachingQuery.GroupBy(x => 1).Select(g => new {
-                    Total = g.Count(),
-                    ThisMonth = g.Sum(c => c.Tanggal >= startOfMonth ? 1 : 0)
-                }).FirstOrDefaultAsync();
+                int thisMonthP5msCount = await p5mQuery.CountAsync(p => p.Tanggal >= startOfMonth);
+                int totalP5msCount = await p5mQuery.CountAsync();
 
-                var observationStats = await observationQuery.GroupBy(x => 1).Select(g => new {
-                    Total = g.Count(),
-                    ThisMonth = g.Sum(o => o.Date >= startOfMonth ? 1 : 0)
-                }).FirstOrDefaultAsync();
+                int thisMonthCoachingsCount = await coachingQuery.CountAsync(c => c.Tanggal >= startOfMonth);
+                int totalCoachingsCount = await coachingQuery.CountAsync();
+
+                int thisMonthObservationsCount = await observationQuery.CountAsync(o => o.Date >= startOfMonth);
+                int totalObservationsCount = await observationQuery.CountAsync();
 
                 var closedAssignedHazardCredits = await actionPlanQuery
                     .Where(a => a.Status == "Closed"
@@ -218,27 +207,27 @@ namespace MBS_SAP.Controllers
                     .Distinct()
                     .CountAsync();
 
-                stats.TotalHazards = hazardStats?.Total ?? 0;
-                stats.OpenHazards = hazardStats?.Open ?? 0;
-                stats.ClosedHazards = hazardStats?.Closed ?? 0;
-                stats.ThisMonthHazards = (hazardStats?.ThisMonth ?? 0) + closedAssignedHazardCredits;
+                stats.TotalHazards = totalHazardsCount;
+                stats.OpenHazards = openHazardsCount;
+                stats.ClosedHazards = closedHazardsCount;
+                stats.ThisMonthHazards = thisMonthHazardsCount + closedAssignedHazardCredits;
 
-                stats.TotalInspections = inspectionStats?.Total ?? 0;
-                stats.ThisMonthInspections = (inspectionStats?.ThisMonth ?? 0) + closedAssignedInspectionCredits;
+                stats.TotalInspections = totalInspectionsCount;
+                stats.ThisMonthInspections = thisMonthInspectionsCount + closedAssignedInspectionCredits;
 
-                stats.TotalActionPlans = actionPlanStats?.Total ?? 0;
+                stats.TotalActionPlans = totalActionPlansCount;
 
-                stats.TotalSafetyTalks = safetyTalkStats?.Total ?? 0;
-                stats.ThisMonthSafetyTalks = safetyTalkStats?.ThisMonth ?? 0;
+                stats.TotalSafetyTalks = totalSafetyTalksCount;
+                stats.ThisMonthSafetyTalks = thisMonthSafetyTalksCount;
 
-                stats.TotalP5ms = p5mStats?.Total ?? 0;
-                stats.ThisMonthP5ms = p5mStats?.ThisMonth ?? 0;
+                stats.TotalP5ms = totalP5msCount;
+                stats.ThisMonthP5ms = thisMonthP5msCount;
 
-                stats.TotalCoachings = coachingStats?.Total ?? 0;
-                stats.ThisMonthCoachings = coachingStats?.ThisMonth ?? 0;
+                stats.TotalCoachings = totalCoachingsCount;
+                stats.ThisMonthCoachings = thisMonthCoachingsCount;
 
-                stats.TotalObservations = observationStats?.Total ?? 0;
-                stats.ThisMonthObservations = observationStats?.ThisMonth ?? 0;
+                stats.TotalObservations = totalObservationsCount;
+                stats.ThisMonthObservations = thisMonthObservationsCount;
      
                 int cappedActH = Math.Min(stats.ThisMonthHazards, targetHazardReport);
                 int cappedActI = Math.Min(stats.ThisMonthInspections, targetInspeksi);

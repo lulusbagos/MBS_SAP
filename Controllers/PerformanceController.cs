@@ -462,15 +462,20 @@ namespace MBS_SAP.Controllers
             var now = DateTime.Now;
             var startOfWeek = DateTime.Today.AddDays(-6); // rolling 7 calendar days (today inclusive)
             var startOfMonth = new DateTime(now.Year, now.Month, 1);
+            var startOfYear = new DateTime(now.Year, 1, 1);
+            var trendStart = new DateTime(now.Year, now.Month, 1).AddMonths(-5);
+            var baseStartDate = trendStart < startOfYear ? trendStart : startOfYear;
 
-            // Submissions query
-            var hazards = _context.HazardReports.Where(h => !h.IsDeleted && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))));
-            var inspections = _context.Inspections.Where(i => !i.IsDeleted && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))));
-            var safetyTalks = _context.SafetyTalks.Where(s => !s.IsDeleted && (companyId == null || (s.PerusahaanId.HasValue && allowedCompanyIds.Contains(s.PerusahaanId.Value))));
-            var p5ms = _context.P5ms.Where(p => !p.IsDeleted && (companyId == null || (p.PerusahaanId.HasValue && allowedCompanyIds.Contains(p.PerusahaanId.Value))));
-            var coachings = _context.Coachings.Where(c => !c.IsDeleted && (companyId == null || (c.PerusahaanId.HasValue && allowedCompanyIds.Contains(c.PerusahaanId.Value))));
+            // Submissions query - filtered by baseStartDate to optimize performance
+            var hazards = _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= baseStartDate && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))));
+            var inspections = _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= baseStartDate && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))));
+            var safetyTalks = _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= baseStartDate && (companyId == null || (s.PerusahaanId.HasValue && allowedCompanyIds.Contains(s.PerusahaanId.Value))));
+            var p5ms = _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= baseStartDate && (companyId == null || (p.PerusahaanId.HasValue && allowedCompanyIds.Contains(p.PerusahaanId.Value))));
+            var coachings = _context.Coachings.Where(c => !c.IsDeleted && c.CreatedAt >= baseStartDate && (companyId == null || (c.PerusahaanId.HasValue && allowedCompanyIds.Contains(c.PerusahaanId.Value))));
 
-            var observationsQuery = _context.Observations.Where(o => !o.IsDeleted);
+            var openHazardsBase = _context.HazardReports.Where(h => !h.IsDeleted && h.StatusTemuan == "Open" && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))));
+
+            var observationsQuery = _context.Observations.Where(o => !o.IsDeleted && o.CreatedAt >= baseStartDate);
             if (companyId.HasValue)
             {
                 var allowedIds = allowedCompanyIds;
@@ -499,7 +504,6 @@ namespace MBS_SAP.Controllers
             int monthTotal = monthHazards + monthInspections + monthSafetyTalks + monthCoachings + monthObservations;
 
             // Incident Pyramid from the same source used by Incident/Index (published incidents)
-            var startOfYear = new DateTime(now.Year, 1, 1);
             var endOfYear = new DateTime(now.Year, 12, 31, 23, 59, 59);
             var incidentBaseQuery = _context.IncidentNewsList.Where(i => i.IsPublished);
             var incidentIndexTotal = await incidentBaseQuery.CountAsync();
@@ -596,11 +600,11 @@ namespace MBS_SAP.Controllers
 
             // 4. Open Hazards breakdown by Risk Level (Low/Medium/High/Extreme)
             // Scoped list keeps existing behavior for KPI cards that follow user/company access scope.
-            var openHazardsList = await hazards.Where(h => h.StatusTemuan == "Open" && h.TingkatResiko != null).Select(h => h.TingkatResiko).ToListAsync();
+            var openHazardsList = await openHazardsBase.Where(h => h.TingkatResiko != null).Select(h => h.TingkatResiko).ToListAsync();
 
             // Safety pyramid must show all companies regardless of login scope and status.
             var riskHazardsListAllCompanies = await _context.HazardReports
-                .Where(h => !h.IsDeleted && h.TingkatResiko != null)
+                .Where(h => !h.IsDeleted && h.StatusTemuan == "Open" && h.TingkatResiko != null && h.CreatedAt >= startOfYear)
                 .Select(h => h.TingkatResiko)
                 .ToListAsync();
 
@@ -617,7 +621,7 @@ namespace MBS_SAP.Controllers
             int openLow = openHazardsList.Count(r => string.Equals(r, "Low", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ringan", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Rendah", StringComparison.OrdinalIgnoreCase));
 
             // 5. Total Open vs Closed Hazards
-            int totalOpenHazards = await hazards.CountAsync(h => h.StatusTemuan == "Open");
+            int totalOpenHazards = await openHazardsBase.CountAsync();
             int totalClosedHazards = await hazards.CountAsync(h => h.StatusTemuan == "Closed");
 
             // 5a. Monitoring Metrics
@@ -682,11 +686,11 @@ namespace MBS_SAP.Controllers
             double highRiskResolution = totalHighRisk > 0 ? (double)highRiskClosed / totalHighRisk * 100 : 0;
 
             // 5b. Extra Professional Graphs Data
-            var allKategori = await hazards.Where(h => h.StatusTemuan == "Open" && h.KategoriBahaya != null).Select(h => h.KategoriBahaya).ToListAsync();
+            var allKategori = await openHazardsBase.Where(h => h.KategoriBahaya != null).Select(h => h.KategoriBahaya).ToListAsync();
             int unsafeActCount = allKategori.Count(k => k != null && (k.Contains("Tindakan", StringComparison.OrdinalIgnoreCase) || k.Contains("Act", StringComparison.OrdinalIgnoreCase) || k.Contains("KTA", StringComparison.OrdinalIgnoreCase)));
             int unsafeConditionCount = allKategori.Count(k => k != null && (k.Contains("Kondisi", StringComparison.OrdinalIgnoreCase) || k.Contains("Condition", StringComparison.OrdinalIgnoreCase) || k.Contains("TTA", StringComparison.OrdinalIgnoreCase) || k.Contains("KTC", StringComparison.OrdinalIgnoreCase)));
             
-            var topAreas = await hazards.Where(h => h.StatusTemuan == "Open" && !string.IsNullOrEmpty(h.Area))
+            var topAreas = await openHazardsBase.Where(h => !string.IsNullOrEmpty(h.Area))
                                         .GroupBy(h => h.Area)
                                         .Select(g => new { Area = g.Key, Count = g.Count() })
                                         .OrderByDescending(x => x.Count)
