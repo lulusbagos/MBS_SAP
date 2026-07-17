@@ -2925,17 +2925,15 @@ namespace MBS_SAP.Controllers
             ViewBag.SimperViolations = simperViolations;
 
             // 5. Maincon Group Comparison Calculation
-            var mainconNames = new[] { "UNGGUL DINAMIKA UTAMA", "KALIMANTAN PRIMA PERSADA", "MEGA GLOBAL ENERGY" };
-            var mainconList = new List<PerusahaanView>();
-            foreach (var mName in mainconNames)
-            {
-                var found = await _context.Perusahaans.AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.StatusAktif && p.NamaPerusahaan != null && p.NamaPerusahaan.Contains(mName));
-                if (found != null)
-                {
-                    mainconList.Add(found);
-                }
-            }
+            // Ambil semua anak perusahaan aktif PT Indexim Coalindo (id=1) secara dinamis dari DB
+            // agar tidak perlu hardcode nama-nama maincon satu per satu.
+            var indeximCoalindoId = 1;
+            var mainconList = await _context.Perusahaans.AsNoTracking()
+                .Where(p => p.StatusAktif
+                    && p.PerusahaanIndukId == indeximCoalindoId
+                    && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
+                .OrderBy(p => p.NamaPerusahaan)
+                .ToListAsync();
 
             var startOfMonthMaincon = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var mainconGroupComparisonList = new List<MainconGroupComparisonViewModel>();
