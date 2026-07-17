@@ -424,51 +424,86 @@
                             }
 
                             <!-- Speedometer thumbnail and defect photo thumbnails -->
-                            <div class="d-flex flex-wrap gap-2 mb-2">
-                                @if (!string.IsNullOrEmpty(item.FotoSpeedometer))
+                            @{
+                                var hasPhotos = !string.IsNullOrEmpty(item.FotoSpeedometer);
+                                if (!hasPhotos)
                                 {
-                                    var proxyFotoSpeedometer = item.FotoSpeedometer.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoSpeedometer) : item.FotoSpeedometer;
-                                    <div class="text-center">
-                                        <a href="@proxyFotoSpeedometer" target="_blank" title="Foto Odometer Speedometer">
-                                            <img src="@proxyFotoSpeedometer" alt="Speedometer" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color);" />
-                                        </a>
-                                        <div class="text-muted" style="font-size: 8px; margin-top: 2px;">Speedometer</div>
-                                    </div>
-                                }
-                                
-                                @* Dynamic rendering of defect photos *@
-                                @{
-                                    var defectPhotos = new List<string>();
                                     try
                                     {
                                         if (!string.IsNullOrEmpty(item.GolA_Json)) {
                                             var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolA_Json);
-                                            if (list != null) defectPhotos.AddRange(list.Where(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl)).Select(x => x.PhotoUrl!));
+                                            if (list != null && list.Any(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl))) hasPhotos = true;
                                         }
-                                        if (!string.IsNullOrEmpty(item.GolB_Json)) {
+                                        if (!hasPhotos && !string.IsNullOrEmpty(item.GolB_Json)) {
                                             var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolB_Json);
-                                            if (list != null) defectPhotos.AddRange(list.Where(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl)).Select(x => x.PhotoUrl!));
+                                            if (list != null && list.Any(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl))) hasPhotos = true;
                                         }
-                                        if (!string.IsNullOrEmpty(item.GolC_Json)) {
+                                        if (!hasPhotos && !string.IsNullOrEmpty(item.GolC_Json)) {
                                             var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolC_Json);
-                                            if (list != null) defectPhotos.AddRange(list.Where(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl)).Select(x => x.PhotoUrl!));
+                                            if (list != null && list.Any(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl))) hasPhotos = true;
                                         }
                                     }
                                     catch {}
-                                    int picIdx = 1;
-                                    foreach (var photo in defectPhotos)
-                                    {
-                                        var proxyPhoto = photo.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(photo) : photo;
-                                        <div class="text-center">
-                                            <a href="@proxyPhoto" target="_blank" title="Foto Kerusakan #@picIdx">
-                                                <img src="@proxyPhoto" alt="Kerusakan" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(244,63,94,0.3);" />
-                                            </a>
-                                            <div class="text-danger" style="font-size: 8px; margin-top: 2px;">Temuan #@picIdx</div>
-                                        </div>
-                                        picIdx++;
-                                    }
                                 }
-                            </div>
+                            }
+                            @if (hasPhotos)
+                            {
+                                @if (item.Nik == userNik || isAdmin)
+                                {
+                                    <div class="d-flex flex-wrap gap-2 mb-2">
+                                        @if (!string.IsNullOrEmpty(item.FotoSpeedometer))
+                                        {
+                                            var proxyFotoSpeedometer = item.FotoSpeedometer.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoSpeedometer) : item.FotoSpeedometer;
+                                            <div class="text-center">
+                                                <a href="@proxyFotoSpeedometer" target="_blank" title="Foto Odometer Speedometer">
+                                                    <img src="@proxyFotoSpeedometer" alt="Speedometer" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color);" />
+                                                </a>
+                                                <div class="text-muted" style="font-size: 8px; margin-top: 2px;">Speedometer</div>
+                                            </div>
+                                        }
+                                        
+                                        @* Dynamic rendering of defect photos *@
+                                        @{
+                                            var defectPhotos = new List<string>();
+                                            try
+                                            {
+                                                if (!string.IsNullOrEmpty(item.GolA_Json)) {
+                                                    var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolA_Json);
+                                                    if (list != null) defectPhotos.AddRange(list.Where(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl)).Select(x => x.PhotoUrl!));
+                                                }
+                                                if (!string.IsNullOrEmpty(item.GolB_Json)) {
+                                                    var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolB_Json);
+                                                    if (list != null) defectPhotos.AddRange(list.Where(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl)).Select(x => x.PhotoUrl!));
+                                                }
+                                                if (!string.IsNullOrEmpty(item.GolC_Json)) {
+                                                    var list = System.Text.Json.JsonSerializer.Deserialize<List<MBS_SAP.Controllers.P2hController.ChecklistItem>>(item.GolC_Json);
+                                                    if (list != null) defectPhotos.AddRange(list.Where(x => x.Status == "NOT_GOOD" && !string.IsNullOrEmpty(x.PhotoUrl)).Select(x => x.PhotoUrl!));
+                                                }
+                                            }
+                                            catch {}
+                                            int picIdx = 1;
+                                            foreach (var photo in defectPhotos)
+                                            {
+                                                var proxyPhoto = photo.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(photo) : photo;
+                                                <div class="text-center">
+                                                    <a href="@proxyPhoto" target="_blank" title="Foto Kerusakan #@picIdx">
+                                                        <img src="@proxyPhoto" alt="Kerusakan" style="width: 55px; height: 55px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(244,63,94,0.3);" />
+                                                    </a>
+                                                    <div class="text-danger" style="font-size: 8px; margin-top: 2px;">Temuan #@picIdx</div>
+                                                </div>
+                                                picIdx++;
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="px-2 py-1.5 d-flex align-items-center gap-1.5 mb-2" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; max-width: fit-content;">
+                                        <i class="bi bi-shield-lock-fill text-warning" style="font-size: 13px;"></i>
+                                        <span class="text-muted" style="font-size: 10px;">Foto dikunci</span>
+                                    </div>
+                                }
+                            }
 
                             <div class="d-flex justify-content-between align-items-center pt-2" style="border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
                                 <span><i class="bi bi-person me-1"></i>@item.Nama</span>

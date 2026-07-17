@@ -236,7 +236,8 @@
             @if (hasFoto1 || hasFoto2)
             {
                 var isAdminUser = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase);
-                if (isAdminUser)
+                var isOwner = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Trim(), item.Nik?.Trim(), StringComparison.OrdinalIgnoreCase);
+                if (isAdminUser || isOwner)
                 {
                     if (hasFoto1 && hasFoto2)
                     {
