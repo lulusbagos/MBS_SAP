@@ -2925,15 +2925,22 @@ namespace MBS_SAP.Controllers
             ViewBag.SimperViolations = simperViolations;
 
             // 5. Maincon Group Comparison Calculation
-            // Ambil semua anak perusahaan aktif PT Indexim Coalindo (id=1) secara dinamis dari DB
-            // agar tidak perlu hardcode nama-nama maincon satu per satu.
-            var indeximCoalindoId = 1;
-            var mainconList = await _context.Perusahaans.AsNoTracking()
-                .Where(p => p.StatusAktif
-                    && p.PerusahaanIndukId == indeximCoalindoId
-                    && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
+            // UDU (3), KPP (4), dan MGE/PT Mega Global Energy (5) tampil sebagai grup mandiri masing-masing.
+            // PT INDEXIM COALINDO (1) tampil sebagai grup tersendiri dengan anak-anaknya SELAIN ketiga promoted maincon tsb.
+            var promotedMainconIds = new HashSet<int> { 3, 4, 5 }; // UDU (3), KPP (4), MGE/PT Mega Global Energy (5)
+
+            // Bangun mainconList: [PT INDEXIM] + [UDU, KPP, MGE] sebagai grup mandiri
+            var indeximCompany = await _context.Perusahaans.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.StatusAktif && p.PerusahaanId == 1);
+
+            var promotedMaincons = await _context.Perusahaans.AsNoTracking()
+                .Where(p => p.StatusAktif && promotedMainconIds.Contains(p.PerusahaanId))
                 .OrderBy(p => p.NamaPerusahaan)
                 .ToListAsync();
+
+            var mainconList = new List<PerusahaanView>();
+            if (indeximCompany != null) mainconList.Add(indeximCompany);
+            mainconList.AddRange(promotedMaincons);
 
             var startOfMonthMaincon = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             var mainconGroupComparisonList = new List<MainconGroupComparisonViewModel>();
@@ -2952,6 +2959,13 @@ namespace MBS_SAP.Controllers
                     .ToListAsync();
 
                 var allChildIds = childIdsFromRelations.Concat(childIdsFromDirectParent).Distinct().ToList();
+
+                // Untuk PT INDEXIM, kecualikan promoted maincons dari daftar anaknya
+                // agar UDU, KPP, MGE tidak dihitung ganda di grup Indexim
+                if (mcon.PerusahaanId == 1)
+                {
+                    allChildIds = allChildIds.Where(id => !promotedMainconIds.Contains(id)).ToList();
+                }
 
                 var subcons = await _context.Perusahaans.AsNoTracking()
                     .Where(p => allChildIds.Contains(p.PerusahaanId) && p.StatusAktif)
