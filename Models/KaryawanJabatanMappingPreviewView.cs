@@ -22,5 +22,6 @@ namespace MBS_SAP.Models
         public int? TargetHazardReport { get; set; }
         public int? TargetCoaching { get; set; }
         public int? TargetSafetyTalk { get; set; }
+        public string? AlasanTargetZero { get; set; }
     }
 }

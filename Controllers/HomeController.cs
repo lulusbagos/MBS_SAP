@@ -121,6 +121,7 @@ namespace MBS_SAP.Controllers
                     if (targetMapping != null)
                     {
                         stats.KategoriPengawas = targetMapping.KategoriPengawas;
+                        stats.AlasanTargetZero = targetMapping.AlasanTargetZero;
                         targetHazardReport = targetMapping.TargetHazardReport ?? 2;
                         targetInspeksi = targetMapping.TargetInspeksi ?? 1;
                         targetSafetyTalk = targetMapping.TargetSafetyTalk ?? 1;
@@ -407,6 +408,7 @@ namespace MBS_SAP.Controllers
             ViewData["ComplianceScore"] = stats.ComplianceScore;
             ViewData["CompliantWeeks"] = stats.CompliantWeeks;
             ViewData["TargetWeeks"] = stats.TargetWeeks;
+            ViewData["AlasanTargetZero"] = stats.AlasanTargetZero;
             ViewData["MyTotalThisMonth"] = stats.MyTotalThisMonth;
             ViewData["MyTotalMonthTarget"] = stats.MyTotalMonthTarget;
             
@@ -462,6 +464,7 @@ namespace MBS_SAP.Controllers
             public int ComplianceScore { get; set; }
             public int CompliantWeeks { get; set; }
             public int TargetWeeks { get; set; }
+            public string? AlasanTargetZero { get; set; }
             public int MyTotalThisMonth { get; set; }
             public int MyTotalMonthTarget { get; set; }
             
