@@ -272,7 +272,7 @@
 
                             @if (!string.IsNullOrEmpty(item.Foto))
                             {
-                                @if (item.Nik == userNik || isAdmin)
+                                @if (item.Nik == userNik)
                                 {
                                     var proxyFoto = item.Foto.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.Foto) : item.Foto;
                                     <div class="my-2">

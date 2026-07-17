@@ -11,6 +11,7 @@ namespace MBS_SAP.Models
         
         public string Nama { get; set; } = string.Empty;
         public string Nik { get; set; } = string.Empty;
+        public string? NikPja { get; set; }
         public string? Departemen { get; set; }
         public int? PerusahaanId { get; set; }
         public string? Jabatan { get; set; }

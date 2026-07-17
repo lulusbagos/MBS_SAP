@@ -283,7 +283,7 @@
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="badge @resultBadgeClass rounded-pill px-2 py-1 fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">@item.HasilObservasi</span>
-                                    @if (item.Nik == userNik || isAdmin)
+                                     @if (item.Nik == userNik || isAdmin)
                                     {
                                         <div class="dropdown">
                                             <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -314,7 +314,7 @@
 
                             @if (!string.IsNullOrEmpty(item.FotoUrl))
                             {
-                                @if (item.Nik == userNik || isAdmin)
+                                 @if (item.Nik == userNik)
                                 {
                                     var proxyFotoUrl = item.FotoUrl.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoUrl) : item.FotoUrl;
                                     <div class="mb-2">

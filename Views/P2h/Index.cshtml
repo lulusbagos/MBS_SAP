@@ -448,7 +448,7 @@
                             }
                             @if (hasPhotos)
                             {
-                                @if (item.Nik == userNik || isAdmin)
+                                @if (item.Nik == userNik)
                                 {
                                     <div class="d-flex flex-wrap gap-2 mb-2">
                                         @if (!string.IsNullOrEmpty(item.FotoSpeedometer))

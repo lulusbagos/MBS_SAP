@@ -188,7 +188,7 @@
                             <!-- Images -->
                             @if (!string.IsNullOrEmpty(item.FotoDiri) || !string.IsNullOrEmpty(item.FotoKegiatan))
                             {
-                                @if (item.Nik == userNik || isAdmin)
+                                @if (item.Nik == userNik)
                                 {
                                     <div class="d-flex gap-2 my-2">
                                         @if (!string.IsNullOrEmpty(item.FotoDiri))

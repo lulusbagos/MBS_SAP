@@ -239,7 +239,7 @@
                              }
                              @if (hasPhotos)
                              {
-                                 var isAuthorized = item.Nik == userNik || item.NikPja == userNik || item.NikPic == userNik || isAdmin;
+                                 var isAuthorized = item.Nik == userNik || item.NikPja == userNik;
                                  @if (isAuthorized)
                                  {
                                      <div class="row g-2 mb-3">

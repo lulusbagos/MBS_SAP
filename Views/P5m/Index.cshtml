@@ -250,7 +250,7 @@
 
                                         @if (!string.IsNullOrEmpty(group.Key.FotoKegiatan))
                                         {
-                                            @if (group.Key.Nik == userNik || isAdmin)
+                                            @if (group.Key.Nik == userNik)
                                             {
                                                 var displayPath = group.Key.FotoKegiatan.StartsWith("http") 
                                                     ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(group.Key.FotoKegiatan) 

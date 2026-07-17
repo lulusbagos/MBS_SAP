@@ -235,9 +235,9 @@
 
             @if (hasFoto1 || hasFoto2)
             {
-                var isAdminUser = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase);
                 var isOwner = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Trim(), item.Nik?.Trim(), StringComparison.OrdinalIgnoreCase);
-                if (isAdminUser || isOwner)
+                var isPja = !string.IsNullOrEmpty(item.NikPja) && string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Trim(), item.NikPja.Trim(), StringComparison.OrdinalIgnoreCase);
+                if (isOwner || isPja)
                 {
                     if (hasFoto1 && hasFoto2)
                     {

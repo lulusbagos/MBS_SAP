@@ -364,7 +364,8 @@
 
                             @if (!string.IsNullOrEmpty(item.FotoTemuan))
                             {
-                                @if (isCreatorOrAdmin)
+                                var isUploaderOrPja = item.Nik == currentUserNik || (!string.IsNullOrEmpty(item.NikPja) && item.NikPja == currentUserNik);
+                                if (isUploaderOrPja)
                                 {
                                     var displayPath = item.FotoTemuan.StartsWith("http") 
                                         ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoTemuan) 
