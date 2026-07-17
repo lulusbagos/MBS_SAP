@@ -3153,9 +3153,21 @@ namespace MBS_SAP.Controllers
                 int totalGroupTarget = totalTargetH + totalTargetI + totalTargetS + totalTargetO + totalTargetC;
                 int totalGroupActual = totalActualH + totalActualI + totalActualS + totalActualO + totalActualC;
 
-                var uncompliantSubs = new List<string>();
+                var uncompliantSubs = new List<string>();   // punya target tapi belum ada submisi
+                var noTargetSubs = new List<string>();        // tidak ada karyawan ber-target sama sekali
                 foreach (var sub in subcons)
                 {
+                    var subKarIds = allGroupKaryawans.Where(k => k.IdPerusahaan == sub.PerusahaanId).Select(k => k.IdKaryawan).ToList();
+                    bool hasTarget = subKarIds.Any(id => allGroupTargets.TryGetValue(id, out var t)
+                        && (t.TargetHazardReport > 0 || t.TargetInspeksi > 0 || t.TargetSafetyTalk > 0 || t.TargetObservasi > 0 || t.TargetCoaching > 0));
+
+                    if (!hasTarget)
+                    {
+                        // Tidak ada karyawan dengan target — tidak relevan untuk compliance
+                        noTargetSubs.Add(sub.NamaPerusahaan ?? "Unknown");
+                        continue;
+                    }
+
                     int subActualCount = 
                         allGroupHazards.Count(x => x.PerusahaanId == sub.PerusahaanId) +
                         allGroupInspections.Count(x => x.PerusahaanId == sub.PerusahaanId) +
@@ -3177,6 +3189,7 @@ namespace MBS_SAP.Controllers
                     EmployeesWithTargetCount = employeesWithTargetCount,
                     ChildCompanyNames = subcons.Select(s => s.NamaPerusahaan ?? "Unknown").ToList(),
                     UncompliantChildCompanyNames = uncompliantSubs,
+                    NoTargetChildCompanyNames = noTargetSubs,
                     OverallComplianceRate = totalGroupTarget > 0 ? Math.Round((double)totalGroupActual / totalGroupTarget * 100.0, 1) : 0,
                     HazardComplianceRate = totalTargetH > 0 ? Math.Round((double)totalActualH / totalTargetH * 100.0, 1) : 0,
                     InspeksiComplianceRate = totalTargetI > 0 ? Math.Round((double)totalActualI / totalTargetI * 100.0, 1) : 0,
@@ -3859,6 +3872,7 @@ namespace MBS_SAP.Controllers
         public int EmployeesWithTargetCount { get; set; }
         public List<string> ChildCompanyNames { get; set; } = new();
         public List<string> UncompliantChildCompanyNames { get; set; } = new();
+        public List<string> NoTargetChildCompanyNames { get; set; } = new();
         public double OverallComplianceRate { get; set; }
         public double HazardComplianceRate { get; set; }
         public double InspeksiComplianceRate { get; set; }
