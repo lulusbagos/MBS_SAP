@@ -137,7 +137,7 @@
                         </div>
                         <div id="pjaSearchResults" class="dropdown-menu w-100" style="background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 300px; overflow-y: auto; z-index: 1050; position: absolute; top: 100%; left: 0;">
                         </div>
-                        <input type="hidden" id="pja" name="pja" required />
+                        <input type="hidden" id="pja" name="pja" />
                         <input type="hidden" id="nikPja" name="nikPja" />
                         <input type="hidden" id="departemenPja" name="departemenPja" />
                     </div>
@@ -874,6 +874,10 @@
             $('#pjaSearchInput').val('');
             $('#pjaSearchInput').parent().hide();
             $('#lintasPerusahaanToggle').closest('.d-flex').hide();
+
+            // Clear validation error on select
+            $('#pjaSearchInput').removeClass('is-invalid');
+            $('#pjaSearchInput').closest('.form-group-sap').find('.sap-err-msg').remove();
         }
 
         function cancelEditInspection() {
@@ -1467,6 +1471,18 @@
                         }
                     }
                 });
+
+                // Validate PJA selection
+                const pjaVal = $('#pja').val();
+                if (!pjaVal || pjaVal.trim() === '') {
+                    isValid = false;
+                    $('#pjaSearchInput').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#pjaSearchInput');
+                    
+                    if ($('#pjaSearchInput').closest('.form-group-sap').find('.sap-err-msg').length === 0) {
+                        $('#pjaSearchInput').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Penanggung Jawab Area (PJA) wajib dipilih dari pencarian.</span>');
+                    }
+                }
 
                 if (!isValid) {
                     e.preventDefault();

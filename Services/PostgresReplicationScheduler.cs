@@ -82,7 +82,7 @@ namespace MBS_SAP.Services
 
         private async Task RunPeriodicSyncAsync(CancellationToken cancellationToken)
         {
-            const int lookbackDays = 3;
+            const int lookbackDays = 30;
             _logger.LogInformation("Starting scheduled 3-hourly postgres replication with lookback {LookbackDays} days.", lookbackDays);
             await RunReplicationAsync(lookbackDays, "periodic", cancellationToken);
         }

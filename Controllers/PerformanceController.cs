@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MBS_SAP.Controllers
 {
@@ -140,6 +141,14 @@ namespace MBS_SAP.Controllers
 
         private async Task<List<dynamic>> GetEmployeesComplianceData(int companyId, string? departmentNameFilter = null)
         {
+            var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
+            var cacheKey = $"EmployeesComplianceData_{companyId}_{departmentNameFilter ?? "All"}";
+            
+            if (cache.TryGetValue(cacheKey, out List<dynamic>? cachedResult) && cachedResult != null)
+            {
+                return cachedResult;
+            }
+
             // Set transaction isolation level to READ UNCOMMITTED to prevent deadlocks/timeouts on heavy tables
             await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
 
@@ -257,7 +266,9 @@ namespace MBS_SAP.Controllers
                 });
             }
 
-            return result.OrderByDescending(r => r.complianceRate).ToList();
+            var complianceResult = result.OrderByDescending(r => r.complianceRate).ToList();
+            cache.Set(cacheKey, complianceResult, TimeSpan.FromMinutes(5));
+            return complianceResult;
         }
 
         private async Task<GeoSafetyRadarViewModel> BuildGeoSafetyRadarDataAsync(int? companyId, HashSet<int> allowedCompanyIds, string? requestedGeoArea, bool includePhotos = false)
@@ -416,6 +427,18 @@ namespace MBS_SAP.Controllers
             var userCompanyIdClaim = User.FindFirst("CompanyId")?.Value;
             int? userCompanyId = int.TryParse(userCompanyIdClaim, out int userCid) && userCid > 0 ? userCid : (int?)null;
             var (companyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
+            
+            var cache = HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>();
+            var cacheKey = $"PerformanceIndexStats_{userNik}_{companyId}_{string.Join(",", allowedCompanyIds)}";
+            
+            if (cache.TryGetValue(cacheKey, out Dictionary<string, object?>? cachedViewData) && cachedViewData != null)
+            {
+                foreach (var kvp in cachedViewData)
+                {
+                    ViewData[kvp.Key] = kvp.Value;
+                }
+                return View();
+            }
             var isAdmin = User.IsInRole("Admin");
             var jobTitle = User.FindFirst("JobTitle")?.Value;
             var department = User.FindFirst("Department")?.Value;
@@ -2121,6 +2144,13 @@ namespace MBS_SAP.Controllers
                     }
                 }
             }
+
+            var viewDataCache = new Dictionary<string, object?>();
+            foreach (var kvp in ViewData)
+            {
+                viewDataCache[kvp.Key] = kvp.Value;
+            }
+            cache.Set(cacheKey, viewDataCache, TimeSpan.FromMinutes(5));
 
             return View();
         }

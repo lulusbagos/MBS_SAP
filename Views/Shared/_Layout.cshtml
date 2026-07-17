@@ -29,7 +29,12 @@
         })();
     </script>
 
-    @{ var isAdminUser = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase); }
+    @{ 
+        var isAdminUser = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase); 
+        var userCompany = User.FindFirst("Company")?.Value;
+        var isKPPUser = string.Equals(userCompany?.Trim(), "PT KALIMANTAN PRIMA PERSADA", StringComparison.OrdinalIgnoreCase);
+        var canAccessUploadData = isAdminUser || isKPPUser;
+    }
 
     <div class="app-container">
         @if (ViewData["HideNav"] == null)
@@ -104,7 +109,7 @@
                         <i class="bi bi-newspaper" style="color: #f43f5e;"></i>
                         <span>Insiden</span>
                     </a>
-                    @if (isAdminUser)
+                    @if (canAccessUploadData)
                     {
                         <a asp-controller="Admin" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Admin" ? "active" : "")">
                             <i class="bi bi-cloud-arrow-up-fill text-success"></i>

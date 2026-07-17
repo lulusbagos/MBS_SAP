@@ -17,7 +17,7 @@ using System.Collections.Generic;
 
 namespace MBS_SAP.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public class AdminController : Controller
     {
         private readonly AppDbContext _context;
@@ -40,8 +40,19 @@ namespace MBS_SAP.Controllers
             _companyHierarchyService = companyHierarchyService;
         }
 
+        private bool IsAuthorizedUser()
+        {
+            if (User.IsInRole("Admin")) return true;
+            var company = User.FindFirst("Company")?.Value;
+            return string.Equals(company?.Trim(), "PT KALIMANTAN PRIMA PERSADA", StringComparison.OrdinalIgnoreCase);
+        }
+
         public IActionResult Index()
         {
+            if (!IsAuthorizedUser())
+            {
+                return Forbid();
+            }
             ViewData["HeaderTitle"] = "Admin Area";
             ViewData["ActiveTab"] = "Admin";
             return View();
@@ -50,6 +61,10 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public IActionResult DownloadTemplate()
         {
+            if (!IsAuthorizedUser())
+            {
+                return Forbid();
+            }
             using var wb = new XLWorkbook();
             
             void StyleHeader(IXLWorksheet ws, int rowNum)
@@ -116,6 +131,10 @@ namespace MBS_SAP.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadExcel(IFormFile excelFile)
         {
+            if (!IsAuthorizedUser())
+            {
+                return Forbid();
+            }
             if (excelFile == null || excelFile.Length == 0)
             {
                 TempData["ErrorMessage"] = "Silakan pilih file Excel (.xlsx)";
@@ -136,6 +155,9 @@ namespace MBS_SAP.Controllers
 
             int addedHazards = 0, addedInspections = 0, addedActionPlans = 0, addedSafetyTalks = 0, addedP5m = 0;
             int skippedHazards = 0, skippedInspections = 0, skippedActionPlans = 0, skippedSafetyTalks = 0, skippedP5m = 0;
+            int failedHazards = 0, failedInspections = 0, failedSafetyTalks = 0, failedP5m = 0;
+            var validationErrors = new List<string>();
+            var duplicateLogs = new List<string>();
 
             try
             {
@@ -169,83 +191,118 @@ namespace MBS_SAP.Controllers
                     EnsureWorksheetRowLimit(wsHazard);
                     foreach (var row in wsHazard.RowsUsed().Skip(2)) // Data starts at row 3 (if header at row 2)
                     {
-                        var nik = GetString(row, 5);
+                        var nik = SafeTruncate(GetString(row, 5), 50);
                         var tanggal = GetDate(row, 2);
-                        if (string.IsNullOrEmpty(nik) || !tanggal.HasValue) continue;
-                        if (nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
+                        
+                        if (string.IsNullOrEmpty(nik) && !tanggal.HasValue) continue;
+                        if (nik != null && nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
+
+                        if (string.IsNullOrEmpty(nik))
+                        {
+                            validationErrors.Add($"[Hazard] Baris {row.RowNumber()}: NIK tidak boleh kosong.");
+                            failedHazards++;
+                            continue;
+                        }
+                        if (!tanggal.HasValue)
+                        {
+                            validationErrors.Add($"[Hazard] Baris {row.RowNumber()}: Kolom Tanggal kosong atau format salah.");
+                            failedHazards++;
+                            continue;
+                        }
 
                         string temuan = GetString(row, 11) ?? "-";
-                        if (!_context.HazardReports.Any(h => h.Nik == nik && h.Tanggal == tanggal.Value.Date && h.Temuan == temuan))
+                        
+                        var existingTemuans = _context.HazardReports
+                            .Where(h => h.Nik == nik && h.Tanggal == tanggal.Value.Date)
+                            .Select(h => h.Temuan)
+                            .ToList();
+                        bool isDuplicateHazard = existingTemuans.Any(existing => CalculateSimilarity(temuan, existing) >= 0.80);
+
+                        if (!isDuplicateHazard)
                         {
                             _context.HazardReports.Add(new HazardReport
                             {
-                                FotoTemuan = GetString(row, 1),
+                                FotoTemuan = SafeTruncate(GetString(row, 1), 500),
                                 Tanggal = tanggal.Value.Date,
                                 Waktu = GetTime(row, 3) ?? TimeSpan.Zero,
-                                Nama = GetString(row, 4) ?? "",
+                                Nama = SafeTruncate(GetString(row, 4) ?? "", 150),
                                 Nik = nik,
-                                Departemen = GetString(row, 6),
-                                Area = GetString(row, 7),
-                                Lokasi = GetString(row, 8),
-                                DetilLokasi = GetString(row, 9),
+                                Departemen = SafeTruncate(GetString(row, 6), 150),
+                                Area = SafeTruncate(GetString(row, 7), 150),
+                                Lokasi = SafeTruncate(GetString(row, 8), 150),
+                                DetilLokasi = SafeTruncate(GetString(row, 9), 250),
                                 Temuan = temuan,
-                                KategoriBahaya = GetString(row, 12),
-                                JenisBahaya = GetString(row, 13),
-                                JenisKetidaksesuaian = GetString(row, 14),
-                                TingkatResiko = GetString(row, 15),
+                                KategoriBahaya = SafeTruncate(GetString(row, 12), 100),
+                                JenisBahaya = SafeTruncate(GetString(row, 13), 100),
+                                JenisKetidaksesuaian = SafeTruncate(GetString(row, 14), 150),
+                                TingkatResiko = SafeTruncate(GetString(row, 15), 50),
                                 Perbaikan = GetString(row, 16),
                                 TindakanPerbaikan = GetString(row, 17),
-                                Pja = GetString(row, 18),
-                                NikPja = GetString(row, 19),
-                                DepartemenPja = GetString(row, 20),
-                                StatusTemuan = GetString(row, 21) ?? "Open",
+                                Pja = SafeTruncate(GetString(row, 18), 150),
+                                NikPja = SafeTruncate(GetString(row, 19), 50),
+                                DepartemenPja = SafeTruncate(GetString(row, 20), 100), // Max DB column is 100
+                                StatusTemuan = SafeTruncate(GetString(row, 21) ?? "Open", 50),
                                 CreatedAt = DateTime.Now
                             });
                             addedHazards++;
                         }
-                        else { skippedHazards++; }
+                        else 
+                        { 
+                            skippedHazards++; 
+                            duplicateLogs.Add($"[Hazard] Baris {row.RowNumber()}: Temuan serupa dengan data yang sudah ada (NIK: {nik}, Tanggal: {tanggal.Value.ToString("dd/MM/yyyy")}, Temuan: \"{temuan}\").");
+                        }
 
                         // Parse Action Plan from Hazard
-                        var pic = GetString(row, 22);
-                        var status = GetString(row, 21);
+                        var pic = SafeTruncate(GetString(row, 22), 150);
+                        var status = SafeTruncate(GetString(row, 21), 50);
                         if (!string.IsNullOrEmpty(pic) || status != null)
                         {
                             string apDetil = temuan;
-                            if (!_context.ActionPlans.Any(a => a.Nik == nik && a.Tanggal == tanggal.Value.Date && a.DetilTemuan == apDetil))
+                            var existingApDetails = _context.ActionPlans
+                                .Where(a => a.Nik == nik && a.Tanggal == tanggal.Value.Date)
+                                .Select(a => a.DetilTemuan)
+                                .ToList();
+                            bool isDuplicateAp = existingApDetails.Any(existing => CalculateSimilarity(apDetil, existing) >= 0.80);
+
+                            if (!isDuplicateAp)
                             {
                                 _context.ActionPlans.Add(new ActionPlan
                                 {
-                                    FotoTemuan = GetString(row, 1),
-                                    FotoPerbaikan = GetString(row, 31),
+                                    FotoTemuan = SafeTruncate(GetString(row, 1), 500),
+                                    FotoPerbaikan = SafeTruncate(GetString(row, 31), 500),
                                     Tanggal = tanggal.Value.Date,
                                     Waktu = GetTime(row, 3) ?? TimeSpan.Zero,
-                                    Nama = GetString(row, 4) ?? "",
+                                    Nama = SafeTruncate(GetString(row, 4) ?? "", 150),
                                     Nik = nik,
-                                    Departemen = GetString(row, 6),
-                                    Area = GetString(row, 7),
-                                    Lokasi = GetString(row, 8),
-                                    DetilLokasi = GetString(row, 9),
+                                    Departemen = SafeTruncate(GetString(row, 6), 150),
+                                    Area = SafeTruncate(GetString(row, 7), 150),
+                                    Lokasi = SafeTruncate(GetString(row, 8), 150),
+                                    DetilLokasi = SafeTruncate(GetString(row, 9), 250),
                                     ItemSap = "Hazard",
-                                    KategoriTemuan = GetString(row, 10),
+                                    KategoriTemuan = SafeTruncate(GetString(row, 10), 150),
                                     DetilTemuan = apDetil,
                                     Status = status ?? "Open",
-                                    Pja = GetString(row, 18),
-                                    NikPja = GetString(row, 19),
-                                    DepartemenPja = GetString(row, 20),
+                                    Pja = SafeTruncate(GetString(row, 18), 150),
+                                    NikPja = SafeTruncate(GetString(row, 19), 50),
+                                    DepartemenPja = SafeTruncate(GetString(row, 20), 100), // Max DB column is 100
                                     Pic = pic,
-                                    NikPic = GetString(row, 23),
-                                    DepartemenPic = GetString(row, 24),
+                                    NikPic = SafeTruncate(GetString(row, 23), 50),
+                                    DepartemenPic = SafeTruncate(GetString(row, 24), 150),
                                     RencanaPerbaikan = GetString(row, 25),
                                     TanggalRencanaPerbaikan = GetDate(row, 26),
                                     Perbaikan = GetString(row, 27),
                                     TanggalPerbaikan = GetDate(row, 28),
-                                    Overdue = GetString(row, 29),
+                                    Overdue = SafeTruncate(GetString(row, 29), 50),
                                     AlasanOverdue = GetString(row, 30),
                                     CreatedAt = DateTime.Now
                                 });
                                 addedActionPlans++;
                             }
-                            else { skippedActionPlans++; }
+                            else 
+                            { 
+                                skippedActionPlans++; 
+                                duplicateLogs.Add($"[Action Plan] Baris {row.RowNumber()}: Rencana perbaikan serupa dengan data yang sudah ada (NIK: {nik}, Tanggal: {tanggal.Value.ToString("dd/MM/yyyy")}, Detail: \"{apDetil}\").");
+                            }
                         }
                     }
                 }
@@ -257,71 +314,106 @@ namespace MBS_SAP.Controllers
                     EnsureWorksheetRowLimit(wsInsp);
                     foreach (var row in wsInsp.RowsUsed().Skip(2)) // Data starts at row 3
                     {
-                        var nik = GetString(row, 4);
+                        var nik = SafeTruncate(GetString(row, 4), 50);
                         var tanggal = GetDate(row, 1);
-                        if (string.IsNullOrEmpty(nik) || !tanggal.HasValue) continue;
-                        if (nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
+                        
+                        if (string.IsNullOrEmpty(nik) && !tanggal.HasValue) continue;
+                        if (nik != null && nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
 
-                        string jenis = GetString(row, 9) ?? "-";
-                        if (!_context.Inspections.Any(i => i.Nik == nik && i.Tanggal == tanggal.Value.Date && i.JenisInspeksi == jenis))
+                        if (string.IsNullOrEmpty(nik))
+                        {
+                            validationErrors.Add($"[Inspection] Baris {row.RowNumber()}: NIK tidak boleh kosong.");
+                            failedInspections++;
+                            continue;
+                        }
+                        if (!tanggal.HasValue)
+                        {
+                            validationErrors.Add($"[Inspection] Baris {row.RowNumber()}: Kolom Tanggal kosong atau format salah.");
+                            failedInspections++;
+                            continue;
+                        }
+
+                        string jenis = SafeTruncate(GetString(row, 9) ?? "-", 150);
+                        var existingJenis = _context.Inspections
+                            .Where(i => i.Nik == nik && i.Tanggal == tanggal.Value.Date)
+                            .Select(i => i.JenisInspeksi)
+                            .ToList();
+                        bool isDuplicateInspection = existingJenis.Any(existing => CalculateSimilarity(jenis, existing) >= 0.80);
+
+                        if (!isDuplicateInspection)
                         {
                             _context.Inspections.Add(new Inspection
                             {
                                 Tanggal = tanggal.Value.Date,
                                 Waktu = GetTime(row, 2) ?? TimeSpan.Zero,
-                                Nama = GetString(row, 3) ?? "",
+                                Nama = SafeTruncate(GetString(row, 3) ?? "", 150),
                                 Nik = nik,
-                                Departemen = GetString(row, 5),
-                                Area = GetString(row, 6),
-                                Lokasi = GetString(row, 7),
-                                DetilLokasi = GetString(row, 8),
+                                Departemen = SafeTruncate(GetString(row, 5), 150),
+                                Area = SafeTruncate(GetString(row, 6), 150),
+                                Lokasi = SafeTruncate(GetString(row, 7), 150),
+                                DetilLokasi = SafeTruncate(GetString(row, 8), 250),
                                 JenisInspeksi = jenis,
-                                Pja = GetString(row, 10),
-                                NikPja = GetString(row, 11),
-                                DepartemenPja = GetString(row, 12),
+                                Pja = SafeTruncate(GetString(row, 10), 150),
+                                NikPja = SafeTruncate(GetString(row, 11), 50),
+                                DepartemenPja = SafeTruncate(GetString(row, 12), 100),
                                 CreatedAt = DateTime.Now
                             });
                             addedInspections++;
                         }
-                        else { skippedInspections++; }
+                        else 
+                        { 
+                            skippedInspections++; 
+                            duplicateLogs.Add($"[Inspection] Baris {row.RowNumber()}: Inspeksi serupa dengan data yang sudah ada (NIK: {nik}, Tanggal: {tanggal.Value.ToString("dd/MM/yyyy")}, Jenis: \"{jenis}\").");
+                        }
 
                         // Parse Action Plan from Inspection
                         var apDetil = GetString(row, 14);
                         if (!string.IsNullOrEmpty(apDetil))
                         {
-                            if (!_context.ActionPlans.Any(a => a.Nik == nik && a.Tanggal == tanggal.Value.Date && a.DetilTemuan == apDetil))
+                            var existingApDetails = _context.ActionPlans
+                                .Where(a => a.Nik == nik && a.Tanggal == tanggal.Value.Date)
+                                .Select(a => a.DetilTemuan)
+                                .ToList();
+                            bool isDuplicateAp = existingApDetails.Any(existing => CalculateSimilarity(apDetil, existing) >= 0.80);
+
+                            if (!isDuplicateAp)
                             {
                                 _context.ActionPlans.Add(new ActionPlan
                                 {
-                                    FotoTemuan = GetString(row, 25),
-                                    FotoPerbaikan = GetString(row, 26),
+                                    FotoTemuan = SafeTruncate(GetString(row, 25), 500),
+                                    FotoPerbaikan = SafeTruncate(GetString(row, 26), 500),
                                     Tanggal = tanggal.Value.Date,
                                     Waktu = GetTime(row, 2) ?? TimeSpan.Zero,
-                                    Nama = GetString(row, 3) ?? "",
+                                    Nama = SafeTruncate(GetString(row, 3) ?? "", 150),
                                     Nik = nik,
-                                    Departemen = GetString(row, 5),
-                                    Area = GetString(row, 6),
-                                    Lokasi = GetString(row, 7),
-                                    DetilLokasi = GetString(row, 8),
+                                    Departemen = SafeTruncate(GetString(row, 5), 150),
+                                    Area = SafeTruncate(GetString(row, 6), 150),
+                                    Lokasi = SafeTruncate(GetString(row, 7), 150),
+                                    DetilLokasi = SafeTruncate(GetString(row, 8), 250),
                                     ItemSap = "Inspection",
-                                    KategoriTemuan = GetString(row, 13),
+                                    KategoriTemuan = SafeTruncate(GetString(row, 13), 150),
                                     DetilTemuan = apDetil,
-                                    Status = GetString(row, 15) ?? "Open",
-                                    Pja = GetString(row, 10),
-                                    NikPja = GetString(row, 11),
-                                    DepartemenPja = GetString(row, 12),
-                                    Pic = GetString(row, 16),
-                                    NikPic = GetString(row, 17),
-                                    DepartemenPic = GetString(row, 18),
+                                    Status = SafeTruncate(GetString(row, 15) ?? "Open", 50),
+                                    Pja = SafeTruncate(GetString(row, 10), 150),
+                                    NikPja = SafeTruncate(GetString(row, 11), 50),
+                                    DepartemenPja = SafeTruncate(GetString(row, 12), 100), // Max DB column is 100
+                                    Pic = SafeTruncate(GetString(row, 16), 150),
+                                    NikPic = SafeTruncate(GetString(row, 17), 50),
+                                    DepartemenPic = SafeTruncate(GetString(row, 18), 150),
                                     RencanaPerbaikan = GetString(row, 19),
                                     TanggalRencanaPerbaikan = GetDate(row, 20),
                                     Perbaikan = GetString(row, 21),
                                     TanggalPerbaikan = GetDate(row, 22),
-                                    Overdue = GetString(row, 23),
+                                    Overdue = SafeTruncate(GetString(row, 23), 50),
                                     AlasanOverdue = GetString(row, 24),
                                     CreatedAt = DateTime.Now
                                 });
                                 addedActionPlans++;
+                            }
+                            else
+                            {
+                                skippedActionPlans++;
+                                duplicateLogs.Add($"[Action Plan] Baris {row.RowNumber()}: Rencana perbaikan serupa dengan data yang sudah ada (NIK: {nik}, Tanggal: {tanggal.Value.ToString("dd/MM/yyyy")}, Detail: \"{apDetil}\").");
                             }
                         }
                     }
@@ -334,33 +426,56 @@ namespace MBS_SAP.Controllers
                     EnsureWorksheetRowLimit(wsSt);
                     foreach (var row in wsSt.RowsUsed().Skip(2))
                     {
-                        var nik = GetString(row, 6);
+                        var nik = SafeTruncate(GetString(row, 6), 50);
                         var tanggal = GetDate(row, 3);
-                        if (string.IsNullOrEmpty(nik) || !tanggal.HasValue) continue;
-                        if (nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (string.IsNullOrEmpty(nik) && !tanggal.HasValue) continue;
+                        if (nik != null && nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
 
-                        string judul = GetString(row, 11) ?? "-";
-                        if (!_context.SafetyTalks.Any(s => s.Nik == nik && s.Tanggal == tanggal.Value.Date && s.Judul == judul))
+                        if (string.IsNullOrEmpty(nik))
+                        {
+                            validationErrors.Add($"[Safety Talk] Baris {row.RowNumber()}: NIK tidak boleh kosong.");
+                            failedSafetyTalks++;
+                            continue;
+                        }
+                        if (!tanggal.HasValue)
+                        {
+                            validationErrors.Add($"[Safety Talk] Baris {row.RowNumber()}: Kolom Tanggal kosong atau format salah.");
+                            failedSafetyTalks++;
+                            continue;
+                        }
+
+                        string judul = SafeTruncate(GetString(row, 11) ?? "-", 150);
+                        var existingJuduls = _context.SafetyTalks
+                            .Where(s => s.Nik == nik && s.Tanggal == tanggal.Value.Date)
+                            .Select(s => s.Judul)
+                            .ToList();
+                        bool isDuplicateSt = existingJuduls.Any(existing => CalculateSimilarity(judul, existing) >= 0.80);
+
+                        if (!isDuplicateSt)
                         {
                             _context.SafetyTalks.Add(new SafetyTalk
                             {
-                                FotoDiri = GetString(row, 1),
-                                FotoKegiatan = GetString(row, 2),
+                                FotoDiri = SafeTruncate(GetString(row, 1), 500),
+                                FotoKegiatan = SafeTruncate(GetString(row, 2), 500),
                                 Tanggal = tanggal.Value.Date,
                                 Waktu = GetTime(row, 4) ?? TimeSpan.Zero,
-                                Nama = GetString(row, 5) ?? "",
+                                Nama = SafeTruncate(GetString(row, 5) ?? "", 150),
                                 Nik = nik,
-                                Departemen = GetString(row, 7),
-                                Area = GetString(row, 8),
-                                Lokasi = GetString(row, 9),
-                                DetilLokasi = GetString(row, 10),
+                                Departemen = SafeTruncate(GetString(row, 7), 150),
+                                Area = SafeTruncate(GetString(row, 8), 150),
+                                Lokasi = SafeTruncate(GetString(row, 9), 150),
+                                DetilLokasi = SafeTruncate(GetString(row, 10), 250),
                                 Judul = judul,
                                 Keterangan = GetString(row, 12),
                                 CreatedAt = DateTime.Now
                             });
                             addedSafetyTalks++;
                         }
-                        else { skippedSafetyTalks++; }
+                        else 
+                        { 
+                            skippedSafetyTalks++; 
+                            duplicateLogs.Add($"[Safety Talk] Baris {row.RowNumber()}: Judul Safety Talk serupa dengan data yang sudah ada (NIK: {nik}, Tanggal: {tanggal.Value.ToString("dd/MM/yyyy")}, Judul: \"{judul}\").");
+                        }
                     }
                 }
 
@@ -371,27 +486,49 @@ namespace MBS_SAP.Controllers
                     EnsureWorksheetRowLimit(wsP5);
                     foreach (var row in wsP5.RowsUsed().Skip(2))
                     {
-                        var nik = GetString(row, 5);
+                        var nik = SafeTruncate(GetString(row, 5), 50);
                         var tanggal = GetDate(row, 2);
-                        if (string.IsNullOrEmpty(nik) || !tanggal.HasValue) continue;
-                        if (nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (string.IsNullOrEmpty(nik) && !tanggal.HasValue) continue;
+                        if (nik != null && nik.StartsWith("CONTOH", StringComparison.OrdinalIgnoreCase)) continue;
 
-                        string judul = GetString(row, 11) ?? "-";
+                        if (string.IsNullOrEmpty(nik))
+                        {
+                            validationErrors.Add($"[P5M] Baris {row.RowNumber()}: NIK tidak boleh kosong.");
+                            failedP5m++;
+                            continue;
+                        }
+                        if (!tanggal.HasValue)
+                        {
+                            validationErrors.Add($"[P5M] Baris {row.RowNumber()}: Kolom Tanggal kosong atau format salah.");
+                            failedP5m++;
+                            continue;
+                        }
+
+                        string judul = SafeTruncate(GetString(row, 11) ?? "-", 150);
                         string pertanyaan = GetString(row, 13) ?? "";
-                        if (!_context.P5ms.Any(p => p.Nik == nik && p.Tanggal == tanggal.Value.Date && p.Judul == judul && p.ListPertanyaan == pertanyaan))
+                        var existingP5ms = _context.P5ms
+                            .Where(p => p.Nik == nik && p.Tanggal == tanggal.Value.Date)
+                            .Select(p => new { p.Judul, p.ListPertanyaan })
+                            .ToList();
+                        bool isDuplicateP5m = existingP5ms.Any(existing => 
+                            CalculateSimilarity(judul, existing.Judul) >= 0.80 &&
+                            CalculateSimilarity(pertanyaan, existing.ListPertanyaan) >= 0.80
+                        );
+
+                        if (!isDuplicateP5m)
                         {
                             _context.P5ms.Add(new P5m
                             {
-                                FotoKegiatan = GetString(row, 1),
+                                FotoKegiatan = SafeTruncate(GetString(row, 1), 500),
                                 Tanggal = tanggal.Value.Date,
                                 Waktu = GetTime(row, 3) ?? TimeSpan.Zero,
-                                Nama = GetString(row, 4) ?? "",
+                                Nama = SafeTruncate(GetString(row, 4) ?? "", 150),
                                 Nik = nik,
-                                Departemen = GetString(row, 6),
-                                Area = GetString(row, 7),
-                                Lokasi = GetString(row, 8),
-                                DetilLokasi = GetString(row, 9),
-                                Topik = GetString(row, 10),
+                                Departemen = SafeTruncate(GetString(row, 6), 150),
+                                Area = SafeTruncate(GetString(row, 7), 150),
+                                Lokasi = SafeTruncate(GetString(row, 8), 150),
+                                DetilLokasi = SafeTruncate(GetString(row, 9), 250),
+                                Topik = SafeTruncate(GetString(row, 10), 150),
                                 Judul = judul,
                                 Keterangan = GetString(row, 12),
                                 ListPertanyaan = pertanyaan,
@@ -401,33 +538,44 @@ namespace MBS_SAP.Controllers
                             });
                             addedP5m++;
                         }
-                        else { skippedP5m++; }
+                        else 
+                        { 
+                            skippedP5m++; 
+                            duplicateLogs.Add($"[P5M] Baris {row.RowNumber()}: P5M serupa dengan data yang sudah ada (NIK: {nik}, Tanggal: {tanggal.Value.ToString("dd/MM/yyyy")}, Judul: \"{judul}\").");
+                        }
                     }
                 }
 
                 await _context.SaveChangesAsync();
                 
-                TempData["SuccessMessage"] = $@"
-                    <div class='mb-2'><strong>Berhasil Upload:</strong></div>
-                    <ul class='mb-2' style='font-size: 13px;'>
-                        <li>{addedHazards} Hazard Baru</li>
-                        <li>{addedInspections} Inspeksi Baru</li>
-                        <li>{addedActionPlans} Action Plan Baru</li>
-                        <li>{addedSafetyTalks} Safety Talk Baru</li>
-                        <li>{addedP5m} P5M Baru</li>
-                    </ul>
-                    <div class='mb-1'><strong>Dilewati (Duplikat):</strong></div>
-                    <ul class='mb-0' style='font-size: 13px;'>
-                        <li>{skippedHazards} Hazard</li>
-                        <li>{skippedInspections} Inspeksi</li>
-                        <li>{skippedActionPlans} Action Plan</li>
-                        <li>{skippedSafetyTalks} Safety Talk</li>
-                        <li>{skippedP5m} P5M</li>
-                    </ul>";
+                var result = new
+                {
+                    isSuccess = true,
+                    message = "File Excel berhasil diimpor ke sistem.",
+                    addedHazards, skippedHazards, failedHazards,
+                    addedInspections, skippedInspections, failedInspections,
+                    addedActionPlans, skippedActionPlans,
+                    addedSafetyTalks, skippedSafetyTalks, failedSafetyTalks,
+                    addedP5m, skippedP5m, failedP5m,
+                    validationErrors,
+                    duplicateLogs
+                };
+                TempData["UploadResultJson"] = JsonSerializer.Serialize(result);
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = "Terjadi kesalahan saat memproses Excel: " + ex.Message;
+                var result = new
+                {
+                    isSuccess = false,
+                    message = "Gagal memproses berkas Excel: " + ex.Message,
+                    addedHazards = 0, skippedHazards = 0, failedHazards = 0,
+                    addedInspections = 0, skippedInspections = 0, failedInspections = 0,
+                    addedActionPlans = 0, skippedActionPlans = 0,
+                    addedSafetyTalks = 0, skippedSafetyTalks = 0, failedSafetyTalks = 0,
+                    addedP5m = 0, skippedP5m = 0, failedP5m = 0,
+                    validationErrors = new List<string> { ex.Message }
+                };
+                TempData["UploadResultJson"] = JsonSerializer.Serialize(result);
             }
 
             return RedirectToAction(nameof(Index));
@@ -438,6 +586,44 @@ namespace MBS_SAP.Controllers
             var cell = row.Cell(col);
             if (cell.IsEmpty()) return null;
             return SanitizeExcelString(cell.Value.ToString());
+        }
+
+        private string? SafeTruncate(string? value, int maxLength)
+        {
+            if (string.IsNullOrEmpty(value)) return value;
+            return value.Length > maxLength ? value.Substring(0, maxLength) : value;
+        }
+
+        private double CalculateSimilarity(string? s, string? t)
+        {
+            if (string.IsNullOrEmpty(s) || string.IsNullOrEmpty(t))
+                return 0;
+
+            s = s.ToLowerInvariant().Trim();
+            t = t.ToLowerInvariant().Trim();
+
+            if (s == t) return 1.0;
+
+            int n = s.Length;
+            int m = t.Length;
+            int[,] d = new int[n + 1, m + 1];
+
+            for (int i = 0; i <= n; d[i, 0] = i++) ;
+            for (int j = 0; j <= m; d[0, j] = j++) ;
+
+            for (int i = 1; i <= n; i++)
+            {
+                for (int j = 1; j <= m; j++)
+                {
+                    int cost = (t[j - 1] == s[i - 1]) ? 0 : 1;
+                    d[i, j] = Math.Min(
+                        Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
+                        d[i - 1, j - 1] + cost);
+                }
+            }
+
+            int maxLength = Math.Max(s.Length, t.Length);
+            return 1.0 - ((double)d[n, m] / maxLength);
         }
         
         private DateTime? GetDate(IXLRow row, int col)
@@ -526,6 +712,10 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> DownloadReport(string sapType, DateTime? startDate, DateTime? endDate)
         {
+            if (!User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
             if (string.IsNullOrEmpty(sapType))
             {
                 TempData["ErrorMessage"] = "Pilih jenis SAP terlebih dahulu.";

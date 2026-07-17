@@ -86,61 +86,365 @@
                     </div>
                 </div>
 
-                <!-- Card 2: Export Laporan dengan Foto -->
-                <div class="col-12">
-                    <div class="card-sap border-primary-accent">
-                        <form asp-controller="Admin" asp-action="DownloadReport" method="get" data-download-form>
-                            <h5 class="mb-2 text-white fw-bold"><i class="bi bi-file-earmark-arrow-down-fill me-2 text-success"></i>Unduh Laporan SAP (Ekspor Dengan Foto)</h5>
-                            <p class="text-muted mb-4" style="font-size: 13px;">
-                                Ekspor data pelaporan ke berkas Excel dengan gambar dokumentasi lapangan yang disematkan langsung secara otomatis.
-                            </p>
+                @if (User.IsInRole("Admin"))
+                {
+                    <!-- Card 2: Export Laporan dengan Foto -->
+                    <div class="col-12">
+                        <div class="card-sap border-primary-accent">
+                            <form asp-controller="Admin" asp-action="DownloadReport" method="get" data-download-form>
+                                <h5 class="mb-2 text-white fw-bold"><i class="bi bi-file-earmark-arrow-down-fill me-2 text-success"></i>Unduh Laporan SAP (Ekspor Dengan Foto)</h5>
+                                <p class="text-muted mb-4" style="font-size: 13px;">
+                                    Ekspor data pelaporan ke berkas Excel dengan gambar dokumentasi lapangan yang disematkan langsung secara otomatis.
+                                </p>
 
-                            <div class="form-group-sap mb-4">
-                                <label class="form-label-sap" for="sapType">Jenis Pelaporan SAP</label>
-                                <div class="input-sap-wrapper">
-                                    <i class="bi bi-file-earmark-spreadsheet input-sap-icon"></i>
-                                    <select id="sapType" name="sapType" class="input-sap" required>
-                                        <option value="">-- Pilih Jenis Pelaporan SAP --</option>
-                                        <option value="hazard">Hazard Report (Foto Temuan)</option>
-                                        <option value="inspection">Inspection (Lampiran Foto)</option>
-                                        <option value="actionplan">Action Plan (Foto Temuan & Perbaikan)</option>
-                                        <option value="safetytalk">Safety Talk (Foto Diri & Kegiatan)</option>
-                                        <option value="p5m">P5M (Foto Kegiatan)</option>
-                                        <option value="observation">Observation (Foto)</option>
-                                        <option value="coaching">Coaching (Foto Kegiatan)</option>
-                                        <option value="p2h">P2H (Foto Speedometer)</option>
-                                    </select>
+                                <div class="form-group-sap mb-4">
+                                    <label class="form-label-sap" for="sapType">Jenis Pelaporan SAP</label>
+                                    <div class="input-sap-wrapper">
+                                        <i class="bi bi-file-earmark-spreadsheet input-sap-icon"></i>
+                                        <select id="sapType" name="sapType" class="input-sap" required>
+                                            <option value="">-- Pilih Jenis Pelaporan SAP --</option>
+                                            <option value="hazard">Hazard Report (Foto Temuan)</option>
+                                            <option value="inspection">Inspection (Lampiran Foto)</option>
+                                            <option value="actionplan">Action Plan (Foto Temuan & Perbaikan)</option>
+                                            <option value="safetytalk">Safety Talk (Foto Diri & Kegiatan)</option>
+                                            <option value="p5m">P5M (Foto Kegiatan)</option>
+                                            <option value="observation">Observation (Foto)</option>
+                                            <option value="coaching">Coaching (Foto Kegiatan)</option>
+                                            <option value="p2h">P2H (Foto Speedometer)</option>
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-4">
-                                    <div class="form-group-sap">
-                                        <label class="form-label-sap" for="startDate">Tanggal Mulai</label>
-                                        <div class="input-sap-wrapper">
-                                            <i class="bi bi-calendar-event input-sap-icon"></i>
-                                            <input type="date" id="startDate" name="startDate" class="input-sap" value="@(new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).ToString("yyyy-MM-dd"))" required />
+                                <div class="row">
+                                    <div class="col-md-6 mb-4">
+                                        <div class="form-group-sap">
+                                            <label class="form-label-sap" for="startDate">Tanggal Mulai</label>
+                                            <div class="input-sap-wrapper">
+                                                <i class="bi bi-calendar-event input-sap-icon"></i>
+                                                <input type="date" id="startDate" name="startDate" class="input-sap" value="@(new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).ToString("yyyy-MM-dd"))" required />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-4">
+                                        <div class="form-group-sap">
+                                            <label class="form-label-sap" for="endDate">Tanggal Selesai</label>
+                                            <div class="input-sap-wrapper">
+                                                <i class="bi bi-calendar-event input-sap-icon"></i>
+                                                <input type="date" id="endDate" name="endDate" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6 mb-4">
-                                    <div class="form-group-sap">
-                                        <label class="form-label-sap" for="endDate">Tanggal Selesai</label>
-                                        <div class="input-sap-wrapper">
-                                            <i class="bi bi-calendar-event input-sap-icon"></i>
-                                            <input type="date" id="endDate" name="endDate" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <button type="submit" class="btn btn-sap-primary w-100 py-3 font-weight-bold" style="font-size: 14px; border-radius: 12px;">
-                                <i class="bi bi-cloud-arrow-down-fill me-2"></i> DOWNLOAD LAPORAN EXCEL
-                            </button>
-                        </form>
+                                <button type="submit" class="btn btn-sap-primary w-100 py-3 font-weight-bold" style="font-size: 14px; border-radius: 12px;">
+                                    <i class="bi bi-cloud-arrow-down-fill me-2"></i> DOWNLOAD LAPORAN EXCEL
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                </div>
+                }
             </div>
         </div>
     </div>
 </div>
+
+@using System.Text.Json
+@if (TempData["UploadResultJson"] != null)
+{
+    var resultStr = TempData["UploadResultJson"]?.ToString();
+    if (!string.IsNullOrEmpty(resultStr))
+    {
+        var resultJson = JsonDocument.Parse(resultStr).RootElement;
+        var isSuccess = resultJson.GetProperty("isSuccess").GetBoolean();
+        var message = resultJson.GetProperty("message").GetString();
+
+        var addedHazards = resultJson.GetProperty("addedHazards").GetInt32();
+        var skippedHazards = resultJson.GetProperty("skippedHazards").GetInt32();
+        var failedHazards = resultJson.GetProperty("failedHazards").GetInt32();
+
+        var addedInspections = resultJson.GetProperty("addedInspections").GetInt32();
+        var skippedInspections = resultJson.GetProperty("skippedInspections").GetInt32();
+        var failedInspections = resultJson.GetProperty("failedInspections").GetInt32();
+
+        var addedActionPlans = resultJson.GetProperty("addedActionPlans").GetInt32();
+        var skippedActionPlans = resultJson.GetProperty("skippedActionPlans").GetInt32();
+
+        var addedSafetyTalks = resultJson.GetProperty("addedSafetyTalks").GetInt32();
+        var skippedSafetyTalks = resultJson.GetProperty("skippedSafetyTalks").GetInt32();
+        var failedSafetyTalks = resultJson.GetProperty("failedSafetyTalks").GetInt32();
+
+        var addedP5m = resultJson.GetProperty("addedP5m").GetInt32();
+        var skippedP5m = resultJson.GetProperty("skippedP5m").GetInt32();
+        var failedP5m = resultJson.GetProperty("failedP5m").GetInt32();
+
+        var validationErrors = new List<string>();
+        foreach (var err in resultJson.GetProperty("validationErrors").EnumerateArray())
+        {
+            var errStr = err.GetString();
+            if (errStr != null)
+            {
+                validationErrors.Add(errStr);
+            }
+        }
+
+        var duplicateLogs = new List<string>();
+        if (resultJson.TryGetProperty("duplicateLogs", out var dupProp))
+        {
+            foreach (var dup in dupProp.EnumerateArray())
+            {
+                var dupStr = dup.GetString();
+                if (dupStr != null)
+                {
+                    duplicateLogs.Add(dupStr);
+                }
+            }
+        }
+
+    var totalAdded = addedHazards + addedInspections + addedActionPlans + addedSafetyTalks + addedP5m;
+    var totalSkipped = skippedHazards + skippedInspections + skippedActionPlans + skippedSafetyTalks + skippedP5m;
+    var totalFailed = failedHazards + failedInspections + failedSafetyTalks + failedP5m;
+
+    <!-- Upload Result Modal -->
+    <style>
+        #uploadResultModal .modal-content {
+            background: var(--bg-card) !important;
+            backdrop-filter: blur(25px) !important;
+            -webkit-backdrop-filter: blur(25px) !important;
+            border: 1px solid var(--border-color) !important;
+            color: var(--text-main) !important;
+            border-radius: 20px !important;
+            box-shadow: var(--shadow-md) !important;
+        }
+        #uploadResultModal .modal-title {
+            color: var(--text-main) !important;
+        }
+        #uploadResultModal .btn-close {
+            opacity: 0.8;
+            transition: var(--transition-fast);
+        }
+        body.light-theme #uploadResultModal .btn-close {
+            filter: none !important;
+        }
+        body:not(.light-theme) #uploadResultModal .btn-close {
+            filter: invert(1) !important;
+        }
+        #uploadResultModal .table-sap-modal {
+            background-color: transparent !important;
+            color: var(--text-main) !important;
+        }
+        #uploadResultModal .table-sap-modal th,
+        #uploadResultModal .table-sap-modal td {
+            background-color: transparent !important;
+            color: var(--text-main) !important;
+            border-color: var(--border-color) !important;
+            padding: 12px 16px !important;
+        }
+        #uploadResultModal .table-sap-modal thead tr th {
+            background-color: rgba(0, 0, 0, 0.15) !important;
+            color: var(--text-muted) !important;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border-color) !important;
+        }
+        body.light-theme #uploadResultModal .table-sap-modal thead tr th {
+            background-color: rgba(0, 0, 0, 0.04) !important;
+        }
+        #uploadResultModal .table-sap-modal tbody tr:hover td {
+            background-color: rgba(255, 255, 255, 0.03) !important;
+        }
+        body.light-theme #uploadResultModal .table-sap-modal tbody tr:hover td {
+            background-color: rgba(0, 0, 0, 0.02) !important;
+        }
+        #uploadResultModal .table-sap-modal tbody tr {
+            border-bottom: 1px solid var(--border-color) !important;
+        }
+    </style>
+    <div class="modal fade" id="uploadResultModal" tabindex="-1" aria-labelledby="uploadResultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="border-radius: 20px;">
+                <div class="modal-header border-0 pb-0" style="padding: 24px 24px 10px 24px;">
+                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="uploadResultModalLabel">
+                        @if (isSuccess && totalFailed == 0)
+                        {
+                            <i class="bi bi-patch-check-fill text-success fs-3"></i>
+                            <span class="text-success">Impor Data Berhasil</span>
+                        }
+                        else if (isSuccess && totalFailed > 0)
+                        {
+                            <i class="bi bi-exclamation-triangle-fill text-warning fs-3"></i>
+                            <span class="text-warning">Impor Selesai dengan Catatan</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-x-octagon-fill text-danger fs-3"></i>
+                            <span class="text-danger">Impor Data Gagal</span>
+                        }
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="padding: 24px;">
+                    <p class="mb-3" style="font-size: 13.5px; color: var(--text-muted);">
+                        @message
+                    </p>
+
+                    <!-- Success Rate Progress Bar -->
+                    @{
+                        var totalRows = totalAdded + totalSkipped + totalFailed;
+                        var successRate = totalRows > 0 ? Math.Round((double)(totalAdded + totalSkipped) / totalRows * 100, 1) : 0.0;
+                        var isPerfect = successRate >= 100.0;
+                    }
+                    <div class="p-3 mb-4" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: 14px;">
+                        <div class="d-flex justify-content-between align-items-center mb-2" style="font-size: 13px;">
+                            <span style="color: var(--text-muted); font-weight: 500;"><i class="bi bi-file-earmark-bar-graph me-2"></i>Persentase Keberhasilan Impor:</span>
+                            <span class="fw-bold" style="color: @(isPerfect ? "var(--color-green)" : "var(--color-orange)");">@successRate% (@(totalAdded + totalSkipped)/@totalRows baris)</span>
+                        </div>
+                        <div class="progress" style="height: 12px; background-color: rgba(100, 116, 139, 0.15); border-radius: 8px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.03);">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated @(isPerfect ? "bg-success" : "bg-warning")" 
+                                 role="progressbar" 
+                                 style="width: @successRate.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)%; transition: width 1s ease-in-out;" 
+                                 aria-valuenow="@successRate" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="p-3 text-center" style="background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 14px;">
+                                <div class="mb-1" style="color: var(--text-muted); font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">BERHASIL DISIMPAN</div>
+                                <div class="text-success fw-bold fs-2" style="font-family: var(--font-family-monospace, monospace); color: var(--color-green) !important;">@totalAdded</div>
+                                <div style="color: var(--text-muted); font-size: 11px;">Baris Baru</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 text-center" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 14px;">
+                                <div class="mb-1" style="color: var(--text-muted); font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">DUPLIKAT / MIRIP</div>
+                                <div class="text-warning fw-bold fs-2" style="font-family: var(--font-family-monospace, monospace); color: var(--color-orange) !important;">@totalSkipped</div>
+                                <div style="color: var(--text-muted); font-size: 11px; margin-bottom: 2px;">Dilewati Sistem</div>
+                                <span class="badge bg-secondary" style="font-size: 8.5px; padding: 3px 6px; border-radius: 6px; letter-spacing: 0.3px; color: var(--text-main); background-color: rgba(255,255,255,0.08) !important;" title="Deteksi deskripsi serupa >= 80% via Levenshtein NLP"><i class="bi bi-cpu me-1"></i>ML Similarity Active</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 text-center" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 14px;">
+                                <div class="mb-1" style="color: var(--text-muted); font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">GAGAL / ERROR</div>
+                                <div class="text-danger fw-bold fs-2" style="font-family: var(--font-family-monospace, monospace); color: var(--color-red) !important;">@totalFailed</div>
+                                <div style="color: var(--text-muted); font-size: 11px;">Format Salah / Kosong</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Breakdown Table -->
+                    <h6 class="fw-bold mb-3" style="font-size: 14px; color: var(--text-main);"><i class="bi bi-grid-3x3-gap-fill me-2 text-info"></i>Rincian Impor per Kategori:</h6>
+                    <div class="table-responsive mb-4" style="border-radius: 10px; border: 1px solid var(--border-color); overflow: hidden;">
+                        <table class="table table-sap-modal table-borderless align-middle mb-0 text-white" style="font-size: 13px;">
+                            <thead>
+                                <tr style="color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid var(--border-color);">
+                                    <th class="py-2.5 ps-3">Sheet Excel</th>
+                                    <th class="py-2.5 text-center">Berhasil</th>
+                                    <th class="py-2.5 text-center">Duplikat</th>
+                                    <th class="py-2.5 text-center">Gagal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="py-2.5 ps-3 fw-medium">Hazard</td>
+                                    <td class="py-2.5 text-center fw-bold" style="color: var(--color-green) !important;">@addedHazards</td>
+                                    <td class="py-2.5 text-center" style="color: var(--color-orange) !important;">@skippedHazards</td>
+                                    <td class="py-2.5 text-center" style="color: var(--color-red) !important;">@failedHazards</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 ps-3 fw-medium">Inspection</td>
+                                    <td class="py-2.5 text-center fw-bold" style="color: var(--color-green) !important;">@addedInspections</td>
+                                    <td class="py-2.5 text-center" style="color: var(--color-orange) !important;">@skippedInspections</td>
+                                    <td class="py-2.5 text-center" style="color: var(--color-red) !important;">@failedInspections</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 ps-3 fw-medium">Action Plan</td>
+                                    <td class="py-2.5 text-center fw-bold" style="color: var(--color-green) !important;">@addedActionPlans</td>
+                                    <td class="py-2.5 text-center" style="color: var(--color-orange) !important;">@skippedActionPlans</td>
+                                    <td class="py-2.5 text-center text-muted">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 ps-3 fw-medium">Safety Talk</td>
+                                    <td class="py-2.5 text-center fw-bold" style="color: var(--color-green) !important;">@addedSafetyTalks</td>
+                                    <td class="py-2.5 text-center" style="color: var(--color-orange) !important;">@skippedSafetyTalks</td>
+                                    <td class="py-2.5 text-center" style="color: var(--color-red) !important;">@failedSafetyTalks</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 ps-3 fw-medium">P5M</td>
+                                    <td class="py-2.5 text-center fw-bold" style="color: var(--color-green) !important;">@addedP5m</td>
+                                    <td class="py-2.5 text-center" style="color: var(--color-orange) !important;">@skippedP5m</td>
+                                    <td class="py-2.5 text-center" style="color: var(--color-red) !important;">@failedP5m</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Validation Errors list -->
+                    @if (validationErrors.Count > 0)
+                    {
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h6 class="fw-bold mb-0" style="font-size: 14px; color: var(--text-main);"><i class="bi bi-exclamation-circle-fill me-2 text-danger"></i>Catatan Validasi Data (@validationErrors.Count):</h6>
+                            <span class="badge bg-danger rounded-pill" style="font-size: 11px;">Perlu Diperbaiki</span>
+                        </div>
+                        <div class="p-3" style="background-color: rgba(239, 68, 68, 0.04); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.25); max-height: 200px; overflow-y: auto;">
+                            <ul class="list-unstyled mb-0" style="font-family: monospace; font-size: 11.5px; line-height: 1.6; color: var(--color-red);">
+                                @foreach (var err in validationErrors)
+                                {
+                                    <li class="d-flex align-items-start gap-2 mb-1.5">
+                                        <i class="bi bi-x-circle mt-0.5 text-danger" style="font-size: 10px; color: var(--color-red) !important;"></i>
+                                        <span style="color: var(--color-red) !important;">@err</span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <!-- Duplicate Logs list -->
+                    @if (duplicateLogs.Count > 0)
+                    {
+                        <div class="d-flex align-items-center justify-content-between mb-2 mt-4">
+                            <h6 class="fw-bold mb-0" style="font-size: 14px; color: var(--text-main);"><i class="bi bi-cpu me-2 text-warning"></i>Data Terduplikat / Serupa Terdeteksi (@duplicateLogs.Count):</h6>
+                            <span class="badge bg-warning rounded-pill text-dark" style="font-size: 11px;">Dilewati Sistem</span>
+                        </div>
+                        <div class="p-3" style="background-color: rgba(245, 158, 11, 0.04); border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.25); max-height: 200px; overflow-y: auto;">
+                            <ul class="list-unstyled mb-0" style="font-family: monospace; font-size: 11.5px; line-height: 1.6; color: var(--color-orange);">
+                                @foreach (var dup in duplicateLogs)
+                                {
+                                    <li class="d-flex align-items-start gap-2 mb-1.5">
+                                        <i class="bi bi-info-circle mt-0.5 text-warning" style="font-size: 10px; color: var(--color-orange) !important;"></i>
+                                        <span style="color: var(--color-orange) !important;">@dup</span>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer border-0 pt-0" style="padding: 24px;">
+                    <button type="button" class="btn btn-sap-secondary px-4 py-2.5 fw-bold" style="border-radius: 10px; font-size: 13px;" data-bs-dismiss="modal">Tutup</button>
+                    @if (totalFailed > 0)
+                    {
+                        <a href="javascript:void(0)" onclick="location.reload();" class="btn btn-sap-primary px-4 py-2.5 fw-bold" style="border-radius: 10px; font-size: 13px;">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Muat Ulang
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trigger Modal script -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var myModal = new bootstrap.Modal(document.getElementById('uploadResultModal'), {
+                keyboard: false,
+                backdrop: 'static'
+            });
+            myModal.show();
+        });
+    </script>
+    }
+}

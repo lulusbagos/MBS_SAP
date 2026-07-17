@@ -6,6 +6,7 @@ using MBS_SAP.Services;
 using Microsoft.Extensions.FileProviders;
 using System.IO;
 using System.Security.Claims;
+using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,7 @@ builder.Services.Configure<PostgresReplicationOptions>(builder.Configuration.Get
 builder.Services.AddScoped<PostgresReplicationService>();
 builder.Services.AddHostedService<PostgresReplicationScheduler>();
 builder.Services.AddHttpClient();
+builder.Services.AddMemoryCache();
 
 // Register DbContext with SQL Server
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -36,28 +38,37 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         {
             OnValidatePrincipal = async context =>
             {
-                var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
                 var nrp = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 var passwordClaim = context.Principal?.FindFirst("PasswordHash")?.Value;
                 
                 if (!string.IsNullOrEmpty(nrp))
                 {
-                    // Check if employee is still active
-                    var karyawan = await dbContext.Karyawans.FirstOrDefaultAsync(k => k.NoNik == nrp && k.StatusAktif);
-                    if (karyawan == null)
-                    {
-                        context.RejectPrincipal();
-                        await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                        return;
-                    }
+                    var cache = context.HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
+                    var cacheKey = $"UserAuthActive_{nrp}";
                     
-                    // Check if password has changed since cookie was issued
-                    var overridePwd = await dbContext.PasswordOverrides.FirstOrDefaultAsync(p => p.Nrp == nrp);
-                    var currentPassword = overridePwd?.KataSandi;
-                    if (string.IsNullOrEmpty(currentPassword))
+                    if (!cache.TryGetValue(cacheKey, out string? currentPassword))
                     {
-                        var pg = await dbContext.Penggunas.FirstOrDefaultAsync(p => p.Username == nrp && p.IsAktif);
-                        currentPassword = pg?.KataSandi ?? "123456";
+                        var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                        
+                        // Check if employee is still active
+                        var karyawan = await dbContext.Karyawans.FirstOrDefaultAsync(k => k.NoNik == nrp && k.StatusAktif);
+                        if (karyawan == null)
+                        {
+                            context.RejectPrincipal();
+                            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                            return;
+                        }
+                        
+                        // Check if password has changed since cookie was issued
+                        var overridePwd = await dbContext.PasswordOverrides.FirstOrDefaultAsync(p => p.Nrp == nrp);
+                        currentPassword = overridePwd?.KataSandi;
+                        if (string.IsNullOrEmpty(currentPassword))
+                        {
+                            var pg = await dbContext.Penggunas.FirstOrDefaultAsync(p => p.Username == nrp && p.IsAktif);
+                            currentPassword = pg?.KataSandi ?? "123456";
+                        }
+                        
+                        cache.Set(cacheKey, currentPassword, TimeSpan.FromMinutes(5));
                     }
                     
                     if (passwordClaim != currentPassword)
@@ -77,6 +88,9 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
 }
+
+app.UseStaticFiles();
+
 app.UseRouting();
 
 var externalFilesPath = @"C:\MinePermitFiles\MBS";
@@ -92,8 +106,6 @@ app.UseStaticFiles(new StaticFileOptions
 
 app.UseAuthentication();
 app.UseAuthorization();
-
-app.UseStaticFiles();
 
 app.MapControllerRoute(
     name: "default",
@@ -168,13 +180,48 @@ using (var scope = app.Services.CreateScope())
             IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_hazard_report_nik_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_hazard_report'))
             BEGIN
                 CREATE NONCLUSTERED INDEX IX_tbl_t_hazard_report_nik_is_deleted_created_at
-                ON tbl_t_hazard_report (nik, is_deleted, created_at);
+                ON tbl_t_hazard_report (nik, is_deleted, created_at DESC)
+                INCLUDE (tanggal, status_temuan, lokasi, area, temuan, nama);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_hazard_report_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_hazard_report'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_hazard_report_is_deleted_created_at
+                ON tbl_t_hazard_report (is_deleted, created_at DESC);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_hazard_report_perusahaan_deleted_created' AND object_id = OBJECT_ID('tbl_t_hazard_report'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_hazard_report_perusahaan_deleted_created
+                ON tbl_t_hazard_report (perusahaan_id, is_deleted, created_at DESC)
+                INCLUDE (nik);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_hazard_report_nik_pja_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_hazard_report'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_hazard_report_nik_pja_is_deleted_created_at
+                ON tbl_t_hazard_report (nik_pja, is_deleted, created_at DESC)
+                INCLUDE (tanggal, status_temuan, lokasi, area, temuan, nama);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_hazard_report_is_deleted_area' AND object_id = OBJECT_ID('tbl_t_hazard_report'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_hazard_report_is_deleted_area
+                ON tbl_t_hazard_report (is_deleted, area);
             END
 
             IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_inspection_nik_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_inspection'))
             BEGIN
                 CREATE NONCLUSTERED INDEX IX_tbl_t_inspection_nik_is_deleted_created_at
-                ON tbl_t_inspection (nik, is_deleted, created_at);
+                ON tbl_t_inspection (nik, is_deleted, created_at DESC)
+                INCLUDE (tanggal, jenis_inspeksi, area, nama);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_inspection_nik_pja_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_inspection'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_inspection_nik_pja_is_deleted_created_at
+                ON tbl_t_inspection (nik_pja, is_deleted, created_at DESC)
+                INCLUDE (tanggal, jenis_inspeksi, area, nama);
             END
 
             IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_safety_talk_nik_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_safety_talk'))
@@ -187,6 +234,42 @@ using (var scope = app.Services.CreateScope())
             BEGIN
                 CREATE NONCLUSTERED INDEX IX_tbl_t_p5m_nik_is_deleted_created_at
                 ON tbl_t_p5m (nik, is_deleted, created_at);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_m_roster_nik' AND object_id = OBJECT_ID('tbl_m_roster'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_m_roster_nik
+                ON tbl_m_roster (nik);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_observation_nik' AND object_id = OBJECT_ID('tbl_t_observation'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_observation_nik ON tbl_t_observation (nik) INCLUDE (is_deleted, created_at);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_coaching_nik' AND object_id = OBJECT_ID('tbl_t_coaching'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_coaching_nik ON tbl_t_coaching (nik) INCLUDE (is_deleted, created_at);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_coaching_participant_nik' AND object_id = OBJECT_ID('tbl_t_coaching_participant'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_coaching_participant_nik ON tbl_t_coaching_participant (nik);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_action_plan_nik' AND object_id = OBJECT_ID('tbl_t_action_plan'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_action_plan_nik ON tbl_t_action_plan (nik) INCLUDE (is_deleted);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_action_plan_nik_pja' AND object_id = OBJECT_ID('tbl_t_action_plan'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_action_plan_nik_pja ON tbl_t_action_plan (nik_pja) INCLUDE (is_deleted);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_action_plan_nik_pic' AND object_id = OBJECT_ID('tbl_t_action_plan'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_action_plan_nik_pic ON tbl_t_action_plan (nik_pic) INCLUDE (is_deleted);
             END
         ");
      } catch {

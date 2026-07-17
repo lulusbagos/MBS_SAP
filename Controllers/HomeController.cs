@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MBS_SAP.Controllers
 {
@@ -15,10 +16,12 @@ namespace MBS_SAP.Controllers
     public class HomeController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly IMemoryCache _cache;
 
-        public HomeController(AppDbContext context)
+        public HomeController(AppDbContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         public async Task<IActionResult> Index()
@@ -35,29 +38,38 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            bool showRosterPopup = false;
-            if (hasUserNik)
+            ViewData["HeaderTitle"] = "Portal K3 MBS";
+            ViewData["ActiveTab"] = "Home";
+
+            if (!hasUserNik)
             {
+                return View(new List<RecentActivityViewModel>());
+            }
+
+            var cacheKey = $"UserDashboardStats_{userNik}";
+            if (!_cache.TryGetValue(cacheKey, out DashboardStatsCache? stats) || stats == null)
+            {
+                stats = new DashboardStatsCache();
+
                 var latestRoster = await _context.Rosters
                     .Where(r => r.Nik == userNik)
                     .OrderByDescending(r => r.AkhirCuti)
                     .FirstOrDefaultAsync();
 
                 // Trigger popup if roster is unset/empty OR if today is after the active cycle (expired)
-                showRosterPopup = (latestRoster == null) || (DateTime.Today > latestRoster.AkhirCuti);
+                stats.ShowRosterPopup = (latestRoster == null) || (DateTime.Today > latestRoster.AkhirCuti);
 
-                var rosterHistory = await _context.Rosters
+                stats.RosterHistory = await _context.Rosters
                     .Where(r => r.Nik == userNik)
                     .OrderByDescending(r => r.AkhirCuti)
                     .ToListAsync();
-                ViewData["RosterHistory"] = rosterHistory;
 
                 var mitraRoster = await _context.MitraRosters
                     .FirstOrDefaultAsync(r => r.NoNik == userNik);
                 if (mitraRoster != null)
                 {
-                    ViewData["MitraHariOnsite"] = mitraRoster.HariOnsite;
-                    ViewData["MitraHariOffsite"] = mitraRoster.HariOffsite;
+                    stats.MitraHariOnsite = mitraRoster.HariOnsite;
+                    stats.MitraHariOffsite = mitraRoster.HariOffsite;
                 }
 
                 // Smart prefilling of roster dates in the form
@@ -66,11 +78,11 @@ namespace MBS_SAP.Controllers
                     if (latestRoster.AkhirCuti >= DateTime.Today)
                     {
                         // Currently running: edit mode (can edit running roster)
-                        ViewData["RosterAwalDinas"] = latestRoster.AwalDinas.ToString("yyyy-MM-dd");
-                        ViewData["RosterAkhirDinas"] = latestRoster.AkhirDinas.ToString("yyyy-MM-dd");
-                        ViewData["RosterAwalCuti"] = latestRoster.AwalCuti.ToString("yyyy-MM-dd");
-                        ViewData["RosterAkhirCuti"] = latestRoster.AkhirCuti.ToString("yyyy-MM-dd");
-                        ViewData["IsEditMode"] = true;
+                        stats.RosterAwalDinas = latestRoster.AwalDinas.ToString("yyyy-MM-dd");
+                        stats.RosterAkhirDinas = latestRoster.AkhirDinas.ToString("yyyy-MM-dd");
+                        stats.RosterAwalCuti = latestRoster.AwalCuti.ToString("yyyy-MM-dd");
+                        stats.RosterAkhirCuti = latestRoster.AkhirCuti.ToString("yyyy-MM-dd");
+                        stats.IsEditMode = true;
                     }
                     else
                     {
@@ -83,293 +95,351 @@ namespace MBS_SAP.Controllers
                         var nextAwalCuti = nextAkhirDinas.AddDays(1);
                         var nextAkhirCuti = nextAwalCuti.AddDays(offsiteDays - 1);
 
-                        ViewData["RosterAwalDinas"] = nextAwalDinas.ToString("yyyy-MM-dd");
-                        ViewData["RosterAkhirDinas"] = nextAkhirDinas.ToString("yyyy-MM-dd");
-                        ViewData["RosterAwalCuti"] = nextAwalCuti.ToString("yyyy-MM-dd");
-                        ViewData["RosterAkhirCuti"] = nextAkhirCuti.ToString("yyyy-MM-dd");
-                        ViewData["IsEditMode"] = false;
+                        stats.RosterAwalDinas = nextAwalDinas.ToString("yyyy-MM-dd");
+                        stats.RosterAkhirDinas = nextAkhirDinas.ToString("yyyy-MM-dd");
+                        stats.RosterAwalCuti = nextAwalCuti.ToString("yyyy-MM-dd");
+                        stats.RosterAkhirCuti = nextAkhirCuti.ToString("yyyy-MM-dd");
+                        stats.IsEditMode = false;
                     }
                 }
                 else
                 {
-                    ViewData["IsEditMode"] = false;
+                    stats.IsEditMode = false;
                 }
-            }
-            ViewData["ShowRosterPopup"] = showRosterPopup;
 
-            string? kategoriPengawas = null;
-            int targetHazardReport = 2;
-            int targetInspeksi = 1;
-            int targetSafetyTalk = 1;
-            int targetObservasi = 0;
-            int targetCoaching = 0;
-            int targetP5m = 1;
+                int targetHazardReport = 2;
+                int targetInspeksi = 1;
+                int targetSafetyTalk = 1;
+                int targetObservasi = 0;
+                int targetCoaching = 0;
+                int targetP5m = 1;
 
-            if (hasUserNik)
-            {
                 var currentKaryawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik != null && k.NoNik.Trim() == userNik && k.StatusAktif);
                 if (currentKaryawan != null)
                 {
                     var targetMapping = await _context.KaryawanJabatanMappings.FirstOrDefaultAsync(m => m.KaryawanId == currentKaryawan.IdKaryawan);
                     if (targetMapping != null)
                     {
-                        kategoriPengawas = targetMapping.KategoriPengawas;
+                        stats.KategoriPengawas = targetMapping.KategoriPengawas;
                         targetHazardReport = targetMapping.TargetHazardReport ?? 2;
                         targetInspeksi = targetMapping.TargetInspeksi ?? 1;
                         targetSafetyTalk = targetMapping.TargetSafetyTalk ?? 1;
                         targetObservasi = targetMapping.TargetObservasi ?? 0;
                         targetCoaching = targetMapping.TargetCoaching ?? 0;
-                        // p5m tidak ada di view, gunakan default 1
                         targetP5m = 1;
                     }
                 }
+                stats.TargetHazardReport = targetHazardReport;
+                stats.TargetInspeksi = targetInspeksi;
+                stats.TargetSafetyTalk = targetSafetyTalk;
+                stats.TargetObservasi = targetObservasi;
+                stats.TargetCoaching = targetCoaching;
+                stats.TargetP5m = targetP5m;
+
+                stats.RunningTexts = await _context.RunningTexts
+                    .Where(r => r.IsAktif)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Select(r => r.Pesan)
+                    .ToListAsync();
+
+                // Query dashboard berbasis akun login (NIK), bukan agregasi perusahaan.
+                var hazardQuery = _context.HazardReports
+                    .Where(h => !h.IsDeleted && h.Nik == userNik);
+                var inspectionQuery = _context.Inspections
+                    .Where(i => !i.IsDeleted && i.Nik == userNik);
+                var actionPlanQuery = _context.ActionPlans
+                    .Where(a => !a.IsDeleted && (a.Nik == userNik || a.NikPja == userNik || a.NikPic == userNik));
+                var safetyTalkQuery = _context.SafetyTalks
+                    .Where(s => !s.IsDeleted && s.Nik == userNik);
+                var p5mQuery = _context.P5ms
+                    .Where(p => !p.IsDeleted && p.Nik == userNik);
+                var coachingQuery = _context.Coachings
+                    .Where(c => !c.IsDeleted && (c.Nik == userNik || _context.CoachingParticipants.Any(p => p.CoachingId == c.Id && p.Nik == userNik)));
+     
+                var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                var observationQuery = _context.Observations.Where(o => !o.IsDeleted && o.Nik == userNik);
+
+                var hazardStats = await hazardQuery.GroupBy(x => 1).Select(g => new {
+                    Total = g.Count(),
+                    Open = g.Sum(h => h.StatusTemuan == "Open" ? 1 : 0),
+                    Closed = g.Sum(h => h.StatusTemuan == "Closed" ? 1 : 0),
+                    ThisMonth = g.Sum(h => h.Tanggal >= startOfMonth ? 1 : 0)
+                }).FirstOrDefaultAsync();
+
+                var inspectionStats = await inspectionQuery.GroupBy(x => 1).Select(g => new {
+                    Total = g.Count(),
+                    ThisMonth = g.Sum(i => i.Tanggal >= startOfMonth ? 1 : 0)
+                }).FirstOrDefaultAsync();
+
+                var actionPlanStats = await actionPlanQuery.GroupBy(x => 1).Select(g => new {
+                    Total = g.Count()
+                }).FirstOrDefaultAsync();
+
+                var safetyTalkStats = await safetyTalkQuery.GroupBy(x => 1).Select(g => new {
+                    Total = g.Count(),
+                    ThisMonth = g.Sum(s => s.Tanggal >= startOfMonth ? 1 : 0)
+                }).FirstOrDefaultAsync();
+
+                var p5mStats = await p5mQuery.GroupBy(x => 1).Select(g => new {
+                    Total = g.Count(),
+                    ThisMonth = g.Sum(p => p.Tanggal >= startOfMonth ? 1 : 0)
+                }).FirstOrDefaultAsync();
+
+                var coachingStats = await coachingQuery.GroupBy(x => 1).Select(g => new {
+                    Total = g.Count(),
+                    ThisMonth = g.Sum(c => c.Tanggal >= startOfMonth ? 1 : 0)
+                }).FirstOrDefaultAsync();
+
+                var observationStats = await observationQuery.GroupBy(x => 1).Select(g => new {
+                    Total = g.Count(),
+                    ThisMonth = g.Sum(o => o.Date >= startOfMonth ? 1 : 0)
+                }).FirstOrDefaultAsync();
+
+                var closedAssignedHazardCredits = await actionPlanQuery
+                    .Where(a => a.Status == "Closed"
+                        && a.TanggalPerbaikan != null
+                        && a.TanggalPerbaikan >= startOfMonth
+                        && a.ItemSap != null
+                        && a.ItemSap.StartsWith("hazard:")
+                        && a.Nik != userNik)
+                    .Select(a => a.ItemSap!)
+                    .Distinct()
+                    .CountAsync();
+
+                var closedAssignedInspectionCredits = await actionPlanQuery
+                    .Where(a => a.Status == "Closed"
+                        && a.TanggalPerbaikan != null
+                        && a.TanggalPerbaikan >= startOfMonth
+                        && a.ItemSap != null
+                        && a.ItemSap.StartsWith("inspection:")
+                        && a.Nik != userNik)
+                    .Select(a => a.ItemSap!)
+                    .Distinct()
+                    .CountAsync();
+
+                stats.TotalHazards = hazardStats?.Total ?? 0;
+                stats.OpenHazards = hazardStats?.Open ?? 0;
+                stats.ClosedHazards = hazardStats?.Closed ?? 0;
+                stats.ThisMonthHazards = (hazardStats?.ThisMonth ?? 0) + closedAssignedHazardCredits;
+
+                stats.TotalInspections = inspectionStats?.Total ?? 0;
+                stats.ThisMonthInspections = (inspectionStats?.ThisMonth ?? 0) + closedAssignedInspectionCredits;
+
+                stats.TotalActionPlans = actionPlanStats?.Total ?? 0;
+
+                stats.TotalSafetyTalks = safetyTalkStats?.Total ?? 0;
+                stats.ThisMonthSafetyTalks = safetyTalkStats?.ThisMonth ?? 0;
+
+                stats.TotalP5ms = p5mStats?.Total ?? 0;
+                stats.ThisMonthP5ms = p5mStats?.ThisMonth ?? 0;
+
+                stats.TotalCoachings = coachingStats?.Total ?? 0;
+                stats.ThisMonthCoachings = coachingStats?.ThisMonth ?? 0;
+
+                stats.TotalObservations = observationStats?.Total ?? 0;
+                stats.ThisMonthObservations = observationStats?.ThisMonth ?? 0;
+     
+                int cappedActH = Math.Min(stats.ThisMonthHazards, targetHazardReport);
+                int cappedActI = Math.Min(stats.ThisMonthInspections, targetInspeksi);
+                int cappedActST = Math.Min(stats.ThisMonthSafetyTalks, targetSafetyTalk);
+                int cappedActO = Math.Min(stats.ThisMonthObservations, targetObservasi);
+                int cappedActC = Math.Min(stats.ThisMonthCoachings, targetCoaching);
+
+                int myTotalMonthTarget = targetHazardReport + targetInspeksi + targetSafetyTalk + targetObservasi + targetCoaching;
+                int myTotalThisMonth = cappedActH + cappedActI + cappedActST + cappedActO + cappedActC;
+
+                int complianceScore = 0;
+                if (myTotalMonthTarget > 0)
+                {
+                    complianceScore = (int)Math.Round((double)myTotalThisMonth / myTotalMonthTarget * 100.0, MidpointRounding.AwayFromZero);
+                    if (complianceScore > 100) complianceScore = 100;
+                }
+                
+                stats.ComplianceScore = complianceScore;
+                stats.MyTotalThisMonth = myTotalThisMonth;
+                stats.MyTotalMonthTarget = myTotalMonthTarget;
+
+                // Load recent history items — difilter akun login
+                var recentHazards = await hazardQuery
+                    .OrderByDescending(h => h.CreatedAt)
+                    .Take(2)
+                    .Select(h => new RecentActivityViewModel
+                    {
+                        Type = "Hazard",
+                        Title = "Hazard: " + (h.Lokasi ?? h.Area ?? "Unknown"),
+                        Description = h.Temuan ?? "",
+                        Date = h.CreatedAt,
+                        Status = h.StatusTemuan,
+                        User = h.Nama
+                    }).ToListAsync();
+
+                var recentInspections = await inspectionQuery
+                    .OrderByDescending(i => i.CreatedAt)
+                    .Take(2)
+                    .Select(i => new RecentActivityViewModel
+                    {
+                        Type = "Inspection",
+                        Title = "Inspeksi: " + (i.JenisInspeksi ?? "Umum"),
+                        Description = "Inspeksi di area " + (i.Area ?? "umum"),
+                        Date = i.CreatedAt,
+                        Status = "Completed",
+                        User = i.Nama
+                    }).ToListAsync();
+
+                var recentActionPlans = await actionPlanQuery
+                    .OrderByDescending(a => a.CreatedAt)
+                    .Take(2)
+                    .Select(a => new RecentActivityViewModel
+                    {
+                        Type = "ActionPlan",
+                        Title = "Action Plan: " + (a.KategoriTemuan ?? "Temuan"),
+                        Description = a.DetilTemuan ?? "",
+                        Date = a.CreatedAt,
+                        Status = a.Status ?? "Open",
+                        User = a.Nama
+                    }).ToListAsync();
+
+                var recentSafetyTalks = await safetyTalkQuery
+                    .OrderByDescending(s => s.CreatedAt)
+                    .Take(2)
+                    .Select(s => new RecentActivityViewModel
+                    {
+                        Type = "SafetyTalk",
+                        Title = "Safety Talk: " + (s.Judul ?? "Talk"),
+                        Description = s.Keterangan ?? "",
+                        Date = s.CreatedAt,
+                        Status = "Completed",
+                        User = s.Nama
+                    }).ToListAsync();
+
+                var recentP5ms = await p5mQuery
+                    .OrderByDescending(p => p.CreatedAt)
+                    .Take(2)
+                    .Select(p => new RecentActivityViewModel
+                    {
+                        Type = "P5m",
+                        Title = "P5M: " + (p.Judul ?? "Pre-Start"),
+                        Description = p.Keterangan ?? "",
+                        Date = p.CreatedAt,
+                        Status = "Completed",
+                        User = p.Nama
+                    }).ToListAsync();
+
+                var recentCoachings = await coachingQuery
+                    .OrderByDescending(c => c.CreatedAt)
+                    .Take(2)
+                    .Select(c => new RecentActivityViewModel
+                    {
+                        Type = "Coaching",
+                        Title = "Coaching: " + (c.Tema ?? "Pembinaan"),
+                        Description = c.Feedback ?? "",
+                        Date = c.CreatedAt,
+                        Status = "Completed",
+                        User = c.Nama
+                    }).ToListAsync();
+
+                // Merge and sort activities
+                stats.RecentActivities = recentHazards
+                    .Concat(recentInspections)
+                    .Concat(recentActionPlans)
+                    .Concat(recentSafetyTalks)
+                    .Concat(recentP5ms)
+                    .Concat(recentCoachings)
+                    .OrderByDescending(a => a.Date)
+                    .Take(6)
+                    .ToList();
+
+                _cache.Set(cacheKey, stats, TimeSpan.FromMinutes(3));
             }
-            ViewData["KategoriPengawas"] = kategoriPengawas;
 
-            ViewData["HeaderTitle"] = "Portal K3 MBS";
-            ViewData["ActiveTab"] = "Home";
+            ViewData["ShowRosterPopup"] = stats.ShowRosterPopup;
+            ViewData["RosterHistory"] = stats.RosterHistory;
+            ViewData["MitraHariOnsite"] = stats.MitraHariOnsite;
+            ViewData["MitraHariOffsite"] = stats.MitraHariOffsite;
+            ViewData["RosterAwalDinas"] = stats.RosterAwalDinas;
+            ViewData["RosterAkhirDinas"] = stats.RosterAkhirDinas;
+            ViewData["RosterAwalCuti"] = stats.RosterAwalCuti;
+            ViewData["RosterAkhirCuti"] = stats.RosterAkhirCuti;
+            ViewData["IsEditMode"] = stats.IsEditMode;
 
-            var runningTexts = await _context.RunningTexts
-                .Where(r => r.IsAktif)
-                .OrderByDescending(r => r.CreatedAt)
-                .Select(r => r.Pesan)
-                .ToListAsync();
+            ViewData["KategoriPengawas"] = stats.KategoriPengawas;
+            ViewData["RunningTexts"] = stats.RunningTexts;
 
-            ViewData["RunningTexts"] = runningTexts;
-
-            // Query dashboard berbasis akun login (NIK), bukan agregasi perusahaan.
-            var hazardQuery = _context.HazardReports
-                .Where(h => !h.IsDeleted && hasUserNik && h.Nik == userNik);
-            var inspectionQuery = _context.Inspections
-                .Where(i => !i.IsDeleted && hasUserNik && i.Nik == userNik);
-            var actionPlanQuery = _context.ActionPlans
-                .Where(a => !a.IsDeleted && hasUserNik && (a.Nik == userNik || a.NikPja == userNik || a.NikPic == userNik));
-            var safetyTalkQuery = _context.SafetyTalks
-                .Where(s => !s.IsDeleted && hasUserNik && s.Nik == userNik);
-            var p5mQuery = _context.P5ms
-                .Where(p => !p.IsDeleted && hasUserNik && p.Nik == userNik);
-            var coachingQuery = _context.Coachings
-                .Where(c => !c.IsDeleted && hasUserNik && (c.Nik == userNik || _context.CoachingParticipants.Any(p => p.CoachingId == c.Id && p.Nik == userNik)));
- 
-            var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-            var observationQuery = _context.Observations.Where(o => !o.IsDeleted && hasUserNik && o.Nik == userNik);
-
-            var hazardStats = await hazardQuery.GroupBy(x => 1).Select(g => new {
-                Total = g.Count(),
-                Open = g.Sum(h => h.StatusTemuan == "Open" ? 1 : 0),
-                Closed = g.Sum(h => h.StatusTemuan == "Closed" ? 1 : 0),
-                ThisMonth = g.Sum(h => h.Tanggal >= startOfMonth ? 1 : 0)
-            }).FirstOrDefaultAsync();
-
-            var inspectionStats = await inspectionQuery.GroupBy(x => 1).Select(g => new {
-                Total = g.Count(),
-                ThisMonth = g.Sum(i => i.Tanggal >= startOfMonth ? 1 : 0)
-            }).FirstOrDefaultAsync();
-
-            var actionPlanStats = await actionPlanQuery.GroupBy(x => 1).Select(g => new {
-                Total = g.Count()
-            }).FirstOrDefaultAsync();
-
-            var safetyTalkStats = await safetyTalkQuery.GroupBy(x => 1).Select(g => new {
-                Total = g.Count(),
-                ThisMonth = g.Sum(s => s.Tanggal >= startOfMonth ? 1 : 0)
-            }).FirstOrDefaultAsync();
-
-            var p5mStats = await p5mQuery.GroupBy(x => 1).Select(g => new {
-                Total = g.Count(),
-                ThisMonth = g.Sum(p => p.Tanggal >= startOfMonth ? 1 : 0)
-            }).FirstOrDefaultAsync();
-
-            var coachingStats = await coachingQuery.GroupBy(x => 1).Select(g => new {
-                Total = g.Count(),
-                ThisMonth = g.Sum(c => c.Tanggal >= startOfMonth ? 1 : 0)
-            }).FirstOrDefaultAsync();
-
-            var observationStats = await observationQuery.GroupBy(x => 1).Select(g => new {
-                Total = g.Count(),
-                ThisMonth = g.Sum(o => o.Date >= startOfMonth ? 1 : 0)
-            }).FirstOrDefaultAsync();
-
-            var closedAssignedHazardCredits = await actionPlanQuery
-                .Where(a => a.Status == "Closed"
-                    && a.TanggalPerbaikan != null
-                    && a.TanggalPerbaikan >= startOfMonth
-                    && a.ItemSap != null
-                    && a.ItemSap.StartsWith("hazard:")
-                    && a.Nik != userNik)
-                .Select(a => a.ItemSap!)
-                .Distinct()
-                .CountAsync();
-
-            var closedAssignedInspectionCredits = await actionPlanQuery
-                .Where(a => a.Status == "Closed"
-                    && a.TanggalPerbaikan != null
-                    && a.TanggalPerbaikan >= startOfMonth
-                    && a.ItemSap != null
-                    && a.ItemSap.StartsWith("inspection:")
-                    && a.Nik != userNik)
-                .Select(a => a.ItemSap!)
-                .Distinct()
-                .CountAsync();
-
-            var totalHazards = hazardStats?.Total ?? 0;
-            var openHazards = hazardStats?.Open ?? 0;
-            var closedHazards = hazardStats?.Closed ?? 0;
-            var thisMonthHazards = (hazardStats?.ThisMonth ?? 0) + closedAssignedHazardCredits;
-
-            var totalInspections = inspectionStats?.Total ?? 0;
-            var thisMonthInspections = (inspectionStats?.ThisMonth ?? 0) + closedAssignedInspectionCredits;
-
-            var totalActionPlans = actionPlanStats?.Total ?? 0;
-
-            var totalSafetyTalks = safetyTalkStats?.Total ?? 0;
-            var thisMonthSafetyTalks = safetyTalkStats?.ThisMonth ?? 0;
-
-            var totalP5ms = p5mStats?.Total ?? 0;
-            var thisMonthP5ms = p5mStats?.ThisMonth ?? 0;
-
-            var totalCoachings = coachingStats?.Total ?? 0;
-            var thisMonthCoachings = coachingStats?.ThisMonth ?? 0;
-
-            var totalObservations = observationStats?.Total ?? 0;
-            var thisMonthObservations = observationStats?.ThisMonth ?? 0;
- 
-            int cappedActH = Math.Min(thisMonthHazards, targetHazardReport);
-            int cappedActI = Math.Min(thisMonthInspections, targetInspeksi);
-            int cappedActST = Math.Min(thisMonthSafetyTalks, targetSafetyTalk);
-            int cappedActO = Math.Min(thisMonthObservations, targetObservasi);
-            int cappedActC = Math.Min(thisMonthCoachings, targetCoaching);
-
-            int myTotalMonthTarget = targetHazardReport + targetInspeksi + targetSafetyTalk + targetObservasi + targetCoaching;
-            int myTotalThisMonth = cappedActH + cappedActI + cappedActST + cappedActO + cappedActC;
-
-            int complianceScore = 0;
-            if (myTotalMonthTarget > 0)
-            {
-                complianceScore = (int)Math.Round((double)myTotalThisMonth / myTotalMonthTarget * 100.0, MidpointRounding.AwayFromZero);
-                if (complianceScore > 100) complianceScore = 100;
-            }
-
-            ViewData["TotalHazards"] = totalHazards;
-            ViewData["OpenHazards"] = openHazards;
-            ViewData["ClosedHazards"] = closedHazards;
-            ViewData["TotalInspections"] = totalInspections;
-            ViewData["TotalActionPlans"] = totalActionPlans;
-            ViewData["TotalSafetyTalks"] = totalSafetyTalks;
-            ViewData["TotalP5ms"] = totalP5ms;
-            ViewData["TotalObservations"] = totalObservations;
-            ViewData["TotalCoachings"] = totalCoachings;
+            ViewData["TotalHazards"] = stats.TotalHazards;
+            ViewData["OpenHazards"] = stats.OpenHazards;
+            ViewData["ClosedHazards"] = stats.ClosedHazards;
+            ViewData["TotalInspections"] = stats.TotalInspections;
+            ViewData["TotalActionPlans"] = stats.TotalActionPlans;
+            ViewData["TotalSafetyTalks"] = stats.TotalSafetyTalks;
+            ViewData["TotalP5ms"] = stats.TotalP5ms;
+            ViewData["TotalObservations"] = stats.TotalObservations;
+            ViewData["TotalCoachings"] = stats.TotalCoachings;
             
-            // Send specific targets and achievements for display
-            ViewData["ComplianceScore"] = complianceScore;
-            ViewData["MyTotalThisMonth"] = myTotalThisMonth;
-            ViewData["MyTotalMonthTarget"] = myTotalMonthTarget;
+            ViewData["ComplianceScore"] = stats.ComplianceScore;
+            ViewData["MyTotalThisMonth"] = stats.MyTotalThisMonth;
+            ViewData["MyTotalMonthTarget"] = stats.MyTotalMonthTarget;
             
-            ViewData["ThisMonthHazards"] = thisMonthHazards;
-            ViewData["ThisMonthInspections"] = thisMonthInspections;
-            ViewData["ThisMonthSafetyTalks"] = thisMonthSafetyTalks;
-            ViewData["ThisMonthP5ms"] = thisMonthP5ms;
-            ViewData["ThisMonthObservations"] = thisMonthObservations;
-            ViewData["ThisMonthCoachings"] = thisMonthCoachings;
+            ViewData["ThisMonthHazards"] = stats.ThisMonthHazards;
+            ViewData["ThisMonthInspections"] = stats.ThisMonthInspections;
+            ViewData["ThisMonthSafetyTalks"] = stats.ThisMonthSafetyTalks;
+            ViewData["ThisMonthP5ms"] = stats.ThisMonthP5ms;
+            ViewData["ThisMonthObservations"] = stats.ThisMonthObservations;
+            ViewData["ThisMonthCoachings"] = stats.ThisMonthCoachings;
 
-            ViewData["TargetHazard"] = targetHazardReport;
-            ViewData["TargetInspeksi"] = targetInspeksi;
-            ViewData["TargetSafetyTalk"] = targetSafetyTalk;
-            ViewData["TargetP5m"] = targetP5m;
-            ViewData["TargetObservasi"] = targetObservasi;
-            ViewData["TargetCoaching"] = targetCoaching;
+            ViewData["TargetHazard"] = stats.TargetHazardReport;
+            ViewData["TargetInspeksi"] = stats.TargetInspeksi;
+            ViewData["TargetSafetyTalk"] = stats.TargetSafetyTalk;
+            ViewData["TargetP5m"] = stats.TargetP5m;
+            ViewData["TargetObservasi"] = stats.TargetObservasi;
+            ViewData["TargetCoaching"] = stats.TargetCoaching;
 
-            // Load recent history items — difilter akun login
-            var recentHazards = await hazardQuery
-                .OrderByDescending(h => h.CreatedAt)
-                .Take(2)
-                .Select(h => new RecentActivityViewModel
-                {
-                    Type = "Hazard",
-                    Title = "Hazard: " + (h.Lokasi ?? h.Area ?? "Unknown"),
-                    Description = h.Temuan ?? "",
-                    Date = h.CreatedAt,
-                    Status = h.StatusTemuan,
-                    User = h.Nama
-                }).ToListAsync();
+            return View(stats.RecentActivities);
+        }
 
-            var recentInspections = await inspectionQuery
-                .OrderByDescending(i => i.CreatedAt)
-                .Take(2)
-                .Select(i => new RecentActivityViewModel
-                {
-                    Type = "Inspection",
-                    Title = "Inspeksi: " + (i.JenisInspeksi ?? "Umum"),
-                    Description = "Inspeksi di area " + (i.Area ?? "umum"),
-                    Date = i.CreatedAt,
-                    Status = "Completed",
-                    User = i.Nama
-                }).ToListAsync();
-
-            var recentActionPlans = await actionPlanQuery
-                .OrderByDescending(a => a.CreatedAt)
-                .Take(2)
-                .Select(a => new RecentActivityViewModel
-                {
-                    Type = "ActionPlan",
-                    Title = "Action Plan: " + (a.KategoriTemuan ?? "Temuan"),
-                    Description = a.DetilTemuan ?? "",
-                    Date = a.CreatedAt,
-                    Status = a.Status ?? "Open",
-                    User = a.Nama
-                }).ToListAsync();
-
-            var recentSafetyTalks = await safetyTalkQuery
-                .OrderByDescending(s => s.CreatedAt)
-                .Take(2)
-                .Select(s => new RecentActivityViewModel
-                {
-                    Type = "SafetyTalk",
-                    Title = "Safety Talk: " + (s.Judul ?? "Talk"),
-                    Description = s.Keterangan ?? "",
-                    Date = s.CreatedAt,
-                    Status = "Completed",
-                    User = s.Nama
-                }).ToListAsync();
-
-            var recentP5ms = await p5mQuery
-                .OrderByDescending(p => p.CreatedAt)
-                .Take(2)
-                .Select(p => new RecentActivityViewModel
-                {
-                    Type = "P5m",
-                    Title = "P5M: " + (p.Judul ?? "Pre-Start"),
-                    Description = p.Keterangan ?? "",
-                    Date = p.CreatedAt,
-                    Status = "Completed",
-                    User = p.Nama
-                }).ToListAsync();
-
-            var recentCoachings = await coachingQuery
-                .OrderByDescending(c => c.CreatedAt)
-                .Take(2)
-                .Select(c => new RecentActivityViewModel
-                {
-                    Type = "Coaching",
-                    Title = "Coaching: " + (c.Tema ?? "Pembinaan"),
-                    Description = c.Feedback ?? "",
-                    Date = c.CreatedAt,
-                    Status = "Completed",
-                    User = c.Nama
-                }).ToListAsync();
-
-            // Merge and sort activities
-            var recentActivities = recentHazards
-                .Concat(recentInspections)
-                .Concat(recentActionPlans)
-                .Concat(recentSafetyTalks)
-                .Concat(recentP5ms)
-                .Concat(recentCoachings)
-                .OrderByDescending(a => a.Date)
-                .Take(6)
-                .ToList();
-
-            return View(recentActivities);
+        public class DashboardStatsCache
+        {
+            public bool ShowRosterPopup { get; set; }
+            public List<Roster> RosterHistory { get; set; } = new();
+            public int? MitraHariOnsite { get; set; }
+            public int? MitraHariOffsite { get; set; }
+            public string RosterAwalDinas { get; set; } = string.Empty;
+            public string RosterAkhirDinas { get; set; } = string.Empty;
+            public string RosterAwalCuti { get; set; } = string.Empty;
+            public string RosterAkhirCuti { get; set; } = string.Empty;
+            public bool IsEditMode { get; set; }
+            
+            public string? KategoriPengawas { get; set; }
+            public int TargetHazardReport { get; set; }
+            public int TargetInspeksi { get; set; }
+            public int TargetSafetyTalk { get; set; }
+            public int TargetObservasi { get; set; }
+            public int TargetCoaching { get; set; }
+            public int TargetP5m { get; set; }
+            
+            public List<string> RunningTexts { get; set; } = new();
+            
+            public int TotalHazards { get; set; }
+            public int OpenHazards { get; set; }
+            public int ClosedHazards { get; set; }
+            public int TotalInspections { get; set; }
+            public int TotalActionPlans { get; set; }
+            public int TotalSafetyTalks { get; set; }
+            public int TotalP5ms { get; set; }
+            public int TotalObservations { get; set; }
+            public int TotalCoachings { get; set; }
+            
+            public int ComplianceScore { get; set; }
+            public int MyTotalThisMonth { get; set; }
+            public int MyTotalMonthTarget { get; set; }
+            
+            public int ThisMonthHazards { get; set; }
+            public int ThisMonthInspections { get; set; }
+            public int ThisMonthSafetyTalks { get; set; }
+            public int ThisMonthP5ms { get; set; }
+            public int ThisMonthObservations { get; set; }
+            public int ThisMonthCoachings { get; set; }
+            
+            public List<RecentActivityViewModel> RecentActivities { get; set; } = new();
         }
 
         public IActionResult SafetyQuiz()
