@@ -2457,7 +2457,7 @@ namespace MBS_SAP.Controllers
             else
             {
                 allowedCompanies = allCompanies
-                    .Where(p => resolvedCompanyId == null || p.PerusahaanId == resolvedCompanyId)
+                    .Where(p => resolvedCompanyId == null || allowedCompanyIds.Contains(p.PerusahaanId))
                     .ToList();
             }
 
