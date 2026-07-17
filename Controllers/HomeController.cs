@@ -255,7 +255,36 @@ namespace MBS_SAP.Controllers
                     if (complianceScore > 100) complianceScore = 100;
                 }
                 
+                int compliantWeeks = 0;
+                int targetWeeks = 4;
+                if (myTotalMonthTarget == 0)
+                {
+                    compliantWeeks = 4;
+                }
+                else
+                {
+                    for (int w = 0; w < 4; w++)
+                    {
+                        var startOfWeek = DateTime.Today.AddDays(-7 * (w + 1) + 1);
+                        var endOfWeek = DateTime.Today.AddDays(-7 * w).AddDays(1).AddTicks(-1);
+
+                        bool submittedInWeek = await hazardQuery.AnyAsync(h => h.CreatedAt >= startOfWeek && h.CreatedAt <= endOfWeek)
+                            || await inspectionQuery.AnyAsync(i => i.CreatedAt >= startOfWeek && i.CreatedAt <= endOfWeek)
+                            || await safetyTalkQuery.AnyAsync(s => s.CreatedAt >= startOfWeek && s.CreatedAt <= endOfWeek)
+                            || await p5mQuery.AnyAsync(p => p.CreatedAt >= startOfWeek && p.CreatedAt <= endOfWeek)
+                            || await coachingQuery.AnyAsync(c => c.CreatedAt >= startOfWeek && c.CreatedAt <= endOfWeek)
+                            || await observationQuery.AnyAsync(o => o.CreatedAt >= startOfWeek && o.CreatedAt <= endOfWeek);
+
+                        if (submittedInWeek)
+                        {
+                            compliantWeeks++;
+                        }
+                    }
+                }
+                
                 stats.ComplianceScore = complianceScore;
+                stats.CompliantWeeks = compliantWeeks;
+                stats.TargetWeeks = targetWeeks;
                 stats.MyTotalThisMonth = myTotalThisMonth;
                 stats.MyTotalMonthTarget = myTotalMonthTarget;
 
@@ -376,6 +405,8 @@ namespace MBS_SAP.Controllers
             ViewData["TotalCoachings"] = stats.TotalCoachings;
             
             ViewData["ComplianceScore"] = stats.ComplianceScore;
+            ViewData["CompliantWeeks"] = stats.CompliantWeeks;
+            ViewData["TargetWeeks"] = stats.TargetWeeks;
             ViewData["MyTotalThisMonth"] = stats.MyTotalThisMonth;
             ViewData["MyTotalMonthTarget"] = stats.MyTotalMonthTarget;
             
@@ -429,6 +460,8 @@ namespace MBS_SAP.Controllers
             public int TotalCoachings { get; set; }
             
             public int ComplianceScore { get; set; }
+            public int CompliantWeeks { get; set; }
+            public int TargetWeeks { get; set; }
             public int MyTotalThisMonth { get; set; }
             public int MyTotalMonthTarget { get; set; }
             
