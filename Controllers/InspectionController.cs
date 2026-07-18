@@ -171,7 +171,13 @@ namespace MBS_SAP.Controllers
                 };
             }
 
-            inspection.Tanggal = DateTime.Today;
+            // Allow backdate up to 1 week (7 days)
+            var validatedTanggal = tanggal.Date;
+            if (validatedTanggal < DateTime.Today.AddDays(-7) || validatedTanggal > DateTime.Today)
+            {
+                validatedTanggal = DateTime.Today;
+            }
+            inspection.Tanggal = validatedTanggal;
             inspection.Waktu = waktu;
             inspection.Area = area?.ToUpper();
             inspection.Lokasi = lokasi?.ToUpper();
