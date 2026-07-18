@@ -17,12 +17,30 @@
             <p class="screen-subtitle mb-0" style="font-size: 13.5px; color: #475569;">Evaluasi kelayakan isi submisi SAP untuk membedakan antara pelaporan rill atau formalitas target.</p>
         </div>
         <div class="d-flex gap-2">
+            <button type="button" id="btnBulkAudit" class="btn btn-warning py-2.5 px-4 fw-bold d-flex align-items-center gap-2 text-dark" style="border-radius: 12px; font-size: 13px; border: none; box-shadow: 0 4px 12px rgba(245,158,11,0.15);" onclick="startBulkAudit()">
+                <i class="bi bi-cpu-fill animate-pulse"></i> Audit Masal AI
+            </button>
             <a href="/Admin/SapQuality/Dasboard" class="btn btn-primary py-2.5 px-4 fw-bold d-flex align-items-center gap-2 text-white" style="border-radius: 12px; font-size: 13px; background: #3b82f6; border: none; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
                 <i class="bi bi-bar-chart-line-fill"></i> Lihat Dashboard Analisis
             </a>
             <a asp-controller="Admin" asp-action="Index" class="btn btn-outline-secondary py-2.5 px-4 fw-bold d-flex align-items-center gap-2" style="border-radius: 12px; font-size: 13px; border-color: #cbd5e1; color: #334155; background: #fff;">
                 <i class="bi bi-arrow-left"></i> Kembali ke Control Center
             </a>
+        </div>
+    </div>
+
+    <!-- Bulk Audit Progress Card -->
+    <div id="bulkAuditProgressCard" class="card p-4 shadow-sm border-0 bg-white mb-4 d-none" style="border-radius: 20px; border: 1.5px solid #f59e0b !important; background-color: #fffbeb !important;">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold text-warning mb-0"><i class="bi bi-cpu-fill me-2"></i>Audit Masal AI Sedang Berjalan...</h6>
+            <span id="bulkProgressText" class="fw-bold text-dark" style="font-size: 13px;">0%</span>
+        </div>
+        <div class="progress mb-2" style="height: 12px; border-radius: 30px; background-color: #e2e8f0;">
+            <div id="bulkProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-warning" role="progressbar" style="width: 0%; border-radius: 30px;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+        <div class="d-flex justify-content-between text-muted" style="font-size: 12px;">
+            <span id="bulkStatusMsg">Menyiapkan data...</span>
+            <span id="bulkCountsText">0 / 0 Data</span>
         </div>
     </div>
 
@@ -630,6 +648,84 @@
                 default: return '#64748b';
             }
         }
+
+        let bulkAuditInterval = null;
+
+        function startBulkAudit() {
+            if (!confirm("Apakah Anda yakin ingin menjalankan audit massal AI? Proses ini akan mengaudit semua data unrated (maksimal 20.000 data terbaru per jenis SAP) di latar belakang.")) {
+                return;
+            }
+
+            $('#btnBulkAudit').prop('disabled', true).addClass('opacity-50');
+            $('#bulkAuditProgressCard').removeClass('d-none');
+
+            $.ajax({
+                url: '/Admin/StartBulkAudit',
+                type: 'POST',
+                data: {
+                    __RequestVerificationToken: token
+                },
+                success: function(response) {
+                    if (response.success) {
+                        pollBulkAuditStatus();
+                        bulkAuditInterval = setInterval(pollBulkAuditStatus, 1500);
+                    } else {
+                        alert(response.message);
+                        resetBulkAuditUI();
+                    }
+                },
+                error: function(err) {
+                    alert('Gagal memulai audit massal: ' + err.responseText);
+                    resetBulkAuditUI();
+                }
+            });
+        }
+
+        function pollBulkAuditStatus() {
+            $.ajax({
+                url: '/Admin/GetBulkAuditStatus',
+                type: 'GET',
+                success: function(status) {
+                    $('#bulkProgressText').text(status.percent + '%');
+                    $('#bulkProgressBar').css('width', status.percent + '%').attr('aria-valuenow', status.percent);
+                    $('#bulkStatusMsg').text(status.message);
+                    $('#bulkCountsText').text(status.processed.toLocaleString() + ' / ' + status.total.toLocaleString() + ' Data');
+
+                    if (!status.isRunning) {
+                        clearInterval(bulkAuditInterval);
+                        $('#btnBulkAudit').prop('disabled', false).removeClass('opacity-50');
+                        if (status.percent === 100 || status.message.includes("Selesai")) {
+                            alert("Audit massal AI selesai! Halaman akan dimuat ulang.");
+                            location.reload();
+                        }
+                    }
+                },
+                error: function() {
+                    clearInterval(bulkAuditInterval);
+                }
+            });
+        }
+
+        function resetBulkAuditUI() {
+            $('#btnBulkAudit').prop('disabled', false).removeClass('opacity-50');
+            $('#bulkAuditProgressCard').addClass('d-none');
+        }
+
+        // Auto-check if bulk audit is already running on page load
+        $(document).ready(function() {
+            $.ajax({
+                url: '/Admin/GetBulkAuditStatus',
+                type: 'GET',
+                success: function(status) {
+                    if (status.isRunning) {
+                        $('#btnBulkAudit').prop('disabled', true).addClass('opacity-50');
+                        $('#bulkAuditProgressCard').removeClass('d-none');
+                        pollBulkAuditStatus();
+                        bulkAuditInterval = setInterval(pollBulkAuditStatus, 1500);
+                    }
+                }
+            });
+        });
     </script>
 
     <style>

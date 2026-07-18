@@ -34,6 +34,17 @@ namespace MBS_SAP.Controllers
         private const long MaxExcelUploadBytes = 10 * 1024 * 1024;
         private const int MaxRowsPerSheet = 5000;
 
+        private static bool _isBulkAuditing = false;
+        private static int _bulkTotal = 0;
+        private static int _bulkProcessed = 0;
+        private static string _bulkStatusMsg = "";
+
+        private class TempAuditItem
+        {
+            public int Id { get; set; }
+            public string? Desc { get; set; }
+        }
+
         public AdminController(AppDbContext context, CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
@@ -1956,6 +1967,255 @@ namespace MBS_SAP.Controllers
             ViewBag.AvgCoaching = Math.Round(avgCoaching, 2);
 
             return View();
+        }
+
+        [HttpGet("Admin/GetBulkAuditStatus")]
+        public IActionResult GetBulkAuditStatus()
+        {
+            return Json(new {
+                isRunning = _isBulkAuditing,
+                total = _bulkTotal,
+                processed = _bulkProcessed,
+                percent = _bulkTotal > 0 ? (int)(_bulkProcessed * 100.0 / _bulkTotal) : 0,
+                message = _bulkStatusMsg
+            });
+        }
+
+        [HttpPost("Admin/StartBulkAudit")]
+        [ValidateAntiForgeryToken]
+        public IActionResult StartBulkAudit()
+        {
+            if (_isBulkAuditing)
+            {
+                return Json(new { success = false, message = "Proses audit massal sedang berjalan." });
+            }
+
+            _isBulkAuditing = true;
+            _bulkProcessed = 0;
+            _bulkTotal = 0;
+            _bulkStatusMsg = "Menginisialisasi data...";
+
+            var serviceProvider = HttpContext.RequestServices;
+
+            // Start background thread
+            _ = Task.Run(async () => {
+                try
+                {
+                    using (var scope = serviceProvider.CreateScope())
+                    {
+                        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                        db.Database.SetCommandTimeout(600); // 10 minutes timeout
+
+                        // Set transaction isolation level to READ UNCOMMITTED to prevent deadlocks/timeouts on heavy tables
+                        await db.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
+
+                        _bulkStatusMsg = "Menghitung data unrated...";
+                        int unratedHazards = await (from h in db.HazardReports
+                                                   where !h.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Hazard" && a.ProgramId == h.Id)
+                                                   select h.Id).CountAsync();
+                        // Limit to latest 20,000 for server stability
+                        unratedHazards = Math.Min(unratedHazards, 20000);
+
+                        int unratedInspections = await (from i in db.Inspections
+                                                       where !i.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Inspection" && a.ProgramId == i.Id)
+                                                       select i.Id).CountAsync();
+                        unratedInspections = Math.Min(unratedInspections, 20000);
+
+                        int unratedSafetyTalks = await (from s in db.SafetyTalks
+                                                       where !s.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "SafetyTalk" && a.ProgramId == s.Id)
+                                                       select s.Id).CountAsync();
+                        unratedSafetyTalks = Math.Min(unratedSafetyTalks, 20000);
+
+                        int unratedObservations = await (from o in db.Observations
+                                                       where !o.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Observation" && a.ProgramId == o.Id)
+                                                       select o.Id).CountAsync();
+                        unratedObservations = Math.Min(unratedObservations, 20000);
+
+                        int unratedCoachings = await (from c in db.Coachings
+                                                     where !c.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Coaching" && a.ProgramId == c.Id)
+                                                     select c.Id).CountAsync();
+                        unratedCoachings = Math.Min(unratedCoachings, 20000);
+
+                        _bulkTotal = unratedHazards + unratedInspections + unratedSafetyTalks + unratedObservations + unratedCoachings;
+                        
+                        if (_bulkTotal == 0)
+                        {
+                            _isBulkAuditing = false;
+                            _bulkStatusMsg = "Semua data sudah ter-audit.";
+                            return;
+                        }
+
+                        var now = DateTime.Now;
+
+                        // Process Hazard
+                        int processedHazards = 0;
+                        while (processedHazards < unratedHazards)
+                        {
+                            _bulkStatusMsg = $"Mengaudit Hazard Reports ({processedHazards}/{unratedHazards})...";
+                            var batch = await (from h in db.HazardReports
+                                               where !h.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Hazard" && a.ProgramId == h.Id)
+                                               orderby h.Id descending
+                                               select new TempAuditItem { Id = h.Id, Desc = h.Temuan }).Take(2500).ToListAsync();
+                            if (!batch.Any()) break;
+
+                            var list = new List<SapQualityAssessment>();
+                            foreach (var item in batch)
+                            {
+                                var (rating, notes) = Services.SapQualityMlEngine.AssessQuality("Hazard", "Hazard Report", item.Desc ?? "");
+                                list.Add(new SapQualityAssessment
+                                {
+                                    ProgramType = "Hazard",
+                                    ProgramId = item.Id,
+                                    Rating = rating,
+                                    Notes = notes,
+                                    CreatedBy = "System-ML-Bulk",
+                                    CreatedAt = now
+                                });
+                            }
+                            db.SapQualityAssessments.AddRange(list);
+                            await db.SaveChangesAsync();
+                            _bulkProcessed += list.Count;
+                            processedHazards += list.Count;
+                        }
+
+                        // Process Inspection
+                        int processedInspections = 0;
+                        while (processedInspections < unratedInspections)
+                        {
+                            _bulkStatusMsg = $"Mengaudit Inspeksi K3 ({processedInspections}/{unratedInspections})...";
+                            var batch = await (from i in db.Inspections
+                                               where !i.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Inspection" && a.ProgramId == i.Id)
+                                               orderby i.Id descending
+                                               select new TempAuditItem { Id = i.Id, Desc = i.Catatan }).Take(2500).ToListAsync();
+                            if (!batch.Any()) break;
+
+                            var list = new List<SapQualityAssessment>();
+                            foreach (var item in batch)
+                            {
+                                var (rating, notes) = Services.SapQualityMlEngine.AssessQuality("Inspection", "Inspeksi K3", item.Desc ?? "");
+                                list.Add(new SapQualityAssessment
+                                {
+                                    ProgramType = "Inspection",
+                                    ProgramId = item.Id,
+                                    Rating = rating,
+                                    Notes = notes,
+                                    CreatedBy = "System-ML-Bulk",
+                                    CreatedAt = now
+                                });
+                            }
+                            db.SapQualityAssessments.AddRange(list);
+                            await db.SaveChangesAsync();
+                            _bulkProcessed += list.Count;
+                            processedInspections += list.Count;
+                        }
+
+                        // Process Safety Talk
+                        int processedSafetyTalks = 0;
+                        while (processedSafetyTalks < unratedSafetyTalks)
+                        {
+                            _bulkStatusMsg = $"Mengaudit Safety Talks ({processedSafetyTalks}/{unratedSafetyTalks})...";
+                            var batch = await (from s in db.SafetyTalks
+                                               where !s.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "SafetyTalk" && a.ProgramId == s.Id)
+                                               orderby s.Id descending
+                                               select new TempAuditItem { Id = s.Id, Desc = s.Keterangan }).Take(2500).ToListAsync();
+                            if (!batch.Any()) break;
+
+                            var list = new List<SapQualityAssessment>();
+                            foreach (var item in batch)
+                            {
+                                var (rating, notes) = Services.SapQualityMlEngine.AssessQuality("SafetyTalk", "Safety Talk", item.Desc ?? "");
+                                list.Add(new SapQualityAssessment
+                                {
+                                    ProgramType = "SafetyTalk",
+                                    ProgramId = item.Id,
+                                    Rating = rating,
+                                    Notes = notes,
+                                    CreatedBy = "System-ML-Bulk",
+                                    CreatedAt = now
+                                });
+                            }
+                            db.SapQualityAssessments.AddRange(list);
+                            await db.SaveChangesAsync();
+                            _bulkProcessed += list.Count;
+                            processedSafetyTalks += list.Count;
+                        }
+
+                        // Process Observation
+                        int processedObservations = 0;
+                        while (processedObservations < unratedObservations)
+                        {
+                            _bulkStatusMsg = $"Mengaudit Observasi K3 ({processedObservations}/{unratedObservations})...";
+                            var batch = await (from o in db.Observations
+                                               where !o.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Observation" && a.ProgramId == o.Id)
+                                               orderby o.Id descending
+                                               select new TempAuditItem { Id = o.Id, Desc = o.KegiatanYangDiamati }).Take(2500).ToListAsync();
+                            if (!batch.Any()) break;
+
+                            var list = new List<SapQualityAssessment>();
+                            foreach (var item in batch)
+                            {
+                                var (rating, notes) = Services.SapQualityMlEngine.AssessQuality("Observation", "Observasi K3", item.Desc ?? "");
+                                list.Add(new SapQualityAssessment
+                                {
+                                    ProgramType = "Observation",
+                                    ProgramId = item.Id,
+                                    Rating = rating,
+                                    Notes = notes,
+                                    CreatedBy = "System-ML-Bulk",
+                                    CreatedAt = now
+                                });
+                            }
+                            db.SapQualityAssessments.AddRange(list);
+                            await db.SaveChangesAsync();
+                            _bulkProcessed += list.Count;
+                            processedObservations += list.Count;
+                        }
+
+                        // Process Coaching
+                        int processedCoachings = 0;
+                        while (processedCoachings < unratedCoachings)
+                        {
+                            _bulkStatusMsg = $"Mengaudit Coaching K3 ({processedCoachings}/{unratedCoachings})...";
+                            var batch = await (from c in db.Coachings
+                                               where !c.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Coaching" && a.ProgramId == c.Id)
+                                               orderby c.Id descending
+                                               select new TempAuditItem { Id = c.Id, Desc = c.Feedback }).Take(2500).ToListAsync();
+                            if (!batch.Any()) break;
+
+                            var list = new List<SapQualityAssessment>();
+                            foreach (var item in batch)
+                            {
+                                var (rating, notes) = Services.SapQualityMlEngine.AssessQuality("Coaching", "Coaching K3", item.Desc ?? "");
+                                list.Add(new SapQualityAssessment
+                                {
+                                    ProgramType = "Coaching",
+                                    ProgramId = item.Id,
+                                    Rating = rating,
+                                    Notes = notes,
+                                    CreatedBy = "System-ML-Bulk",
+                                    CreatedAt = now
+                                });
+                            }
+                            db.SapQualityAssessments.AddRange(list);
+                            await db.SaveChangesAsync();
+                            _bulkProcessed += list.Count;
+                            processedCoachings += list.Count;
+                        }
+
+                        _bulkStatusMsg = "Selesai! Seluruh data berhasil diaudit.";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _bulkStatusMsg = $"Gagal: {ex.Message}";
+                }
+                finally
+                {
+                    _isBulkAuditing = false;
+                }
+            });
+
+            return Json(new { success = true, message = "Proses audit massal telah dimulai di latar belakang." });
         }
 
         private static string? NormalizeImagePath(string? path)
