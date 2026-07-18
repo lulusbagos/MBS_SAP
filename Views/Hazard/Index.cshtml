@@ -76,7 +76,7 @@
                                     <option value="" disabled selected></option>
                                 </select>
                                 <!-- Dropdown list -->
-                                <div id="areaDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background:#1a2332; border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
+                                <div id="areaDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
                                     <!-- Populated by JS -->
                                 </div>
                             </div>
@@ -345,7 +345,7 @@
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
                                             @if (isCreatorOrAdmin)
                                             {
-                                                <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editHazard(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="editHazard(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
                                                 @if (!string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase))
                                                 {
                                                     <li><a class="dropdown-item text-success" href="javascript:void(0)" onclick="openCloseHazard(@item.Id, '@((item.NikPja ?? string.Empty).Replace("'", "\\'"))', '@((item.Pja ?? string.Empty).Replace("'", "\\'"))')"><i class="bi bi-check2-circle me-2"></i>Close Hazard</a></li>
@@ -353,10 +353,10 @@
                                             }
                                             @if (!string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase))
                                             {
-                                                <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="openReassignModal(@item.Id, 'Hazard')"><i class="bi bi-person-lines-fill me-2 text-warning"></i>Alihkan PJA</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" onclick="openReassignModal(@item.Id, 'Hazard')"><i class="bi bi-person-lines-fill me-2 text-warning"></i>Alihkan PJA</a></li>
                                             }
-                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="generateHazardPdf(@item.Id, 'download', event)"><i class="bi bi-file-earmark-pdf-fill me-2 text-danger"></i>Download PDF</a></li>
-                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="generateHazardPdf(@item.Id, 'share', event)"><i class="bi bi-share-fill me-2 text-info"></i>Share PDF</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="generateHazardPdf(@item.Id, 'download', event)"><i class="bi bi-file-earmark-pdf-fill me-2 text-danger"></i>Download PDF</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" onclick="generateHazardPdf(@item.Id, 'share', event)"><i class="bi bi-share-fill me-2 text-info"></i>Share PDF</a></li>
                                             @if (isCreatorOrAdmin && !string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase))
                                             {
                                                 <li><hr class="dropdown-divider border-secondary"></li>
@@ -983,15 +983,16 @@
             if (filtered.length > 0) {
                 filtered.forEach(function(item) {
                     var btn = $('<button type="button"></button>')
-                        .addClass('d-block w-100 text-start text-white py-2 px-3 border-0 area-option-btn')
+                        .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
                         .css({
                             background: 'none',
+                            color: 'var(--text-main)',
                             fontSize: '13px',
-                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                            borderBottom: '1px solid var(--border-color)',
                             cursor: 'pointer'
                         })
                         .html('<i class="bi bi-geo-alt-fill me-2 text-primary"></i>' + item.namaArea)
-                        .on('mouseenter', function() { $(this).css('background', 'rgba(59,130,246,0.15)'); })
+                        .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
                         .on('mouseleave', function() { $(this).css('background', 'none'); })
                         .on('click', function() {
                             selectArea(item.namaArea);
