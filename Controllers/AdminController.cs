@@ -1815,7 +1815,7 @@ namespace MBS_SAP.Controllers
                 var r = await _context.Observations.AsNoTracking().FirstOrDefaultAsync(x => x.Id == programId);
                 if (r != null)
                 {
-                    var k = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(x => x.NoNik == r.Nik);
+                    var k = await _context.Karyawans.AsNoTracking().Where(x => x.NoNik == r.Nik).OrderByDescending(x => x.StatusAktif).FirstOrDefaultAsync();
                     var comp = k != null ? (await _context.Perusahaans.FindAsync(k.IdPerusahaan))?.NamaPerusahaan ?? "Unknown" : "Unknown";
                     data = new {
                         Type = "Observation",

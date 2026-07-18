@@ -150,7 +150,7 @@ namespace MBS_SAP.Controllers
                 }
                 else
                 {
-                    var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == nrp);
+                    var karyawan = karyawanMaster;
                     if (karyawan != null)
                     {
                         idPerusahaan ??= karyawan.IdPerusahaan;
@@ -487,7 +487,7 @@ namespace MBS_SAP.Controllers
 
             var overridePwd = await _context.PasswordOverrides.FirstOrDefaultAsync(p => p.Nrp == nrp);
             var pengguna = await _context.Penggunas.FirstOrDefaultAsync(p => p.Username == nrp);
-            var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == nrp);
+            var karyawan = await _context.Karyawans.Where(k => k.NoNik == nrp).OrderByDescending(k => k.StatusAktif).FirstOrDefaultAsync();
 
             var personal = karyawan != null ? await _context.Personals.FirstOrDefaultAsync(p => p.IdPersonal == karyawan.IdPersonal) : null;
             
