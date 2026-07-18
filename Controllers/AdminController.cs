@@ -1323,7 +1323,9 @@ namespace MBS_SAP.Controllers
             ViewBag.SearchQuery = search;
 
             var assessments = await _context.SapQualityAssessments.AsNoTracking().ToListAsync();
-            var assessmentDict = assessments.ToDictionary(a => $"{a.ProgramType.ToLowerInvariant()}_{a.ProgramId}");
+            var assessmentDict = assessments
+                .GroupBy(a => $"{a.ProgramType.ToLowerInvariant()}_{a.ProgramId}")
+                .ToDictionary(g => g.Key, g => g.First());
 
             var records = new List<SapQualityRecordViewModel>();
             var normalizedSearch = search?.Trim().ToLowerInvariant();
