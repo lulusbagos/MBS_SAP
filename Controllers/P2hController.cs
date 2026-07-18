@@ -380,7 +380,7 @@ namespace MBS_SAP.Controllers
             var isAdmin = User.IsInRole("Admin");
             var companyScopedNiks = await GetCurrentCompanyNiksAsync();
 
-            if (companyScopedNiks.Count == 0 || !companyScopedNiks.Contains(report.Nik))
+            if (companyScopedNiks.Count == 0 || !companyScopedNiks.Any(n => string.Equals(n, report.Nik, StringComparison.OrdinalIgnoreCase)))
             {
                 return Unauthorized();
             }
@@ -419,12 +419,12 @@ namespace MBS_SAP.Controllers
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
             var companyScopedNiks = await GetCurrentCompanyNiksAsync();
 
-            if (companyScopedNiks.Count == 0 || !companyScopedNiks.Contains(report.Nik))
+            if (companyScopedNiks.Count == 0 || !companyScopedNiks.Any(n => string.Equals(n, report.Nik, StringComparison.OrdinalIgnoreCase)))
             {
                 return Unauthorized();
             }
 
-            if (report.Nik != userNik && !User.IsInRole("Admin"))
+            if (!string.Equals(report.Nik?.Trim(), userNik?.Trim(), StringComparison.OrdinalIgnoreCase) && !User.IsInRole("Admin"))
             {
                 return Unauthorized();
             }

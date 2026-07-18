@@ -389,12 +389,12 @@
                                             <i class="bi bi-three-dots-vertical"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
-                                            @if (item.Nik == userNik || isAdmin)
+                                            @if (string.Equals(item.Nik?.Trim(), userNik?.Trim(), StringComparison.OrdinalIgnoreCase) || isAdmin)
                                             {
                                                 <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editP2h(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
                                             }
                                             <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="shareP2h('@item.NoLambung', '@item.Tanggal.ToString("dd MMM yyyy")', '@item.Merek', '@item.JenisKendaraan', @totalDefects, '@item.Nama')"><i class="bi bi-share-fill me-2" style="color: #38bdf8;"></i>Bagikan Hasil</a></li>
-                                            @if (item.Nik == userNik || isAdmin)
+                                            @if (string.Equals(item.Nik?.Trim(), userNik?.Trim(), StringComparison.OrdinalIgnoreCase) || isAdmin)
                                             {
                                                 <li><hr class="dropdown-divider border-secondary"></li>
                                                 <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteP2h(@item.Id)"><i class="bi bi-trash-fill me-2"></i>Hapus Laporan</a></li>
