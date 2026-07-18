@@ -599,9 +599,9 @@ namespace MBS_SAP.Controllers
             return SanitizeExcelString(cell.Value.ToString());
         }
 
-        private string? SafeTruncate(string? value, int maxLength)
+        private string SafeTruncate(string? value, int maxLength)
         {
-            if (string.IsNullOrEmpty(value)) return value;
+            if (string.IsNullOrEmpty(value)) return string.Empty;
             return value.Length > maxLength ? value.Substring(0, maxLength) : value;
         }
 
@@ -1378,7 +1378,7 @@ namespace MBS_SAP.Controllers
                     q = q.Where(i => i.Nik.ToLower().Contains(normalizedSearch) || 
                                      i.Nama.ToLower().Contains(normalizedSearch) || 
                                      i.JenisInspeksi.ToLower().Contains(normalizedSearch) ||
-                                     i.Catatan.ToLower().Contains(normalizedSearch));
+                                     (i.Catatan != null && i.Catatan.ToLower().Contains(normalizedSearch)));
                 }
 
                 var list = await q.Select(i => new { i.Id, i.Tanggal, i.Nik, i.Nama, i.PerusahaanId, i.JenisInspeksi, i.Catatan, i.Lokasi, i.LampiranJson }).ToListAsync();
@@ -1417,8 +1417,8 @@ namespace MBS_SAP.Controllers
                 {
                     q = q.Where(s => s.Nik.ToLower().Contains(normalizedSearch) || 
                                      s.Nama.ToLower().Contains(normalizedSearch) || 
-                                     s.Judul.ToLower().Contains(normalizedSearch) ||
-                                     s.Keterangan.ToLower().Contains(normalizedSearch));
+                                     (s.Judul != null && s.Judul.ToLower().Contains(normalizedSearch)) ||
+                                     (s.Keterangan != null && s.Keterangan.ToLower().Contains(normalizedSearch)));
                 }
 
                 var list = await q.Select(s => new { s.Id, s.Tanggal, s.Nik, s.Nama, s.PerusahaanId, s.Judul, s.Keterangan, s.Lokasi, s.FotoKegiatan, s.FotoDiri }).ToListAsync();

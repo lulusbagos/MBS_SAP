@@ -2618,7 +2618,7 @@ namespace MBS_SAP.Controllers
                 {
                     workbook.SaveAs(stream);
                     var content = stream.ToArray();
-                    string safeCompName = string.Concat(selectedCompany.NamaPerusahaan.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
+                    string safeCompName = string.Concat((selectedCompany.NamaPerusahaan ?? "Company").Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
                     string fileName = $"League_Kepatuhan_SAP_{safeCompName}_{DateTime.Now:yyyyMMdd}.xlsx";
                     return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                 }
