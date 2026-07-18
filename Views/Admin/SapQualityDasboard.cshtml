@@ -1,0 +1,241 @@
+@{
+    ViewData["Title"] = "Dashboard Kualitas SAP";
+    
+    // Safety calculations
+    double assessedPercentage = ViewBag.TotalAllSap > 0 
+        ? Math.Round((double)ViewBag.TotalAssessed / ViewBag.TotalAllSap * 100.0, 1) 
+        : 0;
+
+    double goodPercentage = ViewBag.TotalAssessed > 0 
+        ? Math.Round((double)ViewBag.KualitasBaik / ViewBag.TotalAssessed * 100.0, 1) 
+        : 0;
+
+    double targetPercentage = ViewBag.TotalAssessed > 0 
+        ? Math.Round((double)ViewBag.KejarTarget / ViewBag.TotalAssessed * 100.0, 1) 
+        : 0;
+}
+
+<div class="animate-fade-in pb-4" style="color: #0f172a; font-family: 'Inter', sans-serif;">
+    <!-- Header Block -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <div class="screen-title d-flex align-items-center gap-2" style="font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 24px; color: #0f172a;">
+                <i class="bi bi-bar-chart-line-fill text-primary animate-pulse"></i> Dashboard Analisis Kualitas SAP
+            </div>
+            <p class="screen-subtitle mb-0" style="font-size: 13.5px; color: #475569;">Persentase kelayakan data Keselamatan Kerja dan identifikasi formalitas pelaporan.</p>
+        </div>
+        <a href="/Admin/SapQuality" class="btn btn-outline-secondary py-2.5 px-4 fw-bold d-flex align-items-center gap-2" style="border-radius: 12px; font-size: 13px; border-color: #cbd5e1; color: #334155; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+            <i class="bi bi-arrow-left"></i> Kembali ke Panel Audit
+        </a>
+    </div>
+
+    <!-- Summary Statistics Grid -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card p-3 shadow-sm border-0 bg-white" style="border-radius: 16px; border: 1.5px solid #e2e8f0 !important;">
+                <div class="text-muted fw-bold mb-1" style="font-size: 11px; text-transform: uppercase;">Total Submisi SAP</div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <span class="fs-3 fw-extrabold text-dark" style="font-family: 'Outfit', sans-serif;">@ViewBag.TotalAllSap.ToString("#,##0")</span>
+                    <span class="text-secondary" style="font-size: 11.5px;">Data Masuk</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card p-3 shadow-sm border-0 bg-white" style="border-radius: 16px; border: 1.5px solid #e2e8f0 !important;">
+                <div class="text-muted fw-bold mb-1" style="font-size: 11px; text-transform: uppercase;">Sudah Diaudit (AI & Rill)</div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <span class="fs-3 fw-extrabold text-primary" style="font-family: 'Outfit', sans-serif;">@ViewBag.TotalAssessed.ToString("#,##0")</span>
+                    <span class="text-secondary" style="font-size: 11.5px;">(@assessedPercentage%)</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card p-3 shadow-sm border-0 bg-white" style="border-radius: 16px; border: 1.5px solid #e2e8f0 !important;">
+                <div class="text-muted fw-bold mb-1" style="font-size: 11px; text-transform: uppercase;">Kualitas Baik (⭐3-5)</div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <span class="fs-3 fw-extrabold text-success" style="font-family: 'Outfit', sans-serif;">@ViewBag.KualitasBaik.ToString("#,##0")</span>
+                    <span class="text-success fw-bold" style="font-size: 11.5px;">(@goodPercentage%)</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card p-3 shadow-sm border-0 bg-white" style="border-radius: 16px; border: 1.5px solid #e2e8f0 !important;">
+                <div class="text-muted fw-bold mb-1" style="font-size: 11px; text-transform: uppercase;">Kejar Target (⭐1-2)</div>
+                <div class="d-flex align-items-baseline gap-2">
+                    <span class="fs-3 fw-extrabold text-danger" style="font-family: 'Outfit', sans-serif;">@ViewBag.KejarTarget.ToString("#,##0")</span>
+                    <span class="text-danger fw-bold" style="font-size: 11.5px;">(@targetPercentage%)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Layout Section -->
+    <div class="row g-4 mb-4">
+        <!-- Doughnut: Quality Distribution -->
+        <div class="col-lg-6 col-12">
+            <div class="card p-4 shadow-sm border-0 bg-white" style="border-radius: 20px; border: 1.5px solid #e2e8f0 !important; min-height: 420px;">
+                <h5 class="fw-extrabold text-dark mb-3" style="font-family: 'Outfit', sans-serif;"><i class="bi bi-pie-chart me-2 text-primary"></i>Klasifikasi Kualitas Submisi</h5>
+                <div class="d-flex justify-content-center align-items-center mb-3" style="position: relative; height: 260px;">
+                    <canvas id="qualityChart"></canvas>
+                </div>
+                <div class="row text-center mt-2" style="font-size: 11.5px;">
+                    <div class="col-4">
+                        <span class="d-block text-muted">Kualitas Baik</span>
+                        <strong class="text-success fs-6">@goodPercentage%</strong>
+                    </div>
+                    <div class="col-4" style="border-left: 1.5px solid #e2e8f0; border-right: 1.5px solid #e2e8f0;">
+                        <span class="d-block text-muted">Kejar Target</span>
+                        <strong class="text-danger fs-6">@targetPercentage%</strong>
+                    </div>
+                    <div class="col-4">
+                        <span class="d-block text-muted">Belum Diaudit</span>
+                        <strong class="text-secondary fs-6">@(100.0 - assessedPercentage)%</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bar Chart: SAP Type Distribution -->
+        <div class="col-lg-6 col-12">
+            <div class="card p-4 shadow-sm border-0 bg-white" style="border-radius: 20px; border: 1.5px solid #e2e8f0 !important; min-height: 420px;">
+                <h5 class="fw-extrabold text-dark mb-3" style="font-family: 'Outfit', sans-serif;"><i class="bi bi-funnel me-2 text-primary"></i>Distribusi Audit Berdasarkan Jenis SAP</h5>
+                <div class="d-flex justify-content-center align-items-center mb-3" style="position: relative; height: 260px; width: 100%;">
+                    <canvas id="typesChart"></canvas>
+                </div>
+                <div class="text-center text-muted" style="font-size: 11px; font-style: italic;">
+                    Menampilkan total data submisi yang telah melalui audit kualitas untuk masing-masing modul.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rating Breakdown Grid List -->
+    <div class="card p-4 shadow-sm border-0 bg-white" style="border-radius: 20px; border: 1.5px solid #e2e8f0 !important;">
+        <h5 class="fw-extrabold text-dark mb-4" style="font-family: 'Outfit', sans-serif;"><i class="bi bi-star-half me-2 text-warning"></i>Rincian Distribusi Skala Bintang Audit</h5>
+        <div class="row g-3">
+            @{
+                var stars = new[] {
+                    new { Label = "⭐ 5 Bintang (Sangat Baik)", Count = (int)ViewBag.Star5, Color = "#10b981", Description = "Laporan sangat rinci & mitigasi jelas" },
+                    new { Label = "⭐ 4 Bintang (Baik)", Count = (int)ViewBag.Star4, Color = "#34d399", Description = "Kriteria minimal pelaporan rill terpenuhi" },
+                    new { Label = "⭐ 3 Bintang (Cukup)", Count = (int)ViewBag.Star3, Color = "#60a5fa", Description = "Memiliki detail dasar dengan aksi minim" },
+                    new { Label = "⭐ 2 Bintang (Kurang)", Count = (int)ViewBag.Star2, Color = "#f87171", Description = "Menggunakan frasa klise/deskripsi terbatas" },
+                    new { Label = "⭐ 1 Bintang (Kejar Target)", Count = (int)ViewBag.Star1, Color = "#ef4444", Description = "Deskripsi kosong atau hanya formalitas" }
+                };
+            }
+            @foreach (var s in stars)
+            {
+                double pct = ViewBag.TotalAssessed > 0 ? Math.Round((double)s.Count / ViewBag.TotalAssessed * 100.0, 1) : 0;
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-1.5" style="font-size: 13px;">
+                        <div>
+                            <span class="fw-bold text-dark">@s.Label</span>
+                            <span class="text-muted d-none d-sm-inline ms-2" style="font-size: 11px;">— @s.Description</span>
+                        </div>
+                        <strong class="text-dark">@s.Count.ToString("#,##0") data <span class="text-muted">(@pct%)</span></strong>
+                    </div>
+                    <div class="progress" style="height: 10px; border-radius: 30px; background-color: #f1f5f9;">
+                        <div class="progress-bar" role="progressbar" style="width: @pct%; background-color: @s.Color; border-radius: 30px;" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Load Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // ==================== 1. QUALITY CHART ====================
+            const ctxQuality = document.getElementById('qualityChart').getContext('2d');
+            new Chart(ctxQuality, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Kualitas Baik (⭐3-5)', 'Kejar Target (⭐1-2)', 'Belum Diaudit'],
+                    datasets: [{
+                        data: [
+                            @ViewBag.KualitasBaik, 
+                            @ViewBag.KejarTarget, 
+                            @(ViewBag.TotalAllSap - ViewBag.TotalAssessed)
+                        ],
+                        backgroundColor: ['#10b981', '#ef4444', '#cbd5e1'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 11, family: 'Inter' },
+                                color: '#334155'
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+
+            // ==================== 2. TYPES CHART ====================
+            const ctxTypes = document.getElementById('typesChart').getContext('2d');
+            new Chart(ctxTypes, {
+                type: 'bar',
+                data: {
+                    labels: ['Hazard', 'Inspection', 'Safety Talk', 'Observation', 'Coaching'],
+                    datasets: [{
+                        label: 'Sudah Diaudit',
+                        data: [
+                            @ViewBag.AssessedHazard, 
+                            @ViewBag.AssessedInspection, 
+                            @ViewBag.AssessedSafetyTalk, 
+                            @ViewBag.AssessedObservation, 
+                            @ViewBag.AssessedCoaching
+                        ],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 6
+                    }, {
+                        label: 'Total Submisi',
+                        data: [
+                            @ViewBag.TotalHazard, 
+                            @ViewBag.TotalInspection, 
+                            @ViewBag.TotalSafetyTalk, 
+                            @ViewBag.TotalObservation, 
+                            @ViewBag.TotalCoaching
+                        ],
+                        backgroundColor: '#e2e8f0',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 11, family: 'Inter' },
+                                color: '#334155'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10.5, family: 'Inter' }, color: '#475569' }
+                        },
+                        y: {
+                            grid: { color: '#f1f5f9' },
+                            ticks: { font: { size: 10, family: 'Inter' }, color: '#475569' }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+}

@@ -38,8 +38,8 @@ namespace MBS_SAP.Services
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                var delay = TimeSpan.FromHours(3);
-                _logger.LogInformation("Postgres replication scheduler waiting 3 hours (next run around {NextRun}).", DateTime.Now.Add(delay));
+                var delay = GetDelayToNextRunTime();
+                _logger.LogInformation("Postgres replication scheduler waiting {DelayHours:F1} hours (next run around {NextRun}).", delay.TotalHours, DateTime.Now.Add(delay));
 
                 try
                 {
@@ -59,6 +59,52 @@ namespace MBS_SAP.Services
             }
         }
 
+        private TimeSpan GetDelayToNextRunTime()
+        {
+            var now = DateTime.Now;
+            
+            var todayNoon = DateTime.Today.AddHours(12); // 12:00 PM today
+            var tomorrowMidnight = DateTime.Today.AddDays(1); // 12:00 AM tomorrow
+            var tomorrowNoon = DateTime.Today.AddDays(1).AddHours(12); // 12:00 PM tomorrow
+
+            DateTime nextRun;
+            if (now < todayNoon)
+            {
+                nextRun = todayNoon;
+            }
+            else if (now < tomorrowMidnight)
+            {
+                nextRun = tomorrowMidnight;
+            }
+            else
+            {
+                nextRun = tomorrowNoon;
+            }
+
+            var delay = nextRun - now;
+            
+            // If the delay is extremely small (e.g. less than 5 seconds), it means we just finished running 
+            // right at the target time. To avoid executing repeatedly in the same second, we push to the next run time.
+            if (delay.TotalSeconds < 5)
+            {
+                if (nextRun == todayNoon)
+                {
+                    nextRun = tomorrowMidnight;
+                }
+                else if (nextRun == tomorrowMidnight)
+                {
+                    nextRun = tomorrowNoon;
+                }
+                else
+                {
+                    nextRun = DateTime.Today.AddDays(2);
+                }
+                delay = nextRun - now;
+            }
+
+            return delay;
+        }
+
         private async Task WaitUntilApplicationStartedAsync(CancellationToken cancellationToken)
         {
             if (_appLifetime.ApplicationStarted.IsCancellationRequested)
@@ -73,17 +119,15 @@ namespace MBS_SAP.Services
 
         private async Task RunInitialSyncAsync(CancellationToken cancellationToken)
         {
-            var startOfYear = new DateTime(DateTime.Now.Year, 1, 1);
-            var lookbackDays = Math.Max(1, (DateTime.Today - startOfYear.Date).Days + 1);
-
-            _logger.LogInformation("Starting initial postgres replication from start of year with lookback {LookbackDays} days.", lookbackDays);
+            const int lookbackDays = 2; // Pull last 2 days on startup to prevent db suspension
+            _logger.LogInformation("Starting initial postgres replication with lookback {LookbackDays} days.", lookbackDays);
             await RunReplicationAsync(lookbackDays, "initial", cancellationToken);
         }
 
         private async Task RunPeriodicSyncAsync(CancellationToken cancellationToken)
         {
-            const int lookbackDays = 30;
-            _logger.LogInformation("Starting scheduled 3-hourly postgres replication with lookback {LookbackDays} days.", lookbackDays);
+            const int lookbackDays = 2; // Pull last 2 days during periodic runs
+            _logger.LogInformation("Starting scheduled postgres replication at target times with lookback {LookbackDays} days.", lookbackDays);
             await RunReplicationAsync(lookbackDays, "periodic", cancellationToken);
         }
 

@@ -35,6 +35,7 @@ namespace MBS_SAP.Data
         public DbSet<CoachingParticipant> CoachingParticipants { get; set; } = null!;
         public DbSet<Roster> Rosters { get; set; } = null!;
         public DbSet<MitraRosterView> MitraRosters { get; set; } = null!;
+        public DbSet<SapQualityAssessment> SapQualityAssessments { get; set; } = null!;
 
         // View entities
         public DbSet<KaryawanView> Karyawans { get; set; } = null!;
@@ -142,6 +143,9 @@ namespace MBS_SAP.Data
             modelBuilder.Entity<Roster>()
                 .ToTable("tbl_m_roster")
                 .HasKey(r => r.Id);
+
+            modelBuilder.Entity<SapQualityAssessment>()
+                .ToTable("tbl_m_penilaian_kualitas_sap");
 
             // View mappings
             modelBuilder.Entity<KaryawanView>()

@@ -1,0 +1,791 @@
+@model List<MBS_SAP.Controllers.SapQualityRecordViewModel>
+@{
+    ViewData["Title"] = "Audit Kualitas SAP";
+}
+
+<!-- Anti-Forgery Token for AJAX requests -->
+@Html.AntiForgeryToken()
+
+<div class="animate-fade-in" style="color: #0f172a; font-family: 'Inter', sans-serif;">
+    
+    <!-- Header Block -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <div class="screen-title d-flex align-items-center gap-2" style="font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 24px; color: #0f172a;">
+                <i class="bi bi-patch-check-fill text-primary animate-pulse"></i> Audit Kualitas SAP
+            </div>
+            <p class="screen-subtitle mb-0" style="font-size: 13.5px; color: #475569;">Evaluasi kelayakan isi submisi SAP untuk membedakan antara pelaporan rill atau formalitas target.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/Admin/SapQuality/Dasboard" class="btn btn-primary py-2.5 px-4 fw-bold d-flex align-items-center gap-2 text-white" style="border-radius: 12px; font-size: 13px; background: #3b82f6; border: none; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);">
+                <i class="bi bi-bar-chart-line-fill"></i> Lihat Dashboard Analisis
+            </a>
+            <a asp-controller="Admin" asp-action="Index" class="btn btn-outline-secondary py-2.5 px-4 fw-bold d-flex align-items-center gap-2" style="border-radius: 12px; font-size: 13px; border-color: #cbd5e1; color: #334155; background: #fff;">
+                <i class="bi bi-arrow-left"></i> Kembali ke Control Center
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card-sap mb-4" style="border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 20px; padding: 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);">
+        <form method="get" asp-controller="Admin" asp-action="SapQuality" class="row g-3">
+            <div class="col-lg-3 col-md-6 col-12">
+                <label class="form-label fw-bold mb-1.5" style="font-size: 12px; letter-spacing: 0.5px; color: #334155;">PILIH MAINCON / PERUSAHAAN</label>
+                <select name="companyId" class="form-select custom-select-sap" style="height: 44px;">
+                    <option value="">-- Semua Perusahaan --</option>
+                    @foreach (var c in ViewBag.Companies)
+                    {
+                        if (ViewBag.SelectedCompanyId == c.PerusahaanId)
+                        {
+                            <option value="@c.PerusahaanId" selected>@c.NamaPerusahaan</option>
+                        }
+                        else
+                        {
+                            <option value="@c.PerusahaanId">@c.NamaPerusahaan</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-6 col-12">
+                <label class="form-label fw-bold mb-1.5" style="font-size: 12px; letter-spacing: 0.5px; color: #334155;">JENIS PROGRAM</label>
+                <select name="programType" class="form-select custom-select-sap" style="height: 44px;">
+                    @{
+                        var pts = new[] { "Hazard", "Inspection", "SafetyTalk", "Observation", "Coaching" };
+                    }
+                    <option value="">-- Semua Program --</option>
+                    @foreach (var pt in pts)
+                    {
+                        if (ViewBag.SelectedProgramType == pt)
+                        {
+                            <option value="@pt" selected>@pt</option>
+                        }
+                        else
+                        {
+                            <option value="@pt">@pt</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-lg-2 col-md-6 col-12">
+                <label class="form-label fw-bold mb-1.5" style="font-size: 12px; letter-spacing: 0.5px; color: #334155;">STATUS AUDIT</label>
+                <select name="ratingFilter" class="form-select custom-select-sap" style="height: 44px;">
+                    <option value="all" selected="@(ViewBag.SelectedRatingFilter == "all")">Semua Data</option>
+                    <option value="unrated" selected="@(ViewBag.SelectedRatingFilter == "unrated")">Belum Dinilai</option>
+                    <option value="low" selected="@(ViewBag.SelectedRatingFilter == "low")">Hanya Kejar Target (⭐ 1-2)</option>
+                    <option value="high" selected="@(ViewBag.SelectedRatingFilter == "high")">Kualitas Baik/Benar (⭐ 3-5)</option>
+                </select>
+            </div>
+            <div class="col-lg-3 col-md-6 col-12">
+                <label class="form-label fw-bold mb-1.5" style="font-size: 12px; letter-spacing: 0.5px; color: #334155;">RENTANG TANGGAL</label>
+                <div class="d-flex gap-2">
+                    <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control custom-input-sap" style="height: 44px;" />
+                    <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control custom-input-sap" style="height: 44px;" />
+                </div>
+            </div>
+            <div class="col-lg-2 col-md-12 col-12">
+                <label class="form-label fw-bold mb-1.5" style="font-size: 12px; letter-spacing: 0.5px; color: #334155;">PENCARIAN KATA KUNCI</label>
+                <input type="text" name="search" value="@ViewBag.SearchQuery" placeholder="Cari NIK, nama, isi..." class="form-control custom-input-sap" style="height: 44px;" />
+            </div>
+            <div class="col-12 mt-3 d-flex justify-content-end gap-2">
+                <a asp-controller="Admin" asp-action="SapQuality" class="btn btn-outline-secondary py-2 px-3 fw-bold d-flex align-items-center gap-1.5" style="border-radius: 10px; font-size: 13px; border-color: #cbd5e1; color: #475569; background: #fff;">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset Filter
+                </a>
+                <button type="submit" class="btn btn-primary py-2 px-4 fw-bold d-flex align-items-center gap-1.5" style="border-radius: 10px; font-size: 13px; background: #3b82f6; border: none; color: #fff; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);">
+                    <i class="bi bi-funnel-fill"></i> Terapkan Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Main Content Panel -->
+    <div class="card-sap" style="border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 20px; overflow: hidden; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.04);">
+        
+        <!-- Desktop Grid View -->
+        <div class="d-none d-md-block table-responsive">
+            <table class="table align-middle sap-audit-table" style="font-size: 13px; color: #334155;">
+                <thead>
+                    <tr>
+                        <th style="width: 15%;">Tipe & Tanggal</th>
+                        <th style="width: 20%;">Karyawan / Perusahaan</th>
+                        <th style="width: 28%;">Detail Submisi SAP</th>
+                        <th style="width: 18%;">Penilaian Kualitas</th>
+                        <th style="width: 19%;">Catatan Reviewer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center py-5" style="border: none !important; color: #64748b;">
+                                <i class="bi bi-clipboard-x d-block mb-2" style="font-size: 36px; color: #94a3b8;"></i>
+                                <span class="fs-6 d-block text-dark mb-1" style="font-weight: 600;">Data SAP tidak ditemukan</span>
+                                Coba ubah rentang filter tanggal atau gunakan kata kunci lain.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model)
+                    {
+                        var rowId = $"{item.ProgramType.ToLower()}_{item.Id}";
+                        <tr id="row-@rowId">
+                            <td>
+                                <span class="badge mb-1.5 px-2.5 py-1" style="background: @GetProgramBg(item.ProgramType); color: #fff; font-size: 10px; font-weight: 800; border-radius: 6px; letter-spacing: 0.5px; text-transform: uppercase;">
+                                    @item.ProgramType
+                                </span>
+                                <div class="font-monospace text-secondary" style="font-size: 11px; font-weight: 600;"><i class="bi bi-calendar3 me-1"></i>@item.Tanggal.ToString("yyyy-MM-dd")</div>
+                                @if (!string.IsNullOrEmpty(item.Lokasi))
+                                {
+                                    <div class="text-truncate mt-1.5 text-secondary" style="font-size: 11px; max-width: 140px;" title="@item.Lokasi">
+                                        <i class="bi bi-geo-alt-fill text-danger me-1"></i>@item.Lokasi
+                                    </div>
+                                }
+                            </td>
+                            <td>
+                                <div class="fw-extrabold text-dark" style="font-size: 14px; font-family: 'Outfit', sans-serif;">@item.Nama</div>
+                                <div class="mb-1 text-secondary" style="font-size: 11.5px;">NIK: <span class="font-monospace">@item.Nik</span></div>
+                                <div class="text-primary text-truncate font-weight-bold" style="font-size: 11.5px; max-width: 170px;" title="@item.CompanyName">
+                                    <i class="bi bi-building me-1 opacity-75"></i>@item.CompanyName
+                                </div>
+                            </td>
+                            <td class="pe-3">
+                                <div class="fw-extrabold text-dark mb-1" style="font-size: 13.5px; font-family: 'Outfit', sans-serif; letter-spacing: 0.25px;">@item.Title</div>
+                                <div class="text-wrap text-secondary mb-2" style="font-size: 12.5px; max-height: 95px; overflow-y: auto; line-height: 1.5; padding-right: 4px;">
+                                    @item.Description
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-primary btn-sm py-1 px-2.5 d-flex align-items-center gap-1" style="font-size: 11px; border-radius: 6px; font-weight: 700;" onclick="showSapDetails('@item.ProgramType', @item.Id)">
+                                        <i class="bi bi-image"></i> Detail & Foto
+                                    </button>
+                                    <button class="btn btn-outline-success btn-sm py-1 px-2.5 d-flex align-items-center gap-1" style="font-size: 11px; border-radius: 6px; font-weight: 700;" onclick="runAutoAudit('@item.ProgramType', @item.Id)">
+                                        <i class="bi bi-robot"></i> Auto Audit AI
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="star-rating-container" data-type="@item.ProgramType" data-id="@item.Id">
+                                    <div class="stars d-flex gap-1.5 mb-2">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            var activeClass = item.Rating.HasValue && item.Rating.Value >= i ? "text-warning fill-star" : "text-secondary empty-star";
+                                            <i class="bi bi-star-fill star-icon @activeClass" data-value="@i" onclick="rateRecord(this, '@item.ProgramType', @item.Id, @i)"></i>
+                                        }
+                                    </div>
+                                    <div class="quality-label">
+                                        @Html.Raw(GetQualityLabel(item.Rating))
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="input-group">
+                                    <textarea class="form-control audit-notes-textarea" 
+                                              id="notes-@rowId" 
+                                              placeholder="Tambahkan catatan audit di sini..." 
+                                              onblur="saveNotes('@item.ProgramType', @item.Id)">@item.Notes</textarea>
+                                </div>
+                                <div class="text-end mt-1">
+                                    <small id="status-@rowId" class="text-success" style="font-size: 11px; display: none; font-weight: 700;">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Tersimpan
+                                    </small>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Card View -->
+        <div class="d-block d-md-none">
+            @if (!Model.Any())
+            {
+                <div class="text-center py-5" style="color: #64748b;">
+                    <i class="bi bi-clipboard-x d-block mb-2" style="font-size: 36px; color: #94a3b8;"></i>
+                    <span class="fs-6 d-block text-dark mb-1" style="font-weight: 600;">Data SAP tidak ditemukan</span>
+                    Coba ubah rentang filter tanggal atau gunakan kata kunci lain.
+                </div>
+            }
+            @foreach (var item in Model)
+            {
+                var rowId = $"{item.ProgramType.ToLower()}_{item.Id}";
+                <div class="mobile-card p-3 mb-3" id="mobile-card-@rowId">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge px-2.5 py-1" style="background: @GetProgramBg(item.ProgramType); color: #fff; font-size: 9.5px; font-weight: 800; border-radius: 6px; text-transform: uppercase;">
+                            @item.ProgramType
+                        </span>
+                        <span class="font-monospace text-secondary" style="font-size: 11px;"><i class="bi bi-calendar3 me-1"></i>@item.Tanggal.ToString("yyyy-MM-dd")</span>
+                    </div>
+
+                    <div class="fw-extrabold text-dark mb-0.5" style="font-size: 14.5px; font-family: 'Outfit', sans-serif;">@item.Nama</div>
+                    <div class="mb-1 text-secondary" style="font-size: 11.5px;">NIK: <span class="font-monospace">@item.Nik</span></div>
+                    <div class="text-primary font-weight-bold mb-2 text-truncate" style="font-size: 11.5px;">
+                        <i class="bi bi-building me-1 opacity-75"></i>@item.CompanyName
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(item.Lokasi))
+                    {
+                        <div class="mb-2.5 text-secondary" style="font-size: 11px;"><i class="bi bi-geo-alt-fill text-danger me-1"></i>@item.Lokasi</div>
+                    }
+
+                    <div class="p-3 rounded-3 mb-3" style="background: #f8fafc; border: 1.5px solid #e2e8f0;">
+                        <div class="fw-extrabold text-dark mb-1" style="font-size: 13px; font-family: 'Outfit', sans-serif;">@item.Title</div>
+                        <div class="text-secondary mb-2.5" style="font-size: 12px; line-height: 1.5; word-wrap: break-word;">
+                            @item.Description
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary btn-sm w-50 py-1.5 fw-bold d-flex align-items-center justify-content-center gap-1" style="font-size: 11px; border-radius: 8px;" onclick="showSapDetails('@item.ProgramType', @item.Id)">
+                                <i class="bi bi-image"></i> Detail & Foto
+                            </button>
+                            <button class="btn btn-outline-success btn-sm w-50 py-1.5 fw-bold d-flex align-items-center justify-content-center gap-1" style="font-size: 11px; border-radius: 8px;" onclick="runAutoAudit('@item.ProgramType', @item.Id)">
+                                <i class="bi bi-robot"></i> Auto Audit AI
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 align-items-center">
+                        <div class="col-6">
+                            <div class="star-rating-container" data-type="@item.ProgramType" data-id="@item.Id">
+                                <div class="stars d-flex gap-1.5 mb-1.5">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        var activeClass = item.Rating.HasValue && item.Rating.Value >= i ? "text-warning fill-star" : "text-secondary empty-star";
+                                        <i class="bi bi-star-fill star-icon @activeClass" data-value="@i" onclick="rateRecord(this, '@item.ProgramType', @item.Id, @i)"></i>
+                                    }
+                                </div>
+                                <div class="quality-label">
+                                    @Html.Raw(GetQualityLabel(item.Rating))
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <textarea class="form-control audit-notes-textarea" 
+                                      id="notes-mobile-@rowId" 
+                                      placeholder="Catatan audit..." 
+                                      style="height: 55px;"
+                                      onblur="syncAndSaveNotes('@item.ProgramType', @item.Id)">@item.Notes</textarea>
+                            <div class="text-end mt-1">
+                                <small id="status-mobile-@rowId" class="text-success" style="font-size: 10.5px; display: none; font-weight: 700;">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Tersimpan
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Pagination Controls -->
+        @if (ViewBag.TotalPages > 1)
+        {
+            <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 pt-3" style="border-top: 1.5px solid #e2e8f0;">
+                <span class="text-secondary" style="font-size: 12.5px;">
+                    Menampilkan <strong>@(((ViewBag.CurrentPage - 1) * ViewBag.PageSize) + 1)</strong> - 
+                    <strong>@(Math.Min((int)ViewBag.CurrentPage * (int)ViewBag.PageSize, (int)ViewBag.TotalCount))</strong> dari 
+                    <strong>@ViewBag.TotalCount</strong> data
+                </span>
+                <nav aria-label="Page navigation">
+                    <ul class="pagination mb-0" style="gap: 4px;">
+                        @if (ViewBag.CurrentPage > 1)
+                        {
+                            <li class="page-item">
+                                <a class="page-link custom-pagination-btn"
+                                   href="@Url.Action("SapQuality", new { companyId = ViewBag.SelectedCompanyId, programType = ViewBag.SelectedProgramType, ratingFilter = ViewBag.SelectedRatingFilter, search = ViewBag.SearchQuery, startDate = ViewBag.StartDate, endDate = ViewBag.EndDate, page = ViewBag.CurrentPage - 1 })">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                        }
+                        
+                        @{
+                            int startPage = Math.Max(1, (int)ViewBag.CurrentPage - 2);
+                            int endPage = Math.Min((int)ViewBag.TotalPages, startPage + 4);
+                            if (endPage - startPage < 4) startPage = Math.Max(1, endPage - 4);
+                        }
+                        @for (int p = startPage; p <= endPage; p++)
+                        {
+                            var activeClass = p == ViewBag.CurrentPage ? "active" : "";
+                            <li class="page-item @activeClass">
+                                <a class="page-link custom-pagination-btn"
+                                   href="@Url.Action("SapQuality", new { companyId = ViewBag.SelectedCompanyId, programType = ViewBag.SelectedProgramType, ratingFilter = ViewBag.SelectedRatingFilter, search = ViewBag.SearchQuery, startDate = ViewBag.StartDate, endDate = ViewBag.EndDate, page = p })">
+                                    @p
+                                </a>
+                            </li>
+                        }
+
+                        @if (ViewBag.CurrentPage < ViewBag.TotalPages)
+                        {
+                            <li class="page-item">
+                                <a class="page-link custom-pagination-btn"
+                                   href="@Url.Action("SapQuality", new { companyId = ViewBag.SelectedCompanyId, programType = ViewBag.SelectedProgramType, ratingFilter = ViewBag.SelectedRatingFilter, search = ViewBag.SearchQuery, startDate = ViewBag.StartDate, endDate = ViewBag.EndDate, page = ViewBag.CurrentPage + 1 })">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            </div>
+        }
+
+    </div>
+</div>
+
+<!-- Detail & Photo Modal -->
+<div class="modal fade" id="sapDetailModal" tabindex="-1" aria-labelledby="sapDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 20px; overflow: hidden; border: none; box-shadow: 0 20px 50px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: #f8fafc; border-bottom: 1.5px solid #e2e8f0; padding: 20px;">
+                <h5 class="modal-title fw-extrabold text-dark" id="sapDetailModalLabel" style="font-family: 'Outfit', sans-serif;">Detail Submisi SAP</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" style="background: #ffffff; color: #334155;">
+                <div class="row g-4">
+                    <div class="col-md-6 col-12 d-flex flex-column justify-content-center align-items-center bg-light rounded-3 p-3" style="min-height: 250px; border: 1.5px solid #e2e8f0;">
+                        <div id="modalPhotoContainer" class="w-100 h-100 d-flex align-items-center justify-content-center text-center">
+                            <!-- Image will be injected here -->
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-12">
+                        <span class="badge mb-2 px-2.5 py-1 text-white" id="modalProgramType" style="font-size: 10px; font-weight: 800; border-radius: 6px; text-transform: uppercase;"></span>
+                        <div class="fw-extrabold text-dark fs-5 mb-2" id="modalTitle" style="font-family: 'Outfit', sans-serif;"></div>
+                        <hr style="opacity: 0.1; margin: 12px 0;" />
+                        <table class="table table-borderless table-sm w-100 text-secondary" style="font-size: 12.5px;">
+                            <tr>
+                                <td style="width: 35%; font-weight: 700;">Nama / NIK</td>
+                                <td>: <span id="modalKaryawan" class="text-dark fw-bold"></span></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 700;">Perusahaan</td>
+                                <td>: <span id="modalPerusahaan" class="text-dark"></span></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 700;">Tanggal / Jam</td>
+                                <td>: <span id="modalWaktu" class="font-monospace text-dark"></span></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 700;">Lokasi / Area</td>
+                                <td>: <span id="modalLokasi" class="text-dark"></span></td>
+                            </tr>
+                        </table>
+                        <div class="mt-3">
+                            <label class="fw-bold text-dark mb-1" style="font-size: 12px;">DESKRIPSI SUBMISI:</label>
+                            <div class="p-3 rounded-3 text-secondary bg-light" id="modalDescription" style="font-size: 13px; line-height: 1.5; border: 1.5px solid #e2e8f0; max-height: 150px; overflow-y: auto;"></div>
+                        </div>
+                        <div class="mt-3" id="modalExtraInfoBlock">
+                            <label class="fw-bold text-dark mb-1" style="font-size: 12px;">INFORMASI TAMBAHAN:</label>
+                            <div class="text-secondary font-monospace" id="modalExtraInfo" style="font-size: 11.5px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    public string GetProgramBg(string type)
+    {
+        return type.ToLower() switch
+        {
+            "hazard" => "#6366f1", 
+            "inspection" => "#3b82f6", 
+            "safetytalk" => "#d97706", 
+            "observation" => "#ec4899", 
+            "coaching" => "#a855f7", 
+            _ => "#64748b" 
+        };
+    }
+
+    public string GetQualityLabel(int? rating)
+    {
+        if (!rating.HasValue) 
+            return "<span class='quality-pill quality-pill-unrated'><i class='bi bi-clock-history'></i>Belum Di-Review</span>";
+        if (rating.Value <= 2) 
+            return "<span class='quality-pill quality-pill-target'><i class='bi bi-exclamation-circle-fill'></i>Hanya Kejar Target</span>";
+        return "<span class='quality-pill quality-pill-good'><i class='bi bi-check-circle-fill'></i>Kualitas Baik</span>";
+    }
+}
+
+@section Scripts {
+    <script>
+        const token = $('input[name="__RequestVerificationToken"]').val();
+
+        function rateRecord(starEl, programType, programId, ratingValue) {
+            const rowId = programType.toLowerCase() + '_' + programId;
+            const container = $(starEl).closest('.star-rating-container');
+            const notesText = $('#notes-' + rowId).val() || $('#notes-mobile-' + rowId).val() || '';
+
+            // Optimistic UI Highlight update
+            const stars = container.find('.star-icon');
+            stars.each(function(index) {
+                if (index < ratingValue) {
+                    $(this).removeClass('text-secondary empty-star').addClass('text-warning fill-star');
+                } else {
+                    $(this).removeClass('text-warning fill-star').addClass('text-secondary empty-star');
+                }
+            });
+
+            $.ajax({
+                url: '@Url.Action("RateSap", "Admin")',
+                type: 'POST',
+                data: {
+                    programType: programType,
+                    programId: programId,
+                    rating: ratingValue,
+                    notes: notesText,
+                    __RequestVerificationToken: token
+                },
+                success: function(response) {
+                    if (response.success) {
+                        const labelHtml = ratingValue <= 2 
+                            ? "<span class='quality-pill quality-pill-target'><i class='bi bi-exclamation-circle-fill'></i>Hanya Kejar Target</span>" 
+                            : "<span class='quality-pill quality-pill-good'><i class='bi bi-check-circle-fill'></i>Kualitas Baik</span>";
+                        
+                        $(`.star-rating-container[data-type="${programType}"][data-id="${programId}"] .quality-label`).html(labelHtml);
+                        
+                        const statusEl = $('#status-' + rowId);
+                        const statusMobileEl = $('#status-mobile-' + rowId);
+                        statusEl.fadeIn().delay(1500).fadeOut();
+                        statusMobileEl.fadeIn().delay(1500).fadeOut();
+                    }
+                },
+                error: function(err) {
+                    alert('Gagal menyimpan rating: ' + err.responseText);
+                }
+            });
+        }
+
+        function saveNotes(programType, programId) {
+            const rowId = programType.toLowerCase() + '_' + programId;
+            const notesValue = $('#notes-' + rowId).val();
+            
+            // Sync desktop value to mobile input
+            $('#notes-mobile-' + rowId).val(notesValue);
+
+            const container = $(`.star-rating-container[data-type="${programType}"][data-id="${programId}"]`);
+            const ratingValue = container.find('.fill-star').length;
+
+            if (ratingValue === 0) return;
+
+            $.ajax({
+                url: '@Url.Action("RateSap", "Admin")',
+                type: 'POST',
+                data: {
+                    programType: programType,
+                    programId: programId,
+                    rating: ratingValue,
+                    notes: notesValue,
+                    __RequestVerificationToken: token
+                },
+                success: function(response) {
+                    if (response.success) {
+                        const statusEl = $('#status-' + rowId);
+                        statusEl.fadeIn().delay(1500).fadeOut();
+                    }
+                }
+            });
+        }
+
+        function syncAndSaveNotes(programType, programId) {
+            const rowId = programType.toLowerCase() + '_' + programId;
+            const notesValue = $('#notes-mobile-' + rowId).val();
+            
+            // Sync mobile value to desktop input
+            $('#notes-' + rowId).val(notesValue);
+
+            const container = $(`.star-rating-container[data-type="${programType}"][data-id="${programId}"]`);
+            const ratingValue = container.find('.fill-star').length;
+
+            if (ratingValue === 0) return;
+
+            $.ajax({
+                url: '@Url.Action("RateSap", "Admin")',
+                type: 'POST',
+                data: {
+                    programType: programType,
+                    programId: programId,
+                    rating: ratingValue,
+                    notes: notesValue,
+                    __RequestVerificationToken: token
+                },
+                success: function(response) {
+                    if (response.success) {
+                        const statusMobileEl = $('#status-mobile-' + rowId);
+                        statusMobileEl.fadeIn().delay(1500).fadeOut();
+                    }
+                }
+            });
+        }
+
+        function showSapDetails(programType, programId) {
+            const modal = new bootstrap.Modal(document.getElementById('sapDetailModal'));
+            
+            // Show loading state
+            $('#modalPhotoContainer').html('<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>');
+            $('#modalProgramType').text(programType).css('background-color', getProgramColor(programType));
+            $('#modalTitle').text('Loading...');
+            $('#modalKaryawan').text('');
+            $('#modalPerusahaan').text('');
+            $('#modalWaktu').text('');
+            $('#modalLokasi').text('');
+            $('#modalDescription').text('');
+            $('#modalExtraInfoBlock').hide();
+            $('#modalExtraInfo').text('');
+
+            modal.show();
+
+            $.ajax({
+                url: '@Url.Action("GetSapDetails", "Admin")',
+                type: 'GET',
+                data: { programType: programType, programId: programId },
+                success: function(data) {
+                    $('#modalTitle').text(data.title);
+                    $('#modalKaryawan').text(data.nama + ' (' + data.nik + ')');
+                    $('#modalPerusahaan').text(data.companyName);
+                    $('#modalWaktu').text(data.date + ' ' + data.time);
+                    
+                    let lokasiStr = data.lokasi || '-';
+                    if (data.area) lokasiStr += ' (' + data.area + ')';
+                    if (data.detilLokasi) lokasiStr += ' - ' + data.detilLokasi;
+                    $('#modalLokasi').text(lokasiStr);
+                    
+                    $('#modalDescription').text(data.description);
+                    
+                    if (data.extraInfo) {
+                        $('#modalExtraInfoBlock').show();
+                        $('#modalExtraInfo').text(data.extraInfo);
+                    }
+
+                    if (data.photoUrl) {
+                        $('#modalPhotoContainer').html(`<img src="${data.photoUrl}" class="img-fluid rounded border" style="max-height: 380px; object-fit: contain; width: 100%; cursor: pointer;" onclick="window.open('${data.photoUrl}', '_blank')" alt="Foto Submisi" />`);
+                    } else {
+                        $('#modalPhotoContainer').html('<div class="text-muted" style="font-size: 13.5px;"><i class="bi bi-image" style="font-size: 32px; display: block; opacity: 0.5; margin-bottom: 8px;"></i>Tidak ada lampiran foto</div>');
+                    }
+                },
+                error: function(err) {
+                    $('#modalTitle').text('Gagal Memuat Detail');
+                    $('#modalPhotoContainer').html('<div class="text-danger">Gagal memuat data detail.</div>');
+                }
+            });
+        }
+
+        function runAutoAudit(programType, programId) {
+            const rowId = programType.toLowerCase() + '_' + programId;
+            const autoAuditBtn = $(`#row-${rowId} button[onclick^="runAutoAudit"], #mobile-card-${rowId} button[onclick^="runAutoAudit"]`);
+            
+            // Visual loading state
+            autoAuditBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Auditing...');
+
+            $.ajax({
+                url: '@Url.Action("AutoAuditSap", "Admin")',
+                type: 'POST',
+                data: {
+                    programType: programType,
+                    programId: programId,
+                    __RequestVerificationToken: token
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update stars
+                        const container = $(`.star-rating-container[data-type="${programType}"][data-id="${programId}"]`);
+                        const stars = container.find('.star-icon');
+                        stars.each(function(index) {
+                            if (index < response.rating) {
+                                $(this).removeClass('text-secondary empty-star').addClass('text-warning fill-star');
+                            } else {
+                                $(this).removeClass('text-warning fill-star').addClass('text-secondary empty-star');
+                            }
+                        });
+
+                        // Update quality label
+                        const labelHtml = response.rating <= 2 
+                            ? "<span class='quality-pill quality-pill-target'><i class='bi bi-exclamation-circle-fill'></i>Hanya Kejar Target</span>" 
+                            : "<span class='quality-pill quality-pill-good'><i class='bi bi-check-circle-fill'></i>Kualitas Baik</span>";
+                        container.find('.quality-label').html(labelHtml);
+
+                        // Update notes textareas
+                        $('#notes-' + rowId).val(response.notes);
+                        $('#notes-mobile-' + rowId).val(response.notes);
+
+                        // Flash success status
+                        const statusEl = $('#status-' + rowId);
+                        const statusMobileEl = $('#status-mobile-' + rowId);
+                        statusEl.fadeIn().delay(2000).fadeOut();
+                        statusMobileEl.fadeIn().delay(2000).fadeOut();
+                    }
+                },
+                error: function(err) {
+                    alert('Gagal menjalankan Auto Audit AI: ' + err.responseText);
+                },
+                complete: function() {
+                    // Reset button state
+                    autoAuditBtn.prop('disabled', false).html('<i class="bi bi-robot"></i> Auto Audit AI');
+                }
+            });
+        }
+
+        function getProgramColor(type) {
+            switch(type.toLowerCase()) {
+                case 'hazard': return '#6366f1';
+                case 'inspection': return '#3b82f6';
+                case 'safetytalk': return '#d97706';
+                case 'observation': return '#ec4899';
+                case 'coaching': return '#a855f7';
+                default: return '#64748b';
+            }
+        }
+    </script>
+
+    <style>
+        /* Light Theme Form Controls */
+        .custom-select-sap, .custom-input-sap {
+            background-color: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            color: #0f172a !important;
+            border-radius: 10px !important;
+            font-size: 13.5px !important;
+            font-weight: 600 !important;
+            transition: all 0.2s ease !important;
+        }
+        .custom-select-sap:focus, .custom-input-sap:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+            background-color: #ffffff !important;
+        }
+
+        /* High contrast select options */
+        .custom-select-sap option {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+        }
+
+        /* Webkit Calendar Pick Indicator for Light Background */
+        .custom-input-sap[type="date"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            opacity: 0.75;
+        }
+
+        /* Light-theme Notes Textarea */
+        .audit-notes-textarea {
+            background-color: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            color: #0f172a !important;
+            border-radius: 10px !important;
+            padding: 10px 12px !important;
+            font-size: 12.5px !important;
+            line-height: 1.4 !important;
+            height: 54px !important;
+            resize: none !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .audit-notes-textarea:focus {
+            border-color: #3b82f6 !important;
+            background-color: #ffffff !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+            color: #0f172a !important;
+        }
+
+        /* Table Aesthetics */
+        .sap-audit-table thead th {
+            background: #f1f5f9 !important;
+            color: #475569 !important;
+            font-weight: 800 !important;
+            font-size: 12px !important;
+            text-transform: uppercase;
+            letter-spacing: 0.75px;
+            border-bottom: 2px solid #e2e8f0 !important;
+            padding: 18px 12px !important;
+        }
+        .sap-audit-table tbody tr {
+            transition: background-color 0.2s ease;
+            border-bottom: 1.5px solid #cbd5e1 !important;
+        }
+        .sap-audit-table tbody tr:hover {
+            background-color: #f8fafc !important;
+        }
+        .sap-audit-table td {
+            border: none !important;
+            padding: 18px 12px !important;
+        }
+
+        /* Stars Styling */
+        .stars .star-icon {
+            cursor: pointer; 
+            font-size: 20px; 
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.15s ease !important;
+        }
+        .stars .star-icon:hover {
+            transform: scale(1.35) rotate(5deg) !important;
+        }
+        .empty-star {
+            color: #cbd5e1 !important; /* Light gray for unselected stars */
+        }
+        .fill-star {
+            color: #f59e0b !important; /* Rich warm amber */
+            text-shadow: 0 0 4px rgba(245, 158, 11, 0.25);
+        }
+
+        /* Pill Badges for Quality */
+        .quality-pill {
+            display: inline-flex;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 5px 12px;
+            border-radius: 30px;
+            gap: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1.5px solid transparent;
+        }
+        .quality-pill i {
+            font-size: 11.5px;
+        }
+        .quality-pill-unrated {
+            background: #f1f5f9;
+            color: #64748b;
+            border-color: #e2e8f0;
+        }
+        .quality-pill-target {
+            background: #fef2f2;
+            color: #ef4444;
+            border-color: #fca5a5;
+        }
+        .quality-pill-good {
+            background: #ecfdf5;
+            color: #10b981;
+            border-color: #6ee7b7;
+        }
+
+        /* Mobile View Cards */
+        .mobile-card {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            transition: all 0.25s ease;
+        }
+        .mobile-card:hover {
+            border-color: #3b82f6 !important;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+        }
+
+        /* Premium Custom Pagination */
+        .custom-pagination-btn {
+            background-color: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            color: #334155 !important;
+            font-weight: 700;
+            padding: 8px 14px;
+            border-radius: 8px !important;
+            transition: all 0.2s ease;
+        }
+        .custom-pagination-btn:hover {
+            background: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        .active .custom-pagination-btn {
+            background: #3b82f6 !important;
+            border-color: #3b82f6 !important;
+            color: #fff !important;
+        }
+    </style>
+}

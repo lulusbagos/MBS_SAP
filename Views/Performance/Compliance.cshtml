@@ -14,7 +14,9 @@
     int startRow = ((currentPage - 1) * pageSize) + 1;
     int endRow = Math.Min(currentPage * pageSize, totalCount);
 
-    var mainconComparison = (ViewBag.MainconGroupComparison as List<MBS_SAP.Controllers.MainconGroupComparisonViewModel> ?? new List<MBS_SAP.Controllers.MainconGroupComparisonViewModel>())!;
+    var mainconComparison = (ViewBag.MainconGroupComparison as List<MBS_SAP.Controllers.MainconGroupComparisonViewModel> ?? new List<MBS_SAP.Controllers.MainconGroupComparisonViewModel>())
+        .OrderByDescending(x => x.OverallComplianceRate)
+        .ToList();
     var mostActiveSubcon = ViewBag.MostActiveSubcon as MBS_SAP.Controllers.MostActiveSubconViewModel;
     var mainconLabelsJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(
         mainconComparison.Select(x => x.MainconName.Replace("PT ", "").Split(' '))
@@ -291,6 +293,17 @@
         background: rgba(255, 255, 255, 0.035);
         transform: translateY(-1px);
     }
+    
+    /* AI Pulse Animation */
+    .animate-pulse {
+        animation: pulse-animation 2s infinite;
+        display: inline-block;
+    }
+    @@keyframes pulse-animation {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.7; }
+        100% { transform: scale(1); opacity: 1; }
+    }
 </style>
 
 <div class="animate-fade-in pb-5">
@@ -469,135 +482,327 @@
                         </span>
                     </div>
                     <div class="premium-body p-4">
-                        <div class="row g-4">
-                            <!-- Left Column: The Grouped Bar Chart -->
-                            <div class="col-lg-7 col-md-12">
-                                <div style="height: 380px; position: relative;">
+                        <!-- Top Row: Full-width Grouped Bar Chart -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div style="height: 420px; position: relative;">
                                     <canvas id="mainconComparisonChart"></canvas>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Right Column: Comparative Grid Details -->
-                            <div class="col-lg-5 col-md-12">
-                                <div class="row g-3">
-                                    @foreach (var item in mainconComparison)
-                                    {
-                                        <div class="col-md-12">
-                                            <div class="maincon-item">
-                                                <div class="d-flex justify-content-between align-items-center mb-2.5">
-                                                    <div class="fw-bold" style="font-size: 13.5px; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Outfit', sans-serif;">
-                                                        <i class="bi bi-building-fill text-primary me-1.5"></i>@item.MainconName
-                                                    </div>
-                                                    <span class="badge" style="background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.25); font-weight: 800; font-size: 11.5px; border-radius: 8px; padding: 5px 10px;">
-                                                        Kepatuhan: @item.OverallComplianceRate%
-                                                    </span>
-                                                </div>
-                                                
-                                                <!-- Employee count and subcons details -->
-                                                @{
-                                                    var activeCount = item.ChildCompanyNames.Count - item.UncompliantChildCompanyNames.Count - item.NoTargetChildCompanyNames.Count;
-                                                    if (activeCount < 0) activeCount = 0;
+                        <!-- Divider & Section Header -->
+                        <div class="d-flex align-items-center gap-3 mt-4 mb-4">
+                            <h6 class="text-primary fw-bold text-uppercase m-0" style="font-size: 13px; letter-spacing: 1px; font-family: 'Outfit', sans-serif;">
+                                <i class="bi bi-grid-3x3-gap-fill me-2"></i>Rincian Kepatuhan Per Maincon
+                            </h6>
+                            <div class="flex-grow-1" style="height: 1px; background: var(--border-color); opacity: 0.8;"></div>
+                        </div>
+
+                        <!-- Bottom Row: Comparative Grid Details in a 2-column layout -->
+                        <div class="row g-4">
+                            @foreach (var item in mainconComparison)
+                            {
+                                <div class="col-lg-6 col-md-12">
+                                    <div class="maincon-item">
+                                        <div class="d-flex justify-content-between align-items-center mb-2.5">
+                                            <div style="font-size: 15px; font-weight: 800; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Outfit', sans-serif;">
+                                                <i class="bi bi-building-fill text-primary me-1.5"></i>@item.MainconName
+                                            </div>
+                                            @{
+                                                string rateBadgeStyle = "background-color: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.25);"; // red default
+                                                if (item.OverallComplianceRate >= 85.0)
+                                                {
+                                                    rateBadgeStyle = "background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.25);";
                                                 }
-                                                <div class="d-flex flex-wrap gap-2 mb-3" style="font-size: 11px; color: var(--text-muted);">
-                                                    <div>
-                                                        <i class="bi bi-people-fill me-1"></i>
-                                                        <span class="fw-bold" style="color: var(--text-main);">@item.EmployeesWithTargetCount.ToString("N0")</span> Karyawan Ber-Target
-                                                    </div>
-                                                    <!-- Aktif (has target + has submissions) -->
-                                                    <div class="position-relative" style="cursor: pointer;" onmouseenter="showTooltip('subcon-tooltip-@item.MainconId')" onmouseleave="hideTooltip('subcon-tooltip-@item.MainconId')">
-                                                        <span class="badge px-2 py-1 rounded-2" style="background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.25);font-size:10.5px;font-weight:700;">
-                                                            <i class="bi bi-check2-circle me-1"></i>@activeCount Aktif
-                                                        </span>
-                                                        <div class="subcon-tooltip" id="subcon-tooltip-@item.MainconId">
-                                                            <div class="fw-bold text-success mb-1" style="font-size:10px;border-bottom:1px solid rgba(34,197,94,0.2);padding-bottom:4px;">Subkontraktor Aktif Bergerak:</div>
-                                                            @{
-                                                                var activeSubs = item.ChildCompanyNames
-                                                                    .Where(n => !item.UncompliantChildCompanyNames.Contains(n) && !item.NoTargetChildCompanyNames.Contains(n))
-                                                                    .ToList();
-                                                            }
-                                                            @if (activeSubs.Any())
+                                                else if (item.OverallComplianceRate >= 50.0)
+                                                {
+                                                    rateBadgeStyle = "background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25);";
+                                                }
+                                            }
+                                            <span class="badge" style="@rateBadgeStyle font-weight: 800; font-size: 11.5px; border-radius: 8px; padding: 5px 10px;">
+                                                Kepatuhan: @item.OverallComplianceRate%
+                                            </span>
+                                        </div>
+                                        
+                                        <!-- Employee count and subcons details -->
+                                        @{
+                                            var activeCount = item.ChildCompanyNames.Count - item.UncompliantChildCompanyNames.Count - item.NoTargetChildCompanyNames.Count;
+                                            if (activeCount < 0) activeCount = 0;
+                                        }
+                                        <div class="d-flex flex-wrap gap-2 mb-3" style="font-size: 11px; color: var(--text-muted);">
+                                            <div>
+                                                <i class="bi bi-people-fill me-1"></i>
+                                                <span class="fw-bold" style="color: var(--text-main);">@item.EmployeesWithTargetCount.ToString("N0")</span> Karyawan Ber-Target
+                                            </div>
+                                            <!-- Aktif (has target + has submissions) -->
+                                            <div class="position-relative" style="cursor: pointer;" onmouseenter="showTooltip('subcon-tooltip-@item.MainconId')" onmouseleave="hideTooltip('subcon-tooltip-@item.MainconId')">
+                                                <span class="badge px-2 py-1 rounded-2" style="background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.25);font-size:10.5px;font-weight:700;">
+                                                    <i class="bi bi-check2-circle me-1"></i>@activeCount Aktif
+                                                </span>
+                                                <div class="subcon-tooltip" id="subcon-tooltip-@item.MainconId">
+                                                    <div class="fw-bold text-success mb-1" style="font-size:10px;border-bottom:1px solid rgba(34,197,94,0.2);padding-bottom:4px;">Subkontraktor Aktif Bergerak:</div>
+                                                    @{
+                                                        var activeSubs = item.ChildCompanyNames
+                                                            .Where(n => !item.UncompliantChildCompanyNames.Contains(n) && !item.NoTargetChildCompanyNames.Contains(n))
+                                                            .ToList();
+                                                    }
+                                                    @if (activeSubs.Any())
+                                                    {
+                                                        <ul class="list-unstyled mb-0" style="font-size:10.5px;max-height:120px;overflow-y:auto;line-height:1.6;">
+                                                            @foreach (var sub in activeSubs)
                                                             {
-                                                                <ul class="list-unstyled mb-0" style="font-size:10.5px;max-height:120px;overflow-y:auto;line-height:1.6;">
-                                                                    @foreach (var sub in activeSubs)
-                                                                    {
-                                                                        <li style="color:rgba(255,255,255,0.7)"><i class="bi bi-check-circle-fill text-success me-1" style="font-size:8px;"></i>@sub</li>
-                                                                    }
-                                                                </ul>
+                                                                <li style="color:rgba(255,255,255,0.7)"><i class="bi bi-check-circle-fill text-success me-1" style="font-size:8px;"></i>@sub</li>
                                                             }
-                                                            else { <span class="text-muted" style="font-size:10.5px;">Belum ada yang aktif bulan ini</span> }
-                                                        </div>
-                                                    </div>
-                                                    <!-- Belum Bergerak (has target + 0 submissions) -->
-                                                    @if (item.UncompliantChildCompanyNames.Any())
-                                                    {
-                                                        <div class="position-relative" style="cursor: pointer;" onmouseenter="showTooltip('uncompliant-tooltip-@item.MainconId')" onmouseleave="hideTooltip('uncompliant-tooltip-@item.MainconId')">
-                                                            <span class="badge px-2 py-1 rounded-2" style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);font-size:10.5px;font-weight:700;">
-                                                                <i class="bi bi-exclamation-circle-fill me-1"></i>@item.UncompliantChildCompanyNames.Count Belum Bergerak
-                                                            </span>
-                                                            <div class="subcon-tooltip" id="uncompliant-tooltip-@item.MainconId" style="border-color:#ef4444;">
-                                                                <div class="fw-bold text-danger mb-1" style="font-size:10px;border-bottom:1px solid rgba(239,68,68,0.2);padding-bottom:4px;">Punya Target, Belum Ada Submisi:</div>
-                                                                <ul class="list-unstyled mb-0" style="font-size:10.5px;max-height:120px;overflow-y:auto;line-height:1.6;">
-                                                                    @foreach (var sub in item.UncompliantChildCompanyNames)
-                                                                    {
-                                                                        <li style="color:rgba(255,255,255,0.7)"><i class="bi bi-x-circle-fill text-danger me-1" style="font-size:8px;"></i>@sub</li>
-                                                                    }
-                                                                </ul>
-                                                            </div>
-                                                        </div>
+                                                        </ul>
                                                     }
-                                                    <!-- Tanpa Target (all targets=0, excluded from compliance) -->
-                                                    @if (item.NoTargetChildCompanyNames.Any())
-                                                    {
-                                                        <div class="position-relative" style="cursor: pointer;" onmouseenter="showTooltip('notarget-tooltip-@item.MainconId')" onmouseleave="hideTooltip('notarget-tooltip-@item.MainconId')">
-                                                            <span class="badge px-2 py-1 rounded-2" style="background:rgba(100,116,139,0.15);color:#94a3b8;border:1px solid rgba(100,116,139,0.25);font-size:10.5px;font-weight:700;">
-                                                                <i class="bi bi-dash-circle me-1"></i>@item.NoTargetChildCompanyNames.Count Tanpa Target
-                                                            </span>
-                                                            <div class="subcon-tooltip" id="notarget-tooltip-@item.MainconId" style="border-color:#64748b;">
-                                                                <div class="fw-bold text-muted mb-1" style="font-size:10px;border-bottom:1px solid rgba(100,116,139,0.2);padding-bottom:4px;">Tidak Ada Karyawan Ber-Target (Dikecualikan):</div>
-                                                                <ul class="list-unstyled mb-0" style="font-size:10.5px;max-height:120px;overflow-y:auto;line-height:1.6;">
-                                                                    @foreach (var sub in item.NoTargetChildCompanyNames)
-                                                                    {
-                                                                        <li style="color:rgba(255,255,255,0.5)"><i class="bi bi-dash-circle me-1 text-muted" style="font-size:8px;"></i>@sub</li>
-                                                                    }
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                    }
-                                                </div>
- 
-                                                <!-- SAP Breakdown metrics -->
-                                                <div class="sap-breakdown-grid">
-                                                    <div class="sap-cell">
-                                                        <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Hazard</div>
-                                                        <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #6366f1;">@item.HazardComplianceRate%</div>
-                                                        <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualHazard/@item.TargetHazard</div>
-                                                    </div>
-                                                    <div class="sap-cell">
-                                                        <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Inspeksi</div>
-                                                        <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #3b82f6;">@item.InspeksiComplianceRate%</div>
-                                                        <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualInspeksi/@item.TargetInspeksi</div>
-                                                    </div>
-                                                    <div class="sap-cell">
-                                                        <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">S-Talk</div>
-                                                        <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #d97706;">@item.SafetyTalkComplianceRate%</div>
-                                                        <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualSafetyTalk/@item.TargetSafetyTalk</div>
-                                                    </div>
-                                                    <div class="sap-cell">
-                                                        <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Observasi</div>
-                                                        <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #ec4899;">@item.ObservasiComplianceRate%</div>
-                                                        <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualObservasi/@item.TargetObservasi</div>
-                                                    </div>
-                                                    <div class="sap-cell">
-                                                        <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted);">Coaching</div>
-                                                        <div class="fw-extrabold mt-1" style="font-size: 12.5px; color: #a855f7;">@item.CoachingComplianceRate%</div>
-                                                        <div style="font-size: 8.5px; color: var(--text-muted); opacity: 0.85;">@item.ActualCoaching/@item.TargetCoaching</div>
-                                                    </div>
+                                                    else { <span class="text-muted" style="font-size:10.5px;">Belum ada yang aktif bulan ini</span> }
                                                 </div>
                                             </div>
+                                            <!-- Belum Bergerak (has target + 0 submissions) -->
+                                            @if (item.UncompliantChildCompanyNames.Any())
+                                            {
+                                                <div class="position-relative" style="cursor: pointer;" onmouseenter="showTooltip('uncompliant-tooltip-@item.MainconId')" onmouseleave="hideTooltip('uncompliant-tooltip-@item.MainconId')">
+                                                    <span class="badge px-2 py-1 rounded-2" style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);font-size:10.5px;font-weight:700;">
+                                                        <i class="bi bi-exclamation-circle-fill me-1"></i>@item.UncompliantChildCompanyNames.Count Belum Bergerak
+                                                    </span>
+                                                    <div class="subcon-tooltip" id="uncompliant-tooltip-@item.MainconId" style="border-color:#ef4444;">
+                                                        <div class="fw-bold text-danger mb-1" style="font-size:10px;border-bottom:1px solid rgba(239,68,68,0.2);padding-bottom:4px;">Punya Target, Belum Ada Submisi:</div>
+                                                        <ul class="list-unstyled mb-0" style="font-size:10.5px;max-height:120px;overflow-y:auto;line-height:1.6;">
+                                                            @foreach (var sub in item.UncompliantChildCompanyNames)
+                                                            {
+                                                                <li style="color:rgba(255,255,255,0.7)"><i class="bi bi-x-circle-fill text-danger me-1" style="font-size:8px;"></i>@sub</li>
+                                                            }
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            }
+                                            <!-- Tanpa Target (all targets=0, excluded from compliance) -->
+                                            @if (item.NoTargetChildCompanyNames.Any())
+                                            {
+                                                <div class="position-relative" style="cursor: pointer;" onmouseenter="showTooltip('notarget-tooltip-@item.MainconId')" onmouseleave="hideTooltip('notarget-tooltip-@item.MainconId')">
+                                                    <span class="badge px-2 py-1 rounded-2" style="background:rgba(100,116,139,0.15);color:#94a3b8;border:1px solid rgba(100,116,139,0.25);font-size:10.5px;font-weight:700;">
+                                                        <i class="bi bi-dash-circle me-1"></i>@item.NoTargetChildCompanyNames.Count Tanpa Target
+                                                    </span>
+                                                    <div class="subcon-tooltip" id="notarget-tooltip-@item.MainconId" style="border-color:#64748b;">
+                                                        <div class="fw-bold text-muted mb-1" style="font-size:10px;border-bottom:1px solid rgba(100,116,139,0.2);padding-bottom:4px;">Tidak Ada Karyawan Ber-Target (Dikecualikan):</div>
+                                                        <ul class="list-unstyled mb-0" style="font-size:10.5px;max-height:120px;overflow-y:auto;line-height:1.6;">
+                                                            @foreach (var sub in item.NoTargetChildCompanyNames)
+                                                            {
+                                                                <li style="color:rgba(255,255,255,0.5)"><i class="bi bi-dash-circle me-1 text-muted" style="font-size:8px;"></i>@sub</li>
+                                                            }
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            }
                                         </div>
-                                    }
+          
+                                        <!-- SAP Breakdown metrics -->
+                                        <div class="sap-breakdown-grid">
+                                            <div class="sap-cell">
+                                                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-main); opacity: 0.75;">Hazard</div>
+                                                <div style="font-size: 15.5px; font-weight: 900; color: #6366f1; margin-top: 2px;">@item.HazardComplianceRate%</div>
+                                                <div style="font-size: 11px; font-weight: 800; color: var(--text-main); opacity: 0.65;">@item.ActualHazard/@item.TargetHazard</div>
+                                            </div>
+                                            <div class="sap-cell">
+                                                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-main); opacity: 0.75;">Inspeksi</div>
+                                                <div style="font-size: 15.5px; font-weight: 900; color: #3b82f6; margin-top: 2px;">@item.InspeksiComplianceRate%</div>
+                                                <div style="font-size: 11px; font-weight: 800; color: var(--text-main); opacity: 0.65;">@item.ActualInspeksi/@item.TargetInspeksi</div>
+                                            </div>
+                                            <div class="sap-cell">
+                                                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-main); opacity: 0.75;">S-Talk</div>
+                                                <div style="font-size: 15.5px; font-weight: 900; color: #d97706; margin-top: 2px;">@item.SafetyTalkComplianceRate%</div>
+                                                <div style="font-size: 11px; font-weight: 800; color: var(--text-main); opacity: 0.65;">@item.ActualSafetyTalk/@item.TargetSafetyTalk</div>
+                                            </div>
+                                            <div class="sap-cell">
+                                                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-main); opacity: 0.75;">Observasi</div>
+                                                <div style="font-size: 15.5px; font-weight: 900; color: #ec4899; margin-top: 2px;">@item.ObservasiComplianceRate%</div>
+                                                <div style="font-size: 11px; font-weight: 800; color: var(--text-main); opacity: 0.65;">@item.ActualObservasi/@item.TargetObservasi</div>
+                                            </div>
+                                            <div class="sap-cell">
+                                                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-main); opacity: 0.75;">Coaching</div>
+                                                <div style="font-size: 15.5px; font-weight: 900; color: #a855f7; margin-top: 2px;">@item.CoachingComplianceRate%</div>
+                                                <div style="font-size: 11px; font-weight: 800; color: var(--text-main); opacity: 0.65;">@item.ActualCoaching/@item.TargetCoaching</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @{
+                // AI Calculations based on mainconComparison
+                var sortedMaincons = mainconComparison.OrderByDescending(x => x.OverallComplianceRate).ToList();
+                var highestMaincon = sortedMaincons.FirstOrDefault();
+                var lowestMaincon = sortedMaincons.LastOrDefault();
+
+                var programAverages = new Dictionary<string, double>();
+                if (mainconComparison.Any())
+                {
+                    programAverages["Hazard Report"] = mainconComparison.Average(x => x.HazardComplianceRate);
+                    programAverages["Inspeksi"] = mainconComparison.Average(x => x.InspeksiComplianceRate);
+                    programAverages["Safety Talk"] = mainconComparison.Average(x => x.SafetyTalkComplianceRate);
+                    programAverages["Observasi"] = mainconComparison.Average(x => x.ObservasiComplianceRate);
+                    programAverages["Coaching"] = mainconComparison.Average(x => x.CoachingComplianceRate);
+                }
+                var lowestProgram = programAverages.Any() ? programAverages.OrderBy(x => x.Value).First() : new KeyValuePair<string, double>("N/A", 0);
+                var highestProgram = programAverages.Any() ? programAverages.OrderByDescending(x => x.Value).First() : new KeyValuePair<string, double>("N/A", 0);
+
+                int totalUncompliantSubcons = mainconComparison.Sum(x => x.UncompliantChildCompanyNames.Count);
+                int totalActiveSubcons = mainconComparison.Sum(x => x.ChildCompanyNames.Count - x.UncompliantChildCompanyNames.Count - x.NoTargetChildCompanyNames.Count);
+            }
+
+            <!-- AI Executive Analysis & Recommendations -->
+            <div class="col-lg-7 col-md-12 mt-4">
+                <div class="premium-card mb-0 h-100" style="border: 1.5px solid rgba(168, 85, 247, 0.35); box-shadow: 0 10px 30px rgba(168, 85, 247, 0.08); background: radial-gradient(circle at 95% 10%, rgba(168, 85, 247, 0.04), transparent 60%), var(--bg-card); border-radius: 20px; overflow: hidden; position: relative;">
+                    <div class="premium-header" style="border-bottom: 1.5px solid rgba(168, 85, 247, 0.15); background: rgba(168, 85, 247, 0.02); padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+                        <h5 class="premium-title" style="color: #a855f7; font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                            <i class="bi bi-robot animate-pulse" style="color: #a855f7; font-size: 20px;"></i>Analisis Eksekutif & Rekomendasi AI
+                        </h5>
+                        <span class="badge" style="background: rgba(168, 85, 247, 0.1); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.25); font-weight: 800; font-size: 10.5px; border-radius: 8px; padding: 4px 10px;">
+                            AI Safety Assistant
+                        </span>
+                    </div>
+                    <div class="premium-body p-4">
+                        <!-- Top Row: 3 Diagnostics Cards -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4 col-sm-12">
+                                <div class="p-3 rounded-3 h-100" style="background: rgba(244, 63, 94, 0.03); border: 1px solid rgba(244, 63, 94, 0.15);">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 600;">Kinerja Terendah</span>
+                                        <span class="badge" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e; font-size: 8.5px; font-weight: 700;">Critically Low</span>
+                                    </div>
+                                    <div class="fw-extrabold text-truncate" style="font-size: 13px; color: var(--text-main);" title="@lowestMaincon?.MainconName">@lowestMaincon?.MainconName</div>
+                                    <div class="d-flex align-items-center gap-1.5 mt-2">
+                                        <div class="progress flex-grow-1" style="height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px;">
+                                            <div class="progress-bar" role="progressbar" style="width: @(lowestMaincon?.OverallComplianceRate ?? 0)%; background-color: #f43f5e;" aria-valuenow="@(lowestMaincon?.OverallComplianceRate ?? 0)" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <span class="fw-bold" style="font-size: 11px; color: #f43f5e;">@(lowestMaincon?.OverallComplianceRate ?? 0)%</span>
+                                    </div>
                                 </div>
                             </div>
+                            <div class="col-md-4 col-sm-12">
+                                <div class="p-3 rounded-3 h-100" style="background: rgba(245, 158, 11, 0.03); border: 1px solid rgba(245, 158, 11, 0.15);">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 600;">Program Terlemah</span>
+                                        <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; font-size: 8.5px; font-weight: 700;">Gap</span>
+                                    </div>
+                                    <div class="fw-extrabold text-truncate" style="font-size: 13px; color: var(--text-main);" title="@lowestProgram.Key">@lowestProgram.Key</div>
+                                    <div class="d-flex align-items-center gap-1.5 mt-2">
+                                        <div class="progress flex-grow-1" style="height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px;">
+                                            <div class="progress-bar" role="progressbar" style="width: @(lowestProgram.Value)%; background-color: #f59e0b;" aria-valuenow="@lowestProgram.Value" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                        <span class="fw-bold" style="font-size: 11px; color: #f59e0b;">@Math.Round(lowestProgram.Value, 1)%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-sm-12">
+                                <div class="p-3 rounded-3 h-100" style="background: rgba(239, 68, 68, 0.03); border: 1px solid rgba(239, 68, 68, 0.15);">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 600;">Mitra Belum Bergerak</span>
+                                        <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 8.5px; font-weight: 700;">Inactive</span>
+                                    </div>
+                                    <div class="fw-extrabold" style="font-size: 13px; color: #ef4444;">@totalUncompliantSubcons <span style="font-size: 10px; font-weight: 600; color: var(--text-muted);">Mitra Kerja</span></div>
+                                    <div class="mt-2" style="font-size: 10px; color: var(--text-muted); line-height: 1.2;">
+                                        Dari total @(totalActiveSubcons + totalUncompliantSubcons) subcon MTD Group.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Section: Recommendations List -->
+                        <h6 class="fw-bold mb-3" style="font-size: 12.5px; color: var(--text-main); font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="bi bi-lightning-charge-fill text-warning me-1.5"></i>Rekomendasi Prioritas AI
+                        </h6>
+                        <div class="d-flex flex-column gap-3">
+                            <div class="d-flex gap-3">
+                                <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2); color: #f43f5e; flex-shrink: 0;">
+                                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 15px;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Intervensi Khusus @lowestMaincon?.MainconName</div>
+                                    <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
+                                        Lakukan koordinasi khusus dan mendesak dengan PJA dan pimpinan dari <span class="fw-extrabold text-danger" style="text-decoration: underline;">@lowestMaincon?.MainconName</span> (Kepatuhan: @(lowestMaincon?.OverallComplianceRate ?? 0)%) untuk mengevaluasi kendala pemenuhan target program SAP.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3">
+                                <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); color: #f59e0b; flex-shrink: 0;">
+                                    <i class="bi bi-arrow-up-circle-fill" style="font-size: 15px;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Dongkrak Realisasi Program @lowestProgram.Key</div>
+                                    <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
+                                        Tingkatkan pengawasan dan sosialisasi pengisian program <span class="fw-extrabold text-warning">@lowestProgram.Key</span> (Rata-rata: @Math.Round(lowestProgram.Value, 1)%) karena memiliki tingkat pemenuhan target terendah di seluruh grup Maincon MTD.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3">
+                                <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; flex-shrink: 0;">
+                                    <i class="bi bi-people-fill" style="font-size: 15px;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Aktivasi Mitra Kerja Belum Bergerak</div>
+                                    <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
+                                        Sebanyak <span class="fw-extrabold text-danger">@totalUncompliantSubcons subkontraktor</span> terdaftar aktif namun belum memiliki data submisi bulan ini. Prioritaskan aktivasi mitra-mitra tersebut agar tidak mengurangi skor kepatuhan gabungan.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3">
+                                <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #22c55e; flex-shrink: 0;">
+                                    <i class="bi bi-trophy-fill" style="font-size: 15px;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Replikasi Best Practice @highestMaincon?.MainconName</div>
+                                    <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
+                                        Pelajari metode monitoring dan komitmen pengisian target dari manajemen <span class="fw-extrabold text-success">@highestMaincon?.MainconName</span> (Kepatuhan Tertinggi: @(highestMaincon?.OverallComplianceRate ?? 0)%) untuk direplikasi di Maincon lain yang berkinerja rendah.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employee Safety Awareness Analysis -->
+            <div class="col-lg-5 col-md-12 mt-4">
+                <div class="premium-card mb-0 h-100" style="border: 1.5px solid rgba(16, 185, 129, 0.35); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.08); background: radial-gradient(circle at 95% 10%, rgba(16, 185, 129, 0.04), transparent 60%), var(--bg-card); border-radius: 20px; overflow: hidden; display: flex; flex-direction: column;">
+                    <div class="premium-header" style="border-bottom: 1.5px solid rgba(16, 185, 129, 0.15); background: rgba(16, 185, 129, 0.02); padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+                        <h5 class="premium-title" style="color: #10b981; font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                            <i class="bi bi-person-check-fill animate-pulse" style="color: #10b981; font-size: 20px;"></i>Kesadaran Karyawan (Awareness)
+                        </h5>
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25); font-weight: 800; font-size: 10.5px; border-radius: 8px; padding: 4px 10px;">
+                            Participation
+                        </span>
+                    </div>
+                    <div class="premium-body p-4 flex-grow-1 d-flex flex-column justify-content-between">
+                        <!-- Awareness Rate Gauge/Progress -->
+                        <div class="mb-4 text-center">
+                            <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle mb-3" style="width: 80px; height: 80px; background: rgba(16, 185, 129, 0.08); border: 2.5px solid rgba(16, 185, 129, 0.35);">
+                                <span class="fw-extrabold" style="font-size: 18px; color: #10b981; font-family: 'Outfit', sans-serif;">@ViewBag.EmployeeAwarenessRate%</span>
+                            </div>
+                            <h6 class="fw-bold mb-1" style="font-size: 13.5px; color: var(--text-main);">Score Partisipasi SAP Karyawan</h6>
+                            <p class="text-muted mb-0" style="font-size: 11.5px; line-height: 1.4;">
+                                Sebanyak <span class="fw-bold text-success">@ViewBag.ActiveEmployeesCount</span> dari <span class="fw-bold">@ViewBag.TotalEmployeesWithTarget</span> karyawan ber-target telah berpartisipasi aktif melakukan submisi program bulan ini.
+                            </p>
+                        </div>
+
+                        <!-- Daily Submissions Line Chart -->
+                        <div class="flex-grow-1" style="min-height: 150px; position: relative;">
+                            <h6 class="fw-bold mb-2.5" style="font-size: 12px; color: var(--text-main); font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i class="bi bi-graph-up text-success me-1.5"></i>Tren Aktivitas Harian (14 Hari Terakhir)
+                            </h6>
+                            <div style="height: 140px;">
+                                <canvas id="dailyAwarenessChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Mini Analysis Description -->
+                        <div class="mt-3 text-muted" style="font-size: 11.5px; line-height: 1.5; border-top: 1px dashed var(--border-color); padding-top: 12px;">
+                            <i class="bi bi-journal-text me-1 text-success"></i><strong>Analisis Perubahan Harian:</strong> Kesadaran karyawan menunjukkan keterlibatan yang dinamis. Sisa <span class="fw-bold text-danger">@(ViewBag.TotalEmployeesWithTarget - ViewBag.ActiveEmployeesCount) karyawan</span> ber-target belum tergerak melakukan pengisian bulan ini.
                         </div>
                     </div>
                 </div>
@@ -772,11 +977,13 @@
         document.addEventListener("DOMContentLoaded", function () {
             // Ambil warna text & border dari theme agar grafik kontras di light/dark mode
             const bodyColor = getComputedStyle(document.body).color || '#1e293b';
-            const labelColor = bodyColor;
             
             // Deteksi jika tema aktif adalah dark mode untuk menentukan kontras kisi/gridline
-            const isDarkTheme = bodyColor.includes('255') || bodyColor.includes('f8') || bodyColor.includes('fa') || bodyColor.includes('ff');
+            const isDarkTheme = bodyColor.includes('255') || bodyColor.includes('f8') || bodyColor.includes('fa') || bodyColor.includes('ff') || bodyColor.includes('rgb(255') || bodyColor.includes('248') || bodyColor.includes('250');
             const gridColor = isDarkTheme ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)';
+
+            // Perjelas font label dengan kontras tinggi (solid dark di light theme, solid light di dark theme)
+            const labelColor = isDarkTheme ? '#f8fafc' : '#0f172a';
 
             // Chart 4: Maincon Group Comparison (Grouped Bar Chart)
             const ctxMaincon = document.getElementById('mainconComparisonChart');
@@ -808,60 +1015,60 @@
                                 data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.OverallComplianceRate))),
                                 backgroundColor: overallGrad,
                                 hoverBackgroundColor: '#059669',
-                                borderRadius: 6,
+                                borderRadius: 5,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.6
+                                categoryPercentage: 0.8
                             },
                             {
                                 label: 'Hazard',
                                 data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.HazardComplianceRate))),
                                 backgroundColor: hazardGrad,
                                 hoverBackgroundColor: '#4f46e5',
-                                borderRadius: 6,
+                                borderRadius: 5,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.6
+                                categoryPercentage: 0.8
                             },
                             {
                                 label: 'Inspeksi',
                                 data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.InspeksiComplianceRate))),
                                 backgroundColor: inspeksiGrad,
                                 hoverBackgroundColor: '#2563eb',
-                                borderRadius: 6,
+                                borderRadius: 5,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.6
+                                categoryPercentage: 0.8
                             },
                             {
                                 label: 'Safety Talk',
                                 data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.SafetyTalkComplianceRate))),
                                 backgroundColor: safetyTalkGrad,
                                 hoverBackgroundColor: '#d97706',
-                                borderRadius: 6,
+                                borderRadius: 5,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.6
+                                categoryPercentage: 0.8
                             },
                             {
                                 label: 'Observasi',
                                 data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.ObservasiComplianceRate))),
                                 backgroundColor: observasiGrad,
                                 hoverBackgroundColor: '#db2777',
-                                borderRadius: 6,
+                                borderRadius: 5,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.6
+                                categoryPercentage: 0.8
                             },
                             {
                                 label: 'Coaching',
                                 data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.CoachingComplianceRate))),
                                 backgroundColor: coachingGrad,
                                 hoverBackgroundColor: '#9333ea',
-                                borderRadius: 6,
+                                borderRadius: 5,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.6
+                                categoryPercentage: 0.8
                             }
                         ]
                     },
@@ -877,10 +1084,10 @@
                                         const val = dataset.data[index];
                                         if (val > 0) {
                                             ctx.fillStyle = labelColor;
-                                            ctx.font = 'bold 9px "Outfit", sans-serif';
+                                            ctx.font = 'bold 11px "Outfit", sans-serif';
                                             ctx.textAlign = 'center';
                                             ctx.textBaseline = 'bottom';
-                                            ctx.fillText(val + '%', bar.x, bar.y - 4);
+                                            ctx.fillText(val + '%', bar.x, bar.y - 6);
                                         }
                                     });
                                 });
@@ -900,7 +1107,7 @@
                                     pointStyle: 'circle',
                                     padding: 16,
                                     color: labelColor,
-                                    font: { size: 11, weight: '700', family: "'Outfit', 'Inter', sans-serif" }
+                                    font: { size: 12, weight: '700', family: "'Outfit', 'Inter', sans-serif" }
                                 }
                             },
                             tooltip: {
@@ -926,7 +1133,7 @@
                                 grid: { display: false },
                                 ticks: { 
                                     color: labelColor, 
-                                    font: { size: 11, weight: '800', family: "'Outfit', sans-serif" },
+                                    font: { size: 12, weight: '800', family: "'Outfit', sans-serif" },
                                     padding: 8
                                 }
                             },
@@ -940,7 +1147,7 @@
                                 },
                                 ticks: { 
                                     color: labelColor, 
-                                    font: { size: 11, weight: '700' },
+                                    font: { size: 12, weight: '700' },
                                     padding: 8,
                                     callback: function(value) { return value + '%'; }
                                 }
@@ -1041,6 +1248,80 @@
                                 ticks: { 
                                     color: labelColor, 
                                     font: { size: 10, weight: '700', family: "'Outfit', sans-serif" }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Chart 6: Daily Awareness Trend (Line Chart)
+            const ctxDaily = document.getElementById('dailyAwarenessChart');
+            if (ctxDaily) {
+                const ctxDaily2d = ctxDaily.getContext('2d');
+                
+                const dailyGrad = ctxDaily2d.createLinearGradient(0, 0, 0, 140);
+                dailyGrad.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+                dailyGrad.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+
+                new Chart(ctxDaily2d, {
+                    type: 'line',
+                    data: {
+                        labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.DailyAwarenessTrendLabels)),
+                        datasets: [{
+                            label: 'Submisi Harian',
+                            data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.DailyAwarenessTrendValues)),
+                            borderColor: '#10b981',
+                            backgroundColor: dailyGrad,
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 2.5,
+                            pointHoverRadius: 5,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: 'transparent'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                                titleColor: '#fff',
+                                titleFont: { size: 11, weight: 'bold', family: "'Outfit', sans-serif" },
+                                bodyColor: '#cbd5e1',
+                                bodyFont: { size: 10, family: "'Inter', sans-serif" },
+                                borderColor: 'rgba(255, 255, 255, 0.1)',
+                                borderWidth: 1,
+                                padding: 8,
+                                cornerRadius: 8,
+                                callbacks: {
+                                    label: function(context) {
+                                        return ' Submisi: ' + context.raw;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { 
+                                    color: labelColor, 
+                                    font: { size: 9, family: "'Outfit', sans-serif" }
+                                }
+                            },
+                            y: {
+                                min: 0,
+                                grid: { 
+                                    color: 'rgba(255, 255, 255, 0.05)',
+                                    drawBorder: false
+                                },
+                                ticks: { 
+                                    color: labelColor, 
+                                    font: { size: 9 },
+                                    precision: 0
                                 }
                             }
                         }

@@ -2429,6 +2429,203 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> ExportLeagueToExcel(int? companyId = null, string mode = "dept")
+        {
+            var (resolvedCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
+            var isAdmin = User.IsInRole("Admin");
+            var jobTitle = User.FindFirst("JobTitle")?.Value;
+            var department = User.FindFirst("Department")?.Value;
+            bool isSafetyRole = CheckIsSafetyRole(jobTitle, department, isAdmin);
+
+            var allCompanies = await _context.Perusahaans
+                .Where(p => p.StatusAktif)
+                .OrderBy(p => p.NamaPerusahaan)
+                .ToListAsync();
+
+            List<PerusahaanView> allowedCompanies;
+            if (isAdmin || isSafetyRole)
+            {
+                allowedCompanies = allCompanies;
+            }
+            else
+            {
+                allowedCompanies = allCompanies
+                    .Where(p => allowedCompanyIds.Contains(p.PerusahaanId))
+                    .ToList();
+            }
+
+            if (allowedCompanies == null || !allowedCompanies.Any())
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            int selectedCompanyId = companyId ?? (resolvedCompanyId ?? allowedCompanies.First().PerusahaanId);
+            if (!isAdmin && !isSafetyRole && !allowedCompanyIds.Contains(selectedCompanyId))
+            {
+                selectedCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
+            }
+
+            var selectedCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? allowedCompanies.First();
+
+            List<dynamic> employeesData = new List<dynamic>();
+
+            if (mode == "company")
+            {
+                var allEmployees = new List<dynamic>();
+                foreach (var comp in allCompanies)
+                {
+                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId);
+                    if (!compEmps.Any()) continue;
+                    allEmployees.AddRange(compEmps);
+                }
+
+                employeesData = allEmployees
+                    .Where(e => isAdmin || isSafetyRole || (int)e.companyId == resolvedCompanyId)
+                    .ToList();
+            }
+            else
+            {
+                employeesData = await GetEmployeesComplianceData(selectedCompany.PerusahaanId);
+            }
+
+            var sorted = employeesData
+                .Select(e => new {
+                    name = (string)e.karyawanName,
+                    nik = (string)e.nik,
+                    departmentName = (string)e.departmentName,
+                    jabatanName = (string)e.jabatanName,
+                    complianceRate = (double)e.complianceRate,
+                    mtdTotalTarget = (int)e.mtdTotalTarget,
+                    hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
+                    inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
+                    safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
+                    observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
+                    coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
+                    p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                })
+                .OrderBy(e => e.mtdTotalTarget == 0 ? 1 : 0)
+                .ThenByDescending(e => e.complianceRate)
+                .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
+                .ToList();
+
+            using (var workbook = new XLWorkbook())
+            {
+                var ws = workbook.Worksheets.Add("Klasemen Skuad SAP");
+                
+                // Add header info
+                ws.Cell(1, 1).Value = "LAPORAN KLASEMEN SKUAD KEPATUHAN SAP";
+                ws.Cell(1, 1).Style.Font.Bold = true;
+                ws.Cell(1, 1).Style.Font.FontSize = 14;
+                ws.Cell(1, 1).Style.Font.FontColor = XLColor.Navy;
+
+                ws.Cell(2, 1).Value = $"Perusahaan: {selectedCompany.NamaPerusahaan}";
+                ws.Cell(2, 1).Style.Font.Bold = true;
+                ws.Cell(2, 1).Style.Font.FontSize = 11;
+
+                ws.Cell(3, 1).Value = $"Mode: {(mode == "company" ? "Liga Company (Global)" : "Liga Departemen (Internal)")} | Tanggal Unduh: {DateTime.Now:yyyy-MM-dd HH:mm}";
+                ws.Cell(3, 1).Style.Font.Italic = true;
+                ws.Cell(3, 1).Style.Font.FontSize = 9.5;
+
+                // Setup Table Headers
+                string[] headers = new[] {
+                    "Peringkat", "Nama Karyawan", "NIK", "Departemen", "Jabatan", "Kepatuhan (%)",
+                    "Hazard Actual", "Hazard Target", "Inspeksi Actual", "Inspeksi Target",
+                    "Safety Talk Actual", "Safety Talk Target", "Observasi Actual", "Observasi Target",
+                    "Coaching Actual", "Coaching Target", "P5M Actual", "P5M Target"
+                };
+
+                for (int i = 0; i < headers.Length; i++)
+                {
+                    var cell = ws.Cell(5, i + 1);
+                    cell.Value = headers[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Deep Navy
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                }
+                ws.Row(5).Height = 25;
+
+                int row = 6;
+                int rank = 1;
+                foreach (var emp in sorted)
+                {
+                    ws.Cell(row, 1).Value = rank;
+                    ws.Cell(row, 2).Value = emp.name;
+                    ws.Cell(row, 3).Value = emp.nik;
+                    ws.Cell(row, 4).Value = emp.departmentName;
+                    ws.Cell(row, 5).Value = emp.jabatanName;
+                    
+                    var compCell = ws.Cell(row, 6);
+                    compCell.Value = emp.complianceRate / 100.0;
+                    compCell.Style.NumberFormat.Format = "0.0%";
+
+                    ws.Cell(row, 7).Value = emp.hazard.actual;
+                    ws.Cell(row, 8).Value = emp.hazard.target;
+                    
+                    ws.Cell(row, 9).Value = emp.inspeksi.actual;
+                    ws.Cell(row, 10).Value = emp.inspeksi.target;
+
+                    ws.Cell(row, 11).Value = emp.safetyTalk.actual;
+                    ws.Cell(row, 12).Value = emp.safetyTalk.target;
+
+                    ws.Cell(row, 13).Value = emp.observasi.actual;
+                    ws.Cell(row, 14).Value = emp.observasi.target;
+
+                    ws.Cell(row, 15).Value = emp.coaching.actual;
+                    ws.Cell(row, 16).Value = emp.coaching.target;
+
+                    ws.Cell(row, 17).Value = emp.p5m.actual;
+                    ws.Cell(row, 18).Value = emp.p5m.target;
+
+                    // Align rank, NIK, rates, numbers to center
+                    ws.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    ws.Cell(row, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    ws.Cell(row, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    for (int c = 7; c <= 18; c++)
+                    {
+                        ws.Cell(row, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+
+                    // Format values as number
+                    for (int c = 7; c <= 18; c++)
+                    {
+                        ws.Cell(row, c).Style.NumberFormat.Format = "#,##0";
+                    }
+
+                    // Border styling
+                    var rowRange = ws.Range(row, 1, row, 18);
+                    rowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+                    // Highlight top 3 (Champions Zone) with gold/light-yellow accent
+                    if (rank <= 3)
+                    {
+                        for (int c = 1; c <= 18; c++)
+                        {
+                            ws.Cell(row, c).Style.Fill.BackgroundColor = XLColor.FromHtml("#fef9c3"); // Yellow-50
+                        }
+                    }
+
+                    row++;
+                    rank++;
+                }
+
+                // Auto fit columns
+                ws.Columns(1, 18).AdjustToContents();
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    var content = stream.ToArray();
+                    string safeCompName = string.Concat(selectedCompany.NamaPerusahaan.Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
+                    string fileName = $"League_Kepatuhan_SAP_{safeCompName}_{DateTime.Now:yyyyMMdd}.xlsx";
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+                }
+            }
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Compliance(int? companyId = null, string? departmentName = null, int page = 1)
         {
             // Set transaction isolation level to READ UNCOMMITTED to prevent deadlocks/timeouts on heavy tables
@@ -3215,6 +3412,71 @@ namespace MBS_SAP.Controllers
             ViewBag.MostActiveSubcon = mostActiveSubcon;
             ViewBag.AllSubconStats = allSubconStats.OrderByDescending(s => s.ComplianceRate).ThenByDescending(s => s.TotalSubmissions).ToList();
             ViewBag.MainconGroupComparison = mainconGroupComparisonList;
+
+            // 5. Daily Awareness/Submission Trend (last 14 days)
+            var last14Days = Enumerable.Range(0, 14)
+                .Select(i => DateTime.Today.AddDays(-i))
+                .OrderBy(d => d)
+                .ToList();
+            var startDate = last14Days.First();
+
+            var dailyHazards = await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.CreatedAt >= startDate)
+                .GroupBy(h => h.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var dailyInspections = await _context.Inspections
+                .Where(i => !i.IsDeleted && i.CreatedAt >= startDate)
+                .GroupBy(i => i.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var dailySafetyTalks = await _context.SafetyTalks
+                .Where(s => !s.IsDeleted && s.CreatedAt >= startDate)
+                .GroupBy(s => s.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var dailyObservations = await _context.Observations
+                .Where(o => !o.IsDeleted && o.CreatedAt >= startDate)
+                .GroupBy(o => o.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var dailyCoachings = await _context.Coachings
+                .Where(c => !c.IsDeleted && c.CreatedAt >= startDate)
+                .GroupBy(c => c.CreatedAt.Date)
+                .Select(g => new { Date = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var dailyTrendLabels = new List<string>();
+            var dailyTrendValues = new List<int>();
+
+            foreach (var date in last14Days)
+            {
+                dailyTrendLabels.Add(date.ToString("dd MMM"));
+                int sum = 
+                    (dailyHazards.FirstOrDefault(d => d.Date == date)?.Count ?? 0) +
+                    (dailyInspections.FirstOrDefault(d => d.Date == date)?.Count ?? 0) +
+                    (dailySafetyTalks.FirstOrDefault(d => d.Date == date)?.Count ?? 0) +
+                    (dailyObservations.FirstOrDefault(d => d.Date == date)?.Count ?? 0) +
+                    (dailyCoachings.FirstOrDefault(d => d.Date == date)?.Count ?? 0);
+                dailyTrendValues.Add(sum);
+            }
+
+            ViewBag.DailyAwarenessTrendLabels = dailyTrendLabels;
+            ViewBag.DailyAwarenessTrendValues = dailyTrendValues;
+
+            // Calculate Active Submitting Employees and Awareness Rate
+            int activeEmployees = employees.Count(e => e.MtdTotalActual > 0);
+            int totalEmployeesWithTarget = employees.Count;
+            double employeeAwarenessRate = totalEmployeesWithTarget > 0 ? 
+                Math.Round((double)activeEmployees / totalEmployeesWithTarget * 100.0, 1) : 0.0;
+
+            ViewBag.ActiveEmployeesCount = activeEmployees;
+            ViewBag.TotalEmployeesWithTarget = totalEmployeesWithTarget;
+            ViewBag.EmployeeAwarenessRate = employeeAwarenessRate;
 
             return View(paginatedEmployees);
         }

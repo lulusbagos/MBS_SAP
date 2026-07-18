@@ -287,12 +287,27 @@ namespace MBS_SAP.Services
                 LookbackDays = effectiveLookback
             };
 
-            var existingHazards = await _context.HazardReports
+            var existingHazardsData = await _context.HazardReports
                 .Where(h => !h.IsDeleted && h.Tanggal >= since.AddDays(-7))
+                .Select(h => new HazardReplicationDto
+                {
+                    Id = h.Id,
+                    Nik = h.Nik,
+                    Tanggal = h.Tanggal,
+                    Temuan = h.Temuan,
+                    Lokasi = h.Lokasi,
+                    PerusahaanId = h.PerusahaanId,
+                    StatusTemuan = h.StatusTemuan,
+                    TingkatResiko = h.TingkatResiko,
+                    Pja = h.Pja,
+                    NikPja = h.NikPja,
+                    DepartemenPja = h.DepartemenPja,
+                    CreatedAt = h.CreatedAt
+                })
                 .ToListAsync(cancellationToken);
 
-            var hazardMap = existingHazards
-                .GroupBy(h => BuildHazardKey(h.Nik, h.Tanggal, h.Temuan, h.Lokasi, h.PerusahaanId, null))
+            var hazardMap = existingHazardsData
+                .GroupBy(h => BuildHazardKey(h.Nik ?? string.Empty, h.Tanggal, h.Temuan ?? string.Empty, h.Lokasi, h.PerusahaanId, null))
                 .ToDictionary(
                     g => g.Key,
                     g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
@@ -314,38 +329,27 @@ namespace MBS_SAP.Services
                     var hasHazardChanges = false;
 
                     var newStatus = Truncate(row.StatusTemuan, 50) ?? "Open";
-                    if (!string.Equals(existingHazard.StatusTemuan ?? string.Empty, newStatus, StringComparison.OrdinalIgnoreCase))
-                    {
-                        existingHazard.StatusTemuan = newStatus;
-                        hasHazardChanges = true;
-                    }
-
                     var newRisk = Truncate(row.TingkatResiko, 50);
-                    if (!string.Equals(existingHazard.TingkatResiko ?? string.Empty, newRisk ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-                    {
-                        existingHazard.TingkatResiko = newRisk;
-                        hasHazardChanges = true;
-                    }
-
                     var newPja = Truncate(row.Pja, 150);
-                    if (!string.Equals(existingHazard.Pja ?? string.Empty, newPja ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-                    {
-                        existingHazard.Pja = newPja;
-                        hasHazardChanges = true;
-                    }
-
                     var newNikPja = Truncate(row.NikPja, 50);
-                    if (!string.Equals(existingHazard.NikPja ?? string.Empty, newNikPja ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-                    {
-                        existingHazard.NikPja = newNikPja;
-                        hasHazardChanges = true;
-                    }
-
                     var newDeptPja = Truncate(row.DepartemenPja, 150);
-                    if (!string.Equals(existingHazard.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+
+                    if (!string.Equals(existingHazard.StatusTemuan ?? string.Empty, newStatus, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingHazard.TingkatResiko ?? string.Empty, newRisk ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingHazard.Pja ?? string.Empty, newPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingHazard.NikPja ?? string.Empty, newNikPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingHazard.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase))
                     {
-                        existingHazard.DepartemenPja = newDeptPja;
-                        hasHazardChanges = true;
+                        var realHazard = await _context.HazardReports.FindAsync(new object[] { existingHazard.Id }, cancellationToken);
+                        if (realHazard != null)
+                        {
+                            realHazard.StatusTemuan = newStatus;
+                            realHazard.TingkatResiko = newRisk;
+                            realHazard.Pja = newPja;
+                            realHazard.NikPja = newNikPja;
+                            realHazard.DepartemenPja = newDeptPja;
+                            hasHazardChanges = true;
+                        }
                     }
 
                     if (hasHazardChanges)
@@ -388,16 +392,44 @@ namespace MBS_SAP.Services
                 };
 
                 _context.HazardReports.Add(report);
-                hazardMap[key] = report;
+                hazardMap[key] = new HazardReplicationDto
+                {
+                    Id = report.Id,
+                    Nik = report.Nik,
+                    Tanggal = report.Tanggal,
+                    Temuan = report.Temuan,
+                    Lokasi = report.Lokasi,
+                    PerusahaanId = report.PerusahaanId,
+                    StatusTemuan = report.StatusTemuan,
+                    TingkatResiko = report.TingkatResiko,
+                    Pja = report.Pja,
+                    NikPja = report.NikPja,
+                    DepartemenPja = report.DepartemenPja,
+                    CreatedAt = report.CreatedAt
+                };
                 result.HazardInserted++;
             }
 
-            var existingInspections = await _context.Inspections
+            var existingInspectionsData = await _context.Inspections
                 .Where(i => !i.IsDeleted && i.Tanggal >= since.AddDays(-7))
+                .Select(i => new InspectionReplicationDto
+                {
+                    Id = i.Id,
+                    Nik = i.Nik,
+                    Tanggal = i.Tanggal,
+                    JenisInspeksi = i.JenisInspeksi,
+                    Lokasi = i.Lokasi,
+                    PerusahaanId = i.PerusahaanId,
+                    Pja = i.Pja,
+                    NikPja = i.NikPja,
+                    DepartemenPja = i.DepartemenPja,
+                    Catatan = i.Catatan,
+                    CreatedAt = i.CreatedAt
+                })
                 .ToListAsync(cancellationToken);
 
-            var inspectionMap = existingInspections
-                .GroupBy(i => BuildInspectionKey(i.Nik, i.Tanggal, i.JenisInspeksi, i.Lokasi, i.PerusahaanId, null))
+            var inspectionMap = existingInspectionsData
+                .GroupBy(i => BuildInspectionKey(i.Nik ?? string.Empty, i.Tanggal, i.JenisInspeksi ?? string.Empty, i.Lokasi, i.PerusahaanId, null))
                 .ToDictionary(
                     g => g.Key,
                     g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
@@ -419,31 +451,24 @@ namespace MBS_SAP.Services
                     var hasInspectionChanges = false;
 
                     var newPja = Truncate(row.Pja, 150);
-                    if (!string.Equals(existingInspection.Pja ?? string.Empty, newPja ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-                    {
-                        existingInspection.Pja = newPja;
-                        hasInspectionChanges = true;
-                    }
-
                     var newNikPja = Truncate(row.NikPja, 50);
-                    if (!string.Equals(existingInspection.NikPja ?? string.Empty, newNikPja ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-                    {
-                        existingInspection.NikPja = newNikPja;
-                        hasInspectionChanges = true;
-                    }
-
                     var newDeptPja = Truncate(row.DepartemenPja, 150);
-                    if (!string.Equals(existingInspection.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-                    {
-                        existingInspection.DepartemenPja = newDeptPja;
-                        hasInspectionChanges = true;
-                    }
-
                     var newCatatan = Truncate(row.Catatan, 2000);
-                    if (!string.Equals(existingInspection.Catatan ?? string.Empty, newCatatan ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+
+                    if (!string.Equals(existingInspection.Pja ?? string.Empty, newPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingInspection.NikPja ?? string.Empty, newNikPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingInspection.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingInspection.Catatan ?? string.Empty, newCatatan ?? string.Empty, StringComparison.OrdinalIgnoreCase))
                     {
-                        existingInspection.Catatan = newCatatan;
-                        hasInspectionChanges = true;
+                        var realInspection = await _context.Inspections.FindAsync(new object[] { existingInspection.Id }, cancellationToken);
+                        if (realInspection != null)
+                        {
+                            realInspection.Pja = newPja;
+                            realInspection.NikPja = newNikPja;
+                            realInspection.DepartemenPja = newDeptPja;
+                            realInspection.Catatan = newCatatan;
+                            hasInspectionChanges = true;
+                        }
                     }
 
                     if (hasInspectionChanges)
@@ -480,7 +505,20 @@ namespace MBS_SAP.Services
                 };
 
                 _context.Inspections.Add(report);
-                inspectionMap[key] = report;
+                inspectionMap[key] = new InspectionReplicationDto
+                {
+                    Id = report.Id,
+                    Nik = report.Nik,
+                    Tanggal = report.Tanggal,
+                    JenisInspeksi = report.JenisInspeksi,
+                    Lokasi = report.Lokasi,
+                    PerusahaanId = report.PerusahaanId,
+                    Pja = report.Pja,
+                    NikPja = report.NikPja,
+                    DepartemenPja = report.DepartemenPja,
+                    Catatan = report.Catatan,
+                    CreatedAt = report.CreatedAt
+                };
                 result.InspectionInserted++;
             }
 
@@ -1578,6 +1616,37 @@ ORDER BY date, time, code;";
         {
             if (string.IsNullOrWhiteSpace(value)) return value;
             return value.Length <= maxLength ? value : value.Substring(0, maxLength);
+        }
+
+        private class HazardReplicationDto
+        {
+            public int Id { get; set; }
+            public string? Nik { get; set; }
+            public DateTime Tanggal { get; set; }
+            public string? Temuan { get; set; }
+            public string? Lokasi { get; set; }
+            public int? PerusahaanId { get; set; }
+            public string? StatusTemuan { get; set; }
+            public string? TingkatResiko { get; set; }
+            public string? Pja { get; set; }
+            public string? NikPja { get; set; }
+            public string? DepartemenPja { get; set; }
+            public DateTime CreatedAt { get; set; }
+        }
+
+        private class InspectionReplicationDto
+        {
+            public int Id { get; set; }
+            public string? Nik { get; set; }
+            public DateTime Tanggal { get; set; }
+            public string? JenisInspeksi { get; set; }
+            public string? Lokasi { get; set; }
+            public int? PerusahaanId { get; set; }
+            public string? Pja { get; set; }
+            public string? NikPja { get; set; }
+            public string? DepartemenPja { get; set; }
+            public string? Catatan { get; set; }
+            public DateTime CreatedAt { get; set; }
         }
     }
 }

@@ -1274,6 +1274,704 @@ namespace MBS_SAP.Controllers
             ws.Columns().AdjustToContents();
             if (ws.Column(2).Width < 18) ws.Column(2).Width = 18;
         }
+
+        [HttpGet]
+        public async Task<IActionResult> SapQuality(
+            int? companyId = null, 
+            string? programType = null, 
+            string? ratingFilter = null, 
+            string? search = null, 
+            string? startDate = null,
+            string? endDate = null,
+            int page = 1)
+        {
+            if (!IsAuthorizedUser())
+            {
+                return Forbid();
+            }
+
+            ViewData["HeaderTitle"] = "Audit Kualitas SAP";
+            ViewData["ActiveTab"] = "SapQuality";
+
+            DateTime start = DateTime.Today.AddDays(-30);
+            DateTime end = DateTime.Today;
+            if (DateTime.TryParse(startDate, out var parsedStart)) start = parsedStart.Date;
+            if (DateTime.TryParse(endDate, out var parsedEnd)) end = parsedEnd.Date;
+
+            ViewBag.StartDate = start.ToString("yyyy-MM-dd");
+            ViewBag.EndDate = end.ToString("yyyy-MM-dd");
+
+            var companies = await _context.Perusahaans
+                .Where(p => p.StatusAktif && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
+                .OrderBy(p => p.NamaPerusahaan)
+                .ToListAsync();
+            ViewBag.Companies = companies;
+            ViewBag.SelectedCompanyId = companyId;
+            ViewBag.SelectedProgramType = programType;
+            ViewBag.SelectedRatingFilter = ratingFilter;
+            ViewBag.SearchQuery = search;
+
+            var assessments = await _context.SapQualityAssessments.AsNoTracking().ToListAsync();
+            var assessmentDict = assessments.ToDictionary(a => $"{a.ProgramType.ToLowerInvariant()}_{a.ProgramId}");
+
+            var records = new List<SapQualityRecordViewModel>();
+            var normalizedSearch = search?.Trim().ToLowerInvariant();
+
+            // 1. Hazard Reports
+            if (string.IsNullOrEmpty(programType) || string.Equals(programType, "Hazard", StringComparison.OrdinalIgnoreCase))
+            {
+                var q = _context.HazardReports.AsNoTracking()
+                    .Where(h => !h.IsDeleted && h.Tanggal >= start && h.Tanggal <= end);
+                if (companyId.HasValue) q = q.Where(h => h.PerusahaanId == companyId.Value);
+                if (!string.IsNullOrEmpty(normalizedSearch))
+                {
+                    q = q.Where(h => h.Nik.ToLower().Contains(normalizedSearch) || 
+                                     h.Nama.ToLower().Contains(normalizedSearch) || 
+                                     h.Temuan.ToLower().Contains(normalizedSearch));
+                }
+
+                var list = await q.Select(h => new { h.Id, h.Tanggal, h.Nik, h.Nama, h.PerusahaanId, h.Temuan, h.Lokasi, h.FotoTemuan }).ToListAsync();
+                foreach (var r in list)
+                {
+                    var comp = companies.FirstOrDefault(c => c.PerusahaanId == r.PerusahaanId)?.NamaPerusahaan ?? "Unknown";
+                    var key = $"hazard_{r.Id}";
+                    assessmentDict.TryGetValue(key, out var assess);
+
+                    records.Add(new SapQualityRecordViewModel
+                    {
+                        ProgramType = "Hazard",
+                        Id = r.Id,
+                        Title = "Temuan Hazard",
+                        Description = r.Temuan ?? "-",
+                        Tanggal = r.Tanggal,
+                        Nik = r.Nik,
+                        Nama = r.Nama,
+                        PerusahaanId = r.PerusahaanId,
+                        CompanyName = comp,
+                        Lokasi = r.Lokasi,
+                        PhotoUrl = NormalizeImagePath(r.FotoTemuan),
+                        Rating = assess?.Rating,
+                        Notes = assess?.Notes
+                    });
+                }
+            }
+
+            // 2. Inspections
+            if (string.IsNullOrEmpty(programType) || string.Equals(programType, "Inspection", StringComparison.OrdinalIgnoreCase))
+            {
+                var q = _context.Inspections.AsNoTracking()
+                    .Where(i => !i.IsDeleted && i.Tanggal >= start && i.Tanggal <= end);
+                if (companyId.HasValue) q = q.Where(i => i.PerusahaanId == companyId.Value);
+                if (!string.IsNullOrEmpty(normalizedSearch))
+                {
+                    q = q.Where(i => i.Nik.ToLower().Contains(normalizedSearch) || 
+                                     i.Nama.ToLower().Contains(normalizedSearch) || 
+                                     i.JenisInspeksi.ToLower().Contains(normalizedSearch) ||
+                                     i.Catatan.ToLower().Contains(normalizedSearch));
+                }
+
+                var list = await q.Select(i => new { i.Id, i.Tanggal, i.Nik, i.Nama, i.PerusahaanId, i.JenisInspeksi, i.Catatan, i.Lokasi, i.LampiranJson }).ToListAsync();
+                foreach (var r in list)
+                {
+                    var comp = companies.FirstOrDefault(c => c.PerusahaanId == r.PerusahaanId)?.NamaPerusahaan ?? "Unknown";
+                    var key = $"inspection_{r.Id}";
+                    assessmentDict.TryGetValue(key, out var assess);
+
+                    records.Add(new SapQualityRecordViewModel
+                    {
+                        ProgramType = "Inspection",
+                        Id = r.Id,
+                        Title = $"Inspeksi: {r.JenisInspeksi}",
+                        Description = r.Catatan ?? "-",
+                        Tanggal = r.Tanggal,
+                        Nik = r.Nik,
+                        Nama = r.Nama,
+                        PerusahaanId = r.PerusahaanId,
+                        CompanyName = comp,
+                        Lokasi = r.Lokasi,
+                        PhotoUrl = ExtractFirstInspectionImageUrl(r.LampiranJson),
+                        Rating = assess?.Rating,
+                        Notes = assess?.Notes
+                    });
+                }
+            }
+
+            // 3. Safety Talks
+            if (string.IsNullOrEmpty(programType) || string.Equals(programType, "SafetyTalk", StringComparison.OrdinalIgnoreCase))
+            {
+                var q = _context.SafetyTalks.AsNoTracking()
+                    .Where(s => !s.IsDeleted && s.Tanggal >= start && s.Tanggal <= end);
+                if (companyId.HasValue) q = q.Where(s => s.PerusahaanId == companyId.Value);
+                if (!string.IsNullOrEmpty(normalizedSearch))
+                {
+                    q = q.Where(s => s.Nik.ToLower().Contains(normalizedSearch) || 
+                                     s.Nama.ToLower().Contains(normalizedSearch) || 
+                                     s.Judul.ToLower().Contains(normalizedSearch) ||
+                                     s.Keterangan.ToLower().Contains(normalizedSearch));
+                }
+
+                var list = await q.Select(s => new { s.Id, s.Tanggal, s.Nik, s.Nama, s.PerusahaanId, s.Judul, s.Keterangan, s.Lokasi, s.FotoKegiatan, s.FotoDiri }).ToListAsync();
+                foreach (var r in list)
+                {
+                    var comp = companies.FirstOrDefault(c => c.PerusahaanId == r.PerusahaanId)?.NamaPerusahaan ?? "Unknown";
+                    var key = $"safetytalk_{r.Id}";
+                    assessmentDict.TryGetValue(key, out var assess);
+
+                    records.Add(new SapQualityRecordViewModel
+                    {
+                        ProgramType = "SafetyTalk",
+                        Id = r.Id,
+                        Title = $"Safety Talk: {r.Judul}",
+                        Description = r.Keterangan ?? "-",
+                        Tanggal = r.Tanggal,
+                        Nik = r.Nik,
+                        Nama = r.Nama,
+                        PerusahaanId = r.PerusahaanId,
+                        CompanyName = comp,
+                        Lokasi = r.Lokasi,
+                        PhotoUrl = NormalizeImagePath(r.FotoKegiatan ?? r.FotoDiri),
+                        Rating = assess?.Rating,
+                        Notes = assess?.Notes
+                    });
+                }
+            }
+
+            // 4. Observations
+            if (string.IsNullOrEmpty(programType) || string.Equals(programType, "Observation", StringComparison.OrdinalIgnoreCase))
+            {
+                var q = from o in _context.Observations.AsNoTracking()
+                        join k in _context.Karyawans on o.Nik equals k.NoNik
+                        where !o.IsDeleted && o.Date >= start && o.Date <= end && k.StatusAktif
+                        select new { o.Id, Tanggal = o.Date, o.Nik, o.Nama, Kegiatan = o.KegiatanYangDiamati, Perihal = o.PerihalYangDiamati, o.Lokasi, PerusahaanId = k.IdPerusahaan, o.FotoUrl };
+
+                if (companyId.HasValue) q = q.Where(x => x.PerusahaanId == companyId.Value);
+                if (!string.IsNullOrEmpty(normalizedSearch))
+                {
+                    q = q.Where(x => x.Nik.ToLower().Contains(normalizedSearch) || 
+                                     x.Nama.ToLower().Contains(normalizedSearch) || 
+                                     (x.Kegiatan != null && x.Kegiatan.ToLower().Contains(normalizedSearch)) ||
+                                     (x.Perihal != null && x.Perihal.ToLower().Contains(normalizedSearch)));
+                }
+
+                var list = await q.ToListAsync();
+                foreach (var r in list)
+                {
+                    var comp = companies.FirstOrDefault(c => c.PerusahaanId == r.PerusahaanId)?.NamaPerusahaan ?? "Unknown";
+                    var key = $"observation_{r.Id}";
+                    assessmentDict.TryGetValue(key, out var assess);
+
+                    records.Add(new SapQualityRecordViewModel
+                    {
+                        ProgramType = "Observation",
+                        Id = r.Id,
+                        Title = $"Observasi: {r.Perihal}",
+                        Description = r.Kegiatan ?? "-",
+                        Tanggal = r.Tanggal,
+                        Nik = r.Nik,
+                        Nama = r.Nama,
+                        PerusahaanId = r.PerusahaanId,
+                        CompanyName = comp,
+                        Lokasi = r.Lokasi,
+                        PhotoUrl = NormalizeImagePath(r.FotoUrl),
+                        Rating = assess?.Rating,
+                        Notes = assess?.Notes
+                    });
+                }
+            }
+
+            // 5. Coachings
+            if (string.IsNullOrEmpty(programType) || string.Equals(programType, "Coaching", StringComparison.OrdinalIgnoreCase))
+            {
+                var q = _context.Coachings.AsNoTracking()
+                    .Where(c => !c.IsDeleted && c.Tanggal >= start && c.Tanggal <= end);
+                if (companyId.HasValue) q = q.Where(c => c.PerusahaanId == companyId.Value);
+                if (!string.IsNullOrEmpty(normalizedSearch))
+                {
+                    q = q.Where(c => c.Nik.ToLower().Contains(normalizedSearch) || 
+                                     c.Nama.ToLower().Contains(normalizedSearch) || 
+                                     (c.Tema != null && c.Tema.ToLower().Contains(normalizedSearch)) ||
+                                     (c.Feedback != null && c.Feedback.ToLower().Contains(normalizedSearch)));
+                }
+
+                var list = await q.Select(c => new { c.Id, c.Tanggal, c.Nik, c.Nama, c.PerusahaanId, c.Tema, c.Feedback, c.Lokasi, c.Foto }).ToListAsync();
+                foreach (var r in list)
+                {
+                    var comp = companies.FirstOrDefault(c => c.PerusahaanId == r.PerusahaanId)?.NamaPerusahaan ?? "Unknown";
+                    var key = $"coaching_{r.Id}";
+                    assessmentDict.TryGetValue(key, out var assess);
+
+                    records.Add(new SapQualityRecordViewModel
+                    {
+                        ProgramType = "Coaching",
+                        Id = r.Id,
+                        Title = $"Coaching: {r.Tema}",
+                        Description = r.Feedback ?? "-",
+                        Tanggal = r.Tanggal,
+                        Nik = r.Nik,
+                        Nama = r.Nama,
+                        PerusahaanId = r.PerusahaanId,
+                        CompanyName = comp,
+                        Lokasi = r.Lokasi,
+                        PhotoUrl = NormalizeImagePath(r.Foto),
+                        Rating = assess?.Rating,
+                        Notes = assess?.Notes
+                    });
+                }
+            }
+
+            if (!string.IsNullOrEmpty(ratingFilter) && ratingFilter != "all")
+            {
+                if (ratingFilter == "unrated")
+                {
+                    records = records.Where(r => r.Rating == null).ToList();
+                }
+                else if (ratingFilter == "low")
+                {
+                    records = records.Where(r => r.Rating.HasValue && r.Rating.Value <= 2).ToList();
+                }
+                else if (ratingFilter == "high")
+                {
+                    records = records.Where(r => r.Rating.HasValue && r.Rating.Value >= 3).ToList();
+                }
+            }
+
+            records = records.OrderByDescending(r => r.Tanggal).ThenByDescending(r => r.Id).ToList();
+
+            int pageSize = 15;
+            int totalCount = records.Count;
+            var paginated = records.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+            // Run AI Audit on-the-fly for only the paginated (displayed) unrated items to prevent heavy database writes
+            var newAssessments = new List<SapQualityAssessment>();
+            var systemUser = "System-ML";
+            var now = DateTime.Now;
+
+            foreach (var item in paginated)
+            {
+                if (item.Rating == null)
+                {
+                    var (suggestedRating, aiNotes) = Services.SapQualityMlEngine.AssessQuality(item.ProgramType, item.Title, item.Description);
+                    item.Rating = suggestedRating;
+                    item.Notes = aiNotes;
+
+                    newAssessments.Add(new SapQualityAssessment
+                    {
+                        ProgramType = item.ProgramType,
+                        ProgramId = item.Id,
+                        Rating = suggestedRating,
+                        Notes = aiNotes,
+                        CreatedBy = systemUser,
+                        CreatedAt = now
+                    });
+                }
+            }
+
+            if (newAssessments.Any())
+            {
+                _context.SapQualityAssessments.AddRange(newAssessments);
+                await _context.SaveChangesAsync();
+            }
+
+            ViewBag.CurrentPage = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalCount = totalCount;
+            ViewBag.TotalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            return View(paginated);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RateSap(string programType, int programId, int rating, string? notes)
+        {
+            if (!IsAuthorizedUser())
+            {
+                return Forbid();
+            }
+
+            if (rating < 1 || rating > 5)
+            {
+                return BadRequest("Rating harus bernilai 1 - 5.");
+            }
+
+            var typeLower = programType.Trim().ToLowerInvariant();
+            var allowedTypes = new[] { "hazard", "inspection", "safetytalk", "observation", "coaching" };
+            if (!allowedTypes.Contains(typeLower))
+            {
+                return BadRequest("Tipe program tidak valid.");
+            }
+
+            var assessment = await _context.SapQualityAssessments
+                .FirstOrDefaultAsync(a => a.ProgramType.ToLower() == typeLower && a.ProgramId == programId);
+
+            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                          ?? User.FindFirst("Nrp")?.Value 
+                          ?? User.Identity?.Name 
+                          ?? "System";
+
+            if (assessment == null)
+            {
+                assessment = new SapQualityAssessment
+                {
+                    ProgramType = programType,
+                    ProgramId = programId,
+                    Rating = rating,
+                    Notes = notes,
+                    CreatedBy = userNik,
+                    CreatedAt = DateTime.Now
+                };
+                _context.SapQualityAssessments.Add(assessment);
+            }
+            else
+            {
+                assessment.Rating = rating;
+                assessment.Notes = notes;
+                assessment.CreatedBy = userNik;
+                assessment.CreatedAt = DateTime.Now;
+                _context.SapQualityAssessments.Update(assessment);
+            }
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, rating = assessment.Rating, notes = assessment.Notes });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AutoAuditSap(string programType, int programId)
+        {
+            if (!IsAuthorizedUser())
+            {
+                return Forbid();
+            }
+
+            var typeLower = programType.Trim().ToLowerInvariant();
+            string title = "";
+            string description = "";
+
+            if (typeLower == "hazard")
+            {
+                var r = await _context.HazardReports.FindAsync(programId);
+                if (r != null) { title = "Temuan Hazard"; description = r.Temuan ?? ""; }
+            }
+            else if (typeLower == "inspection")
+            {
+                var r = await _context.Inspections.FindAsync(programId);
+                if (r != null) { title = $"Inspeksi: {r.JenisInspeksi}"; description = r.Catatan ?? ""; }
+            }
+            else if (typeLower == "safetytalk")
+            {
+                var r = await _context.SafetyTalks.FindAsync(programId);
+                if (r != null) { title = $"Safety Talk: {r.Judul}"; description = r.Keterangan ?? ""; }
+            }
+            else if (typeLower == "observation")
+            {
+                var r = await _context.Observations.FindAsync(programId);
+                if (r != null) { title = $"Observasi: {r.PerihalYangDiamati}"; description = r.KegiatanYangDiamati ?? ""; }
+            }
+            else if (typeLower == "coaching")
+            {
+                var r = await _context.Coachings.FindAsync(programId);
+                if (r != null) { title = $"Coaching: {r.Tema}"; description = r.Feedback ?? ""; }
+            }
+
+            if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
+            {
+                return NotFound("Data SAP tidak ditemukan.");
+            }
+
+            // Run quality assessment using ML Heuristics Engine
+            var (suggestedRating, aiNotes) = Services.SapQualityMlEngine.AssessQuality(programType, title, description);
+
+            var assessment = await _context.SapQualityAssessments
+                .FirstOrDefaultAsync(a => a.ProgramType.ToLower() == typeLower && a.ProgramId == programId);
+
+            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                          ?? User.FindFirst("Nrp")?.Value 
+                          ?? User.Identity?.Name 
+                          ?? "System-ML";
+
+            if (assessment == null)
+            {
+                assessment = new SapQualityAssessment
+                {
+                    ProgramType = programType,
+                    ProgramId = programId,
+                    Rating = suggestedRating,
+                    Notes = aiNotes,
+                    CreatedBy = userNik,
+                    CreatedAt = DateTime.Now
+                };
+                _context.SapQualityAssessments.Add(assessment);
+            }
+            else
+            {
+                assessment.Rating = suggestedRating;
+                assessment.Notes = aiNotes;
+                assessment.CreatedBy = userNik;
+                assessment.CreatedAt = DateTime.Now;
+                _context.SapQualityAssessments.Update(assessment);
+            }
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, rating = assessment.Rating, notes = assessment.Notes });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetSapDetails(string programType, int programId)
+        {
+            if (!IsAuthorizedUser())
+            {
+                return Forbid();
+            }
+
+            var typeLower = programType.Trim().ToLowerInvariant();
+            object? data = null;
+
+            if (typeLower == "hazard")
+            {
+                var r = await _context.HazardReports.AsNoTracking().FirstOrDefaultAsync(x => x.Id == programId);
+                if (r != null)
+                {
+                    var comp = (await _context.Perusahaans.FindAsync(r.PerusahaanId))?.NamaPerusahaan ?? "Unknown";
+                    data = new {
+                        Type = "Hazard",
+                        r.Id,
+                        Date = r.Tanggal.ToString("yyyy-MM-dd"),
+                        Time = r.Waktu.ToString(@"hh\:mm"),
+                        r.Nama,
+                        r.Nik,
+                        CompanyName = comp,
+                        r.Area,
+                        r.Lokasi,
+                        r.DetilLokasi,
+                        Title = "Temuan Hazard",
+                        Description = r.Temuan ?? "-",
+                        ExtraInfo = $"Kategori: {r.KategoriBahaya} | Jenis: {r.JenisBahaya} | Resiko: {r.TingkatResiko} | Perbaikan: {r.Perbaikan}",
+                        PhotoUrl = NormalizeImagePath(r.FotoTemuan)
+                    };
+                }
+            }
+            else if (typeLower == "inspection")
+            {
+                var r = await _context.Inspections.AsNoTracking().FirstOrDefaultAsync(x => x.Id == programId);
+                if (r != null)
+                {
+                    var comp = (await _context.Perusahaans.FindAsync(r.PerusahaanId))?.NamaPerusahaan ?? "Unknown";
+                    data = new {
+                        Type = "Inspection",
+                        r.Id,
+                        Date = r.Tanggal.ToString("yyyy-MM-dd"),
+                        Time = r.Waktu.ToString(@"hh\:mm"),
+                        r.Nama,
+                        r.Nik,
+                        CompanyName = comp,
+                        r.Area,
+                        r.Lokasi,
+                        r.DetilLokasi,
+                        Title = $"Inspeksi: {r.JenisInspeksi}",
+                        Description = r.Catatan ?? "-",
+                        ExtraInfo = "Evaluasi Kriteria Inspeksi Terlampir",
+                        PhotoUrl = ExtractFirstInspectionImageUrl(r.LampiranJson)
+                    };
+                }
+            }
+            else if (typeLower == "safetytalk")
+            {
+                var r = await _context.SafetyTalks.AsNoTracking().FirstOrDefaultAsync(x => x.Id == programId);
+                if (r != null)
+                {
+                    var comp = (await _context.Perusahaans.FindAsync(r.PerusahaanId))?.NamaPerusahaan ?? "Unknown";
+                    data = new {
+                        Type = "Safety Talk",
+                        r.Id,
+                        Date = r.Tanggal.ToString("yyyy-MM-dd"),
+                        Time = r.Waktu.ToString(@"hh\:mm"),
+                        r.Nama,
+                        r.Nik,
+                        CompanyName = comp,
+                        r.Area,
+                        r.Lokasi,
+                        r.DetilLokasi,
+                        Title = $"Safety Talk: {r.Judul}",
+                        Description = r.Keterangan ?? "-",
+                        ExtraInfo = "",
+                        PhotoUrl = NormalizeImagePath(r.FotoKegiatan ?? r.FotoDiri)
+                    };
+                }
+            }
+            else if (typeLower == "observation")
+            {
+                var r = await _context.Observations.AsNoTracking().FirstOrDefaultAsync(x => x.Id == programId);
+                if (r != null)
+                {
+                    var k = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(x => x.NoNik == r.Nik);
+                    var comp = k != null ? (await _context.Perusahaans.FindAsync(k.IdPerusahaan))?.NamaPerusahaan ?? "Unknown" : "Unknown";
+                    data = new {
+                        Type = "Observation",
+                        r.Id,
+                        Date = r.Date.ToString("yyyy-MM-dd"),
+                        Time = "00:00",
+                        r.Nama,
+                        r.Nik,
+                        CompanyName = comp,
+                        r.Area,
+                        r.Lokasi,
+                        r.DetilLokasi,
+                        Title = $"Observasi: {r.PerihalYangDiamati}",
+                        Description = r.KegiatanYangDiamati ?? "-",
+                        ExtraInfo = $"Resiko: {r.TingkatResiko} | Hasil: {r.HasilObservasi}",
+                        PhotoUrl = NormalizeImagePath(r.FotoUrl)
+                    };
+                }
+            }
+            else if (typeLower == "coaching")
+            {
+                var r = await _context.Coachings.AsNoTracking().FirstOrDefaultAsync(x => x.Id == programId);
+                if (r != null)
+                {
+                    var comp = (await _context.Perusahaans.FindAsync(r.PerusahaanId))?.NamaPerusahaan ?? "Unknown";
+                    data = new {
+                        Type = "Coaching",
+                        r.Id,
+                        Date = r.Tanggal.ToString("yyyy-MM-dd"),
+                        Time = r.Waktu.ToString(@"hh\:mm"),
+                        r.Nama,
+                        r.Nik,
+                        CompanyName = comp,
+                        r.Area,
+                        r.Lokasi,
+                        r.DetilLokasi,
+                        Title = $"Coaching: {r.Tema}",
+                        Description = r.Feedback ?? "-",
+                        ExtraInfo = $"Komitmen: {r.Komitmen}",
+                        PhotoUrl = NormalizeImagePath(r.Foto)
+                    };
+                }
+            }
+
+            if (data == null) return NotFound("Data tidak ditemukan.");
+            return Json(data);
+        }
+
+        [HttpGet("Admin/SapQuality/Dasboard")]
+        public async Task<IActionResult> SapQualityDasboard()
+        {
+            if (!IsAuthorizedUser())
+            {
+                return Forbid();
+            }
+
+            var assessments = await _context.SapQualityAssessments.AsNoTracking().ToListAsync();
+
+            // Total active counts of each SAP type (all submissions)
+            int totalHazard = await _context.HazardReports.CountAsync(x => !x.IsDeleted);
+            int totalInspection = await _context.Inspections.CountAsync(x => !x.IsDeleted);
+            int totalSafetyTalk = await _context.SafetyTalks.CountAsync(x => !x.IsDeleted);
+            int totalObservation = await _context.Observations.CountAsync(x => !x.IsDeleted);
+            int totalCoaching = await _context.Coachings.CountAsync(x => !x.IsDeleted);
+
+            int totalAllSap = totalHazard + totalInspection + totalSafetyTalk + totalObservation + totalCoaching;
+
+            // Audit statistics
+            int totalAssessed = assessments.Count;
+            int star1 = assessments.Count(a => a.Rating == 1);
+            int star2 = assessments.Count(a => a.Rating == 2);
+            int star3 = assessments.Count(a => a.Rating == 3);
+            int star4 = assessments.Count(a => a.Rating == 4);
+            int star5 = assessments.Count(a => a.Rating == 5);
+
+            int kejarTarget = star1 + star2;
+            int kualitasBaik = star3 + star4 + star5;
+
+            // Assessed counts by type
+            int assessedHazard = assessments.Count(a => string.Equals(a.ProgramType, "Hazard", StringComparison.OrdinalIgnoreCase));
+            int assessedInspection = assessments.Count(a => string.Equals(a.ProgramType, "Inspection", StringComparison.OrdinalIgnoreCase));
+            int assessedSafetyTalk = assessments.Count(a => string.Equals(a.ProgramType, "SafetyTalk", StringComparison.OrdinalIgnoreCase));
+            int assessedObservation = assessments.Count(a => string.Equals(a.ProgramType, "Observation", StringComparison.OrdinalIgnoreCase));
+            int assessedCoaching = assessments.Count(a => string.Equals(a.ProgramType, "Coaching", StringComparison.OrdinalIgnoreCase));
+
+            ViewBag.TotalAllSap = totalAllSap;
+            ViewBag.TotalHazard = totalHazard;
+            ViewBag.TotalInspection = totalInspection;
+            ViewBag.TotalSafetyTalk = totalSafetyTalk;
+            ViewBag.TotalObservation = totalObservation;
+            ViewBag.TotalCoaching = totalCoaching;
+
+            ViewBag.TotalAssessed = totalAssessed;
+            ViewBag.Star1 = star1;
+            ViewBag.Star2 = star2;
+            ViewBag.Star3 = star3;
+            ViewBag.Star4 = star4;
+            ViewBag.Star5 = star5;
+            ViewBag.KejarTarget = kejarTarget;
+            ViewBag.KualitasBaik = kualitasBaik;
+
+            ViewBag.AssessedHazard = assessedHazard;
+            ViewBag.AssessedInspection = assessedInspection;
+            ViewBag.AssessedSafetyTalk = assessedSafetyTalk;
+            ViewBag.AssessedObservation = assessedObservation;
+            ViewBag.AssessedCoaching = assessedCoaching;
+
+            return View();
+        }
+
+        private static string? NormalizeImagePath(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return null;
+            var trimmed = path.Trim();
+            if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || trimmed.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return "/ImageProxy/Get?url=" + Uri.EscapeDataString(trimmed);
+            }
+            if (trimmed.StartsWith("data:image", StringComparison.OrdinalIgnoreCase))
+            {
+                return trimmed;
+            }
+            return trimmed;
+        }
+
+        private static string? ExtractFirstInspectionImageUrl(string? lampiranJson)
+        {
+            if (string.IsNullOrWhiteSpace(lampiranJson)) return null;
+            try
+            {
+                if (lampiranJson.Trim().StartsWith("["))
+                {
+                    var list = JsonSerializer.Deserialize<List<string>>(lampiranJson);
+                    if (list != null && list.Count > 0) return NormalizeImagePath(list[0]);
+                }
+                else
+                {
+                    var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(lampiranJson);
+                    if (dict != null && dict.Count > 0)
+                    {
+                        foreach (var val in dict.Values)
+                        {
+                            if (!string.IsNullOrWhiteSpace(val)) return NormalizeImagePath(val);
+                        }
+                    }
+                }
+            }
+            catch {}
+            return null;
+        }
+    }
+
+    public class SapQualityRecordViewModel
+    {
+        public string ProgramType { get; set; } = null!;
+        public int Id { get; set; }
+        public string Title { get; set; } = null!;
+        public string Description { get; set; } = null!;
+        public DateTime Tanggal { get; set; }
+        public string Nik { get; set; } = null!;
+        public string Nama { get; set; } = null!;
+        public int? PerusahaanId { get; set; }
+        public string CompanyName { get; set; } = null!;
+        public string? Lokasi { get; set; }
+        public string? PhotoUrl { get; set; }
+        public int? Rating { get; set; }
+        public string? Notes { get; set; }
     }
 }
 

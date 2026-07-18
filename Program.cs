@@ -176,6 +176,21 @@ using (var scope = app.Services.CreateScope())
                 );
             END
 
+            IF OBJECT_ID(N'[dbo].[tbl_m_penilaian_kualitas_sap]', N'U') IS NULL
+            BEGIN
+                CREATE TABLE [dbo].[tbl_m_penilaian_kualitas_sap] (
+                    [id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    [program_type] VARCHAR(50) NOT NULL,
+                    [program_id] INT NOT NULL,
+                    [rating] INT NOT NULL,
+                    [notes] NVARCHAR(1000) NULL,
+                    [created_by] NVARCHAR(150) NOT NULL,
+                    [created_at] DATETIME NOT NULL DEFAULT GETDATE()
+                );
+                CREATE NONCLUSTERED INDEX [IX_tbl_m_penilaian_kualitas_sap_program] 
+                ON [dbo].[tbl_m_penilaian_kualitas_sap] ([program_type], [program_id]);
+            END
+
             -- Add non-clustered composite indexes to prevent execution timeouts on safety calculations
             IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_hazard_report_nik_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_hazard_report'))
             BEGIN
@@ -188,6 +203,13 @@ using (var scope = app.Services.CreateScope())
             BEGIN
                 CREATE NONCLUSTERED INDEX IX_tbl_t_hazard_report_is_deleted_created_at
                 ON tbl_t_hazard_report (is_deleted, created_at DESC);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_hazard_report_is_deleted_tanggal' AND object_id = OBJECT_ID('tbl_t_hazard_report'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_hazard_report_is_deleted_tanggal
+                ON tbl_t_hazard_report (is_deleted, tanggal)
+                INCLUDE (nik, temuan, lokasi, perusahaan_id, status_temuan, created_at);
             END
 
             IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_hazard_report_perusahaan_deleted_created' AND object_id = OBJECT_ID('tbl_t_hazard_report'))
@@ -222,6 +244,13 @@ using (var scope = app.Services.CreateScope())
                 CREATE NONCLUSTERED INDEX IX_tbl_t_inspection_nik_pja_is_deleted_created_at
                 ON tbl_t_inspection (nik_pja, is_deleted, created_at DESC)
                 INCLUDE (tanggal, jenis_inspeksi, area, nama);
+            END
+
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_inspection_is_deleted_tanggal' AND object_id = OBJECT_ID('tbl_t_inspection'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_inspection_is_deleted_tanggal
+                ON tbl_t_inspection (is_deleted, tanggal)
+                INCLUDE (nik, jenis_inspeksi, lokasi, perusahaan_id, pja, nik_pja, departemen_pja, catatan, created_at);
             END
 
             IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_safety_talk_nik_is_deleted_created_at' AND object_id = OBJECT_ID('tbl_t_safety_talk'))
