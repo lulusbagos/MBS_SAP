@@ -527,17 +527,15 @@
         const GOL_C_COUNT = @MBS_SAP.Controllers.P2hController.GolC.Length;
 
         // ========= METADATA GATE LOGIC =========
+        // Checklist unlocks as soon as 4 core vehicle fields are filled.
+        // Foto speedometer is still validated (required) at form submit.
         function checkMetadataComplete() {
             const noLambung = $('#noLambungInput').val().trim();
             const merek = $('#merek').val().trim();
             const jenis = $('#jenisKendaraan').val();
             const km = $('#kilometer').val().trim();
-            const isEdit = $('#p2hId').val() !== '';
-            const hasSpeedo = isEdit 
-                ? (!$('#speedoPreviewWrapper').hasClass('d-none') || $('#fotoSpeedometer')[0].files.length > 0)
-                : ($('#fotoSpeedometer')[0].files.length > 0);
 
-            const isComplete = noLambung && merek && jenis && km && hasSpeedo;
+            const isComplete = noLambung && merek && jenis && km;
             const $lock = $('#lockMask');
             const $quickBtns = $('#quickActionBtns');
 
@@ -557,13 +555,9 @@
             const merek = $('#merek').val().trim();
             const jenis = $('#jenisKendaraan').val();
             const km = $('#kilometer').val().trim();
-            const isEdit = $('#p2hId').val() !== '';
-            const hasSpeedo = isEdit
-                ? (!$('#speedoPreviewWrapper').hasClass('d-none') || $('#fotoSpeedometer')[0].files.length > 0)
-                : ($('#fotoSpeedometer')[0].files.length > 0);
 
-            if (!noLambung || !merek || !jenis || !km || !hasSpeedo) {
-                alert('Harap lengkapi data kendaraan (No. Lambung, Merek, Jenis, Odometer, Foto Speedometer) terlebih dahulu.');
+            if (!noLambung || !merek || !jenis || !km) {
+                alert('Harap lengkapi data kendaraan (No. Lambung, Merek, Jenis, Odometer) terlebih dahulu.');
                 return;
             }
 
@@ -662,9 +656,8 @@
         $(document).ready(function() {
             // ========= METADATA GATE LISTENERS =========
             $('#noLambungInput, #merek, #kilometer').on('input change', checkMetadataComplete);
-            $('#jenisKendaraan, #simperKimper').on('change', checkMetadataComplete);
-            $('#fotoSpeedometer').on('change', checkMetadataComplete);
-            // Initial check
+            $('#jenisKendaraan').on('change', checkMetadataComplete);
+            // Initial check on page load
             checkMetadataComplete();
 
             // Autocomplete Search-and-Select dropdown logic for No Lambung
