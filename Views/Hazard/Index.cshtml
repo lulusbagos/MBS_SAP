@@ -49,7 +49,7 @@
                         <label class="form-label-sap" for="tanggal">Tanggal Temuan</label>
                         <div class="input-sap-wrapper">
                             <i class="bi bi-calendar-event-fill input-sap-icon"></i>
-                            <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" min="@DateTime.Today.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                            <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                         </div>
                     </div>
                     <div class="col-md-6 form-group-sap">
@@ -477,26 +477,75 @@
             </div>
         </div>
     </div>
+<!-- Loading Overlay -->
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; color: white; font-family: 'Poppins', sans-serif;">
+    <div class="loader-spinner-container" style="position: relative; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 24px;">
+        <div class="loader-circle" style="box-sizing: border-box; width: 80px; height: 80px; border: 4px solid rgba(255, 255, 255, 0.1); border-radius: 50%; border-top-color: var(--color-orange); border-bottom-color: var(--color-orange); animation: sap-spin 1.5s linear infinite;"></div>
+        <i class="bi bi-cloud-arrow-up-fill" style="position: absolute; font-size: 32px; color: white; animation: sap-bounce 2s ease-in-out infinite;"></i>
+    </div>
+    <h5 style="font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Memproses Laporan Hazard</h5>
+    <p style="font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 0; text-align: center; max-width: 320px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">Sedang menyimpan laporan temuan hazard dan mengunggah lampiran foto. Mohon jangan menutup halaman ini...</p>
 </div>
+
+<style>
+    @@keyframes sap-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    @@keyframes sap-bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+</style>
 
 @section Scripts {
     <script>
-        $(document).ready(function() {
-            $('#hazardForm').on('submit', function(e) {
-                var perbaikan = $('#perbaikan').val().trim();
-                var nikPja = $('#nikPja').val().trim();
-                var pjaName = $('#pja').val().trim();
-                
-                // If the user hasn't filled Tindakan Perbaikan AND hasn't assigned a PJA
-                if (perbaikan === '' && nikPja === '' && pjaName === '') {
-                    var confirmMsg = "Anda yakin hazard ini tidak di-close (Tindakan Perbaikan kosong) atau dilaporkan ke PJA terkait?\n\nHazard ini akan berstatus OPEN tanpa penanggung jawab dan dapat menjadi overdue hazard bagi perusahaan Anda.";
-                    if (!confirm(confirmMsg)) {
-                        e.preventDefault();
-                        return false;
-                    }
-                }
-            });
-        });
+        let hazardFormSubmitting = false;
+
+        function showSapToast(message, type = 'warning') {
+            $('.sap-custom-toast').remove();
+            
+            let iconClass = 'bi-exclamation-triangle-fill';
+            let bgColor = 'rgba(245, 158, 11, 0.95)';
+            let textColor = '#ffffff';
+            let borderStyle = '1px solid rgba(245, 158, 11, 0.3)';
+            
+            if (type === 'success') {
+                iconClass = 'bi-check-circle-fill';
+                bgColor = 'rgba(34, 197, 94, 0.95)';
+                borderStyle = '1px solid rgba(34, 197, 94, 0.3)';
+            } else if (type === 'danger' || type === 'error') {
+                iconClass = 'bi-x-circle-fill';
+                bgColor = 'rgba(239, 68, 68, 0.95)';
+                borderStyle = '1px solid rgba(239, 68, 68, 0.3)';
+            }
+            
+            const toastHtml = `
+                <div class="sap-custom-toast shadow" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: ${bgColor}; color: ${textColor}; border: ${borderStyle}; padding: 12px 24px; border-radius: 12px; z-index: 10000; display: flex; align-items: center; gap: 12px; font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 600; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); backdrop-filter: blur(8px); min-width: 320px; justify-content: center; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);">
+                    <i class="bi ${iconClass}" style="font-size: 16px;"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            $('body').append(toastHtml);
+            
+            setTimeout(function() {
+                $('.sap-custom-toast').css({
+                    'opacity': '1',
+                    'transform': 'translateX(-50%) translateY(0)'
+                });
+            }, 50);
+            
+            setTimeout(function() {
+                $('.sap-custom-toast').css({
+                    'opacity': '0',
+                    'transform': 'translateX(-50%) translateY(-20px)'
+                });
+                setTimeout(function() {
+                    $('.sap-custom-toast').remove();
+                }, 300);
+            }, 4000);
+        }
         function openCloseHazard(id, nikPja, pjaName) {
             $('#closeHazardId').val(id);
             $('#closeHazardNote').val('');
@@ -1168,13 +1217,13 @@
                 $('#hazardForm').find('.sap-err-msg').remove();
 
                 const fieldsToValidate = {
-                    'tanggal': 'Tanggal',
-                    'waktu': 'Waktu',
+                    'tanggal': 'Tanggal Temuan',
+                    'waktuStr': 'Waktu Temuan',
                     'area': 'Area Utama',
                     'lokasi': 'Lokasi Spesifik',
-                    'Temuan': 'Temuan / Bahaya',
                     'kategoriBahaya': 'Kategori Bahaya',
-                    'tingkatResiko': 'Tingkat Resiko'
+                    'jenisBahaya': 'Jenis Bahaya',
+                    'temuan': 'Detil Temuan Hazard'
                 };
 
                 // Validate visible input/select/textarea
@@ -1225,6 +1274,7 @@
 
                 if (!isValid) {
                     e.preventDefault();
+                    showSapToast("Gagal menyimpan: Silakan lengkapi kolom yang wajib diisi!", "warning");
                     if (firstInvalid) {
                         $('html, body').animate({
                             scrollTop: firstInvalid.offset().top - 120
@@ -1233,9 +1283,31 @@
                     return false;
                 }
 
+                var perbaikan = $('#perbaikan').val().trim();
+                var nikPja = $('#nikPja').val().trim();
+                var pjaName = $('#pja').val().trim();
+                
+                // If the user hasn't filled Tindakan Perbaikan AND hasn't assigned a PJA
+                if (perbaikan === '' && nikPja === '' && pjaName === '') {
+                    var confirmMsg = "Anda yakin hazard ini tidak di-close (Tindakan Perbaikan kosong) atau dilaporkan ke PJA terkait?\n\nHazard ini akan berstatus OPEN tanpa penanggung jawab dan dapat menjadi overdue hazard bagi perusahaan Anda.";
+                    if (!confirm(confirmMsg)) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+
+                // Show loading screen overlay
+                $('#loadingOverlay').css('display', 'flex');
+
                 hazardFormSubmitting = true;
                 var btn = $('#btnSubmitHazard');
-                btn.prop('disabled', true);
+                
+                // Safari-safe double-click prevention
+                btn.css('pointer-events', 'none');
+                setTimeout(function() {
+                    btn.prop('disabled', true);
+                }, 100);
+
                 btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');
                 
                 // Allow form to submit normally

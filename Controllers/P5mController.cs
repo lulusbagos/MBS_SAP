@@ -177,18 +177,20 @@ namespace MBS_SAP.Controllers
                 var normalizedTanggal = tanggal == default ? DateTime.Today : tanggal;
 
                 // Guard backend against near-duplicate submit (double-click / retry) for new session.
-                var duplicateWindowStart = DateTime.Now.AddSeconds(-20);
+                // Hanya cek berdasarkan tanggal, area, lokasi, topik & judul (tanpa waktu eksak)
+                // agar submit dari browser berbeda tidak diblokir oleh race condition.
+                var duplicateWindowStart = DateTime.Now.AddSeconds(-30);
                 var duplicatedP5m = await _context.P5ms
                     .AsNoTracking()
                     .Where(p => !p.IsDeleted
                                 && p.Nik == userNik
-                                && p.CreatedAt >= duplicateWindowStart)
-                    .FirstOrDefaultAsync(p => p.Tanggal.Date == normalizedTanggal.Date
-                                           && p.Waktu == waktu
-                                           && (p.Area ?? string.Empty).Trim() == normalizedArea
-                                           && (p.Lokasi ?? string.Empty).Trim() == normalizedLokasi
-                                           && (p.Topik ?? string.Empty).Trim() == normalizedTopik
-                                           && (p.Judul ?? string.Empty).Trim() == normalizedJudul);
+                                && p.CreatedAt >= duplicateWindowStart
+                                && p.Tanggal.Date == normalizedTanggal.Date
+                                && (p.Area ?? string.Empty).Trim() == normalizedArea
+                                && (p.Lokasi ?? string.Empty).Trim() == normalizedLokasi
+                                && (p.Topik ?? string.Empty).Trim() == normalizedTopik
+                                && (p.Judul ?? string.Empty).Trim() == normalizedJudul)
+                    .FirstOrDefaultAsync();
 
                 if (duplicatedP5m != null)
                 {
@@ -241,7 +243,7 @@ namespace MBS_SAP.Controllers
                 TempData["SuccessMessage"] = "Laporan P5M berhasil disimpan!";
             }
 
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpGet]
