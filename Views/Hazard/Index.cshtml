@@ -63,13 +63,22 @@
 
                 <div class="row">
                     <div class="col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="area">Area Utama</label>
+                        <label class="form-label-sap" for="areaSearch">Area Utama</label>
                         <div class="d-flex align-items-center gap-2">
-                            <div class="input-sap-wrapper flex-grow-1 mb-0">
-                                <i class="bi bi-geo-alt-fill input-sap-icon"></i>
-                                <select id="area" name="area" class="input-sap" required>
-                                    <option value="" disabled selected>Loading Area...</option>
+                            <div class="position-relative flex-grow-1 mb-0">
+                                <div class="input-sap-wrapper mb-0">
+                                    <i class="bi bi-geo-alt-fill input-sap-icon"></i>
+                                    <input type="text" id="areaSearch" class="input-sap text-uppercase" placeholder="Ketik untuk mencari area..." autocomplete="off" style="padding-right: 36px;" />
+                                    <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleAreaDropdown"></i>
+                                </div>
+                                <!-- Hidden select for actual form submission -->
+                                <select id="area" name="area" required style="display:none;">
+                                    <option value="" disabled selected></option>
                                 </select>
+                                <!-- Dropdown list -->
+                                <div id="areaDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background:#1a2332; border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
+                                    <!-- Populated by JS -->
+                                </div>
                             </div>
                             <button type="button" class="btn btn-primary shadow-sm" style="height: 46px; border-radius: 12px; padding: 0 16px; background-color: var(--color-primary); border: none;" onclick="$('#addAreaModal').modal('show')" title="Tambah Area Baru">
                                 <i class="bi bi-plus-lg"></i>
@@ -887,32 +896,104 @@
                     globalAreasList = data;
                     renderAreasList();
                     
+                    // Keep hidden select in sync (for form submission)
                     var select = $('#area');
                     select.empty();
-                    select.append('<option value="" disabled selected>Pilih Area...</option>');
+                    select.append('<option value="" disabled selected></option>');
                     if (data && data.length > 0) {
                         data.forEach(function(item) {
                             select.append('<option value="' + item.namaArea + '">' + item.namaArea + '</option>');
                         });
-                    } else {
-                        select.append('<option value="" disabled>Belum ada Area Utama</option>');
                     }
                     
+                    // If a value was pre-selected (edit mode), show it in the search input
                     if (selectedValue) {
                         select.val(selectedValue);
+                        $('#areaSearch').val(selectedValue);
                     }
                     
-                    select.trigger('refresh');
+                    // Re-initialize the searchable dropdown with fresh data
+                    renderAreaDropdown('');
                 },
                 error: function(xhr, status, error) {
                     console.error("Failed to load areas:", error);
-                    var select = $('#area');
-                    select.empty();
-                    select.append('<option value="" disabled>Gagal memuat area</option>');
-                    select.trigger('refresh');
+                    $('#areaSearch').attr('placeholder', 'Gagal memuat area...');
                 }
             });
         }
+
+        // ===== SEARCHABLE AREA DROPDOWN LOGIC =====
+        function renderAreaDropdown(filterText) {
+            var menu = $('#areaDropdownMenu');
+            menu.empty();
+            var clean = (filterText || '').trim().toLowerCase();
+            var filtered = globalAreasList.filter(function(a) {
+                return a.namaArea.toLowerCase().includes(clean);
+            });
+
+            if (filtered.length > 0) {
+                filtered.forEach(function(item) {
+                    var btn = $('<button type="button"></button>')
+                        .addClass('d-block w-100 text-start text-white py-2 px-3 border-0 area-option-btn')
+                        .css({
+                            background: 'none',
+                            fontSize: '13px',
+                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                            cursor: 'pointer'
+                        })
+                        .html('<i class="bi bi-geo-alt-fill me-2 text-primary"></i>' + item.namaArea)
+                        .on('mouseenter', function() { $(this).css('background', 'rgba(59,130,246,0.15)'); })
+                        .on('mouseleave', function() { $(this).css('background', 'none'); })
+                        .on('click', function() {
+                            selectArea(item.namaArea);
+                        });
+                    menu.append(btn);
+                });
+            } else if (clean.length > 0) {
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Area "' + filterText + '" tidak ditemukan</div>');
+            } else {
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada Area Utama. Klik + untuk tambah.</div>');
+            }
+            
+            if (menu.children().length > 0) menu.show(); else menu.hide();
+        }
+
+        function selectArea(namaArea) {
+            $('#areaSearch').val(namaArea);
+            $('#area').val(namaArea);
+            $('#areaDropdownMenu').hide();
+            $('#areaSearch').removeClass('is-invalid');
+        }
+
+        $(document).ready(function() {
+            // Toggle area dropdown on chevron click
+            $('#toggleAreaDropdown').on('click', function() {
+                var menu = $('#areaDropdownMenu');
+                if (menu.is(':visible')) {
+                    menu.hide();
+                } else {
+                    renderAreaDropdown($('#areaSearch').val());
+                    menu.show();
+                }
+            });
+
+            // Filter dropdown on keyup
+            $('#areaSearch').on('input keyup', function() {
+                renderAreaDropdown($(this).val());
+            });
+
+            // Open dropdown on focus
+            $('#areaSearch').on('focus', function() {
+                renderAreaDropdown($(this).val());
+            });
+
+            // Close dropdown when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
+                    $('#areaDropdownMenu').hide();
+                }
+            });
+        });
 
         function saveNewArea() {
             var btn = $('#btnSaveArea');
@@ -1128,6 +1209,17 @@
                     
                     if ($('#pjaSearchInput').closest('.form-group-sap').find('.sap-err-msg').length === 0) {
                         $('#pjaSearchInput').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Penanggung Jawab Area (PJA) wajib dipilih dari pencarian.</span>');
+                    }
+                }
+
+                // Validate Area Utama (searchable input)
+                const areaVal = $('#area').val();
+                if (!areaVal || areaVal.trim() === '') {
+                    isValid = false;
+                    $('#areaSearch').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#areaSearch');
+                    if ($('#areaSearch').closest('.form-group-sap').find('.sap-err-msg').length === 0) {
+                        $('#areaSearch').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Area Utama wajib dipilih dari daftar.</span>');
                     }
                 }
 
