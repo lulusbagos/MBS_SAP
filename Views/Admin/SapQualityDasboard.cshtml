@@ -2,10 +2,6 @@
     ViewData["Title"] = "Dashboard Kualitas SAP";
     
     // Safety calculations
-    double assessedPercentage = ViewBag.TotalAllSap > 0 
-        ? Math.Round((double)ViewBag.TotalAssessed / ViewBag.TotalAllSap * 100.0, 1) 
-        : 0;
-
     double goodPercentage = ViewBag.TotalAssessed > 0 
         ? Math.Round((double)ViewBag.KualitasBaik / ViewBag.TotalAssessed * 100.0, 1) 
         : 0;
@@ -13,9 +9,27 @@
     double targetPercentage = ViewBag.TotalAssessed > 0 
         ? Math.Round((double)ViewBag.KejarTarget / ViewBag.TotalAssessed * 100.0, 1) 
         : 0;
+
+    int selectedYear = ViewBag.SelectedYear as int? ?? 0;
+    int selectedMonth = ViewBag.SelectedMonth as int? ?? 0;
+
+    var months = new[] {
+        new { Val = 1, Name = "Januari" },
+        new { Val = 2, Name = "Februari" },
+        new { Val = 3, Name = "Maret" },
+        new { Val = 4, Name = "April" },
+        new { Val = 5, Name = "Mei" },
+        new { Val = 6, Name = "Juni" },
+        new { Val = 7, Name = "Juli" },
+        new { Val = 8, Name = "Agustus" },
+        new { Val = 9, Name = "September" },
+        new { Val = 10, Name = "Oktober" },
+        new { Val = 11, Name = "November" },
+        new { Val = 12, Name = "Desember" }
+    };
 }
 
-<div class="animate-fade-in pb-4" style="color: #0f172a; font-family: 'Inter', sans-serif;">
+<div class="animate-fade-in pb-5" style="color: #0f172a; font-family: 'Inter', sans-serif;">
     <!-- Header Block -->
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
@@ -24,9 +38,57 @@
             </div>
             <p class="screen-subtitle mb-0" style="font-size: 13.5px; color: #475569;">Persentase kelayakan data Keselamatan Kerja dan identifikasi formalitas pelaporan.</p>
         </div>
-        <a href="/Admin/SapQuality" class="btn btn-outline-secondary py-2.5 px-4 fw-bold d-flex align-items-center gap-2" style="border-radius: 12px; font-size: 13px; border-color: #cbd5e1; color: #334155; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+        <a href="/Admin/SapQuality" class="btn btn-outline-secondary py-2.5 px-4 fw-bold d-flex align-items-center gap-2" style="border-radius: 12px; font-size: 13px; border-color: #cbd5e1; color: #334155; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.2s;">
             <i class="bi bi-arrow-left"></i> Kembali ke Panel Audit
         </a>
+    </div>
+
+    <!-- Filter Card: Year & Month -->
+    <div class="card p-4 shadow-sm border-0 bg-white mb-4" style="border-radius: 20px; border: 1.5px solid #e2e8f0 !important;">
+        <form method="get" action="/Admin/SapQuality/Dasboard" class="row g-3 align-items-end">
+            <div class="col-md-4 col-sm-6">
+                <label class="form-label fw-bold text-muted" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Filter Tahun</label>
+                <select name="year" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 10px; font-size: 14px; padding: 10px 12px;">
+                    <option value="">-- Semua Tahun --</option>
+                    @for (int y = 2024; y <= 2026; y++)
+                    {
+                        if (y == selectedYear)
+                        {
+                            <option value="@y" selected>Tahun @y</option>
+                        }
+                        else
+                        {
+                            <option value="@y">Tahun @y</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-4 col-sm-6">
+                <label class="form-label fw-bold text-muted" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Filter Bulan</label>
+                <select name="month" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 10px; font-size: 14px; padding: 10px 12px;">
+                    <option value="">-- Semua Bulan --</option>
+                    @foreach (var m in months)
+                    {
+                        if (m.Val == selectedMonth)
+                        {
+                            <option value="@m.Val" selected>@m.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@m.Val">@m.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-4 col-12 d-flex gap-2">
+                <button type="submit" class="btn btn-primary py-2.5 px-4 fw-bold w-100 d-flex align-items-center justify-content-center gap-2 text-white" style="border-radius: 10px; background: #3b82f6; border: none; box-shadow: 0 4px 12px rgba(59,130,246,0.15);">
+                    <i class="bi bi-funnel-fill"></i> Terapkan Filter
+                </button>
+                <a href="/Admin/SapQuality/Dasboard" class="btn btn-outline-secondary py-2.5 px-3 fw-bold d-flex align-items-center justify-content-center" style="border-radius: 10px; border-color: #cbd5e1; color: #475569;" title="Reset Filter">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset
+                </a>
+            </div>
+        </form>
     </div>
 
     <!-- Summary Statistics Grid -->
@@ -35,17 +97,17 @@
             <div class="card p-3 shadow-sm border-0 bg-white" style="border-radius: 16px; border: 1.5px solid #e2e8f0 !important;">
                 <div class="text-muted fw-bold mb-1" style="font-size: 11px; text-transform: uppercase;">Total Submisi SAP</div>
                 <div class="d-flex align-items-baseline gap-2">
-                    <span class="fs-3 fw-extrabold text-dark" style="font-family: 'Outfit', sans-serif;">@ViewBag.TotalAllSap.ToString("#,##0")</span>
-                    <span class="text-secondary" style="font-size: 11.5px;">Data Masuk</span>
+                    <span class="fs-3 fw-extrabold text-dark" style="font-family: 'Outfit', sans-serif; font-weight: 850;">@ViewBag.TotalAllSap.ToString("#,##0")</span>
+                    <span class="text-secondary" style="font-size: 11.5px;">Data</span>
                 </div>
             </div>
         </div>
         <div class="col-md-3 col-6">
             <div class="card p-3 shadow-sm border-0 bg-white" style="border-radius: 16px; border: 1.5px solid #e2e8f0 !important;">
-                <div class="text-muted fw-bold mb-1" style="font-size: 11px; text-transform: uppercase;">Sudah Diaudit (AI & Rill)</div>
+                <div class="text-muted fw-bold mb-1" style="font-size: 11px; text-transform: uppercase;">Sudah Diaudit</div>
                 <div class="d-flex align-items-baseline gap-2">
-                    <span class="fs-3 fw-extrabold text-primary" style="font-family: 'Outfit', sans-serif;">@ViewBag.TotalAssessed.ToString("#,##0")</span>
-                    <span class="text-secondary" style="font-size: 11.5px;">(@assessedPercentage%)</span>
+                    <span class="fs-3 fw-extrabold text-primary" style="font-family: 'Outfit', sans-serif; font-weight: 850;">@ViewBag.TotalAssessed.ToString("#,##0")</span>
+                    <span class="text-secondary" style="font-size: 11.5px;">Data</span>
                 </div>
             </div>
         </div>
@@ -53,7 +115,7 @@
             <div class="card p-3 shadow-sm border-0 bg-white" style="border-radius: 16px; border: 1.5px solid #e2e8f0 !important;">
                 <div class="text-muted fw-bold mb-1" style="font-size: 11px; text-transform: uppercase;">Kualitas Baik (⭐3-5)</div>
                 <div class="d-flex align-items-baseline gap-2">
-                    <span class="fs-3 fw-extrabold text-success" style="font-family: 'Outfit', sans-serif;">@ViewBag.KualitasBaik.ToString("#,##0")</span>
+                    <span class="fs-3 fw-extrabold text-success" style="font-family: 'Outfit', sans-serif; font-weight: 850;">@ViewBag.KualitasBaik.ToString("#,##0")</span>
                     <span class="text-success fw-bold" style="font-size: 11.5px;">(@goodPercentage%)</span>
                 </div>
             </div>
@@ -62,7 +124,7 @@
             <div class="card p-3 shadow-sm border-0 bg-white" style="border-radius: 16px; border: 1.5px solid #e2e8f0 !important;">
                 <div class="text-muted fw-bold mb-1" style="font-size: 11px; text-transform: uppercase;">Kejar Target (⭐1-2)</div>
                 <div class="d-flex align-items-baseline gap-2">
-                    <span class="fs-3 fw-extrabold text-danger" style="font-family: 'Outfit', sans-serif;">@ViewBag.KejarTarget.ToString("#,##0")</span>
+                    <span class="fs-3 fw-extrabold text-danger" style="font-family: 'Outfit', sans-serif; font-weight: 850;">@ViewBag.KejarTarget.ToString("#,##0")</span>
                     <span class="text-danger fw-bold" style="font-size: 11.5px;">(@targetPercentage%)</span>
                 </div>
             </div>
@@ -71,41 +133,109 @@
 
     <!-- Charts Layout Section -->
     <div class="row g-4 mb-4">
-        <!-- Doughnut: Quality Distribution -->
+        <!-- Doughnut: Quality Distribution (Audited Only - Colorful & Vibrant) -->
         <div class="col-lg-6 col-12">
-            <div class="card p-4 shadow-sm border-0 bg-white" style="border-radius: 20px; border: 1.5px solid #e2e8f0 !important; min-height: 420px;">
-                <h5 class="fw-extrabold text-dark mb-3" style="font-family: 'Outfit', sans-serif;"><i class="bi bi-pie-chart me-2 text-primary"></i>Klasifikasi Kualitas Submisi</h5>
-                <div class="d-flex justify-content-center align-items-center mb-3" style="position: relative; height: 260px;">
-                    <canvas id="qualityChart"></canvas>
-                </div>
-                <div class="row text-center mt-2" style="font-size: 11.5px;">
-                    <div class="col-4">
-                        <span class="d-block text-muted">Kualitas Baik</span>
-                        <strong class="text-success fs-6">@goodPercentage%</strong>
+            <div class="card p-4 shadow-sm border-0 bg-white" style="border-radius: 20px; border: 1.5px solid #e2e8f0 !important; min-height: 420px; box-shadow: 0 4px 20px rgba(0,0,0,0.01);">
+                <h5 class="fw-extrabold text-dark mb-1" style="font-family: 'Outfit', sans-serif;"><i class="bi bi-pie-chart me-2 text-primary"></i>Kualitas Hasil Audit</h5>
+                <p class="text-muted mb-3" style="font-size: 12.5px;">Persentase perbandingan kualitas data yang lolos standar kepatuhan K3.</p>
+                
+                @if (ViewBag.TotalAssessed == 0)
+                {
+                    <div class="d-flex flex-column align-items-center justify-content-center text-center" style="height: 280px;">
+                        <i class="bi bi-clipboard-x text-muted" style="font-size: 48px;"></i>
+                        <span class="text-muted mt-2 fw-bold">Tidak Ada Data yang Diaudit pada Periode Ini.</span>
                     </div>
-                    <div class="col-4" style="border-left: 1.5px solid #e2e8f0; border-right: 1.5px solid #e2e8f0;">
-                        <span class="d-block text-muted">Kejar Target</span>
-                        <strong class="text-danger fs-6">@targetPercentage%</strong>
+                }
+                else
+                {
+                    <div class="d-flex justify-content-center align-items-center mb-3" style="position: relative; height: 250px;">
+                        <canvas id="qualityChart"></canvas>
                     </div>
-                    <div class="col-4">
-                        <span class="d-block text-muted">Belum Diaudit</span>
-                        <strong class="text-secondary fs-6">@(100.0 - assessedPercentage)%</strong>
+                    <div class="row text-center mt-2" style="font-size: 12px;">
+                        <div class="col-6">
+                            <span class="d-block text-muted">Kualitas Rill (⭐3-5)</span>
+                            <strong class="text-success fs-6">@goodPercentage% (@ViewBag.KualitasBaik data)</strong>
+                        </div>
+                        <div class="col-6" style="border-left: 1.5px solid #e2e8f0;">
+                            <span class="d-block text-muted">Kejar Target (⭐1-2)</span>
+                            <strong class="text-danger fs-6">@targetPercentage% (@ViewBag.KejarTarget data)</strong>
+                        </div>
                     </div>
-                </div>
+                }
             </div>
         </div>
 
-        <!-- Bar Chart: SAP Type Distribution -->
+        <!-- Bar Chart: Average Rating per SAP Type -->
         <div class="col-lg-6 col-12">
-            <div class="card p-4 shadow-sm border-0 bg-white" style="border-radius: 20px; border: 1.5px solid #e2e8f0 !important; min-height: 420px;">
-                <h5 class="fw-extrabold text-dark mb-3" style="font-family: 'Outfit', sans-serif;"><i class="bi bi-funnel me-2 text-primary"></i>Distribusi Audit Berdasarkan Jenis SAP</h5>
+            <div class="card p-4 shadow-sm border-0 bg-white" style="border-radius: 20px; border: 1.5px solid #e2e8f0 !important; min-height: 420px; box-shadow: 0 4px 20px rgba(0,0,0,0.01);">
+                <h5 class="fw-extrabold text-dark mb-1" style="font-family: 'Outfit', sans-serif;"><i class="bi bi-star-fill me-2 text-warning"></i>Rata-Rata Rating Kualitas</h5>
+                <p class="text-muted mb-3" style="font-size: 12.5px;">Penilaian rata-rata tingkat kualitas data (skala 1.0 - 5.0) per modul pelaporan.</p>
                 <div class="d-flex justify-content-center align-items-center mb-3" style="position: relative; height: 260px; width: 100%;">
                     <canvas id="typesChart"></canvas>
                 </div>
-                <div class="text-center text-muted" style="font-size: 11px; font-style: italic;">
-                    Menampilkan total data submisi yang telah melalui audit kualitas untuk masing-masing modul.
-                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Clear detailed breakdown table (Rincian data yang jelas) -->
+    <div class="card p-4 shadow-sm border-0 bg-white mb-4" style="border-radius: 20px; border: 1.5px solid #e2e8f0 !important;">
+        <h5 class="fw-extrabold text-dark mb-3" style="font-family: 'Outfit', sans-serif;"><i class="bi bi-table me-2 text-primary"></i>Rincian Statistik & Kualitas per Jenis SAP</h5>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="border-collapse: separate; border-spacing: 0;">
+                <thead>
+                    <tr style="background: #f8fafc;">
+                        <th class="py-3 px-4 text-secondary text-uppercase fw-bold" style="font-size: 11px; border-bottom: 2px solid #cbd5e1; border-top-left-radius: 8px;">Modul SAP</th>
+                        <th class="py-3 px-3 text-secondary text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1;">Total Submisi</th>
+                        <th class="py-3 px-3 text-secondary text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1;">Sudah Diaudit</th>
+                        <th class="py-3 px-3 text-secondary text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1;">Belum Diaudit</th>
+                        <th class="py-3 px-3 text-danger text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1;">Kejar Target (⭐1-2)</th>
+                        <th class="py-3 px-3 text-success text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1;">Kualitas Baik (⭐3-5)</th>
+                        <th class="py-3 px-4 text-warning text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1; border-top-right-radius: 8px;">Rata-Rata Rating</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var rowDetails = new[] {
+                            new { Name = "Hazard Report", Total = (int)ViewBag.TotalHazard, Assessed = (int)ViewBag.AssessedHazard, Rating = (double)ViewBag.AvgHazard, Theme = "#6366f1", Icon = "bi-shield-fill-exclamation" },
+                            new { Name = "Inspeksi K3", Total = (int)ViewBag.TotalInspection, Assessed = (int)ViewBag.AssessedInspection, Rating = (double)ViewBag.AvgInspection, Theme = "#3b82f6", Icon = "bi-search" },
+                            new { Name = "Safety Talk", Total = (int)ViewBag.TotalSafetyTalk, Assessed = (int)ViewBag.AssessedSafetyTalk, Rating = (double)ViewBag.AvgSafetyTalk, Theme = "#f59e0b", Icon = "bi-megaphone-fill" },
+                            new { Name = "Observasi K3", Total = (int)ViewBag.TotalObservation, Assessed = (int)ViewBag.AssessedObservation, Rating = (double)ViewBag.AvgObservation, Theme = "#14b8a6", Icon = "bi-eye-fill" },
+                            new { Name = "Coaching K3", Total = (int)ViewBag.TotalCoaching, Assessed = (int)ViewBag.AssessedCoaching, Rating = (double)ViewBag.AvgCoaching, Theme = "#d946ef", Icon = "bi-person-badge-fill" }
+                        };
+                    }
+                    @foreach (var rd in rowDetails)
+                    {
+                        int unassessed = Math.Max(0, rd.Total - rd.Assessed);
+                        <tr>
+                            <td class="py-3 px-4 fw-bold">
+                                <span style="color: @rd.Theme;"><i class="bi @rd.Icon me-2"></i>@rd.Name</span>
+                            </td>
+                            <td class="py-3 px-3 text-center fw-bold">@rd.Total.ToString("#,##0")</td>
+                            <td class="py-3 px-3 text-center text-primary fw-bold">@rd.Assessed.ToString("#,##0")</td>
+                            <td class="py-3 px-3 text-center text-muted">@unassessed.ToString("#,##0")</td>
+                            <td class="py-3 px-3 text-center text-danger font-monospace fw-bold">
+                                @if (rd.Assessed > 0)
+                                {
+                                    <span>@((rd.Assessed * (rd.Rating <= 2.5 ? 1 : 0)).ToString()) data</span>
+                                }
+                                else { <span>-</span> }
+                            </td>
+                            <td class="py-3 px-3 text-center text-success font-monospace fw-bold">
+                                @if (rd.Assessed > 0)
+                                {
+                                    <span>@((rd.Assessed * (rd.Rating > 2.5 ? 1 : 0)).ToString()) data</span>
+                                }
+                                else { <span>-</span> }
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <span class="badge text-white py-2 px-3 fw-bold" style="background: @rd.Theme; border-radius: 8px; font-size: 13px;">
+                                    ⭐ @rd.Rating.ToString("0.00")
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -143,95 +273,91 @@
 </div>
 
 @section Scripts {
-    <!-- Load Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // ==================== 1. QUALITY CHART ====================
-            const ctxQuality = document.getElementById('qualityChart').getContext('2d');
-            new Chart(ctxQuality, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Kualitas Baik (⭐3-5)', 'Kejar Target (⭐1-2)', 'Belum Diaudit'],
-                    datasets: [{
-                        data: [
-                            @ViewBag.KualitasBaik, 
-                            @ViewBag.KejarTarget, 
-                            @(ViewBag.TotalAllSap - ViewBag.TotalAssessed)
-                        ],
-                        backgroundColor: ['#10b981', '#ef4444', '#cbd5e1'],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                boxWidth: 12,
-                                font: { size: 11, family: 'Inter' },
-                                color: '#334155'
-                            }
-                        }
+            // ==================== 1. QUALITY CHART (AUDITED ONLY - VIBRANT) ====================
+            const qualityCanvas = document.getElementById('qualityChart');
+            if (qualityCanvas) {
+                const ctxQuality = qualityCanvas.getContext('2d');
+                new Chart(ctxQuality, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Kualitas Rill (⭐3-5)', 'Kejar Target (⭐1-2)'],
+                        datasets: [{
+                            data: [@ViewBag.KualitasBaik, @ViewBag.KejarTarget],
+                            backgroundColor: ['#10b981', '#ef4444'], // Emerald Green & Vibrant Red
+                            borderWidth: 2,
+                            borderColor: '#ffffff',
+                            hoverOffset: 10
+                        }]
                     },
-                    cutout: '65%'
-                }
-            });
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    font: { size: 12, family: 'Inter', weight: 'bold' },
+                                    color: '#334155',
+                                    padding: 15
+                                }
+                            }
+                        },
+                        cutout: '70%'
+                    }
+                });
+            }
 
-            // ==================== 2. TYPES CHART ====================
+            // ==================== 2. TYPES CHART (AVERAGE RATING - HIGHLY COLORFUL) ====================
             const ctxTypes = document.getElementById('typesChart').getContext('2d');
             new Chart(ctxTypes, {
                 type: 'bar',
                 data: {
                     labels: ['Hazard', 'Inspection', 'Safety Talk', 'Observation', 'Coaching'],
                     datasets: [{
-                        label: 'Sudah Diaudit',
+                        label: 'Nilai Rata-Rata Bintang',
                         data: [
-                            @ViewBag.AssessedHazard, 
-                            @ViewBag.AssessedInspection, 
-                            @ViewBag.AssessedSafetyTalk, 
-                            @ViewBag.AssessedObservation, 
-                            @ViewBag.AssessedCoaching
+                            @ViewBag.AvgHazard, 
+                            @ViewBag.AvgInspection, 
+                            @ViewBag.AvgSafetyTalk, 
+                            @ViewBag.AvgObservation, 
+                            @ViewBag.AvgCoaching
                         ],
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 6
-                    }, {
-                        label: 'Total Submisi',
-                        data: [
-                            @ViewBag.TotalHazard, 
-                            @ViewBag.TotalInspection, 
-                            @ViewBag.TotalSafetyTalk, 
-                            @ViewBag.TotalObservation, 
-                            @ViewBag.TotalCoaching
+                        backgroundColor: [
+                            '#6366f1', // Hazard: Indigo
+                            '#3b82f6', // Inspection: Blue
+                            '#f59e0b', // Safety Talk: Amber
+                            '#14b8a6', // Observation: Teal
+                            '#d946ef'  // Coaching: Purple
                         ],
-                        backgroundColor: '#e2e8f0',
-                        borderRadius: 6
+                        borderRadius: 8,
+                        barThickness: 35
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                boxWidth: 12,
-                                font: { size: 11, family: 'Inter' },
-                                color: '#334155'
-                            }
-                        }
+                        legend: { display: false } // Hide legend since colors represent types directly
                     },
                     scales: {
                         x: {
                             grid: { display: false },
-                            ticks: { font: { size: 10.5, family: 'Inter' }, color: '#475569' }
+                            ticks: { font: { size: 11, family: 'Inter', weight: 'bold' }, color: '#1e293b' }
                         },
                         y: {
+                            min: 0,
+                            max: 5,
                             grid: { color: '#f1f5f9' },
-                            ticks: { font: { size: 10, family: 'Inter' }, color: '#475569' }
+                            ticks: { 
+                                stepSize: 1,
+                                font: { size: 11, family: 'Inter' }, 
+                                color: '#475569',
+                                callback: function(value) { return '⭐ ' + value; }
+                            }
                         }
                     }
                 }

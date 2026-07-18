@@ -1854,21 +1854,48 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet("Admin/SapQuality/Dasboard")]
-        public async Task<IActionResult> SapQualityDasboard()
+        public async Task<IActionResult> SapQualityDasboard(int? year = null, int? month = null)
         {
             if (!IsAuthorizedUser())
             {
                 return Forbid();
             }
 
-            var assessments = await _context.SapQualityAssessments.AsNoTracking().ToListAsync();
+            var assessmentQuery = _context.SapQualityAssessments.AsNoTracking();
+            if (year.HasValue) assessmentQuery = assessmentQuery.Where(a => a.CreatedAt.Year == year.Value);
+            if (month.HasValue) assessmentQuery = assessmentQuery.Where(a => a.CreatedAt.Month == month.Value);
+            var assessments = await assessmentQuery.ToListAsync();
 
-            // Total active counts of each SAP type (all submissions)
-            int totalHazard = await _context.HazardReports.CountAsync(x => !x.IsDeleted);
-            int totalInspection = await _context.Inspections.CountAsync(x => !x.IsDeleted);
-            int totalSafetyTalk = await _context.SafetyTalks.CountAsync(x => !x.IsDeleted);
-            int totalObservation = await _context.Observations.CountAsync(x => !x.IsDeleted);
-            int totalCoaching = await _context.Coachings.CountAsync(x => !x.IsDeleted);
+            // Total active counts of each SAP type (filtered by year/month if selected)
+            var hazardQuery = _context.HazardReports.AsNoTracking().Where(x => !x.IsDeleted);
+            var inspectionQuery = _context.Inspections.AsNoTracking().Where(x => !x.IsDeleted);
+            var safetyTalkQuery = _context.SafetyTalks.AsNoTracking().Where(x => !x.IsDeleted);
+            var observationQuery = _context.Observations.AsNoTracking().Where(x => !x.IsDeleted);
+            var coachingQuery = _context.Coachings.AsNoTracking().Where(x => !x.IsDeleted);
+
+            if (year.HasValue)
+            {
+                hazardQuery = hazardQuery.Where(x => x.Tanggal.Year == year.Value);
+                inspectionQuery = inspectionQuery.Where(x => x.Tanggal.Year == year.Value);
+                safetyTalkQuery = safetyTalkQuery.Where(x => x.Tanggal.Year == year.Value);
+                observationQuery = observationQuery.Where(x => x.Date.Year == year.Value);
+                coachingQuery = coachingQuery.Where(x => x.Tanggal.Year == year.Value);
+            }
+
+            if (month.HasValue)
+            {
+                hazardQuery = hazardQuery.Where(x => x.Tanggal.Month == month.Value);
+                inspectionQuery = inspectionQuery.Where(x => x.Tanggal.Month == month.Value);
+                safetyTalkQuery = safetyTalkQuery.Where(x => x.Tanggal.Month == month.Value);
+                observationQuery = observationQuery.Where(x => x.Date.Month == month.Value);
+                coachingQuery = coachingQuery.Where(x => x.Tanggal.Month == month.Value);
+            }
+
+            int totalHazard = await hazardQuery.CountAsync();
+            int totalInspection = await inspectionQuery.CountAsync();
+            int totalSafetyTalk = await safetyTalkQuery.CountAsync();
+            int totalObservation = await observationQuery.CountAsync();
+            int totalCoaching = await coachingQuery.CountAsync();
 
             int totalAllSap = totalHazard + totalInspection + totalSafetyTalk + totalObservation + totalCoaching;
 
@@ -1889,6 +1916,16 @@ namespace MBS_SAP.Controllers
             int assessedSafetyTalk = assessments.Count(a => string.Equals(a.ProgramType, "SafetyTalk", StringComparison.OrdinalIgnoreCase));
             int assessedObservation = assessments.Count(a => string.Equals(a.ProgramType, "Observation", StringComparison.OrdinalIgnoreCase));
             int assessedCoaching = assessments.Count(a => string.Equals(a.ProgramType, "Coaching", StringComparison.OrdinalIgnoreCase));
+
+            // Average ratings by type
+            double avgHazard = assessedHazard > 0 ? assessments.Where(a => string.Equals(a.ProgramType, "Hazard", StringComparison.OrdinalIgnoreCase)).Average(a => a.Rating) : 0;
+            double avgInspection = assessedInspection > 0 ? assessments.Where(a => string.Equals(a.ProgramType, "Inspection", StringComparison.OrdinalIgnoreCase)).Average(a => a.Rating) : 0;
+            double avgSafetyTalk = assessedSafetyTalk > 0 ? assessments.Where(a => string.Equals(a.ProgramType, "SafetyTalk", StringComparison.OrdinalIgnoreCase)).Average(a => a.Rating) : 0;
+            double avgObservation = assessedObservation > 0 ? assessments.Where(a => string.Equals(a.ProgramType, "Observation", StringComparison.OrdinalIgnoreCase)).Average(a => a.Rating) : 0;
+            double avgCoaching = assessedCoaching > 0 ? assessments.Where(a => string.Equals(a.ProgramType, "Coaching", StringComparison.OrdinalIgnoreCase)).Average(a => a.Rating) : 0;
+
+            ViewBag.SelectedYear = year;
+            ViewBag.SelectedMonth = month;
 
             ViewBag.TotalAllSap = totalAllSap;
             ViewBag.TotalHazard = totalHazard;
@@ -1911,6 +1948,12 @@ namespace MBS_SAP.Controllers
             ViewBag.AssessedSafetyTalk = assessedSafetyTalk;
             ViewBag.AssessedObservation = assessedObservation;
             ViewBag.AssessedCoaching = assessedCoaching;
+
+            ViewBag.AvgHazard = Math.Round(avgHazard, 2);
+            ViewBag.AvgInspection = Math.Round(avgInspection, 2);
+            ViewBag.AvgSafetyTalk = Math.Round(avgSafetyTalk, 2);
+            ViewBag.AvgObservation = Math.Round(avgObservation, 2);
+            ViewBag.AvgCoaching = Math.Round(avgCoaching, 2);
 
             return View();
         }
