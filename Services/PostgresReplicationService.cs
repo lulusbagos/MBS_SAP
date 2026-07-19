@@ -1184,7 +1184,7 @@ SELECT
     employee_company,
     status
 FROM {sourceView}
-WHERE date >= @sinceDate OR status IS NULL OR LOWER(status::text) NOT IN ('close', 'closed', '1')
+WHERE date >= @sinceDate
 ORDER BY date, time, code;";
 
             await using var command = new NpgsqlCommand(sql, connection);
