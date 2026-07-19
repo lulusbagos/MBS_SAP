@@ -507,24 +507,51 @@
 
     <!-- Header Selector with Month & Year Filters -->
     <div class="card p-3 shadow-sm border-0 mb-4 bg-white" style="border-radius: 12px; border: 1px solid #cbd5e1 !important;">
-        <form method="get" action="/Performance/League" class="row g-2 align-items-end">
+        <form id="leagueFilterForm" method="get" action="/Performance/League" class="row g-2 align-items-end">
             <input type="hidden" name="mode" value="@currentMode" />
+            <input type="hidden" id="companyIdInput" name="companyId" value="@selectedCompanyId" />
+
+            <!-- Searchable Company Dropdown -->
             <div class="col-md-5 col-sm-12">
                 <label class="form-label text-muted fw-bold mb-1" style="font-size: 11px;">PILIH PERUSAHAAN</label>
-                <select name="companyId" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 13px;" onchange="this.form.submit();">
-                    @foreach (var c in companies)
-                    {
-                        if (c.PerusahaanId == selectedCompanyId)
-                        {
-                            <option value="@c.PerusahaanId" selected>@c.NamaPerusahaan</option>
-                        }
-                        else
-                        {
-                            <option value="@c.PerusahaanId">@c.NamaPerusahaan</option>
-                        }
-                    }
-                </select>
+                <div class="position-relative" id="companyDropdownWrapper">
+                    <div id="companySearchTrigger"
+                         onclick="toggleCompanyDropdown()"
+                         class="form-select border-2 shadow-sm fw-bold d-flex align-items-center justify-content-between"
+                         style="border-radius: 8px; font-size: 13px; cursor: pointer; user-select: none; min-height: 38px;">
+                        <span id="companySelectedLabel">
+                            @(companies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId)?.NamaPerusahaan ?? "Pilih Perusahaan")
+                        </span>
+                        <i class="bi bi-chevron-down" id="companyChevron" style="font-size: 11px; color: #64748b; transition: transform 0.2s;"></i>
+                    </div>
+                    <div id="companyDropdownMenu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:9999; background:#fff; border:2px solid #cbd5e1; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); overflow:hidden;">
+                        <div style="padding: 8px;">
+                            <div class="position-relative">
+                                <i class="bi bi-search" style="position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:12px;"></i>
+                                <input type="text" id="companySearchInput"
+                                       placeholder="Cari perusahaan..."
+                                       oninput="filterCompanyList(this.value)"
+                                       onclick="event.stopPropagation()"
+                                       class="form-control form-control-sm"
+                                       style="padding-left: 30px; border-radius: 6px; font-size: 12px; border-color: #e2e8f0;" />
+                            </div>
+                        </div>
+                        <div id="companyListContainer" style="max-height: 220px; overflow-y: auto; padding: 0 4px 8px;">
+                            @foreach (var c in companies)
+                            {
+                                <div class="company-option @(c.PerusahaanId == selectedCompanyId ? "company-option-active" : "")"
+                                     data-value="@c.PerusahaanId"
+                                     data-label="@c.NamaPerusahaan"
+                                     onclick="selectCompany(@c.PerusahaanId, '@Html.Raw(c.NamaPerusahaan.Replace("'", "\\'"))')"
+                                     style="padding: 8px 12px; border-radius: 7px; cursor:pointer; font-size: 13px; font-weight: 600; transition: background 0.15s; @(c.PerusahaanId == selectedCompanyId ? "background:#eff6ff; color:#1d4ed8;" : "")">
+                                    @c.NamaPerusahaan
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
             </div>
+
             <div class="col-md-3 col-sm-6">
                 <label class="form-label text-muted fw-bold mb-1" style="font-size: 11px;">BULAN KLASEMEN</label>
                 <select name="month" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 13px;" onchange="this.form.submit();">
@@ -564,6 +591,7 @@
             </div>
         </form>
     </div>
+
  
      <!-- Sports Scoreboard Banner -->
      <div class="league-banner">
@@ -1301,4 +1329,54 @@
             }
         });
     });
+
+    // ─── Searchable Company Dropdown ───────────────────────────────────────
+    function toggleCompanyDropdown() {
+        const menu    = document.getElementById('companyDropdownMenu');
+        const chevron = document.getElementById('companyChevron');
+        const input   = document.getElementById('companySearchInput');
+        const isOpen  = menu.style.display !== 'none';
+        if (isOpen) {
+            menu.style.display = 'none';
+            chevron.style.transform = 'rotate(0deg)';
+        } else {
+            menu.style.display = 'block';
+            chevron.style.transform = 'rotate(180deg)';
+            if (input) { input.value = ''; filterCompanyList(''); input.focus(); }
+        }
+    }
+
+    function filterCompanyList(query) {
+        const q = query.toLowerCase().trim();
+        document.querySelectorAll('#companyListContainer .company-option').forEach(function(el) {
+            const label = (el.getAttribute('data-label') || '').toLowerCase();
+            el.style.display = q === '' || label.includes(q) ? '' : 'none';
+        });
+    }
+
+    function selectCompany(id, label) {
+        document.getElementById('companyIdInput').value = id;
+        document.getElementById('companySelectedLabel').textContent = label;
+        document.getElementById('companyDropdownMenu').style.display = 'none';
+        document.getElementById('companyChevron').style.transform = 'rotate(0deg)';
+        // Update active highlight
+        document.querySelectorAll('#companyListContainer .company-option').forEach(function(el) {
+            const active = parseInt(el.getAttribute('data-value')) === id;
+            el.style.background = active ? '#eff6ff' : '';
+            el.style.color      = active ? '#1d4ed8' : '';
+        });
+        document.getElementById('leagueFilterForm').submit();
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const wrapper = document.getElementById('companyDropdownWrapper');
+        const menu    = document.getElementById('companyDropdownMenu');
+        if (wrapper && menu && !wrapper.contains(e.target)) {
+            menu.style.display = 'none';
+            const chevron = document.getElementById('companyChevron');
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        }
+    });
+    // ───────────────────────────────────────────────────────────────────────
 </script>
