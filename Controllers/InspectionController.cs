@@ -16,14 +16,12 @@ namespace MBS_SAP.Controllers
     public class InspectionController : Controller
     {
         private readonly AppDbContext _context;
-        private readonly ExcelService _excelService;
         private readonly ImageUploadService _imageUploadService;
         private readonly CompanyHierarchyService _companyHierarchyService;
 
-        public InspectionController(AppDbContext context, ExcelService excelService, ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
+        public InspectionController(AppDbContext context, ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
-            _excelService = excelService;
             _imageUploadService = imageUploadService;
             _companyHierarchyService = companyHierarchyService;
         }
@@ -315,15 +313,7 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            // Append to Excel Sheet D:\SAP.xlsx
-            try
-            {
-                _excelService.AppendInspection(inspection);
-            }
-            catch (Exception ex)
-            {
-                TempData["WarningMessage"] = "Data disimpan di database, tetapi gagal ditulis ke Excel: " + ex.Message;
-            }
+
 
             // Check if any check item is 0, then spawn ActionPlan
             var checks = new[]
@@ -363,14 +353,7 @@ namespace MBS_SAP.Controllers
                     _context.ActionPlans.Add(actionPlan);
                     await _context.SaveChangesAsync();
 
-                    try
-                    {
-                        _excelService.AppendActionPlan(actionPlan);
-                    }
-                    catch (Exception)
-                    {
-                        // Fail silently for secondary Excel write or log it
-                    }
+
                 }
             }
 

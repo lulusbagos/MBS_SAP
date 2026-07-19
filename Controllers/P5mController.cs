@@ -18,15 +18,13 @@ namespace MBS_SAP.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly ExcelService _excelService;
         private readonly CompanyHierarchyService _companyHierarchyService;
         private readonly MBS_SAP.Services.ImageUploadService _imageUploadService;
 
-        public P5mController(AppDbContext context, IWebHostEnvironment webHostEnvironment, ExcelService excelService, CompanyHierarchyService companyHierarchyService, MBS_SAP.Services.ImageUploadService imageUploadService)
+        public P5mController(AppDbContext context, IWebHostEnvironment webHostEnvironment, CompanyHierarchyService companyHierarchyService, MBS_SAP.Services.ImageUploadService imageUploadService)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
-            _excelService = excelService;
             _companyHierarchyService = companyHierarchyService;
             _imageUploadService = imageUploadService;
         }
@@ -230,15 +228,7 @@ namespace MBS_SAP.Controllers
                     _context.P5ms.Add(p5mRecord);
                     await _context.SaveChangesAsync();
 
-                    // Append to Excel Sheet D:\SAP.xlsx
-                    try
-                    {
-                        _excelService.AppendP5m(p5mRecord);
-                    }
-                    catch (Exception ex)
-                    {
-                        TempData["WarningMessage"] = "Data disimpan di database, tetapi gagal ditulis ke Excel: " + ex.Message;
-                    }
+
                 }
                 TempData["SuccessMessage"] = "Laporan P5M berhasil disimpan!";
             }

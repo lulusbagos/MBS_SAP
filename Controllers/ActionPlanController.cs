@@ -16,15 +16,13 @@ namespace MBS_SAP.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly ExcelService _excelService;
         private readonly MBS_SAP.Services.ImageUploadService _imageUploadService;
         private readonly CompanyHierarchyService _companyHierarchyService;
 
-        public ActionPlanController(AppDbContext context, IWebHostEnvironment webHostEnvironment, ExcelService excelService, MBS_SAP.Services.ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
+        public ActionPlanController(AppDbContext context, IWebHostEnvironment webHostEnvironment, MBS_SAP.Services.ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
-            _excelService = excelService;
             _imageUploadService = imageUploadService;
             _companyHierarchyService = companyHierarchyService;
         }
@@ -152,15 +150,7 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            // Update Excel sheet ACTION PLAN
-            try
-            {
-                _excelService.UpdateActionPlan(plan);
-            }
-            catch (Exception ex)
-            {
-                TempData["WarningMessage"] = "Data disimpan di database, tetapi gagal memperbarui Excel: " + ex.Message;
-            }
+
 
             TempData["SuccessMessage"] = "Action Plan berhasil diperbarui!";
             return RedirectToAction(nameof(Index));

@@ -12,7 +12,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-builder.Services.AddScoped<MBS_SAP.Services.ExcelService>();
 builder.Services.AddScoped<MBS_SAP.Services.CompanyHierarchyService>();
 builder.Services.AddScoped<MBS_SAP.Services.ImageUploadService>();
 builder.Services.Configure<PostgresReplicationOptions>(builder.Configuration.GetSection("PostgresReplication"));

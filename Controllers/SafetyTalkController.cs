@@ -17,15 +17,13 @@ namespace MBS_SAP.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly ExcelService _excelService;
         private readonly MBS_SAP.Services.ImageUploadService _imageUploadService;
         private readonly CompanyHierarchyService _companyHierarchyService;
 
-        public SafetyTalkController(AppDbContext context, IWebHostEnvironment webHostEnvironment, ExcelService excelService, MBS_SAP.Services.ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
+        public SafetyTalkController(AppDbContext context, IWebHostEnvironment webHostEnvironment, MBS_SAP.Services.ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
-            _excelService = excelService;
             _imageUploadService = imageUploadService;
             _companyHierarchyService = companyHierarchyService;
         }
@@ -188,18 +186,7 @@ namespace MBS_SAP.Controllers
             }
             await _context.SaveChangesAsync();
 
-            // Append to Excel Sheet D:\SAP.xlsx
-            try
-            {
-                if (isNew)
-                {
-                    _excelService.AppendSafetyTalk(talk);
-                }
-            }
-            catch (Exception ex)
-            {
-                TempData["WarningMessage"] = "Data disimpan di database, tetapi gagal ditulis ke Excel: " + ex.Message;
-            }
+
 
             TempData["SuccessMessage"] = isNew ? "Laporan Safety Talk berhasil disimpan!" : "Laporan Safety Talk berhasil diperbarui!";
             return RedirectToAction("Index", "Home");

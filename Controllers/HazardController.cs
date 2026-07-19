@@ -18,15 +18,13 @@ namespace MBS_SAP.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _webHostEnvironment;
-        private readonly ExcelService _excelService;
         private readonly MBS_SAP.Services.ImageUploadService _imageUploadService;
         private readonly CompanyHierarchyService _companyHierarchyService;
 
-        public HazardController(AppDbContext context, IWebHostEnvironment webHostEnvironment, ExcelService excelService, MBS_SAP.Services.ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
+        public HazardController(AppDbContext context, IWebHostEnvironment webHostEnvironment, MBS_SAP.Services.ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
-            _excelService = excelService;
             _imageUploadService = imageUploadService;
             _companyHierarchyService = companyHierarchyService;
         }
@@ -351,15 +349,7 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            // Append to Excel D:\SAP.xlsx
-            try
-            {
-                _excelService.AppendHazardReport(report);
-            }
-            catch (Exception ex)
-            {
-                TempData["WarningMessage"] = "Data disimpan di database, tetapi gagal ditulis ke Excel: " + ex.Message;
-            }
+
 
             return RedirectToAction("Index", "Home");
         }
@@ -510,14 +500,7 @@ namespace MBS_SAP.Controllers
                         "/ActionPlan/Index");
                 }
 
-                try
-                {
-                    _excelService.AppendActionPlan(actionPlan);
-                }
-                catch (Exception)
-                {
-                    // Fail silently for secondary Excel write.
-                }
+
             }
             else
             {
