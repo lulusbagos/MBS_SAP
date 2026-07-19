@@ -2035,8 +2035,8 @@ namespace MBS_SAP.Controllers
                         // Set transaction isolation level to READ UNCOMMITTED to prevent deadlocks/timeouts on heavy tables
                         await db.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
 
-                        // Reset old system-generated assessments for Inspeksi and Observasi to trigger recalculation with new rules
-                        await db.Database.ExecuteSqlRawAsync("DELETE FROM tbl_m_penilaian_kualitas_sap WHERE created_by IN ('System-ML', 'System-ML-Bulk', 'System-ML-Bulk-Temp') AND program_type IN ('Inspection', 'Observation');");
+                        // Reset old system-generated assessments to trigger clean recalculation of all ratings
+                        await db.Database.ExecuteSqlRawAsync("DELETE FROM tbl_m_penilaian_kualitas_sap WHERE created_by IN ('System-ML', 'System-ML-Bulk', 'System-ML-Bulk-Temp');");
 
                         _bulkStatusMsg = "Menghitung data unrated...";
                         int unratedHazards = await (from h in db.HazardReports
