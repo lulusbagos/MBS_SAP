@@ -5,6 +5,25 @@
     var departments = ViewBag.Departments as List<string> ?? new List<string>();
     int selectedCompanyId = ViewBag.SelectedCompanyId ?? 0;
     string selectedDeptName = ViewBag.SelectedDepartmentName ?? "";
+
+    int selectedYear  = ViewBag.SelectedYear  as int? ?? DateTime.Today.Year;
+    int selectedMonth = ViewBag.SelectedMonth as int? ?? DateTime.Today.Month;
+
+    var months = new[] {
+        new { Val = 1,  Name = "Januari" },
+        new { Val = 2,  Name = "Februari" },
+        new { Val = 3,  Name = "Maret" },
+        new { Val = 4,  Name = "April" },
+        new { Val = 5,  Name = "Mei" },
+        new { Val = 6,  Name = "Juni" },
+        new { Val = 7,  Name = "Juli" },
+        new { Val = 8,  Name = "Agustus" },
+        new { Val = 9,  Name = "September" },
+        new { Val = 10, Name = "Oktober" },
+        new { Val = 11, Name = "November" },
+        new { Val = 12, Name = "Desember" }
+    };
+    string selectedMonthName = months.First(m => m.Val == selectedMonth).Name;
     
     // Pagination data
     int currentPage = ViewBag.CurrentPage ?? 1;
@@ -340,7 +359,54 @@
         </div>
     </div>
 
-
+    <!-- Month / Year Filter Card -->
+    <div class="card p-3 shadow-sm border-0 mb-4" style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.08) !important; background: var(--bg-card);">
+        <form method="get" action="/Performance/Compliance" class="row g-2 align-items-end">
+            <input type="hidden" name="companyId" value="@selectedCompanyId" />
+            <div class="col-md-5 col-sm-12">
+                <label class="form-label fw-bold mb-1" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">BULAN PERIODE</label>
+                <select name="month" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 13px;" onchange="this.form.submit();">
+                    @foreach (var m in months)
+                    {
+                        if (m.Val == selectedMonth)
+                        {
+                            <option value="@m.Val" selected>@m.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@m.Val">@m.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <label class="form-label fw-bold mb-1" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">TAHUN</label>
+                <select name="year" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 13px;" onchange="this.form.submit();">
+                    @for (int y = 2024; y <= 2026; y++)
+                    {
+                        if (y == selectedYear)
+                        {
+                            <option value="@y" selected>@y</option>
+                        }
+                        else
+                        {
+                            <option value="@y">@y</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 col-sm-6">
+                <button type="submit" class="btn btn-primary fw-bold w-100 shadow-sm" style="border-radius: 8px; font-size: 13px; height: 38px;">
+                    <i class="bi bi-funnel-fill me-1"></i> Filter
+                </button>
+            </div>
+            <div class="col-md-2 col-sm-12">
+                <span class="badge d-flex align-items-center justify-content-center fw-bold" style="background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; font-size: 11px; height: 38px; width: 100%;">
+                    <i class="bi bi-calendar-check me-1"></i> @selectedMonthName @selectedYear
+                </span>
+            </div>
+        </form>
+    </div>
 
     <!-- KPI Summary Row -->
     @{
