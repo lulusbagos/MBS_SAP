@@ -36,6 +36,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Prevent double form submissions globally
     document.querySelectorAll('form').forEach(function(form) {
+        if (form.hasAttribute('data-download-form')) {
+            form.addEventListener('submit', function(e) {
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    const originalHTML = submitBtn.innerHTML;
+                    setTimeout(function() {
+                        submitBtn.style.pointerEvents = 'none';
+                        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="margin-right: 8px;"></span>Memproses Unduhan...';
+                        
+                        setTimeout(function() {
+                            submitBtn.style.pointerEvents = '';
+                            submitBtn.innerHTML = originalHTML;
+                        }, 6000);
+                    }, 10);
+                }
+            });
+            return;
+        }
+
         form.addEventListener('submit', function(e) {
             if (form.classList.contains('is-submitting')) {
                 e.preventDefault();

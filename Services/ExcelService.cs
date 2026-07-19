@@ -8,7 +8,7 @@ namespace MBS_SAP.Services
     public class ExcelService
     {
         private static readonly object _lock = new object();
-        private const string FilePath = @"D:\SAP.xlsx";
+        private const string FilePath = @"D:\SAP_Data\SAP.xlsx";
 
         private void EnsureFileExists()
         {
@@ -112,6 +112,9 @@ namespace MBS_SAP.Services
                     p5.Cell(1, 14).Value = "Jawaban";
                     p5.Cell(1, 15).Value = "Catatan";
 
+                    var dir = Path.GetDirectoryName(FilePath);
+                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                        Directory.CreateDirectory(dir);
                     workbook.SaveAs(FilePath);
                 }
             }
