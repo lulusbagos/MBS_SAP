@@ -484,78 +484,131 @@
     }
 </style>
 
-<div class="animate-fade-in pb-4">
-    <!-- Header Selector -->
-    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-3 mb-4">
-        <div>
-            <h4 class="mb-1" style="font-weight: 800; color: var(--text-main);">League Standings</h4>
-            <p class="text-muted mb-0" style="font-size: 13px;">Klasemen Kepatuhan Safety Accountability Program Berbasis Perusahaan.</p>
-        </div>
-        <div style="min-width: 240px;">
-            <label class="form-label text-muted fw-bold mb-1" style="font-size: 11px;">PILIH PERUSAHAAN</label>
-            <select class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 14px;" onchange="location.href='?companyId=' + this.value;">
-                @foreach (var c in companies)
-                {
-                    if (c.PerusahaanId == selectedCompanyId)
-                    {
-                        <option value="@c.PerusahaanId" selected>@c.NamaPerusahaan</option>
-                    }
-                    else
-                    {
-                        <option value="@c.PerusahaanId">@c.NamaPerusahaan</option>
-                    }
-                }
-            </select>
-        </div>
-    </div>
-
-    <!-- Sports Scoreboard Banner -->
-    <div class="league-banner">
-        <div class="league-banner-pattern"></div>
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center position-relative" style="z-index: 1;">
-            <div class="d-flex align-items-center gap-3 mb-3 mb-md-0">
-                <img src="/images/logo indexim putih.png" style="height: 52px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
-                <div>
-                    <h2 class="league-title-main">League Safety Accountability Program</h2>
-                    <div style="font-size: 13px; font-weight: 600; color: #a1a1aa; margin-top: 2px;">
-                        Kategori Klasemen Utama &bull; @companyName
-                    </div>
-                </div>
-            </div>
-            <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center">
-                <!-- UEFA Anthem Audio Element -->
-                <audio id="anthemAudio" loop>
-                    <source src="/music/UEFA Champions League Anthem.mp3" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
-
-                <!-- Floating Anthem control button -->
-                <button id="musicToggleBtn" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 11px; font-weight: 700; padding: 6px 12px; height: 31px; display: inline-flex; align-items: center; transition: all 0.2s;">
-                    <i id="musicIcon" class="bi bi-volume-mute-fill me-1"></i> <span id="musicText">Play Anthem</span>
-                </button>
-
-                <span class="badge bg-success px-3 py-2" style="border-radius: 8px; font-size: 11px; font-weight: 700; height: 31px; display: inline-flex; align-items: center;">
-                    <i class="bi bi-calendar-event me-1"></i> Bulan Ini (MTD)
-                </span>
-                <a href="/Performance/Index" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 11px; font-weight: 700; padding: 6px 12px; height: 31px; display: inline-flex; align-items: center;">
-                    <i class="bi bi-diagram-3 me-1"></i> Org Chart
-                </a>
-            </div>
-        </div>
-    </div>
-
     @{
+        int selectedYear = ViewBag.SelectedYear as int? ?? DateTime.Today.Year;
+        int selectedMonth = ViewBag.SelectedMonth as int? ?? DateTime.Today.Month;
         var currentMode = ViewBag.Mode as string ?? "dept";
+        
+        var months = new[] {
+            new { Val = 1, Name = "Januari" },
+            new { Val = 2, Name = "Februari" },
+            new { Val = 3, Name = "Maret" },
+            new { Val = 4, Name = "April" },
+            new { Val = 5, Name = "Mei" },
+            new { Val = 6, Name = "Juni" },
+            new { Val = 7, Name = "Juli" },
+            new { Val = 8, Name = "Agustus" },
+            new { Val = 9, Name = "September" },
+            new { Val = 10, Name = "Oktober" },
+            new { Val = 11, Name = "November" },
+            new { Val = 12, Name = "Desember" }
+        };
     }
-    <!-- League Mode Navigation Tab -->
-    <div class="d-flex gap-2 mb-4 bg-light p-2 rounded-3 shadow-sm border" style="width: fit-content;">
-        <button class="btn btn-sm @(currentMode == "dept" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=dept';">
-            <i class="bi bi-shield-shaded me-1"></i> Klasemen Internal (Klub / Departemen)
-        </button>
-        <button class="btn btn-sm @(currentMode == "company" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=company';">
-            <i class="bi bi-globe me-1"></i> Super League (Antar Company)
-        </button>
+
+    <!-- Header Selector with Month & Year Filters -->
+    <div class="card p-3 shadow-sm border-0 mb-4 bg-white" style="border-radius: 12px; border: 1px solid #cbd5e1 !important;">
+        <form method="get" action="/Performance/League" class="row g-2 align-items-end">
+            <input type="hidden" name="mode" value="@currentMode" />
+            <div class="col-md-5 col-sm-12">
+                <label class="form-label text-muted fw-bold mb-1" style="font-size: 11px;">PILIH PERUSAHAAN</label>
+                <select name="companyId" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 13px;" onchange="this.form.submit();">
+                    @foreach (var c in companies)
+                    {
+                        if (c.PerusahaanId == selectedCompanyId)
+                        {
+                            <option value="@c.PerusahaanId" selected>@c.NamaPerusahaan</option>
+                        }
+                        else
+                        {
+                            <option value="@c.PerusahaanId">@c.NamaPerusahaan</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <label class="form-label text-muted fw-bold mb-1" style="font-size: 11px;">BULAN KLASEMEN</label>
+                <select name="month" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 13px;" onchange="this.form.submit();">
+                    @foreach (var m in months)
+                    {
+                        if (m.Val == selectedMonth)
+                        {
+                            <option value="@m.Val" selected>@m.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@m.Val">@m.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 col-sm-6">
+                <label class="form-label text-muted fw-bold mb-1" style="font-size: 11px;">TAHUN</label>
+                <select name="year" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 13px;" onchange="this.form.submit();">
+                    @for (int y = 2024; y <= 2026; y++)
+                    {
+                        if (y == selectedYear)
+                        {
+                            <option value="@y" selected>@y</option>
+                        }
+                        else
+                        {
+                            <option value="@y">@y</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 col-sm-12 d-flex gap-2">
+                <button type="submit" class="btn btn-primary fw-bold w-100 shadow-sm" style="border-radius: 8px; font-size: 13px; height: 38px;">
+                    <i class="bi bi-funnel-fill"></i> Filter
+                </button>
+            </div>
+        </form>
     </div>
+ 
+     <!-- Sports Scoreboard Banner -->
+     <div class="league-banner">
+         <div class="league-banner-pattern"></div>
+         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center position-relative" style="z-index: 1;">
+             <div class="d-flex align-items-center gap-3 mb-3 mb-md-0">
+                 <img src="/images/logo indexim putih.png" style="height: 52px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
+                 <div>
+                     <h2 class="league-title-main">League Safety Accountability Program</h2>
+                     <div style="font-size: 13px; font-weight: 600; color: #a1a1aa; margin-top: 2px;">
+                         Kategori Klasemen Utama &bull; @companyName
+                     </div>
+                 </div>
+             </div>
+             <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center">
+                 <!-- UEFA Anthem Audio Element -->
+                 <audio id="anthemAudio" loop>
+                     <source src="/music/UEFA Champions League Anthem.mp3" type="audio/mpeg">
+                     Your browser does not support the audio element.
+                 </audio>
+ 
+                 <!-- Floating Anthem control button -->
+                 <button id="musicToggleBtn" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 11px; font-weight: 700; padding: 6px 12px; height: 31px; display: inline-flex; align-items: center; transition: all 0.2s;">
+                     <i id="musicIcon" class="bi bi-volume-mute-fill me-1"></i> <span id="musicText">Play Anthem</span>
+                 </button>
+ 
+                 <span class="badge bg-success px-3 py-2" style="border-radius: 8px; font-size: 11px; font-weight: 700; height: 31px; display: inline-flex; align-items: center;">
+                     <i class="bi bi-calendar-event me-1"></i> @months.First(m => m.Val == selectedMonth).Name @selectedYear
+                 </span>
+                 <a href="/Performance/Index" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 11px; font-weight: 700; padding: 6px 12px; height: 31px; display: inline-flex; align-items: center;">
+                     <i class="bi bi-diagram-3 me-1"></i> Org Chart
+                 </a>
+             </div>
+         </div>
+     </div>
+ 
+     <!-- League Mode Navigation Tab -->
+     <div class="d-flex gap-2 mb-4 bg-light p-2 rounded-3 shadow-sm border" style="width: fit-content;">
+         <button class="btn btn-sm @(currentMode == "dept" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=dept&year=@selectedYear&month=@selectedMonth';">
+             <i class="bi bi-shield-shaded me-1"></i> Klasemen Internal (Klub / Departemen)
+         </button>
+         <button class="btn btn-sm @(currentMode == "company" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=company&year=@selectedYear&month=@selectedMonth';">
+             <i class="bi bi-globe me-1"></i> Super League (Antar Company)
+         </button>
+     </div>
 
     <div class="row g-4">
         <!-- Left Column: internal/company standings -->

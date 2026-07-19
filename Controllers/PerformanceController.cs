@@ -139,10 +139,13 @@ namespace MBS_SAP.Controllers
             return Json(result);
         }
 
-        private async Task<List<dynamic>> GetEmployeesComplianceData(int companyId, string? departmentNameFilter = null)
+        private async Task<List<dynamic>> GetEmployeesComplianceData(int companyId, string? departmentNameFilter = null, int? year = null, int? month = null)
         {
+            var selectedYear = year ?? DateTime.Today.Year;
+            var selectedMonth = month ?? DateTime.Today.Month;
+            
             var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
-            var cacheKey = $"EmployeesComplianceData_{companyId}_{departmentNameFilter ?? "All"}";
+            var cacheKey = $"EmployeesComplianceData_{companyId}_{departmentNameFilter ?? "All"}_{selectedYear}_{selectedMonth}";
             
             bool forceRefresh = HttpContext.Request.Query.ContainsKey("refresh") && 
                                string.Equals(HttpContext.Request.Query["refresh"], "true", StringComparison.OrdinalIgnoreCase);
@@ -161,8 +164,8 @@ namespace MBS_SAP.Controllers
                 return new List<dynamic>();
             }
 
-            var today = DateTime.Today;
-            var startOfMonth = new DateTime(today.Year, today.Month, 1);
+            var startOfMonth = new DateTime(selectedYear, selectedMonth, 1);
+            var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
 
             var deptKaryawans = await (from k in _context.Karyawans
                                       join p in _context.Personals on k.IdPersonal equals p.IdPersonal
@@ -187,18 +190,18 @@ namespace MBS_SAP.Controllers
                 departmentNameFilter == null || string.Equals(k.NamaDepartemen ?? "General", departmentNameFilter, StringComparison.OrdinalIgnoreCase)
             ).ToList();
 
-            // MTD: filter by startOfMonth
-            var hazards = await _context.HazardReports.Where(h => !h.IsDeleted && h.PerusahaanId == companyId && h.CreatedAt >= startOfMonth).Select(h => h.Nik).ToListAsync();
-            var inspections = await _context.Inspections.Where(i => !i.IsDeleted && i.PerusahaanId == companyId && i.CreatedAt >= startOfMonth).Select(i => i.Nik).ToListAsync();
-            var safetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.PerusahaanId == companyId && s.CreatedAt >= startOfMonth).Select(s => s.Nik).ToListAsync();
-            var p5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.PerusahaanId == companyId && p.CreatedAt >= startOfMonth).Select(p => p.Nik).ToListAsync();
-            var coachingCreators = await _context.Coachings.Where(c => !c.IsDeleted && c.PerusahaanId == companyId && c.CreatedAt >= startOfMonth).Select(c => c.Nik).ToListAsync();
-            var coachingParticipants = await _context.CoachingParticipants.Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId == companyId && p.Coaching.CreatedAt >= startOfMonth).Select(p => p.Nik).ToListAsync();
+            // MTD: filter by startOfMonth and endOfMonth
+            var hazards = await _context.HazardReports.Where(h => !h.IsDeleted && h.PerusahaanId == companyId && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth).Select(h => h.Nik).ToListAsync();
+            var inspections = await _context.Inspections.Where(i => !i.IsDeleted && i.PerusahaanId == companyId && i.CreatedAt >= startOfMonth && i.CreatedAt <= endOfMonth).Select(i => i.Nik).ToListAsync();
+            var safetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.PerusahaanId == companyId && s.CreatedAt >= startOfMonth && s.CreatedAt <= endOfMonth).Select(s => s.Nik).ToListAsync();
+            var p5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.PerusahaanId == companyId && p.CreatedAt >= startOfMonth && p.CreatedAt <= endOfMonth).Select(p => p.Nik).ToListAsync();
+            var coachingCreators = await _context.Coachings.Where(c => !c.IsDeleted && c.PerusahaanId == companyId && c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth).Select(c => c.Nik).ToListAsync();
+            var coachingParticipants = await _context.CoachingParticipants.Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId == companyId && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth).Select(p => p.Nik).ToListAsync();
             var coachings = coachingCreators.Concat(coachingParticipants).ToList();
             
             var observations = await (from o in _context.Observations
                                   join k in _context.Karyawans on o.Nik equals k.NoNik
-                                  where !o.IsDeleted && o.CreatedAt >= startOfMonth && k.IdPerusahaan == companyId
+                                  where !o.IsDeleted && o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth && k.IdPerusahaan == companyId
                                   select o.Nik).ToListAsync();
 
             var result = new List<dynamic>();
@@ -2164,11 +2167,17 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> League(int? companyId = null, string mode = "dept")
+        public async Task<IActionResult> League(int? companyId = null, string mode = "dept", int? year = null, int? month = null)
         {
             ViewData["HeaderTitle"] = "League SAP";
             ViewData["ActiveTab"] = "Performance";
             ViewBag.Mode = mode; // "dept" or "company"
+
+            var today = DateTime.Today;
+            int selectedYear = year ?? today.Year;
+            int selectedMonth = month ?? today.Month;
+            ViewBag.SelectedYear = selectedYear;
+            ViewBag.SelectedMonth = selectedMonth;
 
             var (resolvedCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
             var isAdmin = User.IsInRole("Admin");
@@ -2275,7 +2284,7 @@ namespace MBS_SAP.Controllers
 
                 foreach (var comp in allCompanies)
                 {
-                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId);
+                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth);
                     if (!compEmps.Any()) continue;
 
                     allEmployees.AddRange(compEmps);
@@ -2352,7 +2361,7 @@ namespace MBS_SAP.Controllers
             else
             {
                 // Liga Internal: Departments
-                var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId);
+                var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth);
                 
                 var deptAchievements = employees
                     .GroupBy(e => (string)e.departmentName)
