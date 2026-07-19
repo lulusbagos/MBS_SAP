@@ -45,6 +45,7 @@ namespace MBS_SAP.Controllers
         {
             public int Id { get; set; }
             public string? Desc { get; set; }
+            public DateTime ProgramDate { get; set; }
         }
 
         public AdminController(AppDbContext context, CompanyHierarchyService companyHierarchyService, IServiceScopeFactory serviceScopeFactory)
@@ -1663,11 +1664,12 @@ namespace MBS_SAP.Controllers
             var typeLower = programType.Trim().ToLowerInvariant();
             string title = "";
             string description = "";
+            DateTime programCreatedAt = DateTime.Now;
 
             if (typeLower == "hazard")
             {
                 var r = await _context.HazardReports.FindAsync(programId);
-                if (r != null) { title = "Temuan Hazard"; description = r.Temuan ?? ""; }
+                if (r != null) { title = "Temuan Hazard"; description = r.Temuan ?? ""; programCreatedAt = r.Tanggal; }
             }
             else if (typeLower == "inspection")
             {
@@ -1675,6 +1677,7 @@ namespace MBS_SAP.Controllers
                 if (r != null) 
                 { 
                     title = $"Inspeksi: {r.JenisInspeksi}"; 
+                    programCreatedAt = r.Tanggal;
                     int safeCount = 0;
                     int hazardCount = 0;
                     int naCount = 0;
@@ -1697,7 +1700,7 @@ namespace MBS_SAP.Controllers
             else if (typeLower == "safetytalk")
             {
                 var r = await _context.SafetyTalks.FindAsync(programId);
-                if (r != null) { title = $"Safety Talk: {r.Judul}"; description = r.Keterangan ?? ""; }
+                if (r != null) { title = $"Safety Talk: {r.Judul}"; description = r.Keterangan ?? ""; programCreatedAt = r.Tanggal; }
             }
             else if (typeLower == "observation")
             {
@@ -1705,13 +1708,14 @@ namespace MBS_SAP.Controllers
                 if (r != null) 
                 { 
                     title = $"Observasi: {r.PerihalYangDiamati}"; 
+                    programCreatedAt = r.Date;
                     description = $"OBSERVATION_AUDIT | Kegiatan: {r.KegiatanYangDiamati ?? "-"} | Perihal: {r.PerihalYangDiamati ?? "-"} | Hasil: {r.HasilObservasi ?? "-"} | Keterangan: {r.Keterangan ?? "-"}"; 
                 }
             }
             else if (typeLower == "coaching")
             {
                 var r = await _context.Coachings.FindAsync(programId);
-                if (r != null) { title = $"Coaching: {r.Tema}"; description = r.Feedback ?? ""; }
+                if (r != null) { title = $"Coaching: {r.Tema}"; description = r.Feedback ?? ""; programCreatedAt = r.Tanggal; }
             }
 
             if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(description))
@@ -1739,7 +1743,8 @@ namespace MBS_SAP.Controllers
                     Rating = suggestedRating,
                     Notes = aiNotes,
                     CreatedBy = userNik,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.Now,
+                    ProgramCreatedAt = programCreatedAt
                 };
                 _context.SapQualityAssessments.Add(assessment);
             }
@@ -1749,6 +1754,7 @@ namespace MBS_SAP.Controllers
                 assessment.Notes = aiNotes;
                 assessment.CreatedBy = userNik;
                 assessment.CreatedAt = DateTime.Now;
+                assessment.ProgramCreatedAt = programCreatedAt;
                 _context.SapQualityAssessments.Update(assessment);
             }
 
@@ -1902,8 +1908,8 @@ namespace MBS_SAP.Controllers
             }
 
             var assessmentQuery = _context.SapQualityAssessments.AsNoTracking();
-            if (year.HasValue) assessmentQuery = assessmentQuery.Where(a => a.CreatedAt.Year == year.Value);
-            if (month.HasValue) assessmentQuery = assessmentQuery.Where(a => a.CreatedAt.Month == month.Value);
+            if (year.HasValue) assessmentQuery = assessmentQuery.Where(a => a.ProgramCreatedAt.Year == year.Value);
+            if (month.HasValue) assessmentQuery = assessmentQuery.Where(a => a.ProgramCreatedAt.Month == month.Value);
             var assessments = await assessmentQuery.ToListAsync();
 
             // Total active counts of each SAP type (filtered by year/month if selected)
@@ -1984,10 +1990,10 @@ namespace MBS_SAP.Controllers
             if (!year.HasValue && !month.HasValue)
             {
                 var thirtyDaysAgo = DateTime.Today.AddDays(-30);
-                dailyTrendsQuery = dailyTrendsQuery.Where(a => a.CreatedAt.Date >= thirtyDaysAgo);
+                dailyTrendsQuery = dailyTrendsQuery.Where(a => a.ProgramCreatedAt.Date >= thirtyDaysAgo);
             }
             var dailyTrends = dailyTrendsQuery
-                .GroupBy(a => a.CreatedAt.Date)
+                .GroupBy(a => a.ProgramCreatedAt.Date)
                 .OrderBy(g => g.Key)
                 .Select(g => new {
                     Date = g.Key.ToString("dd/MM/yyyy"),
@@ -2118,7 +2124,7 @@ namespace MBS_SAP.Controllers
                             var batch = await (from h in db.HazardReports
                                                where !h.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Hazard" && a.ProgramId == h.Id)
                                                orderby h.Id descending
-                                               select new TempAuditItem { Id = h.Id, Desc = h.Temuan }).Take(2500).ToListAsync();
+                                               select new TempAuditItem { Id = h.Id, Desc = h.Temuan, ProgramDate = h.Tanggal }).Take(2500).ToListAsync();
                             if (!batch.Any()) break;
 
                             var list = new List<SapQualityAssessment>();
@@ -2132,7 +2138,8 @@ namespace MBS_SAP.Controllers
                                     Rating = rating,
                                     Notes = notes,
                                     CreatedBy = "System-ML-Bulk",
-                                    CreatedAt = now
+                                    CreatedAt = now,
+                                    ProgramCreatedAt = item.ProgramDate
                                 });
                             }
                             db.SapQualityAssessments.AddRange(list);
@@ -2152,6 +2159,7 @@ namespace MBS_SAP.Controllers
                                                    select new { 
                                                        i.Id, 
                                                        i.Catatan,
+                                                       i.Tanggal,
                                                        i.Q1_1, i.Q1_2, i.Q1_3,
                                                        i.Q2_1, i.Q2_2, i.Q2_3,
                                                        i.Q3_1, i.Q3_2, i.Q3_3,
@@ -2179,7 +2187,8 @@ namespace MBS_SAP.Controllers
                                 }
                                 return new TempAuditItem { 
                                     Id = r.Id, 
-                                    Desc = $"INSPECTION_AUDIT | Catatan: {r.Catatan ?? "-"} | YA: {safeCount} | TIDAK: {hazardCount} | NA: {naCount}" 
+                                    Desc = $"INSPECTION_AUDIT | Catatan: {r.Catatan ?? "-"} | YA: {safeCount} | TIDAK: {hazardCount} | NA: {naCount}",
+                                    ProgramDate = r.Tanggal
                                 };
                              }).ToList();
 
@@ -2194,7 +2203,8 @@ namespace MBS_SAP.Controllers
                                     Rating = rating,
                                     Notes = notes,
                                     CreatedBy = "System-ML-Bulk",
-                                    CreatedAt = now
+                                    CreatedAt = now,
+                                    ProgramCreatedAt = item.ProgramDate
                                 });
                             }
                             db.SapQualityAssessments.AddRange(list);
@@ -2211,7 +2221,7 @@ namespace MBS_SAP.Controllers
                             var batch = await (from s in db.SafetyTalks
                                                where !s.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "SafetyTalk" && a.ProgramId == s.Id)
                                                orderby s.Id descending
-                                               select new TempAuditItem { Id = s.Id, Desc = s.Keterangan }).Take(2500).ToListAsync();
+                                               select new TempAuditItem { Id = s.Id, Desc = s.Keterangan, ProgramDate = s.Tanggal }).Take(2500).ToListAsync();
                             if (!batch.Any()) break;
 
                             var list = new List<SapQualityAssessment>();
@@ -2225,7 +2235,8 @@ namespace MBS_SAP.Controllers
                                     Rating = rating,
                                     Notes = notes,
                                     CreatedBy = "System-ML-Bulk",
-                                    CreatedAt = now
+                                    CreatedAt = now,
+                                    ProgramCreatedAt = item.ProgramDate
                                 });
                             }
                             db.SapQualityAssessments.AddRange(list);
@@ -2244,6 +2255,7 @@ namespace MBS_SAP.Controllers
                                                    orderby o.Id descending
                                                    select new {
                                                        o.Id,
+                                                       o.Date,
                                                        o.KegiatanYangDiamati,
                                                        o.PerihalYangDiamati,
                                                        o.HasilObservasi,
@@ -2253,7 +2265,8 @@ namespace MBS_SAP.Controllers
 
                             var batch = rawBatch.Select(r => new TempAuditItem {
                                  Id = r.Id,
-                                 Desc = $"OBSERVATION_AUDIT | Kegiatan: {r.KegiatanYangDiamati ?? "-"} | Perihal: {r.PerihalYangDiamati ?? "-"} | Hasil: {r.HasilObservasi ?? "-"} | Keterangan: {r.Keterangan ?? "-"}"
+                                 Desc = $"OBSERVATION_AUDIT | Kegiatan: {r.KegiatanYangDiamati ?? "-"} | Perihal: {r.PerihalYangDiamati ?? "-"} | Hasil: {r.HasilObservasi ?? "-"} | Keterangan: {r.Keterangan ?? "-"}",
+                                 ProgramDate = r.Date
                             }).ToList();
 
                             var list = new List<SapQualityAssessment>();
@@ -2267,7 +2280,8 @@ namespace MBS_SAP.Controllers
                                     Rating = rating,
                                     Notes = notes,
                                     CreatedBy = "System-ML-Bulk",
-                                    CreatedAt = now
+                                    CreatedAt = now,
+                                    ProgramCreatedAt = item.ProgramDate
                                 });
                             }
                             db.SapQualityAssessments.AddRange(list);
@@ -2284,7 +2298,7 @@ namespace MBS_SAP.Controllers
                             var batch = await (from c in db.Coachings
                                                where !c.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Coaching" && a.ProgramId == c.Id)
                                                orderby c.Id descending
-                                               select new TempAuditItem { Id = c.Id, Desc = c.Feedback }).Take(2500).ToListAsync();
+                                               select new TempAuditItem { Id = c.Id, Desc = c.Feedback, ProgramDate = c.Tanggal }).Take(2500).ToListAsync();
                             if (!batch.Any()) break;
 
                             var list = new List<SapQualityAssessment>();
@@ -2298,7 +2312,8 @@ namespace MBS_SAP.Controllers
                                     Rating = rating,
                                     Notes = notes,
                                     CreatedBy = "System-ML-Bulk",
-                                    CreatedAt = now
+                                    CreatedAt = now,
+                                    ProgramCreatedAt = item.ProgramDate
                                 });
                             }
                             db.SapQualityAssessments.AddRange(list);

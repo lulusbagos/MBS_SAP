@@ -11,5 +11,6 @@ namespace MBS_SAP.Models
         public string? Notes { get; set; }
         public string CreatedBy { get; set; } = null!;
         public DateTime CreatedAt { get; set; }
+        public DateTime ProgramCreatedAt { get; set; } = DateTime.Now;
     }
 }
