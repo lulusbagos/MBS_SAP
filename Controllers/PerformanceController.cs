@@ -144,7 +144,10 @@ namespace MBS_SAP.Controllers
             var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
             var cacheKey = $"EmployeesComplianceData_{companyId}_{departmentNameFilter ?? "All"}";
             
-            if (cache.TryGetValue(cacheKey, out List<dynamic>? cachedResult) && cachedResult != null)
+            bool forceRefresh = HttpContext.Request.Query.ContainsKey("refresh") && 
+                               string.Equals(HttpContext.Request.Query["refresh"], "true", StringComparison.OrdinalIgnoreCase);
+
+            if (!forceRefresh && cache.TryGetValue(cacheKey, out List<dynamic>? cachedResult) && cachedResult != null)
             {
                 return cachedResult;
             }
