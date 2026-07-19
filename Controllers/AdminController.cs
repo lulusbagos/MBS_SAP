@@ -1669,7 +1669,27 @@ namespace MBS_SAP.Controllers
             else if (typeLower == "inspection")
             {
                 var r = await _context.Inspections.FindAsync(programId);
-                if (r != null) { title = $"Inspeksi: {r.JenisInspeksi}"; description = r.Catatan ?? ""; }
+                if (r != null) 
+                { 
+                    title = $"Inspeksi: {r.JenisInspeksi}"; 
+                    int safeCount = 0;
+                    int hazardCount = 0;
+                    int naCount = 0;
+                    int[] scores = new[] {
+                        r.Q1_1, r.Q1_2, r.Q1_3,
+                        r.Q2_1, r.Q2_2, r.Q2_3,
+                        r.Q3_1, r.Q3_2, r.Q3_3,
+                        r.Q4_1, r.Q4_2, r.Q4_3,
+                        r.Q5_1, r.Q5_2, r.Q5_3
+                    };
+                    foreach (var s in scores)
+                    {
+                        if (s == 2) safeCount++;
+                        else if (s == 0) hazardCount++;
+                        else if (s == 1) naCount++;
+                    }
+                    description = $"INSPECTION_AUDIT | Catatan: {r.Catatan ?? "-"} | YA: {safeCount} | TIDAK: {hazardCount} | NA: {naCount}"; 
+                }
             }
             else if (typeLower == "safetytalk")
             {
@@ -1679,7 +1699,11 @@ namespace MBS_SAP.Controllers
             else if (typeLower == "observation")
             {
                 var r = await _context.Observations.FindAsync(programId);
-                if (r != null) { title = $"Observasi: {r.PerihalYangDiamati}"; description = r.KegiatanYangDiamati ?? ""; }
+                if (r != null) 
+                { 
+                    title = $"Observasi: {r.PerihalYangDiamati}"; 
+                    description = $"OBSERVATION_AUDIT | Kegiatan: {r.KegiatanYangDiamati ?? "-"} | Perihal: {r.PerihalYangDiamati ?? "-"} | Hasil: {r.HasilObservasi ?? "-"} | Keterangan: {r.Keterangan ?? "-"}"; 
+                }
             }
             else if (typeLower == "coaching")
             {
@@ -2011,6 +2035,9 @@ namespace MBS_SAP.Controllers
                         // Set transaction isolation level to READ UNCOMMITTED to prevent deadlocks/timeouts on heavy tables
                         await db.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
 
+                        // Reset old system-generated assessments for Inspeksi and Observasi to trigger recalculation with new rules
+                        await db.Database.ExecuteSqlRawAsync("DELETE FROM tbl_m_penilaian_kualitas_sap WHERE created_by IN ('System-ML', 'System-ML-Bulk', 'System-ML-Bulk-Temp') AND program_type IN ('Inspection', 'Observation');");
+
                         _bulkStatusMsg = "Menghitung data unrated...";
                         int unratedHazards = await (from h in db.HazardReports
                                                    where !h.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Hazard" && a.ProgramId == h.Id)
@@ -2085,11 +2112,42 @@ namespace MBS_SAP.Controllers
                         while (processedInspections < unratedInspections)
                         {
                             _bulkStatusMsg = $"Mengaudit Inspeksi K3 ({processedInspections}/{unratedInspections})...";
-                            var batch = await (from i in db.Inspections
-                                               where !i.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Inspection" && a.ProgramId == i.Id)
-                                               orderby i.Id descending
-                                               select new TempAuditItem { Id = i.Id, Desc = i.Catatan }).Take(2500).ToListAsync();
-                            if (!batch.Any()) break;
+                            var rawBatch = await (from i in db.Inspections
+                                                   where !i.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Inspection" && a.ProgramId == i.Id)
+                                                   orderby i.Id descending
+                                                   select new { 
+                                                       i.Id, 
+                                                       i.Catatan,
+                                                       i.Q1_1, i.Q1_2, i.Q1_3,
+                                                       i.Q2_1, i.Q2_2, i.Q2_3,
+                                                       i.Q3_1, i.Q3_2, i.Q3_3,
+                                                       i.Q4_1, i.Q4_2, i.Q4_3,
+                                                       i.Q5_1, i.Q5_2, i.Q5_3
+                                                   }).Take(2500).ToListAsync();
+                            if (!rawBatch.Any()) break;
+
+                            var batch = rawBatch.Select(r => {
+                                int safeCount = 0;
+                                int hazardCount = 0;
+                                int naCount = 0;
+                                int[] scores = new[] {
+                                    r.Q1_1, r.Q1_2, r.Q1_3,
+                                    r.Q2_1, r.Q2_2, r.Q2_3,
+                                    r.Q3_1, r.Q3_2, r.Q3_3,
+                                    r.Q4_1, r.Q4_2, r.Q4_3,
+                                    r.Q5_1, r.Q5_2, r.Q5_3
+                                };
+                                foreach (var s in scores)
+                                {
+                                    if (s == 2) safeCount++;
+                                    else if (s == 0) hazardCount++;
+                                    else if (s == 1) naCount++;
+                                }
+                                return new TempAuditItem { 
+                                    Id = r.Id, 
+                                    Desc = $"INSPECTION_AUDIT | Catatan: {r.Catatan ?? "-"} | YA: {safeCount} | TIDAK: {hazardCount} | NA: {naCount}" 
+                                };
+                             }).ToList();
 
                             var list = new List<SapQualityAssessment>();
                             foreach (var item in batch)
@@ -2147,11 +2205,22 @@ namespace MBS_SAP.Controllers
                         while (processedObservations < unratedObservations)
                         {
                             _bulkStatusMsg = $"Mengaudit Observasi K3 ({processedObservations}/{unratedObservations})...";
-                            var batch = await (from o in db.Observations
-                                               where !o.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Observation" && a.ProgramId == o.Id)
-                                               orderby o.Id descending
-                                               select new TempAuditItem { Id = o.Id, Desc = o.KegiatanYangDiamati }).Take(2500).ToListAsync();
-                            if (!batch.Any()) break;
+                            var rawBatch = await (from o in db.Observations
+                                                   where !o.IsDeleted && !db.SapQualityAssessments.Any(a => a.ProgramType == "Observation" && a.ProgramId == o.Id)
+                                                   orderby o.Id descending
+                                                   select new {
+                                                       o.Id,
+                                                       o.KegiatanYangDiamati,
+                                                       o.PerihalYangDiamati,
+                                                       o.HasilObservasi,
+                                                       o.Keterangan
+                                                   }).Take(2500).ToListAsync();
+                            if (!rawBatch.Any()) break;
+
+                            var batch = rawBatch.Select(r => new TempAuditItem {
+                                 Id = r.Id,
+                                 Desc = $"OBSERVATION_AUDIT | Kegiatan: {r.KegiatanYangDiamati ?? "-"} | Perihal: {r.PerihalYangDiamati ?? "-"} | Hasil: {r.HasilObservasi ?? "-"} | Keterangan: {r.Keterangan ?? "-"}"
+                            }).ToList();
 
                             var list = new List<SapQualityAssessment>();
                             foreach (var item in batch)
