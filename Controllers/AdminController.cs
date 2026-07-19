@@ -14,6 +14,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MBS_SAP.Controllers
 {
@@ -22,6 +23,7 @@ namespace MBS_SAP.Controllers
     {
         private readonly AppDbContext _context;
         private readonly CompanyHierarchyService _companyHierarchyService;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private static readonly string[] AllowedWorksheetNames =
         {
             "Hazard",
@@ -45,10 +47,11 @@ namespace MBS_SAP.Controllers
             public string? Desc { get; set; }
         }
 
-        public AdminController(AppDbContext context, CompanyHierarchyService companyHierarchyService)
+        public AdminController(AppDbContext context, CompanyHierarchyService companyHierarchyService, IServiceScopeFactory serviceScopeFactory)
         {
             _context = context;
             _companyHierarchyService = companyHierarchyService;
+            _serviceScopeFactory = serviceScopeFactory;
         }
 
         private bool IsAuthorizedUser()
@@ -2021,13 +2024,11 @@ namespace MBS_SAP.Controllers
             _bulkTotal = 0;
             _bulkStatusMsg = "Menginisialisasi data...";
 
-            var serviceProvider = HttpContext.RequestServices;
-
             // Start background thread
             _ = Task.Run(async () => {
                 try
                 {
-                    using (var scope = serviceProvider.CreateScope())
+                    using (var scope = _serviceScopeFactory.CreateScope())
                     {
                         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                         db.Database.SetCommandTimeout(600); // 10 minutes timeout
