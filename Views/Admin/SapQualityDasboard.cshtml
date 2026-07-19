@@ -188,19 +188,31 @@
                         <th class="py-3 px-3 text-secondary text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1;">Total Submisi</th>
                         <th class="py-3 px-3 text-secondary text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1;">Sudah Diaudit</th>
                         <th class="py-3 px-3 text-secondary text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1;">Belum Diaudit</th>
-                        <th class="py-3 px-3 text-danger text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1;">Kejar Target (⭐1-2)</th>
-                        <th class="py-3 px-3 text-success text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1;">Kualitas Baik (⭐3-5)</th>
+                        <th class="py-3 px-2 text-secondary text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1; width: 60px;">⭐ 1</th>
+                        <th class="py-3 px-2 text-secondary text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1; width: 60px;">⭐ 2</th>
+                        <th class="py-3 px-2 text-secondary text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1; width: 60px;">⭐ 3</th>
+                        <th class="py-3 px-2 text-secondary text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1; width: 60px;">⭐ 4</th>
+                        <th class="py-3 px-2 text-secondary text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1; width: 60px;">⭐ 5</th>
                         <th class="py-3 px-4 text-warning text-uppercase fw-bold text-center" style="font-size: 11px; border-bottom: 2px solid #cbd5e1; border-top-right-radius: 8px;">Rata-Rata Rating</th>
                     </tr>
                 </thead>
                 <tbody>
                     @{
+                        var starBreakdown = ViewBag.StarBreakdown as Dictionary<string, int[]> ?? new Dictionary<string, int[]>();
+                        Func<string, int, int> getStarCount = (type, starNum) => {
+                            var key = type.ToLowerInvariant();
+                            if (starBreakdown.TryGetValue(key, out var arr) && arr != null && arr.Length >= 5) {
+                                return arr[starNum - 1];
+                            }
+                            return 0;
+                        };
+
                         var rowDetails = new[] {
-                            new { Name = "Hazard Report", Total = (int)ViewBag.TotalHazard, Assessed = (int)ViewBag.AssessedHazard, Rating = (double)ViewBag.AvgHazard, Theme = "#6366f1", Icon = "bi-shield-fill-exclamation" },
-                            new { Name = "Inspeksi K3", Total = (int)ViewBag.TotalInspection, Assessed = (int)ViewBag.AssessedInspection, Rating = (double)ViewBag.AvgInspection, Theme = "#3b82f6", Icon = "bi-search" },
-                            new { Name = "Safety Talk", Total = (int)ViewBag.TotalSafetyTalk, Assessed = (int)ViewBag.AssessedSafetyTalk, Rating = (double)ViewBag.AvgSafetyTalk, Theme = "#f59e0b", Icon = "bi-megaphone-fill" },
-                            new { Name = "Observasi K3", Total = (int)ViewBag.TotalObservation, Assessed = (int)ViewBag.AssessedObservation, Rating = (double)ViewBag.AvgObservation, Theme = "#14b8a6", Icon = "bi-eye-fill" },
-                            new { Name = "Coaching K3", Total = (int)ViewBag.TotalCoaching, Assessed = (int)ViewBag.AssessedCoaching, Rating = (double)ViewBag.AvgCoaching, Theme = "#d946ef", Icon = "bi-person-badge-fill" }
+                            new { Key = "hazard", Name = "Hazard Report", Total = (int)ViewBag.TotalHazard, Assessed = (int)ViewBag.AssessedHazard, Rating = (double)ViewBag.AvgHazard, Theme = "#6366f1", Icon = "bi-shield-fill-exclamation" },
+                            new { Key = "inspection", Name = "Inspeksi K3", Total = (int)ViewBag.TotalInspection, Assessed = (int)ViewBag.AssessedInspection, Rating = (double)ViewBag.AvgInspection, Theme = "#3b82f6", Icon = "bi-search" },
+                            new { Key = "safetytalk", Name = "Safety Talk", Total = (int)ViewBag.TotalSafetyTalk, Assessed = (int)ViewBag.AssessedSafetyTalk, Rating = (double)ViewBag.AvgSafetyTalk, Theme = "#f59e0b", Icon = "bi-megaphone-fill" },
+                            new { Key = "observation", Name = "Observasi K3", Total = (int)ViewBag.TotalObservation, Assessed = (int)ViewBag.AssessedObservation, Rating = (double)ViewBag.AvgObservation, Theme = "#14b8a6", Icon = "bi-eye-fill" },
+                            new { Key = "coaching", Name = "Coaching K3", Total = (int)ViewBag.TotalCoaching, Assessed = (int)ViewBag.AssessedCoaching, Rating = (double)ViewBag.AvgCoaching, Theme = "#d946ef", Icon = "bi-person-badge-fill" }
                         };
                     }
                     @foreach (var rd in rowDetails)
@@ -213,20 +225,11 @@
                             <td class="py-3 px-3 text-center fw-bold">@rd.Total.ToString("#,##0")</td>
                             <td class="py-3 px-3 text-center text-primary fw-bold">@rd.Assessed.ToString("#,##0")</td>
                             <td class="py-3 px-3 text-center text-muted">@unassessed.ToString("#,##0")</td>
-                            <td class="py-3 px-3 text-center text-danger font-monospace fw-bold">
-                                @if (rd.Assessed > 0)
-                                {
-                                    <span>@((rd.Assessed * (rd.Rating <= 2.5 ? 1 : 0)).ToString()) data</span>
-                                }
-                                else { <span>-</span> }
-                            </td>
-                            <td class="py-3 px-3 text-center text-success font-monospace fw-bold">
-                                @if (rd.Assessed > 0)
-                                {
-                                    <span>@((rd.Assessed * (rd.Rating > 2.5 ? 1 : 0)).ToString()) data</span>
-                                }
-                                else { <span>-</span> }
-                            </td>
+                            <td class="py-3 px-2 text-center font-monospace" style="color: #ef4444; font-weight: 700; font-size: 13px;">@(rd.Assessed > 0 ? getStarCount(rd.Key, 1).ToString("#,##0") : "-")</td>
+                            <td class="py-3 px-2 text-center font-monospace" style="color: #f87171; font-weight: 700; font-size: 13px;">@(rd.Assessed > 0 ? getStarCount(rd.Key, 2).ToString("#,##0") : "-")</td>
+                            <td class="py-3 px-2 text-center font-monospace" style="color: #3b82f6; font-weight: 700; font-size: 13px;">@(rd.Assessed > 0 ? getStarCount(rd.Key, 3).ToString("#,##0") : "-")</td>
+                            <td class="py-3 px-2 text-center font-monospace" style="color: #34d399; font-weight: 700; font-size: 13px;">@(rd.Assessed > 0 ? getStarCount(rd.Key, 4).ToString("#,##0") : "-")</td>
+                            <td class="py-3 px-2 text-center font-monospace" style="color: #10b981; font-weight: 700; font-size: 13px;">@(rd.Assessed > 0 ? getStarCount(rd.Key, 5).ToString("#,##0") : "-")</td>
                             <td class="py-3 px-4 text-center">
                                 <span class="badge text-white py-2 px-3 fw-bold" style="background: @rd.Theme; border-radius: 8px; font-size: 13px;">
                                     ⭐ @rd.Rating.ToString("0.00")

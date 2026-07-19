@@ -1964,6 +1964,21 @@ namespace MBS_SAP.Controllers
             double avgObservation = assessedObservation > 0 ? assessments.Where(a => string.Equals(a.ProgramType, "Observation", StringComparison.OrdinalIgnoreCase)).Average(a => a.Rating) : 0;
             double avgCoaching = assessedCoaching > 0 ? assessments.Where(a => string.Equals(a.ProgramType, "Coaching", StringComparison.OrdinalIgnoreCase)).Average(a => a.Rating) : 0;
 
+            // Star breakdown per type
+            var starBreakdown = assessments
+                .GroupBy(a => a.ProgramType.ToLowerInvariant())
+                .ToDictionary(
+                    g => g.Key,
+                    g => new int[] {
+                        g.Count(a => a.Rating == 1),
+                        g.Count(a => a.Rating == 2),
+                        g.Count(a => a.Rating == 3),
+                        g.Count(a => a.Rating == 4),
+                        g.Count(a => a.Rating == 5)
+                    }
+                );
+            ViewBag.StarBreakdown = starBreakdown;
+
             ViewBag.SelectedYear = year;
             ViewBag.SelectedMonth = month;
 
