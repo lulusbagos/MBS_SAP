@@ -175,6 +175,17 @@
                 </div>
             </div>
         </div>
+    <!-- Row: Daily Trend Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card p-4 shadow-sm border-0 bg-white" style="border-radius: 20px; border: 1.5px solid #e2e8f0 !important; min-height: 380px; box-shadow: 0 4px 20px rgba(0,0,0,0.01);">
+                <h5 class="fw-extrabold text-dark mb-1" style="font-family: 'Outfit', sans-serif;"><i class="bi bi-graph-up me-2 text-primary"></i>Tren Kualitas Audit Harian</h5>
+                <p class="text-muted mb-3" style="font-size: 12.5px;">Grafik perkembangan rata-rata nilai kualitas temuan/kegiatan SAP dari hari ke hari @(ViewBag.SelectedYear != null ? $"(Periode filtered)" : "(30 Hari Terakhir)").</p>
+                <div class="d-flex justify-content-center align-items-center" style="position: relative; height: 280px; width: 100%;">
+                    <canvas id="dailyTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Clear detailed breakdown table (Rincian data yang jelas) -->
@@ -365,6 +376,72 @@
                     }
                 }
             });
+
+            // ==================== 3. DAILY TREND CHART (LINE CHART) ====================
+            const dailyTrendsData = @Html.Raw(ViewBag.DailyTrendsJson ?? "[]");
+            const canvasDaily = document.getElementById('dailyTrendChart');
+            if (canvasDaily && dailyTrendsData.length > 0) {
+                const ctxDaily = canvasDaily.getContext('2d');
+                const labels = dailyTrendsData.map(item => item.Date);
+                const ratings = dailyTrendsData.map(item => item.AvgRating);
+                const counts = dailyTrendsData.map(item => item.Count);
+
+                new Chart(ctxDaily, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Rata-Rata Rating Kualitas',
+                            data: ratings,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                            fill: true,
+                            tension: 0.3,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#2563eb',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const idx = context.dataIndex;
+                                        return [
+                                            `Rata-Rata: ⭐ ${ratings[idx]}`,
+                                            `Total Audit: ${counts[idx]} data`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { font: { size: 10, family: 'Inter' }, color: '#64748b' }
+                            },
+                            y: {
+                                min: 1,
+                                max: 5,
+                                grid: { color: '#f1f5f9' },
+                                ticks: { 
+                                    stepSize: 1,
+                                    font: { size: 10, family: 'Inter' }, 
+                                    color: '#64748b',
+                                    callback: function(value) { return '⭐ ' + value; }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
         });
     </script>
 }

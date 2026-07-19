@@ -1979,6 +1979,24 @@ namespace MBS_SAP.Controllers
                 );
             ViewBag.StarBreakdown = starBreakdown;
 
+            // Daily Quality Trend (Line Chart)
+            var dailyTrendsQuery = assessments.AsEnumerable();
+            if (!year.HasValue && !month.HasValue)
+            {
+                var thirtyDaysAgo = DateTime.Today.AddDays(-30);
+                dailyTrendsQuery = dailyTrendsQuery.Where(a => a.CreatedAt.Date >= thirtyDaysAgo);
+            }
+            var dailyTrends = dailyTrendsQuery
+                .GroupBy(a => a.CreatedAt.Date)
+                .OrderBy(g => g.Key)
+                .Select(g => new {
+                    Date = g.Key.ToString("dd/MM/yyyy"),
+                    AvgRating = Math.Round(g.Average(a => a.Rating), 2),
+                    Count = g.Count()
+                })
+                .ToList();
+            ViewBag.DailyTrendsJson = JsonSerializer.Serialize(dailyTrends);
+
             ViewBag.SelectedYear = year;
             ViewBag.SelectedMonth = month;
 
