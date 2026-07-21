@@ -424,9 +424,14 @@ namespace MBS_SAP.Controllers
             };
         }
 
-        [Authorize(Roles = "Admin")]
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
+            if (!User.IsInRole("Admin"))
+            {
+                return RedirectToAction("Compliance", "Performance");
+            }
+
             ViewData["HeaderTitle"] = "Pencapaian SAP";
             ViewData["ActiveTab"] = "Performance";
 

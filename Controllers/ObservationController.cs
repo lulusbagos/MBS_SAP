@@ -35,17 +35,14 @@ namespace MBS_SAP.Controllers
             var satuBulanLalu = DateTime.Now.AddMonths(-1);
             var query = _context.Observations.Where(r => !r.IsDeleted && r.CreatedAt >= satuBulanLalu);
 
-            // Batasi data observasi berdasarkan perusahaan user aktif (strict company scope).
-            if (companyScopedNiks.Count == 0)
+            if (isAdmin)
             {
-                query = query.Where(r => false);
+                if (companyScopedNiks.Count > 0)
+                {
+                    query = query.Where(r => companyScopedNiks.Contains(r.Nik));
+                }
             }
-            else
-            {
-                query = query.Where(r => companyScopedNiks.Contains(r.Nik));
-            }
-
-            if (!isAdmin && !string.IsNullOrEmpty(userNik))
+            else if (!string.IsNullOrEmpty(userNik))
             {
                 query = query.Where(r => r.Nik == userNik);
             }

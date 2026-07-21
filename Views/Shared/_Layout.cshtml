@@ -54,13 +54,10 @@
                         <i class="bi bi-grid-1x2-fill"></i>
                         <span>Dashboard</span>
                     </a>
-                    @if (isAdminUser)
-                    {
-                        <a asp-controller="Performance" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Performance" ? "active" : "")">
-                            <i class="bi bi-bar-chart-line-fill"></i>
-                            <span>Pencapaian SAP</span>
-                        </a>
-                    }
+                    <a asp-controller="Performance" asp-action="@(isAdminUser ? "Index" : "Compliance")" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Performance" ? "active" : "")">
+                        <i class="bi bi-bar-chart-line-fill"></i>
+                        <span>Pencapaian SAP</span>
+                    </a>
                     <a asp-controller="QrCode" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "QrCode" ? "active" : "")">
                         <i class="bi bi-qr-code-scan"></i>
                         <span>QR Code</span>
@@ -218,13 +215,10 @@
                         <i class="bi bi-grid-1x2-fill"></i>
                         <span>Home</span>
                     </a>
-                    @if (isAdminUser)
-                    {
-                        <a asp-controller="Performance" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Performance" ? "active" : "")">
-                            <i class="bi bi-bar-chart-line-fill"></i>
-                            <span>Pencapaian</span>
-                        </a>
-                    }
+                    <a asp-controller="Performance" asp-action="@(isAdminUser ? "Index" : "Compliance")" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Performance" ? "active" : "")">
+                        <i class="bi bi-bar-chart-line-fill"></i>
+                        <span>Pencapaian</span>
+                    </a>
                     <a asp-controller="QrCode" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "QrCode" ? "active" : "")">
                         <i class="bi bi-qr-code-scan"></i>
                         <span>QR</span>

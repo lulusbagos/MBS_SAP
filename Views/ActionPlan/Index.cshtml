@@ -393,8 +393,30 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            let selectedType   = 'all';
-            let selectedStatus = 'all';
+            const urlParams = new URLSearchParams(window.location.search);
+            let selectedType   = (urlParams.get('type') || 'all').toLowerCase();
+            let selectedStatus = (urlParams.get('status') || 'all').toLowerCase();
+
+            // Set initial active pill for status if passed in URL
+            if (selectedStatus !== 'all') {
+                $('.filter-status').removeClass('active active-green active-red');
+                const $statusPill = $('.filter-status[data-status="' + selectedStatus + '"]');
+                if ($statusPill.length) {
+                    const cls = $statusPill.data('active-class') || 'active';
+                    $statusPill.addClass(cls);
+                }
+            }
+
+            // Set initial active pill for type if passed in URL
+            if (selectedType !== 'all') {
+                $('.filter-type').removeClass('active active-green active-red');
+                const $typePill = $('.filter-type[data-type="' + selectedType + '"]');
+                if ($typePill.length) {
+                    $typePill.addClass('active');
+                }
+            }
+
+            applyFilters();
 
             function applyFilters() {
                 let visible = 0;

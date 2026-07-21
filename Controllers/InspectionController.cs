@@ -37,28 +37,24 @@ namespace MBS_SAP.Controllers
             var isAdmin = User.IsInRole("Admin");
             var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
             int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
+            if (!userCompanyId.HasValue && !string.IsNullOrEmpty(userNik))
+            {
+                var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                if (karyawan != null) userCompanyId = karyawan.IdPerusahaan;
+            }
 
             var satuBulanLalu = DateTime.Now.AddMonths(-1);
             IQueryable<Inspection> query = _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= satuBulanLalu);
 
-            // Filter berdasarkan perusahaan (berlaku untuk Admin maupun non-Admin)
-            if (userCompanyId.HasValue)
+            if (isAdmin && userCompanyId.HasValue)
             {
-                if (isAdmin)
-                {
-                    // Admin melihat semua inspeksi milik perusahaannya
-                    query = query.Where(i => i.PerusahaanId.HasValue && i.PerusahaanId.Value == userCompanyId.Value);
-                }
-                else
-                {
-                    // Non-Admin hanya melihat miliknya sendiri atau yang ditugaskan kepadanya (baik sebagai pembuat maupun PJA)
-                    query = query.Where(i => i.Nik == userNik || i.NikPja == userNik);
-                }
+                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
+                query = query.Where(i => i.PerusahaanId.HasValue && allowedIds.Contains(i.PerusahaanId.Value));
             }
             else
             {
-                // Jika user tidak punya CompanyId claim, tampilkan kosong (jangan bocor semua data)
-                query = query.Where(i => false);
+                // Non-Admin (atau fallback) melihat miliknya sendiri / ditugaskan
+                query = query.Where(i => i.Nik == userNik || i.NikPja == userNik);
             }
 
             // History card only shows last 7 days (including today).

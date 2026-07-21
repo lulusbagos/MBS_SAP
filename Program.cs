@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using MBS_SAP.Data;
 using MBS_SAP.Services;
 using Microsoft.Extensions.FileProviders;
@@ -9,6 +11,16 @@ using System.Security.Claims;
 using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Persist Data Protection Keys to prevent cookie invalidation when app restarts or is re-published
+var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "Keys");
+if (!Directory.Exists(keysFolder))
+{
+    Directory.CreateDirectory(keysFolder);
+}
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
+    .SetApplicationName("MBS_SAP");
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
@@ -20,6 +32,13 @@ builder.Services.AddHostedService<PostgresReplicationScheduler>();
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 
+// Forwarded headers for reverse proxy / IIS domain hosting
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownProxies.Clear();
+});
+
 // Register DbContext with SQL Server
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -29,52 +48,64 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
+        options.Cookie.Name = ".MBS_SAP.Auth";
         options.LoginPath = "/Account/Login";
         options.AccessDeniedPath = "/Account/AccessDenied";
         options.LogoutPath = "/Account/Logout";
-        options.ExpireTimeSpan = TimeSpan.FromHours(8);
+        options.ExpireTimeSpan = TimeSpan.FromHours(12);
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
         options.Events = new CookieAuthenticationEvents
         {
             OnValidatePrincipal = async context =>
             {
-                var nrp = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                var passwordClaim = context.Principal?.FindFirst("PasswordHash")?.Value;
-                
-                if (!string.IsNullOrEmpty(nrp))
+                try
                 {
-                    var cache = context.HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
-                    var cacheKey = $"UserAuthActive_{nrp}";
+                    var nrp = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    var passwordClaim = context.Principal?.FindFirst("PasswordHash")?.Value;
                     
-                    if (!cache.TryGetValue(cacheKey, out string? currentPassword))
+                    if (!string.IsNullOrEmpty(nrp))
                     {
-                        var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                        var cache = context.HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
+                        var cacheKey = $"UserAuthActive_{nrp}";
                         
-                        // Check if employee is still active
-                        var karyawan = await dbContext.Karyawans.FirstOrDefaultAsync(k => k.NoNik == nrp && k.StatusAktif);
-                        if (karyawan == null)
+                        if (!cache.TryGetValue(cacheKey, out string? currentPassword))
+                        {
+                            var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                            
+                            // Check if employee or user exists and active
+                            var karyawan = await dbContext.Karyawans.FirstOrDefaultAsync(k => k.NoNik == nrp && k.StatusAktif);
+                            var pengguna = await dbContext.Penggunas.FirstOrDefaultAsync(p => p.Username == nrp && p.IsAktif);
+
+                            if (karyawan == null && pengguna == null)
+                            {
+                                context.RejectPrincipal();
+                                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                                return;
+                            }
+                            
+                            // Check if password has changed since cookie was issued
+                            var overridePwd = await dbContext.PasswordOverrides.FirstOrDefaultAsync(p => p.Nrp == nrp);
+                            currentPassword = overridePwd?.KataSandi;
+                            if (string.IsNullOrEmpty(currentPassword))
+                            {
+                                currentPassword = pengguna?.KataSandi ?? "123456";
+                            }
+                            
+                            cache.Set(cacheKey, currentPassword, TimeSpan.FromMinutes(5));
+                        }
+                        
+                        if (!string.IsNullOrEmpty(passwordClaim) && !string.IsNullOrEmpty(currentPassword) && passwordClaim != currentPassword)
                         {
                             context.RejectPrincipal();
                             await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                            return;
                         }
-                        
-                        // Check if password has changed since cookie was issued
-                        var overridePwd = await dbContext.PasswordOverrides.FirstOrDefaultAsync(p => p.Nrp == nrp);
-                        currentPassword = overridePwd?.KataSandi;
-                        if (string.IsNullOrEmpty(currentPassword))
-                        {
-                            var pg = await dbContext.Penggunas.FirstOrDefaultAsync(p => p.Username == nrp && p.IsAktif);
-                            currentPassword = pg?.KataSandi ?? "123456";
-                        }
-                        
-                        cache.Set(cacheKey, currentPassword, TimeSpan.FromMinutes(5));
                     }
-                    
-                    if (passwordClaim != currentPassword)
-                    {
-                        context.RejectPrincipal();
-                        await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                    }
+                }
+                catch (Exception ex)
+                {
+                    // Catch DB hiccups so logged in users are not forcefully signed out on domain
+                    Console.WriteLine($"[Auth] OnValidatePrincipal warning: {ex.Message}");
                 }
             }
         };
@@ -88,6 +119,7 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
 }
 
+app.UseForwardedHeaders();
 app.UseStaticFiles();
 
 app.UseRouting();

@@ -96,9 +96,62 @@
             </div>
         </div>
 
+        @{
+            var myOpenAP = (int)(ViewData["MyOpenActionPlans"] ?? 0);
+            var deptOpenAP = (int)(ViewData["DeptOpenActionPlans"] ?? 0);
+            var userDeptName = ViewData["UserDept"] as string ?? "";
+        }
+        @if (myOpenAP > 0 || deptOpenAP > 0)
+        {
+        <!-- Action Plan Open Warning Card -->
+        <div class="card-sap mb-4 animate-fade-in delay-2" style="border-left: 4px solid #f59e0b; background: rgba(245, 158, 11, 0.06);">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(245, 158, 11, 0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="bi bi-exclamation-triangle-fill" style="color: #f59e0b; font-size: 20px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; font-size: 15px; color: var(--text-main);">Action Plan Belum Selesai</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Segera tindak lanjuti agar compliance meningkat</div>
+                    </div>
+                </div>
+                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" class="btn btn-warning btn-sm px-3 py-1.5 fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" style="border-radius: 10px; font-size: 12px; background: #f59e0b; border: none; color: #000;">
+                    <span>Lihat Temuan Open</span>
+                    <i class="bi bi-arrow-right-short" style="font-size: 16px;"></i>
+                </a>
+            </div>
+            <div class="d-flex gap-3 flex-wrap">
+                @if (myOpenAP > 0)
+                {
+                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" style="text-decoration:none; flex: 1; min-width: 140px;">
+                    <div class="d-flex align-items-center justify-content-between" style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.22)'" onmouseout="this.style.background='rgba(245,158,11,0.12)'">
+                        <div>
+                            <div style="font-size: 22px; font-weight: 800; color: #f59e0b; line-height: 1;">@myOpenAP</div>
+                            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 4px;">Milik Saya <span style="font-size: 10px; color: #f59e0b;">(Open)</span></div>
+                        </div>
+                        <span class="badge bg-warning text-dark px-2 py-1" style="font-size: 10px; font-weight: 700;">Tindak Lanjuti &rarr;</span>
+                    </div>
+                </a>
+                }
+                @if (deptOpenAP > 0 && !string.IsNullOrEmpty(userDeptName))
+                {
+                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" style="text-decoration:none; flex: 1; min-width: 140px;">
+                    <div class="d-flex align-items-center justify-content-between" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.16)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
+                        <div>
+                            <div style="font-size: 22px; font-weight: 800; color: #ef4444; line-height: 1;">@deptOpenAP</div>
+                            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 4px;">Dept: @userDeptName <span style="font-size: 10px; color: #ef4444;">(Open)</span></div>
+                        </div>
+                        <span class="badge bg-danger text-white px-2 py-1" style="font-size: 10px; font-weight: 700;">Cek Dept &rarr;</span>
+                    </div>
+                </a>
+                }
+            </div>
+        </div>
+        }
+
         <!-- Quick Action Menu Cards -->
         <div class="action-grid">
-            <a asp-controller="Performance" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
+            <a asp-controller="Performance" asp-action="@(User.IsInRole("Admin") ? "Index" : "Compliance")" class="btn-action-card animate-pop-in delay-2">
                 <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0284c7, #0369a1); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
                     <i class="bi bi-bar-chart-line-fill" style="font-size: 20px; color: white;"></i>
                 </div>

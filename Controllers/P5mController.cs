@@ -39,28 +39,24 @@ namespace MBS_SAP.Controllers
             var isAdmin = User.IsInRole("Admin");
             var companyIdStr = User.FindFirst("CompanyId")?.Value;
             int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+            if (!companyId.HasValue && !string.IsNullOrEmpty(userNik))
+            {
+                var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                if (karyawan != null) companyId = karyawan.IdPerusahaan;
+            }
 
             var satuBulanLalu = DateTime.Now.AddMonths(-1);
             IQueryable<P5m> query = _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= satuBulanLalu);
 
-            // Filter berdasarkan perusahaan (berlaku untuk Admin maupun non-Admin)
-            if (companyId.HasValue)
+            if (isAdmin && companyId.HasValue)
             {
-                if (isAdmin)
-                {
-                    // Admin melihat semua P5M milik perusahaannya
-                    query = query.Where(p => p.PerusahaanId.HasValue && p.PerusahaanId.Value == companyId.Value);
-                }
-                else
-                {
-                    // Non-Admin hanya melihat miliknya sendiri
-                    query = query.Where(p => p.Nik == userNik);
-                }
+                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
+                query = query.Where(p => p.PerusahaanId.HasValue && allowedIds.Contains(p.PerusahaanId.Value));
             }
             else
             {
-                // Jika user tidak punya CompanyId claim, tampilkan kosong
-                query = query.Where(p => false);
+                // Non-Admin (atau fallback) melihat data miliknya sendiri
+                query = query.Where(p => p.Nik == userNik);
             }
 
             var reports = await query

@@ -339,6 +339,8 @@
     </div>
 
     <!-- Tabs Toggle (Redirects back to main page or keeps active) -->
+    @if (User.IsInRole("Admin"))
+    {
     <div class="d-flex justify-content-center mb-4">
         <div style="background: var(--bg-card); border: 1.5px solid var(--border-color); padding: 4px; border-radius: 12px; display: inline-flex; gap: 4px; flex-wrap: wrap; justify-content: center;">
             <button class="tab-btn px-4 py-2 tab-inactive" id="tabMy" onclick="window.location.href='/Performance?tab=my'">
@@ -358,6 +360,7 @@
             </button>
         </div>
     </div>
+    }
 
     <!-- Month / Year Filter Card -->
     <div class="card p-3 shadow-sm border-0 mb-4" style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.08) !important; background: var(--bg-card);">

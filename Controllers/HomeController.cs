@@ -29,6 +29,7 @@ namespace MBS_SAP.Controllers
             var nrp = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var userNik = nrp?.Trim();
             bool hasUserNik = !string.IsNullOrWhiteSpace(userNik);
+            var userDept = User.FindFirst("Department")?.Value ?? string.Empty;
             if (!string.IsNullOrEmpty(nrp))
             {
                 var overridePwd = await _context.PasswordOverrides.FirstOrDefaultAsync(p => p.Nrp == nrp);
@@ -145,6 +146,7 @@ namespace MBS_SAP.Controllers
 
                 // Query dashboard berbasis akun login (NIK) dengan filter rentang waktu 6 bulan terakhir untuk mengoptimalkan kinerja.
                 var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
                 var lookbackDate = startOfMonth.AddMonths(-6);
 
                 var hazardQuery = _context.HazardReports
@@ -163,59 +165,65 @@ namespace MBS_SAP.Controllers
                     .Where(o => !o.IsDeleted && o.Nik == userNik && o.CreatedAt >= lookbackDate);
 
                 // Performa tinggi: Menggunakan CountAsync secara langsung daripada GroupBy(1) yang menghasilkan subquery SQL kompleks dan lambat.
-                int thisMonthHazardsCount = await hazardQuery.CountAsync(h => h.Tanggal >= startOfMonth);
+                int thisMonthHazardsCount = await hazardQuery.CountAsync(h => h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth);
                 int openHazardsCount = await hazardQuery.CountAsync(h => h.StatusTemuan == "Open");
                 int closedHazardsCount = await hazardQuery.CountAsync(h => h.StatusTemuan == "Closed");
                 int totalHazardsCount = openHazardsCount + closedHazardsCount;
 
-                int thisMonthInspectionsCount = await inspectionQuery.CountAsync(i => i.Tanggal >= startOfMonth);
+                int thisMonthInspectionsCount = await inspectionQuery.CountAsync(i => i.CreatedAt >= startOfMonth && i.CreatedAt <= endOfMonth);
                 int totalInspectionsCount = await inspectionQuery.CountAsync();
 
                 int totalActionPlansCount = await actionPlanQuery.CountAsync();
 
-                int thisMonthSafetyTalksCount = await safetyTalkQuery.CountAsync(s => s.Tanggal >= startOfMonth);
+                int thisMonthSafetyTalksCount = await safetyTalkQuery.CountAsync(s => s.CreatedAt >= startOfMonth && s.CreatedAt <= endOfMonth);
                 int totalSafetyTalksCount = await safetyTalkQuery.CountAsync();
 
-                int thisMonthP5msCount = await p5mQuery.CountAsync(p => p.Tanggal >= startOfMonth);
+                int thisMonthP5msCount = await p5mQuery.CountAsync(p => p.CreatedAt >= startOfMonth && p.CreatedAt <= endOfMonth);
                 int totalP5msCount = await p5mQuery.CountAsync();
 
-                int thisMonthCoachingsCount = await coachingQuery.CountAsync(c => c.Tanggal >= startOfMonth);
+                int thisMonthCoachingsCount = await coachingQuery.CountAsync(c => c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth);
                 int totalCoachingsCount = await coachingQuery.CountAsync();
 
-                int thisMonthObservationsCount = await observationQuery.CountAsync(o => o.Date >= startOfMonth);
+                int thisMonthObservationsCount = await observationQuery.CountAsync(o => o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth);
                 int totalObservationsCount = await observationQuery.CountAsync();
 
-                var closedAssignedHazardCredits = await actionPlanQuery
-                    .Where(a => a.Status == "Closed"
-                        && a.TanggalPerbaikan != null
-                        && a.TanggalPerbaikan >= startOfMonth
-                        && a.ItemSap != null
-                        && a.ItemSap.StartsWith("hazard:")
-                        && a.Nik != userNik)
-                    .Select(a => a.ItemSap!)
-                    .Distinct()
-                    .CountAsync();
-
-                var closedAssignedInspectionCredits = await actionPlanQuery
-                    .Where(a => a.Status == "Closed"
-                        && a.TanggalPerbaikan != null
-                        && a.TanggalPerbaikan >= startOfMonth
-                        && a.ItemSap != null
-                        && a.ItemSap.StartsWith("inspection:")
-                        && a.Nik != userNik)
-                    .Select(a => a.ItemSap!)
-                    .Distinct()
-                    .CountAsync();
+                // [FIX] Hapus kredit action plan agar konsisten dengan perhitungan Liga
+                // Sebelumnya ThisMonthHazards dan ThisMonthInspections ditambah closedAssignedCredits
+                // yang menyebabkan Home menampilkan angka berbeda dari Liga.
 
                 stats.TotalHazards = totalHazardsCount;
                 stats.OpenHazards = openHazardsCount;
                 stats.ClosedHazards = closedHazardsCount;
-                stats.ThisMonthHazards = thisMonthHazardsCount + closedAssignedHazardCredits;
+                stats.ThisMonthHazards = thisMonthHazardsCount; // tanpa kredit action plan
 
                 stats.TotalInspections = totalInspectionsCount;
-                stats.ThisMonthInspections = thisMonthInspectionsCount + closedAssignedInspectionCredits;
+                stats.ThisMonthInspections = thisMonthInspectionsCount; // tanpa kredit action plan
 
                 stats.TotalActionPlans = totalActionPlansCount;
+
+                // Query Action Plan Open: individu (saya sebagai pembuat/PJA/PIC)
+                var currentKaryawanForAP = await _context.Karyawans
+                    .Where(k => k.NoNik != null && k.NoNik.Trim() == userNik && k.StatusAktif)
+                    .Select(k => new { k.IdPerusahaan })
+                    .FirstOrDefaultAsync();
+                int? userCompanyId = currentKaryawanForAP?.IdPerusahaan;
+
+                // Action plan Open milik saya (saya sebagai pembuat atau PJA)
+                stats.MyOpenActionPlans = await _context.ActionPlans
+                    .Where(a => !a.IsDeleted && a.Status == "Open"
+                        && (a.Nik == userNik || a.NikPja == userNik || a.NikPic == userNik))
+                    .CountAsync();
+
+                // Action plan Open di departemen saya (berdasarkan field Departemen pada action plan)
+                stats.DeptOpenActionPlans = 0;
+                if (!string.IsNullOrEmpty(userDept) && userCompanyId.HasValue)
+                {
+                    stats.DeptOpenActionPlans = await _context.ActionPlans
+                        .Where(a => !a.IsDeleted && a.Status == "Open"
+                            && a.PerusahaanId == userCompanyId.Value
+                            && (a.Departemen == userDept || a.DepartemenPja == userDept || a.DepartemenPic == userDept))
+                        .CountAsync();
+                }
 
                 stats.TotalSafetyTalks = totalSafetyTalksCount;
                 stats.ThisMonthSafetyTalks = thisMonthSafetyTalksCount;
@@ -415,6 +423,10 @@ namespace MBS_SAP.Controllers
             ViewData["TargetObservasi"] = stats.TargetObservasi;
             ViewData["TargetCoaching"] = stats.TargetCoaching;
 
+            ViewData["MyOpenActionPlans"] = stats.MyOpenActionPlans;
+            ViewData["DeptOpenActionPlans"] = stats.DeptOpenActionPlans;
+            ViewData["UserDept"] = userDept;
+
             return View(stats.RecentActivities);
         }
 
@@ -456,6 +468,8 @@ namespace MBS_SAP.Controllers
             public string? AlasanTargetZero { get; set; }
             public int MyTotalThisMonth { get; set; }
             public int MyTotalMonthTarget { get; set; }
+            public int MyOpenActionPlans { get; set; }
+            public int DeptOpenActionPlans { get; set; }
             
             public int ThisMonthHazards { get; set; }
             public int ThisMonthInspections { get; set; }
