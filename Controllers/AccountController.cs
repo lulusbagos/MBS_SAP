@@ -197,6 +197,12 @@ namespace MBS_SAP.Controllers
             idDepartemen = karyawanMaster.IdDepartemen ?? idDepartemen;
             idJabatan = karyawanMaster.IdJabatan ?? idJabatan;
 
+            var personalMaster = await _context.Personals.FirstOrDefaultAsync(p => p.IdPersonal == karyawanMaster.IdPersonal);
+            if (personalMaster != null && !string.IsNullOrWhiteSpace(personalMaster.NamaLengkap))
+            {
+                fullName = personalMaster.NamaLengkap;
+            }
+
             if (string.IsNullOrEmpty(fullName))
             {
                 fullName = nrp;
@@ -539,9 +545,9 @@ namespace MBS_SAP.Controllers
             ViewData["Department"] = dept?.NamaDepartemen ?? User.FindFirst("Department")?.Value ?? "-";
             ViewData["Company"] = comp?.NamaPerusahaan ?? User.FindFirst("Company")?.Value ?? "-";
             ViewData["JobTitle"] = jab?.NamaJabatan ?? "Staff/Operator";
-            ViewData["FullName"] = User.Identity?.Name;
+            ViewData["FullName"] = personal?.NamaLengkap ?? pengguna?.NamaLengkap ?? User.Identity?.Name;
             ViewData["Nrp"] = nrp;
-            ViewData["Email"] = pengguna?.Email ?? personal?.EmailPribadi ?? "-";
+            ViewData["Email"] = personal?.EmailPribadi ?? pengguna?.Email ?? "-";
             ViewData["Phone"] = personal?.Hp1 ?? "-";
 
             // Safety stats
