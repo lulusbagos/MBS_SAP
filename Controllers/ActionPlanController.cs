@@ -6,8 +6,10 @@ using MBS_SAP.Models;
 using MBS_SAP.Services;
 using System;
 using System.IO;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using ClosedXML.Excel;
 
 namespace MBS_SAP.Controllers
 {
@@ -198,6 +200,220 @@ namespace MBS_SAP.Controllers
 
             TempData["SuccessMessage"] = "Action Plan berhasil dihapus.";
             return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadExcel()
+        {
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var compIdStr = User.FindFirst("CompanyId")?.Value;
+            int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
+            var isAdmin = User.IsInRole("Admin");
+
+            var query = _context.ActionPlans.Where(r => !r.IsDeleted);
+
+            // Filter berdasarkan hierarki perusahaan (sama seperti Index)
+            if (companyId.HasValue)
+            {
+                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
+                query = query.Where(r =>
+                    (r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value)) ||
+                    r.Nik == userNik ||
+                    r.NikPja == userNik ||
+                    r.NikPic == userNik
+                );
+            }
+
+            // Non-Admin hanya melihat yang terkait dengannya langsung
+            if (!isAdmin && !string.IsNullOrEmpty(userNik))
+            {
+                query = query.Where(r =>
+                    r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik || string.IsNullOrEmpty(r.NikPja)
+                );
+            }
+
+            // Urutkan status "Open" terlebih dahulu, kemudian CreatedAt terbaru
+            var reports = await query
+                .OrderBy(r => r.Status == "Closed" ? 1 : 0) // Open (status != Closed) first
+                .ThenByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            // Ambil data nama perusahaan untuk mapping PerusahaanId -> NamaPerusahaan
+            var companies = await _context.Perusahaans
+                .AsNoTracking()
+                .ToDictionaryAsync(p => p.PerusahaanId, p => p.NamaPerusahaan ?? "-");
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Action Plan Temuan");
+
+            // Header Judul Laporan
+            worksheet.Cell(1, 1).Value = "LAPORAN ACTION PLAN TEMUAN SAFETY (SAP)";
+            worksheet.Cell(1, 1).Style.Font.FontSize = 16;
+            worksheet.Cell(1, 1).Style.Font.Bold = true;
+            worksheet.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#059669");
+
+            var userCompanyName = companyId.HasValue && companies.TryGetValue(companyId.Value, out var cName) ? cName : "Semua Perusahaan";
+            worksheet.Cell(2, 1).Value = $"Perusahaan: {userCompanyName} (Termasuk Anak Perusahaan)";
+            worksheet.Cell(2, 1).Style.Font.FontSize = 11;
+            worksheet.Cell(2, 1).Style.Font.Italic = true;
+
+            worksheet.Cell(3, 1).Value = $"Tanggal Ekspor: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+            worksheet.Cell(3, 1).Style.Font.FontSize = 10;
+            worksheet.Cell(3, 1).Style.Font.FontColor = XLColor.Gray;
+
+            // Header Tabel
+            string[] headers = new string[]
+            {
+                "No", "Perusahaan", "Tipe SAP", "Pelapor", "Tanggal Temuan", "Waktu", 
+                "Departemen", "Area / Lokasi", "Kategori Temuan", "Detail Temuan", 
+                "Status", "PJA (NIK - Nama)", "PIC (NIK - Nama)", "Rencana Perbaikan", 
+                "Target Selesai", "Realisasi Perbaikan", "Tanggal Realisasi", "Overdue Status", "Alasan Overdue"
+            };
+
+            int startRow = 5;
+            for (int col = 0; col < headers.Length; col++)
+            {
+                var cell = worksheet.Cell(startRow, col + 1);
+                cell.Value = headers[col];
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#059669"); // Emerald Green
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            }
+
+            int currentRow = startRow + 1;
+            int no = 1;
+
+            foreach (var item in reports)
+            {
+                var compName = item.PerusahaanId.HasValue && companies.TryGetValue(item.PerusahaanId.Value, out var n) ? n : "-";
+                
+                var displayType = item.ItemSap;
+                if (!string.IsNullOrEmpty(displayType) && displayType.Contains(":"))
+                {
+                    displayType = displayType.Split(':')[0];
+                }
+                if (string.IsNullOrEmpty(displayType)) displayType = "Hazard";
+                displayType = System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(displayType.ToLower());
+
+                worksheet.Cell(currentRow, 1).Value = no++;
+                worksheet.Cell(currentRow, 2).Value = compName;
+                worksheet.Cell(currentRow, 3).Value = displayType;
+                worksheet.Cell(currentRow, 4).Value = $"{item.Nik} - {item.Nama}";
+                
+                var dateCell = worksheet.Cell(currentRow, 5);
+                dateCell.Value = item.Tanggal;
+                dateCell.Style.DateFormat.Format = "yyyy-MM-dd";
+                
+                var timeCell = worksheet.Cell(currentRow, 6);
+                timeCell.Value = item.Waktu.ToString(@"hh\:mm");
+                timeCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                worksheet.Cell(currentRow, 7).Value = item.Departemen ?? "-";
+                worksheet.Cell(currentRow, 8).Value = $"{item.Area ?? "-"} / {item.Lokasi ?? "-"} ({item.DetilLokasi ?? "-"})";
+                worksheet.Cell(currentRow, 9).Value = item.KategoriTemuan ?? "-";
+                worksheet.Cell(currentRow, 10).Value = item.DetilTemuan ?? "-";
+
+                // Status with coloring
+                var statusCell = worksheet.Cell(currentRow, 11);
+                var statusVal = item.Status ?? "Open";
+                statusCell.Value = statusVal;
+                statusCell.Style.Font.Bold = true;
+                statusCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                if (statusVal.Equals("Closed", StringComparison.OrdinalIgnoreCase))
+                {
+                    statusCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#D1FAE5"); // Light green
+                    statusCell.Style.Font.FontColor = XLColor.FromHtml("#065F46"); // Dark green
+                }
+                else
+                {
+                    statusCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#FEE2E2"); // Light red
+                    statusCell.Style.Font.FontColor = XLColor.FromHtml("#991B1B"); // Dark red
+                }
+
+                worksheet.Cell(currentRow, 12).Value = string.IsNullOrEmpty(item.NikPja) ? "-" : $"{item.NikPja} - {item.Pja}";
+                worksheet.Cell(currentRow, 13).Value = string.IsNullOrEmpty(item.NikPic) ? "-" : $"{item.NikPic} - {item.Pic}";
+                worksheet.Cell(currentRow, 14).Value = item.RencanaPerbaikan ?? "-";
+
+                var targetDateCell = worksheet.Cell(currentRow, 15);
+                if (item.TanggalRencanaPerbaikan.HasValue)
+                {
+                    targetDateCell.Value = item.TanggalRencanaPerbaikan.Value;
+                    targetDateCell.Style.DateFormat.Format = "yyyy-MM-dd";
+                }
+                else
+                {
+                    targetDateCell.Value = "-";
+                }
+
+                worksheet.Cell(currentRow, 16).Value = item.Perbaikan ?? "-";
+
+                var realDateCell = worksheet.Cell(currentRow, 17);
+                if (item.TanggalPerbaikan.HasValue)
+                {
+                    realDateCell.Value = item.TanggalPerbaikan.Value;
+                    realDateCell.Style.DateFormat.Format = "yyyy-MM-dd";
+                }
+                else
+                {
+                    realDateCell.Value = "-";
+                }
+
+                worksheet.Cell(currentRow, 18).Value = item.Overdue ?? "-";
+                worksheet.Cell(currentRow, 19).Value = item.AlasanOverdue ?? "-";
+
+                // Zebra striping
+                if (no % 2 == 0)
+                {
+                    for (int c = 1; c <= headers.Length; c++)
+                    {
+                        if (c != 11) // Skip status coloring
+                        {
+                            worksheet.Cell(currentRow, c).Style.Fill.BackgroundColor = XLColor.FromHtml("#F9FAFB");
+                        }
+                    }
+                }
+
+                // Add cell borders
+                for (int c = 1; c <= headers.Length; c++)
+                {
+                    worksheet.Cell(currentRow, c).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    worksheet.Cell(currentRow, c).Style.Border.OutsideBorderColor = XLColor.FromHtml("#E5E7EB");
+                }
+
+                currentRow++;
+            }
+
+            // Formatting columns layout
+            worksheet.Columns().AdjustToContents();
+
+            // Set fixed widths for text-heavy columns to avoid super-wide columns
+            worksheet.Column(4).Width = 25; // Pelapor
+            worksheet.Column(8).Width = 35; // Area / Lokasi
+            worksheet.Column(9).Width = 25; // Kategori Temuan
+            worksheet.Column(10).Width = 40; // Detail Temuan
+            worksheet.Column(10).Style.Alignment.WrapText = true;
+            worksheet.Column(12).Width = 25; // PJA
+            worksheet.Column(13).Width = 25; // PIC
+            worksheet.Column(14).Width = 40; // Rencana Perbaikan
+            worksheet.Column(14).Style.Alignment.WrapText = true;
+            worksheet.Column(16).Width = 40; // Realisasi Perbaikan
+            worksheet.Column(16).Style.Alignment.WrapText = true;
+            worksheet.Column(19).Width = 30; // Alasan Overdue
+            worksheet.Column(19).Style.Alignment.WrapText = true;
+
+            // Set alignment vertical
+            for (int r = startRow; r < currentRow; r++)
+            {
+                worksheet.Row(r).Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            }
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var companySuffix = companyId.HasValue ? $"_Comp_{companyId}" : "";
+            var fileName = $"ActionPlan_Report{companySuffix}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            return File(stream.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
     }
 }

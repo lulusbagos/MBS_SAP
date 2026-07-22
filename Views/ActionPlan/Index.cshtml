@@ -156,11 +156,14 @@
             <button class="ap-pill filter-status" data-status="closed" data-active-class="active-green">Closed</button>
         </div>
 
-        <!-- Count badge -->
-        <div class="ms-auto">
+        <!-- Count badge & Export Excel -->
+        <div class="ms-auto d-flex align-items-center gap-2">
             <span id="visibleCount" class="badge" style="background: rgba(56,189,248,0.15); color: var(--color-primary); font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 99px; border: 1px solid rgba(56,189,248,0.25);">
                 @(Model?.Count() ?? 0) item
             </span>
+            <a asp-controller="ActionPlan" asp-action="DownloadExcel" class="btn btn-sm btn-outline-success" style="border-radius: 999px; font-weight: 700; font-size: 11px; padding: 4px 12px; display: flex; align-items: center; gap: 4px;">
+                <i class="bi bi-file-earmark-excel-fill"></i> Export Excel
+            </a>
         </div>
     </div>
 

@@ -1132,7 +1132,7 @@ ORDER BY date, time, code;";
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
                     Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
-                    CompanyName: GetString(reader, "employee_company"),
+                    CompanyName: ResolveCompany(GetString(reader, "employee_company"), GetString(reader, "pja_company")),
                     Area: GetString(reader, "area_name"),
                     Lokasi: GetString(reader, "location_name"),
                     DetilLokasi: GetString(reader, "location_detail"),
@@ -1208,7 +1208,7 @@ ORDER BY date, time, code;";
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
                     Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
-                    CompanyName: GetString(reader, "employee_company"),
+                    CompanyName: ResolveCompany(GetString(reader, "employee_company"), GetString(reader, "pja_company")),
                     Area: GetString(reader, "area_name"),
                     Lokasi: GetString(reader, "location_name"),
                     DetilLokasi: GetString(reader, "location_detail"),
@@ -1275,7 +1275,7 @@ ORDER BY date, time, code;";
                     EmployeeNama: GetString(reader, "employee_name") ?? "Unknown",
                     EmployeeNik: MapNik(GetString(reader, "employee_nik")),
                     EmployeeDepartemen: GetString(reader, "employee_departemen"),
-                    EmployeeCompany: GetString(reader, "employee_company"),
+                    EmployeeCompany: ResolveCompany(GetString(reader, "employee_company")),
                     Area: GetString(reader, "area_name"),
                     Lokasi: GetString(reader, "location_name"),
                     DetilLokasi: GetString(reader, "location_detail"),
@@ -1334,7 +1334,7 @@ ORDER BY date, time, code;";
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
                     Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
-                    CompanyName: GetString(reader, "employee_company"),
+                    CompanyName: ResolveCompany(GetString(reader, "employee_company")),
                     Area: GetString(reader, "area_name"),
                     Lokasi: GetString(reader, "location_name"),
                     DetilLokasi: GetString(reader, "location_detail"),
@@ -1407,7 +1407,7 @@ ORDER BY date, time, code;";
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
                     Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
-                    CompanyName: GetString(reader, "employee_company"),
+                    CompanyName: ResolveCompany(GetString(reader, "employee_company")),
                     JenisKendaraan: GetString(reader, "vehicle_type") ?? "LIGHT VEHICLE",
                     NoLambung: GetString(reader, "vehicle_name") ?? "-",
                     Kilometer: kmVal,
@@ -1467,7 +1467,7 @@ ORDER BY date, time, code;";
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
                     Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
-                    CompanyName: GetString(reader, "employee_company"),
+                    CompanyName: ResolveCompany(GetString(reader, "employee_company")),
                     DetilLokasi: GetString(reader, "location_detail"),
                     Topik: GetString(reader, "topic_id"),
                     Judul: GetString(reader, "title"),
@@ -1524,7 +1524,7 @@ ORDER BY date, time, code;";
                     Nama: GetString(reader, "employee_name") ?? "Unknown",
                     Nik: MapNik(GetString(reader, "employee_nik")),
                     Departemen: GetString(reader, "employee_departemen"),
-                    CompanyName: GetString(reader, "employee_company"),
+                    CompanyName: ResolveCompany(GetString(reader, "employee_company")),
                     Area: GetString(reader, "area_name"),
                     Lokasi: GetString(reader, "location_name"),
                     DetilLokasi: GetString(reader, "location_detail"),
@@ -1542,6 +1542,7 @@ ORDER BY date, time, code;";
             if (string.IsNullOrWhiteSpace(nik)) return "UNKNOWN";
             var clean = nik.Trim();
             if (clean == "18071690163") return "25031691104";
+            if (clean == "11101700060") return "26071701184";
             return clean;
         }
 
@@ -1550,7 +1551,15 @@ ORDER BY date, time, code;";
             if (string.IsNullOrWhiteSpace(nik)) return null;
             var clean = nik.Trim();
             if (clean == "18071690163") return "25031691104";
+            if (clean == "11101700060") return "26071701184";
             return clean;
+        }
+
+        private static string ResolveCompany(string? employeeCompany, string? pjaCompany = null)
+        {
+            if (!string.IsNullOrWhiteSpace(employeeCompany)) return employeeCompany.Trim();
+            if (!string.IsNullOrWhiteSpace(pjaCompany)) return pjaCompany.Trim();
+            return "PT INDEXIM COALINDO";
         }
 
         private static string NormalizeHazardStatus(string? sourceStatus)
