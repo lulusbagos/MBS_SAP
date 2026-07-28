@@ -190,19 +190,59 @@ namespace MBS_SAP.Controllers
                 departmentNameFilter == null || string.Equals(k.NamaDepartemen ?? "General", departmentNameFilter, StringComparison.OrdinalIgnoreCase)
             ).ToList();
 
-            // MTD: filter by startOfMonth and endOfMonth
-            var hazards = await _context.HazardReports.Where(h => !h.IsDeleted && h.PerusahaanId == companyId && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth).Select(h => h.Nik).ToListAsync();
-            var inspections = await _context.Inspections.Where(i => !i.IsDeleted && i.PerusahaanId == companyId && i.CreatedAt >= startOfMonth && i.CreatedAt <= endOfMonth).Select(i => i.Nik).ToListAsync();
-            var safetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.PerusahaanId == companyId && s.CreatedAt >= startOfMonth && s.CreatedAt <= endOfMonth).Select(s => s.Nik).ToListAsync();
-            var p5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.PerusahaanId == companyId && p.CreatedAt >= startOfMonth && p.CreatedAt <= endOfMonth).Select(p => p.Nik).ToListAsync();
-            var coachingCreators = await _context.Coachings.Where(c => !c.IsDeleted && c.PerusahaanId == companyId && c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth).Select(c => c.Nik).ToListAsync();
-            var coachingParticipants = await _context.CoachingParticipants.Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId == companyId && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth).Select(p => p.Nik).ToListAsync();
-            var coachings = coachingCreators.Concat(coachingParticipants).ToList();
-            
-            var observations = await (from o in _context.Observations
-                                  join k in _context.Karyawans on o.Nik equals k.NoNik
-                                  where !o.IsDeleted && o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth && k.IdPerusahaan == companyId
-                                  select o.Nik).ToListAsync();
+            // MTD: filter by startOfMonth and endOfMonth based on employee NIKs
+            var employeeNiks = deptKaryawansFiltered
+                .Select(k => k.NoNik)
+                .Where(nik => !string.IsNullOrWhiteSpace(nik))
+                .Select(nik => nik.Trim())
+                .ToList();
+
+            var hazards = new List<string>();
+            var inspections = new List<string>();
+            var safetyTalks = new List<string>();
+            var p5ms = new List<string>();
+            var coachings = new List<string>();
+            var observations = new List<string>();
+
+            if (employeeNiks.Count > 0)
+            {
+                hazards = await _context.HazardReports
+                    .Where(h => !h.IsDeleted && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth && employeeNiks.Contains(h.Nik))
+                    .Select(h => h.Nik)
+                    .ToListAsync();
+
+                inspections = await _context.Inspections
+                    .Where(i => !i.IsDeleted && i.CreatedAt >= startOfMonth && i.CreatedAt <= endOfMonth && employeeNiks.Contains(i.Nik))
+                    .Select(i => i.Nik)
+                    .ToListAsync();
+
+                safetyTalks = await _context.SafetyTalks
+                    .Where(s => !s.IsDeleted && s.CreatedAt >= startOfMonth && s.CreatedAt <= endOfMonth && employeeNiks.Contains(s.Nik))
+                    .Select(s => s.Nik)
+                    .ToListAsync();
+
+                p5ms = await _context.P5ms
+                    .Where(p => !p.IsDeleted && p.CreatedAt >= startOfMonth && p.CreatedAt <= endOfMonth && employeeNiks.Contains(p.Nik))
+                    .Select(p => p.Nik)
+                    .ToListAsync();
+
+                var coachingCreators = await _context.Coachings
+                    .Where(c => !c.IsDeleted && c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth && employeeNiks.Contains(c.Nik))
+                    .Select(c => c.Nik)
+                    .ToListAsync();
+
+                var coachingParticipants = await _context.CoachingParticipants
+                    .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth && employeeNiks.Contains(p.Nik))
+                    .Select(p => p.Nik)
+                    .ToListAsync();
+
+                coachings = coachingCreators.Concat(coachingParticipants).ToList();
+
+                observations = await _context.Observations
+                    .Where(o => !o.IsDeleted && o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth && employeeNiks.Contains(o.Nik))
+                    .Select(o => o.Nik)
+                    .ToListAsync();
+            }
 
             var result = new List<dynamic>();
             foreach (var k in deptKaryawansFiltered)
@@ -215,9 +255,9 @@ namespace MBS_SAP.Controllers
                 string jabatanName = "-";
                 if (mappingsDict.TryGetValue(k.IdKaryawan, out var m))
                 {
-                    hTar = m.TargetHazardReport ?? 0;
-                    insTar = m.TargetInspeksi ?? 0;
-                    stTar = m.TargetSafetyTalk ?? 0;
+                    hTar = m.TargetHazardReport ?? 2;
+                    insTar = m.TargetInspeksi ?? 1;
+                    stTar = m.TargetSafetyTalk ?? 1;
                     obsTar = m.TargetObservasi ?? 0;
                     cTar = m.TargetCoaching ?? 0;
                     jabatanName = m.NamaJabatanStandar ?? m.NamaJabatanExisting ?? "-";
@@ -1494,11 +1534,12 @@ namespace MBS_SAP.Controllers
                 .Select(c => new { CompanyId = c.PerusahaanId!.Value, c.Nik, c.CreatedAt })
                 .ToListAsync();
 
-            var coachingParticipantsRows = await _context.CoachingParticipants
-                .AsNoTracking()
-                .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId.HasValue && p.Coaching.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(p.Coaching.PerusahaanId!.Value))
-                .Select(p => new { CompanyId = p.Coaching!.PerusahaanId!.Value, p.Nik, CreatedAt = p.Coaching.CreatedAt })
-                .ToListAsync();
+            var coachingParticipantsRows = await (from p in _context.CoachingParticipants
+                                                  join k in _context.Karyawans on p.Nik equals k.NoNik
+                                                  where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfYear && k.IdPerusahaan > 0 && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan)
+                                                  select new { CompanyId = k.IdPerusahaan, p.Nik, CreatedAt = p.Coaching.CreatedAt })
+                                                  .AsNoTracking()
+                                                  .ToListAsync();
 
             var hierarchyCoachingRows = coachingCreatorsRows.Concat(coachingParticipantsRows).ToList();
 
@@ -2287,7 +2328,21 @@ namespace MBS_SAP.Controllers
                 var companyStandings = new List<dynamic>();
                 var allEmployees = new List<dynamic>();
 
-                foreach (var comp in allCompanies)
+                var companiesToCompare = allCompanies;
+                if (selectedCompanyId > 0)
+                {
+                    var childIds = allCompanies.Where(c => c.PerusahaanIndukId == selectedCompanyId).Select(c => c.PerusahaanId).ToList();
+                    var relationChildIds = relations.Where(r => r.ParentCompanyId == selectedCompanyId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
+                    var allChildIds = childIds.Concat(relationChildIds).Distinct().ToList();
+                    
+                    if (allChildIds.Any())
+                    {
+                        var targetCompanyIds = new HashSet<int>(allChildIds) { selectedCompanyId };
+                        companiesToCompare = allCompanies.Where(c => targetCompanyIds.Contains(c.PerusahaanId)).ToList();
+                    }
+                }
+
+                foreach (var comp in companiesToCompare)
                 {
                     var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth);
                     if (!compEmps.Any()) continue;
@@ -2669,17 +2724,7 @@ namespace MBS_SAP.Controllers
                 .OrderBy(p => p.NamaPerusahaan)
                 .ToListAsync();
 
-            List<PerusahaanView> allowedCompanies;
-            if (isAdmin || isSafetyRole)
-            {
-                allowedCompanies = allCompanies;
-            }
-            else
-            {
-                allowedCompanies = allCompanies
-                    .Where(p => resolvedCompanyId == null || allowedCompanyIds.Contains(p.PerusahaanId))
-                    .ToList();
-            }
+            List<PerusahaanView> allowedCompanies = allCompanies;
 
             ViewBag.Companies = allowedCompanies;
 
@@ -2876,10 +2921,11 @@ namespace MBS_SAP.Controllers
                     .Select(co => new { co.PerusahaanId, co.Nik })
                     .ToListAsync();
 
-                var coachingParticipants = await _context.CoachingParticipants
-                    .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && childCompanyIds.Contains(p.Coaching.PerusahaanId ?? 0) && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth)
-                    .Select(p => new { PerusahaanId = p.Coaching!.PerusahaanId, p.Nik })
-                    .ToListAsync();
+                var coachingParticipants = await (from p in _context.CoachingParticipants
+                                                  join k in _context.Karyawans on p.Nik equals k.NoNik
+                                                  where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth && childCompanyIds.Contains(k.IdPerusahaan)
+                                                  select new { PerusahaanId = (int?)k.IdPerusahaan, p.Nik })
+                                                  .ToListAsync();
 
                 var coachings = coachingCreators.Concat(coachingParticipants).ToList();
 
@@ -3006,10 +3052,11 @@ namespace MBS_SAP.Controllers
                 .Select(co => new { co.PerusahaanId, co.Nik })
                 .ToListAsync();
 
-            var groupCoachingParticipants = await _context.CoachingParticipants
-                .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId.HasValue && relatedCompanyIds.Contains(p.Coaching.PerusahaanId.Value) && p.Coaching.CreatedAt >= startOfMonthM && p.Coaching.CreatedAt <= endOfMonthM)
-                .Select(p => new { PerusahaanId = p.Coaching!.PerusahaanId, p.Nik })
-                .ToListAsync();
+            var groupCoachingParticipants = await (from p in _context.CoachingParticipants
+                                                   join k in _context.Karyawans on p.Nik equals k.NoNik
+                                                   where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonthM && p.Coaching.CreatedAt <= endOfMonthM && relatedCompanyIds.Contains(k.IdPerusahaan)
+                                                   select new { PerusahaanId = (int?)k.IdPerusahaan, p.Nik })
+                                                   .ToListAsync();
 
             var groupCoachings = groupCoachingCreators.Concat(groupCoachingParticipants).ToList();
 
@@ -3230,10 +3277,11 @@ namespace MBS_SAP.Controllers
                     .Select(co => new { PerusahaanId = co.PerusahaanId ?? 0, co.Nik })
                     .ToListAsync();
 
-                var allGroupCoachingParticipants = await _context.CoachingParticipants.AsNoTracking()
-                    .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.PerusahaanId.HasValue && companyIds.Contains(p.Coaching.PerusahaanId.Value) && p.Coaching.CreatedAt >= startOfMonthMaincon && p.Coaching.CreatedAt <= endOfMonthMaincon)
-                    .Select(p => new { PerusahaanId = p.Coaching!.PerusahaanId ?? 0, p.Nik })
-                    .ToListAsync();
+                var allGroupCoachingParticipants = await (from p in _context.CoachingParticipants.AsNoTracking()
+                                                          join k in _context.Karyawans.AsNoTracking() on p.Nik equals k.NoNik
+                                                          where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonthMaincon && p.Coaching.CreatedAt <= endOfMonthMaincon && companyIds.Contains(k.IdPerusahaan)
+                                                          select new { PerusahaanId = k.IdPerusahaan, p.Nik })
+                                                          .ToListAsync();
 
                 var allGroupCoachings = allGroupCoachingCreators.Concat(allGroupCoachingParticipants).ToList();
 
@@ -3367,7 +3415,8 @@ namespace MBS_SAP.Controllers
                             TotalEmployees = subKaryawans.Count,
                             EmployeesWithTarget = subEmpsWithTarget,
                             ComplianceRate = subTargetTotal > 0 ? Math.Round((double)subActualTotal / subTargetTotal * 100.0, 1) : 0,
-                            TotalSubmissions = subRawSubmissions
+                            TotalSubmissions = subActualTotal,
+                            TargetSubmissions = subTargetTotal
                         });
                     }
                 }
@@ -3502,6 +3551,66 @@ namespace MBS_SAP.Controllers
             ViewBag.ActiveEmployeesCount = activeEmployees;
             ViewBag.TotalEmployeesWithTarget = totalEmployeesWithTarget;
             ViewBag.EmployeeAwarenessRate = employeeAwarenessRate;
+
+            // 6. Companies that have never logged in
+            var loggedInCompanyIds = await _context.AppUsers
+                .Where(u => u.IdPerusahaan.HasValue)
+                .Select(u => u.IdPerusahaan!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            var companiesWithTargets = await _context.KaryawanJabatanMappings
+                .Where(m => (m.TargetHazardReport ?? 0) > 0 || 
+                            (m.TargetInspeksi ?? 0) > 0 || 
+                            (m.TargetSafetyTalk ?? 0) > 0 || 
+                            (m.TargetObservasi ?? 0) > 0 || 
+                            (m.TargetCoaching ?? 0) > 0)
+                .Select(m => m.PerusahaanId)
+                .Distinct()
+                .ToListAsync();
+
+            var neverLoggedInCompanies = allCompanies
+                .Where(p => !loggedInCompanyIds.Contains(p.PerusahaanId) && companiesWithTargets.Contains(p.PerusahaanId))
+                .ToList();
+
+            var relationsForNeverLoggedIn = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+
+            var neverLoggedInGrouped = neverLoggedInCompanies
+                .GroupBy(p => {
+                    // Try direct lookup in allCompanies
+                    var parent = allCompanies.FirstOrDefault(parentComp => parentComp.PerusahaanId == p.PerusahaanIndukId);
+                    if (parent != null && !string.IsNullOrEmpty(parent.NamaPerusahaan))
+                    {
+                        return parent.NamaPerusahaan;
+                    }
+                    
+                    // Try lookup in hierarchy relations
+                    var rel = relationsForNeverLoggedIn.FirstOrDefault(r => r.ChildCompanyId == p.PerusahaanId && !string.IsNullOrEmpty(r.ParentCompanyName));
+                    if (rel != null && !string.IsNullOrEmpty(rel.ParentCompanyName))
+                    {
+                        return rel.ParentCompanyName;
+                    }
+
+                    // Fallback to database lookup for PerusahaanIndukId
+                    if (p.PerusahaanIndukId.HasValue && p.PerusahaanIndukId.Value > 0)
+                    {
+                        var dbParent = _context.Perusahaans.FirstOrDefault(dbP => dbP.PerusahaanId == p.PerusahaanIndukId.Value);
+                        if (dbParent != null && !string.IsNullOrEmpty(dbParent.NamaPerusahaan))
+                        {
+                            return dbParent.NamaPerusahaan;
+                        }
+                    }
+
+                    return "Independent / Maincon";
+                })
+                .Select(g => new {
+                    ParentName = g.Key,
+                    Companies = g.OrderBy(c => c.NamaPerusahaan).ToList()
+                })
+                .OrderBy(g => g.ParentName)
+                .ToList<dynamic>();
+
+            ViewBag.NeverLoggedInCompanies = neverLoggedInGrouped;
 
             return View(paginatedEmployees);
         }
@@ -4188,6 +4297,7 @@ namespace MBS_SAP.Controllers
         public int EmployeesWithTarget { get; set; }
         public double ComplianceRate { get; set; }
         public int TotalSubmissions { get; set; }
+        public int TargetSubmissions { get; set; }
     }
 
     public class MainconPerformanceReportViewModel
