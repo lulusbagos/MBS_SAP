@@ -173,11 +173,6 @@
 
                 <!-- Metadata validation gate overlay -->
                 <div id="checklistLockOverlay" style="position: relative;">
-                    <div id="lockMask" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: not-allowed;">
-                        <i class="bi bi-lock-fill" style="font-size: 36px; color: var(--color-primary); margin-bottom: 8px;"></i>
-                        <span class="text-white fw-bold" style="font-size: 14px;">Isi Data Kendaraan Terlebih Dahulu</span>
-                        <span class="text-muted" style="font-size: 11px; max-width: 280px; text-align: center; margin-top: 4px;">Lengkapi No. Lambung, Merek, Jenis, Odometer, dan Foto Speedometer sebelum mengisi checklist.</span>
-                    </div>
 
                 <!-- Accordion checklist -->
                 <div class="accordion" id="checklistAccordion">
@@ -530,22 +525,8 @@
         // Checklist unlocks as soon as 4 core vehicle fields are filled.
         // Foto speedometer is still validated (required) at form submit.
         function checkMetadataComplete() {
-            const noLambung = $('#noLambungInput').val().trim();
-            const merek = $('#merek').val().trim();
-            const jenis = $('#jenisKendaraan').val();
-            const km = $('#kilometer').val().trim();
-
-            const isComplete = noLambung && merek && jenis && km;
-            const $lock = $('#lockMask');
             const $quickBtns = $('#quickActionBtns');
-
-            if (isComplete) {
-                $lock.fadeOut(250);
-                $quickBtns.css({ opacity: 1, pointerEvents: 'auto' });
-            } else {
-                $lock.fadeIn(250);
-                $quickBtns.css({ opacity: 0.4, pointerEvents: 'none' });
-            }
+            $quickBtns.css({ opacity: 1, pointerEvents: 'auto' });
         }
 
         // ========= AUTO FILL ALL =========
@@ -776,46 +757,42 @@
 
                 let isValid = true;
                 let firstInvalid = null;
+                let missingFields = [];
 
                 if (!noLambung) {
                     isValid = false;
                     $('#noLambungInput').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#noLambungInput');
                     $('#noLambungInput').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>No. Lambung / Fleet wajib diisi.</span>');
+                    missingFields.push("No. Lambung Kendaraan");
                 }
                 if (!merek) {
                     isValid = false;
                     $('#merek').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#merek');
                     $('#merek').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Merek Kendaraan wajib diisi.</span>');
+                    missingFields.push("Merek / Tipe Kendaraan");
                 }
                 if (!jenis) {
                     isValid = false;
                     $('#jenisKendaraan').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#jenisKendaraan');
                     $('#jenisKendaraan').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Jenis Kendaraan wajib dipilih.</span>');
+                    missingFields.push("Jenis Kendaraan");
                 }
                 if (!km) {
                     isValid = false;
                     $('#kilometer').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#kilometer');
                     $('#kilometer').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Odometer / Kilometer wajib diisi.</span>');
+                    missingFields.push("Odometer / Kilometer");
                 }
                 if (!hasSpeedo) {
                     isValid = false;
                     $('#fotoSpeedometer').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#fotoSpeedometer');
                     $('#fotoSpeedometer').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto Speedometer wajib diunggah.</span>');
-                }
-
-                if (!isValid) {
-                    e.preventDefault();
-                    if (firstInvalid) {
-                        $('html, body').animate({
-                            scrollTop: firstInvalid.offset().top - 120
-                        }, 300);
-                    }
-                    return false;
+                    missingFields.push("Foto Speedometer");
                 }
 
                 // Check critical checklist items: if status is NOT_GOOD, photo must be uploaded
@@ -824,7 +801,7 @@
                     const nameAttr = $(this).attr('name'); // e.g. golA_status_3
                     const parts = nameAttr.split('_'); // ['golA', 'status', '3']
                     const cat = parts[0];
-                    const idx = parts[2];
+                    const idx = parseInt(parts[2]);
                     const fileInput = document.getElementById(`photo_input_${cat}_${idx}`);
                     const previewWrapper = document.getElementById(`photo_preview_wrapper_${cat}_${idx}`);
                     const hasExistingPhoto = previewWrapper && !$(previewWrapper).hasClass('d-none');
@@ -837,6 +814,10 @@
                         $(fileInput).after(errHtml);
                         photoMissing = true;
                         
+                        // Get item text
+                        let itemText = $(`#row_${cat}_${idx}`).find('.fs-13').text()?.trim() || `${groupLabel} Item #${idx + 1}`;
+                        missingFields.push(`Foto Kerusakan: ${itemText}`);
+
                         // Expand the respective accordion item
                         const collapseEl = document.getElementById(`collapse${cat.slice(-1).toUpperCase()}`);
                         if (collapseEl && !$(collapseEl).hasClass('show')) {
@@ -845,8 +826,11 @@
                     }
                 });
 
-                if (photoMissing) {
+                if (!isValid || photoMissing) {
                     e.preventDefault();
+                    if (missingFields.length > 0) {
+                        alert("Harap lengkapi kolom yang belum diisi:\n- " + missingFields.join("\n- "));
+                    }
                     if (firstInvalid) {
                         $('html, body').animate({
                             scrollTop: firstInvalid.offset().top - 120

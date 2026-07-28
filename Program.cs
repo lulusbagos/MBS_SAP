@@ -42,7 +42,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // Register DbContext with SQL Server
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseSqlServer(connectionString, sqlServerOptionsAction =>
+        sqlServerOptionsAction.EnableRetryOnFailure(
+            maxRetryCount: 10,
+            maxRetryDelay: TimeSpan.FromSeconds(3),
+            errorNumbersToAdd: null)));
 
 // Add Cookie Authentication with Real-time Session Invalidation
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

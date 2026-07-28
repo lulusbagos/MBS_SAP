@@ -47,8 +47,11 @@ namespace MBS_SAP.Controllers
                 return View(new List<RecentActivityViewModel>());
             }
 
+            bool forceRefresh = HttpContext.Request.Query.ContainsKey("refresh") && 
+                               string.Equals(HttpContext.Request.Query["refresh"], "true", StringComparison.OrdinalIgnoreCase);
+
             var cacheKey = $"UserDashboardStats_{userNik}";
-            if (!_cache.TryGetValue(cacheKey, out DashboardStatsCache? stats) || stats == null)
+            if (forceRefresh || !_cache.TryGetValue(cacheKey, out DashboardStatsCache? stats) || stats == null)
             {
                 stats = new DashboardStatsCache();
 
@@ -165,7 +168,14 @@ namespace MBS_SAP.Controllers
                     .Where(o => !o.IsDeleted && o.Nik == userNik && o.CreatedAt >= lookbackDate);
 
                 // Performa tinggi: Menggunakan CountAsync secara langsung daripada GroupBy(1) yang menghasilkan subquery SQL kompleks dan lambat.
+                Console.WriteLine($"[DEBUG-HOME] userNik: {userNik}");
+                Console.WriteLine($"[DEBUG-HOME] startOfMonth: {startOfMonth:yyyy-MM-dd HH:mm:ss}");
+                Console.WriteLine($"[DEBUG-HOME] endOfMonth: {endOfMonth:yyyy-MM-dd HH:mm:ss}");
+                Console.WriteLine($"[DEBUG-HOME] lookbackDate: {lookbackDate:yyyy-MM-dd HH:mm:ss}");
+                
                 int thisMonthHazardsCount = await hazardQuery.CountAsync(h => h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth);
+                Console.WriteLine($"[DEBUG-HOME] thisMonthHazardsCount: {thisMonthHazardsCount}");
+                
                 int openHazardsCount = await hazardQuery.CountAsync(h => h.StatusTemuan == "Open");
                 int closedHazardsCount = await hazardQuery.CountAsync(h => h.StatusTemuan == "Closed");
                 int totalHazardsCount = openHazardsCount + closedHazardsCount;
@@ -181,8 +191,21 @@ namespace MBS_SAP.Controllers
                 int thisMonthP5msCount = await p5mQuery.CountAsync(p => p.CreatedAt >= startOfMonth && p.CreatedAt <= endOfMonth);
                 int totalP5msCount = await p5mQuery.CountAsync();
 
-                int thisMonthCoachingsCount = await coachingQuery.CountAsync(c => c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth);
-                int totalCoachingsCount = await coachingQuery.CountAsync();
+                int coachingAsCreator = await _context.Coachings
+                    .Where(c => !c.IsDeleted && c.Nik == userNik && c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth)
+                    .CountAsync();
+                int coachingAsParticipant = await _context.CoachingParticipants
+                    .Where(p => p.Nik == userNik && p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth)
+                    .CountAsync();
+                int thisMonthCoachingsCount = coachingAsCreator + coachingAsParticipant;
+
+                int totalCoachingAsCreator = await _context.Coachings
+                    .Where(c => !c.IsDeleted && c.Nik == userNik)
+                    .CountAsync();
+                int totalCoachingAsParticipant = await _context.CoachingParticipants
+                    .Where(p => p.Nik == userNik && p.Coaching != null && !p.Coaching.IsDeleted)
+                    .CountAsync();
+                int totalCoachingsCount = totalCoachingAsCreator + totalCoachingAsParticipant;
 
                 int thisMonthObservationsCount = await observationQuery.CountAsync(o => o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth);
                 int totalObservationsCount = await observationQuery.CountAsync();

@@ -1326,6 +1326,17 @@ namespace MBS_SAP.Controllers
             ViewBag.SelectedRatingFilter = ratingFilter;
             ViewBag.SearchQuery = search;
 
+            var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+            var targetCompanyIds = new List<int>();
+            if (companyId.HasValue)
+            {
+                targetCompanyIds.Add(companyId.Value);
+                var childIds = companies.Where(c => c.PerusahaanIndukId == companyId.Value).Select(c => c.PerusahaanId).ToList();
+                var relationChildIds = relations.Where(r => r.ParentCompanyId == companyId.Value && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
+                var allChildIds = childIds.Concat(relationChildIds).Distinct().ToList();
+                targetCompanyIds.AddRange(allChildIds);
+            }
+
             var assessments = await _context.SapQualityAssessments.AsNoTracking().ToListAsync();
             var assessmentDict = assessments
                 .GroupBy(a => $"{a.ProgramType.ToLowerInvariant()}_{a.ProgramId}")
@@ -1339,7 +1350,7 @@ namespace MBS_SAP.Controllers
             {
                 var q = _context.HazardReports.AsNoTracking()
                     .Where(h => !h.IsDeleted && h.Tanggal >= start && h.Tanggal <= end);
-                if (companyId.HasValue) q = q.Where(h => h.PerusahaanId == companyId.Value);
+                if (companyId.HasValue) q = q.Where(h => h.PerusahaanId.HasValue && targetCompanyIds.Contains(h.PerusahaanId.Value));
                 if (!string.IsNullOrEmpty(normalizedSearch))
                 {
                     q = q.Where(h => h.Nik.ToLower().Contains(normalizedSearch) || 
@@ -1378,7 +1389,7 @@ namespace MBS_SAP.Controllers
             {
                 var q = _context.Inspections.AsNoTracking()
                     .Where(i => !i.IsDeleted && i.Tanggal >= start && i.Tanggal <= end);
-                if (companyId.HasValue) q = q.Where(i => i.PerusahaanId == companyId.Value);
+                if (companyId.HasValue) q = q.Where(i => i.PerusahaanId.HasValue && targetCompanyIds.Contains(i.PerusahaanId.Value));
                 if (!string.IsNullOrEmpty(normalizedSearch))
                 {
                     q = q.Where(i => i.Nik.ToLower().Contains(normalizedSearch) || 
@@ -1418,7 +1429,7 @@ namespace MBS_SAP.Controllers
             {
                 var q = _context.SafetyTalks.AsNoTracking()
                     .Where(s => !s.IsDeleted && s.Tanggal >= start && s.Tanggal <= end);
-                if (companyId.HasValue) q = q.Where(s => s.PerusahaanId == companyId.Value);
+                if (companyId.HasValue) q = q.Where(s => s.PerusahaanId.HasValue && targetCompanyIds.Contains(s.PerusahaanId.Value));
                 if (!string.IsNullOrEmpty(normalizedSearch))
                 {
                     q = q.Where(s => s.Nik.ToLower().Contains(normalizedSearch) || 
@@ -1461,7 +1472,7 @@ namespace MBS_SAP.Controllers
                         where !o.IsDeleted && o.Date >= start && o.Date <= end && k.StatusAktif
                         select new { o.Id, Tanggal = o.Date, o.Nik, o.Nama, Kegiatan = o.KegiatanYangDiamati, Perihal = o.PerihalYangDiamati, o.Lokasi, PerusahaanId = k.IdPerusahaan, o.FotoUrl };
 
-                if (companyId.HasValue) q = q.Where(x => x.PerusahaanId == companyId.Value);
+                if (companyId.HasValue) q = q.Where(x => targetCompanyIds.Contains(x.PerusahaanId));
                 if (!string.IsNullOrEmpty(normalizedSearch))
                 {
                     q = q.Where(x => x.Nik.ToLower().Contains(normalizedSearch) || 
@@ -1501,7 +1512,7 @@ namespace MBS_SAP.Controllers
             {
                 var q = _context.Coachings.AsNoTracking()
                     .Where(c => !c.IsDeleted && c.Tanggal >= start && c.Tanggal <= end);
-                if (companyId.HasValue) q = q.Where(c => c.PerusahaanId == companyId.Value);
+                if (companyId.HasValue) q = q.Where(c => c.PerusahaanId.HasValue && targetCompanyIds.Contains(c.PerusahaanId.Value));
                 if (!string.IsNullOrEmpty(normalizedSearch))
                 {
                     q = q.Where(c => c.Nik.ToLower().Contains(normalizedSearch) || 
@@ -1601,7 +1612,7 @@ namespace MBS_SAP.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RateSap(string programType, int programId, int rating, string? notes)
         {
-            if (!IsAuthorizedUser())
+            if (!User.IsInRole("Admin"))
             {
                 return Forbid();
             }
@@ -1656,7 +1667,7 @@ namespace MBS_SAP.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AutoAuditSap(string programType, int programId)
         {
-            if (!IsAuthorizedUser())
+            if (!User.IsInRole("Admin"))
             {
                 return Forbid();
             }

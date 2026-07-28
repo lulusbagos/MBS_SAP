@@ -729,6 +729,27 @@
     </script>
 
     <style>
+        @if (!User.IsInRole("Admin"))
+        {
+            <text>
+            .star-icon {
+                pointer-events: none !important;
+                cursor: default !important;
+            }
+            .audit-notes-textarea {
+                pointer-events: none !important;
+                background-color: #f1f5f9 !important;
+                border-color: #cbd5e1 !important;
+                color: #64748b !important;
+            }
+            #btnBulkAudit {
+                display: none !important;
+            }
+            button[onclick*="runAutoAudit"] {
+                display: none !important;
+            }
+            </text>
+        }
         /* Light Theme Form Controls */
         .custom-select-sap, .custom-input-sap {
             background-color: #ffffff !important;

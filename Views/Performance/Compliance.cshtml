@@ -45,6 +45,9 @@
     var top5SubconsList = (ViewBag.AllSubconStats as List<MBS_SAP.Controllers.MostActiveSubconViewModel> ?? new List<MBS_SAP.Controllers.MostActiveSubconViewModel>()).Take(5).ToList();
     var top5LabelsJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(top5SubconsList.Select(x => x.PerusahaanName.Replace("PT ", ""))));
     var top5ComplianceJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(top5SubconsList.Select(x => x.ComplianceRate)));
+    
+    // Complete Subcon list
+    var allSubconsList = (ViewBag.AllSubconStats as List<MBS_SAP.Controllers.MostActiveSubconViewModel> ?? new List<MBS_SAP.Controllers.MostActiveSubconViewModel>()).ToList();
 }
 
 <style>
@@ -318,10 +321,44 @@
         animation: pulse-animation 2s infinite;
         display: inline-block;
     }
-    @@keyframes pulse-animation {
-        0% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.1); opacity: 0.7; }
-        100% { transform: scale(1); opacity: 1; }
+    /* Custom subcon list styles */
+    .subcon-progress-row {
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 12px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .subcon-progress-row:hover {
+        background: #f8fafc;
+        border-color: #3b82f6;
+        transform: translateX(4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+    .search-input-premium {
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        color: #0f172a !important;
+        border-radius: 10px !important;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+    .search-input-premium:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+    }
+    .subcon-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+    .subcon-scrollbar::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 8px;
+    }
+    .subcon-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 8px;
+    }
+    .subcon-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
     }
 </style>
 
@@ -339,8 +376,6 @@
     </div>
 
     <!-- Tabs Toggle (Redirects back to main page or keeps active) -->
-    @if (User.IsInRole("Admin"))
-    {
     <div class="d-flex justify-content-center mb-4">
         <div style="background: var(--bg-card); border: 1.5px solid var(--border-color); padding: 4px; border-radius: 12px; display: inline-flex; gap: 4px; flex-wrap: wrap; justify-content: center;">
             <button class="tab-btn px-4 py-2 tab-inactive" id="tabMy" onclick="window.location.href='/Performance?tab=my'">
@@ -360,7 +395,6 @@
             </button>
         </div>
     </div>
-    }
 
     <!-- Month / Year Filter Card -->
     <div class="card p-3 shadow-sm border-0 mb-4" style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.08) !important; background: var(--bg-card);">
@@ -881,68 +915,136 @@
             <div class="row mt-4 animate-fade-in">
                 <div class="col-12">
                     <div class="report-card premium-card">
-                        <div class="report-header premium-header d-flex justify-content-between align-items-center">
-                            <h3 class="report-title text-primary m-0" style="font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.5px;">
-                                <i class="bi bi-trophy-fill text-warning me-2"></i>🏆 Top 5 Subkontraktor Terbaik (Leaderboard)
-                            </h3>
-                            <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25); font-weight: 700; font-size: 11px; border-radius: 8px; padding: 4px 10px;">
-                                Bulan Ini
-                            </span>
+                        <div class="report-header premium-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <div>
+                                <h3 class="report-title text-primary m-0" style="font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.5px;">
+                                    <i class="bi bi-trophy-fill text-warning me-2"></i>🏆 PENCAPAIAN KEPATUHAN SAP ANAK PERUSAHAAN / SUBKONTRAKTOR
+                                </h3>
+                                <p class="text-muted mb-0" style="font-size: 11px; font-weight: 500;">
+                                    Diurutkan dari persentase kepatuhan tertinggi ke terendah
+                                </p>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="position-relative">
+                                    <i class="bi bi-search text-muted position-absolute" style="left: 12px; top: 50%; transform: translateY(-50%); font-size: 13px;"></i>
+                                    <input type="text" id="subconSearch" class="form-control form-control-sm search-input-premium ps-4.5" placeholder="Cari Anak Perusahaan..." style="width: 240px; padding-left: 32px;" />
+                                </div>
+                                <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25); font-weight: 700; font-size: 11px; border-radius: 8px; padding: 6px 12px;">
+                                    Bulan Ini
+                                </span>
+                            </div>
                         </div>
                         <div class="premium-body p-4">
-                            <div class="row g-4">
-                                <!-- Left Column: Leaderboard Horizontal Bar Chart -->
-                                <div class="col-lg-7 col-md-12">
-                                    <div class="chart-wrapper" style="position: relative; height: 320px; width: 100%;">
-                                        <canvas id="subconLeaderboardChart"></canvas>
+                            @{
+                                int totalSubconsCount = allSubconsList.Count;
+                                double avgCompliance = totalSubconsCount > 0 ? Math.Round(allSubconsList.Average(s => s.ComplianceRate), 1) : 0;
+                                var bestSubcon = allSubconsList.OrderByDescending(s => s.ComplianceRate).ThenByDescending(s => s.TotalSubmissions).FirstOrDefault();
+                                var worstSubcon = allSubconsList.OrderBy(s => s.ComplianceRate).ThenBy(s => s.TotalSubmissions).FirstOrDefault();
+                            }
+                            
+                            <!-- Subcon Statistics Summary Grid -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-3 col-sm-6">
+                                    <div class="p-3 rounded-3" style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color);">
+                                        <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Total Anak Perusahaan</div>
+                                        <div class="fw-extrabold text-primary" style="font-size: 20px; font-family: 'Outfit', sans-serif;">@totalSubconsCount <span style="font-size: 12px; font-weight: 500; color: var(--text-muted);">Kontraktor</span></div>
                                     </div>
                                 </div>
-                                <!-- Right Column: Leaderboard Table/List -->
-                                <div class="col-lg-5 col-md-12">
-                                    <div class="d-flex flex-column gap-2.5">
-                                        @{
-                                            int rank = 1;
-                                        }
-                                        @if (top5SubconsList.Any())
-                                        {
-                                            @foreach (var sub in top5SubconsList)
-                                            {
-                                                string rankBadgeStyle = "";
-                                                string rankText = rank.ToString();
-                                                if (rank == 1) { rankBadgeStyle = "background: linear-gradient(135deg, #f59e0b, #d97706); color: white; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.4);"; rankText = "🥇"; }
-                                                else if (rank == 2) { rankBadgeStyle = "background: linear-gradient(135deg, #94a3b8, #64748b); color: white; box-shadow: 0 4px 10px rgba(148, 163, 184, 0.4);"; rankText = "🥈"; }
-                                                else if (rank == 3) { rankBadgeStyle = "background: linear-gradient(135deg, #b45309, #78350f); color: white; box-shadow: 0 4px 10px rgba(180, 83, 9, 0.4);"; rankText = "🥉"; }
-                                                else { rankBadgeStyle = "background: var(--bg-body); border: 1.5px solid var(--border-color); color: var(--text-muted);"; }
+                                <div class="col-md-3 col-sm-6">
+                                    <div class="p-3 rounded-3" style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color);">
+                                        <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Rata-Rata Kepatuhan</div>
+                                        <div class="fw-extrabold text-success" style="font-size: 20px; font-family: 'Outfit', sans-serif;">@avgCompliance%</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-sm-6">
+                                    <div class="p-3 rounded-3" style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color);">
+                                        <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Performa Terbaik 🥇</div>
+                                        <div class="fw-bold text-truncate text-warning" style="font-size: 13.5px;" title="@(bestSubcon?.PerusahaanName)">
+                                            @(bestSubcon != null ? bestSubcon.PerusahaanName.Replace("PT ", "") : "-")
+                                        </div>
+                                        <div class="fw-extrabold text-success" style="font-size: 12px; font-family: 'Outfit', sans-serif;">@(bestSubcon != null ? bestSubcon.ComplianceRate + "% Kepatuhan" : "")</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-sm-6">
+                                    <div class="p-3 rounded-3" style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color);">
+                                        <div class="text-muted mb-1" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">Perlu Pembinaan ⚠️</div>
+                                        <div class="fw-bold text-truncate text-danger" style="font-size: 13.5px;" title="@(worstSubcon?.PerusahaanName)">
+                                            @(worstSubcon != null ? worstSubcon.PerusahaanName.Replace("PT ", "") : "-")
+                                        </div>
+                                        <div class="fw-extrabold text-danger" style="font-size: 12px; font-family: 'Outfit', sans-serif;">@(worstSubcon != null ? worstSubcon.ComplianceRate + "% Kepatuhan" : "")</div>
+                                    </div>
+                                </div>
+                            </div>
 
-                                                <div class="d-flex align-items-center justify-content-between p-3" style="background: rgba(255, 255, 255, 0.02); border: 1.5px solid var(--border-color); border-radius: 12px; transition: all 0.2s ease;">
-                                                    <div class="d-flex align-items-center gap-3">
-                                                        <div class="d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; border-radius: 50%; font-size: 13.5px; @rankBadgeStyle">
-                                                            @rankText
-                                                        </div>
-                                                        <div>
-                                                            <div class="fw-bold" style="font-size: 12.5px; color: var(--text-main);">@sub.PerusahaanName</div>
-                                                            <div style="font-size: 10.5px; color: var(--text-muted);">
-                                                                <i class="bi bi-building-fill text-primary me-1"></i>Maincon: <span class="fw-semibold text-decoration-underline">@sub.ParentCompanyName</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="text-end">
-                                                        <div class="fw-extrabold text-success" style="font-size: 14px; font-family: 'Outfit', sans-serif;">@sub.ComplianceRate%</div>
-                                                        <div style="font-size: 9.5px; color: var(--text-muted); opacity: 0.85;">@sub.TotalSubmissions.ToString("N0") Data</div>
-                                                    </div>
-                                                </div>
-                                                rank++;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            <div class="text-center py-5 text-muted">
-                                                <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
-                                                Belum ada data subkontraktor aktif bulan ini.
+                            <!-- Subcontractors List with Custom Progress Bars -->
+                            <div class="subcon-scrollbar d-flex flex-column gap-2.5" style="max-height: 520px; overflow-y: auto; padding-right: 8px;">
+                                @if (allSubconsList.Any())
+                                {
+                                    int rank = 1;
+                                    @foreach (var sub in allSubconsList)
+                                    {
+                                        var val = sub.ComplianceRate;
+                                        
+                                        // Premium color palette matching the requested design
+                                        string barColor = "#8b5cf6"; // Purple (< 30)
+                                        if (val >= 90) { barColor = "#10b981"; }      // Emerald green
+                                        else if (val >= 75) { barColor = "#22c55e"; } // Green
+                                        else if (val >= 60) { barColor = "#84cc16"; } // Lime green
+                                        else if (val >= 45) { barColor = "#eab308"; } // Yellow
+                                        else if (val >= 30) { barColor = "#f97316"; }                                          else if (val >= 1)  { barColor = "#ef4444"; }
+                                        
+                                        string rankText = rank.ToString();
+                                        string rankBadgeStyle = "";
+                                        if (rank == 1) { rankBadgeStyle = "background: linear-gradient(135deg, #f59e0b, #d97706); color: white; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.4);"; rankText = "🥇"; }
+                                        else if (rank == 2) { rankBadgeStyle = "background: linear-gradient(135deg, #94a3b8, #64748b); color: white; box-shadow: 0 4px 10px rgba(148, 163, 184, 0.4);"; rankText = "🥈"; }
+                                        else if (rank == 3) { rankBadgeStyle = "background: linear-gradient(135deg, #b45309, #78350f); color: white; box-shadow: 0 4px 10px rgba(180, 83, 9, 0.4);"; rankText = "🥉"; }
+                                        else { rankBadgeStyle = "background: #f1f5f9; border: 1.5px solid #cbd5e1; color: #64748b;"; }
+
+                                        <div class="subcon-progress-row d-flex align-items-center gap-3 p-3 flex-wrap flex-md-nowrap" data-name="@sub.PerusahaanName" data-parent="@sub.ParentCompanyName">
+                                            <!-- Rank Badge -->
+                                            <div class="d-flex align-items-center justify-content-center fw-extrabold" style="width: 34px; height: 34px; border-radius: 50%; font-size: 13px; min-width: 34px; @rankBadgeStyle">
+                                                @rankText
                                             </div>
-                                        }
+                                            
+                                            <!-- Company Name and Parent Group -->
+                                            <div class="company-detail-group" style="width: 250px; min-width: 250px;">
+                                                <h6 class="fw-bold mb-0.5 text-truncate" style="font-size: 13px; color: var(--text-main);" title="@sub.PerusahaanName">
+                                                    @sub.PerusahaanName
+                                                </h6>
+                                                <div class="d-flex align-items-center gap-1.5" style="font-size: 10.5px; color: var(--text-muted);">
+                                                    <i class="bi bi-building-fill text-primary"></i> Maincon: <span class="fw-semibold text-decoration-underline">@sub.ParentCompanyName</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Horizontal Progress Bar Column -->
+                                            <div class="flex-grow-1 position-relative d-flex align-items-center my-2 my-md-0" style="min-width: 150px;">
+                                                <div class="w-100 rounded-pill" style="height: 14px; background: #e2e8f0; overflow: hidden; border: 1px solid #cbd5e1;">
+                                                    <div class="rounded-pill" style="height: 100%; width: @(val)%; background: @barColor; transition: width 0.8s ease-out; min-width: 4px;"></div>
+                                                </div>
+                                            </div>
+                                            
+                                            
+                                            <!-- Submissions Info -->
+                                            <div class="d-flex align-items-center gap-3 justify-content-end text-end ms-auto" style="width: 150px; min-width: 150px;">
+                                                <div class="submissions-count">
+                                                    <div class="fw-bold" style="font-size: 12px; color: var(--text-main);">@sub.TotalSubmissions.ToString("N0") / @sub.TargetSubmissions.ToString("N0")</div>
+                                                    <div style="font-size: 9.5px; color: var(--text-muted);">Submisi / Target</div>
+                                                </div>
+                                                <div class="fw-extrabold" style="font-size: 14.5px; color: @barColor; font-family: 'Outfit', sans-serif; width: 62px;">
+                                                    @val%
+                                                </div>
+                                            </div>
+                                        </div>
+                                        rank++;
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-center py-5 text-muted">
+                                        <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+                                        Belum ada data subkontraktor aktif bulan ini.
                                     </div>
-                                </div>
+                                }
                             </div>
                         </div>
                     </div>
@@ -1398,6 +1500,24 @@
                 });
             }
 
+            // Subcontractor real-time search filtering
+            const subconSearchInput = document.getElementById('subconSearch');
+            if (subconSearchInput) {
+                subconSearchInput.addEventListener('input', function (e) {
+                    const query = e.target.value.toLowerCase().trim();
+                    const rows = document.querySelectorAll('.subcon-progress-row');
+                    rows.forEach(row => {
+                        const name = row.getAttribute('data-name').toLowerCase();
+                        const parent = row.getAttribute('data-parent').toLowerCase();
+                        if (name.includes(query) || parent.includes(query)) {
+                            row.style.setProperty('display', 'flex', 'important');
+                        } else {
+                            row.style.setProperty('display', 'none', 'important');
+                        }
+                    });
+                });
+            }
+
             // Global tooltip show/hide helpers (used by all 3 badge types)
             window.showTooltip = function(id) {
                 const el = document.getElementById(id);
@@ -1409,5 +1529,53 @@
             };
         });
     </script>
+
+    <!-- Perusahaan Belum Pernah Login -->
+    <div class="report-card premium-card mt-4">
+        <div class="report-header premium-header d-flex justify-content-between align-items-center">
+            <h5 class="premium-title">
+                <i class="bi bi-x-circle-fill me-2 text-danger" style="font-size: 18px;"></i>Perusahaan Belum Pernah Login (Berdasar Parent)
+            </h5>
+            <span class="badge" style="background: rgba(244,63,94,0.1); color: #f43f5e; border: 1px solid rgba(244,63,94,0.25); font-weight: 700; font-size: 11px; padding: 5px 10px; border-radius: 8px;">
+                <i class="bi bi-shield-lock-fill me-1"></i>Belum Teraktivitas
+            </span>
+        </div>
+        <div class="report-body">
+            @if (ViewBag.NeverLoggedInCompanies is List<dynamic> neverLoggedIn && neverLoggedIn.Any())
+            {
+                <div class="row g-3">
+                    @foreach (var group in neverLoggedIn)
+                    {
+                        <div class="col-md-6 col-lg-4 col-12">
+                            <div class="p-3 rounded-3 h-100" style="background: rgba(255, 255, 255, 0.01); border: 1.5px solid var(--border-color);">
+                                <h6 class="fw-bold mb-2.5 pb-2 text-white border-bottom border-secondary" style="font-size: 13px; font-family: 'Outfit', sans-serif;">
+                                    <i class="bi bi-building-fill text-primary me-2"></i>@group.ParentName
+                                </h6>
+                                <div class="subcon-scrollbar" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+                                    @foreach (var comp in group.Companies)
+                                    {
+                                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background: rgba(244, 63, 94, 0.03); border: 1px solid rgba(244, 63, 94, 0.15); font-size: 11.5px; color: var(--text-main);">
+                                            <i class="bi bi-x-square-fill text-danger flex-shrink-0" style="font-size: 12px;"></i>
+                                            <span class="text-truncate" title="@comp.NamaPerusahaan">@comp.NamaPerusahaan</span>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="text-muted mt-2 text-end" style="font-size: 9.5px;">
+                                    Total: @group.Companies.Count Perusahaan
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4 text-muted" style="font-size: 13px;">
+                    <i class="bi bi-check-circle-fill text-success d-block mb-2" style="font-size: 28px;"></i>
+                    Semua perusahaan sudah pernah melakukan login ke platform!
+                </div>
+            }
+        </div>
+    </div>
 
 </div>

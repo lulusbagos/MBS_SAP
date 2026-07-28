@@ -225,7 +225,7 @@ namespace MBS_SAP.Services
             foreach (var row in hazardRows)
             {
                 var companyKey = row.PerusahaanId?.ToString() ?? "0";
-                var key = $"{Normalize(row.Nik)}|{row.Tanggal:yyyyMMdd}|{row.Waktu.Hours:D2}:{row.Waktu.Minutes:D2}:{row.Waktu.Seconds:D2}|{Normalize(row.Area)}|{Normalize(row.Lokasi)}|{Normalize(row.Temuan)}|{companyKey}";
+                var key = $"{Normalize(row.Nik)}|{row.Tanggal:yyyy-MM-dd}|{row.Waktu.Hours:D2}:{row.Waktu.Minutes:D2}:{row.Waktu.Seconds:D2}|{Normalize(row.Area)}|{Normalize(row.Lokasi)}|{Normalize(row.Temuan)}|{companyKey}";
 
                 if (!keySet.Add(key))
                 {
