@@ -3064,6 +3064,11 @@ namespace MBS_SAP.Controllers
             int participatingCount = 0;
             int inactiveCount = 0;
 
+            int indeximBelum = 0;
+            int uduBelum = 0;
+            int kppBelum = 0;
+            int mgeBelum = 0;
+
             int targetH = 0, actualH = 0, withTargetH = 0, fulfilledH = 0;
             int targetI = 0, actualI = 0, withTargetI = 0, fulfilledI = 0;
             int targetS = 0, actualS = 0, withTargetS = 0, fulfilledS = 0;
@@ -3107,7 +3112,15 @@ namespace MBS_SAP.Controllers
                 {
                     if (empActual >= empTarget) fullyCompliantCount++;
                     else if (empActual > 0) participatingCount++;
-                    else inactiveCount++;
+                    else
+                    {
+                        inactiveCount++;
+                        // Target Companies specific counters
+                        if (emp.IdPerusahaan == 1) indeximBelum++;
+                        else if (emp.IdPerusahaan == 3) uduBelum++;
+                        else if (emp.IdPerusahaan == 4) kppBelum++;
+                        else if (emp.IdPerusahaan == 5) mgeBelum++;
+                    }
                 }
                 else
                 {
@@ -3139,6 +3152,19 @@ namespace MBS_SAP.Controllers
             int totalBerTarget = fullyCompliantCount + participatingCount + inactiveCount;
             ViewBag.TotalCount = totalBerTarget;
             ViewBag.TotalEmployeesWithTarget = totalBerTarget;
+            ViewBag.WajibSap = totalBerTarget;
+            ViewBag.SudahMengisi = fullyCompliantCount + participatingCount;
+            ViewBag.BelumMengisi = inactiveCount;
+            
+            var childBreakdowns = new List<dynamic>
+            {
+                new { CompanyName = "PT INDEXIM COALINDO", BelumMengisi = indeximBelum },
+                new { CompanyName = "PT UNGGUL DINAMIKA UTAMA", BelumMengisi = uduBelum },
+                new { CompanyName = "PT KALIMANTAN PRIMA PERSADA", BelumMengisi = kppBelum },
+                new { CompanyName = "PT MEGA GLOBAL ENERGY", BelumMengisi = mgeBelum }
+            };
+            ViewBag.ChildBreakdowns = childBreakdowns.OrderByDescending(c => c.BelumMengisi).ToList();
+
             ViewBag.CurrentPage = 1;
             ViewBag.PageSize = 50;
             ViewBag.TotalPages = 1;

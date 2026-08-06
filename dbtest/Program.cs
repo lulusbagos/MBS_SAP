@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MBS_SAP.Data;
-using MBS_SAP.Services;
+using System.Collections.Generic;
 
 namespace dbtest
 {
@@ -26,30 +26,24 @@ namespace dbtest
             var sqlConnStr = configuration.GetConnectionString("DefaultConnection");
             services.AddDbContext<AppDbContext>(options => options.UseSqlServer(sqlConnStr));
 
-            services.Configure<PostgresReplicationOptions>(configuration.GetSection("PostgresReplication"));
-            services.AddScoped<PostgresReplicationService>();
-
             var provider = services.BuildServiceProvider();
             using var scope = provider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var replicationService = scope.ServiceProvider.GetRequiredService<PostgresReplicationService>();
 
-            var nik = "24021850940";
+            var names = new List<string> {
+                "PT INDEXIM COALINDO",
+                "PT UNGGUL DINAMIKA UTAMA",
+                "PT KALIMANTAN PRIMA PERSADA",
+                "PT MEGA GLOBAL ENERGY"
+            };
 
-            Console.WriteLine("Executing replication (lookback 30 days)...");
-            var result = await replicationService.ReplicateAsync(30);
+            var companies = await db.Perusahaans
+                .Where(p => names.Contains(p.NamaPerusahaan))
+                .ToListAsync();
 
-            var iCount = await db.Inspections.CountAsync(i => !i.IsDeleted && i.Nik == nik);
-            var hCount = await db.HazardReports.CountAsync(h => !h.IsDeleted && h.Nik == nik);
-            var oCount = await db.Observations.CountAsync(o => !o.IsDeleted && o.Nik == nik);
-
-            Console.WriteLine("\n================================================");
-            Console.WriteLine($"  STATISTIK RECORD DI MBS UNTUK NIK {nik}:");
-            Console.WriteLine("================================================");
-            Console.WriteLine($"  Inspeksi     : {iCount}");
-            Console.WriteLine($"  Hazard Report: {hCount}");
-            Console.WriteLine($"  Observasi    : {oCount}");
-            Console.WriteLine("================================================");
+            foreach(var c in companies) {
+                Console.WriteLine($"ID {c.PerusahaanId}: {c.NamaPerusahaan}");
+            }
         }
     }
 }

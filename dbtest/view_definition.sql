@@ -323,6 +323,7 @@ OUTER APPLY
 (
     SELECT
         CASE
+            WHEN r.perusahaan_id IN (336, 339) THEN 1
             WHEN UPPER(LTRIM(RTRIM(ISNULL(r.level_jabatan, '')))) = 'NON SAP'
             THEN 1
             WHEN UPPER(LTRIM(RTRIM(ISNULL(r.no_nik, '')))) IN

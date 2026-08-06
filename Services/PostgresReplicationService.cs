@@ -348,7 +348,7 @@ namespace MBS_SAP.Services
                 .ToListAsync(cancellationToken);
 
             var hazardMap = existingHazardsData
-                .GroupBy(h => BuildHazardKey(h.Nik ?? string.Empty, h.Tanggal, h.Waktu, h.Temuan ?? string.Empty, h.Area, h.Lokasi, h.PerusahaanId, null))
+                .GroupBy(h => BuildHazardKey(h.Nik ?? string.Empty, h.Tanggal, h.Waktu, h.Temuan ?? string.Empty, h.Area, h.Lokasi, h.PerusahaanId))
                 .ToDictionary(
                     g => g.Key,
                     g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
@@ -363,7 +363,7 @@ namespace MBS_SAP.Services
                 }
 
                 var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
-                var key = BuildHazardKey(row.Nik, row.Tanggal, row.Waktu, row.Temuan, row.Area, row.Lokasi, perusahaanId, row.SourceCode);
+                var key = BuildHazardKey(row.Nik, row.Tanggal, row.Waktu, row.Temuan, row.Area, row.Lokasi, perusahaanId);
 
                 if (hazardMap.TryGetValue(key, out var existingHazard))
                 {
@@ -472,7 +472,7 @@ namespace MBS_SAP.Services
                 .ToListAsync(cancellationToken);
 
             var inspectionMap = existingInspectionsData
-                .GroupBy(i => BuildInspectionKey(i.Nik ?? string.Empty, i.Tanggal, i.Waktu, i.JenisInspeksi ?? string.Empty, i.Lokasi, i.PerusahaanId, null))
+                .GroupBy(i => BuildInspectionKey(i.Nik ?? string.Empty, i.Tanggal, i.Waktu, i.JenisInspeksi ?? string.Empty, i.Lokasi, i.PerusahaanId))
                 .ToDictionary(
                     g => g.Key,
                     g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
@@ -487,7 +487,7 @@ namespace MBS_SAP.Services
                 }
 
                 var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
-                var key = BuildInspectionKey(row.Nik, row.Tanggal, row.Waktu, row.JenisInspeksi, row.Lokasi, perusahaanId, row.SourceCode);
+                var key = BuildInspectionKey(row.Nik, row.Tanggal, row.Waktu, row.JenisInspeksi, row.Lokasi, perusahaanId);
 
                 if (inspectionMap.TryGetValue(key, out var existingInspection))
                 {
@@ -571,13 +571,13 @@ namespace MBS_SAP.Services
                 .ToListAsync(cancellationToken);
 
             var coachingMap = existingCoachings
-                .GroupBy(c => BuildCoachingKey(c.Nik, c.Tanggal, c.Waktu, c.Tema, null))
+                .GroupBy(c => BuildCoachingKey(c.Nik, c.Tanggal, c.Waktu, c.Tema))
                 .ToDictionary(
                     g => g.Key,
                     g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
 
             var coachingGroups = coachingSourceRows
-                .GroupBy(row => string.IsNullOrWhiteSpace(row.SourceCode) ? BuildCoachingKey(row.TrainerNik, row.Tanggal, row.Waktu, row.Tema, null) : row.SourceCode);
+                .GroupBy(row => string.IsNullOrWhiteSpace(row.SourceCode) ? BuildCoachingKey(row.TrainerNik, row.Tanggal, row.Waktu, row.Tema) : row.SourceCode);
 
             foreach (var group in coachingGroups)
             {
@@ -590,7 +590,7 @@ namespace MBS_SAP.Services
                 }
 
                 var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
-                var key = BuildCoachingKey(first.TrainerNik, first.Tanggal, first.Waktu, first.Tema, first.SourceCode);
+                var key = BuildCoachingKey(first.TrainerNik, first.Tanggal, first.Waktu, first.Tema);
 
                 if (coachingMap.TryGetValue(key, out var existingCoaching))
                 {
@@ -693,7 +693,7 @@ namespace MBS_SAP.Services
                 .ToListAsync(cancellationToken);
 
             var observationMap = existingObservations
-                .GroupBy(o => BuildObservationKey(o.Nik, o.Date.Date, o.Date.TimeOfDay, o.KegiatanYangDiamati, o.PerihalYangDiamati, null))
+                .GroupBy(o => BuildObservationKey(o.Nik, o.Date.Date, o.Date.TimeOfDay, o.KegiatanYangDiamati, o.PerihalYangDiamati))
                 .ToDictionary(
                     g => g.Key,
                     g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
@@ -707,7 +707,7 @@ namespace MBS_SAP.Services
                     continue;
                 }
 
-                var key = BuildObservationKey(row.Nik, row.Tanggal, row.Waktu, row.Kegiatan, row.Perihal, row.SourceCode);
+                var key = BuildObservationKey(row.Nik, row.Tanggal, row.Waktu, row.Kegiatan, row.Perihal);
 
                 if (observationMap.TryGetValue(key, out var existingObs))
                 {
@@ -767,13 +767,13 @@ namespace MBS_SAP.Services
                 .ToListAsync(cancellationToken);
 
             var p2hMap = existingP2hs
-                .GroupBy(p => BuildP2hKey(p.Nik, p.Tanggal, p.Waktu, p.NoLambung, null))
+                .GroupBy(p => BuildP2hKey(p.Nik, p.Tanggal, p.Waktu, p.NoLambung))
                 .ToDictionary(
                     g => g.Key,
                     g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
 
             var p2hGroups = p2hSourceRows
-                .GroupBy(row => string.IsNullOrWhiteSpace(row.SourceCode) ? BuildP2hKey(row.Nik, row.Tanggal, row.Waktu, row.NoLambung, null) : row.SourceCode);
+                .GroupBy(row => string.IsNullOrWhiteSpace(row.SourceCode) ? BuildP2hKey(row.Nik, row.Tanggal, row.Waktu, row.NoLambung) : row.SourceCode);
 
             foreach (var group in p2hGroups)
             {
@@ -785,7 +785,7 @@ namespace MBS_SAP.Services
                     continue;
                 }
 
-                var key = BuildP2hKey(first.Nik, first.Tanggal, first.Waktu, first.NoLambung, first.SourceCode);
+                var key = BuildP2hKey(first.Nik, first.Tanggal, first.Waktu, first.NoLambung);
 
                 var listA = new List<P2hController.ChecklistItem>();
                 var listB = new List<P2hController.ChecklistItem>();
@@ -887,7 +887,7 @@ namespace MBS_SAP.Services
                 .ToListAsync(cancellationToken);
 
             var p5mMap = existingP5ms
-                .GroupBy(p => BuildP5mKey(p.Nik, p.Tanggal, p.Waktu, p.ListPertanyaan, null))
+                .GroupBy(p => BuildP5mKey(p.Nik, p.Tanggal, p.Waktu, p.ListPertanyaan))
                 .ToDictionary(
                     g => g.Key,
                     g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
@@ -902,7 +902,7 @@ namespace MBS_SAP.Services
                 }
 
                 var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
-                var key = BuildP5mKey(row.Nik, row.Tanggal, row.Waktu, row.ListPertanyaan, row.SourceCode);
+                var key = BuildP5mKey(row.Nik, row.Tanggal, row.Waktu, row.ListPertanyaan);
 
                 if (p5mMap.TryGetValue(key, out var existingP5m))
                 {
@@ -966,7 +966,7 @@ namespace MBS_SAP.Services
                 .ToListAsync(cancellationToken);
 
             var safetyTalkMap = existingSafetyTalks
-                .GroupBy(s => BuildSafetyTalkKey(s.Nik, s.Tanggal, s.Waktu, s.Judul, null))
+                .GroupBy(s => BuildSafetyTalkKey(s.Nik, s.Tanggal, s.Waktu, s.Judul))
                 .ToDictionary(
                     g => g.Key,
                     g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
@@ -981,7 +981,7 @@ namespace MBS_SAP.Services
                 }
 
                 var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
-                var key = BuildSafetyTalkKey(row.Nik, row.Tanggal, row.Waktu, row.Judul, row.SourceCode);
+                var key = BuildSafetyTalkKey(row.Nik, row.Tanggal, row.Waktu, row.Judul);
 
                 if (safetyTalkMap.TryGetValue(key, out var existingTalk))
                 {
@@ -1075,50 +1075,43 @@ namespace MBS_SAP.Services
             return value;
         }
 
-        private static string BuildHazardKey(string nik, DateTime tanggal, TimeSpan waktu, string temuan, string? area, string? lokasi, int? perusahaanId, string? sourceCode)
+        private static string BuildHazardKey(string nik, DateTime tanggal, TimeSpan waktu, string temuan, string? area, string? lokasi, int? perusahaanId)
         {
             var companyKey = perusahaanId?.ToString() ?? "0";
             var timeKey = $"{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}";
-            var sourceKey = string.IsNullOrWhiteSpace(sourceCode) ? "-" : NormalizeText(sourceCode);
-            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{timeKey}|{NormalizeText(area)}|{NormalizeText(lokasi)}|{NormalizeText(temuan)}|{companyKey}|{sourceKey}";
+            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{timeKey}|{NormalizeText(area)}|{NormalizeText(lokasi)}|{NormalizeText(temuan)}|{companyKey}";
         }
 
-        private static string BuildInspectionKey(string nik, DateTime tanggal, TimeSpan waktu, string jenisInspeksi, string? lokasi, int? perusahaanId, string? sourceCode)
+        private static string BuildInspectionKey(string nik, DateTime tanggal, TimeSpan waktu, string jenisInspeksi, string? lokasi, int? perusahaanId)
         {
             var companyKey = perusahaanId?.ToString() ?? "0";
             var timeKey = $"{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}";
-            var sourceKey = string.IsNullOrWhiteSpace(sourceCode) ? "-" : NormalizeText(sourceCode);
-            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{timeKey}|{NormalizeText(jenisInspeksi)}|{NormalizeText(lokasi)}|{companyKey}|{sourceKey}";
+            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{timeKey}|{NormalizeText(jenisInspeksi)}|{NormalizeText(lokasi)}|{companyKey}";
         }
 
-        private static string BuildCoachingKey(string nik, DateTime tanggal, TimeSpan waktu, string? tema, string? sourceCode)
+        private static string BuildCoachingKey(string nik, DateTime tanggal, TimeSpan waktu, string? tema)
         {
-            var sourceKey = string.IsNullOrWhiteSpace(sourceCode) ? "-" : NormalizeText(sourceCode);
-            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}|{NormalizeText(tema)}|{sourceKey}";
+            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}|{NormalizeText(tema)}";
         }
 
-        private static string BuildObservationKey(string nik, DateTime tanggal, TimeSpan waktu, string? kegiatan, string? perihal, string? sourceCode)
+        private static string BuildObservationKey(string nik, DateTime tanggal, TimeSpan waktu, string? kegiatan, string? perihal)
         {
-            var sourceKey = string.IsNullOrWhiteSpace(sourceCode) ? "-" : NormalizeText(sourceCode);
-            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}|{NormalizeText(kegiatan)}|{NormalizeText(perihal)}|{sourceKey}";
+            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}|{NormalizeText(kegiatan)}|{NormalizeText(perihal)}";
         }
 
-        private static string BuildP2hKey(string nik, DateTime tanggal, TimeSpan waktu, string? noLambung, string? sourceCode)
+        private static string BuildP2hKey(string nik, DateTime tanggal, TimeSpan waktu, string? noLambung)
         {
-            var sourceKey = string.IsNullOrWhiteSpace(sourceCode) ? "-" : NormalizeText(sourceCode);
-            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}|{NormalizeText(noLambung)}|{sourceKey}";
+            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}|{NormalizeText(noLambung)}";
         }
 
-        private static string BuildP5mKey(string nik, DateTime tanggal, TimeSpan waktu, string? pertanyaan, string? sourceCode)
+        private static string BuildP5mKey(string nik, DateTime tanggal, TimeSpan waktu, string? pertanyaan)
         {
-            var sourceKey = string.IsNullOrWhiteSpace(sourceCode) ? "-" : NormalizeText(sourceCode);
-            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}|{NormalizeText(pertanyaan)}|{sourceKey}";
+            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}|{NormalizeText(pertanyaan)}";
         }
 
-        private static string BuildSafetyTalkKey(string nik, DateTime tanggal, TimeSpan waktu, string? judul, string? sourceCode)
+        private static string BuildSafetyTalkKey(string nik, DateTime tanggal, TimeSpan waktu, string? judul)
         {
-            var sourceKey = string.IsNullOrWhiteSpace(sourceCode) ? "-" : NormalizeText(sourceCode);
-            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}|{NormalizeText(judul)}|{sourceKey}";
+            return $"{NormalizeText(nik)}|{tanggal:yyyy-MM-dd}|{waktu.Hours:D2}:{waktu.Minutes:D2}:{waktu.Seconds:D2}|{NormalizeText(judul)}";
         }
 
         private static string NormalizeText(string? value)

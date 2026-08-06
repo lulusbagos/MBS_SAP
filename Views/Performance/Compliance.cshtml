@@ -445,6 +445,65 @@
         </form>
     </div>
 
+    <!-- SAP Usage Compliance Row (Donut Chart & Child Breakdown) -->
+    <div class="row g-3 mb-4">
+        <!-- Donut Chart -->
+        <div class="col-md-6">
+            <div class="report-card premium-card h-100">
+                <div class="report-header premium-header border-bottom">
+                    <h6 class="premium-title mb-0">
+                        <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Kepatuhan Penggunaan SAP (Keseluruhan)
+                    </h6>
+                </div>
+                <div class="report-body d-flex flex-column align-items-center justify-content-center p-4">
+                    <div style="position: relative; width: 100%; max-width: 250px; aspect-ratio: 1/1;">
+                        <canvas id="sapUsageDonutChart"></canvas>
+                        <!-- Center Text -->
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                            <div style="font-size: 24px; font-weight: 800; color: var(--text-main); font-family: 'Outfit', sans-serif;">@(ViewBag.WajibSap ?? 0)</div>
+                            <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Wajib SAP</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Child Company Breakdown -->
+        <div class="col-md-6">
+            <div class="report-card premium-card h-100">
+                <div class="report-header premium-header border-bottom">
+                    <h6 class="premium-title mb-0">
+                        <i class="bi bi-building-exclamation me-2 text-danger"></i>Terbanyak Belum Mengisi SAP
+                    </h6>
+                </div>
+                <div class="report-body p-0">
+                    <div class="list-group list-group-flush" style="border-radius: 0 0 16px 16px;">
+                        @if (ViewBag.ChildBreakdowns != null)
+                        {
+                            foreach (var item in ViewBag.ChildBreakdowns)
+                            {
+                                <div class="list-group-item d-flex justify-content-between align-items-center p-3" style="background: transparent; border-bottom: 1px solid var(--border-color);">
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                                            <i class="bi bi-person-x-fill"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold" style="font-family: 'Outfit', sans-serif; font-size: 13px; color: var(--text-main);">@item.CompanyName</div>
+                                            <div class="text-muted" style="font-size: 11px;">Karyawan Wajib SAP</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge rounded-pill fs-6 px-3 py-2 shadow-sm" style="background: #ef4444; color: white;">
+                                        @item.BelumMengisi Belum Mengisi
+                                    </span>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- KPI Summary Row -->
     @{
         int totalTarget = (ViewBag.TargetH ?? 0) + (ViewBag.TargetI ?? 0) + (ViewBag.TargetS ?? 0) + (ViewBag.TargetO ?? 0) + (ViewBag.TargetC ?? 0);
@@ -1261,6 +1320,56 @@
             // Perjelas font label dengan kontras tinggi (solid dark di light theme, solid light di dark theme)
             const labelColor = isDarkTheme ? '#f8fafc' : '#0f172a';
 
+            // Chart SAP Usage Donut
+            const ctxDonut = document.getElementById('sapUsageDonutChart');
+            if (ctxDonut) {
+                new Chart(ctxDonut, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Sudah Mengisi', 'Belum Mengisi (Merah)'],
+                        datasets: [{
+                            data: [@(ViewBag.SudahMengisi ?? 0), @(ViewBag.BelumMengisi ?? 0)],
+                            backgroundColor: ['#10b981', '#ef4444'],
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: labelColor,
+                                    font: { family: 'Outfit', size: 11, weight: '600' },
+                                    usePointStyle: true,
+                                    padding: 20
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += context.parsed + ' Karyawan';
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                            label += ` (${pct}%)`;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
             // Chart 4: Maincon Group Comparison (Grouped Bar Chart)
             const ctxMaincon = document.getElementById('mainconComparisonChart');
             if (ctxMaincon) {
@@ -1692,23 +1801,23 @@
                                     </td>
                                     <td class="align-middle fw-bold" style="font-family: 'Outfit', sans-serif; color: var(--text-main);">@comp.CompanyName</td>
                                     <td class="text-center align-middle">
-                                          <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);" title="Total Aktual: @comp.TotalTemuan | Target: @comp.TotalTarget">
+                                          <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);" data-bs-toggle="tooltip" title="Persentase capaian dari keseluruhan target">
                                               @(comp.TotalTarget > 0 ? Math.Round(((double)comp.TotalTemuan / comp.TotalTarget) * 100, 1) + "%" : "-")
                                           </span>
-                                          <div class="text-muted" style="font-size: 10px; margin-top: 2px;">@comp.TotalTemuan / @comp.TotalTarget</div>
+                                          <div class="text-muted" style="font-size: 10px; margin-top: 2px; cursor: help;" data-bs-toggle="tooltip" title="Total Pencapaian Aktual / Total Target yang harus dicapai">@comp.TotalTemuan / @comp.TotalTarget</div>
                                     </td>
                                     <td class="text-center align-middle">
                                         @{
                                             string closeColor = comp.CloseRate >= 80 ? "#10b981" : (comp.CloseRate >= 50 ? "#f59e0b" : "#ef4444");
                                         }
-                                        <div style="font-weight: 700; color: @closeColor;">@Math.Round(comp.CloseRate, 1)%</div>
-                                        <div class="text-muted" style="font-size: 10px;">@comp.TotalClosedHazard / @comp.TotalHazard Hazard</div>
+                                        <div style="font-weight: 700; color: @closeColor; cursor: help;" data-bs-toggle="tooltip" title="Persentase jumlah hazard yang telah ditutup">@Math.Round(comp.CloseRate, 1)%</div>
+                                        <div class="text-muted" style="font-size: 10px; cursor: help;" data-bs-toggle="tooltip" title="Jumlah hazard berstatus Closed / Total hazard yang dilaporkan">@comp.TotalClosedHazard / @comp.TotalHazard Hazard</div>
                                     </td>
                                     <td class="text-center align-middle">
                                         @{
                                             string speedColor = comp.AvgSpeedDays <= 3 ? "#10b981" : (comp.AvgSpeedDays <= 7 ? "#f59e0b" : "#ef4444");
                                         }
-                                        <div style="font-weight: 700; color: @speedColor;">@Math.Round(comp.AvgSpeedDays, 1) Hari</div>
+                                        <div style="font-weight: 700; color: @speedColor; cursor: help;" data-bs-toggle="tooltip" title="Rata-rata waktu yang dibutuhkan untuk menutup sebuah hazard (dalam Hari)">@Math.Round(comp.AvgSpeedDays, 1) Hari</div>
                                     </td>
                                     <td class="text-center align-middle">
                                         <div style="color: #fbbf24; font-size: 13px;">
