@@ -3500,12 +3500,12 @@ namespace MBS_SAP.Controllers
                     ChildCompanyNames = subcons.Select(s => s.NamaPerusahaan ?? "Unknown").ToList(),
                     UncompliantChildCompanyNames = uncompliantSubs,
                     NoTargetChildCompanyNames = noTargetSubs,
-                    OverallComplianceRate = totalGroupTarget > 0 ? Math.Round((double)totalGroupActual / totalGroupTarget * 100.0, 1) : 0,
-                    HazardComplianceRate = totalTargetH > 0 ? Math.Round((double)totalActualH / totalTargetH * 100.0, 1) : 0,
-                    InspeksiComplianceRate = totalTargetI > 0 ? Math.Round((double)totalActualI / totalTargetI * 100.0, 1) : 0,
-                    SafetyTalkComplianceRate = totalTargetS > 0 ? Math.Round((double)totalActualS / totalTargetS * 100.0, 1) : 0,
-                    ObservasiComplianceRate = totalTargetO > 0 ? Math.Round((double)totalActualO / totalTargetO * 100.0, 1) : 0,
-                    CoachingComplianceRate = totalTargetC > 0 ? Math.Round((double)totalActualC / totalTargetC * 100.0, 1) : 0,
+                    OverallComplianceRate = totalGroupTarget > 0 ? Math.Round(Math.Min(100.0, (double)totalGroupActual / totalGroupTarget * 100.0), 1) : 0,
+                    HazardComplianceRate = totalTargetH > 0 ? Math.Round(Math.Min(100.0, (double)totalActualH / totalTargetH * 100.0), 1) : 0,
+                    InspeksiComplianceRate = totalTargetI > 0 ? Math.Round(Math.Min(100.0, (double)totalActualI / totalTargetI * 100.0), 1) : 0,
+                    SafetyTalkComplianceRate = totalTargetS > 0 ? Math.Round(Math.Min(100.0, (double)totalActualS / totalTargetS * 100.0), 1) : 0,
+                    ObservasiComplianceRate = totalTargetO > 0 ? Math.Round(Math.Min(100.0, (double)totalActualO / totalTargetO * 100.0), 1) : 0,
+                    CoachingComplianceRate = totalTargetC > 0 ? Math.Round(Math.Min(100.0, (double)totalActualC / totalTargetC * 100.0), 1) : 0,
                     
                     TargetHazard = totalTargetH, ActualHazard = totalActualH,
                     TargetInspeksi = totalTargetI, ActualInspeksi = totalActualI,
@@ -3629,8 +3629,7 @@ namespace MBS_SAP.Controllers
 
             var scopedCompanies = allCompanies.Where(c => scopedCompanyIds.Contains(c.PerusahaanId)).ToList();
 
-            var evalNeverLoggedInCompanies = companyId.HasValue ? scopedCompanies : allCompanies;
-            var neverLoggedInCompanies = evalNeverLoggedInCompanies
+            var neverLoggedInCompanies = allCompanies
                 .Where(p => !loggedInCompanyIds.Contains(p.PerusahaanId) && companiesWithTargets.Contains(p.PerusahaanId))
                 .ToList();
 
@@ -3700,12 +3699,7 @@ namespace MBS_SAP.Controllers
             int maxTargetAll = 1;
             foreach (var kv in targetDict) { if (kv.Value > maxTargetAll) maxTargetAll = kv.Value; }
 
-            // Gunakan daftar perusahaan yang sesuai scope filter (termasuk dirinya dan subcon-nya)
-            // Namun jika tidak ada companyId yang difilter (misal default admin), scopedCompanies berisi Indexim dan anak-anaknya.
-            // Untuk memastikan Top 10 Best Performance berjalan global jika tidak difilter, kita cek apakah companyId.HasValue
-            var rankingCompanies = companyId.HasValue ? scopedCompanies : allCompanies;
-
-            foreach (var comp in rankingCompanies)
+            foreach (var comp in allCompanies)
             {
                 int cId = comp.PerusahaanId;
                 int hC = hazardCounts.TryGetValue(cId, out int v1) ? v1 : 0;
@@ -3719,8 +3713,8 @@ namespace MBS_SAP.Controllers
                 int totalTemuan = hC + iC + sC + oC + pC + coaC;
                 int totalTarget = targetDict.TryGetValue(cId, out int tgt) ? tgt : 0;
                 
-                // Batasi total temuan aktual dengan target maksimal agar persentase tidak bocor di atas 100% (contoh: 3233%)
-                totalTemuan = Math.Min(totalTemuan, totalTarget);
+                // Jangan membatasi totalTemuan di sini, biarkan UI dan Score perhitungan yang melimitnya 
+                // agar data submisi aktual tetap terlihat utuh.
                 
                 if (totalTemuan > maxKuantitas) maxKuantitas = totalTemuan;
 

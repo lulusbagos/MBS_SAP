@@ -1876,7 +1876,7 @@
                                     <td class="align-middle fw-bold" style="font-family: 'Outfit', sans-serif; color: var(--text-main);">@comp.CompanyName</td>
                                     <td class="text-center align-middle">
                                           <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);" data-bs-toggle="tooltip" title="Persentase capaian dari keseluruhan target">
-                                              @(comp.TotalTarget > 0 ? Math.Round(((double)comp.TotalTemuan / comp.TotalTarget) * 100, 1) + "%" : "-")
+                                              @(comp.TotalTarget > 0 ? Math.Round(Math.Min(100, ((double)comp.TotalTemuan / comp.TotalTarget) * 100), 1) + "%" : "-")
                                           </span>
                                           <div class="text-muted" style="font-size: 10px; margin-top: 2px; cursor: help;" data-bs-toggle="tooltip" title="Total Pencapaian Aktual / Total Target yang harus dicapai">@comp.TotalTemuan / @comp.TotalTarget</div>
                                     </td>
