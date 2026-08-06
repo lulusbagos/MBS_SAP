@@ -3236,26 +3236,18 @@ namespace MBS_SAP.Controllers
             var promotedMainconIds = new HashSet<int> { 3, 4, 5 }; // UDU (3), KPP (4), MGE/PT Mega Global Energy (5)
 
             var mainconList = new List<PerusahaanView>();
-            if (companyId.HasValue && companyId.Value > 0)
-            {
-                var selectedMaincon = await _context.Perusahaans.AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.StatusAktif && p.PerusahaanId == companyId.Value);
-                if (selectedMaincon != null) mainconList.Add(selectedMaincon);
-            }
-            else
-            {
-                // Bangun mainconList default: [PT INDEXIM] + [UDU, KPP, MGE] sebagai grup mandiri
-                var indeximCompany = await _context.Perusahaans.AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.StatusAktif && p.PerusahaanId == 1);
 
-                var promotedMaincons = await _context.Perusahaans.AsNoTracking()
-                    .Where(p => p.StatusAktif && promotedMainconIds.Contains(p.PerusahaanId))
-                    .OrderBy(p => p.NamaPerusahaan)
-                    .ToListAsync();
+            // Bangun mainconList default: [PT INDEXIM] + [UDU, KPP, MGE] sebagai grup mandiri
+            var indeximCompany = await _context.Perusahaans.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.StatusAktif && p.PerusahaanId == 1);
 
-                if (indeximCompany != null) mainconList.Add(indeximCompany);
-                mainconList.AddRange(promotedMaincons);
-            }
+            var promotedMaincons = await _context.Perusahaans.AsNoTracking()
+                .Where(p => p.StatusAktif && promotedMainconIds.Contains(p.PerusahaanId))
+                .OrderBy(p => p.NamaPerusahaan)
+                .ToListAsync();
+
+            if (indeximCompany != null) mainconList.Add(indeximCompany);
+            mainconList.AddRange(promotedMaincons);
 
             var startOfMonthMaincon = new DateTime(selectedYear, selectedMonth, 1);
             var endOfMonthMaincon = startOfMonthMaincon.AddMonths(1).AddTicks(-1);
