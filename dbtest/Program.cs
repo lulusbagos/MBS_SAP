@@ -30,19 +30,22 @@ namespace dbtest
             using var scope = provider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var names = new List<string> {
-                "PT INDEXIM COALINDO",
-                "PT UNGGUL DINAMIKA UTAMA",
-                "PT KALIMANTAN PRIMA PERSADA",
-                "PT MEGA GLOBAL ENERGY"
-            };
-
+            var targetCompanyIds = new List<int> { 360 };
+            
             var companies = await db.Perusahaans
-                .Where(p => names.Contains(p.NamaPerusahaan))
+                .Where(p => targetCompanyIds.Contains(p.PerusahaanId) || p.NamaPerusahaan.Contains("EKA DHARMA") || p.NamaPerusahaan.Contains("ANUGERAH AC"))
                 .ToListAsync();
 
             foreach(var c in companies) {
-                Console.WriteLine($"ID {c.PerusahaanId}: {c.NamaPerusahaan}");
+                Console.WriteLine($"Company: ID {c.PerusahaanId}: {c.NamaPerusahaan} (Parent: {c.PerusahaanIndukId})");
+            }
+            
+            var relations = await db.PerusahaanHierarchyRelations
+                .Where(r => r.ParentCompanyId == 360 || r.ChildCompanyId == 360 || r.ParentCompanyName.Contains("EKA DHARMA"))
+                .ToListAsync();
+                
+            foreach(var r in relations) {
+                Console.WriteLine($"Relation: Parent {r.ParentCompanyId} ({r.ParentCompanyName}) -> Child {r.ChildCompanyId} (Active: {r.ChildIsActive})");
             }
         }
     }

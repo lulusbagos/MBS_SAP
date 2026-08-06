@@ -3605,7 +3605,28 @@ namespace MBS_SAP.Controllers
                 .Distinct()
                 .ToListAsync();
 
-            var neverLoggedInCompanies = allCompanies
+            var scopedCompanyIds = new HashSet<int> { selectedCompanyId };
+            var childIdsScope = await _context.PerusahaanHierarchyRelations.AsNoTracking()
+                .Where(r => r.ParentCompanyId == selectedCompanyId && r.ChildIsActive == true && r.ChildCompanyId.HasValue)
+                .Select(r => r.ChildCompanyId!.Value)
+                .ToListAsync();
+            foreach (var id in childIdsScope) scopedCompanyIds.Add(id);
+            var directChildIds = await _context.Perusahaans.AsNoTracking()
+                .Where(p => p.PerusahaanIndukId == selectedCompanyId && p.StatusAktif)
+                .Select(p => p.PerusahaanId)
+                .ToListAsync();
+            foreach (var id in directChildIds) scopedCompanyIds.Add(id);
+            
+            // Untuk PT INDEXIM, jangan hitung promoted maincons di scopenya
+            if (selectedCompanyId == 1)
+            {
+                scopedCompanyIds.ExceptWith(promotedMainconIds);
+            }
+
+            var scopedCompanies = allCompanies.Where(c => scopedCompanyIds.Contains(c.PerusahaanId)).ToList();
+
+            var evalNeverLoggedInCompanies = companyId.HasValue ? scopedCompanies : allCompanies;
+            var neverLoggedInCompanies = evalNeverLoggedInCompanies
                 .Where(p => !loggedInCompanyIds.Contains(p.PerusahaanId) && companiesWithTargets.Contains(p.PerusahaanId))
                 .ToList();
 
@@ -3675,7 +3696,12 @@ namespace MBS_SAP.Controllers
             int maxTargetAll = 1;
             foreach (var kv in targetDict) { if (kv.Value > maxTargetAll) maxTargetAll = kv.Value; }
 
-            foreach (var comp in allCompanies)
+            // Gunakan daftar perusahaan yang sesuai scope filter (termasuk dirinya dan subcon-nya)
+            // Namun jika tidak ada companyId yang difilter (misal default admin), scopedCompanies berisi Indexim dan anak-anaknya.
+            // Untuk memastikan Top 10 Best Performance berjalan global jika tidak difilter, kita cek apakah companyId.HasValue
+            var rankingCompanies = companyId.HasValue ? scopedCompanies : allCompanies;
+
+            foreach (var comp in rankingCompanies)
             {
                 int cId = comp.PerusahaanId;
                 int hC = hazardCounts.TryGetValue(cId, out int v1) ? v1 : 0;
