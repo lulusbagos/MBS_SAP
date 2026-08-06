@@ -3454,7 +3454,7 @@ namespace MBS_SAP.Controllers
                             TotalEmployees = subKaryawans.Count,
                             EmployeesWithTarget = subEmpsWithTarget,
                             ComplianceRate = subTargetTotal > 0 ? Math.Round((double)subActualTotal / subTargetTotal * 100.0, 1) : 0,
-                            TotalSubmissions = subActualTotal,
+                            TotalSubmissions = subRawSubmissions,
                             TargetSubmissions = subTargetTotal
                         });
                     }
