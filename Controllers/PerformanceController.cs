@@ -3688,6 +3688,10 @@ namespace MBS_SAP.Controllers
                 
                 int totalTemuan = hC + iC + sC + oC + pC + coaC;
                 int totalTarget = targetDict.TryGetValue(cId, out int tgt) ? tgt : 0;
+                
+                // Batasi total temuan aktual dengan target maksimal agar persentase tidak bocor di atas 100% (contoh: 3233%)
+                totalTemuan = Math.Min(totalTemuan, totalTarget);
+                
                 if (totalTemuan > maxKuantitas) maxKuantitas = totalTemuan;
 
                 int totalAp = 0;
