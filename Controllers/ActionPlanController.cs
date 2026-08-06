@@ -55,17 +55,23 @@ namespace MBS_SAP.Controllers
                 );
             }
 
-            // Non-Admin hanya melihat yang terkait dengannya langsung
-            if (!isAdmin && !string.IsNullOrEmpty(userNik))
-            {
-                query = query.Where(r =>
-                    r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik || string.IsNullOrEmpty(r.NikPja)
-                );
-            }
-
+            // Non-Admin dapat melihat semua hazard di perusahaan mereka (sesuai hierarki di atas)
+            // agar bisa melakukan "Take Up" pada temuan dari user lain.
             var reports = await query
-                .OrderByDescending(r => r.CreatedAt)
+                .OrderByDescending(r => r.Status == "Open")
+                .ThenByDescending(r => r.Tanggal)
+                .ThenByDescending(r => r.CreatedAt)
                 .ToListAsync();
+            var perusahaanIds = reports.Where(r => r.PerusahaanId.HasValue).Select(r => r.PerusahaanId!.Value).Distinct().ToList();
+            var perusahaans = await _context.Perusahaans.Where(p => perusahaanIds.Contains(p.PerusahaanId)).ToListAsync();
+            ViewBag.Perusahaans = perusahaans;
+            
+            ViewBag.Departemens = reports.Where(r => !string.IsNullOrEmpty(r.Departemen))
+                                         .Select(r => r.Departemen)
+                                         .Distinct()
+                                         .OrderBy(d => d)
+                                         .ToList();
+
             return View(reports);
         }
 
@@ -101,7 +107,7 @@ namespace MBS_SAP.Controllers
                             || (!string.IsNullOrWhiteSpace(userNik) && plan.Nik == userNik)
                             || (!string.IsNullOrWhiteSpace(userNik) && !string.IsNullOrWhiteSpace(plan.NikPja) && plan.NikPja == userNik)
                             || (!string.IsNullOrWhiteSpace(userNik) && !string.IsNullOrWhiteSpace(plan.NikPic) && plan.NikPic == userNik)
-                            || (string.IsNullOrWhiteSpace(plan.NikPja) && plan.PerusahaanId.HasValue && userCompanyId.HasValue && plan.PerusahaanId == userCompanyId);
+                            || (plan.PerusahaanId.HasValue && userCompanyId.HasValue && plan.PerusahaanId == userCompanyId); // Allow anyone in the same company to Take Up
 
             if (!canUpdate)
             {

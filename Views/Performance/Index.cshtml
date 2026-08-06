@@ -2005,8 +2005,8 @@
 
                 <div class="hitsafe-toolbar">
                     <select id="hitsafeFilterType" class="hitsafe-filter">
+                        <option value="hazard" selected>Hazard</option>
                         <option value="all">Semua Jenis</option>
-                        <option value="hazard">Hazard</option>
                         <option value="inspection">Inspection</option>
                         <option value="p5m">P5M</option>
                         <option value="safetytalk">Safety Talk</option>
@@ -2046,6 +2046,46 @@
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: lime;"></span>
                                 <span>Rendah (Aman)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Floating Legend for Pin Mode -->
+                    <div id="hitsafePinLegend" style="position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: rgba(15, 23, 42, 0.95); border: 1.5px solid #334155; border-radius: 10px; padding: 10px 12px; color: #f8fafc; font-size: 11px; width: 220px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); pointer-events: none;">
+                        <div style="font-weight: 800; margin-bottom: 6px; text-transform: uppercase; color: #38bdf8;">Legenda Marker</div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #3b82f6; border: 1.5px solid #fff;"></span>
+                                <span>Inspection</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #10b981; border: 1.5px solid #fff;"></span>
+                                <span>P5M</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #f59e0b; border: 1.5px solid #fff;"></span>
+                                <span>Safety Talk</span>
+                            </div>
+                            
+                            <div style="margin-top: 4px; padding-top: 4px; border-top: 1px solid #334155; font-weight: 700; color: #94a3b8;">Hazard (Status / Risiko)</div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #10b981; border: 1.5px solid #fff;"></span>
+                                <span>Closed (Selesai)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #991b1b; border: 1.5px solid #fff;"></span>
+                                <span>Open (Ekstrem)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #ef4444; border: 1.5px solid #fff;"></span>
+                                <span>Open (Tinggi)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #f59e0b; border: 1.5px solid #fff;"></span>
+                                <span>Open (Sedang)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #eab308; border: 1.5px solid #fff;"></span>
+                                <span>Open (Rendah)</span>
                             </div>
                         </div>
                     </div>
@@ -4279,7 +4319,7 @@
                     const statusEl = document.getElementById('hitsafeFilterStatus');
                     const riskEl = document.getElementById('hitsafeFilterRisk');
                     const keywordEl = document.getElementById('hitsafeFilterKeyword');
-                    if (typeEl) typeEl.value = 'all';
+                    if (typeEl) typeEl.value = 'hazard';
                     if (statusEl) statusEl.value = 'all';
                     if (riskEl) riskEl.value = 'all';
                     if (keywordEl) keywordEl.value = '';
@@ -4305,6 +4345,7 @@
                 heatmapToggle.addEventListener('click', function() {
                     hitSafeHeatmapMode = !hitSafeHeatmapMode;
                     const legendEl = document.getElementById('hitsafeHeatmapLegend');
+                    const pinLegendEl = document.getElementById('hitsafePinLegend');
 
                     if (hitSafeHeatmapMode) {
                         heatmapToggle.classList.add('btn-danger', 'text-white');
@@ -4313,6 +4354,7 @@
                         heatmapToggle.style.borderColor = '#b91c1c';
                         heatmapToggle.innerHTML = '<i class="bi bi-fire text-white"></i> Mode Pin';
                         if (legendEl) legendEl.style.display = 'block';
+                        if (pinLegendEl) pinLegendEl.style.display = 'none';
                     } else {
                         heatmapToggle.classList.remove('btn-danger', 'text-white');
                         heatmapToggle.style.background = '#0f172a';
@@ -4320,6 +4362,7 @@
                         heatmapToggle.style.borderColor = '#1e293b';
                         heatmapToggle.innerHTML = '<i class="bi bi-fire text-danger"></i> Mode Heatmap';
                         if (legendEl) legendEl.style.display = 'none';
+                        if (pinLegendEl) pinLegendEl.style.display = 'block';
                     }
                     applyHitSafeFiltersAndRender(false);
                 });
@@ -4424,16 +4467,45 @@
                         maxZoom: 18
                     }).addTo(hitSafeMap);
                 }
-            } else {
+                // Urutkan titik agar Hazard di-render paling akhir (tampil paling atas)
+                hitSafeFilteredPoints.sort(function(a, b) {
+                    if (a.type === 'hazard' && b.type !== 'hazard') return 1;
+                    if (a.type !== 'hazard' && b.type === 'hazard') return -1;
+                    return 0;
+                });
+
                 hitSafeFilteredPoints.forEach(function(point) {
                     const popup = buildPointPopup(point.type, point);
                     const markerColors = {
-                        hazard: '#f43f5e',
                         inspection: '#3b82f6',
                         p5m: '#10b981',
                         safetytalk: '#f59e0b'
                     };
-                    const markerColor = markerColors[point.type] || '#3b82f6';
+                    
+                    let markerColor = markerColors[point.type] || '#3b82f6';
+                    
+                    // Prioritas warna marker untuk Hazard berdasarkan resiko dan status
+                    if (point.type === 'hazard') {
+                        const status = String(point.status || '').toLowerCase();
+                        const risk = String(point.resiko || '').toLowerCase();
+                        
+                        if (status === 'closed' || status === 'close') {
+                            markerColor = '#10b981'; // Hijau untuk yang sudah close
+                        } else {
+                            if (risk.includes('extreme') || risk.includes('ekstrem') || risk.includes('sangat berat') || risk.includes('kritis')) {
+                                markerColor = '#991b1b'; // Merah gelap
+                            } else if (risk.includes('high') || risk.includes('tinggi') || risk.includes('berat')) {
+                                markerColor = '#ef4444'; // Merah
+                            } else if (risk.includes('medium') || risk.includes('sedang')) {
+                                markerColor = '#f59e0b'; // Oranye
+                            } else if (risk.includes('low') || risk.includes('rendah')) {
+                                markerColor = '#eab308'; // Kuning
+                            } else {
+                                markerColor = '#f43f5e'; // Default warna merah muda/hazard
+                            }
+                        }
+                    }
+
                     const marker = L.marker([point.lat, point.lon], {
                         icon: L.divIcon({
                             className: 'hitsafe-map-pin-wrapper',
@@ -4691,10 +4763,27 @@
                 hitSafeMap = L.map('hitsafeLeafletMap', {
                     attributionControl: false
                 }).setView([kaliorangLat, kaliorangLon], 11);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
-                    attribution: '&copy; OpenStreetMap contributors'
-                }).addTo(hitSafeMap);
+                    attribution: '&copy; OpenStreetMap'
+                });
+                const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 19,
+                    attribution: 'Tiles &copy; Esri'
+                });
+                const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; CartoDB'
+                });
+                
+                satelliteLayer.addTo(hitSafeMap);
+                
+                const baseMaps = {
+                    "Satelit": satelliteLayer,
+                    "Gelap (Dark)": darkLayer,
+                    "Terang (OSM)": osmLayer
+                };
+                L.control.layers(baseMaps).addTo(hitSafeMap);
                 hitSafeAnchorLayer = L.layerGroup().addTo(hitSafeMap);
                 hitSafeReportLayer = L.layerGroup().addTo(hitSafeMap);
                 if (typeof L.markerClusterGroup === 'function') {

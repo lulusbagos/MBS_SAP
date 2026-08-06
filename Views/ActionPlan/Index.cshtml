@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "Action Plan - SAP";
     var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var userName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
     var isAdmin = User.IsInRole("Admin");
 }
 
@@ -155,6 +156,34 @@
             <button class="ap-pill filter-status" data-status="open" data-active-class="active-red">Open</button>
             <button class="ap-pill filter-status" data-status="closed" data-active-class="active-green">Closed</button>
         </div>
+        
+        <div class="ap-divider d-none d-md-block"></div>
+
+        <!-- Perusahaan -->
+        <div class="ap-filter-group">
+            <span class="ap-filter-label">Perusahaan</span>
+            <select id="filterPerusahaan" class="form-select form-select-sm" style="width: auto; border-radius: 99px; font-size: 12px; font-weight: 600; padding: 4px 28px 4px 12px; border-color: var(--border-color); color: var(--text-muted); cursor: pointer;">
+                <option value="all">Semua Perusahaan</option>
+                @if (ViewBag.Perusahaans != null) {
+                    foreach (var p in (IEnumerable<MBS_SAP.Models.PerusahaanView>)ViewBag.Perusahaans) {
+                        <option value="@p.PerusahaanId">@p.NamaPerusahaan</option>
+                    }
+                }
+            </select>
+        </div>
+        
+        <!-- Departemen -->
+        <div class="ap-filter-group">
+            <span class="ap-filter-label">Departemen</span>
+            <select id="filterDepartemen" class="form-select form-select-sm" style="width: auto; border-radius: 99px; font-size: 12px; font-weight: 600; padding: 4px 28px 4px 12px; border-color: var(--border-color); color: var(--text-muted); cursor: pointer;">
+                <option value="all">Semua Departemen</option>
+                @if (ViewBag.Departemens != null) {
+                    foreach (var d in (IEnumerable<string>)ViewBag.Departemens) {
+                        <option value="@d">@d</option>
+                    }
+                }
+            </select>
+        </div>
 
         <!-- Count badge & Export Excel -->
         <div class="ms-auto d-flex align-items-center gap-2">
@@ -190,8 +219,10 @@
 
                 <div class="col-md-6 mb-4 action-plan-item"
                      data-type="@(displayType?.ToLower() ?? "hazard")"
-                     data-status="@(isOpen ? "open" : "closed")">
-                    <div class="card-sap @(isOpen ? "border-red-accent" : "border-green-accent") h-100 d-flex flex-column justify-content-between">
+                     data-status="@(isOpen ? "open" : "closed")"
+                     data-perusahaan="@(item.PerusahaanId)"
+                     data-departemen="@(item.Departemen)">
+                    <div class="card-sap @(isOpen ? "border-red-accent" : "border-green-accent") h-100 d-flex flex-column justify-content-between" style="@(isOpen ? "box-shadow: 0 4px 15px rgba(244, 63, 94, 0.15);" : "")">
                         <div>
                             <!-- ── Card Header ── -->
                             <div class="d-flex justify-content-between align-items-start mb-2">
@@ -203,8 +234,8 @@
                                         @item.KategoriTemuan
                                     </h6>
                                 </div>
-                                <span class="status-badge @(isOpen ? "pending" : "approved")">
-                                    @(isOpen ? "Open" : "Closed")
+                                <span class="status-badge @(isOpen ? "pending" : "approved")" style="@(isOpen ? "animation: pulse 2s infinite; border: 1px solid #f43f5e;" : "")">
+                                    @(isOpen ? "PRIORITY - OPEN" : "Closed")
                                 </span>
                             </div>
 
@@ -316,9 +347,11 @@
                         @if (isOpen)
                         {
                             <div class="mt-3">
-                                <button class="btn btn-sap-outline w-100 py-2 btn-sm" type="button"
-                                        data-bs-toggle="collapse" data-bs-target="#updateForm-@item.Id" aria-expanded="false">
-                                    <i class="bi bi-pencil-square me-1"></i> Update Progress Perbaikan
+                                <button class="btn w-100 py-2 btn-sm" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; border-radius: 8px;" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#updateForm-@item.Id" aria-expanded="false"
+                                        onmouseover="this.style.background='#f43f5e'; this.style.color='#fff';"
+                                        onmouseout="this.style.background='rgba(244, 63, 94, 0.1)'; this.style.color='#f43f5e';">
+                                    <i class="bi bi-rocket-takeoff-fill me-1"></i> Take Up & Tindak Lanjut
                                 </button>
 
                                 <div class="collapse mt-3" id="updateForm-@item.Id">
@@ -330,11 +363,11 @@
                                             <div class="row">
                                                 <div class="col-md-6 form-group-sap">
                                                     <label class="form-label-sap" style="font-size: 11px;">Nama PIC Perbaikan</label>
-                                                    <input type="text" name="pic" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="Nama PIC" required />
+                                                    <input type="text" name="pic" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="Nama PIC" value="@(string.IsNullOrEmpty(item.Pic) ? userName : item.Pic)" required />
                                                 </div>
                                                 <div class="col-md-6 form-group-sap">
                                                     <label class="form-label-sap" style="font-size: 11px;">NIK PIC</label>
-                                                    <input type="text" name="nikPic" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="NIK PIC" required />
+                                                    <input type="text" name="nikPic" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="NIK PIC" value="@(string.IsNullOrEmpty(item.NikPic) ? userNik : item.NikPic)" required />
                                                 </div>
                                             </div>
 
@@ -421,16 +454,34 @@
 
             applyFilters();
 
+            let selectedPerusahaan = 'all';
+            let selectedDepartemen = 'all';
+
+            $('#filterPerusahaan').on('change', function() {
+                selectedPerusahaan = $(this).val();
+                applyFilters();
+            });
+
+            $('#filterDepartemen').on('change', function() {
+                selectedDepartemen = $(this).val();
+                applyFilters();
+            });
+
             function applyFilters() {
                 let visible = 0;
                 $('.action-plan-item').each(function () {
                     const t = $(this).data('type')   || '';
                     const s = $(this).data('status') || '';
+                    const p = $(this).data('perusahaan') || '';
+                    const d = $(this).data('departemen') || '';
+
                     const matchT = (selectedType   === 'all' || t === selectedType);
                     const matchS = (selectedStatus === 'all' || s === selectedStatus);
+                    const matchP = (selectedPerusahaan === 'all' || p == selectedPerusahaan);
+                    const matchD = (selectedDepartemen === 'all' || d === selectedDepartemen);
 
-                    if (matchT && matchS) { $(this).show(); visible++; }
-                    else                  { $(this).hide(); }
+                    if (matchT && matchS && matchP && matchD) { $(this).show(); visible++; }
+                    else { $(this).hide(); }
                 });
 
                 $('#visibleCount').text(visible + ' item');

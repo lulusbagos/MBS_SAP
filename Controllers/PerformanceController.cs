@@ -317,15 +317,21 @@ namespace MBS_SAP.Controllers
             return complianceResult;
         }
 
-        private async Task<GeoSafetyRadarViewModel> BuildGeoSafetyRadarDataAsync(int? companyId, HashSet<int> allowedCompanyIds, string? requestedGeoArea, bool includePhotos = false)
+        private async Task<GeoSafetyRadarViewModel> BuildGeoSafetyRadarDataAsync(int? companyId, HashSet<int> allowedCompanyIds, string? requestedGeoArea, bool includePhotos = false, int? year = null, int? month = null)
         {
+            var today = DateTime.Today;
+            int selectedYear = year ?? today.Year;
+            int selectedMonth = month ?? today.Month;
+            var startOfMonth = new DateTime(selectedYear, selectedMonth, 1);
+            var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
+
             var hazardPoints = new List<GeoSafetyPointViewModel>();
             var inspectionPoints = new List<GeoSafetyPointViewModel>();
             var p5mPoints = new List<GeoSafetyPointViewModel>();
             var safetyTalkPoints = new List<GeoSafetyPointViewModel>();
 
             var dbHazards = await _context.HazardReports
-                .Where(h => !h.IsDeleted && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))) && h.Lokasi != null && h.Lokasi.Contains(","))
+                .Where(h => !h.IsDeleted && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))) && h.Lokasi != null && h.Lokasi.Contains(",") && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth)
             .Select(h => new { h.Id, h.Tanggal, h.Nama, h.Area, h.Lokasi, h.Temuan, h.TingkatResiko, h.StatusTemuan, h.FotoTemuan })
                 .ToListAsync();
 
@@ -350,7 +356,7 @@ namespace MBS_SAP.Controllers
             }
 
             var dbInspections = await _context.Inspections
-                .Where(i => !i.IsDeleted && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))) && i.Lokasi != null && i.Lokasi.Contains(","))
+                .Where(i => !i.IsDeleted && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))) && i.Lokasi != null && i.Lokasi.Contains(",") && i.CreatedAt >= startOfMonth && i.CreatedAt <= endOfMonth)
                 .Select(i => new { i.Id, i.Tanggal, i.Nama, i.Area, i.Lokasi, i.JenisInspeksi, i.LampiranJson })
                 .ToListAsync();
 
@@ -373,7 +379,7 @@ namespace MBS_SAP.Controllers
             }
 
             var dbP5ms = await _context.P5ms
-                .Where(p => !p.IsDeleted && (companyId == null || (p.PerusahaanId.HasValue && allowedCompanyIds.Contains(p.PerusahaanId.Value))) && p.Lokasi != null && p.Lokasi.Contains(","))
+                .Where(p => !p.IsDeleted && (companyId == null || (p.PerusahaanId.HasValue && allowedCompanyIds.Contains(p.PerusahaanId.Value))) && p.Lokasi != null && p.Lokasi.Contains(",") && p.CreatedAt >= startOfMonth && p.CreatedAt <= endOfMonth)
                 .Select(p => new { p.Id, p.Tanggal, p.Waktu, p.Nik, p.Nama, p.Area, p.Lokasi, p.Topik, p.Judul, p.Keterangan, p.FotoKegiatan })
                 .ToListAsync();
 
@@ -416,7 +422,7 @@ namespace MBS_SAP.Controllers
             }
 
             var dbSafetyTalks = await _context.SafetyTalks
-                .Where(s => !s.IsDeleted && (companyId == null || (s.PerusahaanId.HasValue && allowedCompanyIds.Contains(s.PerusahaanId.Value))) && s.Lokasi != null && s.Lokasi.Contains(","))
+                .Where(s => !s.IsDeleted && (companyId == null || (s.PerusahaanId.HasValue && allowedCompanyIds.Contains(s.PerusahaanId.Value))) && s.Lokasi != null && s.Lokasi.Contains(",") && s.CreatedAt >= startOfMonth && s.CreatedAt <= endOfMonth)
                 .Select(s => new { s.Id, s.Tanggal, s.Nama, s.Area, s.Lokasi, s.Judul, s.Keterangan, s.FotoKegiatan })
                 .ToListAsync();
 
@@ -465,7 +471,9 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
+        [Route("/Performance")]
+        [Route("/Performance/Index")]
+        public async Task<IActionResult> Index(int? year = null, int? month = null)
         {
             if (!User.IsInRole("Admin"))
             {
@@ -474,6 +482,12 @@ namespace MBS_SAP.Controllers
 
             ViewData["HeaderTitle"] = "Pencapaian SAP";
             ViewData["ActiveTab"] = "Performance";
+            
+            var today = DateTime.Today;
+            int selectedYear = year ?? today.Year;
+            int selectedMonth = month ?? today.Month;
+            ViewBag.SelectedYear = selectedYear;
+            ViewBag.SelectedMonth = selectedMonth;
 
             var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Trim();
             var userCompanyIdClaim = User.FindFirst("CompanyId")?.Value;
@@ -512,8 +526,9 @@ namespace MBS_SAP.Controllers
             // Date ranges
             var now = DateTime.Now;
             var startOfWeek = DateTime.Today.AddDays(-6); // rolling 7 calendar days (today inclusive)
-            var startOfMonth = new DateTime(now.Year, now.Month, 1);
-            var startOfYear = new DateTime(now.Year, 1, 1);
+            var startOfMonth = new DateTime(selectedYear, selectedMonth, 1);
+            var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
+            var startOfYear = startOfMonth; // Filter YTD views to MTD to optimize performance
             var trendStart = new DateTime(now.Year, now.Month, 1).AddMonths(-5);
             var baseStartDate = trendStart < startOfYear ? trendStart : startOfYear;
 
@@ -686,7 +701,7 @@ namespace MBS_SAP.Controllers
             int highRiskOpen = openExtreme + openHigh;
             double complianceRisk = totalOpenHazards > 0 ? (double)highRiskOpen / totalOpenHazards * 100 : 0;
 
-            var allHazardRisks = await hazards.Select(h => new { h.StatusTemuan, h.TingkatResiko }).ToListAsync();
+            var allHazardRisks = await hazards.Where(h => h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth).Select(h => new { h.StatusTemuan, h.TingkatResiko }).ToListAsync();
             int GetRiskWeight(string? r) {
                 if (string.IsNullOrEmpty(r)) return 0;
                 if (r.Contains("Extreme", StringComparison.OrdinalIgnoreCase) || r.Contains("Ekstrim", StringComparison.OrdinalIgnoreCase) || r.Contains("Sangat Berat", StringComparison.OrdinalIgnoreCase)) return 4;
@@ -702,7 +717,7 @@ namespace MBS_SAP.Controllers
 
             // RHR is calculated from repeated hazard locations (location-only basis).
             var hazardLocations = await hazards
-                .Where(h => !string.IsNullOrWhiteSpace(h.Lokasi))
+                .Where(h => !string.IsNullOrWhiteSpace(h.Lokasi) && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth)
                 .Select(h => h.Lokasi!.Trim())
                 .ToListAsync();
 
@@ -728,7 +743,7 @@ namespace MBS_SAP.Controllers
             ViewBag.TopRepeatedData = topRepeated.Select(x => x.Count).ToList();
 
 
-            var closedHazardsList = await hazards.Where(h => h.StatusTemuan == "Closed" && h.TingkatResiko != null).Select(h => h.TingkatResiko).ToListAsync();
+            var closedHazardsList = await hazards.Where(h => h.StatusTemuan == "Closed" && h.TingkatResiko != null && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth).Select(h => h.TingkatResiko).ToListAsync();
             int closedKritis = closedHazardsList.Count(r => string.Equals(r, "Kritis", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Critical", StringComparison.OrdinalIgnoreCase));
             int closedExtreme = closedHazardsList.Count(r => string.Equals(r, "Extreme", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Sangat Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ekstrim", StringComparison.OrdinalIgnoreCase));
             int closedHigh = closedHazardsList.Count(r => string.Equals(r, "High", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Tinggi", StringComparison.OrdinalIgnoreCase));
@@ -737,11 +752,11 @@ namespace MBS_SAP.Controllers
             double highRiskResolution = totalHighRisk > 0 ? (double)highRiskClosed / totalHighRisk * 100 : 0;
 
             // 5b. Extra Professional Graphs Data
-            var allKategori = await openHazardsBase.Where(h => h.KategoriBahaya != null).Select(h => h.KategoriBahaya).ToListAsync();
+            var allKategori = await openHazardsBase.Where(h => h.KategoriBahaya != null && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth).Select(h => h.KategoriBahaya).ToListAsync();
             int unsafeActCount = allKategori.Count(k => k != null && (k.Contains("Tindakan", StringComparison.OrdinalIgnoreCase) || k.Contains("Act", StringComparison.OrdinalIgnoreCase) || k.Contains("KTA", StringComparison.OrdinalIgnoreCase)));
             int unsafeConditionCount = allKategori.Count(k => k != null && (k.Contains("Kondisi", StringComparison.OrdinalIgnoreCase) || k.Contains("Condition", StringComparison.OrdinalIgnoreCase) || k.Contains("TTA", StringComparison.OrdinalIgnoreCase) || k.Contains("KTC", StringComparison.OrdinalIgnoreCase)));
             
-            var topAreas = await openHazardsBase.Where(h => !string.IsNullOrEmpty(h.Area))
+            var topAreas = await openHazardsBase.Where(h => !string.IsNullOrEmpty(h.Area) && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth)
                                         .GroupBy(h => h.Area)
                                         .Select(g => new { Area = g.Key, Count = g.Count() })
                                         .OrderByDescending(x => x.Count)
@@ -1058,7 +1073,7 @@ namespace MBS_SAP.Controllers
 
             // 9. Average Closure Days for Action Plans
             var closedActions = await _context.ActionPlans
-                .Where(a => !a.IsDeleted && a.Status == "Closed" && a.TanggalPerbaikan != null && (companyId == null || a.PerusahaanId == companyId.Value))
+                .Where(a => !a.IsDeleted && a.Status == "Closed" && a.TanggalPerbaikan != null && (companyId == null || a.PerusahaanId == companyId.Value) && a.CreatedAt >= startOfMonth && a.CreatedAt <= endOfMonth)
                 .Select(a => new { a.CreatedAt, a.TanggalPerbaikan })
                 .ToListAsync();
 
@@ -1255,6 +1270,13 @@ namespace MBS_SAP.Controllers
             }
 
             var weekCoachList = await coachings.Where(c => c.CreatedAt >= startOfWeek).Select(c => new { c.Id, c.Nik }).ToListAsync();
+            var weekCoachIds = weekCoachList.Select(c => c.Id).ToList();
+            var weekCoachParticipants = new List<string>();
+            if (weekCoachIds.Any()) 
+            {
+                weekCoachParticipants = await _context.CoachingParticipants.Where(p => weekCoachIds.Contains(p.CoachingId)).Select(p => p.Nik).ToListAsync();
+            }
+
             foreach (var item in weekCoachList)
             {
                 if (!string.IsNullOrEmpty(item.Nik))
@@ -1262,14 +1284,13 @@ namespace MBS_SAP.Controllers
                     var cleanNik = item.Nik.Trim();
                     weekSubmitters[cleanNik] = weekSubmitters.TryGetValue(cleanNik, out var count) ? count + 1 : 1;
                 }
-                var pts = await _context.CoachingParticipants.Where(p => p.CoachingId == item.Id).Select(p => p.Nik).ToListAsync();
-                foreach (var pNik in pts)
+            }
+            foreach (var pNik in weekCoachParticipants)
+            {
+                if (!string.IsNullOrEmpty(pNik))
                 {
-                    if (!string.IsNullOrEmpty(pNik))
-                    {
-                        var cleanNik = pNik.Trim();
-                        weekSubmitters[cleanNik] = weekSubmitters.TryGetValue(cleanNik, out var count) ? count + 1 : 1;
-                    }
+                    var cleanNik = pNik.Trim();
+                    weekSubmitters[cleanNik] = weekSubmitters.TryGetValue(cleanNik, out var count) ? count + 1 : 1;
                 }
             }
 
@@ -1288,6 +1309,13 @@ namespace MBS_SAP.Controllers
             }
 
             var monthCoachList = await coachings.Where(c => c.CreatedAt >= startOfMonth).Select(c => new { c.Id, c.Nik }).ToListAsync();
+            var monthCoachIds = monthCoachList.Select(c => c.Id).ToList();
+            var monthCoachParticipants = new List<string>();
+            if (monthCoachIds.Any())
+            {
+                monthCoachParticipants = await _context.CoachingParticipants.Where(p => monthCoachIds.Contains(p.CoachingId)).Select(p => p.Nik).ToListAsync();
+            }
+
             foreach (var item in monthCoachList)
             {
                 if (!string.IsNullOrEmpty(item.Nik))
@@ -1295,14 +1323,13 @@ namespace MBS_SAP.Controllers
                     var cleanNik = item.Nik.Trim();
                     monthSubmitters[cleanNik] = monthSubmitters.TryGetValue(cleanNik, out var count) ? count + 1 : 1;
                 }
-                var pts = await _context.CoachingParticipants.Where(p => p.CoachingId == item.Id).Select(p => p.Nik).ToListAsync();
-                foreach (var pNik in pts)
+            }
+            foreach (var pNik in monthCoachParticipants)
+            {
+                if (!string.IsNullOrEmpty(pNik))
                 {
-                    if (!string.IsNullOrEmpty(pNik))
-                    {
-                        var cleanNik = pNik.Trim();
-                        monthSubmitters[cleanNik] = monthSubmitters.TryGetValue(cleanNik, out var count) ? count + 1 : 1;
-                    }
+                    var cleanNik = pNik.Trim();
+                    monthSubmitters[cleanNik] = monthSubmitters.TryGetValue(cleanNik, out var count) ? count + 1 : 1;
                 }
             }
 
@@ -2138,7 +2165,7 @@ namespace MBS_SAP.Controllers
             ViewBag.CompanyHierarchyRenderedCount = CollectHierarchyIds(rootNodes).Count;
 
             var (mapCompanyId, mapAllowedCompanyIds) = await ResolveMapCompanyScopeAsync();
-            var geoSafetyData = await BuildGeoSafetyRadarDataAsync(mapCompanyId, mapAllowedCompanyIds, Request.Query["area"].FirstOrDefault()?.Trim(), true);
+            var geoSafetyData = await BuildGeoSafetyRadarDataAsync(mapCompanyId, mapAllowedCompanyIds, Request.Query["area"].FirstOrDefault()?.Trim(), true, selectedYear, selectedMonth);
 
             ViewBag.HazardPoints = geoSafetyData.HazardPoints;
             ViewBag.InspectionPoints = geoSafetyData.InspectionPoints;
@@ -2371,17 +2398,19 @@ namespace MBS_SAP.Controllers
                     int p5mTgt = compEmps.Sum(e => (int)e.p5m.target);
 
                     double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
-                    double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : 0;
-                    double iRate = iTgt > 0 ? Math.Min(100.0, Math.Round((double)iAct / iTgt * 100.0, 1)) : 0;
-                    double stRate = stTgt > 0 ? Math.Min(100.0, Math.Round((double)stAct / stTgt * 100.0, 1)) : 0;
-                    double oRate = oTgt > 0 ? Math.Min(100.0, Math.Round((double)oAct / oTgt * 100.0, 1)) : 0;
-                    double cRate = cTgt > 0 ? Math.Min(100.0, Math.Round((double)cAct / cTgt * 100.0, 1)) : 0;
-                    double p5mRate = p5mTgt > 0 ? Math.Min(100.0, Math.Round((double)p5mAct / p5mTgt * 100.0, 1)) : 0;
+                    double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : -1;
+                    double iRate = iTgt > 0 ? Math.Min(100.0, Math.Round((double)iAct / iTgt * 100.0, 1)) : -1;
+                    double stRate = stTgt > 0 ? Math.Min(100.0, Math.Round((double)stAct / stTgt * 100.0, 1)) : -1;
+                    double oRate = oTgt > 0 ? Math.Min(100.0, Math.Round((double)oAct / oTgt * 100.0, 1)) : -1;
+                    double cRate = cTgt > 0 ? Math.Min(100.0, Math.Round((double)cAct / cTgt * 100.0, 1)) : -1;
+                    double p5mRate = p5mTgt > 0 ? Math.Min(100.0, Math.Round((double)p5mAct / p5mTgt * 100.0, 1)) : -1;
 
                     companyStandings.Add(new {
                         CompanyId = comp.PerusahaanId,
                         CompanyName = comp.NamaPerusahaan,
+                        PjoName = comp.NamaPjo,
                         EmployeeCount = compEmps.Count,
+                        TotalTarget = totalTarget,
                         MtdAchievementRate = mtdRate,
                         MtdHazardRate = hRate,
                         MtdInspeksiRate = iRate,
@@ -2392,7 +2421,9 @@ namespace MBS_SAP.Controllers
                     });
                 }
 
-                ViewBag.CompanyStandings = companyStandings.OrderByDescending(x => (double)x.MtdAchievementRate).ToList();
+                var allStandings = companyStandings.OrderByDescending(x => (double)x.MtdAchievementRate).ToList();
+                ViewBag.CompanyStandings = allStandings.Where(x => !((int)x.TotalTarget > 0 && (double)x.MtdAchievementRate == 0)).ToList();
+                ViewBag.CompanyRedZone = allStandings.Where(x => (int)x.TotalTarget > 0 && (double)x.MtdAchievementRate == 0).ToList();
 
                 // Non-admin can only see their own squad players even in global league mode
                 var sortedEmployees = allEmployees
@@ -2450,17 +2481,18 @@ namespace MBS_SAP.Controllers
                         int p5mTgt = g.Sum(e => (int)e.p5m.target);
                         
                         double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
-                        double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : 0;
-                        double iRate = iTgt > 0 ? Math.Min(100.0, Math.Round((double)iAct / iTgt * 100.0, 1)) : 0;
-                        double stRate = stTgt > 0 ? Math.Min(100.0, Math.Round((double)stAct / stTgt * 100.0, 1)) : 0;
-                        double oRate = oTgt > 0 ? Math.Min(100.0, Math.Round((double)oAct / oTgt * 100.0, 1)) : 0;
-                        double cRate = cTgt > 0 ? Math.Min(100.0, Math.Round((double)cAct / cTgt * 100.0, 1)) : 0;
-                        double p5mRate = p5mTgt > 0 ? Math.Min(100.0, Math.Round((double)p5mAct / p5mTgt * 100.0, 1)) : 0;
+                        double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : -1;
+                        double iRate = iTgt > 0 ? Math.Min(100.0, Math.Round((double)iAct / iTgt * 100.0, 1)) : -1;
+                        double stRate = stTgt > 0 ? Math.Min(100.0, Math.Round((double)stAct / stTgt * 100.0, 1)) : -1;
+                        double oRate = oTgt > 0 ? Math.Min(100.0, Math.Round((double)oAct / oTgt * 100.0, 1)) : -1;
+                        double cRate = cTgt > 0 ? Math.Min(100.0, Math.Round((double)cAct / cTgt * 100.0, 1)) : -1;
+                        double p5mRate = p5mTgt > 0 ? Math.Min(100.0, Math.Round((double)p5mAct / p5mTgt * 100.0, 1)) : -1;
                         
                         return new DepartmentAchievementViewModel
                         {
                             DepartmentName = g.Key,
                             EmployeeCount = employeeCount,
+                            TotalTarget = totalTarget,
                             MtdAchievementRate = mtdRate,
                             MtdHazardRate = hRate,
                             MtdInspeksiRate = iRate,
@@ -2473,7 +2505,8 @@ namespace MBS_SAP.Controllers
                     .OrderByDescending(d => d.MtdAchievementRate)
                     .ToList();
 
-                ViewBag.DepartmentAchievements = deptAchievements;
+                ViewBag.DepartmentAchievements = deptAchievements.Where(d => !(d.TotalTarget > 0 && d.MtdAchievementRate == 0)).ToList();
+                ViewBag.DepartmentRedZone = deptAchievements.Where(d => d.TotalTarget > 0 && d.MtdAchievementRate == 0).ToList();
 
                 var sortedEmployees = employees.Select(e => new {
                     name = (string)e.karyawanName,
@@ -2629,8 +2662,8 @@ namespace MBS_SAP.Controllers
                     ws.Cell(row, 5).Value = emp.jabatanName;
                     
                     var compCell = ws.Cell(row, 6);
-                    compCell.Value = emp.complianceRate / 100.0;
-                    compCell.Style.NumberFormat.Format = "0.0%";
+                    compCell.Value = emp.complianceRate;
+                    compCell.Style.NumberFormat.Format = "0.0";
 
                     ws.Cell(row, 7).Value = emp.hazard.actual;
                     ws.Cell(row, 8).Value = emp.hazard.target;
@@ -2663,24 +2696,63 @@ namespace MBS_SAP.Controllers
                     for (int c = 7; c <= 18; c++)
                     {
                         ws.Cell(row, c).Style.NumberFormat.Format = "#,##0";
+                        if (c % 2 != 0) // Actual columns
+                        {
+                            ws.Cell(row, c).Style.Font.Bold = true;
+                        }
                     }
+
+                    // Conditional Formatting for Compliance Rate
+                    if (emp.complianceRate >= 100)
+                        ws.Cell(row, 6).Style.Font.FontColor = XLColor.FromHtml("#16a34a"); // Green
+                    else if (emp.complianceRate >= 80)
+                        ws.Cell(row, 6).Style.Font.FontColor = XLColor.FromHtml("#2563eb"); // Blue
+                    else
+                        ws.Cell(row, 6).Style.Font.FontColor = XLColor.FromHtml("#dc2626"); // Red
+                        
+                    ws.Cell(row, 6).Style.Font.Bold = true;
 
                     // Border styling
                     var rowRange = ws.Range(row, 1, row, 18);
                     rowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                     rowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rowRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
 
-                    // Highlight top 3 (Champions Zone) with gold/light-yellow accent
-                    if (rank <= 3)
+                    // Highlight top 3 (Champions Zone) with Gold, Silver, Bronze, else Zebra striping
+                    if (rank == 1)
+                        rowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#fef08a"); // Gold
+                    else if (rank == 2)
+                        rowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#e2e8f0"); // Silver
+                    else if (rank == 3)
+                        rowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#ffedd5"); // Bronze
+                    else if (emp.mtdTotalTarget > 0 && emp.complianceRate == 0)
                     {
-                        for (int c = 1; c <= 18; c++)
-                        {
-                            ws.Cell(row, c).Style.Fill.BackgroundColor = XLColor.FromHtml("#fef9c3"); // Yellow-50
-                        }
+                        // Red Zone: Has target but no achievement
+                        rowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#fee2e2"); // Light red
+                        ws.Cell(row, 2).Style.Font.FontColor = XLColor.FromHtml("#b91c1c"); // Dark red name
+                    }
+                    else
+                    {
+                        // Zebra striping for others
+                        if (row % 2 == 0)
+                            rowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+                        else
+                            rowRange.Style.Fill.BackgroundColor = XLColor.White;
                     }
 
                     row++;
                     rank++;
+                }
+
+                // Freeze Header Row
+                ws.SheetView.FreezeRows(5);
+                
+                // Add thick outer border to the entire table
+                if (row > 6)
+                {
+                    ws.Range(5, 1, row - 1, 18).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    ws.Range(5, 1, row - 1, 18).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
                 }
 
                 // Auto fit columns
@@ -2747,95 +2819,9 @@ namespace MBS_SAP.Controllers
             ViewBag.Departments = departments;
             ViewBag.SelectedDepartmentName = departmentName;
 
-            // Fetch compliance data from ALL allowed companies (no company filter)
-            var employees = new List<ComplianceEmployeeViewModel>();
-            foreach (var company in allowedCompanies)
-            {
-                if (ExcludedCompanies.IsExcluded(company.PerusahaanId)) continue;
-                var rawData = await GetEmployeesComplianceData(company.PerusahaanId, null, selectedYear, selectedMonth);
-                foreach (var item in rawData)
-                {
-                    employees.Add(new ComplianceEmployeeViewModel
-                    {
-                        KaryawanName  = item.karyawanName ?? string.Empty,
-                        Nik           = item.nik ?? string.Empty,
-                        DepartmentName= item.departmentName ?? string.Empty,
-                        JabatanName   = item.jabatanName ?? string.Empty,
-                        CompanyId     = item.companyId,
-                        MtdTotalTarget= item.mtdTotalTarget,
-                        MtdTotalActual= item.mtdTotalActual,
-                        ComplianceRate= item.complianceRate,
-                        Hazard    = new ComplianceItemDetail { Target = item.hazard.target,     Actual = item.hazard.actual },
-                        Inspeksi  = new ComplianceItemDetail { Target = item.inspeksi.target,   Actual = item.inspeksi.actual },
-                        SafetyTalk= new ComplianceItemDetail { Target = item.safetyTalk.target, Actual = item.safetyTalk.actual },
-                        Observasi = new ComplianceItemDetail { Target = item.observasi.target,  Actual = item.observasi.actual },
-                        Coaching  = new ComplianceItemDetail { Target = item.coaching.target,   Actual = item.coaching.actual },
-                        P5m       = new ComplianceItemDetail { Target = item.p5m.target,        Actual = item.p5m.actual }
-                    });
-                }
-            }
+            // Heavy GetEmployeesComplianceData for all companies removed.
+            // SAP Programs stats and ViewBags are now optimally calculated during Section 4 Group Metrics.
 
-            int pageSize = 50;
-            int totalCount = employees.Count;
-            var paginatedEmployees = employees
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            ViewBag.TotalCount = totalCount;
-            ViewBag.CurrentPage = page;
-            ViewBag.PageSize = pageSize;
-            ViewBag.TotalPages = (int)Math.Ceiling((double)totalCount / pageSize);
-
-            // Per-program stats: "sudah mengisi" = actual >= 1 (minimal 1 submisi)
-            ViewBag.SapPrograms = new[]
-            {
-                new {
-                    Name = "Hazard Report",
-                    Icon = "bi-shield-exclamation",
-                    Color = "#6366f1",
-                    WithTarget  = employees.Count(e => e.Hazard.Target > 0),
-                    Fulfilled   = employees.Count(e => e.Hazard.Target > 0 && e.Hazard.Actual >= 1),
-                    TotalActual = employees.Sum(e => e.Hazard.Actual),
-                    TotalTarget = employees.Sum(e => e.Hazard.Target)
-                },
-                new {
-                    Name = "Inspeksi",
-                    Icon = "bi-check2-square",
-                    Color = "#3b82f6",
-                    WithTarget  = employees.Count(e => e.Inspeksi.Target > 0),
-                    Fulfilled   = employees.Count(e => e.Inspeksi.Target > 0 && e.Inspeksi.Actual >= 1),
-                    TotalActual = employees.Sum(e => e.Inspeksi.Actual),
-                    TotalTarget = employees.Sum(e => e.Inspeksi.Target)
-                },
-                new {
-                    Name = "Safety Talk",
-                    Icon = "bi-chat-left-quote-fill",
-                    Color = "#d97706",
-                    WithTarget  = employees.Count(e => e.SafetyTalk.Target > 0),
-                    Fulfilled   = employees.Count(e => e.SafetyTalk.Target > 0 && e.SafetyTalk.Actual >= 1),
-                    TotalActual = employees.Sum(e => e.SafetyTalk.Actual),
-                    TotalTarget = employees.Sum(e => e.SafetyTalk.Target)
-                },
-                new {
-                    Name = "Observasi",
-                    Icon = "bi-eye-fill",
-                    Color = "#ec4899",
-                    WithTarget  = employees.Count(e => e.Observasi.Target > 0),
-                    Fulfilled   = employees.Count(e => e.Observasi.Target > 0 && e.Observasi.Actual >= 1),
-                    TotalActual = employees.Sum(e => e.Observasi.Actual),
-                    TotalTarget = employees.Sum(e => e.Observasi.Target)
-                },
-                new {
-                    Name = "Coaching",
-                    Icon = "bi-person-lines-fill",
-                    Color = "#a855f7",
-                    WithTarget  = employees.Count(e => e.Coaching.Target > 0),
-                    Fulfilled   = employees.Count(e => e.Coaching.Target > 0 && e.Coaching.Actual >= 1),
-                    TotalActual = employees.Sum(e => e.Coaching.Actual),
-                    TotalTarget = employees.Sum(e => e.Coaching.Target)
-                }
-            };
 
             // 1. Action Plans by Department (creator's department)
             var actionPlanDeptStats = await _context.ActionPlans
@@ -3029,7 +3015,7 @@ namespace MBS_SAP.Controllers
 
             var groupHazards = await _context.HazardReports
                 .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && relatedCompanyIds.Contains(h.PerusahaanId.Value) && h.CreatedAt >= startOfMonthM && h.CreatedAt <= endOfMonthM)
-                .Select(h => new { h.PerusahaanId, h.Nik })
+                .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
                 .ToListAsync();
 
             var groupInspections = await _context.Inspections
@@ -3077,11 +3063,11 @@ namespace MBS_SAP.Controllers
             int participatingCount = 0;
             int inactiveCount = 0;
 
-            int targetH = 0, actualH = 0;
-            int targetI = 0, actualI = 0;
-            int targetS = 0, actualS = 0;
-            int targetO = 0, actualO = 0;
-            int targetC = 0, actualC = 0;
+            int targetH = 0, actualH = 0, withTargetH = 0, fulfilledH = 0;
+            int targetI = 0, actualI = 0, withTargetI = 0, fulfilledI = 0;
+            int targetS = 0, actualS = 0, withTargetS = 0, fulfilledS = 0;
+            int targetO = 0, actualO = 0, withTargetO = 0, fulfilledO = 0;
+            int targetC = 0, actualC = 0, withTargetC = 0, fulfilledC = 0;
 
             foreach (var emp in activeKaryawans)
             {
@@ -3118,18 +3104,9 @@ namespace MBS_SAP.Controllers
 
                 if (empTarget > 0)
                 {
-                    if (empActual >= empTarget)
-                    {
-                        fullyCompliantCount++;
-                    }
-                    else if (empActual > 0)
-                    {
-                        participatingCount++;
-                    }
-                    else
-                    {
-                        inactiveCount++;
-                    }
+                    if (empActual >= empTarget) fullyCompliantCount++;
+                    else if (empActual > 0) participatingCount++;
+                    else inactiveCount++;
                 }
                 else
                 {
@@ -3141,7 +3118,29 @@ namespace MBS_SAP.Controllers
                 targetS += stTar; actualS += actST;
                 targetO += obsTar; actualO += actO;
                 targetC += cTar; actualC += actC;
+
+                if (hTar > 0) { withTargetH++; if (actH >= 1) fulfilledH++; }
+                if (insTar > 0) { withTargetI++; if (actI >= 1) fulfilledI++; }
+                if (stTar > 0) { withTargetS++; if (actST >= 1) fulfilledS++; }
+                if (obsTar > 0) { withTargetO++; if (actO >= 1) fulfilledO++; }
+                if (cTar > 0) { withTargetC++; if (actC >= 1) fulfilledC++; }
             }
+
+            ViewBag.SapPrograms = new[]
+            {
+                new { Name = "Hazard Report", Icon = "bi-shield-exclamation", Color = "#6366f1", WithTarget = withTargetH, Fulfilled = fulfilledH, TotalActual = actualH, TotalTarget = targetH },
+                new { Name = "Inspeksi", Icon = "bi-check2-square", Color = "#3b82f6", WithTarget = withTargetI, Fulfilled = fulfilledI, TotalActual = actualI, TotalTarget = targetI },
+                new { Name = "Safety Talk", Icon = "bi-chat-left-quote-fill", Color = "#d97706", WithTarget = withTargetS, Fulfilled = fulfilledS, TotalActual = actualS, TotalTarget = targetS },
+                new { Name = "Observasi", Icon = "bi-eye-fill", Color = "#ec4899", WithTarget = withTargetO, Fulfilled = fulfilledO, TotalActual = actualO, TotalTarget = targetO },
+                new { Name = "Coaching", Icon = "bi-person-lines-fill", Color = "#a855f7", WithTarget = withTargetC, Fulfilled = fulfilledC, TotalActual = actualC, TotalTarget = targetC }
+            };
+
+            int totalBerTarget = fullyCompliantCount + participatingCount + inactiveCount;
+            ViewBag.TotalCount = totalBerTarget;
+            ViewBag.TotalEmployeesWithTarget = totalBerTarget;
+            ViewBag.CurrentPage = 1;
+            ViewBag.PageSize = 50;
+            ViewBag.TotalPages = 1;
 
             // Hazard age distribution
             var openHazards = await _context.HazardReports
@@ -3478,13 +3477,15 @@ namespace MBS_SAP.Controllers
                 mainconGroupComparisonList.Add(compVm);
             }
 
-            var mostActiveSubcon = allSubconStats
-                .OrderByDescending(s => s.ComplianceRate)
-                .ThenByDescending(s => s.TotalSubmissions)
-                .FirstOrDefault();
-
-            ViewBag.MostActiveSubcon = mostActiveSubcon;
-            ViewBag.AllSubconStats = allSubconStats.OrderByDescending(s => s.ComplianceRate).ThenByDescending(s => s.TotalSubmissions).ToList();
+            var orderedSubcons = allSubconStats.OrderByDescending(s => s.ComplianceRate).ThenByDescending(s => s.TotalSubmissions).ToList();
+            ViewBag.MostActiveSubcon = orderedSubcons.FirstOrDefault();
+            ViewBag.AllSubconStats = orderedSubcons;
+            ViewBag.Top10BestSubcons = orderedSubcons.Take(10).ToList();
+            ViewBag.Top10OverAchieverSubcons = allSubconStats
+                .Where(s => s.ComplianceRate >= 100 && s.TotalSubmissions > s.TargetSubmissions)
+                .OrderByDescending(s => (s.TotalSubmissions - s.TargetSubmissions))
+                .Take(10)
+                .ToList();
             ViewBag.MainconGroupComparison = mainconGroupComparisonList;
 
             // 5. Daily Awareness/Submission Trend (last 14 days)
@@ -3542,16 +3543,15 @@ namespace MBS_SAP.Controllers
             ViewBag.DailyAwarenessTrendLabels = dailyTrendLabels;
             ViewBag.DailyAwarenessTrendValues = dailyTrendValues;
 
-            // Calculate Active Submitting Employees and Awareness Rate
-            int activeEmployees = employees.Count(e => e.MtdTotalActual > 0);
-            int totalEmployeesWithTarget = employees.Count;
-            double employeeAwarenessRate = totalEmployeesWithTarget > 0 ? 
-                Math.Round((double)activeEmployees / totalEmployeesWithTarget * 100.0, 1) : 0.0;
+            // Calculate Active Submitting Employees and Awareness Rate optimally
+            int activeEmployees = fullyCompliantCount + participatingCount;
+            int totalEmpWithTarget = fullyCompliantCount + participatingCount + inactiveCount;
+            double employeeAwarenessRate = totalEmpWithTarget > 0 ? 
+                Math.Round((double)activeEmployees / totalEmpWithTarget * 100.0, 1) : 0.0;
 
             ViewBag.ActiveEmployeesCount = activeEmployees;
-            ViewBag.TotalEmployeesWithTarget = totalEmployeesWithTarget;
+            ViewBag.TotalEmployeesWithTarget = totalEmpWithTarget;
             ViewBag.EmployeeAwarenessRate = employeeAwarenessRate;
-
             // 6. Companies that have never logged in
             var loggedInCompanyIds = await _context.AppUsers
                 .Where(u => u.IdPerusahaan.HasValue)
@@ -3612,15 +3612,106 @@ namespace MBS_SAP.Controllers
 
             ViewBag.NeverLoggedInCompanies = neverLoggedInGrouped;
 
-            return View(paginatedEmployees);
+            // 7. Top 10 Best Performance Companies
+            var hazardCounts = groupHazards.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var closedHazardCounts = groupHazards.Where(h => h.PerusahaanId.HasValue && string.Equals(h.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var inspCounts = groupInspections.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var stCounts = groupSafetyTalks.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var obsCounts = groupObservations.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var p5mCounts = groupP5ms.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var coaCounts = groupCoachings.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+
+            var actionPlansMonth = await _context.ActionPlans
+                .Where(a => !a.IsDeleted && a.PerusahaanId != null && a.CreatedAt >= startOfMonthM && a.CreatedAt <= endOfMonthM)
+                .Select(a => new { a.PerusahaanId, a.Status, a.Tanggal, a.TanggalPerbaikan })
+                .ToListAsync();
+            
+            var apGroups = actionPlansMonth.GroupBy(a => a.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.ToList());
+
+            var performanceList = new List<CompanyPerformanceViewModel>();
+            int maxKuantitas = 1;
+
+            foreach (var comp in allCompanies)
+            {
+                int cId = comp.PerusahaanId;
+                int hC = hazardCounts.TryGetValue(cId, out int v1) ? v1 : 0;
+                int hCClosed = closedHazardCounts.TryGetValue(cId, out int v7) ? v7 : 0;
+                int iC = inspCounts.TryGetValue(cId, out int v2) ? v2 : 0;
+                int sC = stCounts.TryGetValue(cId, out int v3) ? v3 : 0;
+                int oC = obsCounts.TryGetValue(cId, out int v4) ? v4 : 0;
+                int pC = p5mCounts.TryGetValue(cId, out int v5) ? v5 : 0;
+                int coaC = coaCounts.TryGetValue(cId, out int v6) ? v6 : 0;
+                
+                int totalTemuan = hC + iC + sC + oC + pC + coaC;
+                if (totalTemuan > maxKuantitas) maxKuantitas = totalTemuan;
+
+                int totalAp = 0;
+                int closedAp = 0;
+                double sumDays = 0;
+                int apWithDays = 0;
+
+                if (apGroups.TryGetValue(cId, out var apList))
+                {
+                    totalAp = apList.Count;
+                    foreach (var ap in apList)
+                    {
+                        if (ap.Status == "Closed")
+                        {
+                            closedAp++;
+                            if (ap.TanggalPerbaikan.HasValue)
+                            {
+                                var diff = (ap.TanggalPerbaikan.Value - ap.Tanggal).TotalDays;
+                                sumDays += Math.Max(0, diff);
+                                apWithDays++;
+                            }
+                        }
+                    }
+                }
+
+                double closeRate = hC > 0 ? (double)hCClosed / hC * 100 : (totalTemuan > 0 ? 100 : 0);
+                double avgSpeed = apWithDays > 0 ? sumDays / apWithDays : (closedAp > 0 ? 1 : 14); // default speed
+
+                if (totalTemuan > 0)
+                {
+                    performanceList.Add(new CompanyPerformanceViewModel
+                    {
+                        PerusahaanId = cId,
+                        CompanyName = comp.NamaPerusahaan ?? "Unknown",
+                        TotalTemuan = totalTemuan,
+                        TotalHazard = hC,
+                        TotalClosedHazard = hCClosed,
+                        TotalActionPlan = totalAp,
+                        TotalClosedActionPlan = closedAp,
+                        CloseRate = closeRate,
+                        AvgSpeedDays = avgSpeed,
+                        AvgQuality = 5.0 // Default quality since SapQualityAssessment doesn't link to PerusahaanId easily
+                    });
+                }
+            }
+
+            foreach (var p in performanceList)
+            {
+                p.ScoreKuantitas = Math.Min(100, ((double)p.TotalTemuan / maxKuantitas) * 100);
+                p.ScoreCloseRate = p.CloseRate;
+                p.ScoreKualitas = (p.AvgQuality / 5.0) * 100;
+                
+                // Speed Score: 0 days = 100%, >= 14 days = 0%
+                p.ScoreKecepatan = Math.Max(0, 100 - (p.AvgSpeedDays / 14.0 * 100));
+
+                p.TotalScore = (p.ScoreKuantitas * 0.25) + (p.ScoreCloseRate * 0.25) + (p.ScoreKualitas * 0.25) + (p.ScoreKecepatan * 0.25);
+            }
+
+            ViewBag.TopPerformanceList = performanceList.OrderByDescending(p => p.TotalScore).Take(10).ToList();
+
+            return View(new List<ComplianceEmployeeViewModel>());
         }
 
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public async Task<IActionResult> GetGeoSafetyRadar(string? area = null)
+        public async Task<IActionResult> GetGeoSafetyRadar(string? area = null, int? year = null, int? month = null)
         {
             var (mapCompanyId, mapAllowedCompanyIds) = await ResolveMapCompanyScopeAsync();
-            var geoSafetyData = await BuildGeoSafetyRadarDataAsync(mapCompanyId, mapAllowedCompanyIds, area?.Trim(), true);
+            var geoSafetyData = await BuildGeoSafetyRadarDataAsync(mapCompanyId, mapAllowedCompanyIds, area?.Trim(), true, year, month);
 
             return Json(new
             {
@@ -4208,6 +4299,7 @@ namespace MBS_SAP.Controllers
     {
         public string DepartmentName { get; set; } = string.Empty;
         public int EmployeeCount { get; set; }
+        public int TotalTarget { get; set; }
         public double YtdAchievementRate { get; set; }
         public double MtdAchievementRate { get; set; }
         public double WeeklyAchievementRate { get; set; }

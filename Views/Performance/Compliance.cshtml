@@ -911,6 +911,111 @@
                 </div>
             </div>
 
+            <!-- Row: Top 10 Leaderboards -->
+            <div class="row mt-4 animate-fade-in">
+                <!-- Top 10 Terbaik -->
+                <div class="col-lg-6 col-md-12 mb-4 mb-lg-0">
+                    <div class="report-card premium-card h-100">
+                        <div class="report-header premium-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <h3 class="report-title text-primary m-0" style="font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.5px;">
+                                    <i class="bi bi-star-fill text-warning me-2"></i>TOP 10 PERUSAHAAN TERBAIK
+                                </h3>
+                                <p class="text-muted mb-0" style="font-size: 11px; font-weight: 500;">Berdasarkan % Kepatuhan & Jumlah Submisi</p>
+                            </div>
+                        </div>
+                        <div class="premium-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0 custom-table">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th class="px-4 py-3" style="width: 50px;">#</th>
+                                            <th class="py-3">Perusahaan</th>
+                                            <th class="text-center py-3">Submisi</th>
+                                            <th class="text-end px-4 py-3">Pencapaian</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{
+                                            var top10Best = ViewBag.Top10BestSubcons as List<MBS_SAP.Controllers.MostActiveSubconViewModel> ?? new List<MBS_SAP.Controllers.MostActiveSubconViewModel>();
+                                            int top10Rank = 1;
+                                        }
+                                        @if(top10Best.Any()) {
+                                            @foreach (var sub in top10Best) {
+                                                <tr>
+                                                    <td class="px-4 fw-bold text-muted">@top10Rank</td>
+                                                    <td>
+                                                        <div class="fw-bold" style="font-size: 13px;">@sub.PerusahaanName</div>
+                                                        <div class="text-muted" style="font-size: 10px;">@sub.ParentCompanyName</div>
+                                                    </td>
+                                                    <td class="text-center fw-bold text-primary">@sub.TotalSubmissions <span class="text-muted fw-normal" style="font-size: 10px;">/ @sub.TargetSubmissions</span></td>
+                                                    <td class="text-end px-4 fw-bold" style="color: @(sub.ComplianceRate >= 100 ? "#10b981" : (sub.ComplianceRate >= 80 ? "#3b82f6" : "#f59e0b"))">@sub.ComplianceRate%</td>
+                                                </tr>
+                                                top10Rank++;
+                                            }
+                                        } else {
+                                            <tr><td colspan="4" class="text-center py-4 text-muted">Belum ada data</td></tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top 10 Over-Achiever -->
+                <div class="col-lg-6 col-md-12">
+                    <div class="report-card premium-card h-100" style="border: 1px solid rgba(16, 185, 129, 0.2); box-shadow: 0 10px 25px rgba(16, 185, 129, 0.05);">
+                        <div class="report-header premium-header d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.03);">
+                            <div>
+                                <h3 class="report-title text-success m-0" style="font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.5px;">
+                                    <i class="bi bi-rocket-takeoff-fill text-success me-2"></i>TOP 10 OVER-ACHIEVER
+                                </h3>
+                                <p class="text-muted mb-0" style="font-size: 11px; font-weight: 500;">Target sudah sampai tapi tetap berkontribusi</p>
+                            </div>
+                        </div>
+                        <div class="premium-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0 custom-table">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th class="px-4 py-3" style="width: 50px;">#</th>
+                                            <th class="py-3">Perusahaan</th>
+                                            <th class="text-center py-3">Ekstra Submisi</th>
+                                            <th class="text-end px-4 py-3">Total Submisi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{
+                                            var top10Over = ViewBag.Top10OverAchieverSubcons as List<MBS_SAP.Controllers.MostActiveSubconViewModel> ?? new List<MBS_SAP.Controllers.MostActiveSubconViewModel>();
+                                            int top10OverRank = 1;
+                                        }
+                                        @if(top10Over.Any()) {
+                                            @foreach (var sub in top10Over) {
+                                                <tr>
+                                                    <td class="px-4 fw-bold text-muted">@top10OverRank</td>
+                                                    <td>
+                                                        <div class="fw-bold" style="font-size: 13px;">@sub.PerusahaanName</div>
+                                                        <div class="text-muted" style="font-size: 10px;">@sub.ParentCompanyName</div>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-success bg-opacity-10 text-success fw-bold px-2 py-1" style="border: 1px solid rgba(16, 185, 129, 0.2);">+@(sub.TotalSubmissions - sub.TargetSubmissions)</span>
+                                                    </td>
+                                                    <td class="text-end px-4 fw-bold text-success">@sub.TotalSubmissions <span class="text-muted fw-normal" style="font-size: 10px;">/ @sub.TargetSubmissions</span></td>
+                                                </tr>
+                                                top10OverRank++;
+                                            }
+                                        } else {
+                                            <tr><td colspan="4" class="text-center py-4 text-muted">Belum ada perusahaan yang melampaui target</td></tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Row: Subcontractor Leaderboard -->
             <div class="row mt-4 animate-fade-in">
                 <div class="col-12">
@@ -1529,6 +1634,109 @@
             };
         });
     </script>
+
+    <!-- Top 10 Best Performance Companies -->
+    <div class="report-card premium-card mt-4 mb-4">
+        <div class="report-header premium-header d-flex justify-content-between align-items-center">
+            <h5 class="premium-title">
+                <i class="bi bi-trophy-fill me-2 text-warning" style="font-size: 18px;"></i>Top 10 Best Performance Companies
+            </h5>
+            <span class="badge" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.25); font-weight: 700; font-size: 11px; padding: 5px 10px; border-radius: 8px;">
+                <i class="bi bi-star-fill me-1"></i>Peringkat Performa SAP
+            </span>
+        </div>
+        <div class="report-body p-0">
+            @if (ViewBag.TopPerformanceList is List<MBS_SAP.Models.CompanyPerformanceViewModel> topPerformance && topPerformance.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" style="font-size: 12px; color: var(--text-main);">
+                        <thead style="background: rgba(255,255,255,0.02); font-family: 'Outfit', sans-serif;">
+                            <tr>
+                                <th class="text-center border-bottom-0" style="width: 50px;">#</th>
+                                <th class="border-bottom-0">Perusahaan</th>
+                                <th class="text-center border-bottom-0" title="Total Temuan SAP (Hazard, Inspeksi, P5M, dll)">Temuan Terbanyak</th>
+                                <th class="text-center border-bottom-0" title="Persentase Action Plan yang ditutup">Close Rate</th>
+                                <th class="text-center border-bottom-0" title="Kecepatan Rata-rata Penutupan (Hari)">Kecepatan (Hari)</th>
+                                <th class="text-center border-bottom-0" title="Kualitas Penilaian SAP (1-5)">Kualitas SAP</th>
+                                <th class="text-center border-bottom-0 text-warning">Total Skor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                int rank = 1;
+                            }
+                            @foreach (var comp in topPerformance)
+                            {
+                                string rowBg = rank <= 3 ? "background: rgba(234, 179, 8, 0.03);" : "";
+                                string rankStyle = "";
+                                if (rank == 1) rankStyle = "color: #fbbf24; font-size: 16px; font-weight: 900;";
+                                else if (rank == 2) rankStyle = "color: #94a3b8; font-size: 15px; font-weight: 800;";
+                                else if (rank == 3) rankStyle = "color: #b45309; font-size: 14px; font-weight: 800;";
+                                else rankStyle = "color: var(--text-muted); font-weight: 700;";
+
+                                <tr style="@rowBg border-bottom: 1px solid var(--border-color);">
+                                    <td class="text-center align-middle" style="@rankStyle">
+                                        @if (rank <= 3)
+                                        {
+                                            <i class="bi bi-medal-fill"></i> @rank
+                                        }
+                                        else
+                                        {
+                                            @rank
+                                        }
+                                    </td>
+                                    <td class="align-middle fw-bold" style="font-family: 'Outfit', sans-serif; color: var(--text-main);">@comp.CompanyName</td>
+                                    <td class="text-center align-middle">
+                                        <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);">@comp.TotalTemuan</span>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        @{
+                                            string closeColor = comp.CloseRate >= 80 ? "#10b981" : (comp.CloseRate >= 50 ? "#f59e0b" : "#ef4444");
+                                        }
+                                        <div style="font-weight: 700; color: @closeColor;">@Math.Round(comp.CloseRate, 1)%</div>
+                                        <div class="text-muted" style="font-size: 10px;">@comp.TotalClosedHazard / @comp.TotalHazard Hazard</div>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        @{
+                                            string speedColor = comp.AvgSpeedDays <= 3 ? "#10b981" : (comp.AvgSpeedDays <= 7 ? "#f59e0b" : "#ef4444");
+                                        }
+                                        <div style="font-weight: 700; color: @speedColor;">@Math.Round(comp.AvgSpeedDays, 1) Hari</div>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <div style="color: #fbbf24; font-size: 13px;">
+                                            @for (int i = 1; i <= 5; i++)
+                                            {
+                                                if (i <= Math.Round(comp.AvgQuality))
+                                                {
+                                                    <i class="bi bi-star-fill"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-star text-muted" style="opacity: 0.3;"></i>
+                                                }
+                                            }
+                                        </div>
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <div class="fw-bold" style="color: #eab308; font-size: 14px; font-family: 'Outfit', sans-serif;" title="Qty: @Math.Round(comp.ScoreKuantitas, 1) | Close: @Math.Round(comp.ScoreCloseRate, 1) | Spd: @Math.Round(comp.ScoreKecepatan, 1) | Qual: @Math.Round(comp.ScoreKualitas, 1)">@Math.Round(comp.TotalScore, 1)</div>
+                                        <div class="text-muted" style="font-size: 9px;">25% bobot per metrik</div>
+                                    </td>
+                                </tr>
+                                rank++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4 text-muted" style="font-size: 13px;">
+                    <i class="bi bi-info-circle text-muted d-block mb-2" style="font-size: 28px;"></i>
+                    Data performa belum tersedia untuk bulan ini.
+                </div>
+            }
+        </div>
+    </div>
 
     <!-- Perusahaan Belum Pernah Login -->
     <div class="report-card premium-card mt-4">

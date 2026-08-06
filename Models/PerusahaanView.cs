@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace MBS_SAP.Models
 {
@@ -12,6 +13,10 @@ namespace MBS_SAP.Models
 
         [MaxLength(200)]
         public string? NamaPerusahaan { get; set; }
+
+        [MaxLength(200)]
+        [Column("nama_pjo")]
+        public string? NamaPjo { get; set; }
 
         public int? TipePerusahaanId { get; set; }
 
