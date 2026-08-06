@@ -4467,6 +4467,7 @@
                         maxZoom: 18
                     }).addTo(hitSafeMap);
                 }
+            } else {
                 // Urutkan titik agar Hazard di-render paling akhir (tampil paling atas)
                 hitSafeFilteredPoints.sort(function(a, b) {
                     if (a.type === 'hazard' && b.type !== 'hazard') return 1;
