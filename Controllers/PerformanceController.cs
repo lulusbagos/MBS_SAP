@@ -3628,8 +3628,16 @@ namespace MBS_SAP.Controllers
             
             var apGroups = actionPlansMonth.GroupBy(a => a.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.ToList());
 
+            var targetDict = await _context.KaryawanJabatanMappings
+                .Where(m => m.PerusahaanId != null)
+                .GroupBy(m => m.PerusahaanId!.Value)
+                .Select(g => new { Key = g.Key, Tgt = g.Sum(x => (x.TargetHazardReport ?? 2) + (x.TargetInspeksi ?? 1) + (x.TargetSafetyTalk ?? 1) + (x.TargetObservasi ?? 0) + (x.TargetCoaching ?? 0)) })
+                .ToDictionaryAsync(x => x.Key, x => x.Tgt);
+
             var performanceList = new List<CompanyPerformanceViewModel>();
             int maxKuantitas = 1;
+            int maxTargetAll = 1;
+            foreach (var kv in targetDict) { if (kv.Value > maxTargetAll) maxTargetAll = kv.Value; }
 
             foreach (var comp in allCompanies)
             {
@@ -3643,6 +3651,7 @@ namespace MBS_SAP.Controllers
                 int coaC = coaCounts.TryGetValue(cId, out int v6) ? v6 : 0;
                 
                 int totalTemuan = hC + iC + sC + oC + pC + coaC;
+                int totalTarget = targetDict.TryGetValue(cId, out int tgt) ? tgt : 0;
                 if (totalTemuan > maxKuantitas) maxKuantitas = totalTemuan;
 
                 int totalAp = 0;
@@ -3678,6 +3687,7 @@ namespace MBS_SAP.Controllers
                         PerusahaanId = cId,
                         CompanyName = comp.NamaPerusahaan ?? "Unknown",
                         TotalTemuan = totalTemuan,
+                        TotalTarget = totalTarget,
                         TotalHazard = hC,
                         TotalClosedHazard = hCClosed,
                         TotalActionPlan = totalAp,
@@ -3691,14 +3701,15 @@ namespace MBS_SAP.Controllers
 
             foreach (var p in performanceList)
             {
-                p.ScoreKuantitas = Math.Min(100, ((double)p.TotalTemuan / maxKuantitas) * 100);
+                p.ScorePencapaian = p.TotalTarget > 0 ? Math.Min(100, ((double)p.TotalTemuan / p.TotalTarget) * 100) : (p.TotalTemuan > 0 ? 100 : 0);
+                p.ScoreSkalaBeban = maxTargetAll > 0 ? (Math.Log10(p.TotalTarget + 1) / Math.Log10(maxTargetAll + 1)) * 100 : 0;
                 p.ScoreCloseRate = p.CloseRate;
                 p.ScoreKualitas = (p.AvgQuality / 5.0) * 100;
                 
                 // Speed Score: 0 days = 100%, >= 14 days = 0%
                 p.ScoreKecepatan = Math.Max(0, 100 - (p.AvgSpeedDays / 14.0 * 100));
 
-                p.TotalScore = (p.ScoreKuantitas * 0.25) + (p.ScoreCloseRate * 0.25) + (p.ScoreKualitas * 0.25) + (p.ScoreKecepatan * 0.25);
+                p.TotalScore = (p.ScorePencapaian * 0.20) + (p.ScoreSkalaBeban * 0.15) + (p.ScoreCloseRate * 0.25) + (p.ScoreKualitas * 0.20) + (p.ScoreKecepatan * 0.20);
             }
 
             ViewBag.TopPerformanceList = performanceList.OrderByDescending(p => p.TotalScore).Take(10).ToList();

@@ -25,7 +25,9 @@ namespace MBS_SAP.Models
         public double AvgSpeedDays { get; set; }
 
         // Kalkulasi Skor Akhir
-        public double ScoreKuantitas { get; set; }
+        public int TotalTarget { get; set; }
+        public double ScorePencapaian { get; set; }
+        public double ScoreSkalaBeban { get; set; }
         public double ScoreCloseRate { get; set; }
         public double ScoreKualitas { get; set; }
         public double ScoreKecepatan { get; set; }
