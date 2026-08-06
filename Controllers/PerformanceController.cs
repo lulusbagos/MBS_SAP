@@ -571,7 +571,7 @@ namespace MBS_SAP.Controllers
 
             // Incident Pyramid from the same source used by Incident/Index (published incidents)
             var endOfYear = new DateTime(now.Year, 12, 31, 23, 59, 59);
-            var incidentBaseQuery = _context.IncidentNewsList.Where(i => i.IsPublished);
+            var incidentBaseQuery = _context.IncidentNewsList.Where(i => i.IsPublished && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))));
             var incidentIndexTotal = await incidentBaseQuery.CountAsync();
 
             var incidentMonthData = await incidentBaseQuery
