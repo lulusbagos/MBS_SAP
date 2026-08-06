@@ -4762,7 +4762,8 @@
 
             if (!hitSafeMap) {
                 hitSafeMap = L.map('hitsafeLeafletMap', {
-                    attributionControl: false
+                    attributionControl: false,
+                    maxZoom: 19
                 }).setView([kaliorangLat, kaliorangLon], 11);
                 const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 19,
@@ -4791,6 +4792,7 @@
                     hitSafeClusterLayer = L.markerClusterGroup({
                         showCoverageOnHover: false,
                         spiderfyOnMaxZoom: true,
+                        disableClusteringAtZoom: 16,
                         maxClusterRadius: 40
                     }).addTo(hitSafeMap);
                 }
