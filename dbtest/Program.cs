@@ -28,25 +28,36 @@ namespace dbtest
 
             var provider = services.BuildServiceProvider();
             using var scope = provider.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var targetCompanyIds = new List<int> { 360 };
-            
-            var companies = await db.Perusahaans
-                .Where(p => targetCompanyIds.Contains(p.PerusahaanId) || p.NamaPerusahaan.Contains("EKA DHARMA") || p.NamaPerusahaan.Contains("ANUGERAH AC"))
-                .ToListAsync();
+            var names = new List<string> {
+                "CV SALIM BERKAT SEJAHTERA",
+                "GOGM PT UNGGUL DINAMIKA UTAMA",
+                "PT BORNEO MAJU JAYA",
+                "PT CAHAYA ENGINEERING SERVICES",
+                "PT GROUNDPROBE INDONESIA",
+                "PT INDO TRAKTOR UTAMA",
+                "PT INDONESIA COMNETS PLUS",
+                "PT LANGIT MANDIRI SUKSES",
+                "PT PETRO PERKASA INDONESIA",
+                "PT PRESISI DIGITAL MODEREN TEKNOLOGI",
+                "PT PUTERA WIBOWO BORNEO",
+                "PT SAMUDERA INTEGRASI GEMILANG",
+                "PT SANGGAR SARANA BAJA",
+                "PT SANY HEAVY INDUSTRY INDONESIA",
+                "PT SPEEDWORK SOLUSI UTAMA",
+                "PT UNGGUL DIESEL PART",
+                "RUMAH SAKIT PUPUK KALTIM",
+                "SISWA MAGANG UNGGUL"
+            };
 
-            foreach(var c in companies) {
-                Console.WriteLine($"Company: ID {c.PerusahaanId}: {c.NamaPerusahaan} (Parent: {c.PerusahaanIndukId})");
+            var comps = await context.Perusahaans.Where(p => names.Contains(p.NamaPerusahaan.ToUpper())).ToListAsync();
+            Console.WriteLine($"Found {comps.Count} companies.");
+            foreach(var c in comps)
+            {
+                Console.WriteLine($"{c.PerusahaanId}: {c.NamaPerusahaan}");
             }
-            
-            var relations = await db.PerusahaanHierarchyRelations
-                .Where(r => r.ParentCompanyId == 360 || r.ChildCompanyId == 360 || r.ParentCompanyName.Contains("EKA DHARMA"))
-                .ToListAsync();
-                
-            foreach(var r in relations) {
-                Console.WriteLine($"Relation: Parent {r.ParentCompanyId} ({r.ParentCompanyName}) -> Child {r.ChildCompanyId} (Active: {r.ChildIsActive})");
-            }
+            Console.WriteLine($"Array format: {string.Join(", ", comps.Select(c => c.PerusahaanId))}");
         }
     }
 }
