@@ -3384,6 +3384,9 @@ namespace MBS_SAP.Controllers
                     totalTargetC += cTar; totalActualC += cappedC;
                 }
 
+                var uncompliantSubs = new List<string>();   // punya target tapi belum ada submisi
+                var noTargetSubs = new List<string>();        // tidak ada karyawan ber-target sama sekali
+
                 // Subcon calculations
                 foreach (var sub in subcons)
                 {
@@ -3394,6 +3397,7 @@ namespace MBS_SAP.Controllers
                     int subTargetO = 0, subActualO = 0;
                     int subTargetC = 0, subActualC = 0;
                     int subEmpsWithTarget = 0;
+                    int subRawSubmissions = 0;
 
                     foreach (var emp in subKaryawans)
                     {
@@ -3408,18 +3412,21 @@ namespace MBS_SAP.Controllers
                             cTar = t.TargetCoaching ?? 0;
                         }
 
+                        int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
+                        int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
+                        int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
+                        int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
+                        int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
+
+                        // Akumulasi raw submissions berdasarkan NIK karyawan subcon ini
+                        subRawSubmissions += (actH + actI + actST + actO + actC);
+
                         if (hTar + insTar + stTar + obsTar + cTar == 0)
                         {
                             continue;
                         }
 
                         subEmpsWithTarget++;
-
-                        int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
-                        int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
-                        int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
-                        int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
-                        int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
 
                         int cappedH = Math.Min(actH, hTar);
                         int cappedI = Math.Min(actI, insTar);
@@ -3437,15 +3444,17 @@ namespace MBS_SAP.Controllers
                     int subTargetTotal = subTargetH + subTargetI + subTargetS + subTargetO + subTargetC;
                     int subActualTotal = subActualH + subActualI + subActualS + subActualO + subActualC;
 
-                    int subRawSubmissions = 
-                        allGroupHazards.Count(x => x.PerusahaanId == sub.PerusahaanId) +
-                        allGroupInspections.Count(x => x.PerusahaanId == sub.PerusahaanId) +
-                        allGroupSafetyTalks.Count(x => x.PerusahaanId == sub.PerusahaanId) +
-                        allGroupCoachings.Count(x => x.PerusahaanId == sub.PerusahaanId) +
-                        allGroupObservations.Count(x => x.PerusahaanId == sub.PerusahaanId);
-
-                    if (subEmpsWithTarget > 0)
+                    if (subEmpsWithTarget == 0)
                     {
+                        noTargetSubs.Add(sub.NamaPerusahaan ?? "Unknown");
+                    }
+                    else
+                    {
+                        if (subRawSubmissions == 0)
+                        {
+                            uncompliantSubs.Add(sub.NamaPerusahaan ?? "Unknown");
+                        }
+
                         allSubconStats.Add(new MostActiveSubconViewModel
                         {
                             PerusahaanId = sub.PerusahaanId,
@@ -3462,34 +3471,6 @@ namespace MBS_SAP.Controllers
 
                 int totalGroupTarget = totalTargetH + totalTargetI + totalTargetS + totalTargetO + totalTargetC;
                 int totalGroupActual = totalActualH + totalActualI + totalActualS + totalActualO + totalActualC;
-
-                var uncompliantSubs = new List<string>();   // punya target tapi belum ada submisi
-                var noTargetSubs = new List<string>();        // tidak ada karyawan ber-target sama sekali
-                foreach (var sub in subcons)
-                {
-                    var subKarIds = allGroupKaryawans.Where(k => k.IdPerusahaan == sub.PerusahaanId).Select(k => k.IdKaryawan).ToList();
-                    bool hasTarget = subKarIds.Any(id => allGroupTargets.TryGetValue(id, out var t)
-                        && (t.TargetHazardReport > 0 || t.TargetInspeksi > 0 || t.TargetSafetyTalk > 0 || t.TargetObservasi > 0 || t.TargetCoaching > 0));
-
-                    if (!hasTarget)
-                    {
-                        // Tidak ada karyawan dengan target — tidak relevan untuk compliance
-                        noTargetSubs.Add(sub.NamaPerusahaan ?? "Unknown");
-                        continue;
-                    }
-
-                    int subActualCount = 
-                        allGroupHazards.Count(x => x.PerusahaanId == sub.PerusahaanId) +
-                        allGroupInspections.Count(x => x.PerusahaanId == sub.PerusahaanId) +
-                        allGroupSafetyTalks.Count(x => x.PerusahaanId == sub.PerusahaanId) +
-                        allGroupCoachings.Count(x => x.PerusahaanId == sub.PerusahaanId) +
-                        allGroupObservations.Count(x => x.PerusahaanId == sub.PerusahaanId);
-
-                    if (subActualCount == 0)
-                    {
-                        uncompliantSubs.Add(sub.NamaPerusahaan ?? "Unknown");
-                    }
-                }
 
                 var compVm = new MainconGroupComparisonViewModel
                 {
