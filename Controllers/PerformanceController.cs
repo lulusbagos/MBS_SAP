@@ -3127,11 +3127,11 @@ namespace MBS_SAP.Controllers
                     inactiveCount++;
                 }
 
-                targetH += hTar; actualH += actH;
-                targetI += insTar; actualI += actI;
-                targetS += stTar; actualS += actST;
-                targetO += obsTar; actualO += actO;
-                targetC += cTar; actualC += actC;
+                targetH += hTar; actualH += cappedH;
+                targetI += insTar; actualI += cappedI;
+                targetS += stTar; actualS += cappedST;
+                targetO += obsTar; actualO += cappedO;
+                targetC += cTar; actualC += cappedC;
 
                 if (hTar > 0) { withTargetH++; if (actH >= 1) fulfilledH++; }
                 if (insTar > 0) { withTargetI++; if (actI >= 1) fulfilledI++; }
