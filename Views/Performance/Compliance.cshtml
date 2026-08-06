@@ -448,7 +448,7 @@
     <!-- SAP Usage Compliance Row (Donut Chart & Child Breakdown) -->
     <div class="row g-3 mb-4">
         <!-- Donut Chart -->
-        <div class="col-md-6">
+        <div class="col-lg-4 col-md-6">
             <div class="report-card premium-card h-100">
                 <div class="report-header premium-header border-bottom">
                     <h6 class="premium-title mb-0">
@@ -456,12 +456,33 @@
                     </h6>
                 </div>
                 <div class="report-body d-flex flex-column align-items-center justify-content-center p-4">
-                    <div style="position: relative; width: 100%; max-width: 250px; aspect-ratio: 1/1;">
+                    <div style="position: relative; width: 100%; max-width: 200px; aspect-ratio: 1/1;">
                         <canvas id="sapUsageDonutChart"></canvas>
                         <!-- Center Text -->
                         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
-                            <div style="font-size: 24px; font-weight: 800; color: var(--text-main); font-family: 'Outfit', sans-serif;">@(ViewBag.WajibSap ?? 0)</div>
-                            <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Wajib SAP</div>
+                            <div style="font-size: 20px; font-weight: 800; color: var(--text-main); font-family: 'Outfit', sans-serif;">@(ViewBag.WajibSap ?? 0)</div>
+                            <div style="font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Wajib SAP</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Donut Chart: Karyawan Tanpa Target -->
+        <div class="col-lg-4 col-md-6">
+            <div class="report-card premium-card h-100">
+                <div class="report-header premium-header border-bottom">
+                    <h6 class="premium-title mb-0">
+                        <i class="bi bi-person-slash me-2 text-info"></i>Karyawan Tanpa Target
+                    </h6>
+                </div>
+                <div class="report-body d-flex flex-column align-items-center justify-content-center p-4">
+                    <div style="position: relative; width: 100%; max-width: 200px; aspect-ratio: 1/1;">
+                        <canvas id="noTargetDonutChart"></canvas>
+                        <!-- Center Text -->
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                            <div style="font-size: 20px; font-weight: 800; color: var(--text-main); font-family: 'Outfit', sans-serif;">@(ViewData["AktifTidakAdaTarget"] ?? 0)</div>
+                            <div style="font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Tanpa Target</div>
                         </div>
                     </div>
                 </div>
@@ -469,7 +490,7 @@
         </div>
         
         <!-- Child Company Breakdown -->
-        <div class="col-md-6">
+        <div class="col-lg-4 col-md-12">
             <div class="report-card premium-card h-100">
                 <div class="report-header premium-header border-bottom">
                     <h6 class="premium-title mb-0">
@@ -1330,6 +1351,59 @@
                         datasets: [{
                             data: [@(ViewBag.SudahMengisi ?? 0), @(ViewBag.BelumMengisi ?? 0)],
                             backgroundColor: ['#10b981', '#ef4444'],
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: labelColor,
+                                    font: { family: 'Outfit', size: 11, weight: '600' },
+                                    usePointStyle: true,
+                                    padding: 20
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += context.parsed + ' Karyawan';
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : 0;
+                                            label += ` (${pct}%)`;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Chart Karyawan Tanpa Target
+            const ctxNoTarget = document.getElementById('noTargetDonutChart');
+            if (ctxNoTarget) {
+                new Chart(ctxNoTarget, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Tidak Mengisi SAP', 'Tetap Mengisi SAP'],
+                        datasets: [{
+                            data: [
+                                @((int)(ViewData["AktifTidakAdaTarget"] ?? 0) - (int)(ViewData["TidakAdaTargetTapiMengisi"] ?? 0)),
+                                @(ViewData["TidakAdaTargetTapiMengisi"] ?? 0)
+                            ],
+                            backgroundColor: ['#64748b', '#0ea5e9'],
                             borderWidth: 0,
                             hoverOffset: 4
                         }]

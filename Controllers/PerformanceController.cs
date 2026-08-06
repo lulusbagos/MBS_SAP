@@ -3090,6 +3090,18 @@ namespace MBS_SAP.Controllers
 
                 if (hTar + insTar + stTar + obsTar + cTar == 0)
                 {
+                    ViewData["AktifTidakAdaTarget"] = (int)(ViewData["AktifTidakAdaTarget"] ?? 0) + 1;
+                    
+                    int actHT = string.IsNullOrEmpty(nik) ? 0 : (gHazByNik.TryGetValue(nik, out var aht) ? aht : 0);
+                    int actIT = string.IsNullOrEmpty(nik) ? 0 : (gInsByNik.TryGetValue(nik, out var ait) ? ait : 0);
+                    int actSTT = string.IsNullOrEmpty(nik) ? 0 : (gStByNik.TryGetValue(nik, out var astt) ? astt : 0);
+                    int actOT = string.IsNullOrEmpty(nik) ? 0 : (gObsByNik.TryGetValue(nik, out var aot) ? aot : 0);
+                    int actCT = string.IsNullOrEmpty(nik) ? 0 : (gCoaByNik.TryGetValue(nik, out var actt) ? actt : 0);
+                    
+                    if (actHT + actIT + actSTT + actOT + actCT > 0)
+                    {
+                        ViewData["TidakAdaTargetTapiMengisi"] = (int)(ViewData["TidakAdaTargetTapiMengisi"] ?? 0) + 1;
+                    }
                     continue;
                 }
 
