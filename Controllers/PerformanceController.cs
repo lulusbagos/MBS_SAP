@@ -574,8 +574,9 @@ namespace MBS_SAP.Controllers
             var incidentBaseQuery = _context.IncidentNewsList.Where(i => i.IsPublished && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))));
             var incidentIndexTotal = await incidentBaseQuery.CountAsync();
 
-            var incidentMonthData = await incidentBaseQuery
-                .Where(i => (i.TanggalKejadian ?? i.CreatedAt) >= startOfYear && (i.TanggalKejadian ?? i.CreatedAt) <= endOfYear)
+            var actualStartOfYear = new DateTime(selectedYear, 1, 1);
+            var incidentYearData = await incidentBaseQuery
+                .Where(i => (i.TanggalKejadian ?? i.CreatedAt) >= actualStartOfYear && (i.TanggalKejadian ?? i.CreatedAt) <= endOfYear)
                 .Select(i => new { i.Kategori, i.Judul, i.Konten })
                 .ToListAsync();
 
@@ -635,7 +636,7 @@ namespace MBS_SAP.Controllers
             int incidentKebakaran = 0;
             int incidentFatality = 0;
 
-            foreach (var item in incidentMonthData)
+            foreach (var item in incidentYearData)
             {
                 var canonicalCategory = ResolveIncidentCategory(item.Kategori, item.Judul, item.Konten);
                 switch (canonicalCategory)
@@ -662,7 +663,7 @@ namespace MBS_SAP.Controllers
             }
 
             ViewBag.IncidentIndexTotal = incidentIndexTotal;
-            ViewBag.IncidentYearTotal = incidentMonthData.Count;
+            ViewBag.IncidentYearTotal = incidentYearData.Count;
 
             // 4. Open Hazards breakdown by Risk Level (Low/Medium/High/Extreme)
             // Scoped list keeps existing behavior for KPI cards that follow user/company access scope.
