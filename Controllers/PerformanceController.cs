@@ -207,22 +207,22 @@ namespace MBS_SAP.Controllers
             if (employeeNiks.Count > 0)
             {
                 hazards = await _context.HazardReports
-                    .Where(h => !h.IsDeleted && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth && employeeNiks.Contains(h.Nik))
+                    .Where(h => !h.IsDeleted && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth && employeeNiks.Contains(h.Nik))
                     .Select(h => h.Nik)
                     .ToListAsync();
 
                 inspections = await _context.Inspections
-                    .Where(i => !i.IsDeleted && i.CreatedAt >= startOfMonth && i.CreatedAt <= endOfMonth && employeeNiks.Contains(i.Nik))
+                    .Where(i => !i.IsDeleted && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth && employeeNiks.Contains(i.Nik))
                     .Select(i => i.Nik)
                     .ToListAsync();
 
                 safetyTalks = await _context.SafetyTalks
-                    .Where(s => !s.IsDeleted && s.CreatedAt >= startOfMonth && s.CreatedAt <= endOfMonth && employeeNiks.Contains(s.Nik))
+                    .Where(s => !s.IsDeleted && s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth && employeeNiks.Contains(s.Nik))
                     .Select(s => s.Nik)
                     .ToListAsync();
 
                 p5ms = await _context.P5ms
-                    .Where(p => !p.IsDeleted && p.CreatedAt >= startOfMonth && p.CreatedAt <= endOfMonth && employeeNiks.Contains(p.Nik))
+                    .Where(p => !p.IsDeleted && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth && employeeNiks.Contains(p.Nik))
                     .Select(p => p.Nik)
                     .ToListAsync();
 
@@ -331,7 +331,7 @@ namespace MBS_SAP.Controllers
             var safetyTalkPoints = new List<GeoSafetyPointViewModel>();
 
             var dbHazards = await _context.HazardReports
-                .Where(h => !h.IsDeleted && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))) && h.Lokasi != null && h.Lokasi.Contains(",") && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth)
+                .Where(h => !h.IsDeleted && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))) && h.Lokasi != null && h.Lokasi.Contains(",") && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth)
             .Select(h => new { h.Id, h.Tanggal, h.Nama, h.Area, h.Lokasi, h.Temuan, h.TingkatResiko, h.StatusTemuan, h.FotoTemuan })
                 .ToListAsync();
 
@@ -356,7 +356,7 @@ namespace MBS_SAP.Controllers
             }
 
             var dbInspections = await _context.Inspections
-                .Where(i => !i.IsDeleted && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))) && i.Lokasi != null && i.Lokasi.Contains(",") && i.CreatedAt >= startOfMonth && i.CreatedAt <= endOfMonth)
+                .Where(i => !i.IsDeleted && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))) && i.Lokasi != null && i.Lokasi.Contains(",") && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth)
                 .Select(i => new { i.Id, i.Tanggal, i.Nama, i.Area, i.Lokasi, i.JenisInspeksi, i.LampiranJson })
                 .ToListAsync();
 
@@ -379,7 +379,7 @@ namespace MBS_SAP.Controllers
             }
 
             var dbP5ms = await _context.P5ms
-                .Where(p => !p.IsDeleted && (companyId == null || (p.PerusahaanId.HasValue && allowedCompanyIds.Contains(p.PerusahaanId.Value))) && p.Lokasi != null && p.Lokasi.Contains(",") && p.CreatedAt >= startOfMonth && p.CreatedAt <= endOfMonth)
+                .Where(p => !p.IsDeleted && (companyId == null || (p.PerusahaanId.HasValue && allowedCompanyIds.Contains(p.PerusahaanId.Value))) && p.Lokasi != null && p.Lokasi.Contains(",") && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth)
                 .Select(p => new { p.Id, p.Tanggal, p.Waktu, p.Nik, p.Nama, p.Area, p.Lokasi, p.Topik, p.Judul, p.Keterangan, p.FotoKegiatan })
                 .ToListAsync();
 
@@ -422,7 +422,7 @@ namespace MBS_SAP.Controllers
             }
 
             var dbSafetyTalks = await _context.SafetyTalks
-                .Where(s => !s.IsDeleted && (companyId == null || (s.PerusahaanId.HasValue && allowedCompanyIds.Contains(s.PerusahaanId.Value))) && s.Lokasi != null && s.Lokasi.Contains(",") && s.CreatedAt >= startOfMonth && s.CreatedAt <= endOfMonth)
+                .Where(s => !s.IsDeleted && (companyId == null || (s.PerusahaanId.HasValue && allowedCompanyIds.Contains(s.PerusahaanId.Value))) && s.Lokasi != null && s.Lokasi.Contains(",") && s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth)
                 .Select(s => new { s.Id, s.Tanggal, s.Nama, s.Area, s.Lokasi, s.Judul, s.Keterangan, s.FotoKegiatan })
                 .ToListAsync();
 
@@ -533,10 +533,10 @@ namespace MBS_SAP.Controllers
             var baseStartDate = trendStart < startOfYear ? trendStart : startOfYear;
 
             // Submissions query - filtered by baseStartDate to optimize performance
-            var hazards = _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= baseStartDate && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))));
-            var inspections = _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= baseStartDate && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))));
-            var safetyTalks = _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= baseStartDate && (companyId == null || (s.PerusahaanId.HasValue && allowedCompanyIds.Contains(s.PerusahaanId.Value))));
-            var p5ms = _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= baseStartDate && (companyId == null || (p.PerusahaanId.HasValue && allowedCompanyIds.Contains(p.PerusahaanId.Value))));
+            var hazards = _context.HazardReports.Where(h => !h.IsDeleted && h.Tanggal >= baseStartDate && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))));
+            var inspections = _context.Inspections.Where(i => !i.IsDeleted && i.Tanggal >= baseStartDate && (companyId == null || (i.PerusahaanId.HasValue && allowedCompanyIds.Contains(i.PerusahaanId.Value))));
+            var safetyTalks = _context.SafetyTalks.Where(s => !s.IsDeleted && s.Tanggal >= baseStartDate && (companyId == null || (s.PerusahaanId.HasValue && allowedCompanyIds.Contains(s.PerusahaanId.Value))));
+            var p5ms = _context.P5ms.Where(p => !p.IsDeleted && p.Tanggal >= baseStartDate && (companyId == null || (p.PerusahaanId.HasValue && allowedCompanyIds.Contains(p.PerusahaanId.Value))));
             var coachings = _context.Coachings.Where(c => !c.IsDeleted && c.CreatedAt >= baseStartDate && (companyId == null || (c.PerusahaanId.HasValue && allowedCompanyIds.Contains(c.PerusahaanId.Value))));
 
             var openHazardsBase = _context.HazardReports.Where(h => !h.IsDeleted && h.StatusTemuan == "Open" && (companyId == null || (h.PerusahaanId.HasValue && allowedCompanyIds.Contains(h.PerusahaanId.Value))));
@@ -552,19 +552,19 @@ namespace MBS_SAP.Controllers
             }
 
             // 2. Realisasi Minggu Ini
-            int weekHazards = await hazards.CountAsync(h => h.CreatedAt >= startOfWeek);
-            int weekInspections = await inspections.CountAsync(i => i.CreatedAt >= startOfWeek);
-            int weekSafetyTalks = await safetyTalks.CountAsync(s => s.CreatedAt >= startOfWeek);
-            int weekP5ms = await p5ms.CountAsync(p => p.CreatedAt >= startOfWeek);
+            int weekHazards = await hazards.CountAsync(h => h.Tanggal >= startOfWeek);
+            int weekInspections = await inspections.CountAsync(i => i.Tanggal >= startOfWeek);
+            int weekSafetyTalks = await safetyTalks.CountAsync(s => s.Tanggal >= startOfWeek);
+            int weekP5ms = await p5ms.CountAsync(p => p.Tanggal >= startOfWeek);
             int weekCoachings = await coachings.CountAsync(c => c.CreatedAt >= startOfWeek);
             int weekObservations = await observationsQuery.CountAsync(o => o.CreatedAt >= startOfWeek);
             int weekTotal = weekHazards + weekInspections + weekSafetyTalks + weekCoachings + weekObservations;
 
             // 3. Realisasi Bulan Ini
-            int monthHazards = await hazards.CountAsync(h => h.CreatedAt >= startOfMonth);
-            int monthInspections = await inspections.CountAsync(i => i.CreatedAt >= startOfMonth);
-            int monthSafetyTalks = await safetyTalks.CountAsync(s => s.CreatedAt >= startOfMonth);
-            int monthP5ms = await p5ms.CountAsync(p => p.CreatedAt >= startOfMonth);
+            int monthHazards = await hazards.CountAsync(h => h.Tanggal >= startOfMonth);
+            int monthInspections = await inspections.CountAsync(i => i.Tanggal >= startOfMonth);
+            int monthSafetyTalks = await safetyTalks.CountAsync(s => s.Tanggal >= startOfMonth);
+            int monthP5ms = await p5ms.CountAsync(p => p.Tanggal >= startOfMonth);
             int monthCoachings = await coachings.CountAsync(c => c.CreatedAt >= startOfMonth);
             int monthObservations = await observationsQuery.CountAsync(o => o.CreatedAt >= startOfMonth);
             int monthTotal = monthHazards + monthInspections + monthSafetyTalks + monthCoachings + monthObservations;
@@ -670,7 +670,7 @@ namespace MBS_SAP.Controllers
 
             // Safety pyramid must show all companies regardless of login scope and status.
             var riskHazardsListAllCompanies = await _context.HazardReports
-                .Where(h => !h.IsDeleted && h.StatusTemuan == "Open" && h.TingkatResiko != null && h.CreatedAt >= startOfYear)
+                .Where(h => !h.IsDeleted && h.StatusTemuan == "Open" && h.TingkatResiko != null && h.Tanggal >= startOfYear)
                 .Select(h => h.TingkatResiko)
                 .ToListAsync();
 
@@ -701,7 +701,7 @@ namespace MBS_SAP.Controllers
             int highRiskOpen = openExtreme + openHigh;
             double complianceRisk = totalOpenHazards > 0 ? (double)highRiskOpen / totalOpenHazards * 100 : 0;
 
-            var allHazardRisks = await hazards.Where(h => h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth).Select(h => new { h.StatusTemuan, h.TingkatResiko }).ToListAsync();
+            var allHazardRisks = await hazards.Where(h => h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth).Select(h => new { h.StatusTemuan, h.TingkatResiko }).ToListAsync();
             int GetRiskWeight(string? r) {
                 if (string.IsNullOrEmpty(r)) return 0;
                 if (r.Contains("Extreme", StringComparison.OrdinalIgnoreCase) || r.Contains("Ekstrim", StringComparison.OrdinalIgnoreCase) || r.Contains("Sangat Berat", StringComparison.OrdinalIgnoreCase)) return 4;
@@ -717,7 +717,7 @@ namespace MBS_SAP.Controllers
 
             // RHR is calculated from repeated hazard locations (location-only basis).
             var hazardLocations = await hazards
-                .Where(h => !string.IsNullOrWhiteSpace(h.Lokasi) && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth)
+                .Where(h => !string.IsNullOrWhiteSpace(h.Lokasi) && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth)
                 .Select(h => h.Lokasi!.Trim())
                 .ToListAsync();
 
@@ -743,7 +743,7 @@ namespace MBS_SAP.Controllers
             ViewBag.TopRepeatedData = topRepeated.Select(x => x.Count).ToList();
 
 
-            var closedHazardsList = await hazards.Where(h => h.StatusTemuan == "Closed" && h.TingkatResiko != null && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth).Select(h => h.TingkatResiko).ToListAsync();
+            var closedHazardsList = await hazards.Where(h => h.StatusTemuan == "Closed" && h.TingkatResiko != null && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth).Select(h => h.TingkatResiko).ToListAsync();
             int closedKritis = closedHazardsList.Count(r => string.Equals(r, "Kritis", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Critical", StringComparison.OrdinalIgnoreCase));
             int closedExtreme = closedHazardsList.Count(r => string.Equals(r, "Extreme", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Sangat Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Ekstrim", StringComparison.OrdinalIgnoreCase));
             int closedHigh = closedHazardsList.Count(r => string.Equals(r, "High", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Berat", StringComparison.OrdinalIgnoreCase) || string.Equals(r, "Tinggi", StringComparison.OrdinalIgnoreCase));
@@ -752,11 +752,11 @@ namespace MBS_SAP.Controllers
             double highRiskResolution = totalHighRisk > 0 ? (double)highRiskClosed / totalHighRisk * 100 : 0;
 
             // 5b. Extra Professional Graphs Data
-            var allKategori = await openHazardsBase.Where(h => h.KategoriBahaya != null && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth).Select(h => h.KategoriBahaya).ToListAsync();
+            var allKategori = await openHazardsBase.Where(h => h.KategoriBahaya != null && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth).Select(h => h.KategoriBahaya).ToListAsync();
             int unsafeActCount = allKategori.Count(k => k != null && (k.Contains("Tindakan", StringComparison.OrdinalIgnoreCase) || k.Contains("Act", StringComparison.OrdinalIgnoreCase) || k.Contains("KTA", StringComparison.OrdinalIgnoreCase)));
             int unsafeConditionCount = allKategori.Count(k => k != null && (k.Contains("Kondisi", StringComparison.OrdinalIgnoreCase) || k.Contains("Condition", StringComparison.OrdinalIgnoreCase) || k.Contains("TTA", StringComparison.OrdinalIgnoreCase) || k.Contains("KTC", StringComparison.OrdinalIgnoreCase)));
             
-            var topAreas = await openHazardsBase.Where(h => !string.IsNullOrEmpty(h.Area) && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth)
+            var topAreas = await openHazardsBase.Where(h => !string.IsNullOrEmpty(h.Area) && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth)
                                         .GroupBy(h => h.Area)
                                         .Select(g => new { Area = g.Key, Count = g.Count() })
                                         .OrderByDescending(x => x.Count)
@@ -807,19 +807,19 @@ namespace MBS_SAP.Controllers
 
             // MTD: company leaderboard uses same basis as hierarchy (capped per-employee per-category)
             var compHazardsNik = await _context.HazardReports
-                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(h.PerusahaanId!.Value))
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonth && !ExcludedCompanies.Ids.Contains(h.PerusahaanId!.Value))
                 .Select(h => new { CompId = h.PerusahaanId!.Value, h.Nik })
                 .ToListAsync();
             var compInspNik = await _context.Inspections
-                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && i.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(i.PerusahaanId!.Value))
+                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && i.Tanggal >= startOfMonth && !ExcludedCompanies.Ids.Contains(i.PerusahaanId!.Value))
                 .Select(i => new { CompId = i.PerusahaanId!.Value, i.Nik })
                 .ToListAsync();
             var compSTNik = await _context.SafetyTalks
-                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && s.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(s.PerusahaanId!.Value))
+                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && s.Tanggal >= startOfMonth && !ExcludedCompanies.Ids.Contains(s.PerusahaanId!.Value))
                 .Select(s => new { CompId = s.PerusahaanId!.Value, s.Nik })
                 .ToListAsync();
             var compP5mNik = await _context.P5ms
-                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && p.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(p.PerusahaanId!.Value))
+                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && p.Tanggal >= startOfMonth && !ExcludedCompanies.Ids.Contains(p.PerusahaanId!.Value))
                 .Select(p => new { CompId = p.PerusahaanId!.Value, p.Nik })
                 .ToListAsync();
             var compCoaNik = await _context.Coachings
@@ -964,10 +964,10 @@ namespace MBS_SAP.Controllers
                 var monthStart = new DateTime(now.Year, now.Month, 1).AddMonths(-i);
                 var monthEnd = monthStart.AddMonths(1);
 
-                int hCount = await hazards.CountAsync(h => h.CreatedAt >= monthStart && h.CreatedAt < monthEnd);
-                int iCount = await inspections.CountAsync(i => i.CreatedAt >= monthStart && i.CreatedAt < monthEnd);
-                int sCount = await safetyTalks.CountAsync(s => s.CreatedAt >= monthStart && s.CreatedAt < monthEnd);
-                int pCount = await p5ms.CountAsync(p => p.CreatedAt >= monthStart && p.CreatedAt < monthEnd);
+                int hCount = await hazards.CountAsync(h => h.Tanggal >= monthStart && h.CreatedAt < monthEnd);
+                int iCount = await inspections.CountAsync(i => i.Tanggal >= monthStart && i.CreatedAt < monthEnd);
+                int sCount = await safetyTalks.CountAsync(s => s.Tanggal >= monthStart && s.CreatedAt < monthEnd);
+                int pCount = await p5ms.CountAsync(p => p.Tanggal >= monthStart && p.CreatedAt < monthEnd);
 
                 monthlyTrend.Add(new MonthlyTrendViewModel
                 {
@@ -1035,17 +1035,17 @@ namespace MBS_SAP.Controllers
                 var myObservationsQuery = _context.Observations.Where(o => !o.IsDeleted && o.Nik != null && o.Nik == userNik);
                 var myCoachingsQuery = _context.Coachings.Where(c => !c.IsDeleted && (c.Nik == userNik || _context.CoachingParticipants.Any(p => p.CoachingId == c.Id && p.Nik == userNik)));
 
-                myHazardsWeek = await myHazardsQuery.CountAsync(h => h.CreatedAt >= startOfWeek);
-                myInspectionsWeek = await myInspectionsQuery.CountAsync(i => i.CreatedAt >= startOfWeek);
-                mySafetyTalksWeek = await mySafetyTalksQuery.CountAsync(s => s.CreatedAt >= startOfWeek);
-                myP5msWeek = await myP5msQuery.CountAsync(p => p.CreatedAt >= startOfWeek);
+                myHazardsWeek = await myHazardsQuery.CountAsync(h => h.Tanggal >= startOfWeek);
+                myInspectionsWeek = await myInspectionsQuery.CountAsync(i => i.Tanggal >= startOfWeek);
+                mySafetyTalksWeek = await mySafetyTalksQuery.CountAsync(s => s.Tanggal >= startOfWeek);
+                myP5msWeek = await myP5msQuery.CountAsync(p => p.Tanggal >= startOfWeek);
                 myObservationsWeek = await myObservationsQuery.CountAsync(o => o.Date >= startOfWeek);
                 myCoachingsWeek = await myCoachingsQuery.CountAsync(c => c.CreatedAt >= startOfWeek);
 
-                myHazardsMonth = await myHazardsQuery.CountAsync(h => h.CreatedAt >= startOfMonth);
-                myInspectionsMonth = await myInspectionsQuery.CountAsync(i => i.CreatedAt >= startOfMonth);
-                mySafetyTalksMonth = await mySafetyTalksQuery.CountAsync(s => s.CreatedAt >= startOfMonth);
-                myP5msMonth = await myP5msQuery.CountAsync(p => p.CreatedAt >= startOfMonth);
+                myHazardsMonth = await myHazardsQuery.CountAsync(h => h.Tanggal >= startOfMonth);
+                myInspectionsMonth = await myInspectionsQuery.CountAsync(i => i.Tanggal >= startOfMonth);
+                mySafetyTalksMonth = await mySafetyTalksQuery.CountAsync(s => s.Tanggal >= startOfMonth);
+                myP5msMonth = await myP5msQuery.CountAsync(p => p.Tanggal >= startOfMonth);
                 myObservationsMonth = await myObservationsQuery.CountAsync(o => o.Date >= startOfMonth);
                 myCoachingsMonth = await myCoachingsQuery.CountAsync(c => c.CreatedAt >= startOfMonth);
             }
@@ -1257,10 +1257,10 @@ namespace MBS_SAP.Controllers
 
             // Get submitters for current week
             var weekSubmitters = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var weekHazNiks = await hazards.Where(h => h.CreatedAt >= startOfWeek).Select(h => h.Nik).Distinct().ToListAsync();
-            var weekInsNiks = await inspections.Where(i => i.CreatedAt >= startOfWeek).Select(i => i.Nik).Distinct().ToListAsync();
-            var weekSafNiks = await safetyTalks.Where(s => s.CreatedAt >= startOfWeek).Select(s => s.Nik).Distinct().ToListAsync();
-            var weekP5mNiks = await p5ms.Where(p => p.CreatedAt >= startOfWeek).Select(p => p.Nik).Distinct().ToListAsync();
+            var weekHazNiks = await hazards.Where(h => h.Tanggal >= startOfWeek).Select(h => h.Nik).Distinct().ToListAsync();
+            var weekInsNiks = await inspections.Where(i => i.Tanggal >= startOfWeek).Select(i => i.Nik).Distinct().ToListAsync();
+            var weekSafNiks = await safetyTalks.Where(s => s.Tanggal >= startOfWeek).Select(s => s.Nik).Distinct().ToListAsync();
+            var weekP5mNiks = await p5ms.Where(p => p.Tanggal >= startOfWeek).Select(p => p.Nik).Distinct().ToListAsync();
             
             foreach (var n in weekHazNiks.Concat(weekInsNiks).Concat(weekSafNiks).Concat(weekP5mNiks))
             {
@@ -1296,10 +1296,10 @@ namespace MBS_SAP.Controllers
 
             // Get submitters for current month
             var monthSubmitters = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var monthHazNiks = await hazards.Where(h => h.CreatedAt >= startOfMonth).Select(h => new { h.Nik }).ToListAsync();
-            var monthInsNiks = await inspections.Where(i => i.CreatedAt >= startOfMonth).Select(i => new { i.Nik }).ToListAsync();
-            var monthSafNiks = await safetyTalks.Where(s => s.CreatedAt >= startOfMonth).Select(s => new { s.Nik }).ToListAsync();
-            var monthP5mNiks = await p5ms.Where(p => p.CreatedAt >= startOfMonth).Select(p => new { p.Nik }).ToListAsync();
+            var monthHazNiks = await hazards.Where(h => h.Tanggal >= startOfMonth).Select(h => new { h.Nik }).ToListAsync();
+            var monthInsNiks = await inspections.Where(i => i.Tanggal >= startOfMonth).Select(i => new { i.Nik }).ToListAsync();
+            var monthSafNiks = await safetyTalks.Where(s => s.Tanggal >= startOfMonth).Select(s => new { s.Nik }).ToListAsync();
+            var monthP5mNiks = await p5ms.Where(p => p.Tanggal >= startOfMonth).Select(p => new { p.Nik }).ToListAsync();
 
             foreach (var item in monthHazNiks.Concat(monthInsNiks).Concat(monthSafNiks).Concat(monthP5mNiks))
             {
@@ -1533,25 +1533,25 @@ namespace MBS_SAP.Controllers
 
             var hierarchyHazardRows = await _context.HazardReports
                 .AsNoTracking()
-                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(h.PerusahaanId!.Value))
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfYear && !ExcludedCompanies.Ids.Contains(h.PerusahaanId!.Value))
                 .Select(h => new { CompanyId = h.PerusahaanId!.Value, h.Nik, h.CreatedAt })
                 .ToListAsync();
 
             var hierarchyInspectionRows = await _context.Inspections
                 .AsNoTracking()
-                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && i.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(i.PerusahaanId!.Value))
+                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && i.Tanggal >= startOfYear && !ExcludedCompanies.Ids.Contains(i.PerusahaanId!.Value))
                 .Select(i => new { CompanyId = i.PerusahaanId!.Value, i.Nik, i.CreatedAt })
                 .ToListAsync();
 
             var hierarchySafetyTalkRows = await _context.SafetyTalks
                 .AsNoTracking()
-                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && s.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(s.PerusahaanId!.Value))
+                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && s.Tanggal >= startOfYear && !ExcludedCompanies.Ids.Contains(s.PerusahaanId!.Value))
                 .Select(s => new { CompanyId = s.PerusahaanId!.Value, s.Nik, s.CreatedAt })
                 .ToListAsync();
 
             var hierarchyP5mRows = await _context.P5ms
                 .AsNoTracking()
-                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && p.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(p.PerusahaanId!.Value))
+                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && p.Tanggal >= startOfYear && !ExcludedCompanies.Ids.Contains(p.PerusahaanId!.Value))
                 .Select(p => new { CompanyId = p.PerusahaanId!.Value, p.Nik, p.CreatedAt })
                 .ToListAsync();
 
@@ -2883,22 +2883,22 @@ namespace MBS_SAP.Controllers
                 var targetsDict = targets.ToDictionary(m => m.KaryawanId);
 
                 var hazards = await _context.HazardReports
-                    .Where(h => !h.IsDeleted && childCompanyIds.Contains(h.PerusahaanId ?? 0) && h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth)
+                    .Where(h => !h.IsDeleted && childCompanyIds.Contains(h.PerusahaanId ?? 0) && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth)
                     .Select(h => new { h.PerusahaanId, h.Nik })
                     .ToListAsync();
 
                 var inspections = await _context.Inspections
-                    .Where(i => !i.IsDeleted && childCompanyIds.Contains(i.PerusahaanId ?? 0) && i.CreatedAt >= startOfMonth && i.CreatedAt <= endOfMonth)
+                    .Where(i => !i.IsDeleted && childCompanyIds.Contains(i.PerusahaanId ?? 0) && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth)
                     .Select(i => new { i.PerusahaanId, i.Nik })
                     .ToListAsync();
 
                 var safetyTalks = await _context.SafetyTalks
-                    .Where(s => !s.IsDeleted && childCompanyIds.Contains(s.PerusahaanId ?? 0) && s.CreatedAt >= startOfMonth && s.CreatedAt <= endOfMonth)
+                    .Where(s => !s.IsDeleted && childCompanyIds.Contains(s.PerusahaanId ?? 0) && s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth)
                     .Select(s => new { s.PerusahaanId, s.Nik })
                     .ToListAsync();
 
                 var p5ms = await _context.P5ms
-                    .Where(p => !p.IsDeleted && childCompanyIds.Contains(p.PerusahaanId ?? 0) && p.CreatedAt >= startOfMonth && p.CreatedAt <= endOfMonth)
+                    .Where(p => !p.IsDeleted && childCompanyIds.Contains(p.PerusahaanId ?? 0) && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth)
                     .Select(p => new { p.PerusahaanId, p.Nik })
                     .ToListAsync();
 
@@ -3014,22 +3014,22 @@ namespace MBS_SAP.Controllers
             var groupTargetsDict = targetsList.ToDictionary(m => m.KaryawanId);
 
             var groupHazards = await _context.HazardReports
-                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && relatedCompanyIds.Contains(h.PerusahaanId.Value) && h.CreatedAt >= startOfMonthM && h.CreatedAt <= endOfMonthM)
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && relatedCompanyIds.Contains(h.PerusahaanId.Value) && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM)
                 .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
                 .ToListAsync();
 
             var groupInspections = await _context.Inspections
-                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && relatedCompanyIds.Contains(i.PerusahaanId.Value) && i.CreatedAt >= startOfMonthM && i.CreatedAt <= endOfMonthM)
+                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && relatedCompanyIds.Contains(i.PerusahaanId.Value) && i.Tanggal >= startOfMonthM && i.Tanggal <= endOfMonthM)
                 .Select(i => new { i.PerusahaanId, i.Nik })
                 .ToListAsync();
 
             var groupSafetyTalks = await _context.SafetyTalks
-                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && relatedCompanyIds.Contains(s.PerusahaanId.Value) && s.CreatedAt >= startOfMonthM && s.CreatedAt <= endOfMonthM)
+                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && relatedCompanyIds.Contains(s.PerusahaanId.Value) && s.Tanggal >= startOfMonthM && s.Tanggal <= endOfMonthM)
                 .Select(s => new { s.PerusahaanId, s.Nik })
                 .ToListAsync();
 
             var groupP5ms = await _context.P5ms
-                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && relatedCompanyIds.Contains(p.PerusahaanId.Value) && p.CreatedAt >= startOfMonthM && p.CreatedAt <= endOfMonthM)
+                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && relatedCompanyIds.Contains(p.PerusahaanId.Value) && p.Tanggal >= startOfMonthM && p.Tanggal <= endOfMonthM)
                 .Select(p => new { p.PerusahaanId, p.Nik })
                 .ToListAsync();
 
@@ -3257,17 +3257,17 @@ namespace MBS_SAP.Controllers
 
                 // Fetch MTD actual logs
                 var allGroupHazards = await _context.HazardReports.AsNoTracking()
-                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && companyIds.Contains(h.PerusahaanId.Value) && h.CreatedAt >= startOfMonthMaincon && h.CreatedAt <= endOfMonthMaincon)
+                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && companyIds.Contains(h.PerusahaanId.Value) && h.Tanggal >= startOfMonthMaincon && h.Tanggal <= endOfMonthMaincon)
                     .Select(h => new { PerusahaanId = h.PerusahaanId ?? 0, h.Nik })
                     .ToListAsync();
 
                 var allGroupInspections = await _context.Inspections.AsNoTracking()
-                    .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && companyIds.Contains(i.PerusahaanId.Value) && i.CreatedAt >= startOfMonthMaincon && i.CreatedAt <= endOfMonthMaincon)
+                    .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && companyIds.Contains(i.PerusahaanId.Value) && i.Tanggal >= startOfMonthMaincon && i.Tanggal <= endOfMonthMaincon)
                     .Select(i => new { PerusahaanId = i.PerusahaanId ?? 0, i.Nik })
                     .ToListAsync();
 
                 var allGroupSafetyTalks = await _context.SafetyTalks.AsNoTracking()
-                    .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && companyIds.Contains(s.PerusahaanId.Value) && s.CreatedAt >= startOfMonthMaincon && s.CreatedAt <= endOfMonthMaincon)
+                    .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && companyIds.Contains(s.PerusahaanId.Value) && s.Tanggal >= startOfMonthMaincon && s.Tanggal <= endOfMonthMaincon)
                     .Select(s => new { PerusahaanId = s.PerusahaanId ?? 0, s.Nik })
                     .ToListAsync();
 
@@ -3496,20 +3496,20 @@ namespace MBS_SAP.Controllers
             var startDate = last14Days.First();
 
             var dailyHazards = await _context.HazardReports
-                .Where(h => !h.IsDeleted && h.CreatedAt >= startDate)
-                .GroupBy(h => h.CreatedAt.Date)
+                .Where(h => !h.IsDeleted && h.Tanggal >= startDate)
+                .GroupBy(h => h.Tanggal.Date)
                 .Select(g => new { Date = g.Key, Count = g.Count() })
                 .ToListAsync();
 
             var dailyInspections = await _context.Inspections
-                .Where(i => !i.IsDeleted && i.CreatedAt >= startDate)
-                .GroupBy(i => i.CreatedAt.Date)
+                .Where(i => !i.IsDeleted && i.Tanggal >= startDate)
+                .GroupBy(i => i.Tanggal.Date)
                 .Select(g => new { Date = g.Key, Count = g.Count() })
                 .ToListAsync();
 
             var dailySafetyTalks = await _context.SafetyTalks
-                .Where(s => !s.IsDeleted && s.CreatedAt >= startDate)
-                .GroupBy(s => s.CreatedAt.Date)
+                .Where(s => !s.IsDeleted && s.Tanggal >= startDate)
+                .GroupBy(s => s.Tanggal.Date)
                 .Select(g => new { Date = g.Key, Count = g.Count() })
                 .ToListAsync();
 
@@ -3823,10 +3823,10 @@ namespace MBS_SAP.Controllers
             var activeKaryawans = await allKaryawansQuery.ToListAsync();
 
             // Submissions query
-            var hazards = _context.HazardReports.Where(h => !h.IsDeleted && (companyId == null || h.PerusahaanId == companyId) && h.CreatedAt >= targetStart);
-            var inspections = _context.Inspections.Where(i => !i.IsDeleted && (companyId == null || i.PerusahaanId == companyId) && i.CreatedAt >= targetStart);
-            var safetyTalks = _context.SafetyTalks.Where(s => !s.IsDeleted && (companyId == null || s.PerusahaanId == companyId) && s.CreatedAt >= targetStart);
-            var p5ms = _context.P5ms.Where(p => !p.IsDeleted && (companyId == null || p.PerusahaanId == companyId) && p.CreatedAt >= targetStart);
+            var hazards = _context.HazardReports.Where(h => !h.IsDeleted && (companyId == null || h.PerusahaanId == companyId) && h.Tanggal >= targetStart);
+            var inspections = _context.Inspections.Where(i => !i.IsDeleted && (companyId == null || i.PerusahaanId == companyId) && i.Tanggal >= targetStart);
+            var safetyTalks = _context.SafetyTalks.Where(s => !s.IsDeleted && (companyId == null || s.PerusahaanId == companyId) && s.Tanggal >= targetStart);
+            var p5ms = _context.P5ms.Where(p => !p.IsDeleted && (companyId == null || p.PerusahaanId == companyId) && p.Tanggal >= targetStart);
             var coachings = _context.Coachings.Where(c => !c.IsDeleted && (companyId == null || c.PerusahaanId == companyId) && c.CreatedAt >= targetStart);
 
             // Average closure days for this company
