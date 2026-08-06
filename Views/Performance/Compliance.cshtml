@@ -1641,9 +1641,14 @@
             <h5 class="premium-title">
                 <i class="bi bi-trophy-fill me-2 text-warning" style="font-size: 18px;"></i>Top 10 Best Performance Companies
             </h5>
-            <span class="badge" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.25); font-weight: 700; font-size: 11px; padding: 5px 10px; border-radius: 8px;">
-                <i class="bi bi-star-fill me-1"></i>Peringkat Performa SAP
-            </span>
+            <div>
+                <button class="btn btn-sm btn-outline-warning" style="font-size: 11px; font-weight: 600; border-radius: 8px; margin-right: 8px;" data-bs-toggle="modal" data-bs-target="#scoringModal">
+                    <i class="bi bi-calculator me-1"></i>Rumus Penilaian
+                </button>
+                <span class="badge" style="background: rgba(234, 179, 8, 0.1); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.25); font-weight: 700; font-size: 11px; padding: 5px 10px; border-radius: 8px;">
+                    <i class="bi bi-star-fill me-1"></i>Peringkat Performa SAP
+                </span>
+            </div>
         </div>
         <div class="report-body p-0">
             @if (ViewBag.TopPerformanceList is List<MBS_SAP.Models.CompanyPerformanceViewModel> topPerformance && topPerformance.Any())
@@ -1738,6 +1743,46 @@
                     Data performa belum tersedia untuk bulan ini.
                 </div>
             }
+        </div>
+    </div>
+
+    <!-- Scoring Logic Modal -->
+    <div class="modal fade" id="scoringModal" tabindex="-1" aria-labelledby="scoringModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background-color: var(--card-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 15px;">
+                <div class="modal-header border-bottom" style="border-color: var(--border-color) !important;">
+                    <h6 class="modal-title fw-bold" id="scoringModalLabel"><i class="bi bi-calculator me-2 text-warning"></i>Transparansi Sistem Penilaian</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: var(--btn-close-filter);"></button>
+                </div>
+                <div class="modal-body" style="font-size: 13px;">
+                    <p class="mb-3">Skor akhir dihitung secara proporsional untuk menjamin keadilan baik bagi perusahaan skala besar (target ribuan) maupun perusahaan kecil (target sedikit):</p>
+                    <ul class="list-group list-group-flush mb-3" style="border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color);">
+                        <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.02); border-color: var(--border-color);">
+                            <div><strong>1. Capaian Target (20%)</strong><br><small class="text-muted">Total Aktual / Total Target. Maks 100%.</small></div>
+                            <span class="badge bg-primary rounded-pill">20%</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.02); border-color: var(--border-color);">
+                            <div><strong>2. Skala Beban / Effort (15%)</strong><br><small class="text-muted">Apresiasi khusus berdasarkan jumlah/volume target. <br/>Perusahaan kecil tetap dapat skor proporsional.</small></div>
+                            <span class="badge bg-info rounded-pill">15%</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.02); border-color: var(--border-color);">
+                            <div><strong>3. Close Rate (25%)</strong><br><small class="text-muted">Perusahaan kecil yang sangat cepat menyelesaiakan<br/>hazard akan diuntungkan secara masif di aspek ini.</small></div>
+                            <span class="badge bg-success rounded-pill">25%</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.02); border-color: var(--border-color);">
+                            <div><strong>4. Kualitas SAP (20%)</strong><br><small class="text-muted">Rata-rata Rating Kualitas (1-5 Bintang).</small></div>
+                            <span class="badge bg-warning text-dark rounded-pill">20%</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.02); border-color: var(--border-color);">
+                            <div><strong>5. Kecepatan (20%)</strong><br><small class="text-muted">Rata-rata penyelesaian (Hari).<br/>(Semakin cepat dari 14 hari, semakin tinggi).</small></div>
+                            <span class="badge bg-danger rounded-pill">20%</span>
+                        </li>
+                    </ul>
+                    <div class="alert alert-info py-2 px-3 mb-0" style="font-size: 12px; border-radius: 8px;">
+                        <i class="bi bi-info-circle me-1"></i> Perusahaan dengan karyawan sedikit bisa mengalahkan perusahaan besar asalkan mereka memiliki persentase <strong>Close Rate</strong> dan <strong>Kecepatan</strong> penyelesaian yang sangat baik!
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
