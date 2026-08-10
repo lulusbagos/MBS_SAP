@@ -89,6 +89,14 @@
         border: none;
         outline: none;
     }
+    .tab-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.05);
+    }
+    .tab-btn:active {
+        transform: translateY(0);
+        box-shadow: none;
+    }
     .tab-active {
         background: var(--color-primary) !important;
         color: white !important;
@@ -203,11 +211,16 @@
         background: var(--bg-card);
         border: 1px solid var(--border-color);
         border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.03);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
-        backdrop-filter: blur(12px);
+        backdrop-filter: blur(16px);
         position: relative;
+    }
+    .premium-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1), 0 8px 20px rgba(59, 130, 246, 0.1);
+        border-color: rgba(59, 130, 246, 0.3);
     }
     .premium-card::before {
         content: '';
@@ -360,6 +373,26 @@
     .subcon-scrollbar::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
     }
+    @@keyframes float-shape {
+        0% { transform: translateY(0) rotate(0deg) scale(1); }
+        50% { transform: translateY(-15px) rotate(5deg) scale(1.05); }
+        100% { transform: translateY(0) rotate(0deg) scale(1); }
+    }
+    .floating-shape-1 {
+        animation: float-shape 6s ease-in-out infinite;
+    }
+    .floating-shape-2 {
+        animation: float-shape 8s ease-in-out infinite reverse;
+    }
+    .custom-table tbody tr {
+        transition: all 0.25s ease;
+    }
+    .custom-table tbody tr:hover {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.06), transparent) !important;
+    }
+    .custom-table tbody tr:hover td:first-child {
+        padding-left: 1.5rem !important; /* Slide effect */
+    }
 </style>
 
 <div class="animate-fade-in pb-5">
@@ -367,8 +400,8 @@
     <!-- Header Banner -->
     <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
         <div style="background: linear-gradient(135deg, #0284c7, #0369a1); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
-            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
-            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div class="floating-shape-1" style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div class="floating-shape-2" style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
             <i class="bi bi-bar-chart-line-fill text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
             <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px;">PENCAPAIAN KINERJA SAP</h4>
             <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Pantau kepatuhan target mingguan dan statistik bahaya perusahaan secara real-time.</p>
@@ -450,10 +483,11 @@
         <!-- Donut Chart -->
         <div class="col-lg-4 col-md-6">
             <div class="report-card premium-card h-100">
-                <div class="report-header premium-header border-bottom">
+                <div class="report-header premium-header border-bottom d-flex flex-column align-items-start gap-1" style="padding-bottom: 16px;">
                     <h6 class="premium-title mb-0">
                         <i class="bi bi-pie-chart-fill me-2 text-primary"></i>Kepatuhan Penggunaan SAP (Keseluruhan)
                     </h6>
+                    <div class="text-muted" style="font-size: 11.5px; font-weight: 500; line-height: 1.4;">Menampilkan rasio karyawan yang telah memenuhi kewajiban mengisi SAP.</div>
                 </div>
                 <div class="report-body d-flex flex-column align-items-center justify-content-center p-4">
                     <div style="position: relative; width: 100%; max-width: 200px; aspect-ratio: 1/1;">
@@ -471,10 +505,11 @@
         <!-- Donut Chart: Karyawan Tanpa Target -->
         <div class="col-lg-4 col-md-6">
             <div class="report-card premium-card h-100">
-                <div class="report-header premium-header border-bottom">
+                <div class="report-header premium-header border-bottom d-flex flex-column align-items-start gap-1" style="padding-bottom: 16px;">
                     <h6 class="premium-title mb-0">
                         <i class="bi bi-person-slash me-2 text-info"></i>Karyawan Tanpa Target
                     </h6>
+                    <div class="text-muted" style="font-size: 11.5px; font-weight: 500; line-height: 1.4;">Jumlah karyawan aktif yang dikecualikan dari kewajiban target SAP.</div>
                 </div>
                 <div class="report-body d-flex flex-column align-items-center justify-content-center p-4">
                     <div style="position: relative; width: 100%; max-width: 200px; aspect-ratio: 1/1;">
@@ -492,10 +527,11 @@
         <!-- Child Company Breakdown -->
         <div class="col-lg-4 col-md-12">
             <div class="report-card premium-card h-100">
-                <div class="report-header premium-header border-bottom">
+                <div class="report-header premium-header border-bottom d-flex flex-column align-items-start gap-1" style="padding-bottom: 16px;">
                     <h6 class="premium-title mb-0">
                         <i class="bi bi-building-exclamation me-2 text-danger"></i>Terbanyak Belum Mengisi SAP
                     </h6>
+                    <div class="text-muted" style="font-size: 11.5px; font-weight: 500; line-height: 1.4;">Daftar perusahaan dengan karyawan wajib SAP terbanyak yang belum mengisi.</div>
                 </div>
                 <div class="report-body p-0">
                     <div class="list-group list-group-flush" style="border-radius: 0 0 16px 16px;">
@@ -548,6 +584,7 @@
                 <div>
                     <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 8px;">
                         Kepatuhan SAP MTD Group
+                        <i class="bi bi-info-circle ms-1" style="font-size: 11px; cursor: help;" data-bs-toggle="tooltip" title="Skor kepatuhan agregat bulan berjalan (Month-to-Date) untuk seluruh perusahaan."></i>
                     </div>
                     <div class="d-flex align-items-baseline gap-2 mb-2">
                         <span style="font-size: 46px; font-weight: 900; color: @(totalComplianceRate >= 85.0 ? "#22c55e" : (totalComplianceRate >= 50.0 ? "#f59e0b" : "#f43f5e")); font-family: 'Outfit', sans-serif;">
@@ -580,6 +617,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="premium-title" style="font-size: 15px; margin: 0;">
                         <i class="bi bi-grid-fill text-primary me-2"></i>Target & Gap Kepatuhan Program Wajib
+                        <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 13px; cursor: help;" data-bs-toggle="tooltip" title="Rincian perbandingan antara capaian aktual dan target untuk masing-masing program SAP wajib, beserta persentase kekurangan (Gap)."></i>
                     </h5>
                     <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25); font-weight: 700; font-size: 10.5px; border-radius: 6px; padding: 4px 8px;">
                         MTD Actual vs Target
@@ -659,6 +697,7 @@
                     <div class="premium-header">
                         <h5 class="premium-title">
                             <i class="bi bi-bar-chart-line-fill me-2 text-primary" style="font-size: 18px;"></i>Perbandingan Kepatuhan Maincon Utama (MTD Group)
+                            <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 14px; cursor: help;" data-bs-toggle="tooltip" title="Membandingkan persentase agregat kepatuhan SAP seluruh main contractor (termasuk subkontraktor di bawahnya)."></i>
                         </h5>
                         <span class="premium-badge">
                             Maincon + Subkontraktor
@@ -1000,6 +1039,7 @@
                             <div>
                                 <h3 class="report-title text-primary m-0" style="font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.5px;">
                                     <i class="bi bi-star-fill text-warning me-2"></i>TOP 10 PERUSAHAAN TERBAIK
+                                    <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 14px; cursor: help;" data-bs-toggle="tooltip" title="Daftar 10 anak perusahaan dengan persentase kepatuhan (Capped) tertinggi."></i>
                                 </h3>
                                 <p class="text-muted mb-0" style="font-size: 11px; font-weight: 500;">Berdasarkan % Kepatuhan & Jumlah Submisi</p>
                             </div>
@@ -1050,6 +1090,7 @@
                             <div>
                                 <h3 class="report-title text-success m-0" style="font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.5px;">
                                     <i class="bi bi-rocket-takeoff-fill text-success me-2"></i>TOP 10 OVER-ACHIEVER
+                                    <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 14px; cursor: help;" data-bs-toggle="tooltip" title="Daftar 10 anak perusahaan dengan jumlah submisi ekstra terbanyak di atas target mereka."></i>
                                 </h3>
                                 <p class="text-muted mb-0" style="font-size: 11px; font-weight: 500;">Target sudah sampai tapi tetap berkontribusi</p>
                             </div>
@@ -1104,9 +1145,11 @@
                             <div>
                                 <h3 class="report-title text-primary m-0" style="font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.5px;">
                                     <i class="bi bi-trophy-fill text-warning me-2"></i>🏆 PENCAPAIAN KEPATUHAN SAP ANAK PERUSAHAAN / SUBKONTRAKTOR
+                                    <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 14px; cursor: help;" data-bs-toggle="tooltip" title="Peringkat kepatuhan (Capped) subkontraktor, dinilai berdasarkan penyebaran karyawan yang memenuhi target individunya."></i>
                                 </h3>
                                 <p class="text-muted mb-0" style="font-size: 11px; font-weight: 500;">
                                     Diurutkan dari persentase kepatuhan tertinggi ke terendah
+                                    <span class="d-block mt-1" style="color: #6366f1;"><i class="bi bi-info-circle me-1"></i><strong>Info:</strong> Tabel ini murni mengukur tingkat kepatuhan <strong>individu karyawan secara merata</strong>. Jumlah submisi dibatasi (capped) sesuai target individu masing-masing karyawan.</span>
                                 </p>
                             </div>
                             <div class="d-flex align-items-center gap-2">
@@ -1212,8 +1255,8 @@
                                             <!-- Submissions Info -->
                                             <div class="d-flex align-items-center gap-3 justify-content-end text-end ms-auto" style="width: 150px; min-width: 150px;">
                                                 <div class="submissions-count">
-                                                    <div class="fw-bold" style="font-size: 12px; color: var(--text-main);">@sub.TotalSubmissions.ToString("N0") / @sub.TargetSubmissions.ToString("N0")</div>
-                                                    <div style="font-size: 9.5px; color: var(--text-muted);">Submisi / Target</div>
+                                                    <div class="fw-bold" style="font-size: 12px; color: var(--text-main); cursor: help;" data-bs-toggle="tooltip" title="Total submisi dibatasi (Capped) maksimal sesuai target individu">@sub.TotalSubmissions.ToString("N0") / @sub.TargetSubmissions.ToString("N0")</div>
+                                                    <div style="font-size: 9.5px; color: var(--text-muted); cursor: help;" data-bs-toggle="tooltip" title="Submisi (Capped) / Target Kepatuhan">Submisi / Target</div>
                                                 </div>
                                                 <div class="fw-extrabold" style="font-size: 14.5px; color: @barColor; font-family: 'Outfit', sans-serif; width: 62px;">
                                                     @val%
@@ -1248,6 +1291,7 @@
         <div class="report-header premium-header d-flex justify-content-between align-items-center">
             <h5 class="premium-title">
                 <i class="bi bi-bar-chart-fill me-2 text-primary" style="font-size: 18px;"></i>Pencapaian per Program SAP
+                <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 14px; cursor: help;" data-bs-toggle="tooltip" title="Statistik pemenuhan kewajiban per jenis program SAP (Hazard, Inspeksi, dll) secara keseluruhan."></i>
             </h5>
             <span class="badge" style="background: rgba(59,130,246,0.1); color: #3b82f6; border: 1px solid rgba(59,130,246,0.25); font-weight: 700; font-size: 11px; padding: 5px 10px; border-radius: 8px;">
                 <i class="bi bi-people-fill me-1"></i>@totalBerTarget Karyawan Ber-Target
@@ -1823,6 +1867,7 @@
         <div class="report-header premium-header d-flex justify-content-between align-items-center">
             <h5 class="premium-title">
                 <i class="bi bi-trophy-fill me-2 text-warning" style="font-size: 18px;"></i>Top 10 Best Performance Companies
+                <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 14px; cursor: help;" data-bs-toggle="tooltip" title="Peringkat perusahaan secara keseluruhan (Uncapped) menggunakan indikator gabungan (Submisi, Close Rate, Kecepatan, Kualitas)."></i>
             </h5>
             <div>
                 <button class="btn btn-sm btn-outline-warning" style="font-size: 11px; font-weight: 600; border-radius: 8px; margin-right: 8px;" data-bs-toggle="modal" data-bs-target="#scoringModal">
@@ -1834,6 +1879,14 @@
             </div>
         </div>
         <div class="report-body p-0">
+            <div class="alert mb-0" style="background: rgba(59, 130, 246, 0.05); border: none; border-bottom: 1px solid var(--border-color); border-radius: 0; padding: 12px 20px;">
+                <div class="d-flex align-items-start gap-2">
+                    <i class="bi bi-info-circle-fill text-primary" style="font-size: 14px; margin-top: 2px;"></i>
+                    <div style="font-size: 11.5px; color: var(--text-main); line-height: 1.5;">
+                        <strong>Info:</strong> Berbeda dengan tabel Kepatuhan SAP Anak Perusahaan, tabel ini mengukur <strong>performa agregat/keseluruhan (Uncapped)</strong>. Skor dihitung dari total semua submisi karyawan tanpa batasan maksimal, ditambah persentase Close Rate dan kecepatan penutupan Action Plan (hari).
+                    </div>
+                </div>
+            </div>
             @if (ViewBag.TopPerformanceList is List<MBS_SAP.Models.CompanyPerformanceViewModel> topPerformance && topPerformance.Any())
             {
                 <div class="table-responsive">
@@ -1875,10 +1928,10 @@
                                     </td>
                                     <td class="align-middle fw-bold" style="font-family: 'Outfit', sans-serif; color: var(--text-main);">@comp.CompanyName</td>
                                     <td class="text-center align-middle">
-                                          <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);" data-bs-toggle="tooltip" title="Persentase capaian dari keseluruhan target">
+                                          <span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);" data-bs-toggle="tooltip" title="Persentase capaian dari keseluruhan target tanpa batas maksimal (Uncapped)">
                                               @(comp.TotalTarget > 0 ? Math.Round(Math.Min(100, ((double)comp.TotalTemuan / comp.TotalTarget) * 100), 1) + "%" : "-")
                                           </span>
-                                          <div class="text-muted" style="font-size: 10px; margin-top: 2px; cursor: help;" data-bs-toggle="tooltip" title="Total Pencapaian Aktual / Total Target yang harus dicapai">@comp.TotalTemuan / @comp.TotalTarget</div>
+                                          <div class="text-muted" style="font-size: 10px; margin-top: 2px; cursor: help;" data-bs-toggle="tooltip" title="Total Submisi Aktual Keseluruhan (Uncapped) / Total Target yang harus dicapai">@comp.TotalTemuan / @comp.TotalTarget</div>
                                     </td>
                                     <td class="text-center align-middle">
                                         @{

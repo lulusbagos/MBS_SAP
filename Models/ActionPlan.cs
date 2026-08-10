@@ -100,5 +100,8 @@ namespace MBS_SAP.Models
         public bool IsDeleted { get; set; } = false;
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [NotMapped]
+        public string? TingkatResiko { get; set; }
     }
 }

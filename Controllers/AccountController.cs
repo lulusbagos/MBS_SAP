@@ -165,24 +165,24 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            if (!isValid)
-            {
-                ModelState.AddModelError("Nrp", "NRP atau Password salah, atau akun dinonaktifkan!");
-                return View();
-            }
-
             // Status karyawan di ONE DB MITRA menjadi acuan utama aktivasi akun login.
             // Wajib terdaftar di ONE DB MITRA
             if (karyawanMaster == null)
             {
-                ModelState.AddModelError("Nrp", "Akun tidak dapat digunakan karena NIK tidak terdaftar di ONE DB MITRA.");
+                ModelState.AddModelError("Nrp", "User tidak terdaftar.");
                 return View();
             }
 
             // Wajib berstatus aktif di ONE DB MITRA
             if (!karyawanMaster.StatusAktif)
             {
-                ModelState.AddModelError("Nrp", "Akun tidak dapat digunakan karena status karyawan sudah non aktif di ONE DB MITRA.");
+                ModelState.AddModelError("Nrp", "Status karyawan nonaktif di OneDB EV. Silahkan hubungi HR perusahaan.");
+                return View();
+            }
+
+            if (!isValid)
+            {
+                ModelState.AddModelError("Nrp", "Tidak bisa login karena password salah.");
                 return View();
             }
 

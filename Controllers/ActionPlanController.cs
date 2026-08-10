@@ -30,7 +30,7 @@ namespace MBS_SAP.Controllers
         }
 
         // GET: ActionPlan
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate)
         {
             ViewData["HeaderTitle"] = "Action Plan Temuan";
             ViewData["ActiveTab"] = "ActionPlan";
@@ -40,8 +40,14 @@ namespace MBS_SAP.Controllers
             int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
             var isAdmin = User.IsInRole("Admin");
 
-            var satuBulanLalu = DateTime.Now.AddMonths(-1);
-            var query = _context.ActionPlans.Where(r => !r.IsDeleted && r.CreatedAt >= satuBulanLalu);
+            var start = startDate ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var end = endDate ?? DateTime.Now.Date;
+            var endOfDay = end.AddDays(1).AddTicks(-1);
+
+            ViewBag.StartDate = start.ToString("yyyy-MM-dd");
+            ViewBag.EndDate = end.ToString("yyyy-MM-dd");
+
+            var query = _context.ActionPlans.Where(r => !r.IsDeleted && r.Tanggal >= start && r.Tanggal <= endOfDay);
 
             // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin, kecuali jika ditugaskan langsung ke user)
             if (companyId.HasValue)
@@ -62,6 +68,33 @@ namespace MBS_SAP.Controllers
                 .ThenByDescending(r => r.Tanggal)
                 .ThenByDescending(r => r.CreatedAt)
                 .ToListAsync();
+
+            // Populate TingkatResiko
+            var hazardIds = reports.Where(r => r.ItemSap != null && r.ItemSap.StartsWith("hazard:"))
+                .Select(r => { int.TryParse(r.ItemSap!.Substring(7), out int id); return id; })
+                .Where(id => id > 0).ToList();
+            var obsIds = reports.Where(r => r.ItemSap != null && r.ItemSap.StartsWith("observation:"))
+                .Select(r => { int.TryParse(r.ItemSap!.Substring(12), out int id); return id; })
+                .Where(id => id > 0).ToList();
+
+            var hazards = await _context.HazardReports.Where(h => hazardIds.Contains(h.Id)).ToDictionaryAsync(h => h.Id, h => h.TingkatResiko);
+            var observations = await _context.Observations.Where(o => obsIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.TingkatResiko);
+
+            foreach (var r in reports)
+            {
+                if (r.ItemSap != null)
+                {
+                    if (r.ItemSap.StartsWith("hazard:") && int.TryParse(r.ItemSap.Substring(7), out int hId) && hazards.ContainsKey(hId))
+                    {
+                        r.TingkatResiko = hazards[hId];
+                    }
+                    else if (r.ItemSap.StartsWith("observation:") && int.TryParse(r.ItemSap.Substring(12), out int oId) && observations.ContainsKey(oId))
+                    {
+                        r.TingkatResiko = observations[oId];
+                    }
+                }
+            }
+
             var perusahaanIds = reports.Where(r => r.PerusahaanId.HasValue).Select(r => r.PerusahaanId!.Value).Distinct().ToList();
             var perusahaans = await _context.Perusahaans.Where(p => perusahaanIds.Contains(p.PerusahaanId)).ToListAsync();
             ViewBag.Perusahaans = perusahaans;
@@ -209,14 +242,18 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> DownloadExcel()
+        public async Task<IActionResult> DownloadExcel(DateTime? startDate, DateTime? endDate)
         {
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var compIdStr = User.FindFirst("CompanyId")?.Value;
             int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
             var isAdmin = User.IsInRole("Admin");
 
-            var query = _context.ActionPlans.Where(r => !r.IsDeleted);
+            var start = startDate ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var end = endDate ?? DateTime.Now.Date;
+            var endOfDay = end.AddDays(1).AddTicks(-1);
+
+            var query = _context.ActionPlans.Where(r => !r.IsDeleted && r.Tanggal >= start && r.Tanggal <= endOfDay);
 
             // Filter berdasarkan hierarki perusahaan (sama seperti Index)
             if (companyId.HasValue)

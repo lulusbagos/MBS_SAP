@@ -138,61 +138,85 @@
     }
 
     <!-- ── Modern Pill Filter Bar ─────────────────────────────────── -->
-    <div class="ap-filter-bar">
-        <!-- Tipe -->
-        <div class="ap-filter-group">
-            <span class="ap-filter-label">Tipe</span>
-            <button class="ap-pill active filter-type" data-type="all">Semua</button>
-            <button class="ap-pill filter-type" data-type="hazard" data-active-class="active">Hazard</button>
-            <button class="ap-pill filter-type" data-type="inspection" data-active-class="active">Inspeksi</button>
+    <div class="ap-filter-bar flex-column align-items-stretch">
+        <div class="d-flex flex-wrap align-items-center gap-3 justify-content-between w-100 mb-3 pb-3 border-bottom">
+            <form method="get" asp-action="Index" class="d-flex flex-wrap align-items-center gap-2">
+                <span class="ap-filter-label"><i class="bi bi-calendar3 me-1"></i>Periode Tanggal</span>
+                <input type="date" name="startDate" class="form-control form-control-sm" style="width: auto; border-radius: 99px; font-size: 12px;" value="@ViewBag.StartDate" />
+                <span class="text-muted" style="font-size: 12px;">s/d</span>
+                <input type="date" name="endDate" class="form-control form-control-sm" style="width: auto; border-radius: 99px; font-size: 12px;" value="@ViewBag.EndDate" />
+                <button type="submit" class="btn btn-sm btn-primary" style="border-radius: 99px; font-size: 11px; font-weight: 600; padding: 4px 12px;">Terapkan</button>
+            </form>
+            <div class="d-flex align-items-center gap-2">
+                <span id="visibleCount" class="badge" style="background: rgba(56,189,248,0.15); color: var(--color-primary); font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 99px; border: 1px solid rgba(56,189,248,0.25);">
+                    @(Model?.Count() ?? 0) item
+                </span>
+                <a asp-controller="ActionPlan" asp-action="DownloadExcel" asp-route-startDate="@ViewBag.StartDate" asp-route-endDate="@ViewBag.EndDate" class="btn btn-sm btn-outline-success" style="border-radius: 999px; font-weight: 700; font-size: 11px; padding: 4px 12px; display: flex; align-items: center; gap: 4px;">
+                    <i class="bi bi-file-earmark-excel-fill"></i> Export Excel
+                </a>
+            </div>
         </div>
 
-        <div class="ap-divider d-none d-md-block"></div>
+        <div class="d-flex flex-wrap align-items-center gap-3 w-100">
+            <!-- Tipe -->
+            <div class="ap-filter-group">
+                <span class="ap-filter-label">Tipe</span>
+                <button class="ap-pill active filter-type" data-type="all">Semua</button>
+                <button class="ap-pill filter-type" data-type="hazard" data-active-class="active">Hazard</button>
+                <button class="ap-pill filter-type" data-type="inspection" data-active-class="active">Inspeksi</button>
+            </div>
 
-        <!-- Status -->
-        <div class="ap-filter-group">
-            <span class="ap-filter-label">Status</span>
-            <button class="ap-pill active filter-status" data-status="all">Semua</button>
-            <button class="ap-pill filter-status" data-status="open" data-active-class="active-red">Open</button>
-            <button class="ap-pill filter-status" data-status="closed" data-active-class="active-green">Closed</button>
-        </div>
-        
-        <div class="ap-divider d-none d-md-block"></div>
+            <div class="ap-divider d-none d-md-block"></div>
 
-        <!-- Perusahaan -->
-        <div class="ap-filter-group">
-            <span class="ap-filter-label">Perusahaan</span>
-            <select id="filterPerusahaan" class="form-select form-select-sm" style="width: auto; border-radius: 99px; font-size: 12px; font-weight: 600; padding: 4px 28px 4px 12px; border-color: var(--border-color); color: var(--text-muted); cursor: pointer;">
-                <option value="all">Semua Perusahaan</option>
-                @if (ViewBag.Perusahaans != null) {
-                    foreach (var p in (IEnumerable<MBS_SAP.Models.PerusahaanView>)ViewBag.Perusahaans) {
-                        <option value="@p.PerusahaanId">@p.NamaPerusahaan</option>
+            <!-- Status -->
+            <div class="ap-filter-group">
+                <span class="ap-filter-label">Status</span>
+                <button class="ap-pill filter-status" data-status="all">Semua</button>
+                <button class="ap-pill active-red filter-status" data-status="open" data-active-class="active-red">Open</button>
+                <button class="ap-pill filter-status" data-status="closed" data-active-class="active-green">Closed</button>
+            </div>
+            
+            <div class="ap-divider d-none d-md-block"></div>
+
+            <!-- Perusahaan -->
+            <div class="ap-filter-group">
+                <span class="ap-filter-label">Perusahaan</span>
+                <select id="filterPerusahaan" class="form-select form-select-sm" style="width: auto; border-radius: 99px; font-size: 12px; font-weight: 600; padding: 4px 28px 4px 12px; border-color: var(--border-color); color: var(--text-muted); cursor: pointer;">
+                    <option value="all">Semua Perusahaan</option>
+                    @if (ViewBag.Perusahaans != null) {
+                        foreach (var p in (IEnumerable<MBS_SAP.Models.PerusahaanView>)ViewBag.Perusahaans) {
+                            <option value="@p.PerusahaanId">@p.NamaPerusahaan</option>
+                        }
                     }
-                }
-            </select>
-        </div>
-        
-        <!-- Departemen -->
-        <div class="ap-filter-group">
-            <span class="ap-filter-label">Departemen</span>
-            <select id="filterDepartemen" class="form-select form-select-sm" style="width: auto; border-radius: 99px; font-size: 12px; font-weight: 600; padding: 4px 28px 4px 12px; border-color: var(--border-color); color: var(--text-muted); cursor: pointer;">
-                <option value="all">Semua Departemen</option>
-                @if (ViewBag.Departemens != null) {
-                    foreach (var d in (IEnumerable<string>)ViewBag.Departemens) {
-                        <option value="@d">@d</option>
+                </select>
+            </div>
+            
+            <!-- Departemen -->
+            <div class="ap-filter-group">
+                <span class="ap-filter-label">Departemen</span>
+                <select id="filterDepartemen" class="form-select form-select-sm" style="width: auto; border-radius: 99px; font-size: 12px; font-weight: 600; padding: 4px 28px 4px 12px; border-color: var(--border-color); color: var(--text-muted); cursor: pointer;">
+                    <option value="all">Semua Departemen</option>
+                    @if (ViewBag.Departemens != null) {
+                        foreach (var d in (IEnumerable<string>)ViewBag.Departemens) {
+                            <option value="@d">@d</option>
+                        }
                     }
-                }
-            </select>
-        </div>
+                </select>
+            </div>
+            
+            <div class="ap-divider d-none d-md-block"></div>
 
-        <!-- Count badge & Export Excel -->
-        <div class="ms-auto d-flex align-items-center gap-2">
-            <span id="visibleCount" class="badge" style="background: rgba(56,189,248,0.15); color: var(--color-primary); font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 99px; border: 1px solid rgba(56,189,248,0.25);">
-                @(Model?.Count() ?? 0) item
-            </span>
-            <a asp-controller="ActionPlan" asp-action="DownloadExcel" class="btn btn-sm btn-outline-success" style="border-radius: 999px; font-weight: 700; font-size: 11px; padding: 4px 12px; display: flex; align-items: center; gap: 4px;">
-                <i class="bi bi-file-earmark-excel-fill"></i> Export Excel
-            </a>
+            <!-- Kriteria Resiko -->
+            <div class="ap-filter-group">
+                <span class="ap-filter-label">Resiko</span>
+                <select id="filterResiko" class="form-select form-select-sm" style="width: auto; border-radius: 99px; font-size: 12px; font-weight: 600; padding: 4px 28px 4px 12px; border-color: var(--border-color); color: var(--text-muted); cursor: pointer;">
+                    <option value="all">Semua Resiko</option>
+                    <option value="low">Low (Rendah)</option>
+                    <option value="medium">Medium (Sedang)</option>
+                    <option value="high">High (Tinggi)</option>
+                    <option value="ekstrim">Ekstrim</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -221,7 +245,8 @@
                      data-type="@(displayType?.ToLower() ?? "hazard")"
                      data-status="@(isOpen ? "open" : "closed")"
                      data-perusahaan="@(item.PerusahaanId)"
-                     data-departemen="@(item.Departemen)">
+                     data-departemen="@(item.Departemen)"
+                     data-resiko="@(item.TingkatResiko?.ToLower() ?? "unknown")">
                     <div class="card-sap @(isOpen ? "border-red-accent" : "border-green-accent") h-100 d-flex flex-column justify-content-between" style="@(isOpen ? "box-shadow: 0 4px 15px rgba(244, 63, 94, 0.15);" : "")">
                         <div>
                             <!-- ── Card Header ── -->
@@ -230,6 +255,14 @@
                                     <span class="badge bg-secondary text-white" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">
                                         @displayType
                                     </span>
+                                    @if (!string.IsNullOrEmpty(item.TingkatResiko))
+                                    {
+                                        var riskColor = item.TingkatResiko.ToLower() == "high" || item.TingkatResiko.ToLower() == "tinggi" || item.TingkatResiko.ToLower() == "ekstrim" ? "bg-danger" :
+                                                        item.TingkatResiko.ToLower() == "medium" || item.TingkatResiko.ToLower() == "sedang" ? "bg-warning text-dark" : "bg-info";
+                                        <span class="badge @riskColor ms-1" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">
+                                            @item.TingkatResiko
+                                        </span>
+                                    }
                                     <h6 class="text-white mt-1 mb-0" style="font-weight: 800; font-size: 16px;">
                                         @item.KategoriTemuan
                                     </h6>
@@ -431,10 +464,10 @@
         $(document).ready(function () {
             const urlParams = new URLSearchParams(window.location.search);
             let selectedType   = (urlParams.get('type') || 'all').toLowerCase();
-            let selectedStatus = (urlParams.get('status') || 'all').toLowerCase();
+            let selectedStatus = (urlParams.get('status') || 'open').toLowerCase();
 
-            // Set initial active pill for status if passed in URL
-            if (selectedStatus !== 'all') {
+            // Set initial active pill for status
+            if (selectedStatus !== 'open') {
                 $('.filter-status').removeClass('active active-green active-red');
                 const $statusPill = $('.filter-status[data-status="' + selectedStatus + '"]');
                 if ($statusPill.length) {
@@ -456,6 +489,7 @@
 
             let selectedPerusahaan = 'all';
             let selectedDepartemen = 'all';
+            let selectedResiko = 'all';
 
             $('#filterPerusahaan').on('change', function() {
                 selectedPerusahaan = $(this).val();
@@ -467,21 +501,40 @@
                 applyFilters();
             });
 
+            $('#filterResiko').on('change', function() {
+                selectedResiko = $(this).val();
+                applyFilters();
+            });
+
             function applyFilters() {
                 let visible = 0;
                 $('.action-plan-item').each(function () {
-                    const t = $(this).data('type')   || '';
-                    const s = $(this).data('status') || '';
-                    const p = $(this).data('perusahaan') || '';
-                    const d = $(this).data('departemen') || '';
+                    const t = $(this).attr('data-type') || '';
+                    const s = $(this).attr('data-status') || '';
+                    const p = $(this).attr('data-perusahaan') || '';
+                    const d = $(this).attr('data-departemen') || '';
+                    const r = $(this).attr('data-resiko') || '';
 
-                    const matchT = (selectedType   === 'all' || t === selectedType);
+                    const matchT = (selectedType === 'all' || t === selectedType);
                     const matchS = (selectedStatus === 'all' || s === selectedStatus);
-                    const matchP = (selectedPerusahaan === 'all' || p == selectedPerusahaan);
+                    const matchP = (selectedPerusahaan === 'all' || p === selectedPerusahaan);
                     const matchD = (selectedDepartemen === 'all' || d === selectedDepartemen);
+                    
+                    let matchR = (selectedResiko === 'all');
+                    if (!matchR) {
+                        if (selectedResiko === 'low' && (r === 'low' || r === 'rendah')) matchR = true;
+                        else if (selectedResiko === 'medium' && (r === 'medium' || r === 'sedang')) matchR = true;
+                        else if (selectedResiko === 'high' && (r === 'high' || r === 'tinggi')) matchR = true;
+                        else if (selectedResiko === 'ekstrim' && r === 'ekstrim') matchR = true;
+                        else if (r === selectedResiko) matchR = true;
+                    }
 
-                    if (matchT && matchS && matchP && matchD) { $(this).show(); visible++; }
-                    else { $(this).hide(); }
+                    if (matchT && matchS && matchP && matchD && matchR) {
+                        $(this).show();
+                        visible++;
+                    } else {
+                        $(this).hide();
+                    }
                 });
 
                 $('#visibleCount').text(visible + ' item');

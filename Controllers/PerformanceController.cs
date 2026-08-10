@@ -171,12 +171,15 @@ namespace MBS_SAP.Controllers
                                       join p in _context.Personals on k.IdPersonal equals p.IdPersonal
                                       join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
                                       from d in dg.DefaultIfEmpty()
+                                      join j in _context.Jabatans on k.IdJabatan equals j.JabatanId into jg
+                                      from j in jg.DefaultIfEmpty()
                                       where k.IdPerusahaan == companyId && k.StatusAktif == true
                                       select new {
                                           k.IdKaryawan,
                                           k.NoNik,
                                           NamaLengkap = p.NamaLengkap,
-                                          NamaDepartemen = d != null ? d.NamaDepartemen : "General"
+                                          NamaDepartemen = d != null ? d.NamaDepartemen : "General",
+                                          NamaJabatan = j != null ? j.NamaJabatan : "Staff/Operator"
                                       }).ToListAsync();
 
             var targetMappingCompany = await _context.KaryawanJabatanMappings

@@ -1039,7 +1039,7 @@
                                             <td class="align-left">
                                                 <div class="fw-bold" style="color: #334155; font-size: 13px;">@emp.name</div>
                                                 <div style="font-size: 10px; color: #64748b;">
-                                                    @emp.nik &bull; <span class="badge bg-light text-dark py-0" style="font-size: 9px;">@emp.departmentName</span>
+                                                    @emp.nik &bull; <span class="badge bg-light text-dark py-0" style="font-size: 9px;">@emp.departmentName</span> &bull; <span style="font-size: 9px; color: #94a3b8;">@(emp.jabatanName ?? "-")</span>
                                                 </div>
                                             </td>
                                             <td class="text-center fw-bold" style="color: @GetRateColor(emp.complianceRate); font-size: 13px;">@emp.complianceRate%</td>

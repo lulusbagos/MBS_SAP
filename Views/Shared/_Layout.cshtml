@@ -131,6 +131,16 @@
                             <span>User Management</span>
                         </a>
                     }
+                    @{
+                        var isSafetyAdmin = (isAdminUser || (User.FindFirst("JobTitle")?.Value ?? "").Contains("Safety", StringComparison.OrdinalIgnoreCase));
+                    }
+                    @if (isSafetyAdmin)
+                    {
+                        <a asp-controller="UserSupport" asp-action="ResetPassword" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "ResetPassword" ? "active" : "")">
+                            <i class="bi bi-key" style="color: #ef4444;"></i>
+                            <span>Reset Password</span>
+                        </a>
+                    }
                 </nav>
 
                 <div class="sidebar-footer">
