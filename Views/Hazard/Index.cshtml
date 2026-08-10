@@ -311,8 +311,17 @@
                     {
                         var delayClass = "delay-" + (loopIndex > 6 ? 6 : loopIndex);
                         var isCreatorOrAdmin = item.Nik == currentUserNik || isAdmin;
-                        <div class="card-sap animate-fade-in @delayClass @(item.TingkatResiko == "Ekstrim" || item.TingkatResiko == "Tinggi" ? "border-red-accent" : item.TingkatResiko == "Sedang" ? "border-orange-accent" : "border-primary-accent") @(string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase) ? "hazard-card-closed" : "") mb-0" data-status="@(item.StatusTemuan ?? "Open")" data-risk="@(item.TingkatResiko ?? "Rendah")" data-search-text="@(($"{item.Lokasi} {item.Area} {item.Nama} {item.Temuan}").ToLower())">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
+                        var isAssignedToMe = item.NikPja == currentUserNik && item.Nik != currentUserNik;
+                        var cardClass = item.TingkatResiko == "Ekstrim" || item.TingkatResiko == "Tinggi" ? "border-red-accent" : item.TingkatResiko == "Sedang" ? "border-orange-accent" : "border-primary-accent";
+                        var cardStyle = isAssignedToMe ? "background: rgba(13, 202, 240, 0.05); border: 2px solid #0dcaf0; position: relative;" : "";
+                        <div class="card-sap animate-fade-in @delayClass @cardClass @(string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase) ? "hazard-card-closed" : "") mb-0" style="@cardStyle" data-status="@(item.StatusTemuan ?? "Open")" data-risk="@(item.TingkatResiko ?? "Rendah")" data-search-text="@(($"{item.Lokasi} {item.Area} {item.Nama} {item.Temuan}").ToLower())">
+                            @if (isAssignedToMe && !string.Equals(item.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <div style="position: absolute; top: -10px; right: 10px; background: #0dcaf0; color: #000; font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 12px; box-shadow: 0 4px 8px rgba(13,202,240,0.4); z-index: 1;">
+                                    <i class="bi bi-bell-fill me-1"></i> TUGAS UNTUK ANDA
+                                </div>
+                            }
+                            <div class="d-flex justify-content-between align-items-start mb-2 mt-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="history-badge @(item.KategoriBahaya != null && item.KategoriBahaya.Contains("Tindakan") ? "hazard" : "inspection")" style="width: 28px; height: 28px; font-size: 14px;">
                                         <i class="bi @(item.KategoriBahaya != null && item.KategoriBahaya.Contains("Tindakan") ? "bi-person-fill-exclamation" : "bi-exclamation-triangle-fill")"></i>

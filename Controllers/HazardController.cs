@@ -44,18 +44,8 @@ namespace MBS_SAP.Controllers
             var satuBulanLalu = DateTime.Now.AddMonths(-1);
             var query = _context.HazardReports.Where(r => !r.IsDeleted && r.CreatedAt >= satuBulanLalu);
 
-            // Tampilkan data berdasarkan perusahaan user saat ini (strict per company, kecuali jika ditugaskan langsung ke user)
-            if (companyId.HasValue)
-            {
-                query = query.Where(r =>
-                    r.PerusahaanId == companyId.Value ||
-                    r.Nik == userNik ||
-                    r.NikPja == userNik
-                );
-            }
-
-            // Non-Admin hanya melihat miliknya sendiri atau yang ditugaskan kepadanya
-            if (!isAdmin && !string.IsNullOrEmpty(userNik))
+            // Tampilkan history pembuatan hazard nik login saja dan hazard yang diarahkan ke nik login
+            if (!string.IsNullOrEmpty(userNik))
             {
                 query = query.Where(r => r.Nik == userNik || r.NikPja == userNik);
             }
