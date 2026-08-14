@@ -2431,7 +2431,6 @@ namespace MBS_SAP.Controllers
                 foreach (var comp in companiesToCompare)
                 {
                     var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth);
-                    if (!compEmps.Any()) continue;
 
                     allEmployees.AddRange(compEmps);
 
@@ -2683,7 +2682,6 @@ namespace MBS_SAP.Controllers
                 foreach (var comp in companiesToCompare)
                 {
                     var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId);
-                    if (!compEmps.Any()) continue;
                     allEmployees.AddRange(compEmps);
                 }
 
