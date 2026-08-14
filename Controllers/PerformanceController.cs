@@ -2930,6 +2930,24 @@ namespace MBS_SAP.Controllers
             // Heavy GetEmployeesComplianceData for all companies removed.
             // SAP Programs stats and ViewBags are now optimally calculated during Section 4 Group Metrics.
 
+            // Action Plan Overall Stats
+            var allCompanyActionPlans = await _context.ActionPlans
+                .Where(a => !a.IsDeleted && a.PerusahaanId == selectedCompanyId)
+                .Select(a => new { a.Status, a.RencanaPerbaikan })
+                .ToListAsync();
+
+            int apOutstanding = allCompanyActionPlans.Count(a => a.Status == "Open" && string.IsNullOrEmpty(a.RencanaPerbaikan));
+            int apProgress = allCompanyActionPlans.Count(a => a.Status == "Open" && !string.IsNullOrEmpty(a.RencanaPerbaikan));
+            int apClosed = allCompanyActionPlans.Count(a => a.Status == "Closed");
+            int apTotal = apOutstanding + apProgress + apClosed;
+
+            ViewBag.ApOutstanding = apOutstanding;
+            ViewBag.ApProgress = apProgress;
+            ViewBag.ApClosed = apClosed;
+            ViewBag.ApTotal = apTotal;
+            ViewBag.ApOutstandingPct = apTotal > 0 ? (int)Math.Round((double)apOutstanding / apTotal * 100) : 0;
+            ViewBag.ApProgressPct = apTotal > 0 ? (int)Math.Round((double)apProgress / apTotal * 100) : 0;
+            ViewBag.ApClosedPct = apTotal > 0 ? (int)Math.Round((double)apClosed / apTotal * 100) : 0;
 
             // 1. Action Plans by Department (creator's department)
             var actionPlanDeptStats = await _context.ActionPlans
