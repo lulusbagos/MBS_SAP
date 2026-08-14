@@ -121,6 +121,10 @@ namespace MBS_SAP.Controllers
                                          .OrderBy(d => d)
                                          .ToList();
 
+            ViewBag.CountOutstanding = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(r.RencanaPerbaikan));
+            ViewBag.CountProgress = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(r.RencanaPerbaikan));
+            ViewBag.CountClosed = reports.Count(r => string.Equals(r.Status, "Closed", StringComparison.OrdinalIgnoreCase));
+
             return View(reports);
         }
 

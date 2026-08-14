@@ -158,6 +158,46 @@
             </div>
         </div>
 
+        <!-- ── DASHBOARD SUMMARY ── -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-2 mb-md-0">
+                <div class="card-sap border-0 p-3 h-100 d-flex align-items-center" style="background: linear-gradient(135deg, rgba(244, 63, 94, 0.1) 0%, rgba(225, 29, 72, 0.15) 100%); border-left: 4px solid #f43f5e !important; box-shadow: 0 4px 15px rgba(244, 63, 94, 0.1);">
+                    <div class="me-3">
+                        <i class="bi bi-exclamation-octagon-fill" style="font-size: 2rem; color: #f43f5e;"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0" style="font-weight: 800; font-size: 13px; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.5px;">Outstanding</h6>
+                        <h3 class="mb-0" style="font-weight: 900; color: var(--text-main);">@(ViewBag.CountOutstanding ?? 0)</h3>
+                        <small style="font-size: 10px; color: var(--text-muted);">Belum direspons / belum ada Action Plan</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-2 mb-md-0">
+                <div class="card-sap border-0 p-3 h-100 d-flex align-items-center" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.15) 100%); border-left: 4px solid #f59e0b !important; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.1);">
+                    <div class="me-3">
+                        <i class="bi bi-tools" style="font-size: 2rem; color: #f59e0b;"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0" style="font-weight: 800; font-size: 13px; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px;">In Progress</h6>
+                        <h3 class="mb-0" style="font-weight: 900; color: var(--text-main);">@(ViewBag.CountProgress ?? 0)</h3>
+                        <small style="font-size: 10px; color: var(--text-muted);">Sedang dikerjakan (memiliki Action Plan)</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-sap border-0 p-3 h-100 d-flex align-items-center" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.15) 100%); border-left: 4px solid #10b981 !important; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.1);">
+                    <div class="me-3">
+                        <i class="bi bi-check-circle-fill" style="font-size: 2rem; color: #10b981;"></i>
+                    </div>
+                    <div>
+                        <h6 class="mb-0" style="font-weight: 800; font-size: 13px; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">Closed</h6>
+                        <h3 class="mb-0" style="font-weight: 900; color: var(--text-main);">@(ViewBag.CountClosed ?? 0)</h3>
+                        <small style="font-size: 10px; color: var(--text-muted);">Perbaikan telah diverifikasi & selesai</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="d-flex flex-wrap align-items-center gap-3 w-100">
             <!-- Tipe -->
             <div class="ap-filter-group">
@@ -173,7 +213,8 @@
             <div class="ap-filter-group">
                 <span class="ap-filter-label">Status</span>
                 <button class="ap-pill filter-status" data-status="all">Semua</button>
-                <button class="ap-pill active-red filter-status" data-status="open" data-active-class="active-red">Open</button>
+                <button class="ap-pill filter-status active-red" data-status="outstanding" data-active-class="active-red">Outstanding</button>
+                <button class="ap-pill filter-status" data-status="progress" data-active-class="active" style="--color-primary: #f59e0b;">Progress</button>
                 <button class="ap-pill filter-status" data-status="closed" data-active-class="active-green">Closed</button>
             </div>
             
@@ -235,6 +276,10 @@
             @foreach (var item in Model)
             {
                 var isOpen = item.Status?.Equals("Open", StringComparison.OrdinalIgnoreCase) ?? true;
+                var isProgress = isOpen && !string.IsNullOrEmpty(item.RencanaPerbaikan);
+                var isOutstanding = isOpen && string.IsNullOrEmpty(item.RencanaPerbaikan);
+                var isClosed = !isOpen;
+                
                 var displayType = item.ItemSap;
                 if (!string.IsNullOrEmpty(displayType) && displayType.Contains(":"))
                 {
@@ -242,9 +287,11 @@
                 }
                 var isReassigned = !string.IsNullOrEmpty(item.ReassignedFrom) && !string.IsNullOrEmpty(item.ReassignedTo);
 
+                var statusKey = isClosed ? "closed" : (isProgress ? "progress" : "outstanding");
+
                 <div class="col-md-6 mb-4 action-plan-item"
                      data-type="@(displayType?.ToLower() ?? "hazard")"
-                     data-status="@(isOpen ? "open" : "closed")"
+                     data-status="@statusKey"
                      data-perusahaan="@(item.PerusahaanId)"
                      data-departemen="@(item.Departemen)"
                      data-departemenpja="@(item.DepartemenPja)"
@@ -253,7 +300,7 @@
                      data-nikpja="@(item.NikPja)"
                      data-nikpic="@(item.NikPic)"
                      data-resiko="@(item.TingkatResiko?.ToLower() ?? "unknown")">
-                    <div id="card-@item.Id" class="card-sap @(isOpen ? "border-red-accent" : "border-green-accent") h-100 d-flex flex-column justify-content-between" style="@(isOpen ? "box-shadow: 0 4px 15px rgba(244, 63, 94, 0.15);" : "")">
+                    <div id="card-@item.Id" class="card-sap @(isClosed ? "border-green-accent" : (isProgress ? "border-warning-accent" : "border-red-accent")) h-100 d-flex flex-column justify-content-between" style="@(isClosed ? "" : (isProgress ? "box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15); border-color: #f59e0b;" : "box-shadow: 0 4px 15px rgba(244, 63, 94, 0.15);"))">
                         <div>
                             <!-- ── Card Header ── -->
                             <div class="d-flex justify-content-between align-items-start mb-2">
@@ -298,9 +345,24 @@
                                             </span>
                                         }
                                     }
-                                    <span class="status-badge @(isOpen ? "pending" : "approved")" style="@(isOpen ? "animation: pulse 2s infinite; border: 1px solid #f43f5e;" : "")">
-                                        @(isOpen ? "PRIORITY - OPEN" : "Closed")
-                                    </span>
+                                    @if (isOutstanding)
+                                    {
+                                        <span class="status-badge pending" style="animation: pulse 2s infinite; border: 1px solid #f43f5e;">
+                                            <i class="bi bi-exclamation-octagon-fill me-1"></i> OUTSTANDING
+                                        </span>
+                                    }
+                                    else if (isProgress)
+                                    {
+                                        <span class="status-badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid #f59e0b; font-weight: 800; text-transform: uppercase;">
+                                            <i class="bi bi-tools me-1"></i> IN PROGRESS
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge approved">
+                                            <i class="bi bi-check-circle-fill me-1"></i> CLOSED
+                                        </span>
+                                    }
                                 </div>
                             </div>
 
@@ -570,14 +632,14 @@
         $(document).ready(function () {
             const urlParams = new URLSearchParams(window.location.search);
             let selectedType   = (urlParams.get('type') || 'all').toLowerCase();
-            let selectedStatus = (urlParams.get('status') || 'open').toLowerCase();
+            let selectedStatus = (urlParams.get('status') || 'outstanding').toLowerCase();
             let specialFilter  = urlParams.get('filter'); // 'mine' or 'dept'
             let specialDept    = urlParams.get('dept');
             const currentUserNik = '@userNik';
             const currentUserDept = '@(User.FindFirst("Department")?.Value ?? "")'.toLowerCase();
 
             // Set initial active pill for status
-            if (selectedStatus !== 'open') {
+            if (selectedStatus !== 'outstanding') {
                 $('.filter-status').removeClass('active active-green active-red');
                 const $statusPill = $('.filter-status[data-status="' + selectedStatus + '"]');
                 if ($statusPill.length) {
@@ -631,7 +693,7 @@
                     const nikpic = $(this).attr('data-nikpic') || '';
 
                     let matchT = (selectedType === 'all' || t === selectedType);
-                    let matchS = (selectedStatus === 'all' || s === selectedStatus);
+                    let matchS = (selectedStatus === 'all' || s === selectedStatus || (selectedStatus === 'open' && (s === 'outstanding' || s === 'progress')));
                     let matchP = (selectedPerusahaan === 'all' || p === selectedPerusahaan);
                     let matchD = (selectedDepartemen === 'all' || d === selectedDepartemen);
                     
@@ -695,7 +757,7 @@
                 $('.filter-status').removeClass('active active-green active-red');
                 const cls = $(this).data('active-class') || 'active';
                 $(this).addClass(cls);
-                selectedStatus = $(this).data('status');
+                selectedStatus = $(this).attr('data-status') || 'all';
                 applyFilters();
             });
         });
