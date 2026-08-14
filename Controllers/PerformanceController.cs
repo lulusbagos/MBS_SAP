@@ -2385,7 +2385,7 @@ namespace MBS_SAP.Controllers
                 var companyStandings = new List<dynamic>();
                 var allEmployees = new List<dynamic>();
 
-                var companiesToCompare = allCompanies;
+                var companiesToCompare = allowedCompanies;
                 if (selectedCompanyId > 0)
                 {
                     var childIds = allCompanies.Where(c => c.PerusahaanIndukId == selectedCompanyId).Select(c => c.PerusahaanId).ToList();
@@ -2395,7 +2395,11 @@ namespace MBS_SAP.Controllers
                     if (allChildIds.Any())
                     {
                         var targetCompanyIds = new HashSet<int>(allChildIds) { selectedCompanyId };
-                        companiesToCompare = allCompanies.Where(c => targetCompanyIds.Contains(c.PerusahaanId)).ToList();
+                        companiesToCompare = allowedCompanies.Where(c => targetCompanyIds.Contains(c.PerusahaanId)).ToList();
+                    }
+                    else
+                    {
+                        companiesToCompare = allowedCompanies.Where(c => c.PerusahaanId == selectedCompanyId).ToList();
                     }
                 }
 
@@ -2631,7 +2635,7 @@ namespace MBS_SAP.Controllers
 
             if (mode == "company" || mode == "core")
             {
-                var companiesToCompare = allCompanies;
+                var companiesToCompare = allowedCompanies;
                 
                 if (mode == "core")
                 {
@@ -2656,6 +2660,23 @@ namespace MBS_SAP.Controllers
                         "PT KARUNIA ARMADA INDONESIA"
                     };
                     companiesToCompare = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan)).ToList();
+                }
+                else if (selectedCompanyId > 0)
+                {
+                    var childIds = allCompanies.Where(c => c.PerusahaanIndukId == selectedCompanyId).Select(c => c.PerusahaanId).ToList();
+                    var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+                    var relationChildIds = relations.Where(r => r.ParentCompanyId == selectedCompanyId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
+                    var allChildIds = childIds.Concat(relationChildIds).Distinct().ToList();
+                    
+                    if (allChildIds.Any())
+                    {
+                        var targetCompanyIds = new HashSet<int>(allChildIds) { selectedCompanyId };
+                        companiesToCompare = allowedCompanies.Where(c => targetCompanyIds.Contains(c.PerusahaanId)).ToList();
+                    }
+                    else
+                    {
+                        companiesToCompare = allowedCompanies.Where(c => c.PerusahaanId == selectedCompanyId).ToList();
+                    }
                 }
 
                 var allEmployees = new List<dynamic>();
