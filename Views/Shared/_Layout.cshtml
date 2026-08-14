@@ -105,10 +105,13 @@
                             <span>DPA</span>
                         </a>
                     }
-                    <a asp-controller="Incident" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Incident" ? "active" : "")">
-                        <i class="bi bi-newspaper" style="color: #f43f5e;"></i>
-                        <span>Insiden</span>
-                    </a>
+                    @if (isAdminUser)
+                    {
+                        <a asp-controller="Incident" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Incident" ? "active" : "")">
+                            <i class="bi bi-newspaper" style="color: #f43f5e;"></i>
+                            <span>Insiden</span>
+                        </a>
+                    }
                     @if (canAccessUploadData)
                     {
                         <a asp-controller="Admin" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Admin" ? "active" : "")">
@@ -249,10 +252,13 @@
                         <i class="bi bi-calendar-check-fill"></i>
                         <span>Action</span>
                     </a>
-                    <a asp-controller="Incident" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Incident" ? "active" : "")">
-                        <i class="bi bi-newspaper"></i>
-                        <span>Insiden</span>
-                    </a>
+                    @if (isAdminUser)
+                    {
+                        <a asp-controller="Incident" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Incident" ? "active" : "")">
+                            <i class="bi bi-newspaper"></i>
+                            <span>Insiden</span>
+                        </a>
+                    }
                     @if (isAdminUser)
                     {
                         <a asp-controller="EventQr" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "EventQrAdmin" ? "active" : "")">

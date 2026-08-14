@@ -30,13 +30,14 @@ namespace MBS_SAP.Controllers
         }
 
         // GET: ActionPlan
-        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate)
+        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, string? filter, string? dept)
         {
             ViewData["HeaderTitle"] = "Action Plan Temuan";
             ViewData["ActiveTab"] = "ActionPlan";
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var compIdStr = User.FindFirst("CompanyId")?.Value;
+            var userDept = User.FindFirst("Department")?.Value;
             int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
             var isAdmin = User.IsInRole("Admin");
 
@@ -48,6 +49,21 @@ namespace MBS_SAP.Controllers
             ViewBag.EndDate = end.ToString("yyyy-MM-dd");
 
             var query = _context.ActionPlans.Where(r => !r.IsDeleted && r.Tanggal >= start && r.Tanggal <= endOfDay);
+
+            if (!string.IsNullOrEmpty(filter))
+            {
+                if (filter == "mine")
+                {
+                    query = query.Where(r => 
+                        r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik ||
+                        (userDept != null && (r.Departemen == userDept || r.DepartemenPja == userDept || r.DepartemenPic == userDept)));
+                }
+                else if (filter == "dept" && !string.IsNullOrEmpty(dept))
+                {
+                    query = query.Where(r => 
+                        r.Departemen == dept || r.DepartemenPja == dept || r.DepartemenPic == dept);
+                }
+            }
 
             // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin, kecuali jika ditugaskan langsung ke user)
             if (companyId.HasValue)

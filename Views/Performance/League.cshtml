@@ -48,9 +48,9 @@
 
     private string GetDotHtml(double val, string programName) {
         if (val < 0) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Bebas Target - WIN\">W</span>";
-        if (val >= 100) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Tercapai (100%+) - WIN\">W</span>";
-        if (val >= 50) return $"<span class=\"league-form-dot dot-d\" title=\"{programName} Sebagian (50%-99%) - DRAW\">D</span>";
-        return $"<span class=\"league-form-dot dot-l\" title=\"{programName} Kurang (<50%) - LOSS\">L</span>";
+        if (val >= 80) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Tercapai (80%+) - WIN\">W</span>";
+        if (val >= 40) return $"<span class=\"league-form-dot dot-d\" title=\"{programName} Sebagian (40%-79%) - DRAW\">D</span>";
+        return $"<span class=\"league-form-dot dot-l\" title=\"{programName} Kurang (<40%) - LOSS\">L</span>";
     }
 
     public Microsoft.AspNetCore.Html.IHtmlContent GetEmpFormDotsHtml(int hAct, int hTgt, int iAct, int iTgt, int stAct, int stTgt, int oAct, int oTgt, int cAct, int cTgt) {
@@ -66,17 +66,23 @@
     private string GetEmpDotHtml(int act, int tgt, string programName) {
         if (tgt == 0) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Bebas Target - WIN\">W</span>";
         double rate = ((double)act / tgt) * 100;
-        if (rate >= 100) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Tercapai - WIN\">W</span>";
-        if (rate >= 50) return $"<span class=\"league-form-dot dot-d\" title=\"{programName} Sebagian - DRAW\">D</span>";
-        return $"<span class=\"league-form-dot dot-l\" title=\"{programName} Kurang - LOSS\">L</span>";
+        if (rate >= 80) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Tercapai (80%+) - WIN\">W</span>";
+        if (rate >= 40) return $"<span class=\"league-form-dot dot-d\" title=\"{programName} Sebagian (40%-79%) - DRAW\">D</span>";
+        return $"<span class=\"league-form-dot dot-l\" title=\"{programName} Kurang (<40%) - LOSS\">L</span>";
     }
 
     public string GetRateColor(double rate) {
         if (rate < 0) return "#64748b"; // gray for N/A
-        if (rate >= 90) return "#16a34a";
-        if (rate >= 60) return "#ca8a04";
-        if (rate >= 30) return "#ea580c";
-        return "#dc2626";
+        if (rate >= 80) return "#16a34a"; // Hijau
+        if (rate >= 40) return "#dc2626"; // Merah
+        return "#000000"; // Hitam
+    }
+
+    public string GetRowBgColor(double rate) {
+        if (rate < 0) return ""; 
+        if (rate >= 80) return "rgba(22, 163, 74, 0.15)"; // Green with opacity
+        if (rate >= 40) return "rgba(220, 38, 38, 0.15)"; // Red with opacity
+        return "rgba(0, 0, 0, 0.08)"; // Black with opacity
     }
 
     public string FormatRate(double rate) {
@@ -628,19 +634,22 @@
      </div>
  
      <!-- League Mode Navigation Tab -->
-     <div class="d-flex gap-2 mb-4 bg-light p-2 rounded-3 shadow-sm border" style="width: fit-content;">
-         <button class="btn btn-sm @(currentMode == "dept" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=dept&year=@selectedYear&month=@selectedMonth';">
-             <i class="bi bi-shield-shaded me-1"></i> Klasemen Internal (Klub / Departemen)
-         </button>
-         <button class="btn btn-sm @(currentMode == "company" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=company&year=@selectedYear&month=@selectedMonth';">
-             <i class="bi bi-globe me-1"></i> Super League (Antar Company)
-         </button>
-     </div>
+     <div class="d-flex flex-wrap gap-2 mb-4 bg-light p-2 rounded-3 shadow-sm border" style="width: fit-content; max-width: 100%;">
+        <button class="btn btn-sm @(currentMode == "dept" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=dept&year=@selectedYear&month=@selectedMonth';">
+            <i class="bi bi-shield-shaded me-1"></i> Klasemen Internal (Klub / Departemen)
+        </button>
+        <button class="btn btn-sm @(currentMode == "core" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=core&year=@selectedYear&month=@selectedMonth';">
+            <i class="bi bi-star-fill me-1"></i> Liga Perusahaan Inti
+        </button>
+        <button class="btn btn-sm @(currentMode == "company" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=company&year=@selectedYear&month=@selectedMonth';">
+            <i class="bi bi-globe me-1"></i> Super League (Antar Company)
+        </button>
+    </div>
 
     <div class="row g-4">
         <!-- Left Column: internal/company standings -->
         <div class="col-xl-7">
-            @if (currentMode == "company")
+            @if (currentMode == "company" || currentMode == "core")
             {
                 var companyStandings = ViewBag.CompanyStandings as List<dynamic> ?? new List<dynamic>();
                 <div class="league-card p-3">
@@ -700,7 +709,7 @@
                                         var shieldColor = GetDeptColor(comp.CompanyName);
                                         var initials = GetDeptInitials(comp.CompanyName);
 
-                                        <tr class="@rowClass" style="cursor: pointer;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(comp.MtdAchievementRate) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass">@rankText</div>
                                             </td>
@@ -708,8 +717,8 @@
                                                 <div class="d-flex align-items-center">
                                                     <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
                                                     <div>
-                                                        <div class="fw-bold" style="color: #334155;">@comp.CompanyName</div>
-                                                        <div style="font-size: 11px; color: #64748b;">PJO: @comp.PjoName</div>
+                                                        <div class="fw-bold" style="color: #334155; font-size: 14px;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? comp.CompanyName : comp.PjoName)</div>
+                                                        <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.CompanyName)</div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -759,8 +768,8 @@
                                                         <div class="d-flex align-items-center">
                                                             <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
                                                             <div>
-                                                                <div class="fw-bold" style="color: #991b1b;">@comp.CompanyName</div>
-                                                                <div style="font-size: 11px; color: #64748b;">PJO: @comp.PjoName</div>
+                                                                <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? comp.CompanyName : comp.PjoName)</div>
+                                                                <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.CompanyName)</div>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -777,16 +786,16 @@
 
                     <div class="legend-box mt-3">
                         <div class="legend-item">
-                            <div class="legend-dot dot-w"></div>
-                            <span>Zona Liga Utama (Peringkat 1-3)</span>
+                            <div class="legend-dot" style="background: #000000;"></div>
+                            <span>0–39% (Hitam)</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-dot" style="background: #cbd5e1;"></div>
-                            <span>Zona Aman (Tengah)</span>
+                            <div class="legend-dot" style="background: #dc2626;"></div>
+                            <span>40–79% (Merah)</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-dot" style="background: #64748b;"></div>
-                            <span>Tidak Ada Pergerakan (0%)</span>
+                            <div class="legend-dot" style="background: #16a34a;"></div>
+                            <span>80–100% (Hijau)</span>
                         </div>
                     </div>
                     <span class="text-muted mt-2 d-block" style="font-size: 11px; font-style: italic; line-height: 1.4;">
@@ -858,7 +867,7 @@
                                         var shieldColor = GetDeptColor(dept.DepartmentName);
                                         var initials = GetDeptInitials(dept.DepartmentName);
 
-                                        <tr class="@rowClass" style="cursor: pointer;" onclick="filterPlayerTable('@dept.DepartmentName.Replace("'", "\\'")');">
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(dept.MtdAchievementRate) !important;" onclick="filterPlayerTable('@dept.DepartmentName.Replace("'", "\\'")');">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass">@rankText</div>
                                             </td>
@@ -925,20 +934,16 @@
 
                     <div class="legend-box mt-3">
                         <div class="legend-item">
-                            <div class="legend-dot dot-w"></div>
-                            <span>Zona Champions (Peringkat 1-3)</span>
+                            <div class="legend-dot" style="background: #000000;"></div>
+                            <span>0–39% (Hitam)</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-dot" style="background: #cbd5e1;"></div>
-                            <span>Zona Aman (Tengah)</span>
+                            <div class="legend-dot" style="background: #dc2626;"></div>
+                            <span>40–79% (Merah)</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-dot dot-l"></div>
-                            <span>Zona Relegasi / Pembinaan (3 Bawah)</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-dot" style="background: #64748b;"></div>
-                            <span>Tidak Ada Pergerakan (0%)</span>
+                            <div class="legend-dot" style="background: #16a34a;"></div>
+                            <span>80–100% (Hijau)</span>
                         </div>
                     </div>
                     <span class="text-muted mt-2 d-block" style="font-size: 11px; font-style: italic; line-height: 1.4;">
@@ -949,7 +954,7 @@
         </div>
 
         <!-- Right: Player details / Squad Standings -->
-        <div class="col-xl-5" id="squadSection">
+        <div class="col-xl-5 is-fullheight-active" id="squadSection">
             <div class="league-card">
                 <div class="top-scorers-header">
                     <span><i class="bi bi-people-fill me-2"></i>Skuad Pemain K3</span>
@@ -1032,7 +1037,7 @@
 
                                         var rowStyle = zeroTarget ? "background-color: #f0fdf4;" : "";
 
-                                        <tr class="@rowClass player-row" style="@rowStyle" data-dept="@emp.departmentName">
+                                        <tr class="@rowClass player-row" style="@rowStyle background-color: @GetRowBgColor((double)emp.complianceRate) !important;" data-dept="@emp.departmentName">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass" style="font-size: 9px; min-width: 26px;">@rankText</div>
                                             </td>
@@ -1120,7 +1125,11 @@
         // Update alert layout
         alertBox.style.backgroundColor = '#ecfdf5';
         alertBox.style.color = '#047857';
-        alertText.innerHTML = 'Menampilkan Skuad Klub <strong>' + deptName + '</strong> (' + (matchCount / 2) + ' Pemain)';
+        if (alertText) {
+            alertText.innerHTML = 'Menampilkan Skuad Klub <strong>' + deptName + '</strong> (' + (matchCount / 2) + ' Pemain)';
+        }
+        
+        currentSquadDeptFilter = deptName; // Store filter state
         resetBtn.classList.remove('d-none');
 
         // Smooth scroll to squad section
@@ -1151,7 +1160,11 @@
 
         alertBox.style.backgroundColor = '#f0f9ff';
         alertBox.style.color = '#0369a1';
-        alertText.innerHTML = 'Menampilkan seluruh daftar pemain perusahaan.';
+        if (alertText) {
+            alertText.innerHTML = 'Menampilkan seluruh daftar pemain perusahaan.';
+        }
+        
+        currentSquadDeptFilter = null; // Reset filter state
         resetBtn.classList.add('d-none');
 
         // Reset details toggle button state
@@ -1357,10 +1370,16 @@
         podiumContainer.innerHTML = html;
     }
 
+    let currentSquadDeptFilter = null; // Track active filter
+
     function downloadSquadExcel() {
         const companyId = '@selectedCompanyId';
         const mode = '@ViewBag.Mode';
-        window.location.href = '@Url.Action("ExportLeagueToExcel", "Performance")?companyId=' + companyId + '&mode=' + mode;
+        let url = '@Url.Action("ExportLeagueToExcel", "Performance")?companyId=' + companyId + '&mode=' + mode;
+        if (currentSquadDeptFilter) {
+            url += '&departmentName=' + encodeURIComponent(currentSquadDeptFilter);
+        }
+        window.location.href = url;
     }
 
     // ─── Searchable Company Dropdown ───────────────────────────────────────

@@ -4,6 +4,7 @@
     var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
     var userName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
     var isAdmin = User.IsInRole("Admin");
+    var userDept = User.FindFirst("Department")?.Value;
 }
 
 <style>
@@ -246,8 +247,13 @@
                      data-status="@(isOpen ? "open" : "closed")"
                      data-perusahaan="@(item.PerusahaanId)"
                      data-departemen="@(item.Departemen)"
+                     data-departemenpja="@(item.DepartemenPja)"
+                     data-departemenpic="@(item.DepartemenPic)"
+                     data-nik="@(item.Nik)"
+                     data-nikpja="@(item.NikPja)"
+                     data-nikpic="@(item.NikPic)"
                      data-resiko="@(item.TingkatResiko?.ToLower() ?? "unknown")">
-                    <div class="card-sap @(isOpen ? "border-red-accent" : "border-green-accent") h-100 d-flex flex-column justify-content-between" style="@(isOpen ? "box-shadow: 0 4px 15px rgba(244, 63, 94, 0.15);" : "")">
+                    <div id="card-@item.Id" class="card-sap @(isOpen ? "border-red-accent" : "border-green-accent") h-100 d-flex flex-column justify-content-between" style="@(isOpen ? "box-shadow: 0 4px 15px rgba(244, 63, 94, 0.15);" : "")">
                         <div>
                             <!-- ── Card Header ── -->
                             <div class="d-flex justify-content-between align-items-start mb-2">
@@ -267,9 +273,35 @@
                                         @item.KategoriTemuan
                                     </h6>
                                 </div>
-                                <span class="status-badge @(isOpen ? "pending" : "approved")" style="@(isOpen ? "animation: pulse 2s infinite; border: 1px solid #f43f5e;" : "")">
-                                    @(isOpen ? "PRIORITY - OPEN" : "Closed")
-                                </span>
+                                <div class="d-flex align-items-center gap-1 flex-wrap justify-content-end">
+                                    @if (!string.IsNullOrEmpty(userNik) || !string.IsNullOrEmpty(userDept))
+                                    {
+                                        bool isOutbound = (item.Nik == userNik) || (!string.IsNullOrEmpty(userDept) && item.Departemen == userDept);
+                                        bool isInbound = (item.NikPja == userNik || item.NikPic == userNik) || (!string.IsNullOrEmpty(userDept) && (item.DepartemenPja == userDept || item.DepartemenPic == userDept));
+
+                                        if (isOutbound && isInbound)
+                                        {
+                                            <span class="status-badge shadow-sm" style="background: #2563eb; color: white; border: none; font-size: 8px; font-weight: 800;">
+                                                <i class="bi bi-arrow-down-up me-1"></i> MASUK & KELUAR
+                                            </span>
+                                        }
+                                        else if (isInbound)
+                                        {
+                                            <span class="status-badge shadow-sm" style="background: #059669; color: white; border: none; font-size: 8px; font-weight: 800;">
+                                                <i class="bi bi-box-arrow-in-right me-1"></i> LAP. MASUK
+                                            </span>
+                                        }
+                                        else if (isOutbound)
+                                        {
+                                            <span class="status-badge shadow-sm" style="background: #d97706; color: white; border: none; font-size: 8px; font-weight: 800;">
+                                                <i class="bi bi-box-arrow-up-right me-1"></i> LAP. KELUAR
+                                            </span>
+                                        }
+                                    }
+                                    <span class="status-badge @(isOpen ? "pending" : "approved")" style="@(isOpen ? "animation: pulse 2s infinite; border: 1px solid #f43f5e;" : "")">
+                                        @(isOpen ? "PRIORITY - OPEN" : "Closed")
+                                    </span>
+                                </div>
                             </div>
 
                             <!-- ── Location & Date ── -->
@@ -306,7 +338,8 @@
                              }
                              @if (hasPhotos)
                              {
-                                 var isAuthorized = item.Nik == userNik || item.NikPja == userNik;
+                                 var isAuthorized = isAdmin || item.Nik == userNik || item.NikPja == userNik || item.NikPic == userNik || 
+                                                    (!string.IsNullOrEmpty(userDept) && (item.Departemen == userDept || item.DepartemenPja == userDept || item.DepartemenPic == userDept));
                                  @if (isAuthorized)
                                  {
                                      <div class="row g-2 mb-3">
@@ -341,8 +374,12 @@
                                  }
                              }
 
-                            <!-- ── PJA & PIC ── -->
+                            <!-- ── Pihak Terkait ── -->
                             <div class="mb-3" style="font-size: 11px; color: var(--text-muted); background-color: var(--bg-card-hover); padding: 10px 12px; border-radius: 8px;">
+                                <div class="mb-2 pb-2 border-bottom" style="border-color: rgba(255,255,255,0.1) !important;">
+                                    <i class="bi bi-person-circle me-1" style="color: #6366f1;"></i>
+                                    <strong>Pelapor:</strong> @item.Nama (@item.Nik) — @item.Departemen
+                                </div>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
                                         <i class="bi bi-person-badge-fill me-1" style="color: var(--color-primary);"></i>
@@ -376,18 +413,28 @@
                             }
                         </div>
 
-                        <!-- ── Update Form ── -->
-                        @if (isOpen)
-                        {
-                            <div class="mt-3">
-                                <button class="btn w-100 py-2 btn-sm" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; border-radius: 8px;" type="button"
-                                        data-bs-toggle="collapse" data-bs-target="#updateForm-@item.Id" aria-expanded="false"
-                                        onmouseover="this.style.background='#f43f5e'; this.style.color='#fff';"
-                                        onmouseout="this.style.background='rgba(244, 63, 94, 0.1)'; this.style.color='#f43f5e';">
-                                    <i class="bi bi-rocket-takeoff-fill me-1"></i> Take Up & Tindak Lanjut
+                        <!-- ── Update Form & Actions ── -->
+                        <div class="mt-3">
+                            <div class="d-flex gap-2 pdf-exclude">
+                                @if (isOpen)
+                                {
+                                    <button class="btn flex-grow-1 py-2 btn-sm" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; border-radius: 8px;" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#updateForm-@item.Id" aria-expanded="false"
+                                            onmouseover="this.style.background='#f43f5e'; this.style.color='#fff';"
+                                            onmouseout="this.style.background='rgba(244, 63, 94, 0.1)'; this.style.color='#f43f5e';">
+                                        <i class="bi bi-rocket-takeoff-fill me-1"></i> Take Up & Tindak Lanjut
+                                    </button>
+                                }
+                                <button class="btn py-2 btn-sm px-3 @(isOpen ? "" : "flex-grow-1")" style="background: #f8fafc; color: #475569; border: 1px solid #cbd5e1; font-weight: 800; text-transform: uppercase; border-radius: 8px; transition: all 0.2s;" type="button"
+                                        onclick="sharePdf('card-@item.Id', 'ActionPlan_@(item.ItemSap ?? "MBS")_@item.Id')"
+                                        onmouseover="this.style.background='#e2e8f0';" onmouseout="this.style.background='#f8fafc';">
+                                    <i class="bi bi-file-earmark-pdf-fill me-1 text-danger"></i> Share PDF
                                 </button>
+                            </div>
 
-                                <div class="collapse mt-3" id="updateForm-@item.Id">
+                            @if (isOpen)
+                            {
+                                <div class="collapse mt-3 pdf-exclude" id="updateForm-@item.Id">
                                     <div class="card-sap bg-dark-card border-0 p-3 mb-0">
                                         <form asp-controller="ActionPlan" asp-action="Update" method="post" enctype="multipart/form-data">
                                             @Html.AntiForgeryToken()
@@ -450,8 +497,8 @@
                                         </form>
                                     </div>
                                 </div>
-                            </div>
-                        }
+                            }
+                        </div>
                     </div>
                 </div>
             }
@@ -460,11 +507,74 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
+        function sharePdf(cardId, filename) {
+            const element = document.getElementById(cardId);
+            if (!element) return;
+            
+            // Temporary styles to make the PDF look better
+            const originalBorder = element.style.border;
+            const originalShadow = element.style.boxShadow;
+            element.style.border = '1px solid #e2e8f0';
+            element.style.boxShadow = 'none';
+
+            var opt = {
+                margin:       [0.3, 0.3], // top/bottom, left/right
+                filename:     filename + '.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { 
+                    scale: 2, 
+                    useCORS: true,
+                    ignoreElements: function(el) {
+                        return el.classList && el.classList.contains('pdf-exclude');
+                    }
+                },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Generate PDF as blob for sharing
+            html2pdf().set(opt).from(element).outputPdf('blob').then(function(pdfBlob) {
+                // Restore styles
+                element.style.border = originalBorder;
+                element.style.boxShadow = originalShadow;
+
+                var file = new File([pdfBlob], filename + ".pdf", { type: "application/pdf" });
+                
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                        title: 'Action Plan: ' + filename,
+                        text: 'Berikut adalah detail temuan Action Plan.',
+                        files: [file]
+                    }).then(() => {
+                        console.log('Share successful');
+                    }).catch((error) => {
+                        console.log('Sharing failed', error);
+                        // Fallback to download if user cancels or it fails
+                        saveAsFile(pdfBlob, filename + '.pdf');
+                    });
+                } else {
+                    // Fallback to direct download
+                    saveAsFile(pdfBlob, filename + '.pdf');
+                }
+            });
+        }
+
+        function saveAsFile(blob, filename) {
+            var link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
         $(document).ready(function () {
             const urlParams = new URLSearchParams(window.location.search);
             let selectedType   = (urlParams.get('type') || 'all').toLowerCase();
             let selectedStatus = (urlParams.get('status') || 'open').toLowerCase();
+            let specialFilter  = urlParams.get('filter'); // 'mine' or 'dept'
+            let specialDept    = urlParams.get('dept');
+            const currentUserNik = '@userNik';
+            const currentUserDept = '@(User.FindFirst("Department")?.Value ?? "")'.toLowerCase();
 
             // Set initial active pill for status
             if (selectedStatus !== 'open') {
@@ -485,11 +595,11 @@
                 }
             }
 
-            applyFilters();
-
             let selectedPerusahaan = 'all';
             let selectedDepartemen = 'all';
             let selectedResiko = 'all';
+
+            applyFilters();
 
             $('#filterPerusahaan').on('change', function() {
                 selectedPerusahaan = $(this).val();
@@ -513,13 +623,31 @@
                     const s = $(this).attr('data-status') || '';
                     const p = $(this).attr('data-perusahaan') || '';
                     const d = $(this).attr('data-departemen') || '';
+                    const dpja = $(this).attr('data-departemenpja') || '';
+                    const dpic = $(this).attr('data-departemenpic') || '';
                     const r = $(this).attr('data-resiko') || '';
+                    const nik = $(this).attr('data-nik') || '';
+                    const nikpja = $(this).attr('data-nikpja') || '';
+                    const nikpic = $(this).attr('data-nikpic') || '';
 
-                    const matchT = (selectedType === 'all' || t === selectedType);
-                    const matchS = (selectedStatus === 'all' || s === selectedStatus);
-                    const matchP = (selectedPerusahaan === 'all' || p === selectedPerusahaan);
-                    const matchD = (selectedDepartemen === 'all' || d === selectedDepartemen);
+                    let matchT = (selectedType === 'all' || t === selectedType);
+                    let matchS = (selectedStatus === 'all' || s === selectedStatus);
+                    let matchP = (selectedPerusahaan === 'all' || p === selectedPerusahaan);
+                    let matchD = (selectedDepartemen === 'all' || d === selectedDepartemen);
                     
+                    let matchSpecial = true;
+                    if (specialFilter === 'mine') {
+                        let selfMatch = (nik === currentUserNik || nikpja === currentUserNik || nikpic === currentUserNik);
+                        let deptMatch = false;
+                        if (currentUserDept !== '') {
+                            deptMatch = (d.toLowerCase() === currentUserDept || dpja.toLowerCase() === currentUserDept || dpic.toLowerCase() === currentUserDept);
+                        }
+                        matchSpecial = selfMatch || deptMatch;
+                    } else if (specialFilter === 'dept' && specialDept) {
+                        const sd = specialDept.toLowerCase();
+                        matchSpecial = (d.toLowerCase() === sd || dpja.toLowerCase() === sd || dpic.toLowerCase() === sd);
+                    }
+
                     let matchR = (selectedResiko === 'all');
                     if (!matchR) {
                         if (selectedResiko === 'low' && (r === 'low' || r === 'rendah')) matchR = true;
@@ -529,7 +657,7 @@
                         else if (r === selectedResiko) matchR = true;
                     }
 
-                    if (matchT && matchS && matchP && matchD && matchR) {
+                    if (matchT && matchS && matchP && matchD && matchR && matchSpecial) {
                         $(this).show();
                         visible++;
                     } else {

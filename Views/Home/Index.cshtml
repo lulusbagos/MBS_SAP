@@ -112,22 +112,22 @@
                     </div>
                     <div>
                         <div style="font-weight: 800; font-size: 15px; color: var(--text-main);">Action Plan Belum Selesai</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Segera tindak lanjuti agar compliance meningkat</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Segera follow up ke PJA atau PIC, atau close mandiri agar compliance meningkat</div>
                     </div>
                 </div>
-                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" class="btn btn-warning btn-sm px-3 py-1.5 fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" style="border-radius: 10px; font-size: 12px; background: #f59e0b; border: none; color: #000;">
-                    <span>Lihat Temuan Open</span>
+                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="mine" asp-route-startDate="2000-01-01" class="btn btn-warning btn-sm px-3 py-1.5 fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" style="border-radius: 10px; font-size: 12px; background: #f59e0b; border: none; color: #000;">
+                    <span>Lihat Semua Temuan Open</span>
                     <i class="bi bi-arrow-right-short" style="font-size: 16px;"></i>
                 </a>
             </div>
             <div class="d-flex gap-3 flex-wrap">
                 @if (myOpenAP > 0)
                 {
-                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" style="text-decoration:none; flex: 1; min-width: 140px;">
+                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="mine" asp-route-startDate="2000-01-01" style="text-decoration:none; flex: 1; min-width: 140px;">
                     <div class="d-flex align-items-center justify-content-between" style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.22)'" onmouseout="this.style.background='rgba(245,158,11,0.12)'">
                         <div>
                             <div style="font-size: 22px; font-weight: 800; color: #f59e0b; line-height: 1;">@myOpenAP</div>
-                            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 4px;">Milik Saya <span style="font-size: 10px; color: #f59e0b;">(Open)</span></div>
+                            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 4px;">Temuan Open Milik Saya</div>
                         </div>
                         <span class="badge bg-warning text-dark px-2 py-1" style="font-size: 10px; font-weight: 700;">Tindak Lanjuti &rarr;</span>
                     </div>
@@ -135,11 +135,11 @@
                 }
                 @if (deptOpenAP > 0 && !string.IsNullOrEmpty(userDeptName))
                 {
-                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" style="text-decoration:none; flex: 1; min-width: 140px;">
+                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="dept" asp-route-dept="@userDeptName" asp-route-startDate="2000-01-01" style="text-decoration:none; flex: 1; min-width: 140px;">
                     <div class="d-flex align-items-center justify-content-between" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.16)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
                         <div>
                             <div style="font-size: 22px; font-weight: 800; color: #ef4444; line-height: 1;">@deptOpenAP</div>
-                            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 4px;">Dept: @userDeptName <span style="font-size: 10px; color: #ef4444;">(Open)</span></div>
+                            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 4px;">Temuan Open Dept: @userDeptName</div>
                         </div>
                         <span class="badge bg-danger text-white px-2 py-1" style="font-size: 10px; font-weight: 700;">Cek Dept &rarr;</span>
                     </div>
@@ -151,13 +151,17 @@
 
         <!-- Quick Action Menu Cards -->
         <div class="action-grid">
-            <a asp-controller="Performance" asp-action="@(User.IsInRole("Admin") ? "Index" : "Compliance")" class="btn-action-card animate-pop-in delay-2">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0284c7, #0369a1); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
-                    <i class="bi bi-bar-chart-line-fill" style="font-size: 20px; color: white;"></i>
-                </div>
-                <span style="font-weight: 700; font-size: 13px;">Pencapaian</span>
-                <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">KPI Kinerja</span>
-            </a>
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-controller="Performance" asp-action="@(User.IsInRole("Admin") ? "Index" : "Compliance")" class="btn-action-card animate-pop-in delay-2">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0284c7, #0369a1); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
+                        <i class="bi bi-bar-chart-line-fill" style="font-size: 20px; color: white;"></i>
+                    </div>
+                    <span style="font-weight: 700; font-size: 13px;">Pencapaian</span>
+                    <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">KPI Kinerja</span>
+                </a>
+            }
+
 
             <a asp-controller="Performance" asp-action="League" class="btn-action-card animate-pop-in delay-2">
                 <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
@@ -167,11 +171,14 @@
                 <span class="badge" style="background-color: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 10px; font-weight: 600;">Liga K3</span>
             </a>
 
-            <a asp-controller="Timeline" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
-                <img src="~/images/menu_timeline.png" class="menu-action-icon" alt="SafeFeed" asp-append-version="true" />
-                <span style="font-weight: 700; font-size: 13px;">SafeFeed</span>
-                <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">Aktivitas</span>
-            </a>
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-controller="Timeline" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
+                    <img src="~/images/menu_timeline.png" class="menu-action-icon" alt="SafeFeed" asp-append-version="true" />
+                    <span style="font-weight: 700; font-size: 13px;">SafeFeed</span>
+                    <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">Aktivitas</span>
+                </a>
+            }
 
             <a asp-controller="Hazard" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
                 <img src="~/images/menu_hazard.png" class="menu-action-icon" alt="Lapor Hazard" asp-append-version="true" />
@@ -185,11 +192,14 @@
                 <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">Akt: @(ViewData["ThisMonthInspections"] ?? "0") / Tgt: @(ViewData["TargetInspeksi"] ?? "0")</span>
             </a>
             
-            <a asp-controller="ActionPlan" asp-action="Index" class="btn-action-card animate-pop-in delay-4">
-                <img src="~/images/menu_actionplan.png" class="menu-action-icon" alt="Action Plan" asp-append-version="true" />
-                <span style="font-weight: 700; font-size: 13px;">Action Plan</span>
-                <span class="badge" style="background-color: rgba(16, 185, 129, 0.1); color: #059669; font-size: 10px; font-weight: 600;">@(ViewData["TotalActionPlans"] ?? "0") Temuan</span>
-            </a>
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-controller="ActionPlan" asp-action="Index" class="btn-action-card animate-pop-in delay-4">
+                    <img src="~/images/menu_actionplan.png" class="menu-action-icon" alt="Action Plan" asp-append-version="true" />
+                    <span style="font-weight: 700; font-size: 13px;">Action Plan</span>
+                    <span class="badge" style="background-color: rgba(16, 185, 129, 0.1); color: #059669; font-size: 10px; font-weight: 600;">@(ViewData["TotalActionPlans"] ?? "0") Temuan</span>
+                </a>
+            }
 
             <a asp-controller="SafetyTalk" asp-action="Index" class="btn-action-card animate-pop-in delay-5">
                 <img src="~/images/menu_safetytalk.png" class="menu-action-icon" alt="Safety Talk" asp-append-version="true" />
@@ -215,36 +225,39 @@
                 <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; font-size: 10px; font-weight: 600;">Akt: @(ViewData["ThisMonthCoachings"] ?? "0") / Tgt: @(ViewData["TargetCoaching"] ?? "0")</span>
             </a>
 
-            <a asp-controller="P2h" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
-                <img src="~/images/menu_p2h.png" class="menu-action-icon" alt="P2H Kendaraan" asp-append-version="true" />
-                <span style="font-weight: 700; font-size: 13px;">P2H Kendaraan</span>
-                <span class="badge" style="background-color: rgba(236, 72, 153, 0.1); color: #ec4899; font-size: 10px; font-weight: 600;">Cek Unit</span>
-            </a>
-
-            @if (User.FindFirst("CompanyId")?.Value == "1")
+            @if (User.IsInRole("Admin"))
             {
-                <a asp-controller="Dpa" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
-                    <img src="~/images/menu_dpa.png" class="menu-action-icon" alt="DPA" asp-append-version="true" />
-                    <span style="font-weight: 700; font-size: 13px;">DPA</span>
-                    <span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; font-size: 10px; font-weight: 600;">Driver Assessment</span>
+                <a asp-controller="P2h" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
+                    <img src="~/images/menu_p2h.png" class="menu-action-icon" alt="P2H Kendaraan" asp-append-version="true" />
+                    <span style="font-weight: 700; font-size: 13px;">P2H Kendaraan</span>
+                    <span class="badge" style="background-color: rgba(236, 72, 153, 0.1); color: #ec4899; font-size: 10px; font-weight: 600;">Cek Unit</span>
+                </a>
+
+                @if (User.FindFirst("CompanyId")?.Value == "1")
+                {
+                    <a asp-controller="Dpa" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
+                        <img src="~/images/menu_dpa.png" class="menu-action-icon" alt="DPA" asp-append-version="true" />
+                        <span style="font-weight: 700; font-size: 13px;">DPA</span>
+                        <span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; font-size: 10px; font-weight: 600;">Driver Assessment</span>
+                    </a>
+                }
+
+                <a href="#" class="btn-action-card animate-pop-in delay-6" data-bs-toggle="modal" data-bs-target="#rosterSettingsModal">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #a855f7, #c084fc); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
+                        <i class="bi bi-calendar3" style="font-size: 20px; color: white;"></i>
+                    </div>
+                    <span style="font-weight: 700; font-size: 13px;">Roster Kerja</span>
+                    <span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; font-size: 10px; font-weight: 600;" id="rosterStatusBadge">Atur Roster</span>
+                </a>
+
+                <a asp-controller="Incident" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #dc2626, #f43f5e); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
+                        <i class="bi bi-newspaper" style="font-size: 20px; color: white;"></i>
+                    </div>
+                    <span style="font-weight: 700; font-size: 13px;">Insiden</span>
+                    <span class="badge" style="background-color: rgba(244, 63, 94, 0.1); color: #f43f5e; font-size: 10px; font-weight: 600;">Berita K3</span>
                 </a>
             }
-
-            <a href="#" class="btn-action-card animate-pop-in delay-6" data-bs-toggle="modal" data-bs-target="#rosterSettingsModal">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #a855f7, #c084fc); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
-                    <i class="bi bi-calendar3" style="font-size: 20px; color: white;"></i>
-                </div>
-                <span style="font-weight: 700; font-size: 13px;">Roster Kerja</span>
-                <span class="badge" style="background-color: rgba(168, 85, 247, 0.1); color: #a855f7; font-size: 10px; font-weight: 600;" id="rosterStatusBadge">Atur Roster</span>
-            </a>
-
-            <a asp-controller="Incident" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #dc2626, #f43f5e); display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">
-                    <i class="bi bi-newspaper" style="font-size: 20px; color: white;"></i>
-                </div>
-                <span style="font-weight: 700; font-size: 13px;">Insiden</span>
-                <span class="badge" style="background-color: rgba(244, 63, 94, 0.1); color: #f43f5e; font-size: 10px; font-weight: 600;">Berita K3</span>
-            </a>
         </div>
     </div>
 

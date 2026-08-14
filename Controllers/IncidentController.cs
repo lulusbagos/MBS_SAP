@@ -69,8 +69,14 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(int page = 1, int pageSize = 20)
         {
+            if (!IsAdmin())
+            {
+                TempData["ErrorMessage"] = "Anda tidak memiliki akses ke halaman ini.";
+                return RedirectToAction("Index", "Home");
+            }
+
             ViewData["ActiveTab"] = "Incident";
-            ViewData["IsAdmin"] = IsAdmin();
+            ViewData["IsAdmin"] = true;
 
             if (page < 1) page = 1;
             if (pageSize < 5) pageSize = 20;
@@ -104,8 +110,14 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> Detail(int id)
         {
+            if (!IsAdmin())
+            {
+                TempData["ErrorMessage"] = "Anda tidak memiliki akses ke halaman ini.";
+                return RedirectToAction("Index", "Home");
+            }
+
             ViewData["ActiveTab"] = "Incident";
-            ViewData["IsAdmin"] = IsAdmin();
+            ViewData["IsAdmin"] = true;
 
             var incident = await _context.IncidentNewsList
                 .FirstOrDefaultAsync(i => i.Id == id);

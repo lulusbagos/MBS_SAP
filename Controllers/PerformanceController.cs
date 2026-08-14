@@ -209,42 +209,68 @@ namespace MBS_SAP.Controllers
 
             if (employeeNiks.Count > 0)
             {
-                hazards = await _context.HazardReports
-                    .Where(h => !h.IsDeleted && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth && employeeNiks.Contains(h.Nik))
-                    .Select(h => h.Nik)
-                    .ToListAsync();
+                var employeeNiksSet = new HashSet<string>(employeeNiks, StringComparer.OrdinalIgnoreCase);
+                var reqCacheKey = $"MonthlyData_{selectedYear}_{selectedMonth}";
 
-                inspections = await _context.Inspections
-                    .Where(i => !i.IsDeleted && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth && employeeNiks.Contains(i.Nik))
-                    .Select(i => i.Nik)
-                    .ToListAsync();
+                List<string> dbHazards, dbInspections, dbSafetyTalks, dbP5ms, allCoachings, dbObservations;
 
-                safetyTalks = await _context.SafetyTalks
-                    .Where(s => !s.IsDeleted && s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth && employeeNiks.Contains(s.Nik))
-                    .Select(s => s.Nik)
-                    .ToListAsync();
+                if (HttpContext.Items[reqCacheKey] is Tuple<List<string>, List<string>, List<string>, List<string>, List<string>, List<string>> cachedData)
+                {
+                    dbHazards = cachedData.Item1;
+                    dbInspections = cachedData.Item2;
+                    dbSafetyTalks = cachedData.Item3;
+                    dbP5ms = cachedData.Item4;
+                    allCoachings = cachedData.Item5;
+                    dbObservations = cachedData.Item6;
+                }
+                else
+                {
+                    dbHazards = await _context.HazardReports
+                        .Where(h => !h.IsDeleted && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth)
+                        .Select(h => h.Nik)
+                        .ToListAsync();
 
-                p5ms = await _context.P5ms
-                    .Where(p => !p.IsDeleted && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth && employeeNiks.Contains(p.Nik))
-                    .Select(p => p.Nik)
-                    .ToListAsync();
+                    dbInspections = await _context.Inspections
+                        .Where(i => !i.IsDeleted && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth)
+                        .Select(i => i.Nik)
+                        .ToListAsync();
 
-                var coachingCreators = await _context.Coachings
-                    .Where(c => !c.IsDeleted && c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth && employeeNiks.Contains(c.Nik))
-                    .Select(c => c.Nik)
-                    .ToListAsync();
+                    dbSafetyTalks = await _context.SafetyTalks
+                        .Where(s => !s.IsDeleted && s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth)
+                        .Select(s => s.Nik)
+                        .ToListAsync();
 
-                var coachingParticipants = await _context.CoachingParticipants
-                    .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth && employeeNiks.Contains(p.Nik))
-                    .Select(p => p.Nik)
-                    .ToListAsync();
+                    dbP5ms = await _context.P5ms
+                        .Where(p => !p.IsDeleted && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth)
+                        .Select(p => p.Nik)
+                        .ToListAsync();
 
-                coachings = coachingCreators.Concat(coachingParticipants).ToList();
+                    var coachingCreators = await _context.Coachings
+                        .Where(c => !c.IsDeleted && c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth)
+                        .Select(c => c.Nik)
+                        .ToListAsync();
 
-                observations = await _context.Observations
-                    .Where(o => !o.IsDeleted && o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth && employeeNiks.Contains(o.Nik))
-                    .Select(o => o.Nik)
-                    .ToListAsync();
+                    var coachingParticipants = await _context.CoachingParticipants
+                        .Where(p => p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth)
+                        .Select(p => p.Nik)
+                        .ToListAsync();
+
+                    allCoachings = coachingCreators.Concat(coachingParticipants).Where(n => n != null).ToList();
+
+                    dbObservations = await _context.Observations
+                        .Where(o => !o.IsDeleted && o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth)
+                        .Select(o => o.Nik)
+                        .ToListAsync();
+
+                    HttpContext.Items[reqCacheKey] = Tuple.Create(dbHazards, dbInspections, dbSafetyTalks, dbP5ms, allCoachings, dbObservations);
+                }
+
+                hazards = dbHazards.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
+                inspections = dbInspections.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
+                safetyTalks = dbSafetyTalks.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
+                p5ms = dbP5ms.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
+                coachings = allCoachings.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
+                observations = dbObservations.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
             }
 
             var result = new List<dynamic>();
@@ -2353,7 +2379,7 @@ namespace MBS_SAP.Controllers
             ViewBag.SelectedCompanyId = selectedCompany.PerusahaanId;
             ViewBag.CompanyName = selectedCompany.NamaPerusahaan;
 
-            if (mode == "company")
+            if (mode == "company" || mode == "core")
             {
                 // Liga Antar Company: Compare all companies
                 var companyStandings = new List<dynamic>();
@@ -2371,6 +2397,31 @@ namespace MBS_SAP.Controllers
                         var targetCompanyIds = new HashSet<int>(allChildIds) { selectedCompanyId };
                         companiesToCompare = allCompanies.Where(c => targetCompanyIds.Contains(c.PerusahaanId)).ToList();
                     }
+                }
+
+                if (mode == "core")
+                {
+                    var coreCompaniesList = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+                        "PT PELAYARAN GANESHA LAUTJAYA",
+                        "PT SUCOFINDO",
+                        "PT KALIMANTAN PRIMA PERSADA",
+                        "PT ELA SANGATTA",
+                        "PT ADHITAMA WIJAYA PERKASA",
+                        "PT TUNAS JAYA PERKASA",
+                        "PT SEMESTA MANDIRI INDONESIA",
+                        "PT BANDANG MINING COAL",
+                        "PT ORICA MINING SERVICE",
+                        "PT DIVA CAHAYA SEJAHTERA",
+                        "PT UNGGUL DINAMIKA UTAMA",
+                        "PT REZEKI BORNEO SEBUKU",
+                        "PT DAHANA",
+                        "PT MEGA GLOBAL ENERGY",
+                        "PT BERLIAN DUTA ENERGI",
+                        "PT SAMUDERA MAJU PERKASA",
+                        "PT GRAHA PRIMA ENERGI",
+                        "PT KARUNIA ARMADA INDONESIA"
+                    };
+                    companiesToCompare = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan)).ToList();
                 }
 
                 foreach (var comp in companiesToCompare)
@@ -2538,7 +2589,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportLeagueToExcel(int? companyId = null, string mode = "dept")
+        public async Task<IActionResult> ExportLeagueToExcel(int? companyId = null, string mode = "dept", string? departmentName = null)
         {
             var (resolvedCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
             var isAdmin = User.IsInRole("Admin");
@@ -2578,10 +2629,37 @@ namespace MBS_SAP.Controllers
 
             List<dynamic> employeesData = new List<dynamic>();
 
-            if (mode == "company")
+            if (mode == "company" || mode == "core")
             {
+                var companiesToCompare = allCompanies;
+                
+                if (mode == "core")
+                {
+                    var coreCompaniesList = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+                        "PT PELAYARAN GANESHA LAUTJAYA",
+                        "PT SUCOFINDO",
+                        "PT KALIMANTAN PRIMA PERSADA",
+                        "PT ELA SANGATTA",
+                        "PT ADHITAMA WIJAYA PERKASA",
+                        "PT TUNAS JAYA PERKASA",
+                        "PT SEMESTA MANDIRI INDONESIA",
+                        "PT BANDANG MINING COAL",
+                        "PT ORICA MINING SERVICE",
+                        "PT DIVA CAHAYA SEJAHTERA",
+                        "PT UNGGUL DINAMIKA UTAMA",
+                        "PT REZEKI BORNEO SEBUKU",
+                        "PT DAHANA",
+                        "PT MEGA GLOBAL ENERGY",
+                        "PT BERLIAN DUTA ENERGI",
+                        "PT SAMUDERA MAJU PERKASA",
+                        "PT GRAHA PRIMA ENERGI",
+                        "PT KARUNIA ARMADA INDONESIA"
+                    };
+                    companiesToCompare = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan)).ToList();
+                }
+
                 var allEmployees = new List<dynamic>();
-                foreach (var comp in allCompanies)
+                foreach (var comp in companiesToCompare)
                 {
                     var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId);
                     if (!compEmps.Any()) continue;
@@ -2595,6 +2673,13 @@ namespace MBS_SAP.Controllers
             else
             {
                 employeesData = await GetEmployeesComplianceData(selectedCompany.PerusahaanId);
+            }
+
+            if (!string.IsNullOrEmpty(departmentName))
+            {
+                employeesData = employeesData
+                    .Where(e => string.Equals((string)e.departmentName, departmentName, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
             }
 
             var sorted = employeesData
@@ -2631,7 +2716,7 @@ namespace MBS_SAP.Controllers
                 ws.Cell(2, 1).Style.Font.Bold = true;
                 ws.Cell(2, 1).Style.Font.FontSize = 11;
 
-                ws.Cell(3, 1).Value = $"Mode: {(mode == "company" ? "Liga Company (Global)" : "Liga Departemen (Internal)")} | Tanggal Unduh: {DateTime.Now:yyyy-MM-dd HH:mm}";
+                ws.Cell(3, 1).Value = $"Mode: {(mode == "company" ? "Liga Company (Global)" : (mode == "core" ? "Liga Perusahaan Inti" : "Liga Departemen (Internal)"))} | Tanggal Unduh: {DateTime.Now:yyyy-MM-dd HH:mm}";
                 ws.Cell(3, 1).Style.Font.Italic = true;
                 ws.Cell(3, 1).Style.Font.FontSize = 9.5;
 
