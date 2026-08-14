@@ -105,7 +105,7 @@ namespace MBS_SAP.Controllers
                 
                 var hazardActionPlans = await _context.ActionPlans
                     .Where(ap => !ap.IsDeleted && ap.ItemSap != null && ap.ItemSap.StartsWith("hazard:"))
-                    .Select(ap => new { ap.ItemSap, ap.ReassignedFrom })
+                    .Select(ap => new { ap.ItemSap, ap.RencanaPerbaikan })
                     .ToListAsync();
 
                 int totalClosedHazards = allHazards.Count(h => h.StatusTemuan == "Closed");
@@ -117,7 +117,7 @@ namespace MBS_SAP.Controllers
                     if (h.StatusTemuan == "Closed") continue;
                     
                     var linkedAp = hazardActionPlans.FirstOrDefault(ap => ap.ItemSap == $"hazard:{h.Id}");
-                    if (linkedAp != null && !string.IsNullOrEmpty(linkedAp.ReassignedFrom))
+                    if (linkedAp != null && !string.IsNullOrEmpty(linkedAp.RencanaPerbaikan))
                     {
                         totalProgresHazards++;
                     }
@@ -129,9 +129,9 @@ namespace MBS_SAP.Controllers
                 int totalHazards = totalOpenHazards + totalProgresHazards + totalClosedHazards;
                 double complianceClose= totalHazards > 0 ? Math.Round((double)totalClosedHazards / totalHazards * 100, 1) : 0;
 
-                int totalOpenActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Open");
+                int totalOpenActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Open" && string.IsNullOrEmpty(ap.RencanaPerbaikan));
                 int totalClosedActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Closed");
-                int totalProgresActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && (ap.Status == "Progres" || ap.Status == "Progress" || !string.IsNullOrEmpty(ap.ReassignedFrom)));
+                int totalProgresActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Open" && !string.IsNullOrEmpty(ap.RencanaPerbaikan));
 
                 var allHazardRisks = await _context.HazardReports.Where(h => !h.IsDeleted).Select(h => new { h.StatusTemuan, h.TingkatResiko }).ToListAsync();
                 int GetRiskWeight(string? r) {
@@ -409,7 +409,7 @@ namespace MBS_SAP.Controllers
                 var hazardStatus = h.StatusTemuan ?? "Open";
                 if (hazardStatus.Equals("Open", StringComparison.OrdinalIgnoreCase)
                     && linkedAp != null
-                    && !string.IsNullOrEmpty(linkedAp.ReassignedFrom))
+                    && !string.IsNullOrEmpty(linkedAp.RencanaPerbaikan))
                 {
                     hazardStatus = "Progres";
                 }
@@ -445,8 +445,8 @@ namespace MBS_SAP.Controllers
                     && ap.Status.Equals("Open", StringComparison.OrdinalIgnoreCase)).ToList();
 
                 var hasOpenActionPlan = openAps.Any();
-                var hasReassigned = openAps.Any(ap => !string.IsNullOrEmpty(ap.ReassignedFrom));
-                var inspectionStatus = !hasOpenActionPlan ? "Closed" : hasReassigned ? "Progres" : "Open";
+                var hasProgres = openAps.Any(ap => !string.IsNullOrEmpty(ap.RencanaPerbaikan));
+                var inspectionStatus = !hasOpenActionPlan ? "Closed" : hasProgres ? "Progres" : "Open";
 
                 feed.Add(new TimelineItem {
                     Id = i.Id,

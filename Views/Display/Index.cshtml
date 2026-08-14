@@ -672,8 +672,8 @@
 
                 <div class="tab-row feed-tabs" style="margin-bottom: 12px; flex-shrink: 0;">
                     <button class="tab-btn active" id="btn-feed-highlight" onclick="setFeedFilter('highlight')"><i class="bi bi-camera-fill"></i> Highlight</button>
-                    <button class="tab-btn"        id="btn-feed-open"      onclick="setFeedFilter('open')"><i class="bi bi-exclamation-circle-fill" style="color:#ef4444;"></i> Open</button>
-                    <button class="tab-btn"        id="btn-feed-progres"   onclick="setFeedFilter('progres')"><i class="bi bi-arrow-repeat" style="color:#f59e0b;"></i> Progres</button>
+                    <button class="tab-btn"        id="btn-feed-outstanding"      onclick="setFeedFilter('outstanding')"><i class="bi bi-exclamation-octagon-fill" style="color:#ef4444;"></i> Outstanding</button>
+                    <button class="tab-btn"        id="btn-feed-progress"   onclick="setFeedFilter('progress')"><i class="bi bi-tools" style="color:#f59e0b;"></i> In Progress</button>
                     <button class="tab-btn"        id="btn-feed-closed"    onclick="setFeedFilter('closed')"><i class="bi bi-check-circle-fill" style="color:#10b981;"></i> Closed</button>
                 </div>
 
@@ -1140,7 +1140,7 @@ function buildCharts() {
             labels: ['Hazard Report', 'Action Plan'],
             datasets: [
                 {
-                    label: 'Open',
+                    label: 'Outstanding',
                     data: [0, 0],
                     backgroundColor: 'rgba(248, 113, 113, 0.9)', // red
                     borderColor: '#ef4444',
@@ -1148,7 +1148,7 @@ function buildCharts() {
                     borderRadius: 4
                 },
                 {
-                    label: 'Progres',
+                    label: 'In Progress',
                     data: [0, 0],
                     backgroundColor: 'rgba(251, 191, 36, 0.9)', // amber
                     borderColor: '#f59e0b',
