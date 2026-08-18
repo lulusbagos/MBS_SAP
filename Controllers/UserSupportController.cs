@@ -23,8 +23,11 @@ namespace MBS_SAP.Controllers
         {
             var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
             var jobTitle = User.FindFirst("JobTitle")?.Value ?? "";
+            var department = User.FindFirst("Department")?.Value ?? "";
             
-            bool isSafetyAdmin = (role == "Admin" || jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase));
+            bool isSafetyAdmin = role == "Admin" || 
+                                 jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase) || 
+                                 department.Contains("Safety", StringComparison.OrdinalIgnoreCase);
             if (!isSafetyAdmin)
             {
                 return RedirectToAction("AccessDenied", "Account");
@@ -39,8 +42,11 @@ namespace MBS_SAP.Controllers
         {
             var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
             var jobTitle = User.FindFirst("JobTitle")?.Value ?? "";
+            var department = User.FindFirst("Department")?.Value ?? "";
             
-            bool isSafetyAdmin = (role == "Admin" || jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase));
+            bool isSafetyAdmin = role == "Admin" || 
+                                 jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase) || 
+                                 department.Contains("Safety", StringComparison.OrdinalIgnoreCase);
             if (!isSafetyAdmin)
             {
                 return RedirectToAction("AccessDenied", "Account");

@@ -34,7 +34,7 @@ namespace MBS_SAP.Controllers
             var department = User.FindFirst("Department")?.Value;
             bool isSafetyRole = CheckIsSafetyRole(jobTitle, department, isAdmin);
 
-            if (isAdmin || isSafetyRole)
+            if (isAdmin)
             {
                 companyId = null;
             }
@@ -2295,7 +2295,7 @@ namespace MBS_SAP.Controllers
                 .ToListAsync();
 
             List<PerusahaanView> allowedCompanies;
-            if (isAdmin || isSafetyRole)
+            if (isAdmin)
             {
                 allowedCompanies = allCompanies;
             }
@@ -2314,7 +2314,7 @@ namespace MBS_SAP.Controllers
             int selectedCompanyId = companyId ?? (resolvedCompanyId ?? allowedCompanies.First().PerusahaanId);
             
             // Security check: Non-admins cannot inspect other companies' internal dept list unless allowed by scope
-            if (!isAdmin && !isSafetyRole && !allowedCompanyIds.Contains(selectedCompanyId))
+            if (!isAdmin && !allowedCompanyIds.Contains(selectedCompanyId))
             {
                 selectedCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
             }
@@ -2485,7 +2485,7 @@ namespace MBS_SAP.Controllers
 
                 // Non-admin can only see their own squad players even in global league mode
                 var sortedEmployees = allEmployees
-                    .Where(e => isAdmin || isSafetyRole || (int)e.companyId == resolvedCompanyId)
+                    .Where(e => isAdmin || (isSafetyRole && allowedCompanyIds.Contains((int)e.companyId)) || (int)e.companyId == resolvedCompanyId)
                     .Select(e => new {
                         name = (string)e.karyawanName,
                         nik = (string)e.nik,
@@ -2606,7 +2606,7 @@ namespace MBS_SAP.Controllers
                 .ToListAsync();
 
             List<PerusahaanView> allowedCompanies;
-            if (isAdmin || isSafetyRole)
+            if (isAdmin)
             {
                 allowedCompanies = allCompanies;
             }
@@ -2623,7 +2623,7 @@ namespace MBS_SAP.Controllers
             }
 
             int selectedCompanyId = companyId ?? (resolvedCompanyId ?? allowedCompanies.First().PerusahaanId);
-            if (!isAdmin && !isSafetyRole && !allowedCompanyIds.Contains(selectedCompanyId))
+            if (!isAdmin && !allowedCompanyIds.Contains(selectedCompanyId))
             {
                 selectedCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
             }
@@ -2686,7 +2686,7 @@ namespace MBS_SAP.Controllers
                 }
 
                 employeesData = allEmployees
-                    .Where(e => isAdmin || isSafetyRole || (int)e.companyId == resolvedCompanyId)
+                    .Where(e => isAdmin || (isSafetyRole && allowedCompanyIds.Contains((int)e.companyId)) || (int)e.companyId == resolvedCompanyId)
                     .ToList();
             }
             else

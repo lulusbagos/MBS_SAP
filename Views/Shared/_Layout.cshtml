@@ -135,7 +135,11 @@
                         </a>
                     }
                     @{
-                        var isSafetyAdmin = (isAdminUser || (User.FindFirst("JobTitle")?.Value ?? "").Contains("Safety", StringComparison.OrdinalIgnoreCase));
+                        var jobTitle = User.FindFirst("JobTitle")?.Value ?? "";
+                        var department = User.FindFirst("Department")?.Value ?? "";
+                        var isSafetyAdmin = isAdminUser || 
+                                            jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase) || 
+                                            department.Contains("Safety", StringComparison.OrdinalIgnoreCase);
                     }
                     @if (isSafetyAdmin)
                     {
@@ -228,9 +232,9 @@
                         <i class="bi bi-grid-1x2-fill"></i>
                         <span>Home</span>
                     </a>
-                    <a asp-controller="Performance" asp-action="@(isAdminUser ? "Index" : "Compliance")" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Performance" ? "active" : "")">
-                        <i class="bi bi-bar-chart-line-fill"></i>
-                        <span>Pencapaian</span>
+                    <a asp-controller="P2h" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "P2h" ? "active" : "")">
+                        <i class="bi bi-truck-front-fill"></i>
+                        <span>P2H</span>
                     </a>
                     <a asp-controller="QrCode" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "QrCode" ? "active" : "")">
                         <i class="bi bi-qr-code-scan"></i>

@@ -61,6 +61,24 @@
     </div>
 }
 
+<!-- Error Banner Alert -->
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 16px;">
+        <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="filter: invert(var(--text-contrast));"></button>
+    </div>
+}
+
+<!-- Warning Banner Alert -->
+@if (TempData["WarningMessage"] != null)
+{
+    <div class="alert alert-warning alert-dismissible fade show border-0 shadow-sm mb-4" role="alert" style="background-color: rgba(245, 158, 11, 0.15); color: #f59e0b; border-radius: 16px;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["WarningMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="filter: invert(var(--text-contrast));"></button>
+    </div>
+}
+
 <!-- Hybrid Dashboard Row: Grid & Actions on the left, Recent Activities on the right on Laptop -->
 <div class="row g-4">
     
@@ -151,6 +169,7 @@
 
         <!-- Quick Action Menu Cards -->
         <div class="action-grid">
+            @*
             @if (User.IsInRole("Admin"))
             {
                 <a asp-controller="Performance" asp-action="@(User.IsInRole("Admin") ? "Index" : "Compliance")" class="btn-action-card animate-pop-in delay-2">
@@ -161,6 +180,7 @@
                     <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">KPI Kinerja</span>
                 </a>
             }
+            *@
 
 
             <a asp-controller="Performance" asp-action="League" class="btn-action-card animate-pop-in delay-2">
@@ -171,6 +191,7 @@
                 <span class="badge" style="background-color: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 10px; font-weight: 600;">Liga K3</span>
             </a>
 
+            @*
             @if (User.IsInRole("Admin"))
             {
                 <a asp-controller="Timeline" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
@@ -179,6 +200,7 @@
                     <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">Aktivitas</span>
                 </a>
             }
+            *@
 
             <a asp-controller="Hazard" asp-action="Index" class="btn-action-card animate-pop-in delay-2">
                 <img src="~/images/menu_hazard.png" class="menu-action-icon" alt="Lapor Hazard" asp-append-version="true" />
@@ -192,6 +214,7 @@
                 <span class="badge" style="background-color: rgba(2, 132, 199, 0.1); color: #0284c7; font-size: 10px; font-weight: 600;">Akt: @(ViewData["ThisMonthInspections"] ?? "0") / Tgt: @(ViewData["TargetInspeksi"] ?? "0")</span>
             </a>
             
+            @*
             @if (User.IsInRole("Admin"))
             {
                 <a asp-controller="ActionPlan" asp-action="Index" class="btn-action-card animate-pop-in delay-4">
@@ -200,6 +223,7 @@
                     <span class="badge" style="background-color: rgba(16, 185, 129, 0.1); color: #059669; font-size: 10px; font-weight: 600;">@(ViewData["TotalActionPlans"] ?? "0") Temuan</span>
                 </a>
             }
+            *@
 
             <a asp-controller="SafetyTalk" asp-action="Index" class="btn-action-card animate-pop-in delay-5">
                 <img src="~/images/menu_safetytalk.png" class="menu-action-icon" alt="Safety Talk" asp-append-version="true" />
@@ -225,6 +249,7 @@
                 <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; font-size: 10px; font-weight: 600;">Akt: @(ViewData["ThisMonthCoachings"] ?? "0") / Tgt: @(ViewData["TargetCoaching"] ?? "0")</span>
             </a>
 
+            @*
             @if (User.IsInRole("Admin"))
             {
                 <a asp-controller="P2h" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
@@ -258,6 +283,7 @@
                     <span class="badge" style="background-color: rgba(244, 63, 94, 0.1); color: #f43f5e; font-size: 10px; font-weight: 600;">Berita K3</span>
                 </a>
             }
+            *@
         </div>
     </div>
 
