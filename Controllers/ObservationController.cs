@@ -30,16 +30,20 @@ namespace MBS_SAP.Controllers
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var isAdmin = User.IsInRole("Admin");
-            var companyScopedNiks = await GetCurrentCompanyNiksAsync();
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
 
             var satuBulanLalu = DateTime.Now.AddMonths(-1);
             var query = _context.Observations.Where(r => !r.IsDeleted && r.CreatedAt >= satuBulanLalu);
 
             if (isAdmin)
             {
-                if (companyScopedNiks.Count > 0)
+                if (companyId.HasValue)
                 {
-                    query = query.Where(r => companyScopedNiks.Contains(r.Nik));
+                    query = from r in query
+                            join k in _context.Karyawans on r.Nik equals k.NoNik
+                            where k.IdPerusahaan == companyId.Value
+                            select r;
                 }
             }
             else if (!string.IsNullOrEmpty(userNik))
@@ -222,14 +226,19 @@ namespace MBS_SAP.Controllers
             
             var query = _context.Observations.Where(r => !r.IsDeleted);
             var userNikForError = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var companyScopedNiks = await GetCurrentCompanyNiksAsync();
-            if (companyScopedNiks.Count == 0)
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+
+            if (companyId.HasValue)
             {
-                query = query.Where(r => false);
+                query = from r in query
+                        join k in _context.Karyawans on r.Nik equals k.NoNik
+                        where k.IdPerusahaan == companyId.Value
+                        select r;
             }
             else
             {
-                query = query.Where(r => companyScopedNiks.Contains(r.Nik));
+                query = query.Where(r => false);
             }
 
             if (!User.IsInRole("Admin") && !string.IsNullOrEmpty(userNikForError))
@@ -248,9 +257,16 @@ namespace MBS_SAP.Controllers
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var isAdmin = User.IsInRole("Admin");
-            var companyScopedNiks = await GetCurrentCompanyNiksAsync();
-
-            if (companyScopedNiks.Count == 0 || !companyScopedNiks.Contains(report.Nik))
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            if (int.TryParse(companyIdStr, out var companyId) && companyId > 0)
+            {
+                var belongsToSameCompany = await _context.Karyawans.AnyAsync(k => k.NoNik == report.Nik && k.IdPerusahaan == companyId);
+                if (!belongsToSameCompany)
+                {
+                    return Unauthorized();
+                }
+            }
+            else
             {
                 return Unauthorized();
             }
@@ -286,8 +302,16 @@ namespace MBS_SAP.Controllers
             var report = await _context.Observations.FindAsync(id);
             if (report == null || report.IsDeleted) return NotFound();
 
-            var companyScopedNiks = await GetCurrentCompanyNiksAsync();
-            if (companyScopedNiks.Count == 0 || !companyScopedNiks.Contains(report.Nik))
+            var companyIdStr = User.FindFirst("CompanyId")?.Value;
+            if (int.TryParse(companyIdStr, out var companyId) && companyId > 0)
+            {
+                var belongsToSameCompany = await _context.Karyawans.AnyAsync(k => k.NoNik == report.Nik && k.IdPerusahaan == companyId);
+                if (!belongsToSameCompany)
+                {
+                    return Unauthorized();
+                }
+            }
+            else
             {
                 return Unauthorized();
             }

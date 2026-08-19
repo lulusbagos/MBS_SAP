@@ -21,6 +21,15 @@
 <body>
     <!-- Theme Initializer script to prevent theme theme flash -->
     <script>
+        window.baseUrl = '@Url.Content("~/")';
+        const originalFetch = window.fetch;
+        window.fetch = function(input, init) {
+            if (typeof input === 'string' && input.startsWith('/')) {
+                input = window.baseUrl + input.substring(1);
+            }
+            return originalFetch(input, init);
+        };
+
         (function () {
             const savedTheme = localStorage.getItem('sap-theme') || 'light';
             if (savedTheme === 'light') {
@@ -368,6 +377,12 @@
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script>
+        $.ajaxPrefilter(function(options, originalOptions, jqXHR) {
+            if (options.url && options.url.startsWith('/')) {
+                options.url = window.baseUrl + options.url.substring(1);
+            }
+        });
+
         const isAuthenticatedUser = @(User?.Identity?.IsAuthenticated == true ? "true" : "false");
 
         $(document).ready(function() {
