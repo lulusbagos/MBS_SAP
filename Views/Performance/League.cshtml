@@ -717,8 +717,16 @@
                                                 <div class="d-flex align-items-center">
                                                     <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
                                                     <div>
-                                                        <div class="fw-bold" style="color: #334155; font-size: 14px;">@comp.CompanyName</div>
-                                                        <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
+                                                        @if (currentMode == "core")
+                                                        {
+                                                            <div class="fw-bold" style="color: #334155; font-size: 14px;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? comp.CompanyName : comp.PjoName)</div>
+                                                            <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.CompanyName)</div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="fw-bold" style="color: #334155; font-size: 14px;">@comp.CompanyName</div>
+                                                            <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
+                                                        }
                                                     </div>
                                                 </div>
                                             </td>
@@ -768,8 +776,16 @@
                                                         <div class="d-flex align-items-center">
                                                             <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
                                                             <div>
-                                                                <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@comp.CompanyName</div>
-                                                                <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
+                                                                @if (currentMode == "core")
+                                                                {
+                                                                    <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? comp.CompanyName : comp.PjoName)</div>
+                                                                    <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.CompanyName)</div>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@comp.CompanyName</div>
+                                                                    <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
+                                                                }
                                                             </div>
                                                         </div>
                                                     </td>
