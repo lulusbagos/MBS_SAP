@@ -3912,11 +3912,11 @@ namespace MBS_SAP.Controllers
             lon = 0;
             if (string.IsNullOrWhiteSpace(lokasi)) return false;
 
-            var parts = lokasi.Split(',');
-            if (parts.Length != 2) return false;
+            var match = System.Text.RegularExpressions.Regex.Match(lokasi, @"(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)");
+            if (!match.Success) return false;
 
-            return double.TryParse(parts[0].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out lat) &&
-                   double.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out lon);
+            return double.TryParse(match.Groups[1].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out lat) &&
+                   double.TryParse(match.Groups[2].Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out lon);
         }
 
         private static string? NormalizeImagePath(string? path)
