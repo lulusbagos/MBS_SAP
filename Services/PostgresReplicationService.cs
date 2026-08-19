@@ -410,7 +410,7 @@ namespace MBS_SAP.Services
                     FotoTemuan = row.FotoTemuan,
                     Tanggal = row.Tanggal,
                     Waktu = row.Waktu,
-                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150),
+                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
                     Nik = Truncate(row.Nik, 50) ?? "UNKNOWN",
                     Departemen = Truncate(row.Departemen, 150),
                     Area = Truncate(row.Area, 150),
@@ -530,7 +530,7 @@ namespace MBS_SAP.Services
                 {
                     Tanggal = row.Tanggal,
                     Waktu = row.Waktu,
-                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150),
+                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
                     Nik = Truncate(row.Nik, 50) ?? "UNKNOWN",
                     Departemen = Truncate(row.Departemen, 150),
                     Area = Truncate(row.Area, 150),
@@ -660,7 +660,7 @@ namespace MBS_SAP.Services
                     Foto = first.Foto,
                     Tanggal = first.Tanggal,
                     Waktu = first.Waktu,
-                    Nama = Truncate(GetOfficialName(first.TrainerNik, first.TrainerNama), 150),
+                    Nama = Truncate(GetOfficialName(first.TrainerNik, first.TrainerNama), 150) ?? "Unknown",
                     Nik = Truncate(first.TrainerNik, 50) ?? "UNKNOWN",
                     Departemen = Truncate(first.EmployeeDepartemen, 150),
                     Area = Truncate(first.Area, 150),
@@ -739,7 +739,7 @@ namespace MBS_SAP.Services
                 var obs = new Observation
                 {
                     Date = row.Tanggal.Add(row.Waktu),
-                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150),
+                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
                     Nik = Truncate(row.Nik, 50) ?? "UNKNOWN",
                     Departemen = Truncate(row.Departemen, 100) ?? "General",
                     Area = Truncate(row.Area, 100) ?? "General",
@@ -862,7 +862,7 @@ namespace MBS_SAP.Services
                 var p2h = new P2hReport
                 {
                     Nik = Truncate(first.Nik, 50) ?? "UNKNOWN",
-                    Nama = Truncate(GetOfficialName(first.Nik, first.Nama), 150),
+                    Nama = Truncate(GetOfficialName(first.Nik, first.Nama), 150) ?? "Unknown",
                     Tanggal = first.Tanggal,
                     Waktu = first.Waktu,
                     JenisKendaraan = Truncate(first.JenisKendaraan, 100) ?? "LIGHT VEHICLE",
@@ -941,7 +941,7 @@ namespace MBS_SAP.Services
                     FotoKegiatan = row.Foto,
                     Tanggal = row.Tanggal,
                     Waktu = row.Waktu,
-                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150),
+                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
                     Nik = Truncate(row.Nik, 50) ?? "UNKNOWN",
                     Departemen = Truncate(row.Departemen, 150),
                     DetilLokasi = Truncate(row.DetilLokasi, 250),
@@ -1020,7 +1020,7 @@ namespace MBS_SAP.Services
                     FotoKegiatan = row.FotoKegiatan,
                     Tanggal = row.Tanggal,
                     Waktu = row.Waktu,
-                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150),
+                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
                     Nik = Truncate(row.Nik, 50) ?? "UNKNOWN",
                     Departemen = Truncate(row.Departemen, 150),
                     Area = Truncate(row.Area, 150),

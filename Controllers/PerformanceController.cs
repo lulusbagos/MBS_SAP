@@ -1594,7 +1594,7 @@ namespace MBS_SAP.Controllers
             var coachingParticipantsRows = await (from p in _context.CoachingParticipants
                                                   join k in _context.Karyawans on p.Nik equals k.NoNik
                                                   where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfYear && k.IdPerusahaan > 0 && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan)
-                                                  select new { CompanyId = k.IdPerusahaan, p.Nik, CreatedAt = p.Coaching.CreatedAt })
+                                                  select new { CompanyId = k.IdPerusahaan, p.Nik, CreatedAt = p.Coaching!.CreatedAt })
                                                   .AsNoTracking()
                                                   .ToListAsync();
 
@@ -2270,7 +2270,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> League(int? companyId = null, string mode = "dept", int? year = null, int? month = null)
+        public async Task<IActionResult> League(int? companyId = null, string mode = "company", int? year = null, int? month = null)
         {
             ViewData["HeaderTitle"] = "League SAP";
             ViewData["ActiveTab"] = "Performance";
@@ -2425,7 +2425,7 @@ namespace MBS_SAP.Controllers
                         "PT GRAHA PRIMA ENERGI",
                         "PT KARUNIA ARMADA INDONESIA"
                     };
-                    companiesToCompare = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan)).ToList();
+                    companiesToCompare = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan ?? "")).ToList();
                 }
 
                 foreach (var comp in companiesToCompare)
@@ -2592,7 +2592,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportLeagueToExcel(int? companyId = null, string mode = "dept", string? departmentName = null)
+        public async Task<IActionResult> ExportLeagueToExcel(int? companyId = null, string mode = "company", string? departmentName = null)
         {
             var (resolvedCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
             var isAdmin = User.IsInRole("Admin");
@@ -2658,7 +2658,7 @@ namespace MBS_SAP.Controllers
                         "PT GRAHA PRIMA ENERGI",
                         "PT KARUNIA ARMADA INDONESIA"
                     };
-                    companiesToCompare = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan)).ToList();
+                    companiesToCompare = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan ?? "")).ToList();
                 }
                 else if (selectedCompanyId > 0)
                 {

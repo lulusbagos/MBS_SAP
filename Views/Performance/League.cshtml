@@ -557,7 +557,7 @@
                                 <div class="company-option @(c.PerusahaanId == selectedCompanyId ? "company-option-active" : "")"
                                      data-value="@c.PerusahaanId"
                                      data-label="@c.NamaPerusahaan"
-                                     onclick="selectCompany(@c.PerusahaanId, '@Html.Raw(c.NamaPerusahaan.Replace("'", "\\'"))')"
+                                     onclick="selectCompany(@c.PerusahaanId, '@Html.Raw((c.NamaPerusahaan ?? "").Replace("'", "\\'"))')"
                                      style="padding: 8px 12px; border-radius: 7px; cursor:pointer; font-size: 13px; font-weight: 600; transition: background 0.15s; @(c.PerusahaanId == selectedCompanyId ? "background:#eff6ff; color:#1d4ed8;" : "")">
                                     @c.NamaPerusahaan
                                 </div>
@@ -717,8 +717,8 @@
                                                 <div class="d-flex align-items-center">
                                                     <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
                                                     <div>
-                                                        <div class="fw-bold" style="color: #334155; font-size: 14px;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? comp.CompanyName : comp.PjoName)</div>
-                                                        <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.CompanyName)</div>
+                                                        <div class="fw-bold" style="color: #334155; font-size: 14px;">@comp.CompanyName</div>
+                                                        <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -768,8 +768,8 @@
                                                         <div class="d-flex align-items-center">
                                                             <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
                                                             <div>
-                                                                <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? comp.CompanyName : comp.PjoName)</div>
-                                                                <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.CompanyName)</div>
+                                                                <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@comp.CompanyName</div>
+                                                                <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
                                                             </div>
                                                         </div>
                                                     </td>

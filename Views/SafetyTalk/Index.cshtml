@@ -317,14 +317,16 @@
                 }
 
                 try {
-                    const endpoint = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon) + '&zoom=18&addressdetails=1';
+                    const endpoint = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon) + '&zoom=18&addressdetails=1&email=developer@mbs-sap.local';
                     const response = await fetch(endpoint, {
                         headers: {
-                            'Accept': 'application/json'
+                            'Accept': 'application/json',
+                            'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
                         }
                     });
 
                     if (!response.ok) {
+                        console.error('Nominatim API error:', response.status);
                         return;
                     }
 
@@ -334,7 +336,8 @@
                         detailInput.value = resolved;
                     }
                 } catch (e) {
-                    // Keep silent when reverse geocoding fails; GPS coordinates are still captured.
+                    console.error('Reverse geocoding exception:', e);
+                    // Keep silent in UI when reverse geocoding fails; GPS coordinates are still captured.
                 }
             }
             

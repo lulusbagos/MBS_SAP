@@ -30,34 +30,31 @@ namespace dbtest
             using var scope = provider.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var names = new List<string> {
-                "CV SALIM BERKAT SEJAHTERA",
-                "GOGM PT UNGGUL DINAMIKA UTAMA",
-                "PT BORNEO MAJU JAYA",
-                "PT CAHAYA ENGINEERING SERVICES",
-                "PT GROUNDPROBE INDONESIA",
-                "PT INDO TRAKTOR UTAMA",
-                "PT INDONESIA COMNETS PLUS",
-                "PT LANGIT MANDIRI SUKSES",
-                "PT PETRO PERKASA INDONESIA",
-                "PT PRESISI DIGITAL MODEREN TEKNOLOGI",
-                "PT PUTERA WIBOWO BORNEO",
-                "PT SAMUDERA INTEGRASI GEMILANG",
-                "PT SANGGAR SARANA BAJA",
-                "PT SANY HEAVY INDUSTRY INDONESIA",
-                "PT SPEEDWORK SOLUSI UTAMA",
-                "PT UNGGUL DIESEL PART",
-                "RUMAH SAKIT PUPUK KALTIM",
-                "SISWA MAGANG UNGGUL"
-            };
+            var nik = "23091840871";
+            var obs = await context.Observations
+                .Where(o => o.Nik == nik && !o.IsDeleted)
+                .ToListAsync();
 
-            var comps = await context.Perusahaans.Where(p => names.Contains(p.NamaPerusahaan.ToUpper())).ToListAsync();
-            Console.WriteLine($"Found {comps.Count} companies.");
-            foreach(var c in comps)
+            Console.WriteLine($"Total Observations for {nik}: {obs.Count}");
+
+            var grouped = obs.GroupBy(o => new {
+                Date = o.Date.Date,
+                Time = o.Date.TimeOfDay,
+                Kegiatan = o.KegiatanYangDiamati,
+                Perihal = o.PerihalYangDiamati
+            }).Where(g => g.Count() > 1).ToList();
+
+            Console.WriteLine($"Duplicate groups found: {grouped.Count}");
+            foreach (var g in grouped.Take(5))
             {
-                Console.WriteLine($"{c.PerusahaanId}: {c.NamaPerusahaan}");
+                Console.WriteLine($"- Date: {g.Key.Date:yyyy-MM-dd}, Time: {g.Key.Time}, Kegiatan: {g.Key.Kegiatan}, Perihal: {g.Key.Perihal}, Count: {g.Count()}");
+                foreach (var item in g)
+                {
+                    Console.WriteLine($"   -> Id: {item.Id}, CreatedAt: {item.CreatedAt:yyyy-MM-dd HH:mm:ss}");
+                }
             }
-            Console.WriteLine($"Array format: {string.Join(", ", comps.Select(c => c.PerusahaanId))}");
+            
+            // Also let's check BuildObservationKey logic in ReplicationService by looking at how replication stores things.
         }
     }
 }
