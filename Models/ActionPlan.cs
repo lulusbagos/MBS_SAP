@@ -94,6 +94,10 @@ namespace MBS_SAP.Models
 
         public DateTime? ReassignedAt { get; set; }
 
+        [Column("reassign_note")]
+        [MaxLength(1000)]
+        public string? ReassignNote { get; set; }
+
         public int? PerusahaanId { get; set; }
 
         [Column("is_deleted")]

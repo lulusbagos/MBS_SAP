@@ -59,38 +59,56 @@
 
                 <div class="row">
                     <div class="col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="Area">Area Utama</label>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="input-sap-wrapper flex-grow-1 mb-0">
+                        <label class="form-label-sap" for="areaSearch">Area Utama</label>
+                        <div class="position-relative mb-0">
+                            <div class="input-sap-wrapper mb-0">
                                 <i class="bi bi-geo-alt-fill input-sap-icon"></i>
-                                <select id="Area" name="Area" class="input-sap" required>
-                                    <option value="" disabled selected>Pilih Area...</option>
-                                </select>
+                                <input type="text" id="areaSearch" class="input-sap text-uppercase" placeholder="Ketik untuk mencari area..." autocomplete="off" style="padding-right: 36px;" />
+                                <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleAreaDropdown"></i>
                             </div>
-                            <button type="button" class="btn btn-primary shadow-sm" style="height: 46px; border-radius: 12px; padding: 0 16px; background-color: var(--color-primary); border: none;" onclick="$('#addAreaModal').modal('show')" title="Tambah Area Baru">
+                            <!-- Hidden select for actual form submission -->
+                            <select id="Area" name="Area" required style="display:none;">
+                                <option value="" disabled selected></option>
+                            </select>
+                            <!-- Dropdown list -->
+                            <div id="areaDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="benchmarkSearch">Detail Lokasi / Benchmark</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="position-relative flex-grow-1 mb-0">
+                                <div class="input-sap-wrapper mb-0">
+                                    <i class="bi bi-compass-fill input-sap-icon"></i>
+                                    <input type="text" id="benchmarkSearch" class="input-sap text-uppercase" placeholder="Pilih Area Utama dulu..." autocomplete="off" style="padding-right: 36px;" disabled />
+                                    <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleBenchmarkDropdown"></i>
+                                </div>
+                                <!-- Hidden input for actual form submission -->
+                                <input type="hidden" id="DetilLokasi" name="DetilLokasi" value="" />
+                                <!-- Dropdown list -->
+                                <div id="benchmarkDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-primary shadow-sm" style="height: 46px; border-radius: 12px; padding: 0 16px; background-color: var(--color-primary); border: none;" onclick="$('#addBenchmarkModal').modal('show')" title="Tambah Benchmark Baru" id="btnAddBenchmark" disabled>
                                 <i class="bi bi-plus-lg"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="Lokasi">Lokasi Spesifik</label>
-                        <div class="input-sap-wrapper">
-                            <i class="bi bi-geo-fill input-sap-icon"></i>
-                            <input type="text" id="Lokasi" name="Lokasi" class="input-sap" placeholder="Masukkan lokasi spesifik / Klik ikon GPS di kanan..." style="padding-right: 40px;" required />
-                            <button type="button" class="btn btn-link p-0 position-absolute" id="btnGetLocation" style="right: 12px; top: 10px; color: var(--color-primary);" onclick="getLocation()" title="Ambil Lokasi GPS">
-                                <i class="bi bi-crosshair"></i>
-                            </button>
-                        </div>
-                        <small class="text-muted" style="font-size: 10px;">GPS otomatis mengambil kordinat Anda atau Anda bisa mengetiknya secara manual.</small>
-                    </div>
                 </div>
 
                 <div class="form-group-sap">
-                    <label class="form-label-sap" for="DetilLokasi">Detail Lokasi</label>
+                    <label class="form-label-sap" for="Lokasi">Lokasi Spesifik</label>
                     <div class="input-sap-wrapper">
-                        <i class="bi bi-compass-fill input-sap-icon"></i>
-                        <input type="text" id="DetilLokasi" name="DetilLokasi" class="input-sap" placeholder="Misal: KM 12.500" />
+                        <i class="bi bi-geo-fill input-sap-icon"></i>
+                        <input type="text" id="Lokasi" name="Lokasi" class="input-sap" placeholder="Masukkan lokasi spesifik / Klik ikon Lokasi Aktual GPS di kanan..." style="padding-right: 40px;" required />
+                        <button type="button" class="btn btn-link p-0 position-absolute" id="btnGetLocation" style="right: 12px; top: 10px; color: var(--color-primary);" onclick="getLocation()" title="Ambil Lokasi Aktual GPS">
+                            <i class="bi bi-crosshair"></i>
+                        </button>
                     </div>
+                    <small class="text-muted" style="font-size: 10px;">Lokasi Aktual GPS otomatis mengambil koordinat Anda atau Anda bisa mengetiknya secara manual.</small>
                 </div>
 
                 <div class="row">
@@ -345,37 +363,40 @@
     </div>
 </div>
 
-<!-- Modal Add Area -->
-<div class="modal fade" id="addAreaModal" tabindex="-1" aria-labelledby="addAreaModalLabel" aria-hidden="true">
+<!-- Modal Add Benchmark -->
+<div class="modal fade" id="addBenchmarkModal" tabindex="-1" aria-labelledby="addBenchmarkModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title text-white fw-bold" id="addAreaModalLabel"><i class="bi bi-plus-square-fill text-primary me-2"></i>Tambah Area Utama Baru</h5>
+                <h5 class="modal-title text-white fw-bold" id="addBenchmarkModalLabel"><i class="bi bi-plus-square-fill text-primary me-2"></i>Tambah Benchmark Baru</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body pt-4">
                 <div class="alert alert-info py-2" style="font-size: 12px; border-radius: 8px;">
-                    <i class="bi bi-info-circle me-1"></i> Area yang Anda tambahkan hanya akan terlihat oleh karyawan di perusahaan Anda.
+                    <i class="bi bi-info-circle me-1"></i> Benchmark yang Anda tambahkan hanya akan terlihat oleh karyawan di perusahaan Anda untuk area yang sedang dipilih.
                 </div>
                 <div class="form-group-sap mb-3">
-                    <label class="form-label-sap">Nama Area</label>
-                    <input type="text" id="newAreaName" class="form-control input-sap text-uppercase" placeholder="Misal: PIT TEMPUDO" />
-                    <div id="addAreaError" class="text-danger mt-2" style="font-size: 12px; display: none;"></div>
+                    <label class="form-label-sap">Area Utama</label>
+                    <input type="text" id="newBenchmarkArea" class="form-control input-sap" disabled />
+                </div>
+                <div class="form-group-sap mb-3">
+                    <label class="form-label-sap">Nama Benchmark / Detail Lokasi</label>
+                    <input type="text" id="newBenchmarkName" class="form-control input-sap text-uppercase" placeholder="Misal: DEPAN POS SECURITY KM 3" />
+                    <div id="addBenchmarkError" class="text-danger mt-2" style="font-size: 12px; display: none;"></div>
                 </div>
                 <div class="mt-3">
-                    <h6 class="text-white fw-bold mb-2" style="font-size: 13px;"><i class="bi bi-list-task me-1 text-primary"></i>Daftar Area Terdaftar</h6>
-                    <div id="existingAreasList" class="list-group" style="max-height: 180px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2);">
-                        <div class="p-3 text-center text-muted" style="font-size: 12px;">Memuat daftar area...</div>
+                    <h6 class="text-white fw-bold mb-2" style="font-size: 13px;"><i class="bi bi-list-task me-1 text-primary"></i>Daftar Benchmark Terdaftar (di area ini)</h6>
+                    <div id="existingBenchmarksList" class="list-group" style="max-height: 180px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2);">
+                        <div class="p-3 text-center text-muted" style="font-size: 12px;">Memuat daftar benchmark...</div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Tutup</button>
-                <button type="button" class="btn btn-primary" id="btnSaveArea" onclick="saveNewArea()" style="border-radius: 8px; font-weight: 600;">Simpan Area</button>
+                <button type="button" class="btn btn-primary" id="btnSaveBenchmark" onclick="saveNewBenchmark()" style="border-radius: 8px; font-weight: 600;">Simpan Benchmark</button>
             </div>
         </div>
     </div>
-</div>
 
 @section Scripts {
     <script>
@@ -492,107 +513,195 @@
             }
         }
 
-        let globalAreasList = [];
+                var globalAreasList = [
+            { id: 1, namaArea: "Port/Jetty - Indexim" },
+            { id: 2, namaArea: "CPP-33 & ROM - Indexim" },
+            { id: 3, namaArea: "Kantor - Indexim" },
+            { id: 4, namaArea: "Mess & Fasilitas - Indexim" },
+            { id: 5, namaArea: "Nursery - Indexim" },
+            { id: 6, namaArea: "Settling Pond - Indexim" },
+            { id: 7, namaArea: "PIT - Unggul" },
+            { id: 8, namaArea: "Road PIT Overburden - Unggul" },
+            { id: 9, namaArea: "Kantor - Unggul" },
+            { id: 10, namaArea: "Mess & Fasilitas - Unggul" },
+            { id: 11, namaArea: "Settling Pond - Unggul" },
+            { id: 12, namaArea: "PIT - KPP" },
+            { id: 13, namaArea: "Road PIT Overburden - KPP" },
+            { id: 14, namaArea: "Kantor - KPP" },
+            { id: 15, namaArea: "Mess & Fasilitas - KPP" },
+            { id: 16, namaArea: "Settling Pond - KPP" },
+            { id: 17, namaArea: "PIT - MGE" },
+            { id: 18, namaArea: "Road PIT Overburden - MGE" },
+            { id: 19, namaArea: "Kantor - MGE" },
+            { id: 20, namaArea: "Mess & Fasilitas - MGE" },
+            { id: 21, namaArea: "Settling Pond - MGE" },
+            { id: 22, namaArea: "Magazine/Gudang Handak" },
+            { id: 23, namaArea: "Road Coal Mining (Jl. Anggrek)" },
+            { id: 24, namaArea: "Road Coal Mining (Jl. Mawar)" },
+            { id: 25, namaArea: "Road Coal Hauling (Jl. Nusantara)" },
+            { id: 26, namaArea: "Other Area" }
+        ];
 
-        function renderAreasList() {
-            var container = $('#existingAreasList');
-            if (!container.length) return;
-            container.empty();
-            if (globalAreasList && globalAreasList.length > 0) {
-                globalAreasList.forEach(function(item) {
-                    var row = $(`
-                        <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 border-bottom text-white p-2" id="area-row-${item.id}" style="border-color: rgba(255,255,255,0.05) !important;">
-                            <span style="font-size: 13px; font-weight: 600;">${item.namaArea}</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger p-0" onclick="confirmDeleteArea(${item.id}, '${item.namaArea}')" style="border-radius: 6px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-color: rgba(239, 68, 68, 0.4); color: #ef4444;">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    `);
-                    container.append(row);
+        var globalBenchmarksList = [];
+
+        function loadAreas() {
+            var select = $('#Area');
+            select.empty();
+            select.append('<option value="" disabled selected></option>');
+            globalAreasList.forEach(function(item) {
+                select.append('<option value="' + item.namaArea + '">' + item.namaArea + '</option>');
+            });
+            renderAreaDropdown('');
+        }
+
+        function renderAreaDropdown(filterText) {
+            var menu = $('#areaDropdownMenu');
+            menu.empty();
+            var clean = (filterText || '').trim().toLowerCase();
+            var filtered = globalAreasList.filter(function(a) {
+                return a.namaArea.toLowerCase().includes(clean);
+            });
+
+            if (filtered.length > 0) {
+                filtered.forEach(function(item) {
+                    var btn = $('<button type="button"></button>')
+                        .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
+                        .css({
+                            background: 'none',
+                            color: 'var(--text-main)',
+                            fontSize: '13px',
+                            borderBottom: '1px solid var(--border-color)',
+                            cursor: 'pointer'
+                        })
+                        .html('<i class="bi bi-geo-alt-fill me-2 text-primary"></i>' + item.namaArea)
+                        .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
+                        .on('mouseleave', function() { $(this).css('background', 'none'); })
+                        .on('click', function() {
+                            selectArea(item.namaArea);
+                        });
+                    menu.append(btn);
                 });
+            } else if (clean.length > 0) {
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Area "' + filterText + '" tidak ditemukan</div>');
             } else {
-                container.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">Belum ada Area Utama</div>');
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada Area Utama.</div>');
+            }
+            
+            if (menu.children().length > 0) menu.show(); else menu.hide();
+        }
+
+        function selectArea(namaArea) {
+            $('#areaSearch').val(namaArea);
+            $('#Area').val(namaArea);
+            $('#areaDropdownMenu').hide();
+            $('#areaSearch').removeClass('is-invalid');
+            
+            // Load Benchmarks for this area
+            loadBenchmarks(namaArea);
+            
+            // Auto-fill Lokasi Spesifik
+            var currentLokasi = $('#Lokasi').val().trim();
+            if (currentLokasi === '') {
+                $('#Lokasi').val(namaArea + ' - ');
+                $('#Lokasi').focus();
+            } else if (currentLokasi.indexOf(' - ') !== -1) {
+                var parts = currentLokasi.split(' - ');
+                parts[0] = namaArea;
+                $('#Lokasi').val(parts.join(' - '));
+            } else {
+                $('#Lokasi').val(namaArea + ' - ' + currentLokasi);
             }
         }
 
-        function confirmDeleteArea(id, namaArea) {
-            var row = $(`#area-row-${id}`);
-            row.html(`
-                <div class="d-flex align-items-center gap-2 w-100 py-1">
-                    <span class="text-danger fw-bold text-truncate" style="font-size: 11px; flex-grow: 1;">Hapus ${namaArea}?</span>
-                    <input type="password" placeholder="Passcode" class="form-control form-control-sm text-center bg-dark border-secondary text-white" style="width: 80px; font-size: 10px; height: 26px; border-radius: 6px; padding: 0 4px;" id="passcode-${id}" />
-                    <button type="button" class="btn btn-danger btn-sm p-0" onclick="executeDeleteArea(${id}, '${namaArea}')" style="font-size: 10px; height: 26px; width: 42px; border-radius: 6px; font-weight: 600;">Hapus</button>
-                    <button type="button" class="btn btn-secondary btn-sm p-0" onclick="renderAreasList()" style="font-size: 10px; height: 26px; width: 42px; border-radius: 6px; font-weight: 600; background: var(--bg-body); border-color: var(--border-color);">Batal</button>
-                </div>
-            `);
-            $(`#passcode-${id}`).focus();
+        function loadBenchmarks(areaUtama, preselectBenchmark) {
+            if (!areaUtama) return;
+            $('#benchmarkSearch').prop('disabled', true).val('Memuat benchmark...');
+            $('#btnAddBenchmark').prop('disabled', true);
+            
+            $.ajax({
+                url: '/Api/GetBenchmarks',
+                type: 'GET',
+                data: { areaUtama: areaUtama },
+                success: function(response) {
+                    globalBenchmarksList = response || [];
+                    $('#benchmarkSearch').prop('disabled', false).val('');
+                    $('#btnAddBenchmark').prop('disabled', false);
+                    
+                    if (preselectBenchmark) {
+                        selectBenchmark(preselectBenchmark);
+                    } else {
+                        $('#DetilLokasi').val('');
+                        renderBenchmarkDropdown('');
+                        $('#benchmarkDropdownMenu').show();
+                        setTimeout(function() {
+                            $('#benchmarkSearch').focus();
+                        }, 50);
+                    }
+                    renderBenchmarkDropdown('');
+                },
+                error: function() {
+                    $('#benchmarkSearch').prop('disabled', false).val('');
+                    $('#btnAddBenchmark').prop('disabled', false);
+                }
+            });
         }
 
-        function executeDeleteArea(id, namaArea) {
-            var passcode = $(`#passcode-${id}`).val();
-            if (!passcode) {
-                alert("Passcode wajib diisi!");
+        function renderBenchmarkDropdown(filterText) {
+            var menu = $('#benchmarkDropdownMenu');
+            menu.empty();
+            var clean = (filterText || '').trim().toLowerCase();
+            var filtered = globalBenchmarksList.filter(function(b) {
+                return b.namaBenchmark.toLowerCase().includes(clean);
+            });
+
+            if (filtered.length > 0) {
+                filtered.forEach(function(item) {
+                    var btn = $('<button type="button"></button>')
+                        .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
+                        .css({
+                            background: 'none',
+                            color: 'var(--text-main)',
+                            fontSize: '13px',
+                            borderBottom: '1px solid var(--border-color)',
+                            cursor: 'pointer'
+                        })
+                        .html('<i class="bi bi-compass-fill me-2 text-primary"></i>' + item.namaBenchmark)
+                        .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
+                        .on('mouseleave', function() { $(this).css('background', 'none'); })
+                        .on('click', function() {
+                            selectBenchmark(item.namaBenchmark);
+                        });
+                    menu.append(btn);
+                });
+            } else if (clean.length > 0) {
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Benchmark "' + filterText + '" tidak ditemukan</div>');
+            } else {
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada benchmark di area ini. Klik + untuk tambah.</div>');
+            }
+            
+            if (menu.children().length > 0) menu.show(); else menu.hide();
+        }
+
+        function selectBenchmark(namaBenchmark) {
+            $('#benchmarkSearch').val(namaBenchmark);
+            $('#DetilLokasi').val(namaBenchmark);
+            $('#benchmarkDropdownMenu').hide();
+            $('#benchmarkSearch').removeClass('is-invalid');
+        }
+
+        function saveNewBenchmark() {
+            var btn = $('#btnSaveBenchmark');
+            var errorDiv = $('#addBenchmarkError');
+            var benchmarkName = $('#newBenchmarkName').val();
+            var areaUtama = $('#Area').val();
+
+            if (!areaUtama) {
+                errorDiv.text('Area utama belum dipilih!').show();
                 return;
             }
 
-            $.ajax({
-                url: '/Api/DeleteArea',
-                type: 'POST',
-                data: { id: id, passcode: passcode },
-                success: function(response) {
-                    loadAreas();
-                },
-                error: function(xhr) {
-                    alert(xhr.responseText || "Gagal menghapus area.");
-                    renderAreasList();
-                }
-            });
-        }
-
-        function loadAreas(selectedValue) {
-            $.ajax({
-                url: '/Api/GetAreas',
-                type: 'GET',
-                cache: false,
-                dataType: 'json',
-                success: function(data) {
-                    globalAreasList = data;
-                    renderAreasList();
-                    
-                    var select = $('#Area');
-                    select.empty();
-                    select.append('<option value="" disabled selected>Pilih Area...</option>');
-                    if (data && data.length > 0) {
-                        data.forEach(function(item) {
-                            select.append('<option value="' + item.namaArea + '">' + item.namaArea + '</option>');
-                        });
-                    } else {
-                        select.append('<option value="" disabled>Belum ada Area Utama</option>');
-                    }
-                    
-                    if (selectedValue) {
-                        select.val(selectedValue);
-                    }
-                    
-                    select.trigger('refresh');
-                },
-                error: function(xhr, status, error) {
-                    console.error("Failed to load areas:", error);
-                    var select = $('#Area');
-                    select.empty();
-                    select.append('<option value="" disabled>Gagal memuat area</option>');
-                    select.trigger('refresh');
-                }
-            });
-        }
-
-        function saveNewArea() {
-            var btn = $('#btnSaveArea');
-            var errorDiv = $('#addAreaError');
-            var areaName = $('#newAreaName').val();
-
-            if (!areaName || areaName.trim() === '') {
-                errorDiv.text('Nama area tidak boleh kosong').show();
+            if (!benchmarkName || benchmarkName.trim() === '') {
+                errorDiv.text('Nama benchmark tidak boleh kosong').show();
                 return;
             }
 
@@ -600,20 +709,20 @@
             errorDiv.hide();
 
             $.ajax({
-                url: '/Api/AddArea',
+                url: '/Api/AddBenchmark',
                 type: 'POST',
                 dataType: 'json',
-                data: { namaArea: areaName },
+                data: { areaUtama: areaUtama, namaBenchmark: benchmarkName },
                 success: function(response) {
-                    $('#addAreaModal').modal('hide');
-                    $('#newAreaName').val('');
-                    var areaToSelect = (response && response.data) ? response.data.namaArea : null;
-                    loadAreas(areaToSelect);
-                    btn.prop('disabled', false).text('Simpan Area');
+                    $('#addBenchmarkModal').modal('hide');
+                    $('#newBenchmarkName').val('');
+                    var benchmarkToSelect = (response && response.data) ? response.data.namaBenchmark : null;
+                    loadBenchmarks(areaUtama, benchmarkToSelect);
+                    btn.prop('disabled', false).text('Simpan Benchmark');
                 },
                 error: function(xhr) {
-                    errorDiv.text(xhr.responseText || 'Terjadi kesalahan saat menyimpan area').show();
-                    btn.prop('disabled', false).text('Simpan Area');
+                    errorDiv.text(xhr.responseText || 'Terjadi kesalahan saat menyimpan benchmark').show();
+                    btn.prop('disabled', false).text('Simpan Benchmark');
                 }
             });
         }
@@ -647,7 +756,8 @@
                     if (data.waktu) $('#waktuStr').val(data.waktu);
                     
                     // Selects
-                    $('#Area').val(data.area).change();
+                    $('#Area').val(data.area);
+                    $('#areaSearch').val(data.area);
                     $('#DepartemenYangDiamati').val(data.departemenYangDiamati).change();
                     $('#DokumenPendukung').val(data.dokumenPendukung).change();
                     $('#ResikoKritis').val(data.resikoKritis).change();
@@ -659,6 +769,13 @@
                     // Inputs / Texts
                     $('#Lokasi').val(data.lokasi);
                     $('#DetilLokasi').val(data.detilLokasi);
+                    
+                    if (data.area) {
+                        loadBenchmarks(data.area, data.detilLokasi);
+                    } else {
+                        $('#benchmarkSearch').prop('disabled', true).val('Pilih Area Utama dulu...');
+                        $('#btnAddBenchmark').prop('disabled', true);
+                    }
                     $('#KegiatanYangDiamati').val(data.kegiatanYangDiamati);
 
                     // Edit mode keeps one result block mapped to existing single-record structure
@@ -691,6 +808,82 @@
 
         $(document).ready(function() {
             loadAreas();
+            $('#addBenchmarkModal').on('show.bs.modal', function () {
+                var area = $('#Area').val();
+                if(!area) {
+                    alert('Pilih Area Utama terlebih dahulu!');
+                    return false; // Prevent modal from opening
+                }
+                $('#newBenchmarkArea').val(area);
+                $('#newBenchmarkName').val('');
+                $('#addBenchmarkError').hide();
+                
+                // Populate existing benchmarks in modal
+                var list = $('#existingBenchmarksList');
+                list.empty();
+                if(globalBenchmarksList.length > 0) {
+                    globalBenchmarksList.forEach(function(b) {
+                        list.append('<div class="list-group-item" style="font-size: 13px; background: rgba(0,0,0,0.1); border-color: var(--border-color); color: var(--text-main);"><i class="bi bi-compass me-2 text-muted"></i>' + b.namaBenchmark + '</div>');
+                    });
+                } else {
+                    list.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">Belum ada benchmark di area ini</div>');
+                }
+            });
+
+            // Toggle area dropdown on chevron click
+            $('#toggleAreaDropdown').on('click', function() {
+                var menu = $('#areaDropdownMenu');
+                if (menu.is(':visible')) {
+                    menu.hide();
+                } else {
+                    renderAreaDropdown($('#areaSearch').val());
+                    menu.show();
+                }
+            });
+
+            // Filter dropdown on keyup
+            $('#areaSearch').on('input keyup', function() {
+                renderAreaDropdown($(this).val());
+            });
+
+            // Open dropdown on focus
+            $('#areaSearch').on('focus', function() {
+                renderAreaDropdown($(this).val());
+            });
+
+            // Toggle benchmark dropdown on chevron click
+            $('#toggleBenchmarkDropdown').on('click', function() {
+                if ($('#benchmarkSearch').prop('disabled')) return;
+                var menu = $('#benchmarkDropdownMenu');
+                if (menu.is(':visible')) {
+                    menu.hide();
+                } else {
+                    renderBenchmarkDropdown($('#benchmarkSearch').val());
+                    menu.show();
+                }
+            });
+
+            // Filter dropdown on keyup
+            $('#benchmarkSearch').on('input keyup', function() {
+                renderBenchmarkDropdown($(this).val());
+                if($(this).val() === '') $('#DetilLokasi').val('');
+            });
+
+            // Open dropdown on focus
+            $('#benchmarkSearch').on('focus', function() {
+                if ($('#benchmarkSearch').prop('disabled')) return;
+                renderBenchmarkDropdown($(this).val());
+            });
+
+            // Close dropdown when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown').length) {
+                    $('#benchmarkDropdownMenu').hide();
+                }
+                if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
+                    $('#areaDropdownMenu').hide();
+                }
+            });
             getLocation();
 
             updateResultItemLabels();

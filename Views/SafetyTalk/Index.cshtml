@@ -61,37 +61,56 @@
 
                 <div class="row">
                     <div class="col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="area">Area Utama</label>
-                        <div class="input-sap-wrapper">
-                            <i class="bi bi-geo-alt-fill input-sap-icon"></i>
-                            <select id="area" name="area" class="input-sap" required>
-                                <option value="" disabled selected>Pilih Area...</option>
-                                <option value="Mining">Mining</option>
-                                <option value="Haulroad">Haulroad</option>
-                                <option value="Port">Port</option>
-                                <option value="Supporting Area">Supporting Area</option>
+                        <label class="form-label-sap" for="areaSearch">Area Utama</label>
+                        <div class="position-relative mb-0">
+                            <div class="input-sap-wrapper mb-0">
+                                <i class="bi bi-geo-alt-fill input-sap-icon"></i>
+                                <input type="text" id="areaSearch" class="input-sap text-uppercase" placeholder="Ketik untuk mencari area..." autocomplete="off" style="padding-right: 36px;" />
+                                <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleAreaDropdown"></i>
+                            </div>
+                            <!-- Hidden select for actual form submission -->
+                            <select id="area" name="area" required style="display:none;">
+                                <option value="" disabled selected></option>
                             </select>
+                            <!-- Dropdown list -->
+                            <div id="areaDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
+                                <!-- Populated by JS -->
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="lokasi">Lokasi Spesifik</label>
-                        <div class="input-sap-wrapper">
-                            <i class="bi bi-geo-fill input-sap-icon"></i>
-                            <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Masukkan lokasi spesifik / Klik ikon GPS di kanan..." style="padding-right: 40px;" required />
-                            <button type="button" class="btn btn-link p-0 position-absolute" id="btnGetLocation" style="right: 12px; top: 10px; color: var(--color-primary);" onclick="getLocation()" title="Ambil Lokasi GPS">
-                                <i class="bi bi-crosshair"></i>
+                        <label class="form-label-sap" for="benchmarkSearch">Detail Lokasi / Benchmark</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="position-relative flex-grow-1 mb-0">
+                                <div class="input-sap-wrapper mb-0">
+                                    <i class="bi bi-compass-fill input-sap-icon"></i>
+                                    <input type="text" id="benchmarkSearch" class="input-sap text-uppercase" placeholder="Pilih Area Utama dulu..." autocomplete="off" style="padding-right: 36px;" disabled />
+                                    <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleBenchmarkDropdown"></i>
+                                </div>
+                                <!-- Hidden input for actual form submission -->
+                                <input type="hidden" id="detilLokasi" name="detilLokasi" value="" />
+                                <!-- Dropdown list -->
+                                <div id="benchmarkDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-primary shadow-sm" style="height: 46px; border-radius: 12px; padding: 0 16px; background-color: var(--color-primary); border: none;" onclick="$('#addBenchmarkModal').modal('show')" title="Tambah Benchmark Baru" id="btnAddBenchmark" disabled>
+                                <i class="bi bi-plus-lg"></i>
                             </button>
                         </div>
-                        <small class="text-muted" style="font-size: 10px;">GPS otomatis mengambil kordinat Anda atau Anda bisa mengetiknya secara manual.</small>
                     </div>
                 </div>
 
                 <div class="form-group-sap">
-                    <label class="form-label-sap" for="detilLokasi">Detail Lokasi</label>
+                    <label class="form-label-sap" for="lokasi">Lokasi Spesifik</label>
                     <div class="input-sap-wrapper">
-                        <i class="bi bi-compass-fill input-sap-icon"></i>
-                        <input type="text" id="detilLokasi" name="detilLokasi" class="input-sap" placeholder="Misal: Halaman Depan Pos 33" />
+                        <i class="bi bi-geo-fill input-sap-icon"></i>
+                        <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Masukkan lokasi spesifik / Klik ikon Lokasi Aktual GPS di kanan..." style="padding-right: 40px;" required />
+                        <button type="button" class="btn btn-link p-0 position-absolute" id="btnGetLocation" style="right: 12px; top: 10px; color: var(--color-primary);" onclick="getLocation()" title="Ambil Lokasi Aktual GPS">
+                            <i class="bi bi-crosshair"></i>
+                        </button>
                     </div>
+                    <small class="text-muted" style="font-size: 10px;">Lokasi Aktual GPS otomatis mengambil koordinat Anda atau Anda bisa mengetiknya secara manual.</small>
                 </div>
 
                 <div class="form-group-sap">
@@ -280,79 +299,26 @@
         function getLocation() {
             var btn = document.getElementById('btnGetLocation');
             var input = document.getElementById('lokasi');
-            var detailInput = document.getElementById('detilLokasi');
-
-            function buildSpecificLocationLabel(payload) {
-                if (!payload) return '';
-
-                const addr = payload.address || {};
-                const candidates = [
-                    addr.road,
-                    addr.path,
-                    addr.neighbourhood,
-                    addr.suburb,
-                    addr.village,
-                    addr.hamlet,
-                    addr.city_district,
-                    addr.city,
-                    addr.county,
-                    addr.state
-                ];
-
-                const compact = candidates
-                    .filter(function(x) { return typeof x === 'string' && x.trim().length > 0; })
-                    .slice(0, 4)
-                    .join(', ');
-
-                if (compact) {
-                    return compact;
-                }
-
-                return typeof payload.display_name === 'string' ? payload.display_name : '';
-            }
-
-            async function fillSpecificLocation(lat, lon) {
-                if (!detailInput) {
-                    return;
-                }
-
-                try {
-                    const endpoint = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon) + '&zoom=18&addressdetails=1&email=developer@mbs-sap.local';
-                    const response = await fetch(endpoint, {
-                        headers: {
-                            'Accept': 'application/json',
-                            'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7'
-                        }
-                    });
-
-                    if (!response.ok) {
-                        console.error('Nominatim API error:', response.status);
-                        return;
-                    }
-
-                    const json = await response.json();
-                    const resolved = buildSpecificLocationLabel(json);
-                    if (resolved) {
-                        detailInput.value = resolved;
-                    }
-                } catch (e) {
-                    console.error('Reverse geocoding exception:', e);
-                    // Keep silent in UI when reverse geocoding fails; GPS coordinates are still captured.
-                }
-            }
             
             if (navigator.geolocation) {
-                // Show loading spinner
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 14px; height: 14px;"></span>';
                 
-                navigator.geolocation.getCurrentPosition(async function(position) {
+                navigator.geolocation.getCurrentPosition(function(position) {
                     var lat = position.coords.latitude.toFixed(6);
                     var lon = position.coords.longitude.toFixed(6);
-                    input.value = lat + ", " + lon;
-                    await fillSpecificLocation(lat, lon);
+                    var coords = lat + ", " + lon;
+                    
+                    if (!input.value || input.value.indexOf(',') !== -1 || input.value === '') {
+                        input.value = coords;
+                    } else if (input.value.endsWith('- ')) {
+                        input.value = input.value + coords;
+                    } else {
+                        input.value = input.value + " (" + coords + ")";
+                    }
+                    
                     btn.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
                 }, function(error) {
-                    alert('Gagal mendapatkan lokasi GPS: ' + error.message);
+                    console.log('GPS error: ' + error.message);
                     btn.innerHTML = '<i class="bi bi-crosshair text-danger"></i>';
                 }, {
                     enableHighAccuracy: true,
@@ -362,6 +328,220 @@
             } else {
                 alert("Geolocation tidak didukung oleh browser ini.");
             }
+        }
+
+        var globalAreasList = [
+            { id: 1, namaArea: "Port/Jetty - Indexim" },
+            { id: 2, namaArea: "CPP-33 & ROM - Indexim" },
+            { id: 3, namaArea: "Kantor - Indexim" },
+            { id: 4, namaArea: "Mess & Fasilitas - Indexim" },
+            { id: 5, namaArea: "Nursery - Indexim" },
+            { id: 6, namaArea: "Settling Pond - Indexim" },
+            { id: 7, namaArea: "PIT - Unggul" },
+            { id: 8, namaArea: "Road PIT Overburden - Unggul" },
+            { id: 9, namaArea: "Kantor - Unggul" },
+            { id: 10, namaArea: "Mess & Fasilitas - Unggul" },
+            { id: 11, namaArea: "Settling Pond - Unggul" },
+            { id: 12, namaArea: "PIT - KPP" },
+            { id: 13, namaArea: "Road PIT Overburden - KPP" },
+            { id: 14, namaArea: "Kantor - KPP" },
+            { id: 15, namaArea: "Mess & Fasilitas - KPP" },
+            { id: 16, namaArea: "Settling Pond - KPP" },
+            { id: 17, namaArea: "PIT - MGE" },
+            { id: 18, namaArea: "Road PIT Overburden - MGE" },
+            { id: 19, namaArea: "Kantor - MGE" },
+            { id: 20, namaArea: "Mess & Fasilitas - MGE" },
+            { id: 21, namaArea: "Settling Pond - MGE" },
+            { id: 22, namaArea: "Magazine/Gudang Handak" },
+            { id: 23, namaArea: "Road Coal Mining (Jl. Anggrek)" },
+            { id: 24, namaArea: "Road Coal Mining (Jl. Mawar)" },
+            { id: 25, namaArea: "Road Coal Hauling (Jl. Nusantara)" },
+            { id: 26, namaArea: "Other Area" }
+        ];
+
+        var globalBenchmarksList = [];
+
+        function loadAreas() {
+            var select = $('#area');
+            select.empty();
+            select.append('<option value="" disabled selected></option>');
+            globalAreasList.forEach(function(item) {
+                select.append('<option value="' + item.namaArea + '">' + item.namaArea + '</option>');
+            });
+            renderAreaDropdown('');
+        }
+
+        function renderAreaDropdown(filterText) {
+            var menu = $('#areaDropdownMenu');
+            menu.empty();
+            var clean = (filterText || '').trim().toLowerCase();
+            var filtered = globalAreasList.filter(function(a) {
+                return a.namaArea.toLowerCase().includes(clean);
+            });
+
+            if (filtered.length > 0) {
+                filtered.forEach(function(item) {
+                    var btn = $('<button type="button"></button>')
+                        .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
+                        .css({
+                            background: 'none',
+                            color: 'var(--text-main)',
+                            fontSize: '13px',
+                            borderBottom: '1px solid var(--border-color)',
+                            cursor: 'pointer'
+                        })
+                        .html('<i class="bi bi-geo-alt-fill me-2 text-primary"></i>' + item.namaArea)
+                        .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
+                        .on('mouseleave', function() { $(this).css('background', 'none'); })
+                        .on('click', function() {
+                            selectArea(item.namaArea);
+                        });
+                    menu.append(btn);
+                });
+            } else if (clean.length > 0) {
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Area "' + filterText + '" tidak ditemukan</div>');
+            } else {
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada Area Utama.</div>');
+            }
+            
+            if (menu.children().length > 0) menu.show(); else menu.hide();
+        }
+
+        function selectArea(namaArea) {
+            $('#areaSearch').val(namaArea);
+            $('#area').val(namaArea);
+            $('#areaDropdownMenu').hide();
+            $('#areaSearch').removeClass('is-invalid');
+            
+            // Load Benchmarks for this area
+            loadBenchmarks(namaArea);
+            
+            // Auto-fill Lokasi Spesifik
+            var currentLokasi = $('#lokasi').val().trim();
+            if (currentLokasi === '') {
+                $('#lokasi').val(namaArea + ' - ');
+                $('#lokasi').focus();
+            } else if (currentLokasi.indexOf(' - ') !== -1) {
+                var parts = currentLokasi.split(' - ');
+                parts[0] = namaArea;
+                $('#lokasi').val(parts.join(' - '));
+            } else {
+                $('#lokasi').val(namaArea + ' - ' + currentLokasi);
+            }
+        }
+
+        function loadBenchmarks(areaUtama, preselectBenchmark) {
+            if (!areaUtama) return;
+            $('#benchmarkSearch').prop('disabled', true).val('Memuat benchmark...');
+            $('#btnAddBenchmark').prop('disabled', true);
+            
+            $.ajax({
+                url: '/Api/GetBenchmarks',
+                type: 'GET',
+                data: { areaUtama: areaUtama },
+                success: function(response) {
+                    globalBenchmarksList = response || [];
+                    $('#benchmarkSearch').prop('disabled', false).val('');
+                    $('#btnAddBenchmark').prop('disabled', false);
+                    
+                    if (preselectBenchmark) {
+                        selectBenchmark(preselectBenchmark);
+                    } else {
+                        $('#detilLokasi').val('');
+                        renderBenchmarkDropdown('');
+                        $('#benchmarkDropdownMenu').show();
+                        setTimeout(function() {
+                            $('#benchmarkSearch').focus();
+                        }, 50);
+                    }
+                    renderBenchmarkDropdown('');
+                },
+                error: function() {
+                    $('#benchmarkSearch').prop('disabled', false).val('');
+                    $('#btnAddBenchmark').prop('disabled', false);
+                }
+            });
+        }
+
+        function renderBenchmarkDropdown(filterText) {
+            var menu = $('#benchmarkDropdownMenu');
+            menu.empty();
+            var clean = (filterText || '').trim().toLowerCase();
+            var filtered = globalBenchmarksList.filter(function(b) {
+                return b.namaBenchmark.toLowerCase().includes(clean);
+            });
+
+            if (filtered.length > 0) {
+                filtered.forEach(function(item) {
+                    var btn = $('<button type="button"></button>')
+                        .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
+                        .css({
+                            background: 'none',
+                            color: 'var(--text-main)',
+                            fontSize: '13px',
+                            borderBottom: '1px solid var(--border-color)',
+                            cursor: 'pointer'
+                        })
+                        .html('<i class="bi bi-compass-fill me-2 text-primary"></i>' + item.namaBenchmark)
+                        .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
+                        .on('mouseleave', function() { $(this).css('background', 'none'); })
+                        .on('click', function() {
+                            selectBenchmark(item.namaBenchmark);
+                        });
+                    menu.append(btn);
+                });
+            } else if (clean.length > 0) {
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Benchmark "' + filterText + '" tidak ditemukan</div>');
+            } else {
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada benchmark di area ini. Klik + untuk tambah.</div>');
+            }
+            
+            if (menu.children().length > 0) menu.show(); else menu.hide();
+        }
+
+        function selectBenchmark(namaBenchmark) {
+            $('#benchmarkSearch').val(namaBenchmark);
+            $('#detilLokasi').val(namaBenchmark);
+            $('#benchmarkDropdownMenu').hide();
+            $('#benchmarkSearch').removeClass('is-invalid');
+        }
+
+        function saveNewBenchmark() {
+            var btn = $('#btnSaveBenchmark');
+            var errorDiv = $('#addBenchmarkError');
+            var benchmarkName = $('#newBenchmarkName').val();
+            var areaUtama = $('#area').val();
+
+            if (!areaUtama) {
+                errorDiv.text('Area utama belum dipilih!').show();
+                return;
+            }
+
+            if (!benchmarkName || benchmarkName.trim() === '') {
+                errorDiv.text('Nama benchmark tidak boleh kosong').show();
+                return;
+            }
+
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...');
+            errorDiv.hide();
+
+            $.ajax({
+                url: '/Api/AddBenchmark',
+                type: 'POST',
+                dataType: 'json',
+                data: { areaUtama: areaUtama, namaBenchmark: benchmarkName },
+                success: function(response) {
+                    $('#addBenchmarkModal').modal('hide');
+                    $('#newBenchmarkName').val('');
+                    var benchmarkToSelect = (response && response.data) ? response.data.namaBenchmark : null;
+                    loadBenchmarks(areaUtama, benchmarkToSelect);
+                    btn.prop('disabled', false).text('Simpan Benchmark');
+                },
+                error: function(xhr) {
+                    errorDiv.text(xhr.responseText || 'Terjadi kesalahan saat menyimpan benchmark').show();
+                    btn.prop('disabled', false).text('Simpan Benchmark');
+                }
+            });
         }
 
         function cancelEditSafetyTalk() {
@@ -388,11 +568,19 @@
                     if (data.waktu) $('#waktuStr').val(data.waktu.substring(0, 5));
                     
                     // Selects
-                    $('#area').val(data.area).change();
+                    $('#area').val(data.area);
+                    $('#areaSearch').val(data.area);
 
                     // Inputs
                     $('#lokasi').val(data.lokasi);
                     $('#detilLokasi').val(data.detilLokasi);
+                    
+                    if (data.area) {
+                        loadBenchmarks(data.area, data.detilLokasi);
+                    } else {
+                        $('#benchmarkSearch').prop('disabled', true).val('Pilih Area Utama dulu...');
+                        $('#btnAddBenchmark').prop('disabled', true);
+                    }
                     $('#judul').val(data.judul);
                     $('#keterangan').val(data.keterangan);
 
@@ -416,6 +604,83 @@
         }
 
         $(document).ready(function() {
+            loadAreas();
+            $('#addBenchmarkModal').on('show.bs.modal', function () {
+                var area = $('#area').val();
+                if(!area) {
+                    alert('Pilih Area Utama terlebih dahulu!');
+                    return false; // Prevent modal from opening
+                }
+                $('#newBenchmarkArea').val(area);
+                $('#newBenchmarkName').val('');
+                $('#addBenchmarkError').hide();
+                
+                // Populate existing benchmarks in modal
+                var list = $('#existingBenchmarksList');
+                list.empty();
+                if(globalBenchmarksList.length > 0) {
+                    globalBenchmarksList.forEach(function(b) {
+                        list.append('<div class="list-group-item" style="font-size: 13px; background: rgba(0,0,0,0.1); border-color: var(--border-color); color: var(--text-main);"><i class="bi bi-compass me-2 text-muted"></i>' + b.namaBenchmark + '</div>');
+                    });
+                } else {
+                    list.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">Belum ada benchmark di area ini</div>');
+                }
+            });
+
+            // Toggle area dropdown on chevron click
+            $('#toggleAreaDropdown').on('click', function() {
+                var menu = $('#areaDropdownMenu');
+                if (menu.is(':visible')) {
+                    menu.hide();
+                } else {
+                    renderAreaDropdown($('#areaSearch').val());
+                    menu.show();
+                }
+            });
+
+            // Filter dropdown on keyup
+            $('#areaSearch').on('input keyup', function() {
+                renderAreaDropdown($(this).val());
+            });
+
+            // Open dropdown on focus
+            $('#areaSearch').on('focus', function() {
+                renderAreaDropdown($(this).val());
+            });
+
+            // Toggle benchmark dropdown on chevron click
+            $('#toggleBenchmarkDropdown').on('click', function() {
+                if ($('#benchmarkSearch').prop('disabled')) return;
+                var menu = $('#benchmarkDropdownMenu');
+                if (menu.is(':visible')) {
+                    menu.hide();
+                } else {
+                    renderBenchmarkDropdown($('#benchmarkSearch').val());
+                    menu.show();
+                }
+            });
+
+            // Filter dropdown on keyup
+            $('#benchmarkSearch').on('input keyup', function() {
+                renderBenchmarkDropdown($(this).val());
+                if($(this).val() === '') $('#detilLokasi').val('');
+            });
+
+            // Open dropdown on focus
+            $('#benchmarkSearch').on('focus', function() {
+                if ($('#benchmarkSearch').prop('disabled')) return;
+                renderBenchmarkDropdown($(this).val());
+            });
+
+            // Close dropdown when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown').length) {
+                    $('#benchmarkDropdownMenu').hide();
+                }
+                if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
+                    $('#areaDropdownMenu').hide();
+                }
+            });
             // Prevent double submission
             $('#safetyTalkForm').on('submit', function(e) {
                 var btn = $(this).find('button[type="submit"]');

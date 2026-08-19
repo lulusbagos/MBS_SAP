@@ -21,6 +21,7 @@ namespace MBS_SAP.Data
         public DbSet<RunningText> RunningTexts { get; set; } = null!;
         public DbSet<AppUser> AppUsers { get; set; } = null!;
         public DbSet<MasterArea> MasterAreas { get; set; } = null!;
+        public DbSet<MasterBenchmark> Benchmarks { get; set; } = null!;
         public DbSet<Quiz> Quizzes { get; set; } = null!;
         public DbSet<QuizAnswer> QuizAnswers { get; set; } = null!;
         public DbSet<Observation> Observations { get; set; } = null!;

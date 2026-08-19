@@ -385,6 +385,12 @@
                                         {
                                             <span class="ms-1" style="opacity:.75;">(@item.ReassignedAt.Value.ToString("dd MMM yyyy, HH:mm"))</span>
                                         }
+                                        @if (!string.IsNullOrEmpty(item.ReassignNote))
+                                        {
+                                            <div class="mt-1" style="font-size: 11px; opacity: 0.95; font-style: italic; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; border-left: 2px solid var(--color-warning);">
+                                                <strong>Alasan:</strong> @item.ReassignNote
+                                            </div>
+                                        }
                                     </div>
                                 </div>
                             }

@@ -326,6 +326,7 @@ ORDER BY nama_perusahaan";
                         relatedAction.ReassignedFrom = relatedAction.Pja;
                         relatedAction.ReassignedTo = newNama;
                         relatedAction.ReassignedAt = DateTime.Now;
+                        relatedAction.ReassignNote = req.Keterangan;
 
                         relatedAction.Pja = hazard.Pja;
                         relatedAction.NikPja = hazard.NikPja;
@@ -367,6 +368,7 @@ ORDER BY nama_perusahaan";
                     action.ReassignedFrom = action.Pja; // nama PJA lama
                     action.ReassignedTo = newNama;   // nama PJA baru
                     action.ReassignedAt = DateTime.Now;
+                    action.ReassignNote = req.Keterangan;
 
                     if (isCompanyTarget)
                     {
@@ -466,6 +468,7 @@ ORDER BY nama_perusahaan";
                         action.ReassignedFrom = action.Pja;
                         action.ReassignedTo = newNama;
                         action.ReassignedAt = DateTime.Now;
+                        action.ReassignNote = req.Keterangan;
 
                         action.Pja = inspection.Pja;
                         action.NikPja = inspection.NikPja;
@@ -708,6 +711,65 @@ ORDER BY nama_perusahaan";
             return Ok(new { message = "Area berhasil ditambahkan.", data = new { id = newArea.Id, namaArea = newArea.NamaArea } });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetBenchmarks(string areaUtama)
+        {
+            var compIdClaim = User.FindFirst("CompanyId")?.Value;
+            if (int.TryParse(compIdClaim, out int cid) && cid > 0 && !string.IsNullOrWhiteSpace(areaUtama))
+            {
+                var benchmarks = await _context.Benchmarks
+                    .Where(b => b.PerusahaanId == cid && b.AreaUtama == areaUtama)
+                    .OrderBy(b => b.NamaBenchmark)
+                    .Select(b => new { id = b.Id, namaBenchmark = b.NamaBenchmark })
+                    .ToListAsync();
+                return Json(benchmarks);
+            }
+            return Json(new object[] { });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AddBenchmark(string areaUtama, string namaBenchmark)
+        {
+            if (string.IsNullOrWhiteSpace(areaUtama)) return BadRequest("Area utama tidak boleh kosong.");
+            if (string.IsNullOrWhiteSpace(namaBenchmark)) return BadRequest("Nama benchmark tidak boleh kosong.");
+            
+            namaBenchmark = namaBenchmark.Trim().ToUpper();
+
+            var compIdClaim = User.FindFirst("CompanyId")?.Value;
+            if (!int.TryParse(compIdClaim, out int cid) || cid <= 0)
+            {
+                return Unauthorized("Anda tidak memiliki akses perusahaan.");
+            }
+
+            var existingBenchmarks = await _context.Benchmarks
+                .Where(b => b.PerusahaanId == cid && b.AreaUtama == areaUtama)
+                .Select(b => b.NamaBenchmark)
+                .ToListAsync();
+
+            if (existingBenchmarks.Any(b => b == namaBenchmark))
+            {
+                return BadRequest($"Benchmark '{namaBenchmark}' sudah ada di area ini.");
+            }
+
+            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0000";
+            var userName = User.FindFirst("FullName")?.Value ?? "Unknown";
+
+            var newBenchmark = new MasterBenchmark
+            {
+                AreaUtama = areaUtama,
+                NamaBenchmark = namaBenchmark,
+                PerusahaanId = cid,
+                CreatedByNik = userNik,
+                CreatedByName = userName,
+                CreatedAt = System.DateTime.Now
+            };
+
+            _context.Benchmarks.Add(newBenchmark);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Benchmark berhasil ditambahkan.", data = new { id = newBenchmark.Id, namaBenchmark = newBenchmark.NamaBenchmark } });
+        }
+
         [HttpPost]
         public async Task<IActionResult> DeleteArea(int id, string passcode)
         {
@@ -867,6 +929,7 @@ ORDER BY nama_perusahaan";
         public string NewNik { get; set; } = string.Empty;
         public string NewNama { get; set; } = string.Empty;
         public string NewDepartemen { get; set; } = string.Empty;
+        public string? Keterangan { get; set; }
     }
 
     public class PjaCompanyRef

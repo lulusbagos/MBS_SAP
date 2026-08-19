@@ -342,6 +342,14 @@
                         </div>
                     </div>
 
+                    <!-- Remarks / Reason for reassignment -->
+                    <div class="form-group-sap mt-3">
+                        <label class="form-label-sap" style="font-size: 11px; font-weight: 600; color: var(--text-main);">Alasan / Keterangan Pengalihan</label>
+                        <div class="input-sap-wrapper">
+                            <textarea id="reassignKeterangan" class="input-sap" rows="2" placeholder="Tulis alasan mengapa PJA dialihkan (wajib diisi)..." required style="font-size: 12px;"></textarea>
+                        </div>
+                    </div>
+
                     <input type="hidden" id="reassignItemId" />
                     <input type="hidden" id="reassignItemType" />
                     <input type="hidden" id="reassignNik" />
@@ -485,6 +493,7 @@
             $('#reassignDisplayName').text('');
             $('#reassignDisplayRole').text('');
             $('#reassignDisplayCompany').text('');
+            $('#reassignKeterangan').val(''); // Clear the reason field
             
             $('#reassignSelectedCard').addClass('d-none');
             $('#reassignSearchInput').val('').closest('.form-group-sap').show();
@@ -492,12 +501,20 @@
         }
 
         function submitReassign() {
+            var keterangan = $('#reassignKeterangan').val().trim();
+            if (!keterangan) {
+                alert('Alasan / Keterangan pengalihan wajib diisi.');
+                $('#reassignKeterangan').focus();
+                return;
+            }
+
             var req = {
                 itemId: parseInt($('#reassignItemId').val()),
                 itemType: $('#reassignItemType').val(),
                 newNik: $('#reassignNik').val(),
                 newNama: $('#reassignNama').val(),
-                newDepartemen: $('#reassignDept').val()
+                newDepartemen: $('#reassignDept').val(),
+                keterangan: keterangan
             };
 
             $('#btnSaveReassign').html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...').prop('disabled', true);
