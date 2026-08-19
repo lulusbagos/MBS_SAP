@@ -2479,7 +2479,7 @@ namespace MBS_SAP.Controllers
                     });
                 }
 
-                var allStandings = companyStandings.OrderByDescending(x => (double)x.MtdAchievementRate).ToList();
+                var allStandings = companyStandings.Where(x => (int)x.TotalTarget > 0).OrderByDescending(x => (double)x.MtdAchievementRate).ToList();
                 ViewBag.CompanyStandings = allStandings.Where(x => !((int)x.TotalTarget > 0 && (double)x.MtdAchievementRate == 0)).ToList();
                 ViewBag.CompanyRedZone = allStandings.Where(x => (int)x.TotalTarget > 0 && (double)x.MtdAchievementRate == 0).ToList();
 
@@ -2563,8 +2563,9 @@ namespace MBS_SAP.Controllers
                     .OrderByDescending(d => d.MtdAchievementRate)
                     .ToList();
 
-                ViewBag.DepartmentAchievements = deptAchievements.Where(d => !(d.TotalTarget > 0 && d.MtdAchievementRate == 0)).ToList();
-                ViewBag.DepartmentRedZone = deptAchievements.Where(d => d.TotalTarget > 0 && d.MtdAchievementRate == 0).ToList();
+                var activeDeptAchievements = deptAchievements.Where(d => d.TotalTarget > 0).ToList();
+                ViewBag.DepartmentAchievements = activeDeptAchievements.Where(d => !(d.TotalTarget > 0 && d.MtdAchievementRate == 0)).ToList();
+                ViewBag.DepartmentRedZone = activeDeptAchievements.Where(d => d.TotalTarget > 0 && d.MtdAchievementRate == 0).ToList();
 
                 var sortedEmployees = employees.Select(e => new {
                     name = (string)e.karyawanName,
