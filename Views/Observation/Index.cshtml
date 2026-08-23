@@ -397,6 +397,7 @@
             </div>
         </div>
     </div>
+</div>
 
 @section Scripts {
     <script>
@@ -552,6 +553,7 @@
                 select.append('<option value="' + item.namaArea + '">' + item.namaArea + '</option>');
             });
             renderAreaDropdown('');
+            $('#areaDropdownMenu').hide();
         }
 
         function renderAreaDropdown(filterText) {

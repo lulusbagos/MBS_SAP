@@ -1022,7 +1022,7 @@
             $('#pjaSearchInput').focus();
         }
 
-                var globalAreasList = [
+        let globalAreasList = [
             { id: 1, namaArea: "Port/Jetty - Indexim" },
             { id: 2, namaArea: "CPP-33 & ROM - Indexim" },
             { id: 3, namaArea: "Kantor - Indexim" },
@@ -1061,6 +1061,7 @@
                 select.append('<option value="' + item.namaArea + '">' + item.namaArea + '</option>');
             });
             renderAreaDropdown('');
+            $('#areaDropdownMenu').hide();
         }
 
         function renderAreaDropdown(filterText) {
@@ -1621,7 +1622,32 @@
                     return false;
                 }
 
+                // Construct custom questions text
+                if (customQuestionsList.length > 0) {
+                    let originalCatatan = $('#catatan').val() || '';
+                    const sepMarker = "--- PERTANYAAN TAMBAHAN ---";
+                    const sepIdx = originalCatatan.indexOf(sepMarker);
+                    if (sepIdx !== -1) {
+                        originalCatatan = originalCatatan.substring(0, sepIdx).trim();
+                    }
+                    
+                    let extraText = "\n\n--- PERTANYAAN TAMBAHAN ---";
+                    customQuestionsList.forEach((q, index) => {
+                        extraText += `\n${index + 1}. ${q.question}: ${q.value || 'Belum Diisi'}`;
+                    });
+                    extraText += `\n\n<!--CUSTOM_BUILDER_DATA:${JSON.stringify(customQuestionsList)}-->`;
+                    
+                    $('#catatan').val(originalCatatan + extraText);
+                }
+
+                btn.prop('disabled', true);
+                var originalText = btn.html();
+                btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');
                 
+                // Allow form to submit normally
+                return true;
+            });
+
             $('#addBenchmarkModal').on('show.bs.modal', function () {
                 var area = $('#area').val();
                 if(!area) {
@@ -1697,33 +1723,6 @@
                 if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
                     $('#areaDropdownMenu').hide();
                 }
-            });
-        });
-
-            // Construct custom questions text
-            if (customQuestionsList.length > 0) {
-                    let originalCatatan = $('#catatan').val() || '';
-                    const sepMarker = "--- PERTANYAAN TAMBAHAN ---";
-                    const sepIdx = originalCatatan.indexOf(sepMarker);
-                    if (sepIdx !== -1) {
-                        originalCatatan = originalCatatan.substring(0, sepIdx).trim();
-                    }
-                    
-                    let extraText = "\n\n--- PERTANYAAN TAMBAHAN ---";
-                    customQuestionsList.forEach((q, index) => {
-                        extraText += `\n${index + 1}. ${q.question}: ${q.value || 'Belum Diisi'}`;
-                    });
-                    extraText += `\n\n<!--CUSTOM_BUILDER_DATA:${JSON.stringify(customQuestionsList)}-->`;
-                    
-                    $('#catatan').val(originalCatatan + extraText);
-                }
-
-                btn.prop('disabled', true);
-                var originalText = btn.html();
-                btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');
-                
-                // Allow form to submit normally
-                return true;
             });
         });
 

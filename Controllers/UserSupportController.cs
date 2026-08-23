@@ -27,7 +27,8 @@ namespace MBS_SAP.Controllers
             
             bool isSafetyAdmin = role == "Admin" || 
                                  jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase) || 
-                                 department.Contains("Safety", StringComparison.OrdinalIgnoreCase);
+                                 department.Contains("Safety", StringComparison.OrdinalIgnoreCase) ||
+                                 department.Contains("HSE", StringComparison.OrdinalIgnoreCase);
             if (!isSafetyAdmin)
             {
                 return RedirectToAction("AccessDenied", "Account");
@@ -46,7 +47,8 @@ namespace MBS_SAP.Controllers
             
             bool isSafetyAdmin = role == "Admin" || 
                                  jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase) || 
-                                 department.Contains("Safety", StringComparison.OrdinalIgnoreCase);
+                                 department.Contains("Safety", StringComparison.OrdinalIgnoreCase) ||
+                                 department.Contains("HSE", StringComparison.OrdinalIgnoreCase);
             if (!isSafetyAdmin)
             {
                 return RedirectToAction("AccessDenied", "Account");

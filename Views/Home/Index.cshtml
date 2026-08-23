@@ -490,11 +490,11 @@
                     <form id="rosterSettingsForm">
                         <div id="rosterFormAlert" class="alert alert-danger d-none" style="font-size: 12px; border-radius: 12px; padding: 10px 14px;"></div>
 
-                        <!-- Trial Banner Notice -->
-                        <div style="background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 2px solid #f59e0b; border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.05);">
-                            <span style="font-size: 9px; background: #f59e0b; color: #ffffff; padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px;">Uji Coba / Trial</span>
-                            <h5 style="color: #78350f; font-weight: 850; font-size: 13px; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
-                                Masa Trial Perhitungan Safety Accountability Program By Roster
+                        <!-- Target Calculation Info Banner -->
+                        <div style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 2px solid #0ea5e9; border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.05);">
+                            <span style="font-size: 9px; background: #0ea5e9; color: #ffffff; padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px;">Informasi Target</span>
+                            <h5 style="color: #0369a1; font-weight: 850; font-size: 13px; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
+                                Perhitungan Target dihitung dari jumlah hari Onsite
                             </h5>
                         </div>
                         
@@ -613,14 +613,29 @@
     @section Scripts {
         <script>
             $(document).ready(function() {
+                // Auto-trigger popup via query parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('openRoster') === 'true') {
+                    setTimeout(function() {
+                        var myModal = new bootstrap.Modal(document.getElementById('rosterSettingsModal'), {
+                            backdrop: 'static',
+                            keyboard: false
+                        });
+                        myModal.show();
+                    }, 300);
+                }
+
                 // Auto-trigger popup if configured by backend, taking care not to overlap with incident popup
                 @if (ViewData["ShowRosterPopup"] is bool show && show)
                 {
+                    var isUnset = (ViewData["RosterHistory"] as List<MBS_SAP.Models.Roster>)?.Count == 0;
                     <text>
                     setTimeout(function() {
                         // Cek apakah user sudah menolak popup hari ini untuk menghindari pop-up berulang setiap refresh
+                        // KECUALI jika roster belum disetting sama sekali (isUnset = true), maka selalu tampilkan
+                        const isUnset = @(isUnset ? "true" : "false");
                         const todayStr = new Date().toDateString();
-                        if (localStorage.getItem('roster_popup_dismissed_date') === todayStr) {
+                        if (!isUnset && localStorage.getItem('roster_popup_dismissed_date') === todayStr) {
                             return; // Jangan tampilkan jika sudah di-dismiss hari ini
                         }
 

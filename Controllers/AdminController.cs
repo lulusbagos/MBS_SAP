@@ -2389,6 +2389,109 @@ namespace MBS_SAP.Controllers
             catch {}
             return null;
         }
+        [HttpGet]
+        public IActionResult KategoriPengawasKaryawan()
+        {
+            if (!IsAuthorizedUser())
+            {
+                return Forbid();
+            }
+            ViewData["HeaderTitle"] = "Setting Kategori Pengawas Karyawan";
+            ViewData["ActiveTab"] = "Admin";
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GetKategoriPengawasKaryawanData()
+        {
+            if (!IsAuthorizedUser()) return Forbid();
+
+            try
+            {
+                var draw = Request.Form["draw"].FirstOrDefault();
+                var start = Request.Form["start"].FirstOrDefault();
+                var length = Request.Form["length"].FirstOrDefault();
+                var searchValue = Request.Form["search[value]"].FirstOrDefault();
+
+                int pageSize = length != null ? Convert.ToInt32(length) : 10;
+                int skip = start != null ? Convert.ToInt32(start) : 0;
+
+                List<int>? allowedCompanies = null;
+                var companyIdStr = User.FindFirst("CompanyId")?.Value;
+                if (int.TryParse(companyIdStr, out var cid) && cid > 0)
+                {
+                    allowedCompanies = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(cid);
+                }
+
+                var query = from k in _context.Karyawans
+                            join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                            join map in _context.KaryawanJabatanMappings on k.IdKaryawan equals map.KaryawanId into mapGroup
+                            from map in mapGroup.DefaultIfEmpty()
+                            join per in _context.Perusahaans on k.IdPerusahaan equals per.PerusahaanId into perGroup
+                            from per in perGroup.DefaultIfEmpty()
+                            where (allowedCompanies == null || !allowedCompanies.Any() || allowedCompanies.Contains(k.IdPerusahaan)) && k.StatusAktif
+                            select new
+                            {
+                                k.IdKaryawan,
+                                k.NoNik,
+                                NamaLengkap = p.NamaLengkap,
+                                NamaPerusahaan = per != null ? per.NamaPerusahaan : "",
+                                NamaJabatan = map != null ? map.NamaJabatanExisting : "",
+                                KategoriPengawas = map != null ? map.KategoriPengawas : "",
+                                TargetInspeksi = map != null ? map.TargetInspeksi : 0,
+                                TargetObservasi = map != null ? map.TargetObservasi : 0,
+                                TargetHazard = map != null ? map.TargetHazardReport : 0,
+                                TargetCoaching = map != null ? map.TargetCoaching : 0,
+                                TargetSafetyTalk = map != null ? map.TargetSafetyTalk : 0
+                            };
+
+                if (!string.IsNullOrEmpty(searchValue))
+                {
+                    query = query.Where(x => x.NoNik.Contains(searchValue) || x.NamaLengkap.Contains(searchValue));
+                }
+
+                int recordsTotal = await query.CountAsync();
+                
+                var data = await query.OrderBy(x => x.NamaLengkap)
+                                      .Skip(skip)
+                                      .Take(pageSize)
+                                      .ToListAsync();
+
+                return Json(new { draw = draw, recordsFiltered = recordsTotal, recordsTotal = recordsTotal, data = data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateKategoriPengawas(int idKaryawan, string kategoriPengawas)
+        {
+            if (!IsAuthorizedUser()) return Forbid();
+
+            try
+            {
+                var allowedCategories = new[] { "Pengawas Area Operasional", "Pengawas Support Dept - Non Office", "Pengawas Support Dept - Office", "NON SAP" };
+                
+                if (!string.IsNullOrEmpty(kategoriPengawas) && !allowedCategories.Contains(kategoriPengawas))
+                {
+                     return Json(new { success = false, message = "Kategori tidak valid" });
+                }
+                
+                var categoryParam = string.IsNullOrEmpty(kategoriPengawas) ? (object)DBNull.Value : kategoriPengawas;
+                
+                await _context.Database.ExecuteSqlRawAsync(
+                    "UPDATE ONE_DB_MITRA.dbo.tbl_t_karyawan SET level_jabatan = {0} WHERE id_karyawan = {1}", 
+                    categoryParam, idKaryawan);
+
+                return Json(new { success = true, message = "Berhasil mengubah kategori kepengawasan" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Terjadi kesalahan: " + ex.Message });
+            }
+        }
     }
 
     public class SapQualityRecordViewModel
@@ -2408,4 +2511,3 @@ namespace MBS_SAP.Controllers
         public string? Notes { get; set; }
     }
 }
-

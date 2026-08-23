@@ -1,0 +1,138 @@
+@{
+    ViewData["Title"] = "Setting Kategori Pengawas Karyawan";
+}
+
+<div class="animate-fade-in">
+    <div class="screen-title"><i class="bi bi-people-fill text-primary me-2"></i>Kategori Pengawas Karyawan</div>
+    <p class="screen-subtitle">Atur kategori kepengawasan untuk masing-masing karyawan, yang akan menentukan target SPA mereka (Inspeksi, Observasi, Hazard Report, Coaching, Safety Talk).</p>
+
+    <div class="card border-0 shadow-sm rounded-4 mt-4">
+        <div class="card-body p-4">
+            <div class="table-responsive">
+                <table id="karyawanTable" class="table table-hover align-middle w-100" style="font-size: 13.5px;">
+                    <thead class="table-light">
+                        <tr>
+                            <th>NIK</th>
+                            <th>Nama Karyawan</th>
+                            <th>Perusahaan</th>
+                            <th>Target Saat Ini</th>
+                            <th style="min-width: 250px;">Kategori Pengawas</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var table = $('#karyawanTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '@Url.Action("GetKategoriPengawasKaryawanData", "Admin")',
+                    type: 'POST'
+                },
+                columns: [
+                    { data: 'noNik', name: 'NoNik' },
+                    { data: 'namaLengkap', name: 'NamaLengkap' },
+                    { data: 'namaPerusahaan', name: 'NamaPerusahaan' },
+                    { 
+                        data: null, 
+                        render: function (data, type, row) {
+                            return `<div style="font-size:11px;">
+                                Ins: <b>${row.targetInspeksi}</b>, 
+                                Obs: <b>${row.targetObservasi}</b>, 
+                                Hzr: <b>${row.targetHazard}</b>, 
+                                Coa: <b>${row.targetCoaching}</b>, 
+                                ST: <b>${row.targetSafetyTalk}</b>
+                                </div>`;
+                        }
+                    },
+                    { 
+                        data: 'kategoriPengawas', 
+                        render: function (data, type, row) {
+                            var options = [
+                                { val: '', text: '-- Pilih (Berdasarkan Jabatan) --' },
+                                { val: 'Pengawas Area Operasional', text: 'Pengawas Area Operasional' },
+                                { val: 'Pengawas Support Dept - Non Office', text: 'Pengawas Support Dept - Non Office' },
+                                { val: 'Pengawas Support Dept - Office', text: 'Pengawas Support Dept - Office' },
+                                { val: 'NON SAP', text: 'NON SAP (Target 0)' }
+                            ];
+                            
+                            var selectHtml = `<select class="form-select form-select-sm kategori-select" data-id="${row.idKaryawan}">`;
+                            options.forEach(function(opt) {
+                                var selected = (data === opt.val) ? 'selected' : '';
+                                selectHtml += `<option value="${opt.val}" ${selected}>${opt.text}</option>`;
+                            });
+                            selectHtml += `</select>`;
+                            
+                            // Let's add current mapped string as a hint if empty
+                            if(!data && row.namaJabatan) {
+                                selectHtml += `<small class="text-muted d-block mt-1">Sistem: ${row.kategoriPengawas || 'Default'}</small>`;
+                            }
+                            
+                            return selectHtml;
+                        },
+                        orderable: false 
+                    },
+                    { 
+                        data: null, 
+                        render: function (data, type, row) {
+                            return `<button class="btn btn-sm btn-primary btn-save-kategori" data-id="${row.idKaryawan}">
+                                <i class="bi bi-save me-1"></i> Simpan
+                            </button>`;
+                        },
+                        orderable: false 
+                    }
+                ],
+                order: [[1, 'asc']],
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/id.json'
+                }
+            });
+
+            $('#karyawanTable').on('click', '.btn-save-kategori', function() {
+                var btn = $(this);
+                var idKaryawan = btn.data('id');
+                var select = btn.closest('tr').find('.kategori-select');
+                var kategori = select.val();
+
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+
+                $.ajax({
+                    url: '@Url.Action("UpdateKategoriPengawas", "Admin")',
+                    type: 'POST',
+                    data: {
+                        idKaryawan: idKaryawan,
+                        kategoriPengawas: kategori
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil',
+                                text: response.message,
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                            table.ajax.reload(null, false);
+                        } else {
+                            Swal.fire('Error', response.message, 'error');
+                            btn.prop('disabled', false).html('<i class="bi bi-save me-1"></i> Simpan');
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Error', 'Terjadi kesalahan sistem.', 'error');
+                        btn.prop('disabled', false).html('<i class="bi bi-save me-1"></i> Simpan');
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,643 @@
+@{
+    ViewData["Title"] = "SAP Target Override";
+    var companies = ViewData["Companies"] as IEnumerable<dynamic>;
+}
+
+<style>
+@@keyframes blinkFade {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.65; transform: scale(0.98); }
+    100% { opacity: 1; transform: scale(1); }
+}
+.badge-blink-red {
+    animation: blinkFade 1.5s infinite ease-in-out;
+    background-color: #fee2e2 !important;
+    color: #ef4444 !important;
+    border: 1px solid #fca5a5 !important;
+}
+/* Custom DataTables Processing Card Override */
+.dataTables_wrapper .dataTables_processing {
+    position: absolute;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+    border: none !important;
+    z-index: 1000;
+    box-shadow: none !important;
+}
+.loading-card {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(209, 213, 219, 0.3);
+    border-radius: 20px;
+    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.12), 0 1px 1px 0 rgba(0,0,0,0.05);
+    padding: 1.5rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    transition: all 0.3s ease;
+}
+.spinner-gradient {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 30%, var(--bs-primary));
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 0);
+    mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 0);
+    animation: spin 1s linear infinite;
+}
+@@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<div class="animate-fade-in" style="color: #0f172a; font-family: 'Inter', sans-serif;">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <div class="screen-title d-flex align-items-center gap-2" style="font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 24px; color: #0f172a;">
+                <i class="bi bi-sliders text-primary"></i> Override Target SAP
+            </div>
+            <p class="screen-subtitle mb-0" style="font-size: 13.5px; color: #475569;">Atur target SAP manual per Karyawan (Data Tabel).</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-warning py-2 px-3 fw-bold d-flex align-items-center gap-2 text-dark" style="border-radius: 12px; font-size: 13px;" data-bs-toggle="modal" data-bs-target="#bulkUpdateModal">
+                <i class="bi bi-magic"></i> Update Massal
+            </button>
+            <button class="btn btn-info py-2 px-3 fw-bold d-flex align-items-center gap-2 text-white" style="border-radius: 12px; font-size: 13px;" data-bs-toggle="modal" data-bs-target="#aturanTargetModal">
+                <i class="bi bi-info-circle-fill"></i> Aturan Target
+            </button>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary py-2 px-3 fw-bold d-flex align-items-center gap-2" style="border-radius: 12px; font-size: 13px;">
+                <i class="bi bi-arrow-left"></i> Kembali ke Beranda
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px; background: #fff;">
+        <div class="card-body p-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold" style="font-size: 13px; color: #475569;"><i class="bi bi-building me-1 text-primary"></i>Filter Perusahaan</label>
+                    <select id="filterPerusahaan" class="form-select shadow-none" style="border-radius: 10px; font-size: 14px; border-color: #cbd5e1;">
+                        <option value="">-- Semua Perusahaan (Dalam Akses Anda) --</option>
+                        @if (companies != null)
+                        {
+                            foreach (var comp in (IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)companies)
+                            {
+                                var isSelected = comp.Value == ViewData["UserCompanyId"]?.ToString() ? "selected" : "";
+                                if (isSelected == "selected")
+                                {
+                                    <option value="@comp.Value" selected>@comp.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@comp.Value">@comp.Text</option>
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold" style="font-size: 13px; color: #475569;"><i class="bi bi-diagram-3 me-1 text-success"></i>Filter Departemen</label>
+                    <select id="filterDepartemen" class="form-select shadow-none" style="border-radius: 10px; font-size: 14px; border-color: #cbd5e1;">
+                        <option value="">-- Semua Departemen --</option>
+                        @if (ViewData["Departments"] != null)
+                        {
+                            foreach (var dept in (IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)ViewData["Departments"]!)
+                            {
+                                <option value="@dept.Value">@dept.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold" style="font-size: 13px; color: #475569;"><i class="bi bi-search me-1 text-warning"></i>Pencarian Karyawan</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0" style="border-radius: 10px 0 0 10px; border-color: #cbd5e1;"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" id="customSearch" class="form-control shadow-none border-start-0" placeholder="Ketik Nama atau NIK..." style="border-radius: 0 10px 10px 0; font-size: 14px; border-color: #cbd5e1;" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Section -->
+    <div class="card border-0 shadow-sm" style="border-radius: 16px; background: #fff;">
+        <div class="card-body p-4">
+            <div class="table-responsive">
+                <table id="karyawanTable" class="table table-hover align-middle w-100" style="font-size: 13px;">
+                    <thead style="background: #f8fafc; color: #475569;">
+                        <tr>
+                            <th>NAMA</th>
+                            <th>NIK</th>
+                            <th>DEPARTEMEN</th>
+                            <th class="text-center">KATEGORI</th>
+                            <th>JABATAN</th>
+                            <th class="text-center">AKSI</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Target Modal -->
+<div class="modal fade" id="editTargetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+            <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold" style="color: #0f172a;"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Target SAP</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="p-3 mb-4" style="background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <input type="hidden" id="karyawanId" />
+                    <div class="fw-bold" style="font-size: 16px; color: #0f172a;" id="lblNamaLengkap">-</div>
+                    <div class="text-muted" style="font-size: 13px;" id="lblNik">-</div>
+                    <div class="mt-2" style="font-size: 12px; color: #64748b;" id="lblInfoJabatan">-</div>
+                    <div class="mt-1" style="font-size: 11px; color: #f59e0b; font-weight: bold;" id="lblAlasanZero"></div>
+                </div>
+
+                <form id="targetForm" onsubmit="saveTarget(event)">
+                    <div class="row g-3 mb-4 pb-4 border-bottom">
+                        <div class="col-md-12 mb-1">
+                            <div class="fw-bold" style="font-size: 13px; color: #0f172a;"><i class="bi bi-magic me-2 text-primary"></i>Sesuaikan Target Otomatis berdasarkan Kategori:</div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label" style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Pilih Kategori Pengawas</label>
+                            <select id="presetKategori" class="form-select shadow-sm" onchange="applyPreset()" style="font-size: 14px; font-weight: 600; border-radius: 8px; border-color: #cbd5e1; cursor: pointer;">
+                                <option value="">-- Kustom (Biarkan Sesuai Jabatan) --</option>
+                                <option value="Pengawas Area Operasional">Pengawas Area Operasional</option>
+                                <option value="Pengawas Support Dept - Non Office">Pengawas Support Dept - Non Office</option>
+                                <option value="Pengawas Support Dept - Office">Pengawas Support Dept - Office</option>
+                                <option value="-">NON SAP</option>
+                            </select>
+                            <input type="hidden" id="presetJabatan" />
+                        </div>
+                    </div>
+
+                    <div class="fw-bold mb-3" style="font-size: 13px; color: #0f172a;"><i class="bi bi-bullseye me-2 text-danger"></i>Detail Target Akuntabilitas (Bulan Ini):</div>
+                    <div class="row g-3 justify-content-center">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded-3 text-center shadow-sm" style="background: #fff; border-color: #e2e8f0 !important;">
+                                <div class="d-flex justify-content-center align-items-center mb-3">
+                                    <div class="rounded-circle d-flex justify-content-center align-items-center" style="width: 44px; height: 44px; background: #eff6ff;">
+                                        <i class="bi bi-search text-primary" style="font-size: 20px;"></i>
+                                    </div>
+                                </div>
+                                <label class="form-label d-block mb-1" style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Inspeksi</label>
+                                <input type="text" class="form-control shadow-none border-0 fw-bolder text-center mx-auto" id="targetInspeksi" style="width: 80px; background: #f8fafc; font-size: 18px; border-radius: 8px; color: #0f172a;" readonly />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded-3 text-center shadow-sm" style="background: #fff; border-color: #e2e8f0 !important;">
+                                <div class="d-flex justify-content-center align-items-center mb-3">
+                                    <div class="rounded-circle d-flex justify-content-center align-items-center" style="width: 44px; height: 44px; background: #f0fdf4;">
+                                        <i class="bi bi-eye text-success" style="font-size: 20px;"></i>
+                                    </div>
+                                </div>
+                                <label class="form-label d-block mb-1" style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Observasi</label>
+                                <input type="text" class="form-control shadow-none border-0 fw-bolder text-center mx-auto" id="targetObservasi" style="width: 80px; background: #f8fafc; font-size: 18px; border-radius: 8px; color: #0f172a;" readonly />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded-3 text-center shadow-sm" style="background: #fff; border-color: #e2e8f0 !important;">
+                                <div class="d-flex justify-content-center align-items-center mb-3">
+                                    <div class="rounded-circle d-flex justify-content-center align-items-center" style="width: 44px; height: 44px; background: #fffbeb;">
+                                        <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 20px;"></i>
+                                    </div>
+                                </div>
+                                <label class="form-label d-block mb-1" style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Hazard</label>
+                                <input type="text" class="form-control shadow-none border-0 fw-bolder text-center mx-auto" id="targetHazard" style="width: 80px; background: #f8fafc; font-size: 18px; border-radius: 8px; color: #0f172a;" readonly />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 text-center shadow-sm" style="background: #fff; border-color: #e2e8f0 !important;">
+                                <div class="d-flex justify-content-center align-items-center mb-3">
+                                    <div class="rounded-circle d-flex justify-content-center align-items-center" style="width: 44px; height: 44px; background: #ecfeff;">
+                                        <i class="bi bi-chat-dots text-info" style="font-size: 20px;"></i>
+                                    </div>
+                                </div>
+                                <label class="form-label d-block mb-1" style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Coaching</label>
+                                <input type="text" class="form-control shadow-none border-0 fw-bolder text-center mx-auto" id="targetCoaching" style="width: 80px; background: #f8fafc; font-size: 18px; border-radius: 8px; color: #0f172a;" readonly />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 text-center shadow-sm" style="background: #fff; border-color: #e2e8f0 !important;">
+                                <div class="d-flex justify-content-center align-items-center mb-3">
+                                    <div class="rounded-circle d-flex justify-content-center align-items-center" style="width: 44px; height: 44px; background: #fef2f2;">
+                                        <i class="bi bi-megaphone text-danger" style="font-size: 20px;"></i>
+                                    </div>
+                                </div>
+                                <label class="form-label d-block mb-1" style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Safety Talk</label>
+                                <input type="text" class="form-control shadow-none border-0 fw-bolder text-center mx-auto" id="targetSafetyTalk" style="width: 80px; background: #f8fafc; font-size: 18px; border-radius: 8px; color: #0f172a;" readonly />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 text-end">
+                        <button type="button" class="btn btn-light me-2" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" id="btnSaveTarget" class="btn btn-primary px-4 fw-bold"><i class="bi bi-save me-2"></i>Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Bulk Update -->
+<div class="modal fade" id="bulkUpdateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px; border: none;">
+            <div class="modal-header border-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold" style="color: #0f172a;"><i class="bi bi-magic text-warning me-2"></i>Update Massal Departemen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted mb-4" style="font-size: 13px;">Ubah kategori pengawas seluruh karyawan di satu departemen sekaligus secara otomatis.</p>
+                <form id="formBulkUpdate" onsubmit="bulkUpdate(event)">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size: 13px; color: #475569;">Departemen yang akan diupdate</label>
+                        <select id="bulkDepartemen" class="form-select shadow-sm" style="font-size: 14px; font-weight: 600; border-radius: 8px; border-color: #cbd5e1; cursor: pointer;" required>
+                            <option value="">-- Pilih Departemen --</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold" style="font-size: 13px; color: #475569;">Ubah ke Kategori Pengawas</label>
+                        <select id="bulkKategori" class="form-select shadow-sm" style="font-size: 14px; font-weight: 600; border-radius: 8px; border-color: #cbd5e1; cursor: pointer;" required>
+                            <option value="Pengawas Area Operasional">Pengawas Area Operasional</option>
+                            <option value="Pengawas Support Dept - Non Office">Pengawas Support Dept - Non Office</option>
+                            <option value="Pengawas Support Dept - Office">Pengawas Support Dept - Office</option>
+                            <option value="-">NON SAP</option>
+                        </select>
+                        <div class="text-xs text-muted mt-2"><i class="bi bi-info-circle me-1"></i>Angka target tiap individu akan otomatis dihitung berdasarkan Jabatannya.</div>
+                    </div>
+                    <div class="mt-4 text-end">
+                        <button type="button" class="btn btn-light me-2" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" id="btnSubmitBulk" class="btn btn-warning px-4 fw-bold text-dark"><i class="bi bi-check2-all me-2"></i>Update Semua</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Aturan Target -->
+<div class="modal fade" id="aturanTargetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 16px; border: none;">
+            <div class="modal-header border-bottom px-4 pt-4">
+                <h5 class="modal-title fw-bold" style="color: #0f172a;"><i class="bi bi-info-circle-fill text-info me-2"></i>Target Safety Accountability Pengawas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted mb-4" style="font-size: 13px;">Acuan target bulanan aktivitas Akuntabilitas K3 per kelompok pengawas.</p>
+                
+                <h6 class="fw-bold text-dark" style="color: #854d0e !important;">Pengawas Area Operasional</h6>
+                <table class="table table-sm table-bordered text-center" style="font-size: 12px;">
+                    <thead style="background: #f8fafc; font-size: 11px; color: #334155;">
+                        <tr><th class="text-start">JABATAN</th><th>INSPEKSI</th><th>OBSERVASI</th><th>HAZARD REPORT</th><th>COACHING</th><th>SAFETY TALK</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="text-start">General Manager</td><td>1</td><td>1</td><td>1</td><td>1</td><td>4</td></tr>
+                        <tr><td class="text-start">Sr Manager</td><td>2</td><td>2</td><td>1</td><td>1</td><td>4</td></tr>
+                        <tr><td class="text-start">Manager</td><td>2</td><td>2</td><td>1</td><td>1</td><td>4</td></tr>
+                        <tr><td class="text-start">Sr. Sup/Supt</td><td>8</td><td>8</td><td>4</td><td>2</td><td>4</td></tr>
+                        <tr><td class="text-start">Sr Spv/Spv/Officer/Fm</td><td>8</td><td>8</td><td>8</td><td>2</td><td>4</td></tr>
+                    </tbody>
+                </table>
+
+                <h6 class="fw-bold mt-4" style="color: #1d4ed8 !important;">Pengawas Support Dept - Non Office</h6>
+                <table class="table table-sm table-bordered text-center" style="font-size: 12px;">
+                    <thead style="background: #f8fafc; font-size: 11px; color: #334155;">
+                        <tr><th class="text-start">JABATAN</th><th>INSPEKSI</th><th>OBSERVASI</th><th>HAZARD REPORT</th><th>COACHING</th><th>SAFETY TALK</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="text-start">General Manager</td><td>1</td><td>1</td><td>1</td><td>1</td><td>4</td></tr>
+                        <tr><td class="text-start">Sr Manager</td><td>2</td><td>2</td><td>1</td><td>1</td><td>4</td></tr>
+                        <tr><td class="text-start">Manager</td><td>2</td><td>2</td><td>1</td><td>1</td><td>4</td></tr>
+                        <tr><td class="text-start">Sr. Sup/Supt</td><td>4</td><td>4</td><td>2</td><td>1</td><td>4</td></tr>
+                        <tr><td class="text-start">Sr Spv/Spv/Officer/Fm</td><td>4</td><td>4</td><td>4</td><td>1</td><td>4</td></tr>
+                    </tbody>
+                </table>
+
+                <h6 class="fw-bold mt-4" style="color: #15803d !important;">Pengawas Support Dept - Office</h6>
+                <table class="table table-sm table-bordered text-center" style="font-size: 12px;">
+                    <thead style="background: #f8fafc; font-size: 11px; color: #334155;">
+                        <tr><th class="text-start">JABATAN</th><th>INSPEKSI</th><th>OBSERVASI</th><th>HAZARD REPORT</th><th>COACHING</th><th>SAFETY TALK</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="text-start">General Manager</td><td>1</td><td>1</td><td>1</td><td>1</td><td>4</td></tr>
+                        <tr><td class="text-start">Sr Manager</td><td>2</td><td>2</td><td>1</td><td>1</td><td>4</td></tr>
+                        <tr><td class="text-start">Manager</td><td>2</td><td>2</td><td>1</td><td>1</td><td>4</td></tr>
+                        <tr><td class="text-start">Sr. Sup/Supt</td><td>2</td><td>2</td><td>1</td><td>1</td><td>4</td></tr>
+                        <tr><td class="text-start">Sr Spv/Spv/Officer/Fm</td><td>2</td><td>2</td><td>1</td><td>1</td><td>4</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Datatables CSS & JS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+    <!-- Datatables script logic -->
+    <script>
+        $(document).ready(function () {
+            // Populate bulk update dropdown from the filter dropdown
+            function populateBulkDept() {
+                var filterDepts = $('#filterDepartemen').html();
+                $('#bulkDepartemen').html(filterDepts);
+                // Remove the "-- Semua Departemen --" and make it "-- Pilih Departemen --"
+                $('#bulkDepartemen option[value=""]').text("-- Pilih Departemen --");
+            }
+            populateBulkDept();
+            
+            // Re-populate if filter changes (due to company change)
+            $('#filterPerusahaan').change(function() {
+                setTimeout(populateBulkDept, 1500); // Wait for the ajax to finish in your existing script
+            });
+
+            var table = $('#karyawanTable').DataTable({
+                "processing": true,
+                "serverSide": true,
+                "ajax": {
+                    "url": "/SapTarget/GetEmployeeTargetsData",
+                    "type": "POST",
+                    "data": function (d) {
+                        d.perusahaanId = $('#filterPerusahaan').val();
+                        d.departemen = $('#filterDepartemen').val();
+                        d.customSearch = $('#customSearch').val();
+                    }
+                },
+                "dom": 'rt<"row mt-4 align-items-center"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                "columns": [
+                    { 
+                        "data": "nama",
+                        "render": function(data, type, row) {
+                            let photoUrl = `https://erp.indexim.co.id/uploads/karyawan/${row.karyawanId}.jpg`;
+                            let initials = data ? data.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "-";
+                            return `<div class="d-flex align-items-center gap-3">
+                                        <div class="avatar-circle shadow-sm border border-light overflow-hidden flex-shrink-0" style="width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background-color: #f8fafc;">
+                                            <img src="${photoUrl}" alt="${data}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.outerHTML='<div class=\\'w-100 h-100 d-flex align-items-center justify-content-center fw-bold text-primary bg-soft-primary\\' style=\\'font-size: 14px;\\'>${initials}</div>';" />
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold" style="color: #0f172a;">${data}</div>
+                                            <div style="font-size: 11px; color: #64748b;">${row.perusahaan}</div>
+                                        </div>
+                                    </div>`;
+                        }
+                    },
+                    { "data": "nik" },
+                    { "data": "departemen" },
+                    { 
+                        "data": "kategori_pengawas",
+                        "className": "text-center align-middle",
+                        "render": function(data) {
+                            if (!data || data === "-") return `<span class="badge rounded-pill bg-secondary" style="font-size: 11px; font-weight: 600; padding: 5px 12px;">NON SAP</span>`;
+                            
+                            let text = data.replace("Pengawas ", "");
+                            let badgeClass = "bg-secondary";
+                            
+                            if (data.includes("Area Operasional")) {
+                                badgeClass = "bg-warning text-dark";
+                            } else if (data.includes("Non Office")) {
+                                badgeClass = "bg-primary";
+                            } else if (data.includes("Office")) {
+                                badgeClass = "bg-success";
+                            }
+                            
+                            return `<span class="badge rounded-pill ${badgeClass}" style="font-size: 11px; font-weight: 600; padding: 5px 12px;">${text}</span>`;
+                        }
+                    },
+                    { 
+                        "data": "jabatan",
+                        "render": function(data, type, row) {
+                            let content = `<span class="badge bg-light text-dark border">${data}</span>`;
+                            if (row.alasan && row.alasan !== 'Target berdasarkan mapping jabatan') {
+                                let alasanText = row.alasan.replace('Kategori NST (non target)', 'Kategori Non-Target (NST)');
+                                content += `<div class="mt-1"><span class="badge badge-blink-red" style="font-size: 10px; font-weight: 600;"><i class="bi bi-info-circle me-1"></i>${alasanText}</span></div>`;
+                            }
+                            return content;
+                        }
+                    },
+                    {
+                        "data": "karyawanId",
+                        "orderable": false,
+                        "className": "text-center",
+                        "render": function(data, type, row) {
+                            return `<button class="btn btn-sm btn-primary py-1 px-2" style="font-size: 12px; border-radius: 8px;" onclick='openEditModal(${JSON.stringify(row)})'>
+                                        <i class="bi bi-pencil-fill me-1"></i>Edit
+                                    </button>`;
+                        }
+                    }
+                ],
+                "language": {
+                    "search": "Cari Karyawan:",
+                    "lengthMenu": "Tampilkan _MENU_ data per halaman",
+                    "zeroRecords": "Tidak ditemukan data yang sesuai",
+                    "info": "Menampilkan halaman _PAGE_ dari _PAGES_",
+                    "infoEmpty": "Data tidak tersedia",
+                    "infoFiltered": "(difilter dari total _MAX_ data)",
+                    "processing": `<div class="loading-card">
+                                     <div class="spinner-gradient"></div>
+                                     <span class="fw-bold text-dark" style="font-size: 13px; letter-spacing: 0.5px;">Memproses Data...</span>
+                                   </div>`
+                },
+                "ordering": false // Simplified ordering for now
+            });
+
+            $('#filterPerusahaan').on('change', function () {
+                var perusId = $(this).val();
+                var deptSelect = $('#filterDepartemen');
+                
+                deptSelect.html('<option value="">Sedang memuat...</option>');
+                
+                $.get('/SapTarget/GetDepartmentsByCompany', { perusahaanId: perusId }, function(data) {
+                    deptSelect.empty();
+                    deptSelect.append('<option value="">-- Semua Departemen --</option>');
+                    if(data && data.length) {
+                        $.each(data, function(i, item) {
+                            deptSelect.append($('<option></option>').val(item).text(item));
+                        });
+                    }
+                    table.draw();
+                }).fail(function() {
+                    deptSelect.html('<option value="">-- Semua Departemen --</option>');
+                    table.draw();
+                });
+            });
+
+            $('#filterDepartemen').on('change', function () {
+                table.draw();
+            });
+
+            let searchTimeout;
+            $('#customSearch').on('keyup', function () {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function () {
+                    table.draw();
+                }, 500);
+            });
+        });
+
+        function openEditModal(row) {
+            $('#karyawanId').val(row.karyawanId);
+            $('#lblNamaLengkap').text(row.nama);
+            $('#lblNik').text(row.nik);
+            
+            let infoText = row.departemen;
+            if (row.kategori_pengawas && row.kategori_pengawas !== "-") {
+                infoText += ' • ' + row.kategori_pengawas;
+            }
+            infoText += ' • ' + row.jabatan + ' • ' + row.perusahaan;
+            $('#lblInfoJabatan').text(infoText);
+            
+            if (row.alasan && row.alasan !== 'Target berdasarkan mapping jabatan') {
+                let alasanText = row.alasan.replace('Kategori NST (non target)', 'Kategori Non-Target (NST)');
+                $('#lblAlasanZero').html(`<span class="badge badge-blink-red"><i class="bi bi-info-circle me-1"></i>${alasanText}</span>`).show();
+            } else {
+                $('#lblAlasanZero').hide();
+            }
+
+            // Set targets
+            $('#targetInspeksi').val(row.t_inspeksi);
+            $('#targetObservasi').val(row.t_observasi);
+            $('#targetHazard').val(row.t_hazard);
+            $('#targetCoaching').val(row.t_coaching);
+            $('#targetSafetyTalk').val(row.t_safetytalk);
+
+            // Attempt to match preset
+            let validKategori = ["Pengawas Area Operasional", "Pengawas Support Dept - Non Office", "Pengawas Support Dept - Office", "-"];
+            if (row.kategori_pengawas && validKategori.includes(row.kategori_pengawas)) {
+                $('#presetKategori').val(row.kategori_pengawas);
+            } else {
+                $('#presetKategori').val("");
+            }
+
+            let validJabs = ["General Manager", "Sr Manager", "Manager", "Sr. Sup/Supt", "Sr Spv/Spv/Officer/Fm"];
+            let matchedJab = "";
+            if (row.jabatan) {
+                matchedJab = validJabs.find(j => row.jabatan.includes(j)) || "Sr Spv/Spv/Officer/Fm";
+            }
+            $('#presetJabatan').val(matchedJab);
+
+            $('#editTargetModal').modal('show');
+        }
+
+        const targetMatrix = {
+            "Pengawas Area Operasional": {
+                "General Manager": [1, 1, 1, 1, 4],
+                "Sr Manager": [2, 2, 1, 1, 4],
+                "Manager": [2, 2, 1, 1, 4],
+                "Sr. Sup/Supt": [8, 8, 4, 2, 4],
+                "Sr Spv/Spv/Officer/Fm": [8, 8, 8, 2, 4]
+            },
+            "Pengawas Support Dept - Non Office": {
+                "General Manager": [1, 1, 1, 1, 4],
+                "Sr Manager": [2, 2, 1, 1, 4],
+                "Manager": [2, 2, 1, 1, 4],
+                "Sr. Sup/Supt": [4, 4, 2, 1, 4],
+                "Sr Spv/Spv/Officer/Fm": [4, 4, 4, 1, 4]
+            },
+            "Pengawas Support Dept - Office": {
+                "General Manager": [1, 1, 1, 1, 4],
+                "Sr Manager": [2, 2, 1, 1, 4],
+                "Manager": [2, 2, 1, 1, 4],
+                "Sr. Sup/Supt": [2, 2, 1, 1, 4],
+                "Sr Spv/Spv/Officer/Fm": [2, 2, 1, 1, 4]
+            }
+        };
+
+        function applyPreset() {
+            let kat = $('#presetKategori').val();
+            let jab = $('#presetJabatan').val();
+            
+            if (kat === "-") {
+                $('#targetInspeksi').val(0);
+                $('#targetObservasi').val(0);
+                $('#targetHazard').val(0);
+                $('#targetCoaching').val(0);
+                $('#targetSafetyTalk').val(0);
+            } else if (kat && jab && targetMatrix[kat] && targetMatrix[kat][jab]) {
+                let vals = targetMatrix[kat][jab];
+                $('#targetInspeksi').val(vals[0]);
+                $('#targetObservasi').val(vals[1]);
+                $('#targetHazard').val(vals[2]);
+                $('#targetCoaching').val(vals[3]);
+                $('#targetSafetyTalk').val(vals[4]);
+            }
+        }
+
+        function saveTarget(e) {
+            e.preventDefault();
+            
+            const btn = $('#btnSaveTarget');
+            const originalText = btn.html();
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Menyimpan...');
+
+            const data = {
+                karyawanId: $('#karyawanId').val(),
+                targetInspeksi: $('#targetInspeksi').val(),
+                targetObservasi: $('#targetObservasi').val(),
+                targetHazard: $('#targetHazard').val(),
+                targetCoaching: $('#targetCoaching').val(),
+                targetSafetyTalk: $('#targetSafetyTalk').val(),
+                kategoriPengawas: $('#presetKategori').val()
+            };
+
+            $.post('/SapTarget/SaveTarget', data, function(res) {
+                if(res.success) {
+                    $('#editTargetModal').modal('hide');
+                    $('#karyawanTable').DataTable().ajax.reload(null, false);
+                    alert(res.message);
+                } else {
+                    alert('Error: ' + res.message);
+                }
+            }).always(function() {
+                btn.prop('disabled', false).html(originalText);
+            });
+        }
+
+        function bulkUpdate(e) {
+            e.preventDefault();
+            const btn = $('#btnSubmitBulk');
+            const originalText = btn.html();
+            btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Memproses...');
+
+            const data = {
+                perusahaanId: $('#filterPerusahaan').val() || 0,
+                departemen: $('#bulkDepartemen').val(),
+                kategoriPengawas: $('#bulkKategori').val()
+            };
+
+            $.post('/SapTarget/BulkUpdateDepartemen', data, function(res) {
+                if(res.success) {
+                    $('#bulkUpdateModal').modal('hide');
+                    $('#karyawanTable').DataTable().ajax.reload(null, false);
+                    alert(res.message);
+                } else {
+                    alert('Error: ' + res.message);
+                }
+            }).fail(function() {
+                alert('Terjadi kesalahan koneksi saat memproses update massal.');
+            }).always(function() {
+                btn.prop('disabled', false).html(originalText);
+            });
+        }
+    </script>
+}

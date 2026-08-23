@@ -273,6 +273,13 @@ namespace MBS_SAP.Controllers
                 observations = dbObservations.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
             }
 
+            var rosters = await _context.Rosters
+                .Where(r => employeeNiks.Contains(r.Nik))
+                .ToListAsync();
+            var rostersByNik = rosters
+                .GroupBy(r => r.Nik, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
             var result = new List<dynamic>();
             foreach (var k in deptKaryawansFiltered)
             {
@@ -297,11 +304,41 @@ namespace MBS_SAP.Controllers
                     continue;
                 }
 
-                int mtdTgtH = hTar;
-                int mtdTgtI = insTar;
-                int mtdTgtST = stTar;
-                int mtdTgtO = obsTar;
-                int mtdTgtC = cTar;
+                int totalDaysInMonth = DateTime.DaysInMonth(selectedYear, selectedMonth);
+                int onsiteDays = totalDaysInMonth; // default if no roster setting
+                bool hasRoster = false;
+
+                if (rostersByNik.TryGetValue(nik, out var empRosters))
+                {
+                    hasRoster = true;
+                    int computedOnsite = 0;
+                    foreach (var r in empRosters)
+                    {
+                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
+                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                        if (overlapStart <= overlapEnd)
+                        {
+                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                        }
+                    }
+                    onsiteDays = computedOnsite;
+                }
+
+                double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonth : 1.0;
+
+                int ScaleTarget(int baseTarget, double rat, int daysOnsite)
+                {
+                    if (baseTarget == 0) return 0;
+                    if (daysOnsite == 0) return 0;
+                    int scaled = (int)Math.Round(baseTarget * rat, MidpointRounding.AwayFromZero);
+                    return Math.Max(scaled, 1);
+                }
+
+                int mtdTgtH = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
+                int mtdTgtI = hasRoster ? ScaleTarget(insTar, ratio, onsiteDays) : insTar;
+                int mtdTgtST = hasRoster ? ScaleTarget(stTar, ratio, onsiteDays) : stTar;
+                int mtdTgtO = hasRoster ? ScaleTarget(obsTar, ratio, onsiteDays) : obsTar;
+                int mtdTgtC = hasRoster ? ScaleTarget(cTar, ratio, onsiteDays) : cTar;
                 int mtdTgtP5 = p5mTar;
 
                 int mtdActH = hazards.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
@@ -332,6 +369,8 @@ namespace MBS_SAP.Controllers
                     mtdTotalTarget = totalTgt,
                     mtdTotalActual = totalAct,
                     complianceRate = compliance,
+                    onsiteDays = onsiteDays,
+                    hasRoster = hasRoster,
                     hazard = new { target = mtdTgtH, actual = mtdActH },
                     inspeksi = new { target = mtdTgtI, actual = mtdActI },
                     safetyTalk = new { target = mtdTgtST, actual = mtdActST },
@@ -2270,7 +2309,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> League(int? companyId = null, string mode = "company", int? year = null, int? month = null)
+        public async Task<IActionResult> League(int? companyId = null, string mode = "dept", int? year = null, int? month = null)
         {
             ViewData["HeaderTitle"] = "League SAP";
             ViewData["ActiveTab"] = "Performance";
@@ -2311,7 +2350,18 @@ namespace MBS_SAP.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            int selectedCompanyId = companyId ?? (resolvedCompanyId ?? allowedCompanies.First().PerusahaanId);
+            int defaultCompanyId = 0;
+            var userCompanyStr = User.FindFirst("CompanyId")?.Value;
+            if (int.TryParse(userCompanyStr, out int parsedUserCompanyId) && parsedUserCompanyId > 0)
+            {
+                defaultCompanyId = parsedUserCompanyId;
+            }
+            else
+            {
+                defaultCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
+            }
+
+            int selectedCompanyId = companyId ?? defaultCompanyId;
             
             // Security check: Non-admins cannot inspect other companies' internal dept list unless allowed by scope
             if (!isAdmin && !allowedCompanyIds.Contains(selectedCompanyId))
@@ -2574,6 +2624,8 @@ namespace MBS_SAP.Controllers
                     jabatanName = (string)e.jabatanName,
                     complianceRate = (double)e.complianceRate,
                     mtdTotalTarget = (int)e.mtdTotalTarget,
+                    onsiteDays = (int)e.onsiteDays,
+                    hasRoster = (bool)e.hasRoster,
                     hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
                     inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
                     safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },

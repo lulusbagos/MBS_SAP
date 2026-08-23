@@ -805,6 +805,25 @@ ORDER BY nama_perusahaan";
                 return Unauthorized("NIK tidak ditemukan.");
             }
 
+            // Check if user is from "Site Management" department
+            var isSiteManagement = false;
+            var userDeptClaim = User.FindFirst("Department")?.Value;
+            if (!string.IsNullOrEmpty(userDeptClaim) && userDeptClaim.Contains("Site Management", StringComparison.OrdinalIgnoreCase))
+            {
+                isSiteManagement = true;
+            }
+            else
+            {
+                var deptName = await (from k in _context.Karyawans
+                                      join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId
+                                      where k.NoNik == userNik
+                                      select d.NamaDepartemen).FirstOrDefaultAsync();
+                if (!string.IsNullOrEmpty(deptName) && deptName.Contains("Site Management", StringComparison.OrdinalIgnoreCase))
+                {
+                    isSiteManagement = true;
+                }
+            }
+
             // Allowed for all companies during testing / usage
 
             if (req == null || 
@@ -832,7 +851,7 @@ ORDER BY nama_perusahaan";
 
             // Validasi durasi terhadap ONE_DB_MITRA.dbo.vw_m_roster jika ada (dengan toleransi pergeseran)
             var mitraRoster = await _context.MitraRosters.FirstOrDefaultAsync(m => m.NoNik == userNik);
-            if (mitraRoster != null && mitraRoster.HariOnsite.HasValue && mitraRoster.HariOffsite.HasValue)
+            if (!isSiteManagement && mitraRoster != null && mitraRoster.HariOnsite.HasValue && mitraRoster.HariOffsite.HasValue)
             {
                 int expectedOnsite = mitraRoster.HariOnsite.Value;
                 int expectedOffsite = mitraRoster.HariOffsite.Value;
@@ -871,7 +890,7 @@ ORDER BY nama_perusahaan";
                 .OrderByDescending(r => r.AkhirCuti)
                 .FirstOrDefaultAsync();
 
-            if (previousRoster != null)
+            if (!isSiteManagement && previousRoster != null)
             {
                 DateTime expectedStart = previousRoster.AkhirCuti.AddDays(1);
                 int shiftDays = (awalDinas - expectedStart).Days;

@@ -1061,6 +1061,14 @@
                                                 <div class="fw-bold" style="color: #334155; font-size: 13px;">@emp.name</div>
                                                 <div style="font-size: 10px; color: #64748b;">
                                                     @emp.nik &bull; <span class="badge bg-light text-dark py-0" style="font-size: 9px;">@emp.departmentName</span> &bull; <span style="font-size: 9px; color: #94a3b8;">@(emp.jabatanName ?? "-")</span>
+                                                    @if (emp.hasRoster)
+                                                    {
+                                                        <span>&bull;</span> <span class="badge bg-info text-white py-0" style="font-size: 9px; background-color: #0ea5e9 !important;">@emp.onsiteDays Hari Onsite</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>&bull;</span> <span class="badge bg-secondary text-white py-0" style="font-size: 9px; background-color: #64748b !important;">Roster belum di seting</span>
+                                                    }
                                                 </div>
                                             </td>
                                             <td class="text-center fw-bold" style="color: @GetRateColor(emp.complianceRate); font-size: 13px;">@emp.complianceRate%</td>
