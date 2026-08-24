@@ -505,9 +505,18 @@
                         <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: start;">
                             <i class="bi bi-exclamation-triangle-fill" style="color: #f59e0b; font-size: 18px; line-height: 1;"></i>
                             <div>
-                                <h6 style="color: #f59e0b; font-weight: 800; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">Sinkronisasi Roster OneEv & MBS</h6>
+                                <h6 style="color: #f59e0b; font-weight: 800; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">PANDUAN PENYESUAIAN ROSTER AKTUAL</h6>
                                 <p style="color: var(--text-main); font-size: 11px; margin: 0; line-height: 1.5; opacity: 0.9;">
-                                    Seting roster Anda di aplikasi OneEv (Rencana: <strong>@(ViewData["MitraHariOnsite"] ?? "42") hari Dinas</strong> / <strong>@(ViewData["MitraHariOffsite"] ?? "14") hari Cuti</strong>). Pastikan seting roster Anda sesuai dengan aktual lapangan. Segala tindak pelanggaran akan tercatat di system kami.
+                                    Rencana Roster OneEv: <strong>@(ViewData["MitraHariOnsite"] ?? "42") Hari Dinas / @(ViewData["MitraHariOffsite"] ?? "14") Hari Cuti</strong>.
+                                </p>
+                                <p style="color: var(--text-main); font-size: 11px; margin: 8px 0 0 0; line-height: 1.5; font-weight: 700;">
+                                    <i class="bi bi-info-circle-fill text-warning me-1"></i> Jika Aktual Berbeda (Misal: Dinas 35 Hari / Cuti 21 Hari):
+                                </p>
+                                <p style="color: var(--text-muted); font-size: 10.5px; margin: 3px 0 0 0; line-height: 1.5; opacity: 0.85;">
+                                    Anda <strong>dapat langsung memilih tanggal Mulai & Akhir Dinas/Cuti secara manual</strong> pada kolom input di bawah ini sesuai jadwal kepulangan dan keberangkatan Anda yang sebenarnya. 
+                                </p>
+                                <p style="color: var(--text-muted); font-size: 10.5px; margin: 4px 0 0 0; line-height: 1.5; opacity: 0.85;">
+                                    Sistem MBS memberikan toleransi pergeseran secara otomatis sebesar <strong>±14 hari untuk dinas</strong> dan <strong>±7 hari untuk cuti</strong> dari standar OneEv.
                                 </p>
                             </div>
                         </div>
