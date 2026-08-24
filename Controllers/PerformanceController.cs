@@ -2546,6 +2546,8 @@ namespace MBS_SAP.Controllers
                         jabatanName = (string)e.jabatanName,
                         complianceRate = (double)e.complianceRate,
                         mtdTotalTarget = (int)e.mtdTotalTarget,
+                        onsiteDays = (int)e.onsiteDays,
+                        hasRoster = (bool)e.hasRoster,
                         hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
                         inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
                         safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
