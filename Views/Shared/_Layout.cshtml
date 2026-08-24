@@ -131,6 +131,10 @@
                             <i class="bi bi-star-fill text-warning"></i>
                             <span>Kualitas SAP</span>
                         </a>
+                        <a asp-controller="Admin" asp-action="KaryawanParentMapping" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "KaryawanParentMapping" ? "active" : "")">
+                            <i class="bi bi-diagram-3-fill text-info"></i>
+                            <span>Pemetaan Parent Subcon</span>
+                        </a>
                     }
                     @if (isAdminUser)
                     {

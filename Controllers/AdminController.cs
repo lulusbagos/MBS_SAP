@@ -2492,6 +2492,174 @@ namespace MBS_SAP.Controllers
                 return Json(new { success = false, message = "Terjadi kesalahan: " + ex.Message });
             }
         }
+
+        [HttpGet]
+        public IActionResult KaryawanParentMapping()
+        {
+            if (!IsAuthorizedUser()) return Forbid();
+            ViewData["HeaderTitle"] = "Pemetaan Parent Karyawan";
+            ViewData["ActiveTab"] = "KaryawanParentMapping";
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GetKaryawanParentMappingData()
+        {
+            if (!IsAuthorizedUser()) return Forbid();
+
+            try
+            {
+                var draw = Request.Form["draw"].FirstOrDefault();
+                var start = Request.Form["start"].FirstOrDefault();
+                var length = Request.Form["length"].FirstOrDefault();
+                var searchValue = Request.Form["search[value]"].FirstOrDefault();
+
+                int pageSize = length != null ? Convert.ToInt32(length) : 10;
+                int skip = start != null ? Convert.ToInt32(start) : 0;
+
+                // Load all active companies and relations
+                var allCompanies = await _context.Perusahaans.AsNoTracking().ToListAsync();
+                var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+
+                var companyParentsMap = new Dictionary<int, List<PerusahaanView>>();
+                foreach (var c in allCompanies)
+                {
+                    var parents = new List<PerusahaanView>();
+                    if (c.PerusahaanIndukId.HasValue && c.PerusahaanIndukId.Value > 0)
+                    {
+                        var directParent = allCompanies.FirstOrDefault(p => p.PerusahaanId == c.PerusahaanIndukId.Value);
+                        if (directParent != null) parents.Add(directParent);
+                    }
+                    var relParents = relations
+                        .Where(r => r.ChildCompanyId == c.PerusahaanId && r.ParentCompanyId.HasValue && r.ParentIsActive == true)
+                        .Select(r => r.ParentCompanyId!.Value)
+                        .Distinct();
+                    foreach (var pId in relParents)
+                    {
+                        if (parents.All(p => p.PerusahaanId != pId))
+                        {
+                            var relParent = allCompanies.FirstOrDefault(p => p.PerusahaanId == pId);
+                            if (relParent != null) parents.Add(relParent);
+                        }
+                    }
+                    companyParentsMap[c.PerusahaanId] = parents;
+                }
+
+                // Get list of company IDs with multiple parents
+                var multiParentCompanyIds = companyParentsMap
+                    .Where(kv => kv.Value.Count > 1)
+                    .Select(kv => kv.Key)
+                    .ToList();
+
+                var query = from k in _context.Karyawans
+                            join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                            join per in _context.Perusahaans on k.IdPerusahaan equals per.PerusahaanId into perGroup
+                            from per in perGroup.DefaultIfEmpty()
+                            where k.StatusAktif && multiParentCompanyIds.Contains(k.IdPerusahaan)
+                            select new
+                            {
+                                k.IdKaryawan,
+                                k.NoNik,
+                                NamaLengkap = p.NamaLengkap,
+                                IdPerusahaan = k.IdPerusahaan,
+                                NamaPerusahaan = per != null ? per.NamaPerusahaan : "Unknown",
+                                PerusahaanNodeId = k.PerusahaanNodeId
+                            };
+
+                if (!string.IsNullOrEmpty(searchValue))
+                {
+                    query = query.Where(x => x.NoNik.Contains(searchValue) || x.NamaLengkap.Contains(searchValue) || x.NamaPerusahaan.Contains(searchValue));
+                }
+
+                int recordsTotal = await query.CountAsync();
+
+                var rawData = await query.OrderBy(x => x.NamaPerusahaan)
+                                         .ThenBy(x => x.NamaLengkap)
+                                         .Skip(skip)
+                                         .Take(pageSize)
+                                         .ToListAsync();
+
+                var data = rawData.Select(x => {
+                    var options = companyParentsMap.TryGetValue(x.IdPerusahaan, out var list) 
+                        ? list.Select(o => (dynamic)new { id = o.PerusahaanId, name = o.NamaPerusahaan }).ToList()
+                        : new List<dynamic>();
+
+                    return new
+                    {
+                        x.IdKaryawan,
+                        x.NoNik,
+                        NamaLengkap = x.NamaLengkap,
+                        IdPerusahaan = x.IdPerusahaan,
+                        NamaPerusahaan = x.NamaPerusahaan,
+                        PerusahaanNodeId = x.PerusahaanNodeId,
+                        ParentOptions = options
+                    };
+                }).ToList();
+
+                return Json(new { draw = draw, recordsFiltered = recordsTotal, recordsTotal = recordsTotal, data = data });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { error = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateKaryawanParent(int idKaryawan, int newParentId)
+        {
+            if (!IsAuthorizedUser()) return Forbid();
+
+            try
+            {
+                var karyawan = await (from k in _context.Karyawans
+                                      join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                      where k.IdKaryawan == idKaryawan
+                                      select new { k.NoNik, p.NamaLengkap, k.IdPerusahaan, k.PerusahaanNodeId })
+                                      .FirstOrDefaultAsync();
+
+                if (karyawan == null)
+                {
+                    return Json(new { success = false, message = "Karyawan tidak ditemukan." });
+                }
+
+                var allCompanies = await _context.Perusahaans.AsNoTracking().ToListAsync();
+                var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+
+                var c = allCompanies.FirstOrDefault(comp => comp.PerusahaanId == karyawan.IdPerusahaan);
+                var validParents = new HashSet<int>();
+                if (c != null)
+                {
+                    if (c.PerusahaanIndukId.HasValue && c.PerusahaanIndukId.Value > 0) validParents.Add(c.PerusahaanIndukId.Value);
+                    var relParents = relations
+                        .Where(r => r.ChildCompanyId == c.PerusahaanId && r.ParentCompanyId.HasValue && r.ParentIsActive == true)
+                        .Select(r => r.ParentCompanyId!.Value);
+                    foreach (var pId in relParents) validParents.Add(pId);
+                }
+
+                if (!validParents.Contains(newParentId))
+                {
+                    return Json(new { success = false, message = "Perusahaan parent yang dipilih tidak valid untuk perusahaan karyawan ini." });
+                }
+
+                await _context.Database.ExecuteSqlRawAsync(
+                    "UPDATE ONE_DB_MITRA.dbo.tbl_t_karyawan SET perusahaan_node_id = {0} WHERE id_karyawan = {1}",
+                    newParentId, idKaryawan
+                );
+
+                var userName = User.Identity?.Name ?? "Admin";
+                await _context.Database.ExecuteSqlRawAsync(
+                    @"INSERT INTO tbl_h_karyawan_parent_history (karyawan_id, nik, nama_karyawan, perusahaan_id, old_parent_id, new_parent_id, changed_by, changed_at)
+                      VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, GETDATE())",
+                    idKaryawan, karyawan.NoNik ?? "", karyawan.NamaLengkap ?? "", karyawan.IdPerusahaan, karyawan.PerusahaanNodeId, newParentId, userName
+                );
+
+                return Json(new { success = true, message = "Mapping parent berhasil diperbarui." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Gagal memperbarui mapping: " + ex.Message });
+            }
+        }
     }
 
     public class SapQualityRecordViewModel

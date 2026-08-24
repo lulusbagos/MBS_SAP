@@ -135,17 +135,17 @@ namespace MBS_SAP.Controllers
                 return Forbid();
             }
 
-            var result = await GetEmployeesComplianceData(companyId, departmentName);
+            var result = await GetEmployeesComplianceData(companyId, departmentName, null, null, scopeCompanyId);
             return Json(result);
         }
 
-        private async Task<List<dynamic>> GetEmployeesComplianceData(int companyId, string? departmentNameFilter = null, int? year = null, int? month = null)
+        private async Task<List<dynamic>> GetEmployeesComplianceData(int companyId, string? departmentNameFilter = null, int? year = null, int? month = null, int? parentIdFilter = null)
         {
             var selectedYear = year ?? DateTime.Today.Year;
             var selectedMonth = month ?? DateTime.Today.Month;
             
             var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
-            var cacheKey = $"EmployeesComplianceData_{companyId}_{departmentNameFilter ?? "All"}_{selectedYear}_{selectedMonth}";
+            var cacheKey = $"EmployeesComplianceData_{companyId}_{departmentNameFilter ?? "All"}_{selectedYear}_{selectedMonth}_{parentIdFilter ?? 0}";
             
             bool forceRefresh = HttpContext.Request.Query.ContainsKey("refresh") && 
                                string.Equals(HttpContext.Request.Query["refresh"], "true", StringComparison.OrdinalIgnoreCase);
@@ -179,8 +179,37 @@ namespace MBS_SAP.Controllers
                                           k.NoNik,
                                           NamaLengkap = p.NamaLengkap,
                                           NamaDepartemen = d != null ? d.NamaDepartemen : "General",
-                                          NamaJabatan = j != null ? j.NamaJabatan : "Staff/Operator"
+                                          NamaJabatan = j != null ? j.NamaJabatan : "Staff/Operator",
+                                          PerusahaanNodeId = k.PerusahaanNodeId
                                       }).ToListAsync();
+
+            if (parentIdFilter.HasValue && parentIdFilter.Value > 0)
+            {
+                var allCompanies = await _context.Perusahaans.AsNoTracking().ToListAsync();
+                var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+
+                var currentCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == companyId);
+                if (currentCompany != null)
+                {
+                    var parents = new HashSet<int>();
+                    if (currentCompany.PerusahaanIndukId.HasValue && currentCompany.PerusahaanIndukId.Value > 0)
+                    {
+                        parents.Add(currentCompany.PerusahaanIndukId.Value);
+                    }
+                    var relParents = relations
+                        .Where(r => r.ChildCompanyId == companyId && r.ParentCompanyId.HasValue && r.ParentIsActive == true)
+                        .Select(r => r.ParentCompanyId!.Value);
+                    foreach (var pId in relParents)
+                    {
+                        parents.Add(pId);
+                    }
+
+                    if (parents.Count > 1)
+                    {
+                        deptKaryawans = deptKaryawans.Where(k => k.PerusahaanNodeId == parentIdFilter.Value).ToList();
+                    }
+                }
+            }
 
             var targetMappingCompany = await _context.KaryawanJabatanMappings
                 .AsNoTracking()
@@ -2278,7 +2307,7 @@ namespace MBS_SAP.Controllers
                     }
 
                     // 2. Employee Rank
-                    var companyEmployees = await GetEmployeesComplianceData(myKaryawan.IdPerusahaan);
+                    var companyEmployees = await GetEmployeesComplianceData(myKaryawan.IdPerusahaan, null, null, null, myKaryawan.PerusahaanNodeId);
                     
                     var myCompanyEmpRankInfo = companyEmployees
                         .Select((e, idx) => new { Emp = e, Rank = idx + 1 })
@@ -2483,7 +2512,7 @@ namespace MBS_SAP.Controllers
 
                 foreach (var comp in companiesToCompare)
                 {
-                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth);
+                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId);
 
                     allEmployees.AddRange(compEmps);
 
@@ -2565,7 +2594,7 @@ namespace MBS_SAP.Controllers
             else
             {
                 // Liga Internal: Departments
-                var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth);
+                var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId);
                 
                 var deptAchievements = employees
                     .GroupBy(e => (string)e.departmentName)
@@ -2739,7 +2768,7 @@ namespace MBS_SAP.Controllers
                 var allEmployees = new List<dynamic>();
                 foreach (var comp in companiesToCompare)
                 {
-                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId);
+                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, null, null, selectedCompanyId);
                     allEmployees.AddRange(compEmps);
                 }
 
@@ -2749,7 +2778,7 @@ namespace MBS_SAP.Controllers
             }
             else
             {
-                employeesData = await GetEmployeesComplianceData(selectedCompany.PerusahaanId);
+                employeesData = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, null, null, selectedCompanyId);
             }
 
             if (!string.IsNullOrEmpty(departmentName))
@@ -2961,6 +2990,7 @@ namespace MBS_SAP.Controllers
                 .Where(p => p.StatusAktif && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
                 .OrderBy(p => p.NamaPerusahaan)
                 .ToListAsync();
+            var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
 
             List<PerusahaanView> allowedCompanies = allCompanies;
 
@@ -3058,6 +3088,8 @@ namespace MBS_SAP.Controllers
                 var allChildKaryawans = await _context.Karyawans
                     .Where(k => k.StatusAktif && childCompanyIds.Contains(k.IdPerusahaan))
                     .ToListAsync();
+
+                allChildKaryawans = FilterEmployeesByParentScope(allChildKaryawans, selectedCompanyId, allCompanies, relations);
 
                 var allChildKaryawanIds = allChildKaryawans.Select(k => k.IdKaryawan).ToList();
 
@@ -3189,6 +3221,8 @@ namespace MBS_SAP.Controllers
             var activeKaryawans = await _context.Karyawans
                 .Where(k => k.StatusAktif && relatedCompanyIds.Contains(k.IdPerusahaan))
                 .ToListAsync();
+
+            activeKaryawans = FilterEmployeesByParentScope(activeKaryawans, selectedCompanyId, allCompanies, relations);
 
             var activeKaryawanIds = activeKaryawans.Select(k => k.IdKaryawan).ToList();
 
@@ -3472,6 +3506,8 @@ namespace MBS_SAP.Controllers
                 var allGroupKaryawans = await _context.Karyawans.AsNoTracking()
                     .Where(k => k.StatusAktif && companyIds.Contains(k.IdPerusahaan))
                     .ToListAsync();
+
+                allGroupKaryawans = FilterEmployeesByParentScope(allGroupKaryawans, mcon.PerusahaanId, allCompanies, relations);
                 
                 var allGroupKaryawanIds = allGroupKaryawans.Select(k => k.IdKaryawan).ToList();
                 var allGroupTargets = await _context.KaryawanJabatanMappings.AsNoTracking()
@@ -4433,6 +4469,44 @@ namespace MBS_SAP.Controllers
             }
 
             return false;
+        }
+
+        private List<KaryawanView> FilterEmployeesByParentScope(List<KaryawanView> employees, int parentId, List<PerusahaanView> allCompanies, List<PerusahaanHierarchyRelationView> relations)
+        {
+            var companyParentsMap = new Dictionary<int, HashSet<int>>();
+            foreach (var c in allCompanies)
+            {
+                var parents = new HashSet<int>();
+                if (c.PerusahaanIndukId.HasValue && c.PerusahaanIndukId.Value > 0)
+                {
+                    parents.Add(c.PerusahaanIndukId.Value);
+                }
+                var relParents = relations
+                    .Where(r => r.ChildCompanyId == c.PerusahaanId && r.ParentCompanyId.HasValue && r.ParentIsActive == true)
+                    .Select(r => r.ParentCompanyId!.Value);
+                foreach (var pId in relParents)
+                {
+                    parents.Add(pId);
+                }
+                companyParentsMap[c.PerusahaanId] = parents;
+            }
+
+            return employees.Where(emp => {
+                if (emp.IdPerusahaan == parentId)
+                {
+                    return true;
+                }
+                
+                if (companyParentsMap.TryGetValue(emp.IdPerusahaan, out var parents))
+                {
+                    if (parents.Count > 1)
+                    {
+                        return emp.PerusahaanNodeId == parentId;
+                    }
+                }
+                
+                return true;
+            }).ToList();
         }
     }
 

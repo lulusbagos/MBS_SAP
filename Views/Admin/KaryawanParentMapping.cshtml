@@ -1,0 +1,149 @@
+@{
+    ViewData["Title"] = "Pemetaan Parent Subcon Karyawan";
+}
+
+<div class="animate-fade-in">
+    <div class="screen-title"><i class="bi bi-diagram-3-fill text-info me-2"></i>Pemetaan Parent Subcon Karyawan</div>
+    <p class="screen-subtitle">Atur pemetaan perusahaan parent untuk masing-masing karyawan yang bekerja di anak perusahaan multi-parent (memiliki lebih dari satu parent aktif). Hal ini penting agar realisasi dan target SAP tidak terhitung ganda (double-counting) pada parent company yang salah.</p>
+
+    <!-- Info Box -->
+    <div class="alert alert-info rounded-4 border-0 shadow-sm p-4 mb-4 d-flex align-items-start gap-3" style="background: rgba(14, 165, 233, 0.08); border-left: 5px solid #0ea5e9 !important;">
+        <i class="bi bi-info-circle-fill text-info fs-3"></i>
+        <div>
+            <h6 class="fw-bold text-info mb-1" style="font-family: 'Outfit', sans-serif;">Penting untuk Rencana Kerja Kepatuhan (SAP)</h6>
+            <p class="mb-0 text-muted" style="font-size: 13px; line-height: 1.5;">Karyawan wajib diarahkan ke parent company yang tepat. Jika karyawan belum dipetakan (badge merah), data realisasi program SAP mereka <b>tidak akan masuk ke parent company manapun</b> untuk menghindari beban ganda.</p>
+        </div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-body p-4">
+            <div class="table-responsive">
+                <table id="mappingTable" class="table table-hover align-middle w-100" style="font-size: 13.5px;">
+                    <thead class="table-light">
+                        <tr>
+                            <th>NIK</th>
+                            <th>Nama Karyawan</th>
+                            <th>Subkontraktor (Child)</th>
+                            <th style="min-width: 250px;">Parent Yang Dipetakan</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            var table = $('#mappingTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '@Url.Action("GetKaryawanParentMappingData", "Admin")',
+                    type: 'POST'
+                },
+                columns: [
+                    { data: 'noNik', name: 'NoNik' },
+                    { data: 'namaLengkap', name: 'NamaLengkap' },
+                    { data: 'namaPerusahaan', name: 'NamaPerusahaan' },
+                    { 
+                        data: 'perusahaanNodeId', 
+                        render: function (data, type, row) {
+                            var selectHtml = `<select class="form-select form-select-sm parent-select" data-id="${row.idKaryawan}">`;
+                            
+                            // Check if current mapped parent is empty/null/invalid
+                            var isMapped = false;
+                            var optionsHtml = '';
+                            
+                            row.parentOptions.forEach(function(opt) {
+                                var selected = (data === opt.id) ? 'selected' : '';
+                                if (data === opt.id) isMapped = true;
+                                optionsHtml += `<option value="${opt.id}" ${selected}>${opt.name}</option>`;
+                            });
+                            
+                            if (!isMapped) {
+                                selectHtml += `<option value="" selected disabled>-- Pilih Parent Company --</option>`;
+                            }
+                            
+                            selectHtml += optionsHtml;
+                            selectHtml += `</select>`;
+                            
+                            if (!isMapped) {
+                                selectHtml += `<span class="badge bg-danger bg-opacity-10 text-danger mt-1.5 px-2.5 py-1.5 d-inline-block border border-danger border-opacity-20" style="font-size: 10px; font-weight: 700;">
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i> Parent belum dipetakan
+                                </span>`;
+                            }
+                            
+                            return selectHtml;
+                        },
+                        orderable: false 
+                    },
+                    { 
+                        data: null, 
+                        render: function (data, type, row) {
+                            return `<button class="btn btn-sm btn-info text-white btn-save-mapping px-3" data-id="${row.idKaryawan}" style="border-radius: 8px; font-weight:600;">
+                                <i class="bi bi-check-circle me-1"></i> Petakan
+                            </button>`;
+                        },
+                        orderable: false 
+                    }
+                ],
+                order: [[2, 'asc'], [1, 'asc']],
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/id.json'
+                }
+            });
+
+            $('#mappingTable').on('click', '.btn-save-mapping', function() {
+                var btn = $(this);
+                var idKaryawan = btn.data('id');
+                var select = btn.closest('tr').find('.parent-select');
+                var parentId = select.val();
+
+                if (!parentId) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Perhatian',
+                        text: 'Silakan pilih parent company terlebih dahulu.'
+                    });
+                    return;
+                }
+
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+
+                $.ajax({
+                    url: '@Url.Action("UpdateKaryawanParent", "Admin")',
+                    type: 'POST',
+                    data: {
+                        idKaryawan: idKaryawan,
+                        newParentId: parentId
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil',
+                                text: response.message,
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                            table.ajax.reload(null, false);
+                        } else {
+                            Swal.fire('Error', response.message, 'error');
+                            btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i> Petakan');
+                        }
+                    },
+                    error: function() {
+                        Swal.fire('Error', 'Terjadi kesalahan sistem.', 'error');
+                        btn.prop('disabled', false).html('<i class="bi bi-check-circle me-1"></i> Petakan');
+                    }
+                });
+            });
+        });
+    </script>
+}
