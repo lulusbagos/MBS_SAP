@@ -640,16 +640,11 @@
                 // Auto-trigger popup if configured by backend, taking care not to overlap with incident popup
                 @if (ViewData["ShowRosterPopup"] is bool show && show)
                 {
-                    var isUnset = (ViewData["RosterHistory"] as List<MBS_SAP.Models.Roster>)?.Count == 0;
                     <text>
                     setTimeout(function() {
-                        // Cek apakah user sudah menolak popup hari ini untuk menghindari pop-up berulang setiap refresh
-                        // KECUALI jika roster belum disetting sama sekali (isUnset = true), maka selalu tampilkan
-                        const isUnset = @(isUnset ? "true" : "false");
-                        const todayStr = new Date().toDateString();
-                        if (!isUnset && localStorage.getItem('roster_popup_dismissed_date') === todayStr) {
-                            return; // Jangan tampilkan jika sudah di-dismiss hari ini
-                        }
+                        // Roster wajib diset jika belum pernah diset sama sekali atau sudah kedaluwarsa.
+                        // Selalu tampilkan popup pada setiap load halaman untuk memaksa pengisian roster sampai berhasil diset.
+                        // Pengecekan dismiss date diabaikan agar popup terus keluar setiap kali user memuat ulang halaman.
 
                         var $incidentModal = $('#incidentPopupModal');
                         if ($incidentModal.length) {
