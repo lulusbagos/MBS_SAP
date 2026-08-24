@@ -310,7 +310,6 @@ namespace MBS_SAP.Controllers
 
                 if (rostersByNik.TryGetValue(nik, out var empRosters))
                 {
-                    hasRoster = true;
                     int computedOnsite = 0;
                     foreach (var r in empRosters)
                     {
@@ -321,7 +320,11 @@ namespace MBS_SAP.Controllers
                             computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
-                    onsiteDays = computedOnsite;
+                    if (computedOnsite > 0)
+                    {
+                        hasRoster = true;
+                        onsiteDays = computedOnsite;
+                    }
                 }
 
                 double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonth : 1.0;
@@ -3348,10 +3351,10 @@ namespace MBS_SAP.Controllers
             
             var childBreakdowns = new List<dynamic>
             {
-                new { CompanyName = "PT INDEXIM COALINDO", BelumMengisi = indeximBelum },
-                new { CompanyName = "PT UNGGUL DINAMIKA UTAMA", BelumMengisi = uduBelum },
-                new { CompanyName = "PT KALIMANTAN PRIMA PERSADA", BelumMengisi = kppBelum },
-                new { CompanyName = "PT MEGA GLOBAL ENERGY", BelumMengisi = mgeBelum }
+                new { CompanyId = 1, CompanyName = "PT INDEXIM COALINDO", BelumMengisi = indeximBelum },
+                new { CompanyId = 3, CompanyName = "PT UNGGUL DINAMIKA UTAMA", BelumMengisi = uduBelum },
+                new { CompanyId = 4, CompanyName = "PT KALIMANTAN PRIMA PERSADA", BelumMengisi = kppBelum },
+                new { CompanyId = 5, CompanyName = "PT MEGA GLOBAL ENERGY", BelumMengisi = mgeBelum }
             };
             ViewBag.ChildBreakdowns = childBreakdowns.OrderByDescending(c => c.BelumMengisi).ToList();
 
@@ -3638,6 +3641,7 @@ namespace MBS_SAP.Controllers
                             PerusahaanId = sub.PerusahaanId,
                             PerusahaanName = sub.NamaPerusahaan ?? "Unknown",
                             ParentCompanyName = mcon.NamaPerusahaan ?? "Unknown",
+                            ParentCompanyId = mcon.PerusahaanId,
                             TotalEmployees = subKaryawans.Count,
                             EmployeesWithTarget = subEmpsWithTarget,
                             ComplianceRate = subTargetTotal > 0 ? Math.Round((double)subActualTotal / subTargetTotal * 100.0, 1) : 0,
@@ -4619,6 +4623,7 @@ namespace MBS_SAP.Controllers
         public int PerusahaanId { get; set; }
         public string PerusahaanName { get; set; } = string.Empty;
         public string ParentCompanyName { get; set; } = string.Empty;
+        public int ParentCompanyId { get; set; }
         public int TotalEmployees { get; set; }
         public int EmployeesWithTarget { get; set; }
         public double ComplianceRate { get; set; }

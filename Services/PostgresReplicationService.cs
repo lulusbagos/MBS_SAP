@@ -460,6 +460,7 @@ namespace MBS_SAP.Services
                     Id = i.Id,
                     Nik = i.Nik,
                     Tanggal = i.Tanggal,
+                    Waktu = i.Waktu,
                     JenisInspeksi = i.JenisInspeksi,
                     Lokasi = i.Lokasi,
                     PerusahaanId = i.PerusahaanId,
