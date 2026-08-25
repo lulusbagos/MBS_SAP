@@ -1065,6 +1065,826 @@ namespace MBS_SAP.Services
             return result;
         }
 
+        public async Task<PostgresReplicationResult> ReplicateForUserAsync(string targetNik, CancellationToken cancellationToken = default)
+        {
+            if (!_options.Enabled)
+            {
+                throw new InvalidOperationException("Postgres replication belum diaktifkan. Set PostgresReplication:Enabled = true.");
+            }
+
+            if (string.IsNullOrWhiteSpace(_options.ConnectionString))
+            {
+                throw new InvalidOperationException("Connection string PostgreSQL belum diisi.");
+            }
+
+            if (_options.AllowedCompanies == null || _options.AllowedCompanies.Length == 0)
+            {
+                throw new InvalidOperationException("AllowedCompanies belum diisi.");
+            }
+
+            var hazardView = ValidateSqlIdentifier(_options.HazardSourceView, nameof(_options.HazardSourceView));
+            var inspectionView = ValidateSqlIdentifier(_options.InspectionSourceView, nameof(_options.InspectionSourceView));
+            var coachingView = ValidateSqlIdentifier(_options.CoachingSourceView, nameof(_options.CoachingSourceView));
+            var observationView = ValidateSqlIdentifier(_options.ObservationSourceView, nameof(_options.ObservationSourceView));
+            var p2hView = ValidateSqlIdentifier(_options.P2hSourceView, nameof(_options.P2hSourceView));
+            var p5mView = ValidateSqlIdentifier(_options.P5mSourceView, nameof(_options.P5mSourceView));
+            var safetyTalkView = ValidateSqlIdentifier(_options.SafetyTalkSourceView, nameof(_options.SafetyTalkSourceView));
+
+            var since = DateTime.Today.AddDays(-30);
+
+            var allowedCompanies = _options.AllowedCompanies
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(NormalizeCompanyName)
+                .ToHashSet();
+
+            var companyIdMap = await _context.Perusahaans
+                .Where(p => p.StatusAktif)
+                .Select(p => new { p.PerusahaanId, p.NamaPerusahaan })
+                .ToListAsync(cancellationToken);
+
+            var normalizedCompanyIdMap = companyIdMap
+                .Where(x => !string.IsNullOrWhiteSpace(x.NamaPerusahaan))
+                .GroupBy(x => NormalizeCompanyName(x.NamaPerusahaan))
+                .ToDictionary(g => g.Key, g => g.First().PerusahaanId);
+
+            var targetNiks = GetPossibleSourceNiks(targetNik);
+
+            await using var connection = new NpgsqlConnection(_options.ConnectionString);
+            await connection.OpenAsync(cancellationToken);
+
+            var hazardSourceRows = await ReadHazardsAsync(connection, hazardView, since, cancellationToken, targetNiks);
+            var inspectionSourceRows = await ReadInspectionsAsync(connection, inspectionView, since, cancellationToken, targetNiks);
+            var coachingSourceRows = await ReadCoachingsAsync(connection, coachingView, since, cancellationToken, targetNiks);
+            var observationSourceRows = await ReadObservationsAsync(connection, observationView, since, cancellationToken, targetNiks);
+            var p2hSourceRows = await ReadP2hsAsync(connection, p2hView, since, cancellationToken, targetNiks);
+            var p5mSourceRows = await ReadP5msAsync(connection, p5mView, since, cancellationToken, targetNiks);
+            var safetyTalkSourceRows = await ReadSafetyTalksAsync(connection, safetyTalkView, since, cancellationToken, targetNiks);
+
+            var officialNameMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var namesList = await (from k in _context.Karyawans
+                                   join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                   where k.NoNik == targetNik
+                                   select new { k.NoNik, p.NamaLengkap })
+                                   .ToListAsync(cancellationToken);
+            foreach (var x in namesList)
+            {
+                if (!string.IsNullOrWhiteSpace(x.NoNik) && !officialNameMap.ContainsKey(x.NoNik))
+                {
+                    officialNameMap[x.NoNik] = x.NamaLengkap;
+                }
+            }
+
+            string GetOfficialName(string? sourceNik, string? fallbackName)
+            {
+                if (!string.IsNullOrWhiteSpace(sourceNik) && officialNameMap.TryGetValue(sourceNik.Trim(), out var officialName))
+                {
+                    return officialName;
+                }
+                return fallbackName ?? "Unknown";
+            }
+
+            var result = new PostgresReplicationResult
+            {
+                LookbackDays = 30
+            };
+
+            // 1. Process Hazards
+            var existingHazardsData = await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.Nik == targetNik && h.Tanggal >= since.AddDays(-7))
+                .Select(h => new HazardReplicationDto
+                {
+                    Id = h.Id,
+                    Nik = h.Nik,
+                    Tanggal = h.Tanggal,
+                    Waktu = h.Waktu,
+                    Area = h.Area,
+                    Temuan = h.Temuan,
+                    Lokasi = h.Lokasi,
+                    PerusahaanId = h.PerusahaanId,
+                    StatusTemuan = h.StatusTemuan,
+                    TingkatResiko = h.TingkatResiko,
+                    Pja = h.Pja,
+                    NikPja = h.NikPja,
+                    DepartemenPja = h.DepartemenPja,
+                    CreatedAt = h.CreatedAt
+                })
+                .ToListAsync(cancellationToken);
+
+            var hazardMap = existingHazardsData
+                .GroupBy(h => BuildHazardKey(h.Nik ?? string.Empty, h.Tanggal, h.Waktu, h.Temuan ?? string.Empty, h.Area, h.Lokasi, h.PerusahaanId))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
+
+            foreach (var row in hazardSourceRows)
+            {
+                var normalizedCompany = NormalizeCompanyName(row.CompanyName);
+                if (!allowedCompanies.Contains(normalizedCompany))
+                {
+                    result.HazardSkippedCompany++;
+                    continue;
+                }
+
+                var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
+                var key = BuildHazardKey(row.Nik, row.Tanggal, row.Waktu, row.Temuan, row.Area, row.Lokasi, perusahaanId);
+
+                if (hazardMap.TryGetValue(key, out var existingHazard))
+                {
+                    var hasHazardChanges = false;
+                    var newStatus = Truncate(row.StatusTemuan, 50) ?? "Open";
+                    var newRisk = Truncate(row.TingkatResiko, 50);
+                    var newPja = Truncate(row.Pja, 150);
+                    var newNikPja = Truncate(row.NikPja, 50);
+                    var newDeptPja = Truncate(row.DepartemenPja, 150);
+
+                    if (!string.Equals(existingHazard.StatusTemuan ?? string.Empty, newStatus, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingHazard.TingkatResiko ?? string.Empty, newRisk ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingHazard.Pja ?? string.Empty, newPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingHazard.NikPja ?? string.Empty, newNikPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingHazard.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var realHazard = await _context.HazardReports.FindAsync(new object[] { existingHazard.Id }, cancellationToken);
+                        if (realHazard != null)
+                        {
+                            realHazard.StatusTemuan = newStatus;
+                            realHazard.TingkatResiko = newRisk;
+                            realHazard.Pja = newPja;
+                            realHazard.NikPja = newNikPja;
+                            realHazard.DepartemenPja = newDeptPja;
+                            hasHazardChanges = true;
+                        }
+                    }
+
+                    if (hasHazardChanges)
+                    {
+                        result.HazardUpdated++;
+                    }
+                    else
+                    {
+                        result.HazardSkipped++;
+                    }
+                    continue;
+                }
+
+                var report = new HazardReport
+                {
+                    FotoTemuan = row.FotoTemuan,
+                    Tanggal = row.Tanggal,
+                    Waktu = row.Waktu,
+                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
+                    Nik = Truncate(row.Nik, 50) ?? "UNKNOWN",
+                    Departemen = Truncate(row.Departemen, 150),
+                    Area = Truncate(row.Area, 150),
+                    Lokasi = Truncate(row.Lokasi, 150),
+                    DetilLokasi = Truncate(row.DetilLokasi, 250),
+                    Temuan = Truncate(row.Temuan, 1000) ?? "-",
+                    KategoriBahaya = Truncate(row.KategoriBahaya, 100),
+                    JenisBahaya = Truncate(row.JenisBahaya, 100),
+                    JenisKetidaksesuaian = Truncate(row.JenisKetidaksesuaian, 150),
+                    TingkatResiko = Truncate(row.TingkatResiko, 50),
+                    Perbaikan = row.Perbaikan,
+                    TindakanPerbaikan = row.TindakanPerbaikan,
+                    Pja = Truncate(row.Pja, 150),
+                    NikPja = Truncate(row.NikPja, 50),
+                    DepartemenPja = Truncate(row.DepartemenPja, 150),
+                    StatusTemuan = Truncate(row.StatusTemuan, 50) ?? "Open",
+                    PerusahaanId = perusahaanId,
+                    IsDeleted = false,
+                    CreatedAt = row.CreatedAt
+                };
+
+                _context.HazardReports.Add(report);
+                result.HazardInserted++;
+            }
+
+            // 2. Process Inspections
+            var existingInspectionsData = await _context.Inspections
+                .Where(i => !i.IsDeleted && i.Nik == targetNik && i.Tanggal >= since.AddDays(-7))
+                .Select(i => new InspectionReplicationDto
+                {
+                    Id = i.Id,
+                    Nik = i.Nik,
+                    Tanggal = i.Tanggal,
+                    Waktu = i.Waktu,
+                    JenisInspeksi = i.JenisInspeksi,
+                    Lokasi = i.Lokasi,
+                    PerusahaanId = i.PerusahaanId,
+                    Pja = i.Pja,
+                    NikPja = i.NikPja,
+                    DepartemenPja = i.DepartemenPja,
+                    Catatan = i.Catatan,
+                    CreatedAt = i.CreatedAt
+                })
+                .ToListAsync(cancellationToken);
+
+            var inspectionMap = existingInspectionsData
+                .GroupBy(i => BuildInspectionKey(i.Nik ?? string.Empty, i.Tanggal, i.Waktu, i.JenisInspeksi ?? string.Empty, i.Lokasi, i.PerusahaanId))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
+
+            foreach (var row in inspectionSourceRows)
+            {
+                var normalizedCompany = NormalizeCompanyName(row.CompanyName);
+                if (!allowedCompanies.Contains(normalizedCompany))
+                {
+                    result.InspectionSkippedCompany++;
+                    continue;
+                }
+
+                var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
+                var key = BuildInspectionKey(row.Nik, row.Tanggal, row.Waktu, row.JenisInspeksi, row.Lokasi, perusahaanId);
+
+                if (inspectionMap.TryGetValue(key, out var existingInspection))
+                {
+                    var hasInspectionChanges = false;
+                    var newPja = Truncate(row.Pja, 150);
+                    var newNikPja = Truncate(row.NikPja, 50);
+                    var newDeptPja = Truncate(row.DepartemenPja, 150);
+                    var newCatatan = Truncate(row.Catatan, 2000);
+
+                    if (!string.Equals(existingInspection.Pja ?? string.Empty, newPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingInspection.NikPja ?? string.Empty, newNikPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingInspection.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(existingInspection.Catatan ?? string.Empty, newCatatan ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var realInspection = await _context.Inspections.FindAsync(new object[] { existingInspection.Id }, cancellationToken);
+                        if (realInspection != null)
+                        {
+                            realInspection.Pja = newPja;
+                            realInspection.NikPja = newNikPja;
+                            realInspection.DepartemenPja = newDeptPja;
+                            realInspection.Catatan = newCatatan;
+                            hasInspectionChanges = true;
+                        }
+                    }
+
+                    if (hasInspectionChanges)
+                    {
+                        result.InspectionUpdated++;
+                    }
+                    else
+                    {
+                        result.InspectionSkipped++;
+                    }
+                    continue;
+                }
+
+                var report = new Inspection
+                {
+                    Tanggal = row.Tanggal,
+                    Waktu = row.Waktu,
+                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
+                    Nik = Truncate(row.Nik, 50) ?? "UNKNOWN",
+                    Departemen = Truncate(row.Departemen, 150),
+                    Area = Truncate(row.Area, 150),
+                    Lokasi = Truncate(row.Lokasi, 150),
+                    DetilLokasi = Truncate(row.DetilLokasi, 250),
+                    JenisInspeksi = Truncate(row.JenisInspeksi, 150) ?? "General",
+                    Pja = Truncate(row.Pja, 150),
+                    NikPja = Truncate(row.NikPja, 50),
+                    DepartemenPja = Truncate(row.DepartemenPja, 150),
+                    PerusahaanId = perusahaanId,
+                    Catatan = Truncate(row.Catatan, 2000),
+                    LampiranJson = row.LampiranJson,
+                    IsDeleted = false,
+                    CreatedAt = row.CreatedAt
+                };
+
+                _context.Inspections.Add(report);
+                result.InspectionInserted++;
+            }
+
+            // 3. Process Coachings
+            var existingCoachings = await _context.Coachings
+                .Include(c => c.Participants)
+                .Where(c => !c.IsDeleted && c.Nik == targetNik && c.Tanggal >= since.AddDays(-7))
+                .ToListAsync(cancellationToken);
+
+            var coachingMap = existingCoachings
+                .GroupBy(c => BuildCoachingKey(c.Nik, c.Tanggal, c.Waktu, c.Tema))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
+
+            var coachingGroups = coachingSourceRows
+                .GroupBy(row => string.IsNullOrWhiteSpace(row.SourceCode) ? BuildCoachingKey(row.TrainerNik, row.Tanggal, row.Waktu, row.Tema) : row.SourceCode);
+
+            foreach (var group in coachingGroups)
+            {
+                var first = group.First();
+                var normalizedCompany = NormalizeCompanyName(first.EmployeeCompany);
+                if (!allowedCompanies.Contains(normalizedCompany))
+                {
+                    result.CoachingSkippedCompany += group.Count();
+                    continue;
+                }
+
+                var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
+                var key = BuildCoachingKey(first.TrainerNik, first.Tanggal, first.Waktu, first.Tema);
+
+                if (coachingMap.TryGetValue(key, out var existingCoaching))
+                {
+                    var hasChanges = false;
+                    var newFeedback = first.Feedback;
+                    if (!string.Equals(existingCoaching.Feedback ?? string.Empty, newFeedback ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                    {
+                        existingCoaching.Feedback = newFeedback;
+                        hasChanges = true;
+                    }
+
+                    var newKomitmen = first.Komitmen;
+                    if (!string.Equals(existingCoaching.Komitmen ?? string.Empty, newKomitmen ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                    {
+                        existingCoaching.Komitmen = newKomitmen;
+                        hasChanges = true;
+                    }
+
+                    var currentParticipantsMap = existingCoaching.Participants.ToDictionary(p => NormalizeText(p.Nik));
+                    var incomingParticipants = group
+                        .Select(g => new { g.EmployeeNik, g.EmployeeNama })
+                        .DistinctBy(p => NormalizeText(p.EmployeeNik))
+                        .ToList();
+
+                    var participantChanges = false;
+                    if (currentParticipantsMap.Count != incomingParticipants.Count)
+                    {
+                        participantChanges = true;
+                    }
+                    else
+                    {
+                        foreach (var inc in incomingParticipants)
+                        {
+                            if (!currentParticipantsMap.ContainsKey(NormalizeText(inc.EmployeeNik)))
+                            {
+                                participantChanges = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (participantChanges)
+                    {
+                        _context.CoachingParticipants.RemoveRange(existingCoaching.Participants);
+                        existingCoaching.Participants = incomingParticipants.Select(inc => new CoachingParticipant
+                        {
+                            Nik = Truncate(inc.EmployeeNik, 50) ?? "UNKNOWN",
+                            Nama = Truncate(inc.EmployeeNama, 150) ?? "Unknown"
+                        }).ToList();
+                        hasChanges = true;
+                    }
+
+                    if (hasChanges)
+                    {
+                        result.CoachingUpdated++;
+                    }
+                    else
+                    {
+                        result.CoachingSkipped++;
+                    }
+                    continue;
+                }
+
+                var coaching = new Coaching
+                {
+                    Foto = first.Foto,
+                    Tanggal = first.Tanggal,
+                    Waktu = first.Waktu,
+                    Nama = Truncate(GetOfficialName(first.TrainerNik, first.TrainerNama), 150) ?? "Unknown",
+                    Nik = Truncate(first.TrainerNik, 50) ?? "UNKNOWN",
+                    Departemen = Truncate(first.EmployeeDepartemen, 150),
+                    Area = Truncate(first.Area, 150),
+                    Lokasi = Truncate(first.Lokasi, 150),
+                    DetilLokasi = Truncate(first.DetilLokasi, 250),
+                    Tema = Truncate(first.Tema, 100),
+                    Feedback = first.Feedback,
+                    Komitmen = first.Komitmen,
+                    PerusahaanId = perusahaanId,
+                    IsDeleted = false,
+                    CreatedAt = first.Tanggal.Add(first.Waktu)
+                };
+
+                coaching.Participants = group
+                    .Select(g => new { g.EmployeeNik, g.EmployeeNama })
+                    .DistinctBy(p => NormalizeText(p.EmployeeNik))
+                    .Select(inc => new CoachingParticipant
+                    {
+                        Nik = Truncate(inc.EmployeeNik, 50) ?? "UNKNOWN",
+                        Nama = Truncate(inc.EmployeeNama, 150) ?? "Unknown"
+                    }).ToList();
+
+                _context.Coachings.Add(coaching);
+                result.CoachingInserted++;
+            }
+
+            // 4. Process Observations
+            var existingObservations = await _context.Observations
+                .Where(o => !o.IsDeleted && o.Nik == targetNik && o.Date >= since.AddDays(-7))
+                .ToListAsync(cancellationToken);
+
+            var observationMap = existingObservations
+                .GroupBy(o => BuildObservationKey(o.Nik, o.Date.Date, o.Date.TimeOfDay, o.KegiatanYangDiamati, o.PerihalYangDiamati))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
+
+            foreach (var row in observationSourceRows)
+            {
+                var normalizedCompany = NormalizeCompanyName(row.CompanyName);
+                if (!allowedCompanies.Contains(normalizedCompany))
+                {
+                    result.ObservationSkippedCompany++;
+                    continue;
+                }
+
+                var key = BuildObservationKey(row.Nik, row.Tanggal, row.Waktu, row.Kegiatan, row.Perihal);
+
+                if (observationMap.TryGetValue(key, out var existingObs))
+                {
+                    var hasChanges = false;
+                    var newKeterangan = Truncate(row.Keterangan, 2000);
+                    if (!string.Equals(existingObs.Keterangan ?? string.Empty, newKeterangan ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                    {
+                        existingObs.Keterangan = newKeterangan;
+                        hasChanges = true;
+                    }
+                    var newHasil = Truncate(row.Hasil, 50);
+                    if (!string.Equals(existingObs.HasilObservasi ?? string.Empty, newHasil ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                    {
+                        existingObs.HasilObservasi = newHasil;
+                        hasChanges = true;
+                    }
+
+                    if (hasChanges)
+                    {
+                        result.ObservationUpdated++;
+                    }
+                    else
+                    {
+                        result.ObservationSkipped++;
+                    }
+                    continue;
+                }
+
+                var obs = new Observation
+                {
+                    Date = row.Tanggal.Add(row.Waktu),
+                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
+                    Nik = Truncate(row.Nik, 50) ?? "UNKNOWN",
+                    Departemen = Truncate(row.Departemen, 100) ?? "General",
+                    Area = Truncate(row.Area, 100) ?? "General",
+                    Lokasi = Truncate(row.Lokasi, 150) ?? "General",
+                    DetilLokasi = Truncate(row.DetilLokasi, 2000),
+                    KegiatanYangDiamati = row.Kegiatan,
+                    DepartemenYangDiamati = Truncate(row.DeptDiamati, 100),
+                    DokumenPendukung = Truncate(row.Doc, 100),
+                    ResikoKritis = Truncate(row.Resiko, 100),
+                    TingkatResiko = Truncate(row.Kegiatan, 50),
+                    PerihalYangDiamati = Truncate(row.Perihal, 150),
+                    HasilObservasi = Truncate(row.Hasil, 50),
+                    Keterangan = Truncate(row.Keterangan, 2000),
+                    IsDeleted = false,
+                    CreatedAt = row.Tanggal.Add(row.Waktu)
+                };
+
+                _context.Observations.Add(obs);
+                result.ObservationInserted++;
+            }
+
+            // 5. Process P2H
+            var existingP2hs = await _context.P2hReports
+                .Where(p => !p.IsDeleted && p.Nik == targetNik && p.Tanggal >= since.AddDays(-7))
+                .ToListAsync(cancellationToken);
+
+            var p2hMap = existingP2hs
+                .GroupBy(p => BuildP2hKey(p.Nik, p.Tanggal, p.Waktu, p.NoLambung))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
+
+            var p2hGroups = p2hSourceRows
+                .GroupBy(row => string.IsNullOrWhiteSpace(row.SourceCode) ? BuildP2hKey(row.Nik, row.Tanggal, row.Waktu, row.NoLambung) : row.SourceCode);
+
+            foreach (var group in p2hGroups)
+            {
+                var first = group.First();
+                var normalizedCompany = NormalizeCompanyName(first.CompanyName);
+                if (!allowedCompanies.Contains(normalizedCompany))
+                {
+                    result.P2hSkippedCompany += group.Count();
+                    continue;
+                }
+
+                var key = BuildP2hKey(first.Nik, first.Tanggal, first.Waktu, first.NoLambung);
+
+                var listA = new List<P2hController.ChecklistItem>();
+                var listB = new List<P2hController.ChecklistItem>();
+                var listC = new List<P2hController.ChecklistItem>();
+                int idA = 1, idB = 1, idC = 1;
+
+                foreach (var r in group)
+                {
+                    var statusStr = string.Equals(r.Status, "Good", StringComparison.OrdinalIgnoreCase) || string.Equals(r.YesNo, "Yes", StringComparison.OrdinalIgnoreCase) ? "GOOD" : "NOT_GOOD";
+                    var item = new P2hController.ChecklistItem { Name = r.Name, Status = statusStr };
+                    var typeLower = (r.Type ?? "").ToLower();
+                    if (typeLower.Contains("gol. a") || typeLower.Contains("gol a")) { item.Id = idA++; listA.Add(item); }
+                    else if (typeLower.Contains("gol. b") || typeLower.Contains("gol b")) { item.Id = idB++; listB.Add(item); }
+                    else if (typeLower.Contains("gol. c") || typeLower.Contains("gol c")) { item.Id = idC++; listC.Add(item); }
+                }
+
+                var golAJson = System.Text.Json.JsonSerializer.Serialize(listA);
+                var golBJson = System.Text.Json.JsonSerializer.Serialize(listB);
+                var golCJson = System.Text.Json.JsonSerializer.Serialize(listC);
+
+                if (p2hMap.TryGetValue(key, out var existingP2h))
+                {
+                    var hasChanges = false;
+                    if (existingP2h.Kilometer != first.Kilometer) { existingP2h.Kilometer = first.Kilometer; hasChanges = true; }
+                    if (existingP2h.GolA_Json != golAJson) { existingP2h.GolA_Json = golAJson; hasChanges = true; }
+                    if (existingP2h.GolB_Json != golBJson) { existingP2h.GolB_Json = golBJson; hasChanges = true; }
+                    if (existingP2h.GolC_Json != golCJson) { existingP2h.GolC_Json = golCJson; hasChanges = true; }
+
+                    if (hasChanges) result.P2hUpdated++;
+                    else result.P2hSkipped++;
+                    continue;
+                }
+
+                var p2h = new P2hReport
+                {
+                    Nik = Truncate(first.Nik, 50) ?? "UNKNOWN",
+                    Nama = Truncate(GetOfficialName(first.Nik, first.Nama), 150) ?? "Unknown",
+                    Tanggal = first.Tanggal,
+                    Waktu = first.Waktu,
+                    JenisKendaraan = Truncate(first.JenisKendaraan, 100) ?? "LIGHT VEHICLE",
+                    NoLambung = Truncate(first.NoLambung, 100) ?? "-",
+                    Kilometer = first.Kilometer,
+                    Merek = Truncate(first.Merek, 200) ?? "-",
+                    SimperKimper = string.Equals(first.SimperKimper, "Yes", StringComparison.OrdinalIgnoreCase) || string.Equals(first.SimperKimper, "YA", StringComparison.OrdinalIgnoreCase) ? "YA" : "TIDAK",
+                    GolA_Json = golAJson,
+                    GolB_Json = golBJson,
+                    GolC_Json = golCJson,
+                    IsDeleted = false,
+                    CreatedAt = first.Tanggal.Add(first.Waktu)
+                };
+
+                _context.P2hReports.Add(p2h);
+                result.P2hInserted++;
+            }
+
+            // 6. Process P5M
+            var existingP5ms = await _context.P5ms
+                .Where(p => !p.IsDeleted && p.Nik == targetNik && p.Tanggal >= since.AddDays(-7))
+                .ToListAsync(cancellationToken);
+
+            var p5mMap = existingP5ms
+                .GroupBy(p => BuildP5mKey(p.Nik, p.Tanggal, p.Waktu, p.ListPertanyaan))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
+
+            foreach (var row in p5mSourceRows)
+            {
+                var normalizedCompany = NormalizeCompanyName(row.CompanyName);
+                if (!allowedCompanies.Contains(normalizedCompany))
+                {
+                    result.P5mSkippedCompany++;
+                    continue;
+                }
+
+                var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
+                var key = BuildP5mKey(row.Nik, row.Tanggal, row.Waktu, row.ListPertanyaan);
+
+                if (p5mMap.TryGetValue(key, out var existingP5m))
+                {
+                    var hasChanges = false;
+                    var newJawaban = Truncate(row.Jawaban, 100);
+                    if (!string.Equals(existingP5m.Jawaban ?? string.Empty, newJawaban ?? string.Empty, StringComparison.OrdinalIgnoreCase)) { existingP5m.Jawaban = newJawaban; hasChanges = true; }
+                    var newCatatan = row.Catatan;
+                    if (!string.Equals(existingP5m.Catatan ?? string.Empty, newCatatan ?? string.Empty, StringComparison.OrdinalIgnoreCase)) { existingP5m.Catatan = newCatatan; hasChanges = true; }
+                    if (existingP5m.FotoKegiatan != row.Foto) { existingP5m.FotoKegiatan = row.Foto; hasChanges = true; }
+
+                    if (hasChanges) result.P5mUpdated++;
+                    else result.P5mSkipped++;
+                    continue;
+                }
+
+                var p5m = new P5m
+                {
+                    FotoKegiatan = row.Foto,
+                    Tanggal = row.Tanggal,
+                    Waktu = row.Waktu,
+                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
+                    Nik = Truncate(row.Nik, 50) ?? "UNKNOWN",
+                    Departemen = Truncate(row.Departemen, 150),
+                    DetilLokasi = Truncate(row.DetilLokasi, 250),
+                    Topik = Truncate(row.Topik, 250) ?? "Pekerjaan Umum",
+                    Judul = Truncate(row.Judul, 250) ?? "Siap Bekerja",
+                    Keterangan = Truncate(row.Keterangan, 4000) ?? ".",
+                    ListPertanyaan = row.ListPertanyaan,
+                    Jawaban = Truncate(row.Jawaban, 100) ?? "No",
+                    Catatan = row.Catatan,
+                    PerusahaanId = perusahaanId,
+                    IsDeleted = false,
+                    CreatedAt = row.Tanggal.Add(row.Waktu)
+                };
+
+                _context.P5ms.Add(p5m);
+                result.P5mInserted++;
+            }
+
+            // 7. Process SafetyTalks
+            var existingSafetyTalks = await _context.SafetyTalks
+                .Where(s => !s.IsDeleted && s.Nik == targetNik && s.Tanggal >= since.AddDays(-7))
+                .ToListAsync(cancellationToken);
+
+            var safetyTalkMap = existingSafetyTalks
+                .GroupBy(s => BuildSafetyTalkKey(s.Nik, s.Tanggal, s.Waktu, s.Judul))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
+
+            foreach (var row in safetyTalkSourceRows)
+            {
+                var normalizedCompany = NormalizeCompanyName(row.CompanyName);
+                if (!allowedCompanies.Contains(normalizedCompany))
+                {
+                    result.SafetyTalkSkippedCompany++;
+                    continue;
+                }
+
+                var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
+                var key = BuildSafetyTalkKey(row.Nik, row.Tanggal, row.Waktu, row.Judul);
+
+                if (safetyTalkMap.TryGetValue(key, out var existingTalk))
+                {
+                    var hasChanges = false;
+                    var newKeterangan = row.Keterangan;
+                    if (!string.Equals(existingTalk.Keterangan ?? string.Empty, newKeterangan ?? string.Empty, StringComparison.OrdinalIgnoreCase)) { existingTalk.Keterangan = newKeterangan; hasChanges = true; }
+                    if (existingTalk.FotoDiri != row.FotoDiri) { existingTalk.FotoDiri = row.FotoDiri; hasChanges = true; }
+                    if (existingTalk.FotoKegiatan != row.FotoKegiatan) { existingTalk.FotoKegiatan = row.FotoKegiatan; hasChanges = true; }
+
+                    if (hasChanges) result.SafetyTalkUpdated++;
+                    else result.SafetyTalkSkipped++;
+                    continue;
+                }
+
+                var talk = new SafetyTalk
+                {
+                    FotoDiri = row.FotoDiri,
+                    FotoKegiatan = row.FotoKegiatan,
+                    Tanggal = row.Tanggal,
+                    Waktu = row.Waktu,
+                    Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
+                    Nik = Truncate(row.Nik, 50) ?? "UNKNOWN",
+                    Departemen = Truncate(row.Departemen, 150),
+                    Area = Truncate(row.Area, 150),
+                    Lokasi = Truncate(row.Lokasi, 150),
+                    DetilLokasi = Truncate(row.DetilLokasi, 250),
+                    Judul = Truncate(row.Judul, 250),
+                    Keterangan = row.Keterangan,
+                    PerusahaanId = perusahaanId,
+                    IsDeleted = false,
+                    CreatedAt = row.Tanggal.Add(row.Waktu)
+                };
+
+                _context.SafetyTalks.Add(talk);
+                result.SafetyTalkInserted++;
+            }
+
+            // Deduplicate all safety data for this user to ensure absolutely no duplicates exist
+            
+            // Deduplicate HazardReports
+            var userHazards = await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.Nik == targetNik)
+                .OrderByDescending(h => h.CreatedAt)
+                .ThenByDescending(h => h.Id)
+                .ToListAsync(cancellationToken);
+            var hazardKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var h in userHazards)
+            {
+                var key = BuildHazardKey(h.Nik ?? string.Empty, h.Tanggal, h.Waktu, h.Temuan ?? string.Empty, h.Area, h.Lokasi, h.PerusahaanId);
+                if (!hazardKeys.Add(key))
+                {
+                    h.IsDeleted = true;
+                }
+            }
+
+            // Deduplicate Inspections
+            var userInspections = await _context.Inspections
+                .Where(i => !i.IsDeleted && i.Nik == targetNik)
+                .OrderByDescending(i => i.CreatedAt)
+                .ThenByDescending(i => i.Id)
+                .ToListAsync(cancellationToken);
+            var inspectionKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var i in userInspections)
+            {
+                var key = BuildInspectionKey(i.Nik ?? string.Empty, i.Tanggal, i.Waktu, i.JenisInspeksi ?? string.Empty, i.Lokasi, i.PerusahaanId);
+                if (!inspectionKeys.Add(key))
+                {
+                    i.IsDeleted = true;
+                }
+            }
+
+            // Deduplicate Coachings
+            var userCoachings = await _context.Coachings
+                .Where(c => !c.IsDeleted && c.Nik == targetNik)
+                .OrderByDescending(c => c.CreatedAt)
+                .ThenByDescending(c => c.Id)
+                .ToListAsync(cancellationToken);
+            var coachingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in userCoachings)
+            {
+                var key = BuildCoachingKey(c.Nik, c.Tanggal, c.Waktu, c.Tema);
+                if (!coachingKeys.Add(key))
+                {
+                    c.IsDeleted = true;
+                }
+            }
+
+            // Deduplicate Observations
+            var userObservations = await _context.Observations
+                .Where(o => !o.IsDeleted && o.Nik == targetNik)
+                .OrderByDescending(o => o.CreatedAt)
+                .ThenByDescending(o => o.Id)
+                .ToListAsync(cancellationToken);
+            var observationKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var o in userObservations)
+            {
+                var key = BuildObservationKey(o.Nik, o.Date.Date, o.Date.TimeOfDay, o.KegiatanYangDiamati, o.PerihalYangDiamati);
+                if (!observationKeys.Add(key))
+                {
+                    o.IsDeleted = true;
+                }
+            }
+
+            // Deduplicate P2hReports
+            var userP2hs = await _context.P2hReports
+                .Where(p => !p.IsDeleted && p.Nik == targetNik)
+                .OrderByDescending(p => p.CreatedAt)
+                .ThenByDescending(p => p.Id)
+                .ToListAsync(cancellationToken);
+            var p2hKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in userP2hs)
+            {
+                var key = BuildP2hKey(p.Nik, p.Tanggal, p.Waktu, p.NoLambung);
+                if (!p2hKeys.Add(key))
+                {
+                    p.IsDeleted = true;
+                }
+            }
+
+            // Deduplicate P5ms
+            var userP5ms = await _context.P5ms
+                .Where(p => !p.IsDeleted && p.Nik == targetNik)
+                .OrderByDescending(p => p.CreatedAt)
+                .ThenByDescending(p => p.Id)
+                .ToListAsync(cancellationToken);
+            var p5mKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in userP5ms)
+            {
+                var key = BuildP5mKey(p.Nik, p.Tanggal, p.Waktu, p.ListPertanyaan);
+                if (!p5mKeys.Add(key))
+                {
+                    p.IsDeleted = true;
+                }
+            }
+
+            // Deduplicate SafetyTalks
+            var userSafetyTalks = await _context.SafetyTalks
+                .Where(s => !s.IsDeleted && s.Nik == targetNik)
+                .OrderByDescending(s => s.CreatedAt)
+                .ThenByDescending(s => s.Id)
+                .ToListAsync(cancellationToken);
+            var safetyTalkKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var s in userSafetyTalks)
+            {
+                var key = BuildSafetyTalkKey(s.Nik, s.Tanggal, s.Waktu, s.Judul);
+                if (!safetyTalkKeys.Add(key))
+                {
+                    s.IsDeleted = true;
+                }
+            }
+
+            if (result.HazardInserted > 0 || result.HazardUpdated > 0 ||
+                result.InspectionInserted > 0 || result.InspectionUpdated > 0 ||
+                result.CoachingInserted > 0 || result.CoachingUpdated > 0 ||
+                result.ObservationInserted > 0 || result.ObservationUpdated > 0 ||
+                result.P2hInserted > 0 || result.P2hUpdated > 0 ||
+                result.P5mInserted > 0 || result.P5mUpdated > 0 ||
+                result.SafetyTalkInserted > 0 || result.SafetyTalkUpdated > 0 ||
+                _context.ChangeTracker.HasChanges())
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+
+            return result;
+        }
+
+        private static string[] GetPossibleSourceNiks(string targetNik)
+        {
+            return new string[] { targetNik };
+        }
+
         private static string ValidateSqlIdentifier(string raw, string name)
         {
             var value = (raw ?? string.Empty).Trim();
@@ -1129,7 +1949,8 @@ namespace MBS_SAP.Services
             NpgsqlConnection connection,
             string sourceView,
             DateTime since,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default,
+            string[]? targetNiks = null)
         {
             var sql = $@"
 SELECT
@@ -1157,11 +1978,21 @@ SELECT
     employee_company,
     foto_temuan
 FROM {sourceView}
-WHERE date >= @sinceDate OR status IS NULL OR LOWER(status::text) NOT IN ('close', 'closed', '1')
-ORDER BY date, time, code;";
+WHERE (date >= @sinceDate OR status IS NULL OR LOWER(status::text) NOT IN ('close', 'closed', '1'))";
+
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                sql += " AND employee_nik = ANY(@targetNiks)";
+            }
+
+            sql += " ORDER BY date, time, code;";
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("sinceDate", since.Date);
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                command.Parameters.AddWithValue("targetNiks", targetNiks);
+            }
 
             var data = new List<HazardSourceRow>();
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -1211,7 +2042,8 @@ ORDER BY date, time, code;";
             NpgsqlConnection connection,
             string sourceView,
             DateTime since,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default,
+            string[]? targetNiks = null)
         {
             var sql = $@"
 SELECT
@@ -1233,11 +2065,21 @@ SELECT
     employee_company,
     status
 FROM {sourceView}
-WHERE date >= @sinceDate
-ORDER BY date, time, code;";
+WHERE date >= @sinceDate";
+
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                sql += " AND employee_nik = ANY(@targetNiks)";
+            }
+
+            sql += " ORDER BY date, time, code;";
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("sinceDate", since.Date);
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                command.Parameters.AddWithValue("targetNiks", targetNiks);
+            }
 
             var data = new List<InspectionSourceRow>();
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -1281,7 +2123,8 @@ ORDER BY date, time, code;";
             NpgsqlConnection connection,
             string sourceView,
             DateTime since,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default,
+            string[]? targetNiks = null)
         {
             var sql = $@"
 SELECT
@@ -1302,11 +2145,21 @@ SELECT
     remark,
     foto
 FROM {sourceView}
-WHERE date >= @sinceDate
-ORDER BY date, time, code;";
+WHERE date >= @sinceDate";
+
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                sql += " AND trainer_nik = ANY(@targetNiks)";
+            }
+
+            sql += " ORDER BY date, time, code;";
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("sinceDate", since.Date);
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                command.Parameters.AddWithValue("targetNiks", targetNiks);
+            }
 
             var data = new List<CoachingSourceRow>();
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -1341,7 +2194,8 @@ ORDER BY date, time, code;";
             NpgsqlConnection connection,
             string sourceView,
             DateTime since,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default,
+            string[]? targetNiks = null)
         {
             var sql = $@"
 SELECT
@@ -1363,11 +2217,21 @@ SELECT
     point,
     remark
 FROM {sourceView}
-WHERE date >= @sinceDate
-ORDER BY date, time, code;";
+WHERE date >= @sinceDate";
+
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                sql += " AND employee_nik = ANY(@targetNiks)";
+            }
+
+            sql += " ORDER BY date, time, code;";
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("sinceDate", since.Date);
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                command.Parameters.AddWithValue("targetNiks", targetNiks);
+            }
 
             var data = new List<ObservationSourceRow>();
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -1403,7 +2267,8 @@ ORDER BY date, time, code;";
             NpgsqlConnection connection,
             string sourceView,
             DateTime since,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default,
+            string[]? targetNiks = null)
         {
             var sql = $@"
 SELECT
@@ -1425,11 +2290,21 @@ SELECT
     name,
     status
 FROM {sourceView}
-WHERE date >= @sinceDate
-ORDER BY date, time, code;";
+WHERE date >= @sinceDate";
+
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                sql += " AND employee_nik = ANY(@targetNiks)";
+            }
+
+            sql += " ORDER BY date, time, code;";
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("sinceDate", since.Date);
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                command.Parameters.AddWithValue("targetNiks", targetNiks);
+            }
 
             var data = new List<P2hSourceRow>();
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -1476,7 +2351,8 @@ ORDER BY date, time, code;";
             NpgsqlConnection connection,
             string sourceView,
             DateTime since,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default,
+            string[]? targetNiks = null)
         {
             var sql = $@"
 SELECT
@@ -1496,11 +2372,21 @@ SELECT
     remark,
     foto
 FROM {sourceView}
-WHERE date >= @sinceDate
-ORDER BY date, time, code;";
+WHERE date >= @sinceDate";
+
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                sql += " AND employee_nik = ANY(@targetNiks)";
+            }
+
+            sql += " ORDER BY date, time, code;";
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("sinceDate", since.Date);
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                command.Parameters.AddWithValue("targetNiks", targetNiks);
+            }
 
             var data = new List<P5mSourceRow>();
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -1534,7 +2420,8 @@ ORDER BY date, time, code;";
             NpgsqlConnection connection,
             string sourceView,
             DateTime since,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken = default,
+            string[]? targetNiks = null)
         {
             var sql = $@"
 SELECT
@@ -1553,11 +2440,21 @@ SELECT
     foto,
     foto_kegiatan
 FROM {sourceView}
-WHERE date >= @sinceDate
-ORDER BY date, time, code;";
+WHERE date >= @sinceDate";
+
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                sql += " AND employee_nik = ANY(@targetNiks)";
+            }
+
+            sql += " ORDER BY date, time, code;";
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("sinceDate", since.Date);
+            if (targetNiks != null && targetNiks.Length > 0)
+            {
+                command.Parameters.AddWithValue("targetNiks", targetNiks);
+            }
 
             var data = new List<SafetyTalkSourceRow>();
             await using var reader = await command.ExecuteReaderAsync(cancellationToken);

@@ -184,6 +184,20 @@
             <i class="bi bi-chevron-right text-muted"></i>
         </a>
 
+        <!-- Sinkronisasi Data Safety Button -->
+        <button type="button" onclick="syncPostgresData()" id="btnSyncPostgres"
+                class="d-flex align-items-center p-3 text-decoration-none w-100 border-0 text-start"
+                style="background: transparent; color: inherit; cursor: pointer; border-bottom: 1px solid var(--border-color);">
+            <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+                <i class="bi bi-arrow-repeat" id="syncIcon" style="font-size: 18px;"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">Sinkronisasi Data Safety</div>
+                <div class="text-muted" style="font-size: 11px;">Tarik data K3 dari INDEXSAFE / ZPRO (1 periode)</div>
+            </div>
+            <i class="bi bi-chevron-right text-muted" id="syncChevron"></i>
+        </button>
+
         <!-- Reset Password Button -->
         <button type="button" onclick="showResetModal()"
                 class="d-flex align-items-center p-3 text-decoration-none w-100 border-0 text-start"
@@ -245,6 +259,69 @@
     </div>
 </div>
 
+<!-- ── Progress Loading Overlay for Syncing ── -->
+<div id="syncProgressOverlay"
+     style="display:none; position:fixed; inset:0; z-index:10000;
+            background:rgba(15, 23, 42, 0.75); backdrop-filter:blur(6px);
+            align-items:center; justify-content:center;">
+    <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:24px;
+                max-width:380px; width:90%; margin:auto; padding:32px 24px; text-align:center;
+                box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); position:relative;">
+
+        <!-- Animating Sync Gear/Globe / Success / Error Icon -->
+        <div class="mb-4 position-relative d-inline-block">
+            <div id="syncIconContainer" style="width: 72px; height: 72px; background: rgba(59, 130, 246, 0.15); border-radius: 50%;
+                        display: flex; align-items: center; justify-content: center; margin: 0 auto; transition: all 0.3s ease;">
+                <i id="syncStatusIcon" class="bi bi-arrow-repeat text-primary animate-spin" style="font-size: 36px; display: inline-block;"></i>
+            </div>
+        </div>
+
+        <h5 id="syncTitle" style="font-weight: 800; color: var(--text-main); margin-bottom: 6px;">Sinkronisasi Data Safety</h5>
+        <p id="syncDesc" style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 24px;">
+            Menarik data K3 dari INDEXSAFE / ZPRO (Periode 30 Hari Terakhir) untuk NIK Anda. Mohon tunggu...
+        </p>
+
+        <!-- Progress Bar -->
+        <div id="syncProgressBarContainer" class="progress mb-4" style="height: 10px; border-radius: 999px; background: var(--border-color); overflow: hidden;">
+            <div id="syncProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                 role="progressbar" style="width: 0%; transition: width 0.4s ease;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+
+        <!-- Progress Steps -->
+        <div id="syncStepsContainer" class="text-start" style="font-size: 12.5px; font-weight: 600; color: var(--text-main);">
+            <div id="step1" class="d-flex align-items-center mb-2 text-muted">
+                <i class="bi bi-circle me-2" id="iconStep1"></i> <span>Menghubungkan ke server INDEXSAFE / ZPRO...</span>
+            </div>
+            <div id="step2" class="d-flex align-items-center mb-2 text-muted">
+                <i class="bi bi-circle me-2" id="iconStep2"></i> <span>Membaca data K3 (Hazard & Inspeksi)...</span>
+            </div>
+            <div id="step3" class="d-flex align-items-center mb-2 text-muted">
+                <i class="bi bi-circle me-2" id="iconStep3"></i> <span>Membaca data P2H, P5M, & Safety Talk...</span>
+            </div>
+            <div id="step4" class="d-flex align-items-center text-muted">
+                <i class="bi bi-circle me-2" id="iconStep4"></i> <span>Membersihkan duplikasi & menyimpan data...</span>
+            </div>
+        </div>
+
+        <!-- Close Button (only visible on error) -->
+        <button id="btnSyncClose" type="button" onclick="closeSyncOverlay()"
+                style="display:none; width:100%; padding:11px 0; background:var(--border-color); color:var(--text-main);
+                       border-radius:12px; font-weight:700; border:none; font-size:13px; cursor:pointer; margin-top: 15px;">
+            Tutup
+        </button>
+    </div>
+</div>
+
+<style>
+    @@keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .animate-spin {
+        animation: spin 2s linear infinite;
+    }
+</style>
+
 @section Scripts {
     <script>
         function showResetModal() {
@@ -264,5 +341,170 @@
         document.getElementById('resetOverlay').addEventListener('click', function(e) {
             if (e.target === this) closeResetOverlay();
         });
+
+        function closeSyncOverlay() {
+            const overlay = document.getElementById('syncProgressOverlay');
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function syncPostgresData() {
+            const btn = document.getElementById('btnSyncPostgres');
+            if (btn.disabled || btn.classList.contains('disabled')) return;
+
+            // Show Custom Progress Overlay
+            const overlay = document.getElementById('syncProgressOverlay');
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            const progressBar = document.getElementById('syncProgressBar');
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+            const step3 = document.getElementById('step3');
+            const step4 = document.getElementById('step4');
+            
+            const icon1 = document.getElementById('iconStep1');
+            const icon2 = document.getElementById('iconStep2');
+            const icon3 = document.getElementById('iconStep3');
+            const icon4 = document.getElementById('iconStep4');
+
+            const syncIconContainer = document.getElementById('syncIconContainer');
+            const syncStatusIcon = document.getElementById('syncStatusIcon');
+            const syncTitle = document.getElementById('syncTitle');
+            const syncDesc = document.getElementById('syncDesc');
+            const syncProgressBarContainer = document.getElementById('syncProgressBarContainer');
+            const syncStepsContainer = document.getElementById('syncStepsContainer');
+            const btnSyncClose = document.getElementById('btnSyncClose');
+
+            // Reset UI State to default loading
+            syncIconContainer.style.background = 'rgba(59, 130, 246, 0.15)';
+            syncStatusIcon.className = 'bi bi-arrow-repeat text-primary animate-spin';
+            syncTitle.innerText = 'Sinkronisasi Data Safety';
+            syncDesc.innerText = 'Menarik data K3 dari INDEXSAFE / ZPRO (Periode 30 Hari Terakhir) untuk NIK Anda. Mohon tunggu...';
+            syncProgressBarContainer.style.display = 'block';
+            syncStepsContainer.style.display = 'block';
+            btnSyncClose.style.display = 'none';
+
+            progressBar.style.width = '0%';
+            progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+            resetStep(step1, icon1);
+            resetStep(step2, icon2);
+            resetStep(step3, icon3);
+            resetStep(step4, icon4);
+
+            function resetStep(el, icon) {
+                el.className = 'd-flex align-items-center mb-2 text-muted';
+                icon.className = 'bi bi-circle text-muted me-2';
+                icon.style.width = '';
+                icon.style.height = '';
+                icon.style.borderWidth = '';
+                icon.style.display = '';
+            }
+
+            function setStepActive(el, icon) {
+                el.className = 'd-flex align-items-center mb-2 text-primary fw-bold';
+                icon.className = 'spinner-border spinner-border-sm text-primary me-2';
+                icon.style.width = '12px';
+                icon.style.height = '12px';
+                icon.style.borderWidth = '2px';
+                icon.style.display = 'inline-block';
+            }
+
+            function setStepComplete(el, icon) {
+                el.className = 'd-flex align-items-center mb-2 text-success';
+                icon.className = 'bi bi-check-circle-fill text-success me-2';
+                icon.style.width = '';
+                icon.style.height = '';
+                icon.style.borderWidth = '';
+                icon.style.display = '';
+            }
+
+            // Start Progress Timeline Simulation
+            setStepActive(step1, icon1);
+            progressBar.style.width = '15%';
+
+            const t1 = setTimeout(() => {
+                setStepComplete(step1, icon1);
+                setStepActive(step2, icon2);
+                progressBar.style.width = '40%';
+            }, 800);
+
+            const t2 = setTimeout(() => {
+                setStepComplete(step2, icon2);
+                setStepActive(step3, icon3);
+                progressBar.style.width = '70%';
+            }, 1800);
+
+            const t3 = setTimeout(() => {
+                setStepComplete(step3, icon3);
+                setStepActive(step4, icon4);
+                progressBar.style.width = '90%';
+            }, 2800);
+
+            // Fetch request running in parallel
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            const formData = new URLSearchParams();
+            if (token) {
+                formData.append('__RequestVerificationToken', token);
+            }
+
+            fetch('/Account/SyncPostgresData', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                clearTimeout(t1);
+                clearTimeout(t2);
+                clearTimeout(t3);
+
+                if (data.success) {
+                    setStepComplete(step1, icon1);
+                    setStepComplete(step2, icon2);
+                    setStepComplete(step3, icon3);
+                    setStepComplete(step4, icon4);
+                    progressBar.style.width = '100%';
+                    progressBar.className = 'progress-bar bg-success';
+
+                    // Transition to Success Modal View
+                    setTimeout(() => {
+                        syncIconContainer.style.background = 'rgba(16, 185, 129, 0.15)';
+                        syncStatusIcon.className = 'bi bi-check-circle-fill text-success';
+                        syncStatusIcon.style.fontSize = '36px';
+                        syncTitle.innerText = 'Sinkronisasi Berhasil!';
+                        syncDesc.innerText = data.message;
+                        syncStepsContainer.style.display = 'none';
+                        syncProgressBarContainer.style.display = 'none';
+
+                        // Auto reload page after 2.2 seconds
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2200);
+                    }, 500);
+                } else {
+                    showErrorState(data.message || 'Terjadi kesalahan saat sinkronisasi.');
+                }
+            })
+            .catch(err => {
+                clearTimeout(t1);
+                clearTimeout(t2);
+                clearTimeout(t3);
+                showErrorState('Gagal menghubungi server.');
+            });
+
+            function showErrorState(errMsg) {
+                syncIconContainer.style.background = 'rgba(239, 68, 68, 0.15)';
+                syncStatusIcon.className = 'bi bi-x-circle-fill text-danger';
+                syncStatusIcon.style.fontSize = '36px';
+                syncTitle.innerText = 'Sinkronisasi Gagal';
+                syncDesc.innerText = errMsg;
+                syncStepsContainer.style.display = 'none';
+                syncProgressBarContainer.style.display = 'none';
+                btnSyncClose.style.display = 'block';
+            }
+        }
     </script>
 }

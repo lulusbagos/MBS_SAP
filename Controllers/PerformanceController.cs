@@ -204,9 +204,24 @@ namespace MBS_SAP.Controllers
                         parents.Add(pId);
                     }
 
-                    if (parents.Count > 1)
+                    if (parents.Count > 1 && parentIdFilter.Value != companyId)
                     {
-                        deptKaryawans = deptKaryawans.Where(k => k.PerusahaanNodeId == parentIdFilter.Value).ToList();
+                        var relasiIds = relations
+                            .Where(r => r.ChildCompanyId == companyId && r.ParentCompanyId == parentIdFilter.Value)
+                            .Select(r => r.RelasiId)
+                            .Where(id => id.HasValue)
+                            .Select(id => id!.Value)
+                            .ToList();
+
+                        var allowedNodeIds = new HashSet<int> { parentIdFilter.Value };
+                        foreach (var relId in relasiIds)
+                        {
+                            allowedNodeIds.Add(relId);
+                        }
+
+                        deptKaryawans = deptKaryawans
+                            .Where(k => k.PerusahaanNodeId.HasValue && allowedNodeIds.Contains(k.PerusahaanNodeId.Value))
+                            .ToList();
                     }
                 }
             }

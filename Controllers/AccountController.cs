@@ -17,12 +17,18 @@ namespace MBS_SAP.Controllers
         private readonly AppDbContext _context;
         private readonly Microsoft.AspNetCore.Hosting.IWebHostEnvironment _webHostEnvironment;
         private readonly MBS_SAP.Services.ImageUploadService _imageUploadService;
+        private readonly MBS_SAP.Services.PostgresReplicationService _replicationService;
 
-        public AccountController(AppDbContext context, Microsoft.AspNetCore.Hosting.IWebHostEnvironment webHostEnvironment, MBS_SAP.Services.ImageUploadService imageUploadService)
+        public AccountController(
+            AppDbContext context, 
+            Microsoft.AspNetCore.Hosting.IWebHostEnvironment webHostEnvironment, 
+            MBS_SAP.Services.ImageUploadService imageUploadService,
+            MBS_SAP.Services.PostgresReplicationService replicationService)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
             _imageUploadService = imageUploadService;
+            _replicationService = replicationService;
         }
 
         [HttpGet]
@@ -564,6 +570,42 @@ namespace MBS_SAP.Controllers
             ViewData["ActiveTab"] = "Profile";
             return View();
         }
+
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SyncPostgresData()
+        {
+            var nrp = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (nrp == null) return Json(new { success = false, message = "User tidak terautentikasi." });
+
+            try
+            {
+                var result = await _replicationService.ReplicateForUserAsync(nrp, HttpContext.RequestAborted);
+
+                int totalInserted = result.HazardInserted + result.InspectionInserted + result.CoachingInserted + 
+                                    result.ObservationInserted + result.P2hInserted + result.P5mInserted + result.SafetyTalkInserted;
+                int totalUpdated = result.HazardUpdated + result.InspectionUpdated + result.CoachingUpdated + 
+                                   result.ObservationUpdated + result.P2hUpdated + result.P5mUpdated + result.SafetyTalkUpdated;
+
+                return Json(new { 
+                    success = true, 
+                    message = $"Sinkronisasi berhasil! {totalInserted} data baru ditambahkan, {totalUpdated} data diperbarui." 
+                });
+            }
+            catch (Exception ex)
+            {
+                var fullMessage = ex.Message;
+                var inner = ex.InnerException;
+                while (inner != null)
+                {
+                    fullMessage += " -> " + inner.Message;
+                    inner = inner.InnerException;
+                }
+                return Json(new { success = false, message = $"Gagal sinkronisasi: {fullMessage}" });
+            }
+        }
+
 
         [HttpPost]
         [Authorize]

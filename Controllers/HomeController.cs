@@ -134,6 +134,53 @@ namespace MBS_SAP.Controllers
                         targetP5m = 1;
                     }
                 }
+                var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
+                var lookbackDate = startOfMonth.AddMonths(-6);
+
+                // Scale targets by roster to match League calculations
+                int totalDaysInMonth = DateTime.DaysInMonth(startOfMonth.Year, startOfMonth.Month);
+                int computedOnsiteDays = totalDaysInMonth;
+                bool hasRoster = false;
+
+                if (stats.RosterHistory != null && stats.RosterHistory.Any())
+                {
+                    int computedOnsite = 0;
+                    foreach (var r in stats.RosterHistory)
+                    {
+                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
+                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                        if (overlapStart <= overlapEnd)
+                        {
+                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                        }
+                    }
+                    if (computedOnsite > 0)
+                    {
+                        hasRoster = true;
+                        computedOnsiteDays = computedOnsite;
+                    }
+                }
+
+                double ratio = hasRoster ? (double)computedOnsiteDays / totalDaysInMonth : 1.0;
+
+                int ScaleTarget(int baseTarget, double rat, int daysOnsite)
+                {
+                    if (baseTarget == 0) return 0;
+                    if (daysOnsite == 0) return 0;
+                    int scaled = (int)Math.Round(baseTarget * rat, MidpointRounding.AwayFromZero);
+                    return Math.Max(scaled, 1);
+                }
+
+                if (hasRoster)
+                {
+                    targetHazardReport = ScaleTarget(targetHazardReport, ratio, computedOnsiteDays);
+                    targetInspeksi = ScaleTarget(targetInspeksi, ratio, computedOnsiteDays);
+                    targetSafetyTalk = ScaleTarget(targetSafetyTalk, ratio, computedOnsiteDays);
+                    targetObservasi = ScaleTarget(targetObservasi, ratio, computedOnsiteDays);
+                    targetCoaching = ScaleTarget(targetCoaching, ratio, computedOnsiteDays);
+                }
+
                 stats.TargetHazardReport = targetHazardReport;
                 stats.TargetInspeksi = targetInspeksi;
                 stats.TargetSafetyTalk = targetSafetyTalk;
@@ -146,11 +193,6 @@ namespace MBS_SAP.Controllers
                     .OrderByDescending(r => r.CreatedAt)
                     .Select(r => r.Pesan)
                     .ToListAsync();
-
-                // Query dashboard berbasis akun login (NIK) dengan filter rentang waktu 6 bulan terakhir untuk mengoptimalkan kinerja.
-                var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-                var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
-                var lookbackDate = startOfMonth.AddMonths(-6);
 
                 var hazardQuery = _context.HazardReports
                     .Where(h => !h.IsDeleted && h.Nik == userNik && h.CreatedAt >= lookbackDate);
