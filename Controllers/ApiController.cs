@@ -931,6 +931,31 @@ ORDER BY nama_perusahaan";
             await _context.SaveChangesAsync();
             return Ok(new { message = "Roster berhasil disimpan." });
         }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteRoster()
+        {
+            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(userNik))
+            {
+                return Unauthorized("NIK tidak ditemukan.");
+            }
+
+            var latestRoster = await _context.Rosters
+                .Where(r => r.Nik == userNik)
+                .OrderByDescending(r => r.AkhirCuti)
+                .FirstOrDefaultAsync();
+
+            if (latestRoster == null)
+            {
+                return NotFound("Roster tidak ditemukan.");
+            }
+
+            _context.Rosters.Remove(latestRoster);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Roster berhasil dihapus." });
+        }
     }
 
     public class RosterSaveRequest
