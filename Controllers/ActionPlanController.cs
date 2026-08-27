@@ -65,7 +65,7 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin, kecuali jika ditugaskan langsung ke user)
+            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin, kecuali jika ditugaskan langsung ke user atau departemen user)
             if (companyId.HasValue)
             {
                 var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
@@ -73,7 +73,8 @@ namespace MBS_SAP.Controllers
                     (r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value)) ||
                     r.Nik == userNik ||
                     r.NikPja == userNik ||
-                    r.NikPic == userNik
+                    r.NikPic == userNik ||
+                    (userDept != null && (r.Departemen == userDept || r.DepartemenPja == userDept || r.DepartemenPic == userDept))
                 );
             }
 
@@ -110,6 +111,20 @@ namespace MBS_SAP.Controllers
                     }
                 }
             }
+
+            var allNiks = reports.Select(r => r.Nik)
+                .Concat(reports.Where(r => !string.IsNullOrEmpty(r.NikPja)).Select(r => r.NikPja!))
+                .Concat(reports.Where(r => !string.IsNullOrEmpty(r.NikPic)).Select(r => r.NikPic!))
+                .Distinct()
+                .ToList();
+
+            var nikCompanyMap = await (from k in _context.Karyawans
+                                       join p in _context.Perusahaans on k.IdPerusahaan equals p.PerusahaanId
+                                       where allNiks.Contains(k.NoNik)
+                                       select new { k.NoNik, p.NamaPerusahaan })
+                                       .Distinct()
+                                       .ToDictionaryAsync(x => x.NoNik, x => x.NamaPerusahaan);
+            ViewBag.NikCompanyMap = nikCompanyMap;
 
             var perusahaanIds = reports.Where(r => r.PerusahaanId.HasValue).Select(r => r.PerusahaanId!.Value).Distinct().ToList();
             var perusahaans = await _context.Perusahaans.Where(p => perusahaanIds.Contains(p.PerusahaanId)).ToListAsync();
@@ -275,6 +290,8 @@ namespace MBS_SAP.Controllers
 
             var query = _context.ActionPlans.Where(r => !r.IsDeleted && r.Tanggal >= start && r.Tanggal <= endOfDay);
 
+            var userDept = User.FindFirst("Department")?.Value;
+
             // Filter berdasarkan hierarki perusahaan (sama seperti Index)
             if (companyId.HasValue)
             {
@@ -283,15 +300,17 @@ namespace MBS_SAP.Controllers
                     (r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value)) ||
                     r.Nik == userNik ||
                     r.NikPja == userNik ||
-                    r.NikPic == userNik
+                    r.NikPic == userNik ||
+                    (userDept != null && (r.Departemen == userDept || r.DepartemenPja == userDept || r.DepartemenPic == userDept))
                 );
             }
 
-            // Non-Admin hanya melihat yang terkait dengannya langsung
+            // Non-Admin hanya melihat yang terkait dengannya langsung atau departemennya
             if (!isAdmin && !string.IsNullOrEmpty(userNik))
             {
                 query = query.Where(r =>
-                    r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik || string.IsNullOrEmpty(r.NikPja)
+                    r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik || string.IsNullOrEmpty(r.NikPja) ||
+                    (userDept != null && (r.Departemen == userDept || r.DepartemenPja == userDept || r.DepartemenPic == userDept))
                 );
             }
 
@@ -305,6 +324,19 @@ namespace MBS_SAP.Controllers
             var companies = await _context.Perusahaans
                 .AsNoTracking()
                 .ToDictionaryAsync(p => p.PerusahaanId, p => p.NamaPerusahaan ?? "-");
+
+            var allNiks = reports.Select(r => r.Nik)
+                .Concat(reports.Where(r => !string.IsNullOrEmpty(r.NikPja)).Select(r => r.NikPja!))
+                .Concat(reports.Where(r => !string.IsNullOrEmpty(r.NikPic)).Select(r => r.NikPic!))
+                .Distinct()
+                .ToList();
+
+            var nikCompanyMap = await (from k in _context.Karyawans
+                                       join p in _context.Perusahaans on k.IdPerusahaan equals p.PerusahaanId
+                                       where allNiks.Contains(k.NoNik)
+                                       select new { k.NoNik, p.NamaPerusahaan })
+                                       .Distinct()
+                                       .ToDictionaryAsync(x => x.NoNik, x => x.NamaPerusahaan);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Action Plan Temuan");
@@ -395,8 +427,11 @@ namespace MBS_SAP.Controllers
                     statusCell.Style.Font.FontColor = XLColor.FromHtml("#991B1B"); // Dark red
                 }
 
-                worksheet.Cell(currentRow, 12).Value = string.IsNullOrEmpty(item.NikPja) ? "-" : $"{item.NikPja} - {item.Pja}";
-                worksheet.Cell(currentRow, 13).Value = string.IsNullOrEmpty(item.NikPic) ? "-" : $"{item.NikPic} - {item.Pic}";
+                var pjaComp = !string.IsNullOrEmpty(item.NikPja) && nikCompanyMap.TryGetValue(item.NikPja, out var pjc) ? pjc : null;
+                var picComp = !string.IsNullOrEmpty(item.NikPic) && nikCompanyMap.TryGetValue(item.NikPic, out var picc) ? picc : null;
+
+                worksheet.Cell(currentRow, 12).Value = string.IsNullOrEmpty(item.NikPja) ? "-" : $"{item.NikPja} - {item.Pja} ({item.DepartemenPja ?? "-"})" + (pjaComp != null ? $" - {pjaComp}" : "");
+                worksheet.Cell(currentRow, 13).Value = string.IsNullOrEmpty(item.NikPic) ? "-" : $"{item.NikPic} - {item.Pic} ({item.DepartemenPic ?? "-"})" + (picComp != null ? $" - {picComp}" : "");
                 worksheet.Cell(currentRow, 14).Value = item.RencanaPerbaikan ?? "-";
 
                 var targetDateCell = worksheet.Cell(currentRow, 15);
