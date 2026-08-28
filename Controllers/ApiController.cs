@@ -718,7 +718,8 @@ ORDER BY nama_perusahaan";
             if (int.TryParse(compIdClaim, out int cid) && cid > 0 && !string.IsNullOrWhiteSpace(areaUtama))
             {
                 var benchmarks = await _context.Benchmarks
-                    .Where(b => b.PerusahaanId == cid && b.AreaUtama == areaUtama)
+                    .AsNoTracking()
+                    .Where(b => (b.PerusahaanId == cid || b.PerusahaanId == 1) && b.AreaUtama == areaUtama)
                     .OrderBy(b => b.NamaBenchmark)
                     .Select(b => new { id = b.Id, namaBenchmark = b.NamaBenchmark })
                     .ToListAsync();
