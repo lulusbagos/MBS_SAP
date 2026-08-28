@@ -215,22 +215,22 @@ namespace MBS_SAP.Controllers
                 Console.WriteLine($"[DEBUG-HOME] endOfMonth: {endOfMonth:yyyy-MM-dd HH:mm:ss}");
                 Console.WriteLine($"[DEBUG-HOME] lookbackDate: {lookbackDate:yyyy-MM-dd HH:mm:ss}");
                 
-                int thisMonthHazardsCount = await hazardQuery.CountAsync(h => h.CreatedAt >= startOfMonth && h.CreatedAt <= endOfMonth);
+                int thisMonthHazardsCount = await hazardQuery.CountAsync(h => h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth);
                 Console.WriteLine($"[DEBUG-HOME] thisMonthHazardsCount: {thisMonthHazardsCount}");
                 
                 int openHazardsCount = await hazardQuery.CountAsync(h => h.StatusTemuan == "Open");
                 int closedHazardsCount = await hazardQuery.CountAsync(h => h.StatusTemuan == "Closed");
                 int totalHazardsCount = openHazardsCount + closedHazardsCount;
 
-                int thisMonthInspectionsCount = await inspectionQuery.CountAsync(i => i.CreatedAt >= startOfMonth && i.CreatedAt <= endOfMonth);
+                int thisMonthInspectionsCount = await inspectionQuery.CountAsync(i => i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth);
                 int totalInspectionsCount = await inspectionQuery.CountAsync();
 
                 int totalActionPlansCount = await actionPlanQuery.CountAsync();
 
-                int thisMonthSafetyTalksCount = await safetyTalkQuery.CountAsync(s => s.CreatedAt >= startOfMonth && s.CreatedAt <= endOfMonth);
+                int thisMonthSafetyTalksCount = await safetyTalkQuery.CountAsync(s => s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth);
                 int totalSafetyTalksCount = await safetyTalkQuery.CountAsync();
 
-                int thisMonthP5msCount = await p5mQuery.CountAsync(p => p.CreatedAt >= startOfMonth && p.CreatedAt <= endOfMonth);
+                int thisMonthP5msCount = await p5mQuery.CountAsync(p => p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth);
                 int totalP5msCount = await p5mQuery.CountAsync();
 
                 int coachingAsCreator = await _context.Coachings
