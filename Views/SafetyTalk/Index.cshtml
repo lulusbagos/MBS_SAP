@@ -303,6 +303,33 @@
     </div>
 </div>
 
+<!-- Loading Overlay -->
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; color: white; font-family: 'Poppins', sans-serif;">
+    <div class="loader-spinner-container" style="position: relative; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 24px;">
+        <div class="loader-circle" style="box-sizing: border-box; width: 80px; height: 80px; border: 4px solid rgba(255, 255, 255, 0.1); border-radius: 50%; border-top-color: #f43f5e; border-bottom-color: #f43f5e; animation: sap-spin 1.5s linear infinite;"></div>
+        <i class="bi bi-cloud-arrow-up-fill" style="position: absolute; font-size: 32px; color: white; animation: sap-bounce 2s ease-in-out infinite;"></i>
+    </div>
+    <h5 id="loadingTitle" style="font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Memproses Laporan Safety Talk</h5>
+    <p id="loadingSubtitle" style="font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 16px; text-align: center; max-width: 320px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">Sedang menyimpan laporan safety talk dan mengunggah lampiran foto. Mohon jangan menutup halaman ini...</p>
+
+    <!-- Progress Bar Container -->
+    <div style="width: 280px; background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05);">
+        <div id="loadingProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #f43f5e, #e11d48); transition: width 0.1s ease; border-radius: 4px;"></div>
+    </div>
+    <div id="loadingProgressPercent" style="font-size: 14px; font-weight: 700; color: #f43f5e; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">0%</div>
+</div>
+
+<style>
+    @@keyframes sap-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    @@keyframes sap-bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+</style>
+
 @section Scripts {
     <script>
         function previewDiri(input) {
@@ -719,7 +746,12 @@
                 }
             });
             // Prevent double submission
+            let safetyTalkSubmitting = false;
             $('#safetyTalkForm').on('submit', function(e) {
+                e.preventDefault();
+
+                if (safetyTalkSubmitting) return false;
+
                 var btn = $(this).find('button[type="submit"]');
                 if (btn.prop('disabled')) {
                     return false;
@@ -764,7 +796,6 @@
                 });
 
                 if (!isValid) {
-                    e.preventDefault();
                     if (firstInvalid) {
                         $('html, body').animate({
                             scrollTop: firstInvalid.offset().top - 120
@@ -773,12 +804,95 @@
                     return false;
                 }
 
+                // Additional check for hidden area field
+                var areaVal = $('#area').val();
+                if (!areaVal || areaVal.trim() === '') {
+                    $('#areaSearch').addClass('is-invalid');
+                    if (!$('#areaSearch').closest('.input-sap-wrapper').next('.sap-err-msg').length) {
+                        $('#areaSearch').closest('.input-sap-wrapper').after(`<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Area Utama wajib dipilih dari dropdown.</span>`);
+                    }
+                    $('html, body').animate({
+                        scrollTop: $('#areaSearch').offset().top - 120
+                    }, 300);
+                    return false;
+                }
+
+                safetyTalkSubmitting = true;
                 btn.prop('disabled', true);
+                btn.css('pointer-events', 'none');
                 var originalText = btn.html();
                 btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');
                 
-                // Allow form to submit normally
-                return true;
+                const $overlay = $('#loadingOverlay');
+                const $progressBar = $('#loadingProgressBar');
+                const $progressPercent = $('#loadingProgressPercent');
+                const $title = $('#loadingTitle');
+                const $subtitle = $('#loadingSubtitle');
+
+                $overlay.css('display', 'flex');
+                $title.text('Menyiapkan Data...');
+                $subtitle.text('Sedang memproses laporan safety talk...');
+                $progressBar.css('width', '0%');
+                $progressPercent.text('0%');
+
+                const formData = new FormData($('#safetyTalkForm')[0]);
+
+                $.ajax({
+                    url: '/SafetyTalk/Submit',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    xhr: function() {
+                        const xhr = new window.XMLHttpRequest();
+                        xhr.upload.addEventListener('progress', function(evt) {
+                            if (evt.lengthComputable) {
+                                const percentComplete = Math.round((evt.loaded / evt.total) * 100);
+                                $progressBar.css('width', percentComplete + '%');
+                                $progressPercent.text(percentComplete + '%');
+                                if (percentComplete === 100) {
+                                    $title.text('Memproses di Server...');
+                                    $subtitle.text('Mohon tunggu, server sedang menyimpan data...');
+                                }
+                            }
+                        }, false);
+                        return xhr;
+                    },
+                    success: function(response) {
+                        $title.text('Selesai!');
+                        $subtitle.text(response.message || 'Laporan safety talk berhasil disimpan.');
+                        $progressBar.css('width', '100%');
+                        $progressPercent.text('100%');
+                        
+                        setTimeout(() => {
+                            window.location.href = '/Home/Index';
+                        }, 800);
+                    },
+                    error: function(xhr, status, error) {
+                        $overlay.css('display', 'none');
+                        btn.prop('disabled', false);
+                        btn.css('pointer-events', 'auto');
+                        btn.html(originalText);
+                        safetyTalkSubmitting = false;
+                        
+                        let errMessage = "Gagal mengirim data. Silakan periksa koneksi internet Anda.";
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errMessage = xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            try {
+                                const parsed = JSON.parse(xhr.responseText);
+                                if (parsed && parsed.message) errMessage = parsed.message;
+                            } catch(e) {}
+                        }
+                        
+                        alert(errMessage);
+                    }
+                });
+
+                return false;
             });
         });
     </script>

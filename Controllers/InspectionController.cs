@@ -120,241 +120,270 @@ namespace MBS_SAP.Controllers
             int q5_1, int q5_2, int q5_3,
             string? catatan)
         {
-            TimeSpan waktu = DateTime.Now.TimeOfDay;
-            if (!string.IsNullOrEmpty(waktuStr) && TimeSpan.TryParse(waktuStr, out var parsedWaktu))
+            var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
+            try
             {
-                waktu = parsedWaktu;
-            }
-
-            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
-            var userName = User.Identity?.Name ?? "Anonymous";
-            var userDept = User.FindFirst("Department")?.Value ?? "General";
-            var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
-            if (!userCompanyId.HasValue)
-            {
-                var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
-                if (karyawan != null) userCompanyId = karyawan.IdPerusahaan;
-            }
-
-            Inspection? inspection;
-            bool isNew = true;
-
-            if (id.HasValue && id.Value > 0)
-            {
-                inspection = await _context.Inspections.FindAsync(id.Value);
-                if (inspection == null || inspection.IsDeleted) return NotFound();
-
-                if (inspection.Nik != userNik && !User.IsInRole("Admin"))
+                TimeSpan waktu = DateTime.Now.TimeOfDay;
+                if (!string.IsNullOrEmpty(waktuStr) && TimeSpan.TryParse(waktuStr, out var parsedWaktu))
                 {
-                    TempData["ErrorMessage"] = "Anda tidak memiliki akses untuk mengubah inspeksi ini.";
-                    return RedirectToAction(nameof(Index));
+                    waktu = parsedWaktu;
                 }
-                isNew = false;
-            }
-            else
-            {
 
-                inspection = new Inspection
+                var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
+                var userName = User.Identity?.Name ?? "Anonymous";
+                var userDept = User.FindFirst("Department")?.Value ?? "General";
+                var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
+                int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
+                if (!userCompanyId.HasValue)
                 {
-                    Nama = userName,
-                    Nik = userNik,
-                    Departemen = userDept,
-                    PerusahaanId = userCompanyId,
-                    CreatedAt = DateTime.Now
-                };
-            }
-
-            // Allow backdate up to 1 week (7 days)
-            var validatedTanggal = tanggal.Date;
-            if (validatedTanggal < DateTime.Today.AddDays(-7) || validatedTanggal > DateTime.Today)
-            {
-                validatedTanggal = DateTime.Today;
-            }
-            inspection.Tanggal = validatedTanggal;
-            inspection.Waktu = waktu;
-            inspection.Area = area?.ToUpper();
-            inspection.Lokasi = lokasi?.ToUpper();
-            inspection.DetilLokasi = detilLokasi?.ToUpper();
-            inspection.JenisInspeksi = jenisInspeksi?.ToUpper() ?? "UMUM";
-            var pjaName = pja?.Trim().ToUpper();
-            var pjaDept = departemenPja?.Trim().ToUpper();
-            var pjaNik = nikPja?.Trim();
-
-            if (TryParseCompanyNikToken(pjaNik, out var selectedCompanyId))
-            {
-                inspection.Pja = pjaName;
-                inspection.NikPja = null;
-                inspection.DepartemenPja = "PERUSAHAAN";
-                if (selectedCompanyId > 0)
-                {
-                    inspection.PerusahaanId = selectedCompanyId;
+                    var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                    if (karyawan != null) userCompanyId = karyawan.IdPerusahaan;
                 }
-            }
-            else
-            {
-                inspection.Pja = pjaName;
-                inspection.NikPja = pjaNik;
-                inspection.DepartemenPja = pjaDept;
-            }
 
-            // Guard backend against near-duplicate submit (double-click / retry) for new records.
-            if (isNew)
-            {
-                var duplicateWindowStart = DateTime.Now.AddSeconds(-20);
-                var normalizedArea = (inspection.Area ?? string.Empty).Trim();
-                var normalizedLokasi = (inspection.Lokasi ?? string.Empty).Trim();
-                var normalizedJenis = (inspection.JenisInspeksi ?? string.Empty).Trim();
-
-                var duplicatedInspection = await _context.Inspections
-                    .AsNoTracking()
-                    .Where(i => !i.IsDeleted
-                                && i.Nik == userNik
-                                && i.CreatedAt >= duplicateWindowStart)
-                    .FirstOrDefaultAsync(i => (i.Area ?? string.Empty).Trim() == normalizedArea
-                                           && (i.Lokasi ?? string.Empty).Trim() == normalizedLokasi
-                                           && (i.JenisInspeksi ?? string.Empty).Trim() == normalizedJenis);
-
-                if (duplicatedInspection != null)
+                string SafeTruncate(string? val, int maxLen)
                 {
-                    TempData["WarningMessage"] = "Data inspeksi yang sama terdeteksi terkirim dua kali. Sistem hanya menyimpan satu data.";
-                    return RedirectToAction(nameof(Index));
+                    if (string.IsNullOrEmpty(val)) return string.Empty;
+                    return val.Length <= maxLen ? val.Trim() : val.Trim().Substring(0, maxLen);
                 }
-            }
-            
-            inspection.Q1_1 = q1_1;
-            inspection.Q1_2 = q1_2;
-            inspection.Q1_3 = q1_3;
-            inspection.Q2_1 = q2_1;
-            inspection.Q2_2 = q2_2;
-            inspection.Q2_3 = q2_3;
-            inspection.Q3_1 = q3_1;
-            inspection.Q3_2 = q3_2;
-            inspection.Q3_3 = q3_3;
-            inspection.Q4_1 = q4_1;
-            inspection.Q4_2 = q4_2;
-            inspection.Q4_3 = q4_3;
-            inspection.Q5_1 = q5_1;
-            inspection.Q5_2 = q5_2;
-            inspection.Q5_3 = q5_3;
-            inspection.Catatan = catatan;
 
-            // Handle Photo Uploads for 15 questions
-            var lampiranDict = new System.Collections.Generic.Dictionary<string, string>();
-            if (!string.IsNullOrEmpty(inspection.LampiranJson))
-            {
-                try { lampiranDict = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, string>>(inspection.LampiranJson) ?? new System.Collections.Generic.Dictionary<string, string>(); } catch {}
-            }
+                Inspection? inspection;
+                bool isNew = true;
 
-            for (int m = 1; m <= 5; m++)
-            {
-                for (int q = 1; q <= 3; q++)
+                if (id.HasValue && id.Value > 0)
                 {
-                    string key = $"{m}_{q}";
-                    var file = Request.Form.Files[$"foto_{key}"];
-                    if (file != null && file.Length > 0)
+                    inspection = await _context.Inspections.FindAsync(id.Value);
+                    if (inspection == null || inspection.IsDeleted) return NotFound();
+
+                    if (inspection.Nik != userNik && !User.IsInRole("Admin"))
                     {
-                        try
-                        {
-                            var path = await _imageUploadService.UploadAndCompressImageAsync(file, "inspections");
-                            if (!string.IsNullOrEmpty(path))
-                            {
-                                lampiranDict[key] = path;
-                            }
-                        }
-                        catch (Exception) { }
+                        var errAccess = "Anda tidak memiliki akses untuk mengubah inspeksi ini.";
+                        if (isAjax) return StatusCode(403, new { success = false, message = errAccess });
+                        TempData["ErrorMessage"] = errAccess;
+                        return RedirectToAction(nameof(Index));
                     }
+                    isNew = false;
                 }
-            }
-            if (lampiranDict.Count > 0)
-            {
-                inspection.LampiranJson = System.Text.Json.JsonSerializer.Serialize(lampiranDict);
-            }
-
-            // Save Inspection to Database
-            if (isNew)
-            {
-                _context.Inspections.Add(inspection);
-            }
-            else
-            {
-                _context.Inspections.Update(inspection);
-            }
-            await _context.SaveChangesAsync();
-
-            // Notify PJA
-            if (isNew && !string.IsNullOrWhiteSpace(inspection.Pja))
-            {
-                if (!string.IsNullOrWhiteSpace(inspection.NikPja))
+                else
                 {
-                    var notif = new Notification
+                    inspection = new Inspection
                     {
-                        RecipientNik = inspection.NikPja,
-                        Title = "Penugasan Inspeksi Baru",
-                        Message = $"Anda ditunjuk sebagai PJA untuk inspeksi {inspection.JenisInspeksi} di {inspection.Lokasi ?? inspection.Area} oleh {inspection.Nama}.",
-                        Url = "/Inspection/Index",
-                        NotifType = "inspection_new"
-                    };
-                    _context.Notifications.Add(notif);
-                    await _context.SaveChangesAsync();
-                }
-                else if (inspection.PerusahaanId.HasValue)
-                {
-                    await CreateCompanyBroadcastNotificationAsync(
-                        inspection.PerusahaanId.Value,
-                        "Penugasan Inspeksi Baru",
-                        $"Inspeksi baru pada perusahaan {inspection.Pja ?? "-"} di {inspection.Lokasi ?? inspection.Area} membutuhkan tindak lanjut.",
-                        "/Inspection/Index",
-                        "inspection_new");
-                }
-            }
-
-
-
-            // Check if any check item is 0, then spawn ActionPlan
-            var checks = new[]
-            {
-                new { Name = "Modul 1: Kepatuhan & Sistem", Score = Math.Min(q1_1, Math.Min(q1_2, q1_3)) },
-                new { Name = "Modul 2: Risiko & Keselamatan", Score = Math.Min(q2_1, Math.Min(q2_2, q2_3)) },
-                new { Name = "Modul 3: SDM & Kesehatan Kerja", Score = Math.Min(q3_1, Math.Min(q3_2, q3_3)) },
-                new { Name = "Modul 4: Operasi & Lingkungan", Score = Math.Min(q4_1, Math.Min(q4_2, q4_3)) },
-                new { Name = "Modul 5: Monitoring & Perbaikan", Score = Math.Min(q5_1, Math.Min(q5_2, q5_3)) }
-            };
-
-            foreach (var check in checks)
-            {
-                if (check.Score == 0)
-                {
-                    var actionPlan = new ActionPlan
-                    {
-                        Tanggal = inspection.Tanggal,
-                        Waktu = inspection.Waktu,
-                        Nama = userName,
-                        Nik = userNik,
-                        Departemen = userDept,
-                        Area = area,
-                        Lokasi = lokasi,
-                        DetilLokasi = detilLokasi,
-                        ItemSap = $"inspection:{inspection.Id}",
-                        KategoriTemuan = check.Name,
-                        DetilTemuan = $"Temuan ketidaksesuaian (skor 0) saat inspeksi '{inspection.JenisInspeksi}' pada {check.Name}. Catatan: {catatan}",
-                        Status = "Open",
-                        Pja = inspection.Pja,
-                        NikPja = inspection.NikPja,
-                        DepartemenPja = inspection.DepartemenPja,
-                        PerusahaanId = inspection.PerusahaanId,
+                        Nama = SafeTruncate(userName, 150),
+                        Nik = SafeTruncate(userNik, 50),
+                        Departemen = SafeTruncate(userDept, 150),
+                        PerusahaanId = userCompanyId,
                         CreatedAt = DateTime.Now
                     };
-
-                    _context.ActionPlans.Add(actionPlan);
-                    await _context.SaveChangesAsync();
-
-
                 }
-            }
 
-            TempData["SuccessMessage"] = isNew ? "Formulir Safety Inspeksi berhasil dikirim." : "Formulir Safety Inspeksi berhasil diperbarui.";
-            return RedirectToAction("Index", "Home");
+                // Allow backdate up to 1 week (7 days)
+                var validatedTanggal = tanggal.Date;
+                if (validatedTanggal < DateTime.Today.AddDays(-7) || validatedTanggal > DateTime.Today)
+                {
+                    validatedTanggal = DateTime.Today;
+                }
+                inspection.Tanggal = validatedTanggal;
+                inspection.Waktu = waktu;
+                inspection.Area = SafeTruncate(area, 150).ToUpper();
+                inspection.Lokasi = SafeTruncate(lokasi, 150).ToUpper();
+                inspection.DetilLokasi = SafeTruncate(detilLokasi, 250).ToUpper();
+                inspection.JenisInspeksi = SafeTruncate(jenisInspeksi, 100).ToUpper();
+                if (string.IsNullOrEmpty(inspection.JenisInspeksi)) inspection.JenisInspeksi = "UMUM";
+
+                var pjaName = SafeTruncate(pja, 150).ToUpper();
+                var pjaDept = SafeTruncate(departemenPja, 150).ToUpper();
+                var pjaNik = SafeTruncate(nikPja, 50);
+
+                if (TryParseCompanyNikToken(pjaNik, out var selectedCompanyId))
+                {
+                    inspection.Pja = pjaName;
+                    inspection.NikPja = null;
+                    inspection.DepartemenPja = "PERUSAHAAN";
+                    if (selectedCompanyId > 0)
+                    {
+                        inspection.PerusahaanId = selectedCompanyId;
+                    }
+                }
+                else
+                {
+                    inspection.Pja = pjaName;
+                    inspection.NikPja = pjaNik;
+                    inspection.DepartemenPja = pjaDept;
+                }
+
+                // Guard backend against near-duplicate submit (double-click / retry) for new records.
+                if (isNew)
+                {
+                    var duplicateWindowStart = DateTime.Now.AddSeconds(-20);
+                    var normalizedArea = (inspection.Area ?? string.Empty).Trim();
+                    var normalizedLokasi = (inspection.Lokasi ?? string.Empty).Trim();
+                    var normalizedJenis = (inspection.JenisInspeksi ?? string.Empty).Trim();
+
+                    var duplicatedInspection = await _context.Inspections
+                        .AsNoTracking()
+                        .Where(i => !i.IsDeleted
+                                    && i.Nik == userNik
+                                    && i.CreatedAt >= duplicateWindowStart)
+                        .FirstOrDefaultAsync(i => (i.Area ?? string.Empty).Trim() == normalizedArea
+                                               && (i.Lokasi ?? string.Empty).Trim() == normalizedLokasi
+                                               && (i.JenisInspeksi ?? string.Empty).Trim() == normalizedJenis);
+
+                    if (duplicatedInspection != null)
+                    {
+                        var errDuplicate = "Data inspeksi yang sama terdeteksi terkirim dua kali. Sistem hanya menyimpan satu data.";
+                        if (isAjax) return BadRequest(new { success = false, message = errDuplicate });
+                        TempData["WarningMessage"] = errDuplicate;
+                        return RedirectToAction(nameof(Index));
+                    }
+                }
+                
+                inspection.Q1_1 = q1_1;
+                inspection.Q1_2 = q1_2;
+                inspection.Q1_3 = q1_3;
+                inspection.Q2_1 = q2_1;
+                inspection.Q2_2 = q2_2;
+                inspection.Q2_3 = q2_3;
+                inspection.Q3_1 = q3_1;
+                inspection.Q3_2 = q3_2;
+                inspection.Q3_3 = q3_3;
+                inspection.Q4_1 = q4_1;
+                inspection.Q4_2 = q4_2;
+                inspection.Q4_3 = q4_3;
+                inspection.Q5_1 = q5_1;
+                inspection.Q5_2 = q5_2;
+                inspection.Q5_3 = q5_3;
+                inspection.Catatan = catatan;
+
+                // Handle Photo Uploads for 15 questions
+                var lampiranDict = new System.Collections.Generic.Dictionary<string, string>();
+                if (!string.IsNullOrEmpty(inspection.LampiranJson))
+                {
+                    try { lampiranDict = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, string>>(inspection.LampiranJson) ?? new System.Collections.Generic.Dictionary<string, string>(); } catch {}
+                }
+
+                for (int m = 1; m <= 5; m++)
+                {
+                    for (int q = 1; q <= 3; q++)
+                    {
+                        string key = $"{m}_{q}";
+                        var file = Request.Form.Files[$"foto_{key}"];
+                        if (file != null && file.Length > 0)
+                        {
+                            try
+                            {
+                                var path = await _imageUploadService.UploadAndCompressImageAsync(file, "inspections");
+                                if (!string.IsNullOrEmpty(path))
+                                {
+                                    lampiranDict[key] = path;
+                                }
+                            }
+                            catch (Exception) { }
+                        }
+                    }
+                }
+                if (lampiranDict.Count > 0)
+                {
+                    inspection.LampiranJson = System.Text.Json.JsonSerializer.Serialize(lampiranDict);
+                }
+
+                // Save Inspection to Database
+                if (isNew)
+                {
+                    _context.Inspections.Add(inspection);
+                }
+                else
+                {
+                    _context.Inspections.Update(inspection);
+                }
+                await _context.SaveChangesAsync();
+
+                // Notify PJA
+                if (isNew && !string.IsNullOrWhiteSpace(inspection.Pja))
+                {
+                    var recipientNik = inspection.NikPja;
+                    if (string.IsNullOrWhiteSpace(recipientNik) && !string.IsNullOrWhiteSpace(inspection.Pja))
+                    {
+                        recipientNik = await (from k in _context.Karyawans
+                                              join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                              where k.StatusAktif && p.NamaLengkap.ToLower() == inspection.Pja.ToLower()
+                                              select k.NoNik).FirstOrDefaultAsync();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(recipientNik))
+                    {
+                        var notif = new Notification
+                        {
+                            RecipientNik = recipientNik,
+                            Title = "Penugasan Inspeksi Baru",
+                            Message = $"Anda ditunjuk sebagai PJA untuk inspeksi {inspection.JenisInspeksi} di {inspection.Lokasi ?? inspection.Area} oleh {inspection.Nama}.",
+                            Url = "/Inspection/Index",
+                            NotifType = "inspection_new"
+                        };
+                        _context.Notifications.Add(notif);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+
+                // Check if any check item is 0, then spawn ActionPlan
+                var checks = new[]
+                {
+                    new { Name = "Modul 1: Kepatuhan & Sistem", Score = Math.Min(q1_1, Math.Min(q1_2, q1_3)) },
+                    new { Name = "Modul 2: Risiko & Keselamatan", Score = Math.Min(q2_1, Math.Min(q2_2, q2_3)) },
+                    new { Name = "Modul 3: SDM & Kesehatan Kerja", Score = Math.Min(q3_1, Math.Min(q3_2, q3_3)) },
+                    new { Name = "Modul 4: Operasi & Lingkungan", Score = Math.Min(q4_1, Math.Min(q4_2, q4_3)) },
+                    new { Name = "Modul 5: Monitoring & Perbaikan", Score = Math.Min(q5_1, Math.Min(q5_2, q5_3)) }
+                };
+
+                foreach (var check in checks)
+                {
+                    if (check.Score == 0)
+                    {
+                        var actionPlan = new ActionPlan
+                        {
+                            Tanggal = inspection.Tanggal,
+                            Waktu = inspection.Waktu,
+                            Nama = SafeTruncate(userName, 150),
+                            Nik = SafeTruncate(userNik, 50),
+                            Departemen = SafeTruncate(userDept, 150),
+                            Area = inspection.Area,
+                            Lokasi = inspection.Lokasi,
+                            DetilLokasi = inspection.DetilLokasi,
+                            ItemSap = $"inspection:{inspection.Id}",
+                            KategoriTemuan = SafeTruncate(check.Name, 150),
+                            DetilTemuan = $"Temuan ketidaksesuaian (skor 0) saat inspeksi '{inspection.JenisInspeksi}' pada {check.Name}. Catatan: {catatan}",
+                            Status = "Open",
+                            Pja = inspection.Pja,
+                            NikPja = inspection.NikPja,
+                            DepartemenPja = inspection.DepartemenPja,
+                            PerusahaanId = inspection.PerusahaanId,
+                            CreatedAt = DateTime.Now
+                        };
+
+                        _context.ActionPlans.Add(actionPlan);
+                        await _context.SaveChangesAsync();
+                    }
+                }
+
+                var successMsg = isNew ? "Formulir Safety Inspeksi berhasil dikirim." : "Formulir Safety Inspeksi berhasil diperbarui.";
+                if (isAjax) return Json(new { success = true, message = successMsg });
+
+                TempData["SuccessMessage"] = successMsg;
+                return RedirectToAction("Index", "Home");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR-INSPECTION-SUBMIT] {ex.Message} \n {ex.StackTrace}");
+                var fullErr = $"Gagal menyimpan Laporan Inspeksi: {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    fullErr += $" ({ex.InnerException.Message})";
+                }
+
+                if (isAjax) return StatusCode(500, new { success = false, message = fullErr });
+
+                TempData["ErrorMessage"] = fullErr;
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         [HttpGet]

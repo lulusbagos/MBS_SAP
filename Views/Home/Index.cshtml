@@ -136,7 +136,7 @@
                         <div style="font-size: 11px; color: var(--text-muted);">Segera follow up ke PJA atau PIC, atau close mandiri agar compliance meningkat</div>
                     </div>
                 </div>
-                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="mine" asp-route-startDate="2000-01-01" class="btn btn-warning btn-sm px-3 py-1.5 fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" style="border-radius: 10px; font-size: 12px; background: #f59e0b; border: none; color: #000;">
+                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-startDate="2000-01-01" class="btn btn-warning btn-sm px-3 py-1.5 fw-bold shadow-sm d-inline-flex align-items-center gap-1.5" style="border-radius: 10px; font-size: 12px; background: #f59e0b; border: none; color: #000;">
                     <span>Lihat Semua Temuan Open</span>
                     <i class="bi bi-arrow-right-short" style="font-size: 16px;"></i>
                 </a>
@@ -148,7 +148,8 @@
                     <div class="d-flex align-items-center justify-content-between" style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.22)'" onmouseout="this.style.background='rgba(245,158,11,0.12)'">
                         <div>
                             <div style="font-size: 22px; font-weight: 800; color: #f59e0b; line-height: 1;">@myOpenAP</div>
-                            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 4px;">Temuan Open Milik Saya</div>
+                            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 4px;">Temuan Pribadi Saya</div>
+                            <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">(Sebagai Pelapor, PJA, atau PIC)</div>
                         </div>
                         <span class="badge bg-warning text-dark px-2 py-1" style="font-size: 10px; font-weight: 700;">Tindak Lanjuti &rarr;</span>
                     </div>
@@ -160,7 +161,8 @@
                     <div class="d-flex align-items-center justify-content-between" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.16)'" onmouseout="this.style.background='rgba(239,68,68,0.08)'">
                         <div>
                             <div style="font-size: 22px; font-weight: 800; color: #ef4444; line-height: 1;">@deptOpenAP</div>
-                            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 4px;">Temuan Open Dept: @userDeptName</div>
+                            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-top: 4px;">Temuan Dept: @userDeptName</div>
+                            <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">(Total Semua Anggota Dept)</div>
                         </div>
                         <span class="badge bg-danger text-white px-2 py-1" style="font-size: 10px; font-weight: 700;">Cek Dept &rarr;</span>
                     </div>

@@ -87,6 +87,12 @@ namespace MBS_SAP.Controllers
 
                 var baseDate = tanggal.Date.Add(waktu);
 
+                string SafeTruncate(string? val, int maxLen)
+                {
+                    if (string.IsNullOrEmpty(val)) return string.Empty;
+                    return val.Length <= maxLen ? val.Trim() : val.Trim().Substring(0, maxLen);
+                }
+
                 if (!isNew)
                 {
                     var report = await _context.Observations.FindAsync(id!.Value);
@@ -99,17 +105,17 @@ namespace MBS_SAP.Controllers
                     }
 
                     report.Date = baseDate;
-                    report.Area = observation.Area;
-                    report.Lokasi = observation.Lokasi;
-                    report.DetilLokasi = observation.DetilLokasi;
-                    report.KegiatanYangDiamati = observation.KegiatanYangDiamati;
-                    report.DepartemenYangDiamati = observation.DepartemenYangDiamati;
-                    report.DokumenPendukung = observation.DokumenPendukung;
-                    report.ResikoKritis = observation.ResikoKritis;
-                    report.TingkatResiko = observation.TingkatResiko;
-                    report.PerihalYangDiamati = observation.PerihalYangDiamati;
-                    report.HasilObservasi = observation.HasilObservasi;
-                    report.Keterangan = observation.Keterangan;
+                    report.Area = SafeTruncate(observation.Area, 100);
+                    report.Lokasi = SafeTruncate(observation.Lokasi, 150);
+                    report.DetilLokasi = SafeTruncate(observation.DetilLokasi, 250);
+                    report.KegiatanYangDiamati = SafeTruncate(observation.KegiatanYangDiamati, 250);
+                    report.DepartemenYangDiamati = SafeTruncate(observation.DepartemenYangDiamati, 100);
+                    report.DokumenPendukung = SafeTruncate(observation.DokumenPendukung, 100);
+                    report.ResikoKritis = SafeTruncate(observation.ResikoKritis, 100);
+                    report.TingkatResiko = SafeTruncate(observation.TingkatResiko, 50);
+                    report.PerihalYangDiamati = SafeTruncate(observation.PerihalYangDiamati, 150);
+                    report.HasilObservasi = SafeTruncate(observation.HasilObservasi, 50);
+                    report.Keterangan = SafeTruncate(observation.Keterangan, 2000);
 
                     if (foto != null && foto.Length > 0)
                     {
@@ -186,22 +192,22 @@ namespace MBS_SAP.Controllers
 
                     var report = new Observation
                     {
-                        Nama = userName,
-                        Nik = userNik,
-                        Departemen = userDept,
+                        Nama = SafeTruncate(userName, 150),
+                        Nik = SafeTruncate(userNik, 50),
+                        Departemen = SafeTruncate(userDept, 100),
                         CreatedAt = DateTime.Now,
                         Date = baseDate,
-                        Area = observation.Area,
-                        Lokasi = observation.Lokasi,
-                        DetilLokasi = observation.DetilLokasi,
-                        KegiatanYangDiamati = observation.KegiatanYangDiamati,
-                        DepartemenYangDiamati = observation.DepartemenYangDiamati,
-                        DokumenPendukung = observation.DokumenPendukung,
-                        ResikoKritis = observation.ResikoKritis,
-                        TingkatResiko = observation.TingkatResiko,
-                        PerihalYangDiamati = observation.PerihalYangDiamati,
-                        HasilObservasi = hasil,
-                        Keterangan = i < normalizedNotes.Count ? normalizedNotes[i] : null,
+                        Area = SafeTruncate(observation.Area, 100),
+                        Lokasi = SafeTruncate(observation.Lokasi, 150),
+                        DetilLokasi = SafeTruncate(observation.DetilLokasi, 250),
+                        KegiatanYangDiamati = SafeTruncate(observation.KegiatanYangDiamati, 250),
+                        DepartemenYangDiamati = SafeTruncate(observation.DepartemenYangDiamati, 100),
+                        DokumenPendukung = SafeTruncate(observation.DokumenPendukung, 100),
+                        ResikoKritis = SafeTruncate(observation.ResikoKritis, 100),
+                        TingkatResiko = SafeTruncate(observation.TingkatResiko, 50),
+                        PerihalYangDiamati = SafeTruncate(observation.PerihalYangDiamati, 150),
+                        HasilObservasi = SafeTruncate(hasil, 50),
+                        Keterangan = SafeTruncate(i < normalizedNotes.Count ? normalizedNotes[i] : null, 2000),
                         FotoUrl = fotoUrl
                     };
 
@@ -219,7 +225,12 @@ namespace MBS_SAP.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error saving observation");
-                TempData["ErrorMessage"] = "Terjadi kesalahan saat menyimpan data.";
+                var fullErr = $"Terjadi kesalahan saat menyimpan data: {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    fullErr += $" ({ex.InnerException.Message})";
+                }
+                TempData["ErrorMessage"] = fullErr;
             }
 
             await PopulateViewBagAsync();

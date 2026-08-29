@@ -711,12 +711,7 @@
                     
                     let matchSpecial = true;
                     if (specialFilter === 'mine') {
-                        let selfMatch = (nik === currentUserNik || nikpja === currentUserNik || nikpic === currentUserNik);
-                        let deptMatch = false;
-                        if (currentUserDept !== '') {
-                            deptMatch = (d.toLowerCase() === currentUserDept || dpja.toLowerCase() === currentUserDept || dpic.toLowerCase() === currentUserDept);
-                        }
-                        matchSpecial = selfMatch || deptMatch;
+                        matchSpecial = (nik === currentUserNik || nikpja === currentUserNik || nikpic === currentUserNik);
                     } else if (specialFilter === 'dept' && specialDept) {
                         const sd = specialDept.toLowerCase();
                         matchSpecial = (d.toLowerCase() === sd || dpja.toLowerCase() === sd || dpic.toLowerCase() === sd);

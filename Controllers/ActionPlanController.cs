@@ -55,8 +55,7 @@ namespace MBS_SAP.Controllers
                 if (filter == "mine")
                 {
                     query = query.Where(r => 
-                        r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik ||
-                        (userDept != null && (r.Departemen == userDept || r.DepartemenPja == userDept || r.DepartemenPic == userDept)));
+                        r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik);
                 }
                 else if (filter == "dept" && !string.IsNullOrEmpty(dept))
                 {
@@ -118,12 +117,16 @@ namespace MBS_SAP.Controllers
                 .Distinct()
                 .ToList();
 
-            var nikCompanyMap = await (from k in _context.Karyawans
-                                       join p in _context.Perusahaans on k.IdPerusahaan equals p.PerusahaanId
-                                       where allNiks.Contains(k.NoNik)
-                                       select new { k.NoNik, p.NamaPerusahaan })
-                                       .Distinct()
-                                       .ToDictionaryAsync(x => x.NoNik, x => x.NamaPerusahaan);
+            var nikCompanyList = await (from k in _context.Karyawans
+                                        join p in _context.Perusahaans on k.IdPerusahaan equals p.PerusahaanId
+                                        where allNiks.Contains(k.NoNik)
+                                        select new { k.NoNik, k.StatusAktif, p.NamaPerusahaan })
+                                        .ToListAsync();
+
+            var nikCompanyMap = nikCompanyList
+                .OrderByDescending(x => x.StatusAktif)
+                .GroupBy(x => x.NoNik)
+                .ToDictionary(g => g.Key, g => g.First().NamaPerusahaan);
             ViewBag.NikCompanyMap = nikCompanyMap;
 
             var perusahaanIds = reports.Where(r => r.PerusahaanId.HasValue).Select(r => r.PerusahaanId!.Value).Distinct().ToList();
@@ -305,12 +308,10 @@ namespace MBS_SAP.Controllers
                 );
             }
 
-            // Non-Admin hanya melihat yang terkait dengannya langsung atau departemennya
             if (!isAdmin && !string.IsNullOrEmpty(userNik))
             {
                 query = query.Where(r =>
-                    r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik || string.IsNullOrEmpty(r.NikPja) ||
-                    (userDept != null && (r.Departemen == userDept || r.DepartemenPja == userDept || r.DepartemenPic == userDept))
+                    r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik
                 );
             }
 
@@ -331,12 +332,16 @@ namespace MBS_SAP.Controllers
                 .Distinct()
                 .ToList();
 
-            var nikCompanyMap = await (from k in _context.Karyawans
-                                       join p in _context.Perusahaans on k.IdPerusahaan equals p.PerusahaanId
-                                       where allNiks.Contains(k.NoNik)
-                                       select new { k.NoNik, p.NamaPerusahaan })
-                                       .Distinct()
-                                       .ToDictionaryAsync(x => x.NoNik, x => x.NamaPerusahaan);
+            var nikCompanyList = await (from k in _context.Karyawans
+                                        join p in _context.Perusahaans on k.IdPerusahaan equals p.PerusahaanId
+                                        where allNiks.Contains(k.NoNik)
+                                        select new { k.NoNik, k.StatusAktif, p.NamaPerusahaan })
+                                        .ToListAsync();
+
+            var nikCompanyMap = nikCompanyList
+                .OrderByDescending(x => x.StatusAktif)
+                .GroupBy(x => x.NoNik)
+                .ToDictionary(g => g.Key, g => g.First().NamaPerusahaan);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Action Plan Temuan");

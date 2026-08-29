@@ -602,6 +602,56 @@
         </div>
     </div>
 
+    <!-- Hazard Categories Breakdown (KTA & TTA) per Period -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="report-card premium-card h-100 mb-0 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="premium-title" style="font-size: 15px; margin: 0;">
+                        <i class="bi bi-exclamation-triangle text-warning me-2"></i>Kategori Temuan Hazard per Periode (@(selectedMonthName) @(selectedYear))
+                        <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 13px; cursor: help;" data-bs-toggle="tooltip" title="Menampilkan jumlah laporan Kondisi Tidak Aman (KTA) dan Tindakan Tidak Aman (TTA) yang dilaporkan selama periode terpilih."></i>
+                    </h5>
+                    <span class="badge" style="background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25); font-weight: 700; font-size: 10.5px; border-radius: 6px; padding: 4px 8px;">
+                        Hazard MTD
+                    </span>
+                </div>
+                
+                <div class="row g-4 text-center">
+                    <div class="col-md-4">
+                        <div style="font-size: 36px; font-weight: 900; color: #f43f5e; font-family: 'Outfit', sans-serif;">@(ViewBag.PeriodKtaCount)</div>
+                        <div style="font-size: 14px; font-weight: 700; color: var(--text-main); text-transform: uppercase;">Kondisi Tidak Aman (KTA)</div>
+                        <div style="font-size: 12px; font-weight: 500; color: var(--text-muted); margin-top: 4px;">@(ViewBag.PeriodKtaPct)% dari total hazard</div>
+                    </div>
+                    <div class="col-md-4" style="border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color);">
+                        <div style="font-size: 36px; font-weight: 900; color: #3b82f6; font-family: 'Outfit', sans-serif;">@(ViewBag.PeriodTtaCount)</div>
+                        <div style="font-size: 14px; font-weight: 700; color: var(--text-main); text-transform: uppercase;">Tindakan Tidak Aman (TTA)</div>
+                        <div style="font-size: 12px; font-weight: 500; color: var(--text-muted); margin-top: 4px;">@(ViewBag.PeriodTtaPct)% dari total hazard</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div style="font-size: 36px; font-weight: 900; color: #10b981; font-family: 'Outfit', sans-serif;">@(ViewBag.PeriodTotalHazardCount)</div>
+                        <div style="font-size: 14px; font-weight: 700; color: var(--text-main); text-transform: uppercase;">Total Laporan Hazard</div>
+                        <div style="font-size: 12px; font-weight: 500; color: var(--text-muted); margin-top: 4px;">Periode: @(selectedMonthName) @(selectedYear)</div>
+                    </div>
+                </div>
+
+                @{
+                    int totalHazard = ViewBag.PeriodTotalHazardCount ?? 0;
+                    int ktaPct = ViewBag.PeriodKtaPct ?? 0;
+                    int ttaPct = ViewBag.PeriodTtaPct ?? 0;
+                    int otherPct = totalHazard > 0 ? (100 - ktaPct - ttaPct) : 0;
+                }
+                <div class="progress mt-4" style="height: 12px; border-radius: 6px; background: rgba(255,255,255,0.05); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);">
+                    <div class="progress-bar" role="progressbar" style="width: @(ktaPct)%; background: #f43f5e;" aria-valuenow="@(ktaPct)" aria-valuemin="0" aria-valuemax="100" title="KTA: @(ktaPct)%"></div>
+                    <div class="progress-bar" role="progressbar" style="width: @(ttaPct)%; background: #3b82f6;" aria-valuenow="@(ttaPct)" aria-valuemin="0" aria-valuemax="100" title="TTA: @(ttaPct)%"></div>
+                    @if (otherPct > 0)
+                    {
+                        <div class="progress-bar" role="progressbar" style="width: @(otherPct)%; background: #64748b;" aria-valuenow="@(otherPct)" aria-valuemin="0" aria-valuemax="100" title="Lainnya: @(otherPct)%"></div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- KPI Summary Row -->
     @{
         int totalTarget = (ViewBag.TargetH ?? 0) + (ViewBag.TargetI ?? 0) + (ViewBag.TargetS ?? 0) + (ViewBag.TargetO ?? 0) + (ViewBag.TargetC ?? 0);

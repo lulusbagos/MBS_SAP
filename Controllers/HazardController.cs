@@ -100,248 +100,281 @@ namespace MBS_SAP.Controllers
             string? departemenPja,
             IFormFile? fotoTemuan)
         {
+            var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
             if (string.IsNullOrEmpty(temuan))
             {
-                TempData["ErrorMessage"] = "Kolom Detil Temuan wajib diisi!";
+                var errRequired = "Kolom Detil Temuan wajib diisi!";
+                if (isAjax) return BadRequest(new { success = false, message = errRequired });
+                TempData["ErrorMessage"] = errRequired;
                 return RedirectToAction(nameof(Index));
             }
 
-            // Parse time
-            TimeSpan waktu = DateTime.Now.TimeOfDay;
-            if (!string.IsNullOrEmpty(waktuStr) && TimeSpan.TryParse(waktuStr, out var parsedWaktu))
+            try
             {
-                waktu = parsedWaktu;
-            }
-
-            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
-            var userName = User.Identity?.Name ?? "Anonymous";
-            var userDept = User.FindFirst("Department")?.Value ?? "General";
-            var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
-            if (!userCompanyId.HasValue)
-            {
-                var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
-                if (karyawan != null) userCompanyId = karyawan.IdPerusahaan;
-            }
-
-            HazardReport? report;
-            bool isNew = true;
-
-            if (id.HasValue && id.Value > 0)
-            {
-                report = await _context.HazardReports.FindAsync(id.Value);
-                if (report == null || report.IsDeleted) return NotFound();
-                
-                // Optional: Check if user is Admin or the creator
-                if (report.Nik != userNik && !User.IsInRole("Admin"))
+                // Parse time
+                TimeSpan waktu = DateTime.Now.TimeOfDay;
+                if (!string.IsNullOrEmpty(waktuStr) && TimeSpan.TryParse(waktuStr, out var parsedWaktu))
                 {
-                    TempData["ErrorMessage"] = "Anda tidak memiliki akses untuk mengubah laporan ini.";
-                    return RedirectToAction(nameof(Index));
+                    waktu = parsedWaktu;
                 }
-                isNew = false;
-            }
-            else
-            {
-                report = new HazardReport
+
+                var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
+                var userName = User.Identity?.Name ?? "Anonymous";
+                var userDept = User.FindFirst("Department")?.Value ?? "General";
+                var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
+                int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
+                if (!userCompanyId.HasValue)
                 {
-                    Nama = userName,
-                    Nik = userNik,
-                    Departemen = userDept,
-                    PerusahaanId = userCompanyId,
-                    StatusTemuan = "Open",
-                    CreatedAt = DateTime.Now
-                };
-            }
-
-            report.Tanggal = DateTime.Today;
-            report.Waktu = waktu;
-            report.Area = area;
-            report.Lokasi = lokasi;
-            report.DetilLokasi = detilLokasi;
-            report.Temuan = temuan;
-            report.KategoriBahaya = kategoriBahaya;
-            report.JenisBahaya = jenisBahaya;
-            report.JenisKetidaksesuaian = jenisKetidaksesuaian;
-            report.TingkatResiko = tingkatResiko;
-            report.Perbaikan = perbaikan;
-            report.TindakanPerbaikan = tindakanPerbaikan;
-            var pjaName = pja?.Trim().ToUpper();
-            var pjaDept = departemenPja?.Trim().ToUpper();
-            var pjaNik = nikPja?.Trim();
-
-            // Guard backend terhadap submit ganda (double-click / request retry) dalam waktu sangat dekat.
-            if (isNew)
-            {
-                var now = DateTime.Now;
-                var duplicateWindowStart = now.AddSeconds(-20);
-                var normalizedTemuan = (temuan ?? string.Empty).Trim();
-                var normalizedArea = (area ?? string.Empty).Trim();
-                var normalizedLokasi = (lokasi ?? string.Empty).Trim();
-
-                var duplicatedReport = await _context.HazardReports
-                    .AsNoTracking()
-                    .Where(h => !h.IsDeleted
-                                && h.Nik == userNik
-                                && h.CreatedAt >= duplicateWindowStart)
-                    .FirstOrDefaultAsync(h => (h.Temuan ?? string.Empty).Trim() == normalizedTemuan
-                                           && (h.Area ?? string.Empty).Trim() == normalizedArea
-                                           && (h.Lokasi ?? string.Empty).Trim() == normalizedLokasi);
-
-                if (duplicatedReport != null)
-                {
-                    TempData["WarningMessage"] = "Data hazard yang sama terdeteksi terkirim dua kali. Sistem hanya menyimpan satu data.";
-                    return RedirectToAction(nameof(Index));
+                    var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                    if (karyawan != null) userCompanyId = karyawan.IdPerusahaan;
                 }
-            }
 
-            if (TryParseCompanyNikToken(pjaNik, out var selectedCompanyId))
-            {
-                report.Pja = pjaName;
-                report.NikPja = null;
-                report.DepartemenPja = "PERUSAHAAN";
-                if (selectedCompanyId > 0)
+                string SafeTruncate(string? val, int maxLen)
                 {
-                    report.PerusahaanId = selectedCompanyId;
+                    if (string.IsNullOrEmpty(val)) return string.Empty;
+                    return val.Length <= maxLen ? val.Trim() : val.Trim().Substring(0, maxLen);
                 }
-            }
-            else
-            {
-                report.Pja = pjaName;
-                report.NikPja = pjaNik;
-                report.DepartemenPja = pjaDept;
-            }
 
-            // Handle Photo Upload
-            if (fotoTemuan != null && fotoTemuan.Length > 0)
-            {
-                try
+                HazardReport? report;
+                bool isNew = true;
+
+                if (id.HasValue && id.Value > 0)
                 {
-                    report.FotoTemuan = await _imageUploadService.UploadAndCompressImageAsync(fotoTemuan, "hazards");
-                }
-                catch (Exception)
-                {
-                    report.FotoTemuan = null;
-                }
-            }
-
-            // Save to SQL Database
-            if (isNew)
-            {
-                _context.HazardReports.Add(report);
-            }
-            else
-            {
-                _context.HazardReports.Update(report);
-            }
-            await _context.SaveChangesAsync();
-
-            // Sync with ActionPlan
-            if (!string.IsNullOrWhiteSpace(report.Pja))
-            {
-                var actionPlanItemSap = $"hazard:{report.Id}";
-                var actionPlan = await _context.ActionPlans.FirstOrDefaultAsync(a => a.ItemSap == actionPlanItemSap && !a.IsDeleted);
-
-                if (actionPlan == null)
-                {
-                    actionPlan = new ActionPlan
+                    report = await _context.HazardReports.FindAsync(id.Value);
+                    if (report == null || report.IsDeleted) return NotFound();
+                    
+                    // Optional: Check if user is Admin or the creator
+                    if (report.Nik != userNik && !User.IsInRole("Admin"))
                     {
-                        Tanggal = report.Tanggal,
-                        Waktu = report.Waktu,
-                        Nama = report.Nama,
-                        Nik = report.Nik,
-                        Departemen = report.Departemen,
-                        Area = report.Area,
-                        Lokasi = report.Lokasi,
-                        DetilLokasi = report.DetilLokasi,
-                        ItemSap = actionPlanItemSap,
-                        KategoriTemuan = report.KategoriBahaya,
-                        DetilTemuan = report.Temuan,
-                        Status = report.StatusTemuan,
-                        Pja = report.Pja,
-                        NikPja = report.NikPja,
-                        DepartemenPja = report.DepartemenPja,
-                        RencanaPerbaikan = report.TindakanPerbaikan,
-                        FotoTemuan = report.FotoTemuan,
-                        PerusahaanId = report.PerusahaanId,
-                        CreatedAt = DateTime.Now
-                    };
-                    _context.ActionPlans.Add(actionPlan);
+                        var errAccess = "Anda tidak memiliki akses untuk mengubah laporan ini.";
+                        if (isAjax) return StatusCode(403, new { success = false, message = errAccess });
+                        TempData["ErrorMessage"] = errAccess;
+                        return RedirectToAction(nameof(Index));
+                    }
+                    isNew = false;
                 }
                 else
                 {
-                    actionPlan.Tanggal = report.Tanggal;
-                    actionPlan.Waktu = report.Waktu;
-                    actionPlan.Area = report.Area;
-                    actionPlan.Lokasi = report.Lokasi;
-                    actionPlan.DetilLokasi = report.DetilLokasi;
-                    actionPlan.KategoriTemuan = report.KategoriBahaya;
-                    actionPlan.DetilTemuan = report.Temuan;
-                    actionPlan.Pja = report.Pja;
-                    actionPlan.NikPja = report.NikPja;
-                    actionPlan.DepartemenPja = report.DepartemenPja;
-                    actionPlan.RencanaPerbaikan = report.TindakanPerbaikan;
-                    actionPlan.FotoTemuan = report.FotoTemuan;
-                    actionPlan.Status = report.StatusTemuan;
-                    _context.ActionPlans.Update(actionPlan);
+                    report = new HazardReport
+                    {
+                        Nama = SafeTruncate(userName, 150),
+                        Nik = SafeTruncate(userNik, 50),
+                        Departemen = SafeTruncate(userDept, 150),
+                        PerusahaanId = userCompanyId,
+                        StatusTemuan = "Open",
+                        CreatedAt = DateTime.Now
+                    };
+                }
+
+                report.Tanggal = DateTime.Today;
+                report.Waktu = waktu;
+                report.Area = SafeTruncate(area, 150);
+                report.Lokasi = SafeTruncate(lokasi, 150);
+                report.DetilLokasi = SafeTruncate(detilLokasi, 250);
+                report.Temuan = temuan;
+                report.KategoriBahaya = SafeTruncate(kategoriBahaya, 100);
+                report.JenisBahaya = SafeTruncate(jenisBahaya, 100);
+                report.JenisKetidaksesuaian = SafeTruncate(jenisKetidaksesuaian, 150);
+                report.TingkatResiko = SafeTruncate(tingkatResiko, 50);
+                report.Perbaikan = perbaikan;
+                report.TindakanPerbaikan = tindakanPerbaikan;
+                var pjaName = SafeTruncate(pja, 150).ToUpper();
+                var pjaDept = SafeTruncate(departemenPja, 150).ToUpper();
+                var pjaNik = SafeTruncate(nikPja, 50);
+
+                // Guard backend terhadap submit ganda (double-click / request retry) dalam waktu sangat dekat.
+                if (isNew)
+                {
+                    var now = DateTime.Now;
+                    var duplicateWindowStart = now.AddSeconds(-20);
+                    var normalizedTemuan = (temuan ?? string.Empty).Trim();
+                    var normalizedArea = (report.Area ?? string.Empty).Trim();
+                    var normalizedLokasi = (report.Lokasi ?? string.Empty).Trim();
+
+                    var duplicatedReport = await _context.HazardReports
+                        .AsNoTracking()
+                        .Where(h => !h.IsDeleted
+                                    && h.Nik == userNik
+                                    && h.CreatedAt >= duplicateWindowStart)
+                        .FirstOrDefaultAsync(h => (h.Temuan ?? string.Empty).Trim() == normalizedTemuan
+                                               && (h.Area ?? string.Empty).Trim() == normalizedArea
+                                               && (h.Lokasi ?? string.Empty).Trim() == normalizedLokasi);
+
+                    if (duplicatedReport != null)
+                    {
+                        var errDuplicate = "Data hazard yang sama terdeteksi terkirim dua kali. Sistem hanya menyimpan satu data.";
+                        if (isAjax) return BadRequest(new { success = false, message = errDuplicate });
+                        TempData["WarningMessage"] = errDuplicate;
+                        return RedirectToAction(nameof(Index));
+                    }
+                }
+
+                if (TryParseCompanyNikToken(pjaNik, out var selectedCompanyId))
+                {
+                    report.Pja = pjaName;
+                    report.NikPja = null;
+                    report.DepartemenPja = "PERUSAHAAN";
+                    if (selectedCompanyId > 0)
+                    {
+                        report.PerusahaanId = selectedCompanyId;
+                    }
+                }
+                else
+                {
+                    report.Pja = pjaName;
+                    report.NikPja = pjaNik;
+                    report.DepartemenPja = pjaDept;
+                }
+
+                // Handle Photo Upload
+                if (fotoTemuan != null && fotoTemuan.Length > 0)
+                {
+                    try
+                    {
+                        report.FotoTemuan = await _imageUploadService.UploadAndCompressImageAsync(fotoTemuan, "hazards");
+                    }
+                    catch (Exception)
+                    {
+                        report.FotoTemuan = null;
+                    }
+                }
+
+                // Save to SQL Database
+                if (isNew)
+                {
+                    _context.HazardReports.Add(report);
+                }
+                else
+                {
+                    _context.HazardReports.Update(report);
                 }
                 await _context.SaveChangesAsync();
-            }
-            else
-            {
-                var actionPlanItemSap = $"hazard:{report.Id}";
-                var actionPlan = await _context.ActionPlans.FirstOrDefaultAsync(a => a.ItemSap == actionPlanItemSap && !a.IsDeleted);
-                if (actionPlan != null)
+
+                // Sync with ActionPlan
+                if (!string.IsNullOrWhiteSpace(report.Pja))
                 {
-                    actionPlan.IsDeleted = true;
-                    _context.ActionPlans.Update(actionPlan);
+                    var actionPlanItemSap = $"hazard:{report.Id}";
+                    var actionPlan = await _context.ActionPlans.FirstOrDefaultAsync(a => a.ItemSap == actionPlanItemSap && !a.IsDeleted);
+
+                    if (actionPlan == null)
+                    {
+                        actionPlan = new ActionPlan
+                        {
+                            Tanggal = report.Tanggal,
+                            Waktu = report.Waktu,
+                            Nama = report.Nama,
+                            Nik = report.Nik,
+                            Departemen = report.Departemen,
+                            Area = report.Area,
+                            Lokasi = report.Lokasi,
+                            DetilLokasi = report.DetilLokasi,
+                            ItemSap = actionPlanItemSap,
+                            KategoriTemuan = report.KategoriBahaya,
+                            DetilTemuan = report.Temuan,
+                            Status = report.StatusTemuan,
+                            Pja = report.Pja,
+                            NikPja = report.NikPja,
+                            DepartemenPja = report.DepartemenPja,
+                            RencanaPerbaikan = report.TindakanPerbaikan,
+                            FotoTemuan = report.FotoTemuan,
+                            PerusahaanId = report.PerusahaanId,
+                            CreatedAt = DateTime.Now
+                        };
+                        _context.ActionPlans.Add(actionPlan);
+                    }
+                    else
+                    {
+                        actionPlan.Tanggal = report.Tanggal;
+                        actionPlan.Waktu = report.Waktu;
+                        actionPlan.Area = report.Area;
+                        actionPlan.Lokasi = report.Lokasi;
+                        actionPlan.DetilLokasi = report.DetilLokasi;
+                        actionPlan.KategoriTemuan = report.KategoriBahaya;
+                        actionPlan.DetilTemuan = report.Temuan;
+                        actionPlan.Pja = report.Pja;
+                        actionPlan.NikPja = report.NikPja;
+                        actionPlan.DepartemenPja = report.DepartemenPja;
+                        actionPlan.RencanaPerbaikan = report.TindakanPerbaikan;
+                        actionPlan.FotoTemuan = report.FotoTemuan;
+                        actionPlan.Status = report.StatusTemuan;
+                        _context.ActionPlans.Update(actionPlan);
+                    }
                     await _context.SaveChangesAsync();
                 }
-            }
+                else
+                {
+                    var actionPlanItemSap = $"hazard:{report.Id}";
+                    var actionPlan = await _context.ActionPlans.FirstOrDefaultAsync(a => a.ItemSap == actionPlanItemSap && !a.IsDeleted);
+                    if (actionPlan != null)
+                    {
+                        actionPlan.IsDeleted = true;
+                        _context.ActionPlans.Update(actionPlan);
+                        await _context.SaveChangesAsync();
+                    }
+                }
 
-            // Notify PJA if new or if PJA changed/assigned
-            bool pjaAssignedOrChanged = false;
-            if (isNew && !string.IsNullOrWhiteSpace(report.Pja))
-            {
-                pjaAssignedOrChanged = true;
-            }
-            else if (!isNew && !string.IsNullOrWhiteSpace(report.Pja))
-            {
-                var originalReport = await _context.HazardReports.AsNoTracking().FirstOrDefaultAsync(h => h.Id == report.Id);
-                if (originalReport != null && (originalReport.NikPja != report.NikPja || originalReport.Pja != report.Pja))
+                // Notify PJA if new or if PJA changed/assigned
+                bool pjaAssignedOrChanged = false;
+                if (isNew && !string.IsNullOrWhiteSpace(report.Pja))
                 {
                     pjaAssignedOrChanged = true;
                 }
-            }
-
-            if (pjaAssignedOrChanged)
-            {
-                if (!string.IsNullOrWhiteSpace(report.NikPja))
+                else if (!isNew && !string.IsNullOrWhiteSpace(report.Pja))
                 {
-                    var notif = new Notification
+                    var originalReport = await _context.HazardReports.AsNoTracking().FirstOrDefaultAsync(h => h.Id == report.Id);
+                    if (originalReport != null && (originalReport.NikPja != report.NikPja || originalReport.Pja != report.Pja))
                     {
-                        RecipientNik = report.NikPja!,
-                        Title = "Temuan Hazard Baru",
-                        Message = $"Anda ditunjuk sebagai PJA untuk temuan Hazard di {report.Lokasi ?? report.Area} oleh {report.Nama}.",
-                        Url = "/ActionPlan/Index",
-                        NotifType = "hazard_new"
-                    };
-                    _context.Notifications.Add(notif);
-                    await _context.SaveChangesAsync();
+                        pjaAssignedOrChanged = true;
+                    }
                 }
-                else if (report.PerusahaanId.HasValue)
+
+                if (pjaAssignedOrChanged)
                 {
-                    await CreateCompanyBroadcastNotificationAsync(
-                        report.PerusahaanId.Value,
-                        "Temuan Hazard Baru",
-                        $"Temuan Hazard baru pada area perusahaan {report.Pja ?? "-"} di {report.Lokasi ?? report.Area} membutuhkan tindak lanjut.",
-                        "/Hazard/Index",
-                        "hazard_new");
+                    var recipientNik = report.NikPja;
+                    if (string.IsNullOrWhiteSpace(recipientNik) && !string.IsNullOrWhiteSpace(report.Pja))
+                    {
+                        recipientNik = await (from k in _context.Karyawans
+                                              join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                              where k.StatusAktif && p.NamaLengkap.ToLower() == report.Pja.ToLower()
+                                              select k.NoNik).FirstOrDefaultAsync();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(recipientNik))
+                    {
+                        var notif = new Notification
+                        {
+                            RecipientNik = recipientNik,
+                            Title = "Temuan Hazard Baru",
+                            Message = $"Anda ditunjuk sebagai PJA untuk temuan Hazard di {report.Lokasi ?? report.Area} oleh {report.Nama}.",
+                            Url = "/ActionPlan/Index",
+                            NotifType = "hazard_new"
+                        };
+                        _context.Notifications.Add(notif);
+                        await _context.SaveChangesAsync();
+                    }
                 }
+
+                var successMsg = isNew ? "Laporan Hazard berhasil disimpan!" : "Laporan Hazard berhasil diperbarui!";
+                if (isAjax) return Json(new { success = true, message = successMsg });
+
+                TempData["SuccessMessage"] = successMsg;
+                return RedirectToAction("Index", "Home");
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR-HAZARD-SUBMIT] {ex.Message} \n {ex.StackTrace}");
+                var fullErr = $"Gagal menyimpan Laporan Hazard: {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    fullErr += $" ({ex.InnerException.Message})";
+                }
 
+                if (isAjax) return StatusCode(500, new { success = false, message = fullErr });
 
-
-            return RedirectToAction("Index", "Home");
+                TempData["ErrorMessage"] = fullErr;
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         [HttpGet]
@@ -470,24 +503,25 @@ namespace MBS_SAP.Controllers
                     _context.ActionPlans.Update(actionPlan);
                 }
 
-                if (!string.IsNullOrWhiteSpace(report.NikPja))
+                var recipientNik = report.NikPja;
+                if (string.IsNullOrWhiteSpace(recipientNik) && !string.IsNullOrWhiteSpace(report.Pja))
+                {
+                    recipientNik = await (from k in _context.Karyawans
+                                          join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                          where k.StatusAktif && p.NamaLengkap.ToLower() == report.Pja.ToLower()
+                                          select k.NoNik).FirstOrDefaultAsync();
+                }
+
+                if (!string.IsNullOrWhiteSpace(recipientNik))
                 {
                     var notif = new Notification
                     {
-                        RecipientNik = report.NikPja,
+                        RecipientNik = recipientNik,
                         Title = "Action Plan Hazard Baru",
                         Message = $"Anda menerima tindak lanjut hazard dari {report.Nama} di {report.Lokasi ?? report.Area}.",
                         Url = "/ActionPlan/Index"
                     };
                     _context.Notifications.Add(notif);
-                }
-                else if (report.PerusahaanId.HasValue)
-                {
-                    await CreateCompanyBroadcastNotificationAsync(
-                        report.PerusahaanId.Value,
-                        "Action Plan Hazard Baru",
-                        $"Tindak lanjut hazard baru untuk perusahaan {report.Pja ?? "-"} di {report.Lokasi ?? report.Area}.",
-                        "/ActionPlan/Index");
                 }
 
 

@@ -68,128 +68,160 @@ namespace MBS_SAP.Controllers
             IFormFile? fotoDiri,
             IFormFile? fotoKegiatan)
         {
+            var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
             if (string.IsNullOrEmpty(judul))
             {
-                TempData["ErrorMessage"] = "Judul Safety Talk wajib diisi!";
+                var errRequired = "Judul Safety Talk wajib diisi!";
+                if (isAjax) return BadRequest(new { success = false, message = errRequired });
+                TempData["ErrorMessage"] = errRequired;
                 return RedirectToAction(nameof(Index));
             }
 
-            TimeSpan waktu = DateTime.Now.TimeOfDay;
-            if (!string.IsNullOrEmpty(waktuStr) && TimeSpan.TryParse(waktuStr, out var parsedWaktu))
+            try
             {
-                waktu = parsedWaktu;
-            }
-
-            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
-            var userName = User.Identity?.Name ?? "Anonymous";
-            var userDept = User.FindFirst("Department")?.Value ?? "General";
-            var companyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
-            if (!userCompanyId.HasValue)
-            {
-                var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
-                if (karyawan != null) userCompanyId = karyawan.IdPerusahaan;
-            }
-
-            SafetyTalk? talk;
-            bool isNew = true;
-
-            if (id.HasValue && id.Value > 0)
-            {
-                talk = await _context.SafetyTalks.FindAsync(id.Value);
-                if (talk == null || talk.IsDeleted) return NotFound();
-
-                if (talk.Nik != userNik && !User.IsInRole("Admin"))
+                TimeSpan waktu = DateTime.Now.TimeOfDay;
+                if (!string.IsNullOrEmpty(waktuStr) && TimeSpan.TryParse(waktuStr, out var parsedWaktu))
                 {
-                    TempData["ErrorMessage"] = "Anda tidak memiliki akses untuk mengubah laporan ini.";
-                    return RedirectToAction(nameof(Index));
+                    waktu = parsedWaktu;
                 }
-                isNew = false;
-            }
-            else
-            {
-                talk = new SafetyTalk
+
+                var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
+                var userName = User.Identity?.Name ?? "Anonymous";
+                var userDept = User.FindFirst("Department")?.Value ?? "General";
+                var companyIdStr = User.FindFirst("CompanyId")?.Value;
+                int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+                if (!userCompanyId.HasValue)
                 {
-                    Nama = userName,
-                    Nik = userNik,
-                    Departemen = userDept,
-                    PerusahaanId = userCompanyId,
-                    CreatedAt = DateTime.Now
-                };
-            }
-
-            talk.Tanggal = tanggal == default ? DateTime.Today : tanggal;
-            talk.Waktu = waktu;
-            talk.Area = area;
-            talk.Lokasi = lokasi;
-            talk.DetilLokasi = detilLokasi;
-            talk.Judul = judul;
-            talk.Keterangan = keterangan;
-
-            // Guard backend against near-duplicate submit (double-click / retry) for new records.
-            if (isNew)
-            {
-                var duplicateWindowStart = DateTime.Now.AddSeconds(-20);
-                var normalizedArea = (talk.Area ?? string.Empty).Trim();
-                var normalizedLokasi = (talk.Lokasi ?? string.Empty).Trim();
-                var normalizedJudul = (talk.Judul ?? string.Empty).Trim();
-
-                var duplicatedTalk = await _context.SafetyTalks
-                    .AsNoTracking()
-                    .Where(s => !s.IsDeleted
-                                && s.Nik == userNik
-                                && s.CreatedAt >= duplicateWindowStart)
-                    .FirstOrDefaultAsync(s => (s.Area ?? string.Empty).Trim() == normalizedArea
-                                           && (s.Lokasi ?? string.Empty).Trim() == normalizedLokasi
-                                           && (s.Judul ?? string.Empty).Trim() == normalizedJudul);
-
-                if (duplicatedTalk != null)
-                {
-                    TempData["WarningMessage"] = "Data Safety Talk yang sama terdeteksi terkirim dua kali. Sistem hanya menyimpan satu data.";
-                    return RedirectToAction(nameof(Index));
+                    var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                    if (karyawan != null) userCompanyId = karyawan.IdPerusahaan;
                 }
-            }
 
-            // Handle Foto Diri Upload
-            if (fotoDiri != null && fotoDiri.Length > 0)
-            {
-                try
+                string SafeTruncate(string? val, int maxLen)
                 {
-                    talk.FotoDiri = await _imageUploadService.UploadAndCompressImageAsync(fotoDiri, "safetytalks", "diri");
+                    if (string.IsNullOrEmpty(val)) return string.Empty;
+                    return val.Length <= maxLen ? val.Trim() : val.Trim().Substring(0, maxLen);
                 }
-                catch (Exception)
+
+                SafetyTalk? talk;
+                bool isNew = true;
+
+                if (id.HasValue && id.Value > 0)
                 {
-                    talk.FotoDiri = null;
-                }
-            }
+                    talk = await _context.SafetyTalks.FindAsync(id.Value);
+                    if (talk == null || talk.IsDeleted) return NotFound();
 
-            // Handle Foto Kegiatan Upload
-            if (fotoKegiatan != null && fotoKegiatan.Length > 0)
-            {
-                try
+                    if (talk.Nik != userNik && !User.IsInRole("Admin"))
+                    {
+                        var errAccess = "Anda tidak memiliki akses untuk mengubah laporan ini.";
+                        if (isAjax) return StatusCode(403, new { success = false, message = errAccess });
+                        TempData["ErrorMessage"] = errAccess;
+                        return RedirectToAction(nameof(Index));
+                    }
+                    isNew = false;
+                }
+                else
                 {
-                    talk.FotoKegiatan = await _imageUploadService.UploadAndCompressImageAsync(fotoKegiatan, "safetytalks", "keg");
+                    talk = new SafetyTalk
+                    {
+                        Nama = SafeTruncate(userName, 150),
+                        Nik = SafeTruncate(userNik, 50),
+                        Departemen = SafeTruncate(userDept, 150),
+                        PerusahaanId = userCompanyId,
+                        CreatedAt = DateTime.Now
+                    };
                 }
-                catch (Exception)
+
+                talk.Tanggal = tanggal == default ? DateTime.Today : tanggal;
+                talk.Waktu = waktu;
+                talk.Area = SafeTruncate(area, 150);
+                talk.Lokasi = SafeTruncate(lokasi, 150);
+                talk.DetilLokasi = SafeTruncate(detilLokasi, 250);
+                talk.Judul = SafeTruncate(judul, 250);
+                talk.Keterangan = keterangan;
+
+                // Guard backend against near-duplicate submit (double-click / retry) for new records.
+                if (isNew)
                 {
-                    talk.FotoKegiatan = null;
+                    var duplicateWindowStart = DateTime.Now.AddSeconds(-20);
+                    var normalizedArea = (talk.Area ?? string.Empty).Trim();
+                    var normalizedLokasi = (talk.Lokasi ?? string.Empty).Trim();
+                    var normalizedJudul = (talk.Judul ?? string.Empty).Trim();
+
+                    var duplicatedTalk = await _context.SafetyTalks
+                        .AsNoTracking()
+                        .Where(s => !s.IsDeleted
+                                    && s.Nik == userNik
+                                    && s.CreatedAt >= duplicateWindowStart)
+                        .FirstOrDefaultAsync(s => (s.Area ?? string.Empty).Trim() == normalizedArea
+                                               && (s.Lokasi ?? string.Empty).Trim() == normalizedLokasi
+                                               && (s.Judul ?? string.Empty).Trim() == normalizedJudul);
+
+                    if (duplicatedTalk != null)
+                    {
+                        var errDuplicate = "Data Safety Talk yang sama terdeteksi terkirim dua kali. Sistem hanya menyimpan satu data.";
+                        if (isAjax) return BadRequest(new { success = false, message = errDuplicate });
+                        TempData["WarningMessage"] = errDuplicate;
+                        return RedirectToAction(nameof(Index));
+                    }
                 }
-            }
 
-            if (isNew)
+                // Handle Foto Diri Upload
+                if (fotoDiri != null && fotoDiri.Length > 0)
+                {
+                    try
+                    {
+                        talk.FotoDiri = await _imageUploadService.UploadAndCompressImageAsync(fotoDiri, "safetytalks", "diri");
+                    }
+                    catch (Exception)
+                    {
+                        talk.FotoDiri = null;
+                    }
+                }
+
+                // Handle Foto Kegiatan Upload
+                if (fotoKegiatan != null && fotoKegiatan.Length > 0)
+                {
+                    try
+                    {
+                        talk.FotoKegiatan = await _imageUploadService.UploadAndCompressImageAsync(fotoKegiatan, "safetytalks", "keg");
+                    }
+                    catch (Exception)
+                    {
+                        talk.FotoKegiatan = null;
+                    }
+                }
+
+                if (isNew)
+                {
+                    _context.SafetyTalks.Add(talk);
+                }
+                else
+                {
+                    _context.SafetyTalks.Update(talk);
+                }
+                await _context.SaveChangesAsync();
+
+                var successMsg = isNew ? "Laporan Safety Talk berhasil disimpan!" : "Laporan Safety Talk berhasil diperbarui!";
+                if (isAjax) return Json(new { success = true, message = successMsg });
+
+                TempData["SuccessMessage"] = successMsg;
+                return RedirectToAction("Index", "Home");
+            }
+            catch (Exception ex)
             {
-                _context.SafetyTalks.Add(talk);
+                Console.WriteLine($"[ERROR-SAFETYTALK-SUBMIT] {ex.Message} \n {ex.StackTrace}");
+                var fullErr = $"Gagal menyimpan Safety Talk: {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    fullErr += $" ({ex.InnerException.Message})";
+                }
+
+                if (isAjax) return StatusCode(500, new { success = false, message = fullErr });
+                
+                TempData["ErrorMessage"] = fullErr;
+                return RedirectToAction(nameof(Index));
             }
-            else
-            {
-                _context.SafetyTalks.Update(talk);
-            }
-            await _context.SaveChangesAsync();
-
-
-
-            TempData["SuccessMessage"] = isNew ? "Laporan Safety Talk berhasil disimpan!" : "Laporan Safety Talk berhasil diperbarui!";
-            return RedirectToAction("Index", "Home");
         }
 
         [HttpGet]

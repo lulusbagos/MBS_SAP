@@ -418,6 +418,7 @@ html, body {
     font-weight: 600;
     font-size: 14px;
     transition: var(--transition-fast);
+    flex-shrink: 0;
 }
 
 .menu-item i {

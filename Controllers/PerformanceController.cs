@@ -3052,6 +3052,28 @@ namespace MBS_SAP.Controllers
             ViewBag.ApProgressPct = apTotal > 0 ? (int)Math.Round((double)apProgress / apTotal * 100) : 0;
             ViewBag.ApClosedPct = apTotal > 0 ? (int)Math.Round((double)apClosed / apTotal * 100) : 0;
 
+            // Hazard reports by type KTA (Kondisi Tidak Aman) vs TTA (Tindakan Tidak Aman) for the selected period MTD
+            var startOfPeriod = new DateTime(selectedYear, selectedMonth, 1);
+            var endOfPeriod = startOfPeriod.AddMonths(1);
+
+            var hazardReportsInPeriod = await _context.HazardReports
+                .Where(h => !h.IsDeleted 
+                         && h.PerusahaanId == selectedCompanyId 
+                         && h.Tanggal >= startOfPeriod 
+                         && h.Tanggal < endOfPeriod)
+                .Select(h => h.KategoriBahaya)
+                .ToListAsync();
+
+            int ktaCount = hazardReportsInPeriod.Count(k => k != null && k.Trim().ToLower().Contains("kondisi"));
+            int ttaCount = hazardReportsInPeriod.Count(k => k != null && k.Trim().ToLower().Contains("tindakan"));
+            int totalHazardInPeriod = hazardReportsInPeriod.Count;
+
+            ViewBag.PeriodKtaCount = ktaCount;
+            ViewBag.PeriodTtaCount = ttaCount;
+            ViewBag.PeriodTotalHazardCount = totalHazardInPeriod;
+            ViewBag.PeriodKtaPct = totalHazardInPeriod > 0 ? (int)Math.Round((double)ktaCount / totalHazardInPeriod * 100) : 0;
+            ViewBag.PeriodTtaPct = totalHazardInPeriod > 0 ? (int)Math.Round((double)ttaCount / totalHazardInPeriod * 100) : 0;
+
             // 1. Action Plans by Department (creator's department)
             var actionPlanDeptStats = await _context.ActionPlans
                 .Where(a => !a.IsDeleted && a.PerusahaanId == selectedCompanyId)

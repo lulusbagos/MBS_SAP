@@ -241,6 +241,22 @@ ORDER BY nama_perusahaan";
             var notifs = await _context.Notifications
                 .Where(n => n.RecipientNik == nik)
                 .OrderByDescending(n => n.CreatedAt)
+                .Take(100)
+                .ToListAsync();
+
+            var filteredNotifs = notifs
+                .Where(n => {
+                    var type = n.NotifType ?? "";
+                    if (type.StartsWith("hazard_") || type.StartsWith("inspection_") || type.StartsWith("actionplan_"))
+                    {
+                        var msg = n.Message ?? "";
+                        if (msg.Contains("perusahaan", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return false; // Filter out company broadcasts
+                        }
+                    }
+                    return true;
+                })
                 .Take(30)
                 .Select(n => new {
                     id = n.Id,
@@ -251,9 +267,9 @@ ORDER BY nama_perusahaan";
                     notifType = n.NotifType ?? "general",
                     createdAt = n.CreatedAt.ToString("o")
                 })
-                .ToListAsync();
+                .ToList();
 
-            return Json(notifs);
+            return Json(filteredNotifs);
         }
 
         [HttpPost]
@@ -334,25 +350,25 @@ ORDER BY nama_perusahaan";
                         relatedAction.PerusahaanId = hazard.PerusahaanId;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(hazard.NikPja))
+                    var recipientNik = hazard.NikPja;
+                    if (string.IsNullOrWhiteSpace(recipientNik) && !string.IsNullOrWhiteSpace(hazard.Pja))
+                    {
+                        recipientNik = await (from k in _context.Karyawans
+                                              join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                              where k.StatusAktif && p.NamaLengkap.ToLower() == hazard.Pja.ToLower()
+                                              select k.NoNik).FirstOrDefaultAsync();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(recipientNik))
                     {
                         _context.Notifications.Add(new Notification
                         {
-                            RecipientNik = hazard.NikPja,
+                            RecipientNik = recipientNik,
                             Title = "Pengalihan Hazard",
                             Message = $"Laporan Hazard di {hazard.Lokasi ?? hazard.Area} telah dialihkan kepada Anda oleh {userName}.",
                             Url = "/Hazard/Index",
                             NotifType = "hazard_reassign"
                         });
-                    }
-                    else if (hazard.PerusahaanId.HasValue)
-                    {
-                        await CreateCompanyBroadcastNotificationAsync(
-                            hazard.PerusahaanId.Value,
-                            "Pengalihan Hazard",
-                            $"Laporan Hazard di {hazard.Lokasi ?? hazard.Area} dialihkan ke penanggung jawab perusahaan oleh {userName}.",
-                            "/Hazard/Index",
-                            "hazard_reassign");
                     }
 
                     await _context.SaveChangesAsync();
@@ -413,25 +429,25 @@ ORDER BY nama_perusahaan";
                         }
                     }
 
-                    if (!string.IsNullOrWhiteSpace(action.NikPja))
+                    var recipientNik = action.NikPja;
+                    if (string.IsNullOrWhiteSpace(recipientNik) && !string.IsNullOrWhiteSpace(action.Pja))
+                    {
+                        recipientNik = await (from k in _context.Karyawans
+                                              join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                              where k.StatusAktif && p.NamaLengkap.ToLower() == action.Pja.ToLower()
+                                              select k.NoNik).FirstOrDefaultAsync();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(recipientNik))
                     {
                         _context.Notifications.Add(new Notification
                         {
-                            RecipientNik = action.NikPja,
+                            RecipientNik = recipientNik,
                             Title = "Pengalihan Action Plan",
                             Message = $"Action Plan untuk {action.KategoriTemuan} di {action.Lokasi ?? action.Area} telah dialihkan kepada Anda oleh {userName}.",
                             Url = "/ActionPlan/Index",
                             NotifType = "actionplan_reassign"
                         });
-                    }
-                    else if (action.PerusahaanId.HasValue)
-                    {
-                        await CreateCompanyBroadcastNotificationAsync(
-                            action.PerusahaanId.Value,
-                            "Pengalihan Action Plan",
-                            $"Action Plan untuk {action.KategoriTemuan} di {action.Lokasi ?? action.Area} dialihkan ke penanggung jawab perusahaan oleh {userName}.",
-                            "/ActionPlan/Index",
-                            "actionplan_reassign");
                     }
 
                     await _context.SaveChangesAsync();
@@ -476,25 +492,25 @@ ORDER BY nama_perusahaan";
                         action.PerusahaanId = inspection.PerusahaanId;
                     }
 
-                    if (!string.IsNullOrWhiteSpace(inspection.NikPja))
+                    var recipientNik = inspection.NikPja;
+                    if (string.IsNullOrWhiteSpace(recipientNik) && !string.IsNullOrWhiteSpace(inspection.Pja))
+                    {
+                        recipientNik = await (from k in _context.Karyawans
+                                              join p in _context.Personals on k.IdPersonal equals p.IdPersonal
+                                              where k.StatusAktif && p.NamaLengkap.ToLower() == inspection.Pja.ToLower()
+                                              select k.NoNik).FirstOrDefaultAsync();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(recipientNik))
                     {
                         _context.Notifications.Add(new Notification
                         {
-                            RecipientNik = inspection.NikPja,
+                            RecipientNik = recipientNik,
                             Title = "Pengalihan Inspeksi",
                             Message = $"Penugasan Inspeksi di {inspection.Lokasi ?? inspection.Area} telah dialihkan kepada Anda oleh {userName}.",
                             Url = "/Inspection/Index",
                             NotifType = "inspection_reassign"
                         });
-                    }
-                    else if (inspection.PerusahaanId.HasValue)
-                    {
-                        await CreateCompanyBroadcastNotificationAsync(
-                            inspection.PerusahaanId.Value,
-                            "Pengalihan Inspeksi",
-                            $"Penugasan Inspeksi di {inspection.Lokasi ?? inspection.Area} dialihkan ke penanggung jawab perusahaan oleh {userName}.",
-                            "/Inspection/Index",
-                            "inspection_reassign");
                     }
 
                     await _context.SaveChangesAsync();
