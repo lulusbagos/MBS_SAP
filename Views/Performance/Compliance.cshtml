@@ -48,6 +48,11 @@
     
     // Complete Subcon list
     var allSubconsList = (ViewBag.AllSubconStats as List<MBS_SAP.Controllers.MostActiveSubconViewModel> ?? new List<MBS_SAP.Controllers.MostActiveSubconViewModel>()).ToList();
+
+    var hazardTrend = ViewBag.HazardTrend as List<object> ?? new List<object>();
+    var trendLabelsJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(hazardTrend.Select(t => ((dynamic)t).MonthLabel)));
+    var trendKtaJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(hazardTrend.Select(t => ((dynamic)t).Kta)));
+    var trendTtaJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(hazardTrend.Select(t => ((dynamic)t).Tta)));
 }
 
 <style>
@@ -647,6 +652,27 @@
                     {
                         <div class="progress-bar" role="progressbar" style="width: @(otherPct)%; background: #64748b;" aria-valuenow="@(otherPct)" aria-valuemin="0" aria-valuemax="100" title="Lainnya: @(otherPct)%"></div>
                     }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hazard Categories Trend (KTA & TTA) last 3 months -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="report-card premium-card h-100 mb-0 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="premium-title" style="font-size: 15px; margin: 0;">
+                        <i class="bi bi-graph-up text-primary me-2"></i>Tren Perubahan KTA & TTA (3 Bulan Terakhir)
+                        <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 13px; cursor: help;" data-bs-toggle="tooltip" title="Menampilkan tren perbandingan laporan Kondisi Tidak Aman (KTA) dan Tindakan Tidak Aman (TTA) selama 3 bulan terakhir."></i>
+                    </h5>
+                    <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25); font-weight: 700; font-size: 10.5px; border-radius: 6px; padding: 4px 8px;">
+                        Tren 3 Bulan
+                    </span>
+                </div>
+                
+                <div style="height: 250px; position: relative;">
+                    <canvas id="hazardTrendChart"></canvas>
                 </div>
             </div>
         </div>
@@ -1573,6 +1599,71 @@
                                         return label;
                                     }
                                 }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Chart Trend KTA & TTA (3 Bulan Terakhir)
+            const ctxTrend = document.getElementById('hazardTrendChart');
+            if (ctxTrend) {
+                new Chart(ctxTrend, {
+                    type: 'line',
+                    data: {
+                        labels: @trendLabelsJson,
+                        datasets: [
+                            {
+                                label: 'Kondisi Tidak Aman (KTA)',
+                                data: @trendKtaJson,
+                                borderColor: '#f43f5e',
+                                backgroundColor: 'rgba(244, 63, 94, 0.08)',
+                                borderWidth: 3,
+                                fill: true,
+                                tension: 0.3,
+                                pointBackgroundColor: '#f43f5e',
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: 'Tindakan Tidak Aman (TTA)',
+                                data: @trendTtaJson,
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                                borderWidth: 3,
+                                fill: true,
+                                tension: 0.3,
+                                pointBackgroundColor: '#3b82f6',
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    color: labelColor,
+                                    font: { family: 'Outfit', size: 11, weight: '600' }
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: gridColor },
+                                ticks: { color: labelColor, font: { family: 'Outfit', size: 11 } }
+                            },
+                            y: {
+                                grid: { color: gridColor },
+                                ticks: { color: labelColor, font: { family: 'Outfit', size: 11 } },
+                                min: 0
                             }
                         }
                     }

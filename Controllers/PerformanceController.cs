@@ -3074,6 +3074,37 @@ namespace MBS_SAP.Controllers
             ViewBag.PeriodKtaPct = totalHazardInPeriod > 0 ? (int)Math.Round((double)ktaCount / totalHazardInPeriod * 100) : 0;
             ViewBag.PeriodTtaPct = totalHazardInPeriod > 0 ? (int)Math.Round((double)ttaCount / totalHazardInPeriod * 100) : 0;
 
+            // Trend of KTA & TTA for the last 3 months ending in the selected month
+            string[] monthNames = { "", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember" };
+            var trendList = new List<object>();
+            for (int i = 2; i >= 0; i--)
+            {
+                var targetDate = startOfPeriod.AddMonths(-i);
+                var targetYear = targetDate.Year;
+                var targetMonth = targetDate.Month;
+                var monthStart = new DateTime(targetYear, targetMonth, 1);
+                var monthEnd = monthStart.AddMonths(1);
+
+                var reports = await _context.HazardReports
+                    .Where(h => !h.IsDeleted 
+                             && h.PerusahaanId == selectedCompanyId 
+                             && h.Tanggal >= monthStart 
+                             && h.Tanggal < monthEnd)
+                    .Select(h => h.KategoriBahaya)
+                    .ToListAsync();
+
+                int kta = reports.Count(k => k != null && k.Trim().ToLower().Contains("kondisi"));
+                int tta = reports.Count(k => k != null && k.Trim().ToLower().Contains("tindakan"));
+
+                trendList.Add(new {
+                    MonthLabel = $"{monthNames[targetMonth]} {targetYear}",
+                    Kta = kta,
+                    Tta = tta
+                });
+            }
+
+            ViewBag.HazardTrend = trendList;
+
             // 1. Action Plans by Department (creator's department)
             var actionPlanDeptStats = await _context.ActionPlans
                 .Where(a => !a.IsDeleted && a.PerusahaanId == selectedCompanyId)
