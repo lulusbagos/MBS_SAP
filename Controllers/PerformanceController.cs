@@ -3058,7 +3058,6 @@ namespace MBS_SAP.Controllers
 
             var hazardReportsInPeriod = await _context.HazardReports
                 .Where(h => !h.IsDeleted 
-                         && h.PerusahaanId == selectedCompanyId 
                          && h.Tanggal >= startOfPeriod 
                          && h.Tanggal < endOfPeriod)
                 .Select(h => h.KategoriBahaya)
@@ -3087,7 +3086,6 @@ namespace MBS_SAP.Controllers
 
                 var reports = await _context.HazardReports
                     .Where(h => !h.IsDeleted 
-                             && h.PerusahaanId == selectedCompanyId 
                              && h.Tanggal >= monthStart 
                              && h.Tanggal < monthEnd)
                     .Select(h => h.KategoriBahaya)
