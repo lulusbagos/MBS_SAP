@@ -7087,8 +7087,22 @@ namespace MBS_SAP.Controllers
                     }
                 }
 
+                // Fetch Action Plans for this group in MTD
+                var allGroupActionPlans = await _context.ActionPlans.AsNoTracking()
+                    .Where(a => !a.IsDeleted && a.PerusahaanId.HasValue && companyIds.Contains(a.PerusahaanId.Value) && a.Tanggal >= startOfMonthMaincon && a.Tanggal <= endOfMonthMaincon)
+                    .Select(a => new { a.PerusahaanId, a.Status, a.RencanaPerbaikan })
+                    .ToListAsync();
+
+                int totalGroupAps = allGroupActionPlans.Count;
+                int closedGroupAps = allGroupActionPlans.Count(a => a.Status != null && a.Status.Trim().Equals("Closed", StringComparison.OrdinalIgnoreCase));
+                int openGroupAps = totalGroupAps - closedGroupAps;
+                double groupClosureRate = totalGroupAps > 0 ? Math.Round(Math.Min(100.0, (double)closedGroupAps / totalGroupAps * 100.0), 1) : 100.0;
+
                 int totalGroupTarget = totalTargetH + totalTargetI + totalTargetS + totalTargetO + totalTargetC;
                 int totalGroupActual = totalActualH + totalActualI + totalActualS + totalActualO + totalActualC;
+
+                double sapSubmissionRate = totalGroupTarget > 0 ? Math.Round(Math.Min(100.0, (double)totalGroupActual / totalGroupTarget * 100.0), 1) : 0.0;
+                double overallComplianceRate = Math.Round((0.5 * sapSubmissionRate) + (0.5 * groupClosureRate), 1);
 
                 var compVm = new MainconGroupComparisonViewModel
                 {
@@ -7099,7 +7113,12 @@ namespace MBS_SAP.Controllers
                     ChildCompanyNames = grp.SubconCompanies.Select(s => s.NamaPerusahaan ?? "Unknown").ToList(),
                     UncompliantChildCompanyNames = uncompliantSubs,
                     NoTargetChildCompanyNames = noTargetSubs,
-                    OverallComplianceRate = totalGroupTarget > 0 ? Math.Round(Math.Min(100.0, (double)totalGroupActual / totalGroupTarget * 100.0), 1) : 0,
+                    SapSubmissionRate = sapSubmissionRate,
+                    ActionPlanClosureRate = groupClosureRate,
+                    TotalActionPlans = totalGroupAps,
+                    ClosedActionPlans = closedGroupAps,
+                    OpenActionPlans = openGroupAps,
+                    OverallComplianceRate = overallComplianceRate,
                     HazardComplianceRate = totalTargetH > 0 ? Math.Round(Math.Min(100.0, (double)totalActualH / totalTargetH * 100.0), 1) : 0,
                     InspeksiComplianceRate = totalTargetI > 0 ? Math.Round(Math.Min(100.0, (double)totalActualI / totalTargetI * 100.0), 1) : 0,
                     SafetyTalkComplianceRate = totalTargetS > 0 ? Math.Round(Math.Min(100.0, (double)totalActualS / totalTargetS * 100.0), 1) : 0,
@@ -8170,6 +8189,11 @@ namespace MBS_SAP.Controllers
         public List<string> ChildCompanyNames { get; set; } = new();
         public List<string> UncompliantChildCompanyNames { get; set; } = new();
         public List<string> NoTargetChildCompanyNames { get; set; } = new();
+        public double SapSubmissionRate { get; set; }
+        public double ActionPlanClosureRate { get; set; }
+        public int TotalActionPlans { get; set; }
+        public int ClosedActionPlans { get; set; }
+        public int OpenActionPlans { get; set; }
         public double OverallComplianceRate { get; set; }
         public double HazardComplianceRate { get; set; }
         public double InspeksiComplianceRate { get; set; }
