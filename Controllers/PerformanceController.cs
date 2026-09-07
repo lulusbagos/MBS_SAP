@@ -7459,7 +7459,7 @@ namespace MBS_SAP.Controllers
                     }
                 }
 
-                double closeRate = hC > 0 ? (double)hCClosed / hC * 100 : (totalTemuan > 0 ? 100 : 0);
+                double closeRate = totalAp > 0 ? ((double)closedAp / totalAp * 100.0) : (hC > 0 ? ((double)hCClosed / hC * 100.0) : 100.0);
                 double avgSpeed = apWithDays > 0 ? sumDays / apWithDays : (closedAp > 0 ? 1 : 14); // default speed
 
                 if (totalTemuan > 0)
@@ -7483,15 +7483,24 @@ namespace MBS_SAP.Controllers
 
             foreach (var p in performanceList)
             {
-                p.ScorePencapaian = p.TotalTarget > 0 ? Math.Min(100, ((double)p.TotalTemuan / p.TotalTarget) * 100) : (p.TotalTemuan > 0 ? 100 : 0);
-                p.ScoreSkalaBeban = maxTargetAll > 0 ? (Math.Log10(p.TotalTarget + 1) / Math.Log10(maxTargetAll + 1)) * 100 : 0;
+                p.ScorePencapaian = p.TotalTarget > 0 ? Math.Min(100.0, ((double)p.TotalTemuan / p.TotalTarget) * 100.0) : (p.TotalTemuan > 0 ? 100.0 : 0.0);
+                p.ScoreSkalaBeban = maxTargetAll > 0 ? (Math.Log10(p.TotalTarget + 1) / Math.Log10(maxTargetAll + 1)) * 100.0 : 0.0;
                 p.ScoreCloseRate = p.CloseRate;
-                p.ScoreKualitas = (p.AvgQuality / 5.0) * 100;
+                p.ScoreKualitas = (p.AvgQuality / 5.0) * 100.0;
                 
                 // Speed Score: 0 days = 100%, >= 14 days = 0%
-                p.ScoreKecepatan = Math.Max(0, 100 - (p.AvgSpeedDays / 14.0 * 100));
+                p.ScoreKecepatan = Math.Max(0.0, 100.0 - (p.AvgSpeedDays / 14.0 * 100.0));
 
-                p.TotalScore = (p.ScorePencapaian * 0.20) + (p.ScoreSkalaBeban * 0.15) + (p.ScoreCloseRate * 0.25) + (p.ScoreKualitas * 0.20) + (p.ScoreKecepatan * 0.20);
+                if (isCurrentNewPolicy)
+                {
+                    // Kebijakan Baru (Mulai September 2026): 50% Submisi SAP + 50% Close Rate Action Plan
+                    p.TotalScore = (p.ScorePencapaian * 0.50) + (p.ScoreCloseRate * 0.50);
+                }
+                else
+                {
+                    // Kebijakan Historis (Sebelum September 2026): Multi-faktor
+                    p.TotalScore = (p.ScorePencapaian * 0.20) + (p.ScoreSkalaBeban * 0.15) + (p.ScoreCloseRate * 0.25) + (p.ScoreKualitas * 0.20) + (p.ScoreKecepatan * 0.20);
+                }
             }
 
             ViewBag.TopPerformanceList = performanceList.OrderByDescending(p => p.TotalScore).Take(10).ToList();
