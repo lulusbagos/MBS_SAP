@@ -63,9 +63,13 @@
                         <i class="bi bi-grid-1x2-fill"></i>
                         <span>Dashboard</span>
                     </a>
-                    <a asp-controller="Performance" asp-action="@(isAdminUser ? "Index" : "Compliance")" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Performance" ? "active" : "")">
+                    <a asp-controller="Performance" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Performance" ? "active" : "")">
                         <i class="bi bi-bar-chart-line-fill"></i>
                         <span>Pencapaian SAP</span>
+                    </a>
+                    <a asp-controller="Performance" asp-action="League" asp-route-mode="company" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "League" ? "active" : "")">
+                        <i class="bi bi-trophy-fill"></i>
+                        <span>Klasemen League</span>
                     </a>
                     <a asp-controller="QrCode" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "QrCode" ? "active" : "")">
                         <i class="bi bi-qr-code-scan"></i>
@@ -130,10 +134,6 @@
                         <a asp-controller="Admin" asp-action="SapQuality" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "SapQuality" ? "active" : "")">
                             <i class="bi bi-star-fill text-warning"></i>
                             <span>Kualitas SAP</span>
-                        </a>
-                        <a asp-controller="Admin" asp-action="KaryawanParentMapping" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "KaryawanParentMapping" ? "active" : "")">
-                            <i class="bi bi-diagram-3-fill text-info"></i>
-                            <span>Pemetaan Parent Subcon</span>
                         </a>
                     }
                     @if (isAdminUser)

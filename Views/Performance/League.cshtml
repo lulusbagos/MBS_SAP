@@ -8,6 +8,9 @@
     var deptAchievements = ViewBag.DepartmentAchievements as List<DepartmentAchievementViewModel> ?? new List<DepartmentAchievementViewModel>();
     var employees = ViewBag.Employees as System.Collections.ICollection;
     var isIndexim = companyName.ToUpper().Contains("INDEXIM");
+    var isSafetyRole = ViewBag.IsSafetyRole as bool? ?? false;
+    var isAdmin = ViewBag.IsAdmin as bool? ?? User.IsInRole("Admin");
+    var canDownloadDetail = isAdmin || isSafetyRole;
 }
 
 
@@ -608,30 +611,56 @@
     </div>
 
  
-     <!-- Sports Scoreboard Banner -->
-     <div class="league-banner">
-         <div class="league-banner-pattern"></div>
-         <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center position-relative" style="z-index: 1;">
-             <div class="d-flex align-items-center gap-3 mb-3 mb-md-0">
-                 <img src="/images/logo indexim putih.png" style="height: 52px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
-                 <div>
-                     <h2 class="league-title-main">League Safety Accountability Program</h2>
-                     <div style="font-size: 13px; font-weight: 600; color: #a1a1aa; margin-top: 2px;">
-                         Kategori Klasemen Utama &bull; @companyName
-                     </div>
-                 </div>
-             </div>
-             <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center">
- 
-                 <span class="badge bg-success px-3 py-2" style="border-radius: 8px; font-size: 11px; font-weight: 700; height: 31px; display: inline-flex; align-items: center;">
-                     <i class="bi bi-calendar-event me-1"></i> @months.First(m => m.Val == selectedMonth).Name @selectedYear
-                 </span>
-                 <a href="/Performance/Index" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 11px; font-weight: 700; padding: 6px 12px; height: 31px; display: inline-flex; align-items: center;">
-                     <i class="bi bi-diagram-3 me-1"></i> Org Chart
-                 </a>
-             </div>
-         </div>
-     </div>
+    <!-- Download Loading Modal / Overlay -->
+    <div id="downloadLoadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 99999; justify-content: center; align-items: center;">
+        <div style="background: #ffffff; border-radius: 16px; padding: 28px 32px; max-width: 440px; width: 90%; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2); border: 1px solid #e2e8f0; animation: modalPop 0.3s ease-out;">
+            <div style="width: 64px; height: 64px; margin: 0 auto 16px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative;">
+                <div class="spinner-border text-primary" style="width: 48px; height: 48px; border-width: 3px;" role="status"></div>
+                <i class="bi bi-file-earmark-arrow-down-fill text-primary" style="position: absolute; font-size: 20px;"></i>
+            </div>
+            <h5 id="downloadModalTitle" style="font-weight: 800; color: #0f172a; margin-bottom: 8px;">Menyiapkan Dokumen Excel...</h5>
+            <p id="downloadModalDesc" style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 20px;">
+                AI sedang mengaudit kualitas laporan SAP dan menyusun rekapitulasi multi-sheet...
+            </p>
+            <div class="progress" style="height: 6px; border-radius: 999px; background-color: #f1f5f9; overflow: hidden;">
+                <div id="downloadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 100%;"></div>
+            </div>
+            <div style="margin-top: 14px; font-size: 11px; color: #94a3b8; font-weight: 600;">
+                <i class="bi bi-shield-check text-success me-1"></i> Mohon tunggu sebentar, file akan terunduh otomatis
+            </div>
+        </div>
+    </div>
+
+    <!-- Sports Scoreboard Banner -->
+    <div class="league-banner">
+        <div class="league-banner-pattern"></div>
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center position-relative" style="z-index: 1;">
+            <div class="d-flex align-items-center gap-3 mb-3 mb-md-0">
+                <img src="/images/logo indexim putih.png" style="height: 52px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));" />
+                <div>
+                    <h2 class="league-title-main">League Safety Accountability Program</h2>
+                    <div style="font-size: 13px; font-weight: 600; color: #a1a1aa; margin-top: 2px;">
+                        Kategori Klasemen Utama &bull; @companyName
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center">
+
+                @if (canDownloadDetail)
+                {
+                    <button type="button" class="btn btn-sm btn-warning fw-bold text-dark" onclick="downloadSapDetailExcel(this);" title="Unduh Rincian Seluruh Program SAP per Sheet + Audit Kualitas AI (.xlsx)" style="border-radius: 8px; font-size: 11px; padding: 6px 12px; height: 31px; display: inline-flex; align-items: center; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);">
+                        <i class="bi bi-stars me-1 text-dark"></i> Download Detail SAP + AI
+                    </button>
+                }
+                <span class="badge bg-success px-3 py-2" style="border-radius: 8px; font-size: 11px; font-weight: 700; height: 31px; display: inline-flex; align-items: center;">
+                    <i class="bi bi-calendar-event me-1"></i> @months.First(m => m.Val == selectedMonth).Name @selectedYear
+                </span>
+                <a href="/Performance/Index" class="btn btn-sm btn-outline-light" style="border-radius: 8px; font-size: 11px; font-weight: 700; padding: 6px 12px; height: 31px; display: inline-flex; align-items: center;">
+                    <i class="bi bi-diagram-3 me-1"></i> Org Chart
+                </a>
+            </div>
+        </div>
+    </div>
  
      <!-- League Mode Navigation Tab -->
      <div class="d-flex flex-wrap gap-2 mb-4 bg-light p-2 rounded-3 shadow-sm border" style="width: fit-content; max-width: 100%;">
@@ -655,7 +684,15 @@
                 <div class="league-card p-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0" style="font-weight: 800; color: #0f172a;"><i class="bi bi-globe me-2 text-primary"></i>Super League (Antar Company)</h5>
-                        <span class="badge bg-primary px-2 py-1" style="font-size: 10px; font-weight: 700;">@companyStandings.Count COMPANY</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary px-2 py-1" style="font-size: 10px; font-weight: 700;">@companyStandings.Count COMPANY</span>
+                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="downloadSapDetailExcel(this);" title="Unduh Detail Seluruh SAP + AI Quality (.xlsx)" style="font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px;">
+                                <i class="bi bi-stars text-warning"></i> <span class="d-none d-sm-inline ms-1">Detail + AI</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="downloadSquadExcel(this);" title="Unduh Laporan Klasemen Excel (.xlsx)" style="font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px;">
+                                <i class="bi bi-file-earmark-excel-fill"></i> <span class="d-none d-sm-inline ms-1">Klasemen Excel</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="table-responsive league-table-wrap mb-3">
@@ -824,7 +861,15 @@
                 <div class="league-card p-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="mb-0" style="font-weight: 800; color: #0f172a;"><i class="bi bi-shield-shaded me-2 text-primary"></i>Klasemen Klub (Departemen)</h5>
-                        <span class="badge bg-primary px-2 py-1" style="font-size: 10px; font-weight: 700;">@deptAchievements.Count KLUB</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary px-2 py-1" style="font-size: 10px; font-weight: 700;">@deptAchievements.Count KLUB</span>
+                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="downloadSapDetailExcel(this);" title="Unduh Detail Seluruh SAP + AI Quality (.xlsx)" style="font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px;">
+                                <i class="bi bi-stars text-warning"></i> <span class="d-none d-sm-inline ms-1">Detail + AI</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="downloadSquadExcel(this);" title="Unduh Laporan Klasemen Excel (.xlsx)" style="font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px;">
+                                <i class="bi bi-file-earmark-excel-fill"></i> <span class="d-none d-sm-inline ms-1">Klasemen Excel</span>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="table-responsive league-table-wrap mb-3">
@@ -978,8 +1023,11 @@
                         <button type="button" class="btn btn-sm btn-outline-light d-none" id="resetFilterBtn" onclick="resetPlayerFilter();" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px;">
                             <i class="bi bi-x-circle me-1"></i> Tampilkan Semua
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-light" id="downloadExcelBtn" onclick="downloadSquadExcel();" title="Ekspor ke Excel (CSV)" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
-                            <i class="bi bi-file-earmark-excel" id="excelIcon"></i> <span class="d-none d-md-inline ms-1">Download Excel</span>
+                        <button type="button" class="btn btn-sm btn-outline-warning" id="downloadSapDetailBtn" onclick="downloadSapDetailExcel(this);" title="Unduh Rincian Seluruh SAP per Sheet + Bintang Kualitas AI (.xlsx)" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
+                            <i class="bi bi-stars text-warning" id="aiIcon"></i> <span class="d-none d-md-inline ms-1">Detail SAP + AI</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-light" id="downloadExcelBtn" onclick="downloadSquadExcel(this);" title="Unduh Laporan Klasemen Excel (.xlsx)" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
+                            <i class="bi bi-file-earmark-excel-fill text-success" id="excelIcon"></i> <span class="d-none d-md-inline ms-1">Klasemen Excel</span>
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-light" id="toggleAllDetailsBtn" onclick="toggleAllDetails();" title="Tampilkan Semua Rincian Kepatuhan" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
                             <i class="bi bi-eye" id="detailsIcon"></i> <span class="d-none d-md-inline ms-1" id="detailsText">Buka Rincian</span>
@@ -1396,14 +1444,122 @@
 
     let currentSquadDeptFilter = null; // Track active filter
 
-    function downloadSquadExcel() {
+    function downloadSquadExcel(clickedBtn) {
         const companyId = '@selectedCompanyId';
-        const mode = '@ViewBag.Mode';
-        let url = '@Url.Action("ExportLeagueToExcel", "Performance")?companyId=' + companyId + '&mode=' + mode;
+        const mode = '@currentMode';
+        const year = '@selectedYear';
+        const month = '@selectedMonth';
+        let url = '@Url.Action("ExportLeagueToExcel", "Performance")?companyId=' + companyId + '&mode=' + encodeURIComponent(mode) + '&year=' + year + '&month=' + month;
         if (currentSquadDeptFilter) {
             url += '&departmentName=' + encodeURIComponent(currentSquadDeptFilter);
         }
-        window.location.href = url;
+        executeExcelDownload(
+            url,
+            "Menyiapkan Laporan Klasemen...",
+            "Sedang menyusun data klasemen & kepatuhan skuad SAP ke format Excel (.xlsx)...",
+            clickedBtn
+        );
+    }
+
+    function downloadSapDetailExcel(clickedBtn) {
+        const companyId = '@selectedCompanyId';
+        const mode = '@currentMode';
+        const year = '@selectedYear';
+        const month = '@selectedMonth';
+        let url = '@Url.Action("ExportSapDetailToExcel", "Performance")?companyId=' + companyId + '&mode=' + encodeURIComponent(mode) + '&year=' + year + '&month=' + month;
+        if (currentSquadDeptFilter) {
+            url += '&departmentName=' + encodeURIComponent(currentSquadDeptFilter);
+        }
+        executeExcelDownload(
+            url,
+            "🤖 AI Memproses & Mengaudit Detail SAP...",
+            "Sedang mengaudit mutu laporan SAP (Hazard, Inspeksi, Action Plan, Observasi, P5M) dan menyusun Dashboard Eksekutif...",
+            clickedBtn
+        );
+    }
+
+    async function executeExcelDownload(url, title, desc, clickedBtn) {
+        const overlay = document.getElementById('downloadLoadingOverlay');
+        const modalTitle = document.getElementById('downloadModalTitle');
+        const modalDesc = document.getElementById('downloadModalDesc');
+        const pBar = document.getElementById('downloadProgressBar');
+
+        if (modalTitle) modalTitle.innerText = title || "Menyiapkan Dokumen Excel...";
+        if (modalDesc) modalDesc.innerText = desc || "Sedang memproses dan mengaudit data SAP...";
+        if (pBar) {
+            pBar.className = "progress-bar progress-bar-striped progress-bar-animated bg-primary";
+            pBar.style.width = "100%";
+        }
+
+        let origHtml = "";
+        if (clickedBtn) {
+            origHtml = clickedBtn.innerHTML;
+            clickedBtn.disabled = true;
+            clickedBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Mengunduh...';
+        }
+
+        if (overlay) overlay.style.display = 'flex';
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error("Gagal mengunduh file (HTTP " + response.status + ")");
+            }
+
+            let fileName = "Laporan_SAP.xlsx";
+            const disposition = response.headers.get('Content-Disposition') || response.headers.get('content-disposition');
+            if (disposition && disposition.indexOf('filename=') !== -1) {
+                const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+                if (matches != null && matches[1]) {
+                    fileName = matches[1].replace(/['"]/g, '');
+                }
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = downloadUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(downloadUrl);
+            document.body.removeChild(a);
+
+            if (modalTitle) modalTitle.innerText = "✅ Berhasil Diunduh!";
+            if (modalDesc) modalDesc.innerText = "File " + fileName + " siap dibuka.";
+            if (pBar) {
+                pBar.className = "progress-bar bg-success";
+                pBar.style.width = "100%";
+            }
+            if (clickedBtn) {
+                clickedBtn.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i> Selesai!';
+            }
+
+            setTimeout(() => {
+                if (overlay) overlay.style.display = 'none';
+                if (clickedBtn) {
+                    clickedBtn.disabled = false;
+                    clickedBtn.innerHTML = origHtml;
+                }
+            }, 1200);
+
+        } catch (err) {
+            console.error(err);
+            if (modalTitle) modalTitle.innerText = "❌ Terjadi Kendala";
+            if (modalDesc) modalDesc.innerText = "Gagal memproses unduhan. Silakan coba kembali.";
+            if (pBar) {
+                pBar.className = "progress-bar bg-danger";
+                pBar.style.width = "100%";
+            }
+            setTimeout(() => {
+                if (overlay) overlay.style.display = 'none';
+                if (clickedBtn) {
+                    clickedBtn.disabled = false;
+                    clickedBtn.innerHTML = origHtml;
+                }
+            }, 2000);
+        }
     }
 
     // ─── Searchable Company Dropdown ───────────────────────────────────────

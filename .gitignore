@@ -53,3 +53,9 @@ Thumbs.db
 ## Videos
 wwwroot/video/*.mp4
 publish/wwwroot/video/*.mp4
+
+## Python Scratch
+scratch/
+__pycache__/
+*.pyc
+

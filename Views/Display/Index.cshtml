@@ -112,19 +112,90 @@
         100% { transform: translateX(-200%); }
     }
 
-    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    /* ── Top Global Progress Bar (5 Minutes Slide Countdown) ── */
+    .slide-progress-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.05);
+        z-index: 9999;
+    }
+    .slide-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #38bdf8, #10b981, #f59e0b, #ef4444);
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+        transition: width 1s linear;
+    }
+
+    /* Slide Switcher Widget in Header */
+    .slide-indicator-widget {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid var(--border);
+        border-radius: 30px;
+        padding: 4px 14px 4px 10px;
+        justify-self: center;
+    }
+    .slide-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 800;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        padding: 3px 10px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .slide-timer-text {
+        font-size: 12px;
+        font-weight: 700;
+        color: #cbd5e1;
+        font-variant-numeric: tabular-nums;
+    }
+    .slide-btn {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #fff;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .slide-btn:hover {
+        background: rgba(56, 189, 248, 0.25);
+        border-color: #38bdf8;
+        color: #fff;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────
        HEADER
-    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    ───────────────────────────────────────────────────────────────── */
     .tv-hdr {
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: var(--r);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        padding: 12px 24px;
+        padding: 10px 20px;
         display: grid;
-        grid-template-columns: 1fr auto 1fr;
+        grid-template-columns: auto 1fr auto auto;
         align-items: center;
+        gap: 16px;
         box-shadow: 0 12px 40px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.05);
     }
 
@@ -480,7 +551,7 @@
         transition: none;
     }
 
-    /* â”€â”€ Initials Avatar â”€â”€ */
+    /* ── Initials Avatar ── */
     .fcard-avatar-initials {
         width: 26px;
         height: 26px;
@@ -501,7 +572,7 @@
     .screen-flash.flash { animation: flashAnim 1.2s ease-out; }
     @@keyframes flashAnim { 0%{opacity:0} 25%{opacity:.18} 100%{opacity:0} }
 
-    /* â”€â”€ Update overlay â”€â”€ */
+    /* ── Update overlay ── */
     .update-toast {
         position: fixed; top: 24px; right: 24px;
         background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.3);
@@ -523,6 +594,11 @@
     </style>
 </head>
 <body>
+<!-- 5-Minute Slide Progress Bar -->
+<div class="slide-progress-container">
+    <div class="slide-progress-bar" id="slideProgressBar"></div>
+</div>
+
 <div class="screen-flash" id="screenFlash"></div>
 <div class="update-toast" id="updateToast">
     <i class="bi bi-arrow-clockwise"></i> <span id="updateToastMsg">Data diperbarui</span>
@@ -546,11 +622,29 @@
         <div class="hdr-brand">
             <img src="~/images/logo_mbs.png" style="height: 38px; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.3)); margin-right: 4px;" alt="MBS Logo" />
             <div>
-                <div class="hdr-title">Mari Berbudaya Safety</div>
+                <div class="hdr-title">
+                    <span>Mari Berbudaya Safety</span>
+                    <span style="font-size: 11px; font-weight: 800; background: linear-gradient(135deg, #38bdf8, #2563eb); color: #fff; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Display 1</span>
+                </div>
                 <div class="hdr-sub">PT INDEXIM COALINDO &mdash; K3 Command Center</div>
             </div>
         </div>
 
+        <!-- 5-Minute Slide Transition Bar Controller -->
+        <div class="slide-indicator-widget">
+            <div class="slide-pill">
+                <i class="bi bi-display"></i> Slide 1 / 2
+            </div>
+            <div class="slide-timer-text">
+                <i class="bi bi-clock-history" style="color:#38bdf8;"></i> Ganti ke Display 2 dalam: <span id="slideCountdown">05:00</span>
+            </div>
+            <a href="/Display2" class="slide-btn" title="Pindah ke Display 2 sekarang">
+                <i class="bi bi-arrow-left-right"></i> Display 2 🏎️
+            </a>
+            <button class="slide-btn" id="togglePauseBtn" onclick="togglePauseSlide()" title="Jeda rotasi otomatis">
+                <i class="bi bi-pause-fill" id="pauseIcon"></i> <span id="pauseText">Jeda</span>
+            </button>
+        </div>
 
         <div class="hdr-center">
             <div class="refresh-badge">
@@ -1964,6 +2058,60 @@ function rotateRankings() {
     }
 }
 setInterval(rotateRankings, 8000);
+
+/* ──────────────────────────────────────────────────────────────────────────
+   3. 5-MINUTE AUTO SLIDE ROTATION (/Display -> /Display2)
+   ────────────────────────────────────────────────────────────────────────── */
+const SLIDE_DURATION_SECONDS = 300; // 5 minutes = 300 seconds
+let slideTimeRemaining = SLIDE_DURATION_SECONDS;
+let isSlidePaused = false;
+
+function updateSlideTimer() {
+    if (isSlidePaused) return;
+
+    slideTimeRemaining--;
+    if (slideTimeRemaining < 0) {
+        // Transition to Display 2
+        window.location.href = '/Display2';
+        return;
+    }
+
+    const mins = Math.floor(slideTimeRemaining / 60);
+    const secs = slideTimeRemaining % 60;
+    const countdownEl = document.getElementById('slideCountdown');
+    if (countdownEl) {
+        countdownEl.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    const progressPct = ((SLIDE_DURATION_SECONDS - slideTimeRemaining) / SLIDE_DURATION_SECONDS) * 100;
+    const progressEl = document.getElementById('slideProgressBar');
+    if (progressEl) {
+        progressEl.style.width = `${progressPct}%`;
+    }
+}
+setInterval(updateSlideTimer, 1000);
+
+function togglePauseSlide() {
+    isSlidePaused = !isSlidePaused;
+    const icon = document.getElementById('pauseIcon');
+    const text = document.getElementById('pauseText');
+    const btn = document.getElementById('togglePauseBtn');
+    if (isSlidePaused) {
+        if (icon) icon.className = 'bi bi-play-fill';
+        if (text) text.innerText = 'Lanjut';
+        if (btn) {
+            btn.style.background = 'rgba(239, 68, 68, 0.3)';
+            btn.style.borderColor = '#ef4444';
+        }
+    } else {
+        if (icon) icon.className = 'bi bi-pause-fill';
+        if (text) text.innerText = 'Jeda';
+        if (btn) {
+            btn.style.background = 'rgba(255, 255, 255, 0.06)';
+            btn.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+        }
+    }
+}
 </script>
 </body>
 </html>

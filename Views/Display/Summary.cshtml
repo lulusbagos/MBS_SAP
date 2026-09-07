@@ -1,0 +1,1593 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Display Pemenang & Executive Summary Liga SAP &mdash; PT INDEXIM COALINDO</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    
+    <!-- Google Fonts: Poppins (Primary) & Futuristic Monospace / Display Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,600;1,800&family=Orbitron:wght@600;700;800;900&family=Chakra+Petch:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti for Celebration Effect -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+    <style>
+    :root {
+        --font-main:     'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-digit:    'Chakra Petch', 'Orbitron', monospace;
+        --font-tech:     'Orbitron', 'Poppins', sans-serif;
+
+        --bg-space:      #020612;
+        --bg-surface:    rgba(11, 20, 38, 0.82);
+        --bg-surface-hover: rgba(16, 29, 56, 0.95);
+        --panel:         rgba(7, 14, 28, 0.92);
+        --border-glass:  rgba(56, 189, 248, 0.18);
+        --border-bright: rgba(0, 240, 255, 0.45);
+        
+        --text-pure:     #ffffff;
+        --text-sub:      #e2e8f0;
+        --text-muted:    #94a3b8;
+        
+        /* Futuristic Neon Palette */
+        --gold:          #ffc700;
+        --gold-glow:     0 0 25px rgba(255, 199, 0, 0.45);
+        --emerald:       #00ff9d;
+        --emerald-glow:  0 0 25px rgba(0, 255, 157, 0.45);
+        --cyan:          #00f0ff;
+        --cyan-glow:     0 0 25px rgba(0, 240, 255, 0.45);
+        --ruby:          #ff2a5f;
+        --ruby-glow:     0 0 25px rgba(255, 42, 95, 0.45);
+        --violet:        #a855f7;
+        --blue-electric: #38bdf8;
+        
+        --radius:        18px;
+    }
+
+    html { background: var(--bg-space); color-scheme: dark; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        background: var(--bg-space);
+        background-image: 
+            radial-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+            radial-gradient(circle at 10% 10%, rgba(0, 240, 255, 0.12) 0%, transparent 40%),
+            radial-gradient(circle at 90% 10%, rgba(255, 199, 0, 0.10) 0%, transparent 40%),
+            radial-gradient(circle at 50% 90%, rgba(0, 255, 157, 0.08) 0%, transparent 50%),
+            radial-gradient(circle at 85% 65%, rgba(255, 42, 95, 0.09) 0%, transparent 40%);
+        background-size: 32px 32px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+        font-family: var(--font-main);
+        color: var(--text-pure);
+        min-height: 100vh;
+        overflow-x: hidden;
+        position: relative;
+    }
+
+    /* ── Progress Bar Top (for Auto Presentation) ── */
+    .slide-progress-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        z-index: 9999;
+    }
+    .slide-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--gold), var(--emerald), var(--cyan), var(--ruby));
+        box-shadow: 0 0 16px var(--cyan);
+        transition: width 0.3s linear;
+    }
+
+    /* ── Main App Wrapper ── */
+    .summary-app {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        padding: 16px 22px 24px 22px;
+        gap: 16px;
+        max-width: 1850px;
+        margin: 0 auto;
+    }
+
+    /* ── Top Futuristic Header ── */
+    .hdr-bar {
+        background: var(--panel);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius);
+        backdrop-filter: blur(28px);
+        -webkit-backdrop-filter: blur(28px);
+        padding: 14px 26px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), inset 0 1px 2px rgba(255, 255, 255, 0.08);
+        flex-wrap: wrap;
+        gap: 14px;
+        position: relative;
+        overflow: hidden;
+    }
+    .hdr-bar::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--cyan), var(--gold), var(--emerald), transparent);
+    }
+
+    .hdr-brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .hdr-brand-logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, rgba(255, 199, 0, 0.2), rgba(0, 240, 255, 0.25));
+        border: 1.5px solid var(--border-bright);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: var(--gold);
+        box-shadow: var(--gold-glow);
+        animation: pulseLogo 3s infinite alternate;
+    }
+    @@keyframes pulseLogo {
+        0% { transform: scale(1); box-shadow: 0 0 15px rgba(255, 199, 0, 0.3); }
+        100% { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 240, 255, 0.6); }
+    }
+
+    .hdr-title-group h1 {
+        font-size: 21px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        color: #ffffff;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    .hdr-title-group .hdr-sub {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-top: 2px;
+    }
+
+    /* Header Controls */
+    .hdr-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .period-picker {
+        display: flex;
+        align-items: center;
+        background: rgba(15, 25, 48, 0.9);
+        border: 1px solid var(--border-bright);
+        border-radius: 30px;
+        padding: 5px 14px;
+        gap: 8px;
+        box-shadow: 0 4px 15px rgba(0, 240, 255, 0.15);
+    }
+    .period-picker select {
+        background: transparent;
+        border: none;
+        color: #ffffff;
+        font-family: var(--font-main);
+        font-weight: 700;
+        font-size: 13px;
+        outline: none;
+        cursor: pointer;
+        padding: 2px 4px;
+    }
+    .period-picker select option {
+        background: #0b1426;
+        color: #fff;
+    }
+
+    .btn-ctrl {
+        background: rgba(15, 25, 48, 0.9);
+        border: 1px solid var(--border-glass);
+        border-radius: 30px;
+        color: var(--text-sub);
+        font-family: var(--font-main);
+        font-weight: 700;
+        font-size: 12px;
+        padding: 7px 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-ctrl:hover {
+        background: rgba(0, 240, 255, 0.2);
+        border-color: var(--cyan);
+        color: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: var(--cyan-glow);
+    }
+    .btn-ctrl.active {
+        background: rgba(0, 255, 157, 0.25);
+        border-color: var(--emerald);
+        color: var(--emerald);
+        box-shadow: var(--emerald-glow);
+    }
+
+    .live-clock {
+        font-family: var(--font-tech);
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--cyan);
+        background: rgba(0, 240, 255, 0.1);
+        border: 1px solid rgba(0, 240, 255, 0.35);
+        border-radius: 30px;
+        padding: 6px 16px;
+        letter-spacing: 1.5px;
+        box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+    }
+
+    /* ── Section Title ── */
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 4px;
+        margin-bottom: 2px;
+        padding: 0 4px;
+    }
+    .section-header h2 {
+        font-size: 16px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+    }
+    .period-tag-pill {
+        background: linear-gradient(135deg, rgba(255, 199, 0, 0.2), rgba(0, 240, 255, 0.2));
+        border: 1px solid var(--border-bright);
+        color: var(--text-pure);
+        font-family: var(--font-main);
+        font-size: 12px;
+        font-weight: 800;
+        padding: 5px 14px;
+        border-radius: 20px;
+        letter-spacing: 0.8px;
+        box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);
+    }
+
+    /* ── PODIUM OF CHAMPIONS (THE 3 WINNER CARDS) ── */
+    .podium-title {
+        font-size: 14px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--gold);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .podium-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 8px;
+    }
+    @@media (max-width: 1200px) {
+        .podium-grid { grid-template-columns: 1fr; }
+    }
+
+    .winner-card {
+        background: linear-gradient(145deg, rgba(16, 29, 56, 0.9), rgba(9, 16, 31, 0.95));
+        border-radius: var(--radius);
+        padding: 20px 22px;
+        backdrop-filter: blur(20px);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        border: 1.5px solid var(--card-accent-border, var(--border-bright));
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), var(--card-glow, none);
+    }
+    .winner-card:hover {
+        transform: translateY(-4px) scale(1.01);
+        box-shadow: 0 24px 50px rgba(0, 0, 0, 0.8), var(--card-glow-hover, none);
+    }
+    .winner-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: var(--card-accent-color, var(--gold));
+    }
+
+    /* Card Top Bar */
+    .card-meta-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+    .winner-trophy-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--card-accent-color, #fff);
+    }
+    .winner-rank-tag {
+        font-family: var(--font-tech);
+        font-size: 11px;
+        font-weight: 800;
+        padding: 4px 12px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        background: var(--tag-bg, rgba(255, 199, 0, 0.2));
+        color: var(--tag-text, #ffc700);
+        border: 1px solid var(--tag-border, #ffc700);
+    }
+
+    /* Card Center Body */
+    .winner-body {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+    }
+    .entity-primary-name {
+        font-family: var(--font-tech);
+        font-size: 26px;
+        font-weight: 900;
+        color: #ffffff;
+        letter-spacing: 0.5px;
+        line-height: 1.1;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    }
+    .entity-full-desc {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-sub);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 4px;
+    }
+    .entity-context-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    /* Score Callout */
+    .score-gauge {
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+    .score-big-num {
+        font-family: var(--font-digit);
+        font-size: 36px;
+        font-weight: 800;
+        color: var(--card-accent-color, #fff);
+        line-height: 1;
+        text-shadow: 0 0 20px var(--card-accent-color, rgba(255,255,255,0.4));
+    }
+    .score-ratio-text {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
+    /* Progress Track */
+    .progress-track-neo {
+        width: 100%;
+        height: 7px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        overflow: hidden;
+    }
+    .progress-fill-neo {
+        height: 100%;
+        border-radius: 6px;
+        background: var(--card-accent-color, var(--gold));
+        box-shadow: 0 0 12px var(--card-accent-color, var(--gold));
+        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .winner-comment-box {
+        font-size: 12px;
+        color: var(--text-sub);
+        background: rgba(0, 0, 0, 0.35);
+        padding: 8px 12px;
+        border-radius: 10px;
+        border-left: 3px solid var(--card-accent-color, var(--gold));
+        line-height: 1.45;
+        font-weight: 500;
+    }
+
+    /* ── EVALUATION / LOWEST SECTION (3 WARNING CARDS) ── */
+    .eval-title {
+        font-size: 14px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--ruby);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        margin-bottom: 8px;
+    }
+    .eval-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 12px;
+    }
+    @@media (max-width: 1200px) {
+        .eval-grid { grid-template-columns: 1fr; }
+    }
+
+    .eval-card {
+        background: linear-gradient(145deg, rgba(28, 14, 24, 0.85), rgba(12, 10, 20, 0.95));
+        border: 1.5px solid rgba(255, 42, 95, 0.35);
+        border-radius: var(--radius);
+        padding: 18px 20px;
+        backdrop-filter: blur(20px);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    }
+    .eval-card:hover {
+        transform: translateY(-3px);
+        border-color: var(--ruby);
+        box-shadow: 0 16px 40px rgba(255, 42, 95, 0.25);
+    }
+    .eval-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: var(--ruby);
+    }
+
+    /* Winner Colors */
+    .card-gold {
+        --card-accent-color: var(--gold);
+        --card-accent-border: rgba(255, 199, 0, 0.5);
+        --card-glow: 0 0 25px rgba(255, 199, 0, 0.2);
+        --card-glow-hover: 0 0 40px rgba(255, 199, 0, 0.4);
+        --tag-bg: rgba(255, 199, 0, 0.2);
+        --tag-text: #ffc700;
+        --tag-border: #ffc700;
+    }
+    .card-emerald {
+        --card-accent-color: var(--emerald);
+        --card-accent-border: rgba(0, 255, 157, 0.5);
+        --card-glow: 0 0 25px rgba(0, 255, 157, 0.2);
+        --card-glow-hover: 0 0 40px rgba(0, 255, 157, 0.4);
+        --tag-bg: rgba(0, 255, 157, 0.2);
+        --tag-text: #00ff9d;
+        --tag-border: #00ff9d;
+    }
+    .card-cyan {
+        --card-accent-color: var(--cyan);
+        --card-accent-border: rgba(0, 240, 255, 0.5);
+        --card-glow: 0 0 25px rgba(0, 240, 255, 0.2);
+        --card-glow-hover: 0 0 40px rgba(0, 240, 255, 0.4);
+        --tag-bg: rgba(0, 240, 255, 0.2);
+        --tag-text: #00f0ff;
+        --tag-border: #00f0ff;
+    }
+
+    /* ── Tab Navigation ── */
+    .summary-tabs {
+        display: flex;
+        gap: 10px;
+        background: rgba(11, 20, 38, 0.7);
+        padding: 6px 8px;
+        border-radius: 40px;
+        border: 1px solid var(--border-glass);
+        width: fit-content;
+        align-self: center;
+        flex-wrap: wrap;
+        justify-content: center;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        margin-top: 4px;
+    }
+    .tab-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-muted);
+        font-family: var(--font-main);
+        font-weight: 700;
+        font-size: 13px;
+        padding: 9px 22px;
+        border-radius: 30px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tab-btn:hover {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.06);
+    }
+    .tab-btn.active {
+        background: linear-gradient(135deg, rgba(0, 240, 255, 0.3), rgba(0, 255, 157, 0.3));
+        border: 1.5px solid var(--cyan);
+        color: #ffffff;
+        box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+    }
+
+    /* ── Tab Panes & Table View ── */
+    .tab-pane-content {
+        display: none;
+        animation: fadeInTab 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .tab-pane-content.active {
+        display: block;
+    }
+
+    @@keyframes fadeInTab {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .table-card {
+        background: var(--panel);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius);
+        padding: 18px 24px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .table-hdr-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .table-hdr-row h3 {
+        font-size: 17px;
+        font-weight: 800;
+        color: #ffffff;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .table-search-box {
+        background: rgba(15, 25, 48, 0.9);
+        border: 1px solid var(--border-bright);
+        border-radius: 25px;
+        padding: 6px 16px;
+        color: #fff;
+        font-family: var(--font-main);
+        font-size: 13px;
+        outline: none;
+        width: 240px;
+        transition: width 0.3s ease;
+    }
+    .table-search-box:focus {
+        width: 300px;
+        box-shadow: var(--cyan-glow);
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 6px;
+    }
+    .custom-table th {
+        background: rgba(15, 25, 48, 0.7);
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-glass);
+    }
+    .custom-table td {
+        background: rgba(11, 20, 38, 0.6);
+        color: var(--text-sub);
+        font-size: 13px;
+        font-weight: 600;
+        padding: 12px 16px;
+        vertical-align: middle;
+        border-top: 1px solid rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    .custom-table tr:hover td {
+        background: rgba(20, 35, 68, 0.85);
+    }
+    .custom-table tr td:first-child {
+        border-top-left-radius: 10px;
+        border-bottom-left-radius: 10px;
+    }
+    .custom-table tr td:last-child {
+        border-top-right-radius: 10px;
+        border-bottom-right-radius: 10px;
+    }
+
+    /* Rank Number Badges */
+    .rank-num {
+        font-family: var(--font-digit);
+        font-weight: 900;
+        font-size: 15px;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #cbd5e1;
+    }
+    .rank-1 {
+        background: linear-gradient(135deg, rgba(255, 199, 0, 0.35), rgba(245, 158, 11, 0.45));
+        border-color: var(--gold);
+        color: var(--gold);
+        box-shadow: var(--gold-glow);
+    }
+    .rank-2 {
+        background: linear-gradient(135deg, rgba(226, 232, 240, 0.25), rgba(148, 163, 184, 0.35));
+        border-color: #e2e8f0;
+        color: #ffffff;
+    }
+    .rank-3 {
+        background: linear-gradient(135deg, rgba(217, 119, 6, 0.25), rgba(180, 83, 9, 0.35));
+        border-color: #d97706;
+        color: #f59e0b;
+    }
+
+    .pct-bar-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .pct-bar-track {
+        flex: 1;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 4px;
+        overflow: hidden;
+        min-width: 90px;
+    }
+    .pct-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+    }
+    .pct-label {
+        font-family: var(--font-digit);
+        font-weight: 800;
+        font-size: 15px;
+        min-width: 52px;
+        text-align: right;
+    }
+
+    /* Overall Statistics Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    @@media (max-width: 992px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .stat-card {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius);
+        padding: 18px 22px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: rgba(0, 240, 255, 0.15);
+        border: 1px solid var(--border-bright);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        color: var(--cyan);
+    }
+    .stat-info .stat-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+    }
+    .stat-info .stat-val {
+        font-family: var(--font-digit);
+        font-size: 24px;
+        font-weight: 800;
+        color: #ffffff;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(2, 6, 18, 0.85);
+        backdrop-filter: blur(10px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+    .loading-overlay.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+    .spinner-neon {
+        width: 56px;
+        height: 56px;
+        border: 3px solid rgba(0, 240, 255, 0.15);
+        border-top-color: var(--cyan);
+        border-right-color: var(--gold);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        box-shadow: var(--cyan-glow);
+    }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Footer info */
+    .summary-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: var(--text-muted);
+        font-weight: 600;
+        padding: 12px 6px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        margin-top: auto;
+    }
+    </style>
+</head>
+<body>
+
+    <!-- Top Countdown Progress Bar -->
+    <div class="slide-progress-container">
+        <div id="slideProgressBar" class="slide-progress-bar"></div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner-neon"></div>
+        <div style="font-family: var(--font-main); font-weight: 800; color: var(--cyan); margin-top: 18px; letter-spacing: 1px; font-size: 15px;">MEMUAT DISPLAY PEMENANG LIGA SAP...</div>
+    </div>
+
+    <div class="summary-app">
+        <!-- ── HEADER BAR ── -->
+        <header class="hdr-bar">
+            <div class="hdr-brand">
+                <div class="hdr-brand-logo">
+                    <i class="bi bi-trophy-fill"></i>
+                </div>
+                <div class="hdr-title-group">
+                    <h1>
+                        LIGA SAP &mdash; EXECUTIVE DISPLAY PEMENANG
+                        <span style="font-size: 11px; font-weight: 800; background: linear-gradient(135deg, rgba(255,199,0,0.25), rgba(0,240,255,0.25)); color: var(--gold); border: 1px solid var(--gold); padding: 3px 10px; border-radius: 12px;">CHAMPION HALL</span>
+                    </h1>
+                    <div class="hdr-sub">PT INDEXIM COALINDO &bull; SAFETY ACCOUNTABILITY PROGRAM (SAP)</div>
+                </div>
+            </div>
+
+            <div class="hdr-controls">
+                <!-- Period Dropdown -->
+                <div class="period-picker">
+                    <i class="bi bi-calendar3 text-cyan"></i>
+                    <select id="selectMonth" onchange="onPeriodChange()">
+                        <option value="1">Januari</option>
+                        <option value="2">Februari</option>
+                        <option value="3">Maret</option>
+                        <option value="4">April</option>
+                        <option value="5">Mei</option>
+                        <option value="6">Juni</option>
+                        <option value="7">Juli</option>
+                        <option value="8" selected>Agustus</option>
+                        <option value="9">September</option>
+                        <option value="10">Oktober</option>
+                        <option value="11">November</option>
+                        <option value="12">Desember</option>
+                    </select>
+                    <select id="selectYear" onchange="onPeriodChange()">
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026" selected>2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+
+                <!-- Confetti Button -->
+                <button class="btn-ctrl" onclick="fireConfetti()" title="Rayakan Juara!">
+                    <i class="bi bi-fire text-warning"></i> Rayakan
+                </button>
+
+                <!-- Auto Cycle Button -->
+                <button id="btnAutoPlay" class="btn-ctrl" onclick="toggleAutoCycle()" title="Otomatis berganti tab setiap 20 detik untuk TV Display">
+                    <i class="bi bi-play-circle-fill"></i> Auto Slide: <span id="autoPlayStatus">OFF</span>
+                </button>
+
+                <!-- Refresh Button -->
+                <button class="btn-ctrl" onclick="loadSummaryData()" title="Segarkan Data">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+
+                <!-- Fullscreen Button -->
+                <button class="btn-ctrl" onclick="toggleFullScreen()" title="Layar Penuh (F11)">
+                    <i class="bi bi-arrows-fullscreen"></i>
+                </button>
+
+                <!-- Live Clock -->
+                <div id="liveClock" class="live-clock">00:00:00</div>
+            </div>
+        </header>
+
+        <!-- ── WINNERS & EVALUATION SPOTLIGHT ── -->
+        <section>
+            <!-- 1. HALL OF CHAMPIONS (BEST PERFORMERS) -->
+            <div class="podium-title">
+                <i class="bi bi-trophy-fill"></i> PANGGUNG JUARA &bull; KATEGORI TERBAIK LIGA SAP
+                <span id="periodBadge" class="period-tag-pill ms-auto">PERIODE: AGUSTUS 2026</span>
+            </div>
+
+            <div class="podium-grid">
+                <!-- 1. Mitra Inti Terbaik -->
+                <div class="winner-card card-gold">
+                    <div class="card-meta-top">
+                        <div class="winner-trophy-badge">
+                            <i class="bi bi-trophy-fill" style="font-size: 16px;"></i> SAP Mitra Inti Terbaik
+                        </div>
+                        <span class="winner-rank-tag" id="cardBadgeMitraBest">CHAMPION #1</span>
+                    </div>
+                    <div class="winner-body">
+                        <div style="flex:1; min-width:0;">
+                            <div class="entity-primary-name" id="cardCodeMitraBest">MGE</div>
+                            <div class="entity-full-desc" id="cardNameMitraBest">PT MEGA GLOBAL ENERGY</div>
+                            <div class="entity-context-label" id="cardRankMitraBest">RANK #1 DARI 19 MITRA INTI</div>
+                        </div>
+                        <div class="score-gauge">
+                            <div class="score-big-num" id="cardPctMitraBest">100.0%</div>
+                            <div class="score-ratio-text" id="cardRatioMitraBest">3.295 / 3.295</div>
+                        </div>
+                    </div>
+                    <div class="progress-track-neo">
+                        <div class="progress-fill-neo" id="cardBarMitraBest" style="width: 100%;"></div>
+                    </div>
+                    <div class="winner-comment-box" id="cardNoteMitraBest">
+                        Pencapaian sempurna 100% dengan volume kepatuhan tertinggi di Liga Mitra Inti.
+                    </div>
+                </div>
+
+                <!-- 2. Dept IC Terbaik -->
+                <div class="winner-card card-emerald">
+                    <div class="card-meta-top">
+                        <div class="winner-trophy-badge">
+                            <i class="bi bi-shield-fill-check" style="font-size: 16px;"></i> SAP Dept IC Terbaik
+                        </div>
+                        <span class="winner-rank-tag" id="cardBadgeDeptBest">BEST DEPT #1</span>
+                    </div>
+                    <div class="winner-body">
+                        <div style="flex:1; min-width:0;">
+                            <div class="entity-primary-name" id="cardCodeDeptBest">SECURITY</div>
+                            <div class="entity-full-desc" id="cardNameDeptBest">DEPARTEMEN SECURITY</div>
+                            <div class="entity-context-label" id="cardRankDeptBest">RANK #1 DARI 24 DEPT IC</div>
+                        </div>
+                        <div class="score-gauge">
+                            <div class="score-big-num" id="cardPctDeptBest">95.8%</div>
+                            <div class="score-ratio-text" id="cardRatioDeptBest">91 / 95</div>
+                        </div>
+                    </div>
+                    <div class="progress-track-neo">
+                        <div class="progress-fill-neo" id="cardBarDeptBest" style="width: 95.8%;"></div>
+                    </div>
+                    <div class="winner-comment-box" id="cardNoteDeptBest">
+                        Memuncaki klasemen 24 departemen internal PT Indexim Coalindo.
+                    </div>
+                </div>
+
+                <!-- 3. Subkont Terbaik -->
+                <div class="winner-card card-cyan">
+                    <div class="card-meta-top">
+                        <div class="winner-trophy-badge">
+                            <i class="bi bi-award-fill" style="font-size: 16px;"></i> SAP Subkont Terbaik
+                        </div>
+                        <span class="winner-rank-tag" id="cardBadgeSubBest">TOP VENDOR</span>
+                    </div>
+                    <div class="winner-body">
+                        <div style="flex:1; min-width:0;">
+                            <div class="entity-primary-name" id="cardCodeSubBest">SMP</div>
+                            <div class="entity-full-desc" id="cardNameSubBest">PT SURYA MEGAH PERKASA</div>
+                            <div class="entity-context-label" id="cardRankSubBest">VENDOR INDUK: IDC &bull; SAMUDERA 100%</div>
+                        </div>
+                        <div class="score-gauge">
+                            <div class="score-big-num" id="cardPctSubBest">66.7%</div>
+                            <div class="score-ratio-text" id="cardRatioSubBest">4 / 6 (IDC Sub)</div>
+                        </div>
+                    </div>
+                    <div class="progress-track-neo">
+                        <div class="progress-fill-neo" id="cardBarSubBest" style="width: 66.7%;"></div>
+                    </div>
+                    <div class="winner-comment-box" id="cardNoteSubBest">
+                        Subkontraktor vendor langsung Indexim terdepan (PT Surya Megah Perkasa) & PT Samudera Maju Perkasa (100%).
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. EVALUATION & WARNING SPOTLIGHT (LOWEST PERFORMERS) -->
+            <div class="eval-title">
+                <i class="bi bi-exclamation-triangle-fill"></i> ZONA PERBAIKAN &bull; KATEGORI TERENDAH / PERLU INTERVENSI
+            </div>
+
+            <div class="eval-grid">
+                <!-- 1. Mitra Inti Terburuk -->
+                <div class="eval-card">
+                    <div class="card-meta-top">
+                        <div class="winner-trophy-badge" style="color: var(--ruby);">
+                            <i class="bi bi-exclamation-octagon-fill"></i> SAP Mitra Inti Terburuk
+                        </div>
+                        <span class="winner-rank-tag" style="background: rgba(255,42,95,0.2); color: var(--ruby); border-color: var(--ruby);" id="cardBadgeMitraWorst">RELEGATION ZONE</span>
+                    </div>
+                    <div class="winner-body">
+                        <div style="flex:1; min-width:0;">
+                            <div class="entity-primary-name" id="cardCodeMitraWorst">SCF</div>
+                            <div class="entity-full-desc" id="cardNameMitraWorst">PT SUCOFINDO</div>
+                            <div class="entity-context-label" id="cardRankMitraWorst">RANK #18 / TERBAWAH AKTIF</div>
+                        </div>
+                        <div class="score-gauge">
+                            <div class="score-big-num" style="color: var(--ruby);" id="cardPctMitraWorst">6.8%</div>
+                            <div class="score-ratio-text" id="cardRatioMitraWorst">48 / 708</div>
+                        </div>
+                    </div>
+                    <div class="progress-track-neo">
+                        <div class="progress-fill-neo" id="cardBarMitraWorst" style="width: 6.8%; background: var(--ruby); box-shadow: 0 0 10px var(--ruby);"></div>
+                    </div>
+                    <div class="winner-comment-box" id="cardNoteMitraWorst" style="border-left-color: var(--ruby);">
+                        Capaian terendah dari seluruh mitra inti aktif dengan gap kepatuhan signifikan.
+                    </div>
+                </div>
+
+                <!-- 2. Dept IC Terburuk -->
+                <div class="eval-card">
+                    <div class="card-meta-top">
+                        <div class="winner-trophy-badge" style="color: var(--ruby);">
+                            <i class="bi bi-exclamation-octagon-fill"></i> SAP Dept IC Terburuk
+                        </div>
+                        <span class="winner-rank-tag" style="background: rgba(255,42,95,0.2); color: var(--ruby); border-color: var(--ruby);" id="cardBadgeDeptWorst">BOTTOM ACTIVE</span>
+                    </div>
+                    <div class="winner-body">
+                        <div style="flex:1; min-width:0;">
+                            <div class="entity-primary-name" id="cardCodeDeptWorst">SHIPPING & PORT</div>
+                            <div class="entity-full-desc" id="cardNameDeptWorst">DEPT SHIPPING & PORT</div>
+                            <div class="entity-context-label" id="cardRankDeptWorst">RANK #23 (TERENDAH AKTIF)</div>
+                        </div>
+                        <div class="score-gauge">
+                            <div class="score-big-num" style="color: var(--ruby);" id="cardPctDeptWorst">12.9%</div>
+                            <div class="score-ratio-text" id="cardRatioDeptWorst">27 / 210</div>
+                        </div>
+                    </div>
+                    <div class="progress-track-neo">
+                        <div class="progress-fill-neo" id="cardBarDeptWorst" style="width: 12.9%; background: var(--ruby); box-shadow: 0 0 10px var(--ruby);"></div>
+                    </div>
+                    <div class="winner-comment-box" id="cardNoteDeptWorst" style="border-left-color: var(--ruby);">
+                        Departemen terendah yang memiliki submisi aktif (di luar Dept Project 0%).
+                    </div>
+                </div>
+
+                <!-- 3. Subkont Terburuk -->
+                <div class="eval-card">
+                    <div class="card-meta-top">
+                        <div class="winner-trophy-badge" style="color: var(--ruby);">
+                            <i class="bi bi-x-octagon-fill"></i> SAP Subkont Terburuk
+                        </div>
+                        <span class="winner-rank-tag" style="background: rgba(255,42,95,0.2); color: var(--ruby); border-color: var(--ruby);" id="cardBadgeSubWorst">CRITICAL WARNING</span>
+                    </div>
+                    <div class="winner-body">
+                        <div style="flex:1; min-width:0;">
+                            <div class="entity-primary-name" id="cardCodeSubWorst">WBP</div>
+                            <div class="entity-full-desc" id="cardNameSubWorst">PT WIJAYA BERKAH PERKASA</div>
+                            <div class="entity-context-label" id="cardRankSubWorst">SUBKONT INDUK: IDC</div>
+                        </div>
+                        <div class="score-gauge">
+                            <div class="score-big-num" style="color: var(--ruby);" id="cardPctSubWorst">1.4%</div>
+                            <div class="score-ratio-text" id="cardRatioSubWorst">1 / 73</div>
+                        </div>
+                    </div>
+                    <div class="progress-track-neo">
+                        <div class="progress-fill-neo" id="cardBarSubWorst" style="width: 1.4%; background: var(--ruby); box-shadow: 0 0 10px var(--ruby);"></div>
+                    </div>
+                    <div class="winner-comment-box" id="cardNoteSubWorst" style="border-left-color: var(--ruby);">
+                        Subkontraktor terendah dengan hanya 1 realisasi dari target 73.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── TAB NAVIGATION BUTTONS ── -->
+        <div class="summary-tabs">
+            <button class="tab-btn active" onclick="switchTab('tabMitra', this)">
+                <i class="bi bi-trophy-fill text-warning"></i> 1. Klasemen Mitra Inti
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabDept', this)">
+                <i class="bi bi-diagram-3-fill text-success"></i> 2. Klasemen Dept Indexim
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabSubcon', this)">
+                <i class="bi bi-truck text-info"></i> 3. Klasemen Subkontraktor
+            </button>
+            <button class="tab-btn" onclick="switchTab('tabOverview', this)">
+                <i class="bi bi-pie-chart-fill text-primary"></i> 4. Ringkasan & 6 Pilar SAP
+            </button>
+        </div>
+
+        <!-- ── TAB 1: MITRA INTI STANDINGS ── -->
+        <div id="tabMitra" class="tab-pane-content active">
+            <div class="table-card">
+                <div class="table-hdr-row">
+                    <h3>
+                        <i class="bi bi-trophy-fill text-warning"></i> Klasemen Liga Perusahaan Inti (Mitra Inti SAP)
+                    </h3>
+                    <input type="text" class="table-search-box" placeholder="Cari nama / kode mitra..." onkeyup="filterTable(this, 'tableMitra')">
+                </div>
+                <div class="table-responsive">
+                    <table id="tableMitra" class="custom-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">Rank</th>
+                                <th style="width: 110px;">Kode</th>
+                                <th>Nama Perusahaan</th>
+                                <th>PJO / Pimpinan</th>
+                                <th style="width: 100px; text-align: center;">Karyawan</th>
+                                <th style="width: 140px; text-align: center;">Realisasi / Target</th>
+                                <th style="width: 220px;">Pencapaian</th>
+                                <th style="width: 130px; text-align: center;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyMitra">
+                            <!-- Populated via Javascript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TAB 2: DEPT IC STANDINGS ── -->
+        <div id="tabDept" class="tab-pane-content">
+            <div class="table-card">
+                <div class="table-hdr-row">
+                    <h3>
+                        <i class="bi bi-diagram-3-fill text-success"></i> Klasemen Departemen Internal PT Indexim Coalindo
+                    </h3>
+                    <input type="text" class="table-search-box" placeholder="Cari departemen..." onkeyup="filterTable(this, 'tableDept')">
+                </div>
+                <div class="table-responsive">
+                    <table id="tableDept" class="custom-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">Rank</th>
+                                <th>Nama Departemen</th>
+                                <th style="width: 100px; text-align: center;">Karyawan</th>
+                                <th style="width: 140px; text-align: center;">Realisasi / Target</th>
+                                <th style="width: 220px;">Pencapaian Kepatuhan</th>
+                                <th style="width: 130px; text-align: center;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyDept">
+                            <!-- Populated via Javascript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TAB 3: SUBCON STANDINGS ── -->
+        <div id="tabSubcon" class="tab-pane-content">
+            <div class="table-card">
+                <div class="table-hdr-row">
+                    <h3>
+                        <i class="bi bi-truck text-cyan"></i> Klasemen Kepatuhan Anak Perusahaan & Subkontraktor
+                    </h3>
+                    <input type="text" class="table-search-box" placeholder="Cari nama subkon / parent..." onkeyup="filterTable(this, 'tableSubcon')">
+                </div>
+                <div class="table-responsive">
+                    <table id="tableSubcon" class="custom-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">Rank</th>
+                                <th style="width: 100px;">Kode</th>
+                                <th>Nama Perusahaan</th>
+                                <th style="width: 120px;">Induk / Parent</th>
+                                <th style="width: 90px; text-align: center;">Karyawan</th>
+                                <th style="width: 140px; text-align: center;">Realisasi / Target</th>
+                                <th style="width: 220px;">Pencapaian</th>
+                                <th style="width: 130px; text-align: center;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodySubcon">
+                            <!-- Populated via Javascript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── TAB 4: OVERVIEW & 6 PILLARS ── -->
+        <div id="tabOverview" class="tab-pane-content">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Total Karyawan Terdaftar</div>
+                        <div class="stat-val" id="statEmployees">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(0, 255, 157, 0.15); color: var(--emerald);"><i class="bi bi-building-check"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Total Entitas Perusahaan</div>
+                        <div class="stat-val" id="statCompanies">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(255, 199, 0, 0.15); color: var(--gold);"><i class="bi bi-bullseye"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Total Target SAP MTD</div>
+                        <div class="stat-val" id="statTarget">0</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: rgba(0, 240, 255, 0.15); color: var(--cyan);"><i class="bi bi-check2-all"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Kepatuhan Gabungan (Agregat)</div>
+                        <div class="stat-val" id="statCompliance">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pillars Breakdown -->
+            <div class="table-card">
+                <h3 style="margin-bottom: 16px;"><i class="bi bi-layers-fill text-cyan"></i> Realisasi 6 Pilar Safety Accountability Program (SAP)</h3>
+                <div class="row g-3" id="pillarsGrid">
+                    <!-- Populated via Javascript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ── FOOTER ── -->
+        <footer class="summary-footer">
+            <div>&copy; 2026 PT INDEXIM COALINDO &bull; MBS SAP Safety Accountability Platform</div>
+            <div>Halaman Rangkuman Eksekutif Kepatuhan Liga (Hidden Route) &bull; Live Connected</div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let currentTabList = ['tabMitra', 'tabDept', 'tabSubcon', 'tabOverview'];
+        let currentTabIndex = 0;
+        let isAutoCycle = false;
+        let countdownTimer = null;
+        let secondsRemaining = 20;
+        const CYCLE_SECONDS = 20;
+
+        // Digital Clock
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('liveClock').textContent = `${h}:${m}:${s}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Celebration Confetti
+        function fireConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#ffc700', '#00ff9d', '#00f0ff', '#ffffff']
+                });
+            }
+        }
+
+        // Switch Tab
+        function switchTab(tabId, el) {
+            $('.tab-pane-content').removeClass('active');
+            $('.tab-btn').removeClass('active');
+            $(`#${tabId}`).addClass('active');
+            if (el) $(el).addClass('active');
+
+            currentTabIndex = currentTabList.indexOf(tabId);
+            resetCycleTimer();
+        }
+
+        // Auto Cycle (for TV Display)
+        function toggleAutoCycle() {
+            isAutoCycle = !isAutoCycle;
+            const btn = document.getElementById('btnAutoPlay');
+            const status = document.getElementById('autoPlayStatus');
+            if (isAutoCycle) {
+                btn.classList.add('active');
+                status.textContent = 'ON';
+                startCycle();
+            } else {
+                btn.classList.remove('active');
+                status.textContent = 'OFF';
+                stopCycle();
+            }
+        }
+
+        function startCycle() {
+            stopCycle();
+            secondsRemaining = CYCLE_SECONDS;
+            countdownTimer = setInterval(() => {
+                secondsRemaining--;
+                let pct = ((CYCLE_SECONDS - secondsRemaining) / CYCLE_SECONDS) * 100;
+                document.getElementById('slideProgressBar').style.width = pct + '%';
+                if (secondsRemaining <= 0) {
+                    currentTabIndex = (currentTabIndex + 1) % currentTabList.length;
+                    const nextTabId = currentTabList[currentTabIndex];
+                    const tabButtons = document.querySelectorAll('.tab-btn');
+                    switchTab(nextTabId, tabButtons[currentTabIndex]);
+                    secondsRemaining = CYCLE_SECONDS;
+                }
+            }, 1000);
+        }
+
+        function stopCycle() {
+            if (countdownTimer) clearInterval(countdownTimer);
+            document.getElementById('slideProgressBar').style.width = '0%';
+        }
+
+        function resetCycleTimer() {
+            if (isAutoCycle) {
+                secondsRemaining = CYCLE_SECONDS;
+                document.getElementById('slideProgressBar').style.width = '0%';
+            }
+        }
+
+        // Fullscreen Toggle
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        // Filter Table rows
+        function filterTable(input, tableId) {
+            const query = input.value.toLowerCase();
+            $(`#${tableId} tbody tr`).each(function() {
+                const text = $(this).text().toLowerCase();
+                $(this).toggle(text.indexOf(query) > -1);
+            });
+        }
+
+        function onPeriodChange() {
+            loadSummaryData();
+        }
+
+        // Load Data from API
+        function loadSummaryData() {
+            const year = document.getElementById('selectYear').value;
+            const month = document.getElementById('selectMonth').value;
+
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+
+            $.ajax({
+                url: `/Display/GetDisplaySummaryData?year=${year}&month=${month}`,
+                type: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                    if (res && res.success) {
+                        renderSummary(res);
+                        fireConfetti();
+                    } else {
+                        alert('Gagal memuat data: ' + (res ? res.error : 'Unknown error'));
+                    }
+                },
+                error: function(err) {
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                    console.error(err);
+                }
+            });
+        }
+
+        function renderSummary(data) {
+            const p = data.period;
+            document.getElementById('periodBadge').textContent = `PERIODE: ${p.formatted.toUpperCase()}`;
+
+            const h = data.highlights;
+
+            // 1. Mitra Inti Terbaik
+            const mb = h.mitraInti.terbaik;
+            document.getElementById('cardCodeMitraBest').textContent = mb.code;
+            document.getElementById('cardNameMitraBest').textContent = mb.name;
+            document.getElementById('cardRankMitraBest').textContent = `RANK #${mb.rank} DARI ${data.coreStandings.length} MITRA INTI`;
+            document.getElementById('cardPctMitraBest').textContent = mb.achievementRate.toFixed(1) + '%';
+            document.getElementById('cardRatioMitraBest').textContent = `${mb.totalActual.toLocaleString()} / ${mb.totalTarget.toLocaleString()}`;
+            document.getElementById('cardBarMitraBest').style.width = mb.achievementRate + '%';
+            document.getElementById('cardNoteMitraBest').textContent = mb.note;
+
+            // 2. Mitra Inti Terburuk
+            const mw = h.mitraInti.terburuk;
+            document.getElementById('cardCodeMitraWorst').textContent = mw.code;
+            document.getElementById('cardNameMitraWorst').textContent = mw.name;
+            document.getElementById('cardRankMitraWorst').textContent = `RANK #${mw.rank} (TERBAWAH AKTIF)`;
+            document.getElementById('cardPctMitraWorst').textContent = mw.achievementRate.toFixed(1) + '%';
+            document.getElementById('cardRatioMitraWorst').textContent = `${mw.totalActual.toLocaleString()} / ${mw.totalTarget.toLocaleString()}`;
+            document.getElementById('cardBarMitraWorst').style.width = mw.achievementRate + '%';
+            document.getElementById('cardNoteMitraWorst').textContent = mw.note;
+
+            // 3. Dept IC Terbaik
+            const db = h.deptIC.terbaik;
+            document.getElementById('cardCodeDeptBest').textContent = db.name;
+            document.getElementById('cardNameDeptBest').textContent = `DEPARTEMEN ${db.name}`;
+            document.getElementById('cardRankDeptBest').textContent = `RANK #${db.rank} DARI ${data.deptStandings.length} DEPT IC`;
+            document.getElementById('cardPctDeptBest').textContent = db.achievementRate.toFixed(1) + '%';
+            document.getElementById('cardRatioDeptBest').textContent = `${db.totalActual.toLocaleString()} / ${db.totalTarget.toLocaleString()}`;
+            document.getElementById('cardBarDeptBest').style.width = db.achievementRate + '%';
+            document.getElementById('cardNoteDeptBest').textContent = db.note;
+
+            // 4. Dept IC Terburuk
+            const dw = h.deptIC.terburuk;
+            document.getElementById('cardCodeDeptWorst').textContent = dw.name;
+            document.getElementById('cardNameDeptWorst').textContent = `DEPT ${dw.name}`;
+            document.getElementById('cardRankDeptWorst').textContent = `RANK #${dw.rank} (TERENDAH AKTIF)`;
+            document.getElementById('cardPctDeptWorst').textContent = dw.achievementRate.toFixed(1) + '%';
+            document.getElementById('cardRatioDeptWorst').textContent = `${dw.totalActual.toLocaleString()} / ${dw.totalTarget.toLocaleString()}`;
+            document.getElementById('cardBarDeptWorst').style.width = dw.achievementRate + '%';
+            document.getElementById('cardNoteDeptWorst').textContent = dw.note;
+
+            // 5. Subkont Terbaik
+            const sb = h.subkont.terbaik;
+            document.getElementById('cardCodeSubBest').textContent = sb.code;
+            document.getElementById('cardNameSubBest').textContent = sb.name;
+            document.getElementById('cardRankSubBest').textContent = `VENDOR INDUK: ${sb.parentCode} &bull; SAMUDERA 100%`;
+            document.getElementById('cardPctSubBest').textContent = sb.achievementRate.toFixed(1) + '%';
+            document.getElementById('cardRatioSubBest').textContent = `${sb.totalActual.toLocaleString()} / ${sb.totalTarget.toLocaleString()}`;
+            document.getElementById('cardBarSubBest').style.width = sb.achievementRate + '%';
+            document.getElementById('cardNoteSubBest').textContent = sb.note;
+
+            // 6. Subkont Terburuk
+            const sw = h.subkont.terburuk;
+            document.getElementById('cardCodeSubWorst').textContent = sw.code;
+            document.getElementById('cardNameSubWorst').textContent = sw.name;
+            document.getElementById('cardRankSubWorst').textContent = `SUBKONT INDUK: ${sw.parentCode}`;
+            document.getElementById('cardPctSubWorst').textContent = sw.achievementRate.toFixed(1) + '%';
+            document.getElementById('cardRatioSubWorst').textContent = `${sw.totalActual.toLocaleString()} / ${sw.totalTarget.toLocaleString()}`;
+            document.getElementById('cardBarSubWorst').style.width = sw.achievementRate + '%';
+            document.getElementById('cardNoteSubWorst').textContent = sw.note;
+
+            // Render Tables
+            renderCoreTable(data.coreStandings);
+            renderDeptTable(data.deptStandings);
+            renderSubconTable(data.subconStandings);
+
+            // Render Overview
+            const s = data.statistics;
+            document.getElementById('statEmployees').textContent = s.totalEmployees.toLocaleString();
+            document.getElementById('statCompanies').textContent = s.totalCompanies.toLocaleString();
+            document.getElementById('statTarget').textContent = s.grandTotalTarget.toLocaleString();
+            document.getElementById('statCompliance').textContent = s.overallCompliance.toFixed(1) + '%';
+
+            renderPillarsGrid(s.pillars);
+        }
+
+        function renderCoreTable(list) {
+            let html = '';
+            list.forEach(c => {
+                const rankClass = c.rank === 1 ? 'rank-1' : (c.rank === 2 ? 'rank-2' : (c.rank === 3 ? 'rank-3' : ''));
+                const color = c.achievementRate >= 80 ? 'var(--emerald)' : (c.achievementRate >= 50 ? 'var(--cyan)' : (c.achievementRate > 0 ? 'var(--gold)' : 'var(--ruby)'));
+
+                html += `
+                <tr>
+                    <td><div class="rank-num ${rankClass}">#${c.rank}</div></td>
+                    <td><span style="font-family:var(--font-tech); font-weight:800; color:#fff;">${c.companyCode}</span></td>
+                    <td>
+                        <div style="font-weight:700; color:#fff;">${c.companyName}</div>
+                    </td>
+                    <td><span style="color:var(--text-muted); font-size:12px;">${c.pjoName || '-'}</span></td>
+                    <td style="text-align:center;">${c.employeeCount}</td>
+                    <td style="text-align:center; font-family:var(--font-digit); font-weight:700;">
+                        ${c.totalActual.toLocaleString()} / ${c.totalTarget.toLocaleString()}
+                    </td>
+                    <td>
+                        <div class="pct-bar-wrap">
+                            <div class="pct-bar-track">
+                                <div class="pct-bar-fill" style="width:${c.achievementRate}%; background:${color}; box-shadow:0 0 8px ${color};"></div>
+                            </div>
+                            <div class="pct-label" style="color:${color};">${c.achievementRate.toFixed(1)}%</div>
+                        </div>
+                    </td>
+                    <td style="text-align:center;">
+                        <span class="winner-rank-tag" style="background:${c.statusColor}22; color:${c.statusColor}; border:1px solid ${c.statusColor}55;">
+                            ${c.statusBadge}
+                        </span>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('tbodyMitra').innerHTML = html;
+        }
+
+        function renderDeptTable(list) {
+            let html = '';
+            list.forEach(d => {
+                const rankClass = d.rank === 1 ? 'rank-1' : (d.rank === 2 ? 'rank-2' : (d.rank === 3 ? 'rank-3' : ''));
+                const color = d.achievementRate >= 80 ? 'var(--emerald)' : (d.achievementRate >= 50 ? 'var(--cyan)' : (d.achievementRate > 0 ? 'var(--gold)' : 'var(--ruby)'));
+
+                html += `
+                <tr>
+                    <td><div class="rank-num ${rankClass}">#${d.rank}</div></td>
+                    <td>
+                        <div style="font-weight:700; color:#fff;">${d.departmentName}</div>
+                    </td>
+                    <td style="text-align:center;">${d.employeeCount}</td>
+                    <td style="text-align:center; font-family:var(--font-digit); font-weight:700;">
+                        ${d.totalActual.toLocaleString()} / ${d.totalTarget.toLocaleString()}
+                    </td>
+                    <td>
+                        <div class="pct-bar-wrap">
+                            <div class="pct-bar-track">
+                                <div class="pct-bar-fill" style="width:${d.achievementRate}%; background:${color}; box-shadow:0 0 8px ${color};"></div>
+                            </div>
+                            <div class="pct-label" style="color:${color};">${d.achievementRate.toFixed(1)}%</div>
+                        </div>
+                    </td>
+                    <td style="text-align:center;">
+                        <span class="winner-rank-tag" style="background:${d.statusColor}22; color:${d.statusColor}; border:1px solid ${d.statusColor}55;">
+                            ${d.statusBadge}
+                        </span>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('tbodyDept').innerHTML = html;
+        }
+
+        function renderSubconTable(list) {
+            let html = '';
+            list.forEach(s => {
+                const rankClass = s.rank === 1 ? 'rank-1' : (s.rank === 2 ? 'rank-2' : (s.rank === 3 ? 'rank-3' : ''));
+                const color = s.achievementRate >= 80 ? 'var(--emerald)' : (s.achievementRate >= 50 ? 'var(--cyan)' : (s.achievementRate > 0 ? 'var(--gold)' : 'var(--ruby)'));
+
+                html += `
+                <tr>
+                    <td><div class="rank-num ${rankClass}">#${s.rank}</div></td>
+                    <td><span style="font-family:var(--font-tech); font-weight:800; color:#fff;">${s.companyCode}</span></td>
+                    <td>
+                        <div style="font-weight:700; color:#fff;">${s.companyName}</div>
+                    </td>
+                    <td>
+                        <span style="font-size:11px; font-weight:800; background:rgba(0,240,255,0.15); color:var(--cyan); padding:3px 10px; border-radius:12px; border:1px solid rgba(0,240,255,0.35);">
+                            ${s.parentCode}
+                        </span>
+                    </td>
+                    <td style="text-align:center;">${s.employeeCount}</td>
+                    <td style="text-align:center; font-family:var(--font-digit); font-weight:700;">
+                        ${s.totalActual.toLocaleString()} / ${s.totalTarget.toLocaleString()}
+                    </td>
+                    <td>
+                        <div class="pct-bar-wrap">
+                            <div class="pct-bar-track">
+                                <div class="pct-bar-fill" style="width:${s.achievementRate}%; background:${color}; box-shadow:0 0 8px ${color};"></div>
+                            </div>
+                            <div class="pct-label" style="color:${color};">${s.achievementRate.toFixed(1)}%</div>
+                        </div>
+                    </td>
+                    <td style="text-align:center;">
+                        <span class="winner-rank-tag" style="background:${s.statusColor}22; color:${s.statusColor}; border:1px solid ${s.statusColor}55;">
+                            ${s.statusBadge}
+                        </span>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('tbodySubcon').innerHTML = html;
+        }
+
+        function renderPillarsGrid(p) {
+            const pillars = [
+                { name: 'Hazard Report', val: p.hazard, icon: 'bi-exclamation-triangle-fill', color: '#ffc700' },
+                { name: 'Inspeksi K3', val: p.inspeksi, icon: 'bi-clipboard2-check-fill', color: '#00f0ff' },
+                { name: 'Safety Talk', val: p.safetyTalk, icon: 'bi-megaphone-fill', color: '#00ff9d' },
+                { name: 'Observasi Tugas', val: p.observasi, icon: 'bi-eye-fill', color: '#a855f7' },
+                { name: 'Coaching Safety', val: p.coaching, icon: 'bi-person-check-fill', color: '#f43f5e' },
+                { name: 'P5M / Briefing', val: p.p5m, icon: 'bi-clock-history', color: '#38bdf8' }
+            ];
+
+            let html = '';
+            pillars.forEach(item => {
+                html += `
+                <div class="col-md-4 col-sm-6">
+                    <div style="background:rgba(15,25,48,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:16px 18px; display:flex; align-items:center; gap:14px;">
+                        <div style="width:44px; height:44px; border-radius:12px; background:${item.color}20; color:${item.color}; display:flex; align-items:center; justify-content:center; font-size:20px; border:1px solid ${item.color}40; box-shadow:0 0 15px ${item.color}30;">
+                            <i class="bi ${item.icon}"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">${item.name}</div>
+                            <div style="font-family:var(--font-digit); font-size:22px; font-weight:800; color:#fff;">${item.val.toLocaleString()} Submisi</div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('pillarsGrid').innerHTML = html;
+        }
+
+        // Initialize on page load
+        $(document).ready(function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const y = urlParams.get('year');
+            const m = urlParams.get('month');
+            if (y) document.getElementById('selectYear').value = y;
+            if (m) document.getElementById('selectMonth').value = m;
+
+            loadSummaryData();
+        });
+    </script>
+</body>
+</html>

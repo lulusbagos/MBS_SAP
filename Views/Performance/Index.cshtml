@@ -26,6 +26,159 @@
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
 <style>
+    /* Premium Analytics Styles */
+    .analytics-toolbar {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 14px 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    }
+    .analytics-filter-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .analytics-filter-label {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+    }
+    .analytics-select {
+        border-radius: 8px;
+        font-size: 12.5px;
+        font-weight: 600;
+        background-color: var(--bg-card);
+        color: var(--text-main);
+        border-color: var(--border-color);
+        min-width: 150px;
+    }
+    .analytics-search-wrap {
+        position: relative;
+        min-width: 180px;
+    }
+    .analytics-search-wrap i {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+    .analytics-search-input {
+        padding-left: 28px;
+        border-radius: 8px;
+        font-size: 12.5px;
+        background-color: var(--bg-card);
+        color: var(--text-main);
+        border-color: var(--border-color);
+    }
+    .kpi-card-v2 {
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 16px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .kpi-card-v2:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+    }
+    .kpi-icon-wrap {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+    .kpi-label-v2 {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        letter-spacing: 0.3px;
+    }
+    .kpi-value-v2 {
+        font-size: 22px;
+        font-weight: 900;
+        color: var(--text-main);
+        line-height: 1.15;
+        margin: 2px 0;
+    }
+    .kpi-sub-v2 {
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--text-muted);
+    }
+    .analytics-table th {
+        background: var(--bg-card) !important;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: var(--text-muted);
+        padding: 12px 14px;
+        border-bottom: 1.5px solid var(--border-color);
+    }
+    .analytics-table td {
+        padding: 12px 14px;
+        font-size: 12.5px;
+        border-bottom: 1px solid var(--border-color);
+    }
+    .tier-pill {
+        font-size: 10px;
+        font-weight: 800;
+        padding: 3px 8px;
+        border-radius: 6px;
+        display: inline-block;
+        text-transform: uppercase;
+    }
+    .tier-owner {
+        background: rgba(2, 132, 199, 0.15);
+        color: #0284c7;
+        border: 1px solid rgba(2, 132, 199, 0.3);
+    }
+    .tier-maincon {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .tier-subcon {
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .pillar-mini-badge {
+        font-size: 9.5px;
+        font-weight: 700;
+        padding: 2px 5px;
+        border-radius: 4px;
+        margin: 0 1px;
+    }
+    .pillar-mini-ok {
+        background: rgba(34, 197, 94, 0.15);
+        color: #16a34a;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .pillar-mini-warn {
+        background: rgba(245, 158, 11, 0.15);
+        color: #d97706;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .pillar-mini-danger {
+        background: rgba(239, 68, 68, 0.15);
+        color: #dc2626;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
     #hitsafeLeafletMap {
         background: var(--bg-body);
         height: calc(100vh - 230px);
@@ -1669,19 +1822,25 @@
     <!-- Tabs Toggle -->
     <div class="d-flex justify-content-center mb-4">
         <div style="background: var(--bg-card); border: 1.5px solid var(--border-color); padding: 4px; border-radius: 12px; display: inline-flex; gap: 4px; flex-wrap: wrap; justify-content: center;">
-            <button class="tab-btn px-4 py-2 tab-active" id="tabMy" onclick="switchTab('my')">
+            <button class="tab-btn px-3 py-2 tab-active" id="tabMy" onclick="switchTab('my')">
                 <i class="bi bi-person-badge-fill me-1"></i> Pencapaian Saya
             </button>
-            <button class="tab-btn px-4 py-2 tab-inactive" id="tabCompany" onclick="switchTab('company')">
+            <button class="tab-btn px-3 py-2 tab-inactive" id="tabCompany" onclick="switchTab('company')">
                 <i class="bi bi-building-fill me-1"></i> Kinerja Perusahaan
             </button>
-            <button class="tab-btn px-4 py-2 tab-inactive" id="tabHitSafe" onclick="switchTab('hitsafe')">
+            <button class="tab-btn px-3 py-2 tab-inactive" id="tabHitSafe" onclick="switchTab('hitsafe')">
                 <i class="bi bi-geo-alt-fill me-1"></i> Safe Map
             </button>
-            <button class="tab-btn px-4 py-2 tab-inactive" id="tabHierarchy" onclick="switchTab('hierarchy')">
+            <button class="tab-btn px-3 py-2 tab-inactive" id="tabHierarchy" onclick="switchTab('hierarchy')">
                 <i class="bi bi-diagram-3-fill me-1"></i> Hirarki Perusahaan
             </button>
-            <button class="tab-btn px-4 py-2 tab-inactive" id="tabCompliance" onclick="window.location.href='/Performance/Compliance'">
+            <button class="tab-btn px-3 py-2 tab-inactive" id="tabAnalytics" onclick="switchTab('analytics')">
+                <i class="bi bi-bar-chart-line-fill me-1"></i> Grafik SAP (MTD &amp; YTD)
+            </button>
+            <button class="tab-btn px-3 py-2 tab-inactive" id="tabLeague" onclick="window.location.href='/Performance/League?mode=company'">
+                <i class="bi bi-trophy-fill me-1"></i> Klasemen Super League
+            </button>
+            <button class="tab-btn px-3 py-2 tab-inactive" id="tabCompliance" onclick="window.location.href='/Performance/Compliance'">
                 <i class="bi bi-file-earmark-text-fill me-1"></i> Laporan Kepatuhan
             </button>
         </div>
@@ -1992,7 +2151,591 @@
         </div>
     </div>
 
-    <div id="sectionHitSafe" style="display: none;">
+    
+    <!-- ==================== SECTION: GRAFIK & ANALITIK SAP (MTD & YTD) ==================== -->
+    <div id="sectionAnalytics" style="display: none;">
+        <!-- Controls & Filter Toolbar -->
+        <div class="analytics-toolbar mb-4 animate-fade-in">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <!-- Mode Switcher -->
+                <div class="btn-group" role="group" aria-label="Mode Timeframe">
+                    <button type="button" class="btn btn-sm btn-primary active analytics-mode-btn" id="btnModeMtd" onclick="setAnalyticsTimeframe('mtd')">
+                        <i class="bi bi-calendar-month me-1"></i> MTD (Bulan Ini)
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary analytics-mode-btn" id="btnModeYtd" onclick="setAnalyticsTimeframe('ytd')">
+                        <i class="bi bi-calendar3 me-1"></i> YTD (Tahun Ini)
+                    </button>
+                </div>
+
+                <!-- Tier & Pillar Filters -->
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <div class="analytics-filter-group">
+                        <span class="analytics-filter-label"><i class="bi bi-funnel-fill me-1"></i>Tier:</span>
+                        <select id="analyticsTierFilter" class="form-select form-select-sm analytics-select" onchange="applyAnalyticsFilters()">
+                            <option value="all" selected>Semua Tier</option>
+                            <option value="Owner">Owner (INDEXIM)</option>
+                            <option value="Maincon">Main Contractor</option>
+                            <option value="Subcon">Sub Contractor &amp; Vendor</option>
+                        </select>
+                    </div>
+
+                    <div class="analytics-filter-group">
+                        <span class="analytics-filter-label"><i class="bi bi-layers-fill me-1"></i>Pilar:</span>
+                        <select id="analyticsPillarFilter" class="form-select form-select-sm analytics-select" onchange="applyAnalyticsFilters()">
+                            <option value="all" selected>Semua Pilar SAP</option>
+                            <option value="hazard">Hazard Report (Total)</option>
+                            <option value="hazard_kta">Hazard - KTA (Kondisi Tidak Aman)</option>
+                            <option value="hazard_tta">Hazard - TTA (Tindakan Tidak Aman)</option>
+                            <option value="inspeksi">Inspeksi</option>
+                            <option value="safetytalk">Safety Talk</option>
+                            <option value="observasi">Observasi</option>
+                            <option value="coaching">Coaching</option>
+                            <option value="p5m">P5M</option>
+                        </select>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="analytics-search-wrap">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="analyticsSearchInput" class="form-control form-control-sm analytics-search-input" placeholder="Cari perusahaan..." oninput="applyAnalyticsFilters()" />
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadAnalyticsTab(true)" title="Muat ulang data">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary KPI Cards -->
+        <div class="row g-3 mb-4 animate-fade-in" id="analyticsSummaryRow">
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card-v2" style="background: linear-gradient(135deg, rgba(2, 132, 199, 0.1), rgba(3, 105, 161, 0.05)); border-color: rgba(2, 132, 199, 0.3);">
+                    <div class="kpi-icon-wrap" style="background: rgba(2, 132, 199, 0.15); color: #0284c7;">
+                        <i class="bi bi-clipboard2-data-fill"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-label-v2" id="kpiSubmissionsLabel">Realisasi SAP (MTD)</div>
+                        <div class="kpi-value-v2" id="kpiTotalActual"><span class="spinner-border spinner-border-sm"></span></div>
+                        <div class="kpi-sub-v2" id="kpiTargetSub">Target: <span id="kpiTotalTarget">-</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card-v2" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.05)); border-color: rgba(16, 185, 129, 0.3);">
+                    <div class="kpi-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                        <i class="bi bi-speedometer"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-label-v2" id="kpiRateLabel">Rata-rata Capaian (MTD)</div>
+                        <div class="kpi-value-v2" id="kpiAvgRate"><span class="spinner-border spinner-border-sm"></span></div>
+                        <div class="kpi-sub-v2">Kepatuhan seluruh perusahaan</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card-v2" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05)); border-color: rgba(245, 158, 11, 0.3);">
+                    <div class="kpi-icon-wrap" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                        <i class="bi bi-trophy-fill"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-label-v2">Top Perusahaan</div>
+                        <div class="kpi-value-v2" style="font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" id="kpiTopCompany">-</div>
+                        <div class="kpi-sub-v2" id="kpiTopCompanyScore">Peringkat #1</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="kpi-card-v2" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(126, 34, 206, 0.05)); border-color: rgba(168, 85, 247, 0.3);">
+                    <div class="kpi-icon-wrap" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div>
+                        <div class="kpi-label-v2">Total Karyawan</div>
+                        <div class="kpi-value-v2" id="kpiTotalEmployees">-</div>
+                        <div class="kpi-sub-v2"><span id="kpiTotalCompanies">-</span> Perusahaan Aktif</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 1: Company SAP Comparison & SA Pillar Breakdown -->
+        <div class="row g-3 mb-4 animate-fade-in">
+            <!-- Company SAP Comparison Bar Chart -->
+            <div class="col-12 col-xl-8">
+                <div class="premium-card h-100">
+                    <div class="premium-header">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-bar-chart-fill text-primary me-2"></i>
+                                <span id="chartCompanyTitle">Perbandingan Kepatuhan SAP Antar Perusahaan (%)</span>
+                            </h6>
+                            <small class="text-muted" id="chartCompanySubtitle">Persentase pencapaian kepatuhan SAP MTD seluruh perusahaan</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-2 py-1" style="font-size: 11px;">≥80% Patuh</span>
+                            <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2 py-1" style="font-size: 11px;">50-79%</span>
+                            <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-2 py-1" style="font-size: 11px;">&lt;50%</span>
+                        </div>
+                    </div>
+                    <div class="premium-body">
+                        <div style="min-height: 380px; height: 420px; position: relative;" id="companyChartWrapper">
+                            <canvas id="chartCompanyMtdYtd"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SA Pillars Radar Chart -->
+            <div class="col-12 col-xl-4">
+                <div class="premium-card h-100">
+                    <div class="premium-header">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-radar text-info me-2"></i>
+                                Capaian 6 Pilar SAP
+                            </h6>
+                            <small class="text-muted">Target vs Realisasi Keseluruhan</small>
+                        </div>
+                    </div>
+                    <div class="premium-body d-flex flex-column justify-content-center">
+                        <div style="height: 320px; position: relative;">
+                            <canvas id="chartSaPillars"></canvas>
+                        </div>
+                        <div class="d-flex justify-content-center gap-3 mt-3" style="font-size: 12px; font-weight: 700;">
+                            <span style="color: #0284c7;"><i class="bi bi-square-fill me-1"></i>Realisasi</span>
+                            <span style="color: #f43f5e;"><i class="bi bi-square-fill me-1"></i>Target</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2: Top 10 Employees & Employee Compliance Distribution -->
+        <div class="row g-3 mb-4 animate-fade-in">
+            <!-- Top 10 Star Performers -->
+            <div class="col-12 col-lg-7">
+                <div class="premium-card h-100">
+                    <div class="premium-header">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-star-fill text-warning me-2"></i>
+                                Top 10 Bintang SAP Karyawan (Star Performers)
+                            </h6>
+                            <small class="text-muted">Karyawan dengan kontribusi &amp; kepatuhan SAP tertinggi</small>
+                        </div>
+                    </div>
+                    <div class="premium-body">
+                        <div style="height: 300px; position: relative;">
+                            <canvas id="chartTopPerformers"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employee Compliance Distribution Doughnut -->
+            <div class="col-12 col-lg-5">
+                <div class="premium-card h-100">
+                    <div class="premium-header">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-pie-chart-fill text-success me-2"></i>
+                                Distribusi Kepatuhan Karyawan
+                            </h6>
+                            <small class="text-muted">Segmentasi tingkat kepatuhan karyawan</small>
+                        </div>
+                    </div>
+                    <div class="premium-body">
+                        <div style="height: 200px; position: relative;">
+                            <canvas id="chartEmployeeComplianceDist"></canvas>
+                        </div>
+                        <div class="row g-2 mt-3 text-center" id="complianceDistBadges">
+                            <div class="col-6 col-sm-3">
+                                <div class="p-2 rounded" style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);">
+                                    <div style="font-size: 10px; font-weight: 700; color: #16a34a;">100%+ (Sangat Patuh)</div>
+                                    <div style="font-size: 16px; font-weight: 900; color: #16a34a;" id="distCount100">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <div class="p-2 rounded" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                                    <div style="font-size: 10px; font-weight: 700; color: #2563eb;">80-99% (Patuh)</div>
+                                    <div style="font-size: 16px; font-weight: 900; color: #2563eb;" id="distCount80">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <div class="p-2 rounded" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);">
+                                    <div style="font-size: 10px; font-weight: 700; color: #d97706;">50-79% (Cukup)</div>
+                                    <div style="font-size: 16px; font-weight: 900; color: #d97706;" id="distCount50">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <div class="p-2 rounded" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+                                    <div style="font-size: 10px; font-weight: 700; color: #dc2626;">&lt;50% (Rendah)</div>
+                                    <div style="font-size: 16px; font-weight: 900; color: #dc2626;" id="distCountLow">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 3: Hazard Breakdown (KTA vs TTA) MTD & YTD -->
+        <div class="row g-3 mb-4 animate-fade-in" id="rowHazardKtaTtaAnalytics">
+            <div class="col-12 col-xl-5">
+                <div class="premium-card h-100">
+                    <div class="premium-header flex-wrap gap-2">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-pie-chart-fill text-warning me-2"></i>
+                                Proporsi Tipe Hazard (<span id="hazardKtaTtaTimeframeLabel">MTD</span>)
+                            </h6>
+                            <small class="text-muted">Pembagian kategori temuan Kondisi Tidak Aman (KTA) vs Tindakan Tidak Aman (TTA)</small>
+                        </div>
+                        <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle px-2 py-1" style="font-size: 11px;" id="badgeHazardTotalSelected">0 Laporan</span>
+                    </div>
+                    <div class="premium-body d-flex flex-column justify-content-center">
+                        <div style="height: 220px; position: relative;">
+                            <canvas id="chartHazardKtaTtaAnalytics"></canvas>
+                        </div>
+                        <div class="d-flex justify-content-center gap-4 mt-3" style="font-size: 12px; font-weight: 700;">
+                            <span style="color: #3b82f6;"><i class="bi bi-circle-fill me-1"></i>KTA (Kondisi): <span id="legendKtaPct">0%</span></span>
+                            <span style="color: #f59e0b;"><i class="bi bi-circle-fill me-1"></i>TTA (Tindakan): <span id="legendTtaPct">0%</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-7">
+                <div class="premium-card h-100">
+                    <div class="premium-header flex-wrap gap-2">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-shield-exclamation text-danger me-2"></i>
+                                Komparasi Pembagian Hazard: MTD vs YTD
+                            </h6>
+                            <small class="text-muted">Perbandingan rincian kuantitas &amp; proporsi keselamatan secara komprehensif</small>
+                        </div>
+                    </div>
+                    <div class="premium-body">
+                        <div class="row g-3">
+                            <!-- MTD Card -->
+                            <div class="col-12 col-md-6">
+                                <div class="p-3 rounded h-100" style="background: rgba(2, 132, 199, 0.04); border: 1.5px solid rgba(2, 132, 199, 0.2); border-radius: 12px;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-primary" style="font-size: 13px;"><i class="bi bi-calendar-month me-1"></i> Periode MTD (Bulan Ini)</span>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="badgeHazMtdTotal">0 Laporan</span>
+                                    </div>
+                                    <div class="d-flex flex-column gap-2 mt-3">
+                                        <!-- KTA MTD -->
+                                        <div class="p-2 rounded" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25);">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span style="font-size: 11.5px; font-weight: 700; color: #2563eb;"><i class="bi bi-cone-striped me-1"></i> Kondisi Tidak Aman (KTA)</span>
+                                                <span class="fw-bold" style="font-size: 14px; color: #1d4ed8;" id="valHazMtdKta">0 (<span id="pctHazMtdKta">0%</span>)</span>
+                                            </div>
+                                            <div class="progress" style="height: 6px; background: rgba(0,0,0,0.06);">
+                                                <div class="progress-bar bg-primary" id="progHazMtdKta" style="width: 0%;"></div>
+                                            </div>
+                                            <small class="text-muted" style="font-size: 10px;">Fisik alat, infrastruktur &amp; lingkungan kerja</small>
+                                        </div>
+
+                                        <!-- TTA MTD -->
+                                        <div class="p-2 rounded" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25);">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span style="font-size: 11.5px; font-weight: 700; color: #d97706;"><i class="bi bi-person-exclamation me-1"></i> Tindakan Tidak Aman (TTA)</span>
+                                                <span class="fw-bold" style="font-size: 14px; color: #b45309;" id="valHazMtdTta">0 (<span id="pctHazMtdTta">0%</span>)</span>
+                                            </div>
+                                            <div class="progress" style="height: 6px; background: rgba(0,0,0,0.06);">
+                                                <div class="progress-bar bg-warning" id="progHazMtdTta" style="width: 0%;"></div>
+                                            </div>
+                                            <small class="text-muted" style="font-size: 10px;">Perilaku, kepatuhan APD &amp; disiplin SOP</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- YTD Card -->
+                            <div class="col-12 col-md-6">
+                                <div class="p-3 rounded h-100" style="background: rgba(168, 85, 247, 0.04); border: 1.5px solid rgba(168, 85, 247, 0.2); border-radius: 12px;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span class="fw-bold text-purple" style="font-size: 13px; color: #9333ea;"><i class="bi bi-calendar3 me-1"></i> Periode YTD (Tahun Ini)</span>
+                                        <span class="badge bg-purple-subtle text-purple border border-purple-subtle" style="background: rgba(168, 85, 247, 0.15); color: #9333ea;" id="badgeHazYtdTotal">0 Laporan</span>
+                                    </div>
+                                    <div class="d-flex flex-column gap-2 mt-3">
+                                        <!-- KTA YTD -->
+                                        <div class="p-2 rounded" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25);">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span style="font-size: 11.5px; font-weight: 700; color: #2563eb;"><i class="bi bi-cone-striped me-1"></i> Kondisi Tidak Aman (KTA)</span>
+                                                <span class="fw-bold" style="font-size: 14px; color: #1d4ed8;" id="valHazYtdKta">0 (<span id="pctHazYtdKta">0%</span>)</span>
+                                            </div>
+                                            <div class="progress" style="height: 6px; background: rgba(0,0,0,0.06);">
+                                                <div class="progress-bar bg-primary" id="progHazYtdKta" style="width: 0%;"></div>
+                                            </div>
+                                            <small class="text-muted" style="font-size: 10px;">Fisik alat, infrastruktur &amp; lingkungan kerja</small>
+                                        </div>
+
+                                        <!-- TTA YTD -->
+                                        <div class="p-2 rounded" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25);">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <span style="font-size: 11.5px; font-weight: 700; color: #d97706;"><i class="bi bi-person-exclamation me-1"></i> Tindakan Tidak Aman (TTA)</span>
+                                                <span class="fw-bold" style="font-size: 14px; color: #b45309;" id="valHazYtdTta">0 (<span id="pctHazYtdTta">0%</span>)</span>
+                                            </div>
+                                            <div class="progress" style="height: 6px; background: rgba(0,0,0,0.06);">
+                                                <div class="progress-bar bg-warning" id="progHazYtdTta" style="width: 0%;"></div>
+                                            </div>
+                                            <small class="text-muted" style="font-size: 10px;">Perilaku, kepatuhan APD &amp; disiplin SOP</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Insight Note -->
+                        <div class="mt-3 p-2 rounded d-flex align-items-center gap-2" style="background: rgba(0,0,0,0.02); border: 1px dashed var(--border-color); font-size: 11px; color: var(--text-muted);">
+                            <i class="bi bi-info-circle-fill text-info" style="font-size: 14px;"></i>
+                            <span id="hazardKtaTtaInsightText">Dominasi temuan membantu menentukan prioritas tindakan mitigasi: fokus pada perbaikan fasilitas fisik &amp; lingkungan kerja (KTA) atau pengawasan coaching &amp; disiplin perilaku SOP (TTA).</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Super League Preview & Dedicated Page Link Card -->
+        <div class="row mb-4 animate-fade-in">
+            <div class="col-12">
+                <div class="premium-card">
+                    <div class="premium-header flex-wrap gap-2">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-trophy-fill text-warning me-2"></i>
+                                Klasemen Super League Seluruh Perusahaan
+                            </h6>
+                            <small class="text-muted">Peringkat 5 teratas kepatuhan SAP antar entitas perusahaan (Buka halaman khusus untuk daftar lengkap)</small>
+                        </div>
+                        <a href="/Performance/League?mode=company&year=@ViewBag.SelectedYear&month=@ViewBag.SelectedMonth" class="btn btn-sm btn-primary fw-bold" style="border-radius: 8px;">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> Buka Halaman Klasemen Lengkap
+                        </a>
+                    </div>
+                    <div class="premium-body">
+                        <!-- Top 5 Quick Table Preview -->
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-3 analytics-table" id="tableCompanyStandings">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px; text-align: center;">Rank</th>
+                                        <th>Perusahaan</th>
+                                        <th style="text-align: center;">Tier</th>
+                                        <th style="text-align: center;">Karyawan</th>
+                                        <th style="text-align: center;">Target MTD</th>
+                                        <th style="text-align: center;">Realisasi MTD</th>
+                                        <th style="text-align: center;">% MTD</th>
+                                        <th style="text-align: center;">% YTD</th>
+                                        <th style="text-align: center;">Pilar Capaian (MTD)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyCompanyStandings">
+                                    <tr><td colspan="9" class="text-center py-3 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Memuat Top 5...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="text-center mt-3 pt-2 border-top">
+                            <a href="/Performance/League?mode=company&year=@ViewBag.SelectedYear&month=@ViewBag.SelectedMonth" class="btn btn-outline-primary px-4 py-2 fw-bold" style="border-radius: 10px;">
+                                <i class="bi bi-globe me-2"></i> Buka Seluruh Daftar di Halaman Klasemen Super League <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tables Row 4: Top Karyawan Table & Low Compliance Table -->
+        <div class="row g-3 mb-4 animate-fade-in">
+            <!-- Top Karyawan Details Table -->
+            <div class="col-12 col-xl-6">
+                <div class="premium-card h-100">
+                    <div class="premium-header">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-person-check-fill text-success me-2"></i>
+                                Top Karyawan Berkinerja Terbaik
+                            </h6>
+                            <small class="text-muted">Karyawan dengan capaian &amp; kepatuhan tertinggi</small>
+                        </div>
+                    </div>
+                    <div class="premium-body p-0">
+                        <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 12px;">
+                                <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 5;">
+                                    <tr>
+                                        <th style="width: 45px; text-align: center;">#</th>
+                                        <th>Nama / NIK</th>
+                                        <th>Perusahaan / Dept</th>
+                                        <th style="text-align: center;">MTD</th>
+                                        <th style="text-align: center;">YTD</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyTopEmployees">
+                                    <tr><td colspan="5" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Memuat...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Compliance Attention Table -->
+            <div class="col-12 col-xl-6">
+                <div class="premium-card h-100">
+                    <div class="premium-header">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-exclamation-octagon-fill text-danger me-2"></i>
+                                Karyawan Perlu Bimbingan (&lt;50% Target)
+                            </h6>
+                            <small class="text-muted">Monitoring karyawan uncompliant / di bawah standar target</small>
+                        </div>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle" id="badgeLowComplianceCount">0 Karyawan</span>
+                    </div>
+                    <div class="premium-body p-0">
+                        <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+                            <table class="table table-sm table-hover align-middle mb-0" style="font-size: 12px;">
+                                <thead style="position: sticky; top: 0; background: var(--bg-card); z-index: 5;">
+                                    <tr>
+                                        <th style="width: 45px; text-align: center;">#</th>
+                                        <th>Nama / NIK</th>
+                                        <th>Perusahaan / Dept</th>
+                                        <th style="text-align: center;">Target</th>
+                                        <th style="text-align: center;">Realisasi</th>
+                                        <th style="text-align: center;">Capaian</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyLowCompliance">
+                                    <tr><td colspan="6" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Memuat...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ==================== GRAFIK PENINGKATAN & PERTUMBUHAN SAP BULANAN (YTD) ==================== -->
+        <div class="row mb-4 animate-fade-in" id="cardMonthlyProgression">
+            <div class="col-12">
+                <div class="premium-card">
+                    <div class="premium-header flex-wrap gap-2">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-graph-up-arrow text-success me-2"></i>
+                                Grafik Peningkatan &amp; Pertumbuhan Aktivitas SAP Bulanan (YTD)
+                            </h6>
+                            <small class="text-muted">Pergerakan total submission dan rincian kenaikan per jenis/pilar SAP per bulan (Januari - Desember)</small>
+                        </div>
+
+                        <!-- Interactive Toolbar for Monthly Progression -->
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <!-- Cumulative toggle -->
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-primary active prog-view-btn" id="btnProgMonthly" onclick="setProgressionCumulativeMode(false)">
+                                    <i class="bi bi-bar-chart me-1"></i> Per Bulan
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary prog-view-btn" id="btnProgCumulative" onclick="setProgressionCumulativeMode(true)">
+                                    <i class="bi bi-layer-forward me-1"></i> Akumulasi YTD
+                                </button>
+                            </div>
+
+                            <!-- Pilar Filter for Progression -->
+                            <select id="progPillarFilter" class="form-select form-select-sm analytics-select" style="min-width: 160px;" onchange="renderYtdProgressionChart()">
+                                <option value="all" selected>Semua Jenis (Stacked)</option>
+                                <option value="total">Total Submission</option>
+                                <option value="hazard">Hazard Report (Total)</option>
+                                <option value="hazard_kta">Hazard - KTA (Kondisi Tidak Aman)</option>
+                                <option value="hazard_tta">Hazard - TTA (Tindakan Tidak Aman)</option>
+                                <option value="hazard_both">Hazard - KTA vs TTA (Perbandingan)</option>
+                                <option value="inspeksi">Inspeksi</option>
+                                <option value="safetytalk">Safety Talk</option>
+                                <option value="observasi">Observasi</option>
+                                <option value="coaching">Coaching</option>
+                                <option value="p5m">P5M</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="premium-body">
+                        <!-- Growth Metric Badges Row -->
+                        <div class="row g-2 mb-3 text-center" id="progressionMetricsRow">
+                            <div class="col-6 col-md-3">
+                                <div class="p-2 rounded" style="background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.25);">
+                                    <div style="font-size: 10.5px; font-weight: 700; color: #0284c7; text-transform: uppercase;">Total Akumulasi YTD</div>
+                                    <div style="font-size: 18px; font-weight: 900; color: #0284c7;" id="metricProgTotalYtd">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-2 rounded" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
+                                    <div style="font-size: 10.5px; font-weight: 700; color: #10b981; text-transform: uppercase;">Bulan Paling Produktif</div>
+                                    <div style="font-size: 18px; font-weight: 900; color: #10b981;" id="metricProgPeakMonth">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-2 rounded" style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.25);">
+                                    <div style="font-size: 10.5px; font-weight: 700; color: #a855f7; text-transform: uppercase;">Rata-rata / Bulan</div>
+                                    <div style="font-size: 18px; font-weight: 900; color: #a855f7;" id="metricProgAvgMonth">-</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-2 rounded" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25);">
+                                    <div style="font-size: 10.5px; font-weight: 700; color: #d97706; text-transform: uppercase;">Pertumbuhan Terakhir (MoM)</div>
+                                    <div style="font-size: 18px; font-weight: 900; color: #d97706;" id="metricProgLastGrowth">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progression Canvas -->
+                        <div style="height: 360px; position: relative;">
+                            <canvas id="chartYtdMonthlyProgression"></canvas>
+                        </div>
+
+                        <!-- Collapsible Monthly Rekap Table -->
+                        <div class="mt-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--text-muted);">
+                                    <i class="bi bi-table me-1"></i> Rincian Peningkatan SAP Bulanan
+                                </span>
+                            </div>
+                            <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                                <table class="table table-sm table-hover align-middle mb-0 analytics-table" style="font-size: 11.5px;">
+                                    <thead style="position: sticky; top: 0; z-index: 2;">
+                                        <tr>
+                                            <th>Bulan</th>
+                                            <th style="text-align: center;">Total SAP</th>
+                                            <th style="text-align: center;">Hazard</th>
+                                            <th style="text-align: center;">Inspeksi</th>
+                                            <th style="text-align: center;">Safety Talk</th>
+                                            <th style="text-align: center;">Observasi</th>
+                                            <th style="text-align: center;">Coaching</th>
+                                            <th style="text-align: center;">P5M</th>
+                                            <th style="text-align: center;">Kenaikan (MoM %)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyYtdMonthlyProgression">
+                                        <tr><td colspan="9" class="text-center py-3 text-muted">Memuat rincian bulanan...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+<div id="sectionHitSafe" style="display: none;">
         <div class="premium-card animate-fade-in" style="border: 2px solid #1e293b; box-shadow: 4px 4px 0px #1e293b; background: var(--bg-card); border-radius: 16px; margin-bottom: 24px;">
             <div class="premium-header" style="background: var(--bg-card); border-bottom: 2px solid #1e293b; padding: 16px 20px; display: flex; align-items: center; border-top-left-radius: 14px; border-top-right-radius: 14px;">
                 <i class="bi bi-geo-alt-fill text-primary me-2" style="font-size: 18px;"></i>
@@ -2538,13 +3281,34 @@
             <!-- Kategori Bahaya (TTA vs KTA) -->
             <div class="col-12 col-md-6">
                 <div class="premium-card">
-                    <div class="premium-header">
-                        <i class="bi bi-exclamation-circle-fill text-warning" style="font-size: 16px; color: #fbbf24 !important;"></i>
-                        <h6 class="premium-title">Kategori Temuan Hazard (TTA vs KTA)</h6>
+                    <div class="premium-header flex-wrap gap-2">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-exclamation-circle-fill text-warning me-2" style="font-size: 16px; color: #fbbf24 !important;"></i>
+                                Kategori Temuan Hazard (KTA vs TTA)
+                            </h6>
+                            <small class="text-muted">Proporsi temuan Kondisi Tidak Aman vs Tindakan Tidak Aman</small>
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-sm btn-primary active" id="btnCompanyKategoriMtd" onclick="switchCompanyKategoriTimeframe('mtd')">MTD</button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnCompanyKategoriYtd" onclick="switchCompanyKategoriTimeframe('ytd')">YTD</button>
+                        </div>
                     </div>
                     <div class="premium-body">
-                        <div style="height: 250px; display: flex; align-items: center; justify-content: center;">
+                        <div style="height: 220px; display: flex; align-items: center; justify-content: center;">
                             <canvas id="chartKategoriBahaya"></canvas>
+                        </div>
+                        <div class="row g-2 mt-2 text-center" style="font-size: 11.5px; font-weight: 700;">
+                            <div class="col-6">
+                                <div class="p-1 rounded" style="background: rgba(59, 130, 246, 0.1); color: #2563eb; border: 1px solid rgba(59, 130, 246, 0.25);">
+                                    <i class="bi bi-cone-striped me-1"></i>KTA: <span id="compKategoriKtaText">@ViewBag.UnsafeConditionCount (@( (ViewBag.UnsafeConditionCount + ViewBag.UnsafeActCount) > 0 ? Math.Round((double)ViewBag.UnsafeConditionCount / (ViewBag.UnsafeConditionCount + ViewBag.UnsafeActCount) * 100, 1) : 0 )%)</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-1 rounded" style="background: rgba(245, 158, 11, 0.1); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.25);">
+                                    <i class="bi bi-person-exclamation me-1"></i>TTA: <span id="compKategoriTtaText">@ViewBag.UnsafeActCount (@( (ViewBag.UnsafeConditionCount + ViewBag.UnsafeActCount) > 0 ? Math.Round((double)ViewBag.UnsafeActCount / (ViewBag.UnsafeConditionCount + ViewBag.UnsafeActCount) * 100, 1) : 0 )%)</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2562,6 +3326,98 @@
                     <div class="premium-body">
                         <div style="height: 300px; position: relative;">
                             <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dual Axis Chart: Korelasi Budaya Pengisian SAP vs Tren Insiden -->
+        <div class="row mb-4 animate-fade-in">
+            <div class="col-12">
+                <div class="premium-card">
+                    <div class="premium-header flex-wrap gap-2 d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-graph-up-arrow text-danger" style="font-size: 18px; color: #f43f5e !important;"></i>
+                            <div>
+                                <h6 class="premium-title mb-0">Korelasi Budaya Pengisian SAP vs Tren Insiden</h6>
+                                <small class="text-muted" style="font-size: 11px;">Analisis dinamika kepatuhan pengisian SAP (Hazard, Inspeksi, Safety Talk, P5M, Observasi) berbanding lurus dengan deteksi insiden (6 Bulan Terakhir)</small>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="tier-pill" style="background: rgba(244, 63, 94, 0.12); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-size: 11px;">
+                                <i class="bi bi-shield-exclamation me-1"></i> Reporting Culture &amp; Incident Discovery
+                            </span>
+                        </div>
+                    </div>
+                    <div class="premium-body">
+                        <!-- Mini KPI Summary Chips -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-6 col-md-3">
+                                <div class="p-2.5 rounded-3 d-flex align-items-center gap-2.5" style="background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.2);">
+                                    <div class="d-flex align-items-center justify-content-center flex-shrink-0" style="width: 34px; height: 34px; border-radius: 8px; background: rgba(2, 132, 199, 0.15); color: #0284c7; font-size: 16px;">
+                                        <i class="bi bi-clipboard-data-fill"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Pengisian SAP</div>
+                                        <div style="font-size: 16px; font-weight: 900; color: #0284c7; line-height: 1.2;">@trend.Sum(t => t.TotalSap).ToString("N0") <span style="font-size: 10px; font-weight: 600; color: var(--text-muted);">Laporan</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-2.5 rounded-3 d-flex align-items-center gap-2.5" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2);">
+                                    <div class="d-flex align-items-center justify-content-center flex-shrink-0" style="width: 34px; height: 34px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); color: #ef4444; font-size: 16px;">
+                                        <i class="bi bi-exclamation-octagon-fill"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Kejadian Insiden</div>
+                                        <div style="font-size: 16px; font-weight: 900; color: #ef4444; line-height: 1.2;">@trend.Sum(t => t.Incidents) <span style="font-size: 10px; font-weight: 600; color: var(--text-muted);">Kasus</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-2.5 rounded-3 d-flex align-items-center gap-2.5" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2);">
+                                    <div class="d-flex align-items-center justify-content-center flex-shrink-0" style="width: 34px; height: 34px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 16px;">
+                                        <i class="bi bi-bar-chart-fill"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Rata-rata SAP / Bulan</div>
+                                        <div style="font-size: 16px; font-weight: 900; color: #10b981; line-height: 1.2;">@(trend.Count > 0 ? Math.Round((double)trend.Sum(t => t.TotalSap) / trend.Count).ToString("N0") : "0") <span style="font-size: 10px; font-weight: 600; color: var(--text-muted);">Lap/Bln</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-2.5 rounded-3 d-flex align-items-center gap-2.5" style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2);">
+                                    <div class="d-flex align-items-center justify-content-center flex-shrink-0" style="width: 34px; height: 34px; border-radius: 8px; background: rgba(168, 85, 247, 0.15); color: #a855f7; font-size: 16px;">
+                                        <i class="bi bi-shield-check"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Rasio Laporan SAP / Insiden</div>
+                                        @{
+                                            int sumSapVal = trend.Sum(t => t.TotalSap);
+                                            int sumIncVal = trend.Sum(t => t.Incidents);
+                                            string ratioText = sumIncVal > 0 ? (sumSapVal / (double)sumIncVal).ToString("0.0") + " : 1" : $"{sumSapVal} : 0";
+                                        }
+                                        <div style="font-size: 16px; font-weight: 900; color: #a855f7; line-height: 1.2;">@ratioText</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Explanatory Insight Callout -->
+                        <div class="p-3 mb-3 rounded-3" style="background: rgba(245, 158, 11, 0.06); border-left: 4px solid #f59e0b; font-size: 11.5px; color: var(--text-main); line-height: 1.5;">
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="bi bi-info-circle-fill text-warning mt-0.5" style="font-size: 14px;"></i>
+                                <div>
+                                    <strong>Catatan Analisis K3 (Reporting Maturity Paradox):</strong>
+                                    Peningkatan budaya pengisian SAP yang konsisten mencerminkan tingginya kesadaran pelaporan dan transparansi bahaya di lapangan. Kenaikan tren pencatatan insiden yang mengiringinya mengindikasikan berkurangnya <em>under-reporting</em> (khususnya kategori <em>Near Miss</em> &amp; <em>First Aid</em>), sehingga insiden dapat segera diinvestigasi dan dicegah agar tidak berkembang menjadi kecelakaan berat/fatal.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chart Canvas Container -->
+                        <div style="height: 330px; position: relative;">
+                            <canvas id="sapVsIncidentChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -3104,6 +3960,76 @@
 
 <!-- Charts & Tabs Handling Script -->
 @section Scripts {
+
+    <!-- ==================== SECTION 6: LAPORAN & EXPORT DATA ==================== -->
+    <div id="sectionReports" style="display: none;">
+        <div class="row g-4 mb-4 animate-fade-in">
+            <!-- Card 1: Laporan Kepatuhan Karyawan Detail -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="premium-card h-100 p-4 d-flex flex-column justify-content-between text-center">
+                    <div>
+                        <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(59, 130, 246, 0.15); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 16px;">
+                            <i class="bi bi-person-lines-fill"></i>
+                        </div>
+                        <h6 style="font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Laporan Kepatuhan Detail</h6>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Lihat rekapitulasi kepatuhan per karyawan dengan filter perusahaan, departemen, dan pagination lengkap.</p>
+                    </div>
+                    <a href="/Performance/Compliance" class="btn btn-primary w-100" style="font-weight: 700; border-radius: 10px;">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Buka Laporan
+                    </a>
+                </div>
+            </div>
+
+            <!-- Card 2: Export Klasemen Super League -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="premium-card h-100 p-4 d-flex flex-column justify-content-between text-center">
+                    <div>
+                        <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(16, 185, 129, 0.15); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 16px;">
+                            <i class="bi bi-file-earmark-excel-fill"></i>
+                        </div>
+                        <h6 style="font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Export Klasemen League</h6>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Download data klasemen kepatuhan antar perusahaan dan antar departemen dalam format Excel (.xlsx).</p>
+                    </div>
+                    <a href="/Performance/ExportLeagueToExcel?year=@ViewBag.SelectedYear&month=@ViewBag.SelectedMonth" class="btn btn-success w-100" style="font-weight: 700; border-radius: 10px;">
+                        <i class="bi bi-download me-1"></i> Download Excel
+                    </a>
+                </div>
+            </div>
+
+            <!-- Card 3: Export Detail SAP Karyawan -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="premium-card h-100 p-4 d-flex flex-column justify-content-between text-center">
+                    <div>
+                        <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(168, 85, 247, 0.15); color: #a855f7; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 16px;">
+                            <i class="bi bi-table"></i>
+                        </div>
+                        <h6 style="font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Export Detail SAP Karyawan</h6>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Download rincian target &amp; realisasi 5 pilar SAP untuk setiap karyawan di seluruh perusahaan.</p>
+                    </div>
+                    <a href="/Performance/ExportSapDetailToExcel?year=@ViewBag.SelectedYear&month=@ViewBag.SelectedMonth" class="btn text-white w-100" style="background: #a855f7; font-weight: 700; border-radius: 10px;">
+                        <i class="bi bi-download me-1"></i> Download Detail
+                    </a>
+                </div>
+            </div>
+
+            <!-- Card 4: Download Laporan Uncompliant -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="premium-card h-100 p-4 d-flex flex-column justify-content-between text-center">
+                    <div>
+                        <div style="width: 60px; height: 60px; border-radius: 16px; background: rgba(244, 63, 94, 0.15); color: #f43f5e; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 16px;">
+                            <i class="bi bi-file-earmark-person-fill"></i>
+                        </div>
+                        <h6 style="font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Laporan Uncompliant</h6>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 20px;">Unduh daftar karyawan yang belum memenuhi target mingguan atau bulanan untuk tindak lanjut pembinaan.</p>
+                    </div>
+                    <a href="/Performance/DownloadUncompliantReport?range=month" class="btn btn-danger w-100" style="font-weight: 700; border-radius: 10px;">
+                        <i class="bi bi-download me-1"></i> Unduh Rekap
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <script>
     const deptModal = document.getElementById('deptAchievementModal');
     const deptRows = document.getElementById('deptAchievementRows');
@@ -3407,16 +4333,37 @@
     function switchTab(tab) {
         ensureHierarchySectionDetached();
 
-        document.getElementById('sectionMy').style.display = tab === 'my' ? 'block' : 'none';
-        document.getElementById('sectionCompany').style.display = tab === 'company' ? 'block' : 'none';
-        document.getElementById('sectionHitSafe').style.display = tab === 'hitsafe' ? 'block' : 'none';
-        document.getElementById('sectionHierarchy').style.display = tab === 'hierarchy' ? 'block' : 'none';
+        const sMy = document.getElementById('sectionMy');
+        const sAnalytics = document.getElementById('sectionAnalytics');
+        const sCompany = document.getElementById('sectionCompany');
+        const sHitSafe = document.getElementById('sectionHitSafe');
+        const sHierarchy = document.getElementById('sectionHierarchy');
+        const sReports = document.getElementById('sectionReports');
 
-        document.getElementById('tabMy').className = 'tab-btn px-4 py-2 ' + (tab === 'my' ? 'tab-active' : 'tab-inactive');
-        document.getElementById('tabCompany').className = 'tab-btn px-4 py-2 ' + (tab === 'company' ? 'tab-active' : 'tab-inactive');
-        document.getElementById('tabHitSafe').className = 'tab-btn px-4 py-2 ' + (tab === 'hitsafe' ? 'tab-active' : 'tab-inactive');
-        document.getElementById('tabHierarchy').className = 'tab-btn px-4 py-2 ' + (tab === 'hierarchy' ? 'tab-active' : 'tab-inactive');
+        if (sMy) sMy.style.display = tab === 'my' ? 'block' : 'none';
+        if (sAnalytics) sAnalytics.style.display = tab === 'analytics' ? 'block' : 'none';
+        if (sCompany) sCompany.style.display = tab === 'company' ? 'block' : 'none';
+        if (sHitSafe) sHitSafe.style.display = tab === 'hitsafe' ? 'block' : 'none';
+        if (sHierarchy) sHierarchy.style.display = tab === 'hierarchy' ? 'block' : 'none';
+        if (sReports) sReports.style.display = tab === 'reports' ? 'block' : 'none';
 
+        const tMy = document.getElementById('tabMy');
+        const tAnalytics = document.getElementById('tabAnalytics');
+        const tCompany = document.getElementById('tabCompany');
+        const tHitSafe = document.getElementById('tabHitSafe');
+        const tHierarchy = document.getElementById('tabHierarchy');
+        const tReports = document.getElementById('tabReports');
+
+        if (tMy) tMy.className = 'tab-btn px-3 py-2 ' + (tab === 'my' ? 'tab-active' : 'tab-inactive');
+        if (tAnalytics) tAnalytics.className = 'tab-btn px-3 py-2 ' + (tab === 'analytics' ? 'tab-active' : 'tab-inactive');
+        if (tCompany) tCompany.className = 'tab-btn px-3 py-2 ' + (tab === 'company' ? 'tab-active' : 'tab-inactive');
+        if (tHitSafe) tHitSafe.className = 'tab-btn px-3 py-2 ' + (tab === 'hitsafe' ? 'tab-active' : 'tab-inactive');
+        if (tHierarchy) tHierarchy.className = 'tab-btn px-3 py-2 ' + (tab === 'hierarchy' ? 'tab-active' : 'tab-inactive');
+        if (tReports) tReports.className = 'tab-btn px-3 py-2 ' + (tab === 'reports' ? 'tab-active' : 'tab-inactive');
+
+        if (tab === 'analytics') {
+            loadAnalyticsTab();
+        }
         if (tab === 'company' && typeof window._initCompanyCharts === 'function') {
             window._initCompanyCharts();
         }
@@ -3816,11 +4763,13 @@
         window._companyChartsInitialized = false;
 
         // Pre-populate trend data at load time (Razor server-side as JSON)
-        const _trendLabels  = @Html.Raw(Json.Serialize(trend.Select(x => x.MonthLabel).ToList()));
-        const _trendHazard  = @Html.Raw(Json.Serialize(trend.Select(x => x.Hazards).ToList()));
-        const _trendInspect = @Html.Raw(Json.Serialize(trend.Select(x => x.Inspections).ToList()));
-        const _trendTalk    = @Html.Raw(Json.Serialize(trend.Select(x => x.SafetyTalks).ToList()));
-        const _trendP5m     = @Html.Raw(Json.Serialize(trend.Select(x => x.P5ms).ToList()));
+        const _trendLabels    = @Html.Raw(Json.Serialize(trend.Select(x => x.MonthLabel).ToList()));
+        const _trendHazard    = @Html.Raw(Json.Serialize(trend.Select(x => x.Hazards).ToList()));
+        const _trendInspect   = @Html.Raw(Json.Serialize(trend.Select(x => x.Inspections).ToList()));
+        const _trendTalk      = @Html.Raw(Json.Serialize(trend.Select(x => x.SafetyTalks).ToList()));
+        const _trendP5m       = @Html.Raw(Json.Serialize(trend.Select(x => x.P5ms).ToList()));
+        const _trendTotalSap  = @Html.Raw(Json.Serialize(trend.Select(x => x.TotalSap).ToList()));
+        const _trendIncidents = @Html.Raw(Json.Serialize(trend.Select(x => x.Incidents).ToList()));
         const _hitSafeHazardPointsRaw = @Html.Raw(Json.Serialize(ViewBag.HazardPoints ?? new List<object>()));
         const _hitSafeInspectionPointsRaw = @Html.Raw(Json.Serialize(ViewBag.InspectionPoints ?? new List<object>()));
         const _hitSafeP5mPointsRaw = @Html.Raw(Json.Serialize(ViewBag.P5mPoints ?? new List<object>()));
@@ -3854,6 +4803,139 @@
                         scales: {
                             x: { grid: { color: gridColor }, ticks: { color: textColor, font: { weight: 'bold' } } },
                             y: { grid: { color: gridColor }, ticks: { color: textColor, font: { weight: 'bold' } } }
+                        }
+                    }
+                });
+            }
+
+            // Inisialisasi Chart Korelasi Budaya Pengisian SAP vs Tren Insiden (Dual Axis)
+            const sapVsIncidentEl = document.getElementById('sapVsIncidentChart');
+            if (sapVsIncidentEl) {
+                const maxInc = Math.max(..._trendIncidents, 0);
+                const suggestedMaxInc = maxInc <= 5 ? 5 : Math.ceil(maxInc * 1.25);
+
+                new Chart(sapVsIncidentEl.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: _trendLabels,
+                        datasets: [
+                            {
+                                type: 'bar',
+                                label: 'Budaya Pengisian SAP (Total Aktivitas)',
+                                data: _trendTotalSap,
+                                backgroundColor: 'rgba(2, 132, 199, 0.75)',
+                                hoverBackgroundColor: '#0284c7',
+                                borderColor: '#0284c7',
+                                borderWidth: 1.5,
+                                borderRadius: 6,
+                                yAxisID: 'ySAP',
+                                order: 2
+                            },
+                            {
+                                type: 'line',
+                                label: 'Tren Kejadian Insiden (Kasus)',
+                                data: _trendIncidents,
+                                borderColor: '#ef4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                                borderWidth: 3,
+                                tension: 0.35,
+                                fill: false,
+                                pointRadius: 6,
+                                pointHoverRadius: 8,
+                                pointBackgroundColor: '#ffffff',
+                                pointBorderColor: '#ef4444',
+                                pointBorderWidth: 2.5,
+                                yAxisID: 'yIncident',
+                                order: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    color: textColor,
+                                    font: { weight: 'bold', size: 11.5 },
+                                    usePointStyle: true,
+                                    pointStyle: 'rectRounded'
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleColor: '#f8fafc',
+                                bodyColor: '#e2e8f0',
+                                borderColor: '#334155',
+                                borderWidth: 1,
+                                padding: 12,
+                                boxPadding: 6,
+                                callbacks: {
+                                    label: function(ctx) {
+                                        if (ctx.dataset.yAxisID === 'ySAP') {
+                                            return ' 📝 Total Pengisian SAP: ' + (ctx.raw || 0).toLocaleString() + ' laporan';
+                                        } else {
+                                            return ' ⚠️ Kejadian Insiden: ' + (ctx.raw || 0).toLocaleString() + ' kasus';
+                                        }
+                                    },
+                                    afterBody: function(items) {
+                                        if (items.length >= 2) {
+                                            const sapVal = items.find(i => i.dataset.yAxisID === 'ySAP')?.raw || 0;
+                                            const incVal = items.find(i => i.dataset.yAxisID === 'yIncident')?.raw || 0;
+                                            if (incVal > 0) {
+                                                const r = (sapVal / incVal).toFixed(1);
+                                                return ['\n 🎯 Rasio SAP : Insiden = ' + r + ' : 1'];
+                                            }
+                                        }
+                                        return [];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: gridColor },
+                                ticks: { color: textColor, font: { weight: 'bold', size: 11 } }
+                            },
+                            ySAP: {
+                                type: 'linear',
+                                position: 'left',
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Total Pelaporan SAP (Laporan)',
+                                    color: '#0284c7',
+                                    font: { weight: 'bold', size: 11 }
+                                },
+                                grid: { color: gridColor },
+                                ticks: {
+                                    color: '#0284c7',
+                                    font: { weight: 'bold' }
+                                }
+                            },
+                            yIncident: {
+                                type: 'linear',
+                                position: 'right',
+                                beginAtZero: true,
+                                suggestedMax: suggestedMaxInc,
+                                title: {
+                                    display: true,
+                                    text: 'Jumlah Insiden (Kasus)',
+                                    color: '#ef4444',
+                                    font: { weight: 'bold', size: 11 }
+                                },
+                                grid: { drawOnChartArea: false },
+                                ticks: {
+                                    color: '#ef4444',
+                                    font: { weight: 'bold' },
+                                    precision: 0
+                                }
+                            }
                         }
                     }
                 });
@@ -3913,29 +4995,8 @@
                 });
             }
 
-            // Inisialisasi Kategori Bahaya (TTA vs KTA) secara lazy
-            const ctxKategori = document.getElementById('chartKategoriBahaya');
-            if (ctxKategori) {
-                new Chart(ctxKategori.getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Tindakan Tidak Aman (TTA)', 'Kondisi Tidak Aman (KTA)'],
-                        datasets: [{
-                            data: [@ViewBag.UnsafeActCount, @ViewBag.UnsafeConditionCount],
-                            backgroundColor: ['rgba(245, 158, 11, 0.85)', 'rgba(59, 130, 246, 0.85)'],
-                            borderWidth: 2,
-                            borderColor: isDark ? '#1e293b' : '#ffffff'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { color: textColor } }
-                        }
-                    }
-                });
-            }
+            // Inisialisasi Kategori Bahaya (KTA vs TTA) secara lazy
+            renderCompanyKategoriChart();
 
             // Inisialisasi Chart Perbandingan Kepatuhan Perusahaan secara lazy
             const leaderboardEl = document.getElementById('leaderboardChart');
@@ -4848,6 +5909,1099 @@
         }
 
     });
+
+    // ==========================================
+    // Analytics Tab Engine (MTD & YTD Graphs)
+    // ==========================================
+    let _analyticsData = null;
+    let _employeeAnalyticsData = null;
+    let _analyticsMode = 'mtd'; // 'mtd' | 'ytd'
+    let _chartCompanyMtdYtdInstance = null;
+    let _chartSaPillarsInstance = null;
+    let _chartTopPerformersInstance = null;
+    let _chartEmployeeComplianceDistInstance = null;
+    let _chartHazardKtaTtaAnalyticsInstance = null;
+    let _chartMultiMonthTrendInstance = null;
+    let _chartKategoriBahayaInstance = null;
+    let _companyKategoriMode = 'mtd';
+
+    function switchCompanyKategoriTimeframe(mode) {
+        _companyKategoriMode = mode;
+        const btnMtd = document.getElementById('btnCompanyKategoriMtd');
+        const btnYtd = document.getElementById('btnCompanyKategoriYtd');
+        if (btnMtd && btnYtd) {
+            if (mode === 'mtd') {
+                btnMtd.classList.add('btn-primary', 'active');
+                btnMtd.classList.remove('btn-outline-primary');
+                btnYtd.classList.add('btn-outline-primary');
+                btnYtd.classList.remove('btn-primary', 'active');
+            } else {
+                btnYtd.classList.add('btn-primary', 'active');
+                btnYtd.classList.remove('btn-outline-primary');
+                btnMtd.classList.add('btn-outline-primary');
+                btnMtd.classList.remove('btn-primary', 'active');
+            }
+        }
+        renderCompanyKategoriChart();
+    }
+
+    function renderCompanyKategoriChart() {
+        const ctx = document.getElementById('chartKategoriBahaya');
+        if (!ctx) return;
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                       document.body.classList.contains('dark') || 
+                       document.body.classList.contains('dark-theme');
+        const textColor = isDark ? '#f8fafc' : '#0f172a';
+
+        let ktaCount = 0;
+        let ttaCount = 0;
+
+        if (_companyKategoriMode === 'ytd') {
+            ktaCount = @(ViewBag.UnsafeConditionCountYtd ?? 0);
+            ttaCount = @(ViewBag.UnsafeActCountYtd ?? 0);
+        } else {
+            ktaCount = @(ViewBag.UnsafeConditionCount ?? 0);
+            ttaCount = @(ViewBag.UnsafeActCount ?? 0);
+        }
+
+        if (_analyticsData && _analyticsData.hazardBreakdown) {
+            const hb = _companyKategoriMode === 'ytd' ? _analyticsData.hazardBreakdown.ytd : _analyticsData.hazardBreakdown.mtd;
+            if (hb) {
+                ktaCount = hb.kta || 0;
+                ttaCount = hb.tta || 0;
+            }
+        }
+
+        const total = ktaCount + ttaCount;
+        const ktaPct = total > 0 ? Math.round((ktaCount / total) * 1000) / 10 : 0;
+        const ttaPct = total > 0 ? Math.round((ttaCount / total) * 1000) / 10 : 0;
+
+        const ktaTextEl = document.getElementById('compKategoriKtaText');
+        const ttaTextEl = document.getElementById('compKategoriTtaText');
+        if (ktaTextEl) ktaTextEl.textContent = ktaCount.toLocaleString('id-ID') + ' (' + ktaPct + '%)';
+        if (ttaTextEl) ttaTextEl.textContent = ttaCount.toLocaleString('id-ID') + ' (' + ttaPct + '%)';
+
+        if (_chartKategoriBahayaInstance) {
+            _chartKategoriBahayaInstance.destroy();
+        }
+
+        _chartKategoriBahayaInstance = new Chart(ctx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['KTA (Kondisi Tidak Aman)', 'TTA (Tindakan Tidak Aman)'],
+                datasets: [{
+                    data: [ktaCount, ttaCount],
+                    backgroundColor: ['#3b82f6', '#f59e0b'],
+                    borderWidth: 2,
+                    borderColor: isDark ? '#1e293b' : '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: textColor, font: { weight: 'bold', size: 11 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw || 0;
+                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                return ' ' + context.label + ': ' + val.toLocaleString('id-ID') + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+
+    function setAnalyticsTimeframe(mode) {
+        _analyticsMode = mode;
+        const btnMtd = document.getElementById('btnModeMtd');
+        const btnYtd = document.getElementById('btnModeYtd');
+        if (btnMtd && btnYtd) {
+            if (mode === 'mtd') {
+                btnMtd.classList.add('btn-primary', 'active');
+                btnMtd.classList.remove('btn-outline-primary');
+                btnYtd.classList.add('btn-outline-primary');
+                btnYtd.classList.remove('btn-primary', 'active');
+            } else {
+                btnYtd.classList.add('btn-primary', 'active');
+                btnYtd.classList.remove('btn-outline-primary');
+                btnMtd.classList.add('btn-outline-primary');
+                btnMtd.classList.remove('btn-primary', 'active');
+            }
+        }
+        renderAnalyticsUI();
+    }
+
+    async function loadAnalyticsTab(forceRefresh = false) {
+        if (_analyticsData && _employeeAnalyticsData && !forceRefresh) {
+            renderAnalyticsUI();
+            return;
+        }
+
+        const selectedYear = '@ViewBag.SelectedYear' || new Date().getFullYear();
+        const selectedMonth = '@ViewBag.SelectedMonth' || (new Date().getMonth() + 1);
+
+        try {
+            const refreshParam = forceRefresh ? '&refresh=true' : '';
+            const [resCompany, resEmployee] = await Promise.all([
+                fetch('/Performance/GetCompanyAnalyticsData?year=' + selectedYear + '&month=' + selectedMonth + refreshParam),
+                fetch('/Performance/GetEmployeeAnalyticsData?year=' + selectedYear + '&month=' + selectedMonth + refreshParam)
+            ]);
+
+            if (resCompany.ok && resEmployee.ok) {
+                _analyticsData = await resCompany.json();
+                _employeeAnalyticsData = await resEmployee.json();
+                renderAnalyticsUI();
+                renderCompanyKategoriChart();
+            } else {
+                console.error('Failed to load analytics data', resCompany.status, resEmployee.status);
+            }
+        } catch (err) {
+            console.error('Error loading analytics:', err);
+        }
+    }
+
+    function applyAnalyticsFilters() {
+        renderAnalyticsUI();
+    }
+
+    function renderAnalyticsUI() {
+        renderYtdProgressionChart();
+        if (!_analyticsData || !_employeeAnalyticsData) return;
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                       document.body.classList.contains('dark') || 
+                       document.body.classList.contains('dark-theme');
+        const textColor = isDark ? '#f8fafc' : '#0f172a';
+        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+
+        const isMtd = _analyticsMode === 'mtd';
+        const tierFilter = document.getElementById('analyticsTierFilter')?.value || 'all';
+        const pillarFilter = document.getElementById('analyticsPillarFilter')?.value || 'all';
+        const searchQuery = (document.getElementById('analyticsSearchInput')?.value || '').trim().toLowerCase();
+
+        // 1. Update KPI Summary Cards
+        const sum = _analyticsData.summary || {};
+        const totalActualEl = document.getElementById('kpiTotalActual');
+        const totalTargetEl = document.getElementById('kpiTotalTarget');
+        const avgRateEl = document.getElementById('kpiAvgRate');
+        const subLabelEl = document.getElementById('kpiSubmissionsLabel');
+        const rateLabelEl = document.getElementById('kpiRateLabel');
+        const topCompEl = document.getElementById('kpiTopCompany');
+        const topScoreEl = document.getElementById('kpiTopCompanyScore');
+        const totalEmpEl = document.getElementById('kpiTotalEmployees');
+        const totalCompEl = document.getElementById('kpiTotalCompanies');
+
+        if (subLabelEl) subLabelEl.textContent = isMtd ? 'Realisasi SAP (MTD)' : 'Realisasi SAP (YTD)';
+        if (rateLabelEl) rateLabelEl.textContent = isMtd ? 'Rata-rata Capaian (MTD)' : 'Rata-rata Capaian (YTD)';
+        if (totalActualEl) totalActualEl.textContent = (isMtd ? sum.grandMtdActual : sum.grandYtdActual)?.toLocaleString('id-ID') || '0';
+        if (totalTargetEl) totalTargetEl.textContent = (isMtd ? sum.grandMtdTarget : sum.grandYtdTarget)?.toLocaleString('id-ID') || '0';
+        if (avgRateEl) avgRateEl.textContent = ((isMtd ? sum.avgMtdRate : sum.avgYtdRate) || 0) + '%';
+        if (totalEmpEl) totalEmpEl.textContent = sum.totalEmployees?.toLocaleString('id-ID') || '0';
+        if (totalCompEl) totalCompEl.textContent = sum.totalCompanies || '0';
+
+        // Filter companies
+        let companies = (_analyticsData.companies || []).slice();
+        if (tierFilter !== 'all') {
+            companies = companies.filter(c => String(c.tier || '').toLowerCase() === tierFilter.toLowerCase());
+        }
+        if (searchQuery) {
+            companies = companies.filter(c => String(c.companyName || '').toLowerCase().includes(searchQuery));
+        }
+
+        // Sort companies based on selected pillar filter and timeframe mode
+        companies.sort((a, b) => {
+            let metricA = 0;
+            let metricB = 0;
+            if (pillarFilter === 'hazard') {
+                metricA = isMtd ? Number(a.hazardMtd || 0) : Number(a.hazardYtd || 0);
+                metricB = isMtd ? Number(b.hazardMtd || 0) : Number(b.hazardYtd || 0);
+            } else if (pillarFilter === 'hazard_kta') {
+                metricA = isMtd ? Number(a.hazardMtdKta || 0) : Number(a.hazardYtdKta || 0);
+                metricB = isMtd ? Number(b.hazardMtdKta || 0) : Number(b.hazardYtdKta || 0);
+            } else if (pillarFilter === 'hazard_tta') {
+                metricA = isMtd ? Number(a.hazardMtdTta || 0) : Number(a.hazardYtdTta || 0);
+                metricB = isMtd ? Number(b.hazardMtdTta || 0) : Number(b.hazardYtdTta || 0);
+            } else if (pillarFilter === 'inspeksi') {
+                metricA = isMtd ? Number(a.inspeksiMtd || 0) : Number(a.inspeksiYtd || 0);
+                metricB = isMtd ? Number(b.inspeksiMtd || 0) : Number(b.inspeksiYtd || 0);
+            } else if (pillarFilter === 'safetytalk') {
+                metricA = isMtd ? Number(a.safetyTalkMtd || 0) : Number(a.safetyTalkYtd || 0);
+                metricB = isMtd ? Number(b.safetyTalkMtd || 0) : Number(b.safetyTalkYtd || 0);
+            } else if (pillarFilter === 'observasi') {
+                metricA = isMtd ? Number(a.observasiMtd || 0) : Number(a.observasiYtd || 0);
+                metricB = isMtd ? Number(b.observasiMtd || 0) : Number(b.observasiYtd || 0);
+            } else if (pillarFilter === 'coaching') {
+                metricA = isMtd ? Number(a.coachingMtd || 0) : Number(a.coachingYtd || 0);
+                metricB = isMtd ? Number(b.coachingMtd || 0) : Number(b.coachingYtd || 0);
+            } else if (pillarFilter === 'p5m') {
+                metricA = isMtd ? Number(a.p5mMtd || 0) : Number(a.p5mYtd || 0);
+                metricB = isMtd ? Number(b.p5mMtd || 0) : Number(b.p5mYtd || 0);
+            } else {
+                metricA = isMtd ? Number(a.mtdRate || 0) : Number(a.ytdRate || 0);
+                metricB = isMtd ? Number(b.mtdRate || 0) : Number(b.ytdRate || 0);
+            }
+            return metricB - metricA;
+        });
+
+        if (companies.length > 0 && topCompEl) {
+            const top = companies[0];
+            topCompEl.textContent = top.companyName;
+            const topRate = isMtd ? top.mtdRate : top.ytdRate;
+            if (topScoreEl) topScoreEl.textContent = 'Skor: ' + topRate + '% (Peringkat #1)';
+        }
+
+        // 2. Render Chart Perusahaan (MTD vs YTD)
+        const ctxCompany = document.getElementById('chartCompanyMtdYtd');
+        const chartTitleEl = document.getElementById('chartCompanyTitle');
+        const chartSubTitleEl = document.getElementById('chartCompanySubtitle');
+        
+        let chartMetricLabel = isMtd ? 'Kepatuhan MTD (%)' : 'Kepatuhan YTD (%)';
+        let isPercentage = true;
+
+        if (pillarFilter === 'hazard') {
+            if (chartTitleEl) chartTitleEl.textContent = isMtd ? 'Laporan Hazard Report Perusahaan (MTD)' : 'Laporan Hazard Report Perusahaan (YTD)';
+            if (chartSubTitleEl) chartSubTitleEl.textContent = 'Jumlah total temuan hazard dilaporkan per entitas perusahaan';
+            chartMetricLabel = isMtd ? 'Laporan Hazard (MTD)' : 'Laporan Hazard (YTD)';
+            isPercentage = false;
+        } else if (pillarFilter === 'hazard_kta') {
+            if (chartTitleEl) chartTitleEl.textContent = isMtd ? 'Hazard - Kondisi Tidak Aman / KTA (MTD)' : 'Hazard - Kondisi Tidak Aman / KTA (YTD)';
+            if (chartSubTitleEl) chartSubTitleEl.textContent = 'Jumlah temuan bahaya fisik, fasilitas, dan lingkungan kerja per perusahaan';
+            chartMetricLabel = isMtd ? 'Laporan KTA (MTD)' : 'Laporan KTA (YTD)';
+            isPercentage = false;
+        } else if (pillarFilter === 'hazard_tta') {
+            if (chartTitleEl) chartTitleEl.textContent = isMtd ? 'Hazard - Tindakan Tidak Aman / TTA (MTD)' : 'Hazard - Tindakan Tidak Aman / TTA (YTD)';
+            if (chartSubTitleEl) chartSubTitleEl.textContent = 'Jumlah temuan pelanggaran perilaku, SOP, dan APD per perusahaan';
+            chartMetricLabel = isMtd ? 'Laporan TTA (MTD)' : 'Laporan TTA (YTD)';
+            isPercentage = false;
+        } else {
+            if (chartTitleEl) chartTitleEl.textContent = isMtd ? 'Perbandingan Kepatuhan SAP Perusahaan (MTD %)' : 'Perbandingan Kepatuhan SAP Perusahaan (YTD %)';
+            if (chartSubTitleEl) chartSubTitleEl.textContent = isMtd ? 'Pencapaian target bulan berjalan per entitas perusahaan' : 'Pencapaian akumulasi target tahun berjalan per entitas perusahaan';
+        }
+
+        if (ctxCompany) {
+            if (_chartCompanyMtdYtdInstance) {
+                _chartCompanyMtdYtdInstance.destroy();
+            }
+
+            const compLabels = companies.map(c => c.companyName);
+            let compValues = [];
+            let compColors = [];
+
+            if (pillarFilter === 'hazard') {
+                compValues = companies.map(c => isMtd ? (c.hazardMtd || 0) : (c.hazardYtd || 0));
+                compColors = compValues.map(() => 'rgba(244, 63, 94, 0.85)');
+            } else if (pillarFilter === 'hazard_kta') {
+                compValues = companies.map(c => isMtd ? (c.hazardMtdKta || 0) : (c.hazardYtdKta || 0));
+                compColors = compValues.map(() => 'rgba(59, 130, 246, 0.85)');
+            } else if (pillarFilter === 'hazard_tta') {
+                compValues = companies.map(c => isMtd ? (c.hazardMtdTta || 0) : (c.hazardYtdTta || 0));
+                compColors = compValues.map(() => 'rgba(245, 158, 11, 0.85)');
+            } else if (pillarFilter === 'inspeksi') {
+                compValues = companies.map(c => isMtd ? (c.inspeksiMtd || 0) : (c.inspeksiYtd || 0));
+                compColors = compValues.map(() => 'rgba(59, 130, 246, 0.85)');
+            } else if (pillarFilter === 'safetytalk') {
+                compValues = companies.map(c => isMtd ? (c.safetyTalkMtd || 0) : (c.safetyTalkYtd || 0));
+                compColors = compValues.map(() => 'rgba(168, 85, 247, 0.85)');
+            } else if (pillarFilter === 'observasi') {
+                compValues = companies.map(c => isMtd ? (c.observasiMtd || 0) : (c.observasiYtd || 0));
+                compColors = compValues.map(() => 'rgba(245, 158, 11, 0.85)');
+            } else if (pillarFilter === 'coaching') {
+                compValues = companies.map(c => isMtd ? (c.coachingMtd || 0) : (c.coachingYtd || 0));
+                compColors = compValues.map(() => 'rgba(16, 185, 129, 0.85)');
+            } else if (pillarFilter === 'p5m') {
+                compValues = companies.map(c => isMtd ? (c.p5mMtd || 0) : (c.p5mYtd || 0));
+                compColors = compValues.map(() => 'rgba(20, 184, 166, 0.85)');
+            } else {
+                compValues = companies.map(c => isMtd ? c.mtdRate : c.ytdRate);
+                compColors = compValues.map(r => {
+                    if (r >= 80) return 'rgba(16, 185, 129, 0.85)'; // Green
+                    if (r >= 50) return 'rgba(245, 158, 11, 0.85)'; // Yellow
+                    return 'rgba(239, 68, 68, 0.85)'; // Red
+                });
+            }
+
+            _chartCompanyMtdYtdInstance = new Chart(ctxCompany.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: compLabels,
+                    datasets: [{
+                        label: chartMetricLabel,
+                        data: compValues,
+                        backgroundColor: compColors,
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const comp = companies[context.dataIndex];
+                                    if (isPercentage) {
+                                        const actual = isMtd ? comp.mtdActual : comp.ytdActual;
+                                        const target = isMtd ? comp.mtdTarget : comp.ytdTarget;
+                                        return 'Kepatuhan: ' + context.parsed.x + '% (' + actual + ' / ' + target + ')';
+                                    } else {
+                                        return chartMetricLabel + ': ' + context.parsed.x.toLocaleString('id-ID') + ' laporan';
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, font: { weight: 'bold' } },
+                            suggestedMax: isPercentage ? 100 : undefined,
+                            min: 0
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: textColor, font: { size: 11, weight: '600' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 3. Render SA Pillars Radar Chart
+        const ctxPillars = document.getElementById('chartSaPillars');
+        if (ctxPillars && _analyticsData.saTypes) {
+            if (_chartSaPillarsInstance) {
+                _chartSaPillarsInstance.destroy();
+            }
+
+            const sa = _analyticsData.saTypes;
+            const targetData = isMtd ? sa.mtdTargets : sa.ytdTargets;
+            const actualData = isMtd ? sa.mtdActuals : sa.ytdActuals;
+
+            _chartSaPillarsInstance = new Chart(ctxPillars.getContext('2d'), {
+                type: 'radar',
+                data: {
+                    labels: sa.labels || ['Hazard', 'Inspeksi', 'Safety Talk', 'Observasi', 'Coaching', 'P5M'],
+                    datasets: [
+                        {
+                            label: 'Realisasi (' + (isMtd ? 'MTD' : 'YTD') + ')',
+                            data: actualData,
+                            backgroundColor: 'rgba(2, 132, 199, 0.35)',
+                            borderColor: '#0284c7',
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#0284c7',
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Target (' + (isMtd ? 'MTD' : 'YTD') + ')',
+                            data: targetData,
+                            backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                            borderColor: '#f43f5e',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointBackgroundColor: '#f43f5e',
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: { color: gridColor },
+                            grid: { color: gridColor },
+                            pointLabels: { color: textColor, font: { weight: '700', size: 11 } },
+                            ticks: { backdropColor: 'transparent', color: textColor, beginAtZero: true }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 4. Render Top 10 Star Performers (Employee) Chart
+        const ctxTopPerformers = document.getElementById('chartTopPerformers');
+        if (ctxTopPerformers && _employeeAnalyticsData) {
+            if (_chartTopPerformersInstance) {
+                _chartTopPerformersInstance.destroy();
+            }
+
+            const topList = isMtd ? (_employeeAnalyticsData.topPerformersMtd || []) : (_employeeAnalyticsData.topPerformersYtd || []);
+            const labels = topList.map(e => e.nama + ' (' + (e.namaDepartemen || 'General') + ')');
+            const rates = topList.map(e => isMtd ? e.mtdRate : e.ytdRate);
+
+            _chartTopPerformersInstance = new Chart(ctxTopPerformers.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Kepatuhan (%)',
+                        data: rates,
+                        backgroundColor: 'rgba(245, 158, 11, 0.85)',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const emp = topList[context.dataIndex];
+                                    const actual = isMtd ? emp.mtdActual : emp.ytdActual;
+                                    const target = isMtd ? emp.mtdTarget : emp.ytdTarget;
+                                    return 'Capaian: ' + context.parsed.x + '% (' + actual + '/' + target + ' laporan) - ' + emp.namaPerusahaan;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: gridColor },
+                            ticks: { color: textColor },
+                            suggestedMax: 100,
+                            min: 0
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: textColor, font: { size: 10, weight: 'bold' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 5. Render Employee Compliance Distribution Doughnut Chart
+        const ctxDist = document.getElementById('chartEmployeeComplianceDist');
+        if (ctxDist && _employeeAnalyticsData && _employeeAnalyticsData.complianceDistribution) {
+            if (_chartEmployeeComplianceDistInstance) {
+                _chartEmployeeComplianceDistInstance.destroy();
+            }
+
+            const dist = _employeeAnalyticsData.complianceDistribution;
+            const d100 = document.getElementById('distCount100');
+            const d80 = document.getElementById('distCount80');
+            const d50 = document.getElementById('distCount50');
+            const dLow = document.getElementById('distCountLow');
+
+            if (d100) d100.textContent = dist.tier100 || 0;
+            if (d80) d80.textContent = dist.tier80 || 0;
+            if (d50) d50.textContent = dist.tier50 || 0;
+            if (dLow) dLow.textContent = dist.tierLow || 0;
+
+            _chartEmployeeComplianceDistInstance = new Chart(ctxDist.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['100%+ (Sangat Patuh)', '80-99% (Patuh)', '50-79% (Cukup)', '<50% (Rendah)'],
+                    datasets: [{
+                        data: [dist.tier100 || 0, dist.tier80 || 0, dist.tier50 || 0, dist.tierLow || 0],
+                        backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: isDark ? '#1e293b' : '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: textColor, font: { size: 11, weight: 'bold' } } }
+                    },
+                    cutout: '65%'
+                }
+            });
+        }
+
+        // 5b. Render Hazard Breakdown (KTA vs TTA) Analytics Doughnut Chart & Cards
+        const ctxHazBreakdown = document.getElementById('chartHazardKtaTtaAnalytics');
+        const hazBreakdown = _analyticsData.hazardBreakdown;
+        if (hazBreakdown) {
+            const mtdHaz = hazBreakdown.mtd || { total: 0, kta: 0, tta: 0, ktaPct: 0, ttaPct: 0 };
+            const ytdHaz = hazBreakdown.ytd || { total: 0, kta: 0, tta: 0, ktaPct: 0, ttaPct: 0 };
+            const activeHaz = isMtd ? mtdHaz : ytdHaz;
+
+            // Header labels
+            const tfLabel = document.getElementById('hazardKtaTtaTimeframeLabel');
+            const totalBadge = document.getElementById('badgeHazardTotalSelected');
+            const legKta = document.getElementById('legendKtaPct');
+            const legTta = document.getElementById('legendTtaPct');
+
+            if (tfLabel) tfLabel.textContent = isMtd ? 'MTD' : 'YTD';
+            if (totalBadge) totalBadge.textContent = (activeHaz.total || 0).toLocaleString('id-ID') + ' Laporan';
+            if (legKta) legKta.textContent = (activeHaz.ktaPct || 0) + '% (' + (activeHaz.kta || 0).toLocaleString('id-ID') + ')';
+            if (legTta) legTta.textContent = (activeHaz.ttaPct || 0) + '% (' + (activeHaz.tta || 0).toLocaleString('id-ID') + ')';
+
+            // MTD Card elements
+            const bHazMtdTotal = document.getElementById('badgeHazMtdTotal');
+            const vHazMtdKta = document.getElementById('valHazMtdKta');
+            const barHazMtdKta = document.getElementById('progHazMtdKta');
+            const vHazMtdTta = document.getElementById('valHazMtdTta');
+            const barHazMtdTta = document.getElementById('progHazMtdTta');
+
+            if (bHazMtdTotal) bHazMtdTotal.textContent = (mtdHaz.total || 0).toLocaleString('id-ID') + ' Laporan';
+            if (vHazMtdKta) vHazMtdKta.innerHTML = (mtdHaz.kta || 0).toLocaleString('id-ID') + ' (<span id="pctHazMtdKta">' + (mtdHaz.ktaPct || 0) + '%</span>)';
+            if (barHazMtdKta) barHazMtdKta.style.width = Math.min(100, mtdHaz.ktaPct || 0) + '%';
+            if (vHazMtdTta) vHazMtdTta.innerHTML = (mtdHaz.tta || 0).toLocaleString('id-ID') + ' (<span id="pctHazMtdTta">' + (mtdHaz.ttaPct || 0) + '%</span>)';
+            if (barHazMtdTta) barHazMtdTta.style.width = Math.min(100, mtdHaz.ttaPct || 0) + '%';
+
+            // YTD Card elements
+            const bHazYtdTotal = document.getElementById('badgeHazYtdTotal');
+            const vHazYtdKta = document.getElementById('valHazYtdKta');
+            const barHazYtdKta = document.getElementById('progHazYtdKta');
+            const vHazYtdTta = document.getElementById('valHazYtdTta');
+            const barHazYtdTta = document.getElementById('progHazYtdTta');
+
+            if (bHazYtdTotal) bHazYtdTotal.textContent = (ytdHaz.total || 0).toLocaleString('id-ID') + ' Laporan';
+            if (vHazYtdKta) vHazYtdKta.innerHTML = (ytdHaz.kta || 0).toLocaleString('id-ID') + ' (<span id="pctHazYtdKta">' + (ytdHaz.ktaPct || 0) + '%</span>)';
+            if (barHazYtdKta) barHazYtdKta.style.width = Math.min(100, ytdHaz.ktaPct || 0) + '%';
+            if (vHazYtdTta) vHazYtdTta.innerHTML = (ytdHaz.tta || 0).toLocaleString('id-ID') + ' (<span id="pctHazYtdTta">' + (ytdHaz.ttaPct || 0) + '%</span>)';
+            if (barHazYtdTta) barHazYtdTta.style.width = Math.min(100, ytdHaz.ttaPct || 0) + '%';
+
+            // Dynamic Insight Note
+            const insightEl = document.getElementById('hazardKtaTtaInsightText');
+            if (insightEl) {
+                if (activeHaz.total === 0) {
+                    insightEl.textContent = 'Belum ada data laporan hazard pada periode ' + (isMtd ? 'MTD bulan ini' : 'YTD tahun ini') + '.';
+                } else if (activeHaz.kta > activeHaz.tta) {
+                    insightEl.textContent = 'Temuan Kondisi Tidak Aman (KTA) mendominasi (' + activeHaz.ktaPct + '%). Disarankan fokus pada perbaikan fasilitas fisik, infrastruktur kerja, perbaikan alat, dan housekeeping.';
+                } else if (activeHaz.tta > activeHaz.kta) {
+                    insightEl.textContent = 'Temuan Tindakan Tidak Aman (TTA) mendominasi (' + activeHaz.ttaPct + '%). Disarankan meningkatkan observasi keselamatan, briefing SOP, coaching pekerja, dan penegakan kepatuhan APD.';
+                } else {
+                    insightEl.textContent = 'Proporsi temuan KTA dan TTA seimbang (' + activeHaz.ktaPct + '% vs ' + activeHaz.ttaPct + '%). Pertahankan pengawasan terintegrasi pada aspek fisik lingkungan kerja dan perilaku aman pekerja.';
+                }
+            }
+
+            // Doughnut chart rendering
+            if (ctxHazBreakdown) {
+                if (_chartHazardKtaTtaAnalyticsInstance) {
+                    _chartHazardKtaTtaAnalyticsInstance.destroy();
+                }
+
+                _chartHazardKtaTtaAnalyticsInstance = new Chart(ctxHazBreakdown.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['KTA (Kondisi Tidak Aman)', 'TTA (Tindakan Tidak Aman)'],
+                        datasets: [{
+                            data: [activeHaz.kta || 0, activeHaz.tta || 0],
+                            backgroundColor: ['#3b82f6', '#f59e0b'],
+                            borderWidth: 2,
+                            borderColor: isDark ? '#1e293b' : '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const val = context.raw || 0;
+                                        const pct = activeHaz.total > 0 ? ((val / activeHaz.total) * 100).toFixed(1) : 0;
+                                        return ' ' + context.label + ': ' + val.toLocaleString('id-ID') + ' (' + pct + '%)';
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '65%'
+                    }
+                });
+            }
+        }
+
+        // 6. Populate Super League Company Standings (Top 5 Preview)
+        const tbodyComp = document.getElementById('tbodyCompanyStandings');
+        if (tbodyComp) {
+            if (companies.length === 0) {
+                tbodyComp.innerHTML = '<tr><td colspan="9" class="text-center py-3 text-muted">Tidak ada data perusahaan yang sesuai filter.</td></tr>';
+            } else {
+                tbodyComp.innerHTML = companies.slice(0, 5).map((c, idx) => {
+                    let rankDisplay = idx + 1;
+                    if (idx === 0) rankDisplay = '🥇 1';
+                    else if (idx === 1) rankDisplay = '🥈 2';
+                    else if (idx === 2) rankDisplay = '🥉 3';
+
+                    const tierClass = c.tier === 'Owner' ? 'tier-owner' : (c.tier === 'Maincon' ? 'tier-maincon' : 'tier-subcon');
+                    const mtdRate = Number(c.mtdRate || 0);
+                    const ytdRate = Number(c.ytdRate || 0);
+
+                    const mtdBadgeClass = mtdRate >= 80 ? 'text-success' : (mtdRate >= 50 ? 'text-warning' : 'text-danger');
+                    const ytdBadgeClass = ytdRate >= 80 ? 'text-success' : (ytdRate >= 50 ? 'text-warning' : 'text-danger');
+
+                    // Mini pillar badges
+                    const pHaz = c.hazardMtd > 0 ? '<span class="pillar-mini-badge pillar-mini-ok" title="Hazard: ' + c.hazardMtd + ' (KTA: ' + (c.hazardMtdKta || 0) + ' | TTA: ' + (c.hazardMtdTta || 0) + ')">H:' + c.hazardMtd + '</span>' : '<span class="pillar-mini-badge pillar-mini-danger">H:0</span>';
+                    const pIns = c.inspeksiMtd > 0 ? '<span class="pillar-mini-badge pillar-mini-ok" title="Inspeksi: ' + c.inspeksiMtd + '">I:' + c.inspeksiMtd + '</span>' : '<span class="pillar-mini-badge pillar-mini-danger">I:0</span>';
+                    const pSt = c.safetyTalkMtd > 0 ? '<span class="pillar-mini-badge pillar-mini-ok" title="Safety Talk: ' + c.safetyTalkMtd + '">ST:' + c.safetyTalkMtd + '</span>' : '<span class="pillar-mini-badge pillar-mini-danger">ST:0</span>';
+                    const pObs = c.observasiMtd > 0 ? '<span class="pillar-mini-badge pillar-mini-ok" title="Observasi: ' + c.observasiMtd + '">O:' + c.observasiMtd + '</span>' : '<span class="pillar-mini-badge pillar-mini-warn">O:0</span>';
+                    const pCoa = c.coachingMtd > 0 ? '<span class="pillar-mini-badge pillar-mini-ok" title="Coaching: ' + c.coachingMtd + '">C:' + c.coachingMtd + '</span>' : '<span class="pillar-mini-badge pillar-mini-warn">C:0</span>';
+
+                    return `
+                        <tr>
+                            <td class="text-center fw-bold text-muted">${rankDisplay}</td>
+                            <td class="fw-bold">${c.companyName}</td>
+                            <td class="text-center"><span class="tier-pill ${tierClass}">${c.tier}</span></td>
+                            <td class="text-center fw-bold">${c.activeEmployees}</td>
+                            <td class="text-center">${c.mtdTarget}</td>
+                            <td class="text-center fw-bold">${c.mtdActual}</td>
+                            <td class="text-center fw-bold ${mtdBadgeClass}">${mtdRate}%</td>
+                            <td class="text-center fw-bold ${ytdBadgeClass}">${ytdRate}%</td>
+                            <td class="text-center">${pHaz} ${pIns} ${pSt} ${pObs} ${pCoa}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 7. Populate Top Employees Table
+        const tbodyTopEmp = document.getElementById('tbodyTopEmployees');
+        if (tbodyTopEmp && _employeeAnalyticsData) {
+            const topList = isMtd ? (_employeeAnalyticsData.topPerformersMtd || []) : (_employeeAnalyticsData.topPerformersYtd || []);
+            if (topList.length === 0) {
+                tbodyTopEmp.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">Belum ada data.</td></tr>';
+            } else {
+                tbodyTopEmp.innerHTML = topList.slice(0, 10).map((e, idx) => {
+                    return `
+                        <tr>
+                            <td class="text-center fw-bold text-muted">${idx + 1}</td>
+                            <td>
+                                <div class="fw-bold">${e.nama}</div>
+                                <small class="text-muted">${e.nik}</small>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-truncate" style="max-width: 160px;" title="${e.namaPerusahaan}">${e.namaPerusahaan}</div>
+                                <small class="text-muted">${e.namaDepartemen || 'General'}</small>
+                            </td>
+                            <td class="text-center fw-bold text-success">${e.mtdRate}% (${e.mtdActual}/${e.mtdTarget})</td>
+                            <td class="text-center fw-bold text-primary">${e.ytdRate}%</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 8. Populate Low Compliance Table
+        const tbodyLow = document.getElementById('tbodyLowCompliance');
+        const lowBadge = document.getElementById('badgeLowComplianceCount');
+        if (tbodyLow && _employeeAnalyticsData) {
+            const lowList = _employeeAnalyticsData.lowCompliance || [];
+            if (lowBadge) lowBadge.textContent = lowList.length + ' Karyawan';
+
+            if (lowList.length === 0) {
+                tbodyLow.innerHTML = '<tr><td colspan="6" class="text-center py-3 text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Luar biasa! Tidak ada karyawan di bawah 50% target.</td></tr>';
+            } else {
+                tbodyLow.innerHTML = lowList.slice(0, 15).map((e, idx) => {
+                    return `
+                        <tr>
+                            <td class="text-center fw-bold text-muted">${idx + 1}</td>
+                            <td>
+                                <div class="fw-bold">${e.nama}</div>
+                                <small class="text-muted">${e.nik}</small>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-truncate" style="max-width: 140px;" title="${e.namaPerusahaan}">${e.namaPerusahaan}</div>
+                                <small class="text-muted">${e.namaDepartemen || 'General'}</small>
+                            </td>
+                            <td class="text-center">${e.mtdTarget}</td>
+                            <td class="text-center fw-bold text-danger">${e.mtdActual}</td>
+                            <td class="text-center"><span class="badge bg-danger-subtle text-danger border border-danger-subtle">${e.mtdRate}%</span></td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 9. Render Multi-Month Trend Chart
+        const ctxMultiTrend = document.getElementById('chartMultiMonthTrend');
+        if (ctxMultiTrend && _analyticsData.monthlyTrend) {
+            if (_chartMultiMonthTrendInstance) {
+                _chartMultiMonthTrendInstance.destroy();
+            }
+
+            const tr = _analyticsData.monthlyTrend;
+            const labels = tr.map(t => t.monthLabel);
+
+            _chartMultiMonthTrendInstance = new Chart(ctxMultiTrend.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Hazard Report', data: tr.map(t => t.hazards), borderColor: '#f43f5e', backgroundColor: 'rgba(244, 63, 94, 0.1)', tension: 0.3, fill: true, borderWidth: 2.5 },
+                        { label: 'Inspeksi', data: tr.map(t => t.inspections), borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', tension: 0.3, fill: true, borderWidth: 2.5 },
+                        { label: 'Safety Talk', data: tr.map(t => t.safetyTalks), borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.1)', tension: 0.3, fill: true, borderWidth: 2.5 },
+                        { label: 'Observasi', data: tr.map(t => t.observations || 0), borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', tension: 0.3, fill: true, borderWidth: 2.5 },
+                        { label: 'Coaching', data: tr.map(t => t.coachings || 0), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.3, fill: true, borderWidth: 2.5 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { color: textColor, font: { weight: 'bold' } } }
+                    },
+                    scales: {
+                        x: { grid: { color: gridColor }, ticks: { color: textColor, font: { weight: 'bold' } } },
+                        y: { grid: { color: gridColor }, ticks: { color: textColor, font: { weight: 'bold' } } }
+                    }
+                }
+            });
+        }
+    }
+
+
+    let _progressionCumulativeMode = false;
+    let _chartYtdProgressionInstance = null;
+
+    function setProgressionCumulativeMode(isCumulative) {
+        _progressionCumulativeMode = isCumulative;
+        const btnM = document.getElementById('btnProgMonthly');
+        const btnC = document.getElementById('btnProgCumulative');
+        if (btnM && btnC) {
+            if (isCumulative) {
+                btnC.classList.add('btn-primary', 'active');
+                btnC.classList.remove('btn-outline-primary');
+                btnM.classList.add('btn-outline-primary');
+                btnM.classList.remove('btn-primary', 'active');
+            } else {
+                btnM.classList.add('btn-primary', 'active');
+                btnM.classList.remove('btn-outline-primary');
+                btnC.classList.add('btn-outline-primary');
+                btnC.classList.remove('btn-primary', 'active');
+            }
+        }
+        renderYtdProgressionChart();
+    }
+
+    function renderYtdProgressionChart() {
+        if (!_analyticsData || !_analyticsData.ytdMonthlyProgression) return;
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                       document.body.classList.contains('dark') || 
+                       document.body.classList.contains('dark-theme');
+        const textColor = isDark ? '#f8fafc' : '#0f172a';
+        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+
+        const progList = _analyticsData.ytdMonthlyProgression || [];
+        if (progList.length === 0) return;
+
+        const pillar = document.getElementById('progPillarFilter')?.value || 'all';
+        const isCum = _progressionCumulativeMode;
+
+        // Metric calculations
+        const totalYtd = progList[progList.length - 1]?.cumulative || 0;
+        let peakMonth = progList[0];
+        let sumTotal = 0;
+        progList.forEach(p => {
+            sumTotal += p.total;
+            if (p.total > (peakMonth?.total || 0)) peakMonth = p;
+        });
+        const avgPerMonth = Math.round(sumTotal / Math.max(1, progList.length));
+        const lastMonth = progList[progList.length - 1];
+        const lastGrowth = lastMonth?.growthRate || 0;
+
+        const mTotalEl = document.getElementById('metricProgTotalYtd');
+        const mPeakEl = document.getElementById('metricProgPeakMonth');
+        const mAvgEl = document.getElementById('metricProgAvgMonth');
+        const mGrowthEl = document.getElementById('metricProgLastGrowth');
+
+        if (mTotalEl) mTotalEl.textContent = totalYtd.toLocaleString('id-ID');
+        if (mPeakEl) mPeakEl.textContent = (peakMonth?.monthShort || '-') + ' (' + (peakMonth?.total || 0).toLocaleString('id-ID') + ')';
+        if (mAvgEl) mAvgEl.textContent = avgPerMonth.toLocaleString('id-ID') + ' / bln';
+        if (mGrowthEl) {
+            const growthSign = lastGrowth > 0 ? '+' : '';
+            const growthClass = lastGrowth >= 0 ? 'text-success' : 'text-danger';
+            const growthIcon = lastGrowth >= 0 ? '<i class="bi bi-arrow-up-right"></i> ' : '<i class="bi bi-arrow-down-right"></i> ';
+            mGrowthEl.innerHTML = `<span class="${growthClass}">${growthIcon}${growthSign}${lastGrowth}%</span>`;
+        }
+
+        // Prepare chart datasets
+        const labels = progList.map(p => p.monthShort);
+        let datasets = [];
+
+        if (isCum) {
+            // Cumulative YTD view
+            datasets.push({
+                type: 'line',
+                label: 'Akumulasi Total SAP (YTD)',
+                data: progList.map(p => p.cumulative),
+                borderColor: '#0284c7',
+                backgroundColor: 'rgba(2, 132, 199, 0.15)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.35,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: '#0284c7'
+            });
+        } else {
+            // Monthly progression view
+            if (pillar === 'total') {
+                datasets.push({
+                    type: 'bar',
+                    label: 'Total Submission SAP',
+                    data: progList.map(p => p.total),
+                    backgroundColor: 'rgba(2, 132, 199, 0.85)',
+                    borderRadius: 6
+                });
+                datasets.push({
+                    type: 'line',
+                    label: 'Trend Kenaikan',
+                    data: progList.map(p => p.total),
+                    borderColor: '#f59e0b',
+                    borderWidth: 2.5,
+                    tension: 0.35,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#f59e0b',
+                    fill: false
+                });
+            } else if (pillar === 'hazard') {
+                datasets.push({
+                    type: 'bar',
+                    label: 'Hazard Report (Total)',
+                    data: progList.map(p => p.hazards),
+                    backgroundColor: 'rgba(244, 63, 94, 0.85)',
+                    borderRadius: 6
+                });
+                datasets.push({
+                    type: 'line',
+                    label: 'Trend Hazard',
+                    data: progList.map(p => p.hazards),
+                    borderColor: '#f43f5e',
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#f43f5e',
+                    fill: false
+                });
+            } else if (pillar === 'hazard_kta') {
+                datasets.push({
+                    type: 'bar',
+                    label: 'Hazard - KTA (Kondisi Tidak Aman)',
+                    data: progList.map(p => p.hazardsKta || 0),
+                    backgroundColor: 'rgba(59, 130, 246, 0.85)',
+                    borderRadius: 6
+                });
+                datasets.push({
+                    type: 'line',
+                    label: 'Trend KTA',
+                    data: progList.map(p => p.hazardsKta || 0),
+                    borderColor: '#3b82f6',
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#3b82f6',
+                    fill: false
+                });
+            } else if (pillar === 'hazard_tta') {
+                datasets.push({
+                    type: 'bar',
+                    label: 'Hazard - TTA (Tindakan Tidak Aman)',
+                    data: progList.map(p => p.hazardsTta || 0),
+                    backgroundColor: 'rgba(245, 158, 11, 0.85)',
+                    borderRadius: 6
+                });
+                datasets.push({
+                    type: 'line',
+                    label: 'Trend TTA',
+                    data: progList.map(p => p.hazardsTta || 0),
+                    borderColor: '#f59e0b',
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#f59e0b',
+                    fill: false
+                });
+            } else if (pillar === 'hazard_both') {
+                datasets.push(
+                    {
+                        type: 'bar',
+                        label: 'KTA (Kondisi)',
+                        data: progList.map(p => p.hazardsKta || 0),
+                        backgroundColor: 'rgba(59, 130, 246, 0.85)',
+                        borderRadius: 4
+                    },
+                    {
+                        type: 'bar',
+                        label: 'TTA (Tindakan)',
+                        data: progList.map(p => p.hazardsTta || 0),
+                        backgroundColor: 'rgba(245, 158, 11, 0.85)',
+                        borderRadius: 4
+                    },
+                    {
+                        type: 'line',
+                        label: 'Total Hazard',
+                        data: progList.map(p => p.hazards),
+                        borderColor: '#f43f5e',
+                        borderWidth: 2.5,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#f43f5e',
+                        fill: false
+                    }
+                );
+            } else if (pillar === 'inspeksi') {
+                datasets.push({
+                    type: 'bar',
+                    label: 'Inspeksi',
+                    data: progList.map(p => p.inspections),
+                    backgroundColor: 'rgba(59, 130, 246, 0.85)',
+                    borderRadius: 6
+                });
+            } else if (pillar === 'safetytalk') {
+                datasets.push({
+                    type: 'bar',
+                    label: 'Safety Talk',
+                    data: progList.map(p => p.safetyTalks),
+                    backgroundColor: 'rgba(168, 85, 247, 0.85)',
+                    borderRadius: 6
+                });
+            } else if (pillar === 'observasi') {
+                datasets.push({
+                    type: 'bar',
+                    label: 'Observasi',
+                    data: progList.map(p => p.observations),
+                    backgroundColor: 'rgba(245, 158, 11, 0.85)',
+                    borderRadius: 6
+                });
+            } else if (pillar === 'coaching') {
+                datasets.push({
+                    type: 'bar',
+                    label: 'Coaching',
+                    data: progList.map(p => p.coachings),
+                    backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                    borderRadius: 6
+                });
+            } else if (pillar === 'p5m') {
+                datasets.push({
+                    type: 'bar',
+                    label: 'P5M',
+                    data: progList.map(p => p.p5ms),
+                    backgroundColor: 'rgba(20, 184, 166, 0.85)',
+                    borderRadius: 6
+                });
+            } else {
+                // All Stacked
+                datasets.push(
+                    { type: 'bar', label: 'Hazard', data: progList.map(p => p.hazards), backgroundColor: 'rgba(244, 63, 94, 0.85)', stack: 'sap', borderRadius: 4 },
+                    { type: 'bar', label: 'Inspeksi', data: progList.map(p => p.inspections), backgroundColor: 'rgba(59, 130, 246, 0.85)', stack: 'sap', borderRadius: 4 },
+                    { type: 'bar', label: 'Safety Talk', data: progList.map(p => p.safetyTalks), backgroundColor: 'rgba(168, 85, 247, 0.85)', stack: 'sap', borderRadius: 4 },
+                    { type: 'bar', label: 'Observasi', data: progList.map(p => p.observations), backgroundColor: 'rgba(245, 158, 11, 0.85)', stack: 'sap', borderRadius: 4 },
+                    { type: 'bar', label: 'Coaching', data: progList.map(p => p.coachings), backgroundColor: 'rgba(16, 185, 129, 0.85)', stack: 'sap', borderRadius: 4 },
+                    { type: 'bar', label: 'P5M', data: progList.map(p => p.p5ms), backgroundColor: 'rgba(20, 184, 166, 0.85)', stack: 'sap', borderRadius: 4 },
+                    {
+                        type: 'line',
+                        label: 'Total Submission',
+                        data: progList.map(p => p.total),
+                        borderColor: '#0284c7',
+                        borderWidth: 2.5,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#0284c7',
+                        fill: false
+                    }
+                );
+            }
+        }
+
+        const ctxProg = document.getElementById('chartYtdMonthlyProgression');
+        if (ctxProg) {
+            if (_chartYtdProgressionInstance) {
+                _chartYtdProgressionInstance.destroy();
+            }
+
+            _chartYtdProgressionInstance = new Chart(ctxProg.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: textColor, font: { weight: 'bold', size: 11 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                footer: function(tooltipItems) {
+                                    if (tooltipItems.length > 0) {
+                                        const idx = tooltipItems[0].dataIndex;
+                                        const item = progList[idx];
+                                        const growth = item.growthRate;
+                                        const growthStr = idx === 0 ? 'Bulan Pertama' : ((growth >= 0 ? '+' : '') + growth + '% MoM');
+                                        return 'Total: ' + item.total.toLocaleString('id-ID') + ' (KTA: ' + (item.hazardsKta || 0) + ' | TTA: ' + (item.hazardsTta || 0) + ') | Kenaikan: ' + growthStr;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: gridColor },
+                            ticks: { color: textColor, font: { weight: 'bold' } }
+                        },
+                        y: {
+                            grid: { color: gridColor },
+                            ticks: { color: textColor }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Populate Table
+        const tbody = document.getElementById('tbodyYtdMonthlyProgression');
+        if (tbody) {
+            tbody.innerHTML = progList.map((p, idx) => {
+                const growthVal = p.growthRate;
+                let growthDisplay = idx === 0 
+                    ? '<span class="badge bg-secondary-subtle text-secondary">-</span>' 
+                    : (growthVal >= 0 
+                        ? `<span class="badge bg-success-subtle text-success fw-bold"><i class="bi bi-arrow-up-right me-1"></i>+${growthVal}%</span>` 
+                        : `<span class="badge bg-danger-subtle text-danger fw-bold"><i class="bi bi-arrow-down-right me-1"></i>${growthVal}%</span>`);
+
+                return `
+                    <tr>
+                        <td class="fw-bold text-nowrap"><i class="bi bi-calendar2-month text-primary me-1"></i>${p.monthName}</td>
+                        <td class="text-center fw-bold text-primary">${p.total.toLocaleString('id-ID')}</td>
+                        <td class="text-center" title="KTA: ${p.hazardsKta || 0} | TTA: ${p.hazardsTta || 0}">
+                            <span class="fw-bold">${p.hazards.toLocaleString('id-ID')}</span>
+                            <small class="d-block text-muted" style="font-size: 10px;">(KTA:${p.hazardsKta || 0} | TTA:${p.hazardsTta || 0})</small>
+                        </td>
+                        <td class="text-center">${p.inspections.toLocaleString('id-ID')}</td>
+                        <td class="text-center">${p.safetyTalks.toLocaleString('id-ID')}</td>
+                        <td class="text-center">${p.observations.toLocaleString('id-ID')}</td>
+                        <td class="text-center">${p.coachings.toLocaleString('id-ID')}</td>
+                        <td class="text-center">${p.p5ms.toLocaleString('id-ID')}</td>
+                        <td class="text-center">${growthDisplay}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    }
+
 </script>
 }
 

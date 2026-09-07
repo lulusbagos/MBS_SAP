@@ -1,0 +1,3266 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Klasemen Liga & F1 Grand Prix Safety &mdash; PT INDEXIM COALINDO</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Chakra+Petch:wght@500;700;800&family=Orbitron:wght@600;800;900&display=swap" rel="stylesheet">
+
+    <style>
+    :root {
+        --bg:            #050811;
+        --bg-card:       rgba(15, 23, 42, 0.55);
+        --panel:         rgba(10, 18, 32, 0.75);
+        --border:        rgba(56, 189, 248, 0.12);
+        --border-bright: rgba(56, 189, 248, 0.35);
+        --txt:           #ffffff;
+        --muted:         #94a3b8;
+        --blue:          #38bdf8;
+        --cyan:          #00d2ff;
+        --green:         #34d399;
+        --red:           #f87171;
+        --amber:         #fbbf24;
+        --purple:        #a78bfa;
+        --pink:          #f472b6;
+        --teal:          #2dd4bf;
+        --asphalt:       #0d131f;
+        --r:             16px;
+    }
+
+    html { background: #050811; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        background: var(--bg);
+        background-image: 
+            radial-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px),
+            radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.06) 0%, transparent 40%),
+            radial-gradient(circle at 80% 20%, rgba(239, 68, 68, 0.05) 0%, transparent 35%);
+        background-size: 28px 28px, 100% 100%, 100% 100%, 100% 100%;
+        font-family: 'Outfit', sans-serif;
+        color: var(--txt);
+        height: 100vh;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* ── Top Global Progress Bar (5 Minutes Slide Countdown) ── */
+    .slide-progress-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.05);
+        z-index: 9999;
+    }
+    .slide-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #38bdf8, #10b981, #f59e0b, #ef4444);
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+        transition: width 1s linear;
+    }
+
+    /* ── TV Main Layout ── */
+    .tv {
+        display: grid;
+        grid-template-rows: auto auto 1fr;
+        height: 100vh;
+        padding: 10px 14px 12px 14px;
+        gap: 10px;
+    }
+
+    /* ── Header ── */
+    .tv-hdr {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 10px 20px;
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.05);
+    }
+
+    .hdr-brand { display: flex; align-items: center; gap: 12px; }
+    .hdr-title { font-size: 20px; font-weight: 900; color: #ffffff; letter-spacing: .4px; display: flex; align-items: center; gap: 8px; }
+    .hdr-sub   { font-size: 11px; color: #94a3b8; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; margin-top: 1px; }
+
+    /* Slide Switcher Widget in Header */
+    .slide-indicator-widget {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid var(--border);
+        border-radius: 30px;
+        padding: 4px 14px 4px 10px;
+        justify-self: center;
+    }
+    .slide-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 800;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        padding: 3px 10px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .slide-timer-text {
+        font-size: 12px;
+        font-weight: 700;
+        color: #cbd5e1;
+        font-variant-numeric: tabular-nums;
+    }
+    .slide-btn {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #fff;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .slide-btn:hover {
+        background: rgba(56, 189, 248, 0.25);
+        border-color: #38bdf8;
+        color: #fff;
+    }
+
+    .hdr-center { text-align: center; display: flex; align-items: center; gap: 10px; }
+    .refresh-badge {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.25);
+        border-radius: 8px; padding: 4px 10px;
+    }
+    .refresh-label { font-size: 11.5px; font-weight: 800; color: #34d399; letter-spacing: 0.5px; }
+
+    .sonar-ping {
+        position: relative;
+        display: inline-block;
+        width: 8px; height: 8px;
+        background-color: #10b981;
+        border-radius: 50%;
+    }
+    .sonar-ping::after {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        border-radius: 50%;
+        background-color: #10b981;
+        animation: sonar 2s infinite ease-out;
+    }
+    @@keyframes sonar {
+        0% { transform: scale(1); opacity: 0.8; }
+        100% { transform: scale(3.5); opacity: 0; }
+    }
+
+    .hdr-clock { text-align: right; }
+    .clock-time { font-size: 28px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; color: #ffffff; font-family: 'Orbitron', monospace; }
+    .clock-date { font-size: 11px; color: #94a3b8; font-weight: 600; margin-top: 2px; }
+
+    /* ── Marquee Ticker ── */
+    .running-text-wrap {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 6px 16px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        gap: 12px;
+        height: 38px;
+    }
+    .marquee-badge {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: #fff;
+        padding: 2px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.8px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        flex-shrink: 0;
+    }
+    .marquee-container {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+        height: 20px;
+        display: flex;
+        align-items: center;
+    }
+    .marquee-text {
+        white-space: nowrap;
+        display: inline-block;
+        animation: scrollMarquee 38s linear infinite;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #ffffff;
+        letter-spacing: 0.4px;
+        will-change: transform;
+    }
+    @@keyframes scrollMarquee {
+        0%   { transform: translateX(0%); }
+        100% { transform: translateX(-200%); }
+    }
+
+    /* ── Main 2-Column Split: League Table (Left) + F1 Race Circuit (Right) ── */
+    .tv-main-grid {
+        display: grid;
+        grid-template-columns: 46% 54%;
+        gap: 12px;
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    /* ── Glass Panel ── */
+    .glass-panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        height: 100%;
+        min-height: 0;
+        position: relative;
+    }
+
+    /* Panel Title Header */
+    .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        flex-shrink: 0;
+    }
+    .panel-title {
+        font-size: 14px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #f1f5f9;
+    }
+    .panel-subtitle {
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 600;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       LEFT COLUMN: KLASEMEN LIGA SEPAK BOLA SAFETY (MODEL PERFORMANCE/LEAGUE)
+       ══════════════════════════════════════════════════════════════════════════ */
+    .league-view-tabs {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .tab-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.2s ease;
+    }
+    .tab-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+    .tab-btn.active {
+        background: rgba(56, 189, 248, 0.2);
+        border-color: #38bdf8;
+        color: #38bdf8;
+        box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    }
+    .tab-rotator-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        color: #38bdf8;
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 10px;
+        font-weight: 800;
+        font-family: 'Orbitron', monospace;
+    }
+    .spin-icon {
+        display: inline-block;
+        animation: rotateIcon 4s linear infinite;
+    }
+    @@keyframes rotateIcon {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* ── League Top KPI Live Bar ── */
+    .league-kpi-bar {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin-bottom: 8px;
+        flex-shrink: 0;
+    }
+    .league-kpi-card {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 8px;
+        padding: 5px 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .league-kpi-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+    .league-kpi-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+    .league-kpi-lbl {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .league-kpi-val {
+        font-size: 13px;
+        font-weight: 900;
+        color: #ffffff;
+        font-family: 'Chakra Petch', sans-serif;
+        line-height: 1.1;
+        white-space: nowrap;
+    }
+
+    /* ── League Footer Strip ── */
+    .league-footer-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 5px 10px;
+        background: rgba(15, 23, 42, 0.85);
+        border-top: 1px solid var(--border);
+        border-radius: 0 0 8px 8px;
+        font-size: 9.5px;
+        color: #94a3b8;
+        margin-top: 4px;
+        flex-shrink: 0;
+    }
+
+    /* ── Football League Table Wrap ── */
+    .league-table-wrap {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        min-height: 0;
+        position: relative;
+    }
+
+    .league-thead {
+        display: grid;
+        grid-template-columns: 34px 1fr 38px 68px 84px 34px 34px 34px 34px 34px 36px;
+        gap: 2px;
+        padding: 6px 6px;
+        background: rgba(15, 23, 42, 0.95);
+        border-bottom: 1.5px solid var(--border-bright);
+        font-size: 9.5px;
+        font-weight: 800;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        border-radius: 8px 8px 0 0;
+        flex-shrink: 0;
+        align-items: center;
+    }
+
+    /* Auto-scrolling body container */
+    .league-tbody-scroll-container {
+        flex: 1;
+        overflow-y: hidden;
+        position: relative;
+        min-height: 0;
+    }
+
+    .league-tbody-scroll-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 4px 0;
+        transition: transform 0.1s linear;
+        will-change: transform;
+    }
+
+    .league-row {
+        display: grid;
+        grid-template-columns: 34px 1fr 38px 68px 84px 34px 34px 34px 34px 34px 36px;
+        gap: 2px;
+        padding: 5px 6px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 6px;
+        align-items: center;
+        transition: all 0.2s ease;
+    }
+    .league-row:hover {
+        background: rgba(56, 189, 248, 0.08);
+        border-color: rgba(56, 189, 248, 0.3);
+    }
+
+    .league-tr-champions {
+        border-left: 3.5px solid #fbbf24 !important;
+        background: rgba(251, 191, 36, 0.06);
+    }
+    .league-tr-ucl {
+        border-left: 3.5px solid #38bdf8 !important;
+        background: rgba(56, 189, 248, 0.04);
+    }
+    .league-tr-europa {
+        border-left: 3.5px solid #34d399 !important;
+        background: rgba(52, 211, 153, 0.03);
+    }
+    .league-tr-relegation {
+        border-left: 3.5px solid #ef4444 !important;
+        background: rgba(239, 68, 68, 0.1) !important;
+    }
+
+    /* Rank Badges */
+    .league-rank-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1px 4px;
+        min-width: 24px;
+        border-radius: 4px;
+        font-weight: 900;
+        font-size: 10px;
+        background: rgba(255, 255, 255, 0.06);
+        color: #cbd5e1;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        font-family: 'Chakra Petch', sans-serif;
+    }
+    .rank-pill-1 { background: linear-gradient(135deg, #fbbf24, #d97706); color: #000; box-shadow: 0 0 8px rgba(251, 191, 36, 0.6); }
+    .rank-pill-2 { background: linear-gradient(135deg, #38bdf8, #0284c7); color: #000; }
+    .rank-pill-3 { background: linear-gradient(135deg, #34d399, #059669); color: #000; }
+    .rank-pill-relegation { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; }
+
+    /* Football Club Shield Badge */
+    .club-info {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+    }
+    .football-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 25px;
+        color: #ffffff;
+        font-weight: 900;
+        font-size: 8px;
+        clip-path: polygon(0% 0%, 100% 0%, 100% 70%, 50% 100%, 0% 70%);
+        margin-right: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        vertical-align: middle;
+        text-transform: uppercase;
+        flex-shrink: 0;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+        text-shadow: 1px 1px 0px rgba(0,0,0,0.6);
+    }
+    .club-name-box {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        line-height: 1.15;
+    }
+    .club-name {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #ffffff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .club-tag {
+        font-size: 9px;
+        color: #94a3b8;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Stats columns */
+    .stat-num {
+        font-size: 11px;
+        font-weight: 700;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Percentage Column with Neon Progress Bar */
+    .pct-box {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding-right: 4px;
+    }
+    .pct-val {
+        font-size: 11px;
+        font-weight: 900;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        font-family: 'Chakra Petch', sans-serif;
+    }
+    .pct-bar-bg {
+        width: 100%;
+        height: 3.5px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    .pct-bar-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.5s ease;
+    }
+
+    /* 5-Pillar Form Badges (W D L) */
+    .form-dots {
+        display: flex;
+        align-items: center;
+        gap: 1.5px;
+        justify-content: center;
+    }
+    .league-form-dot {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        font-weight: 850;
+        font-size: 7.5px;
+        color: #ffffff;
+        text-transform: uppercase;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .dot-w { background: #10b981; }
+    .dot-d { background: #f59e0b; }
+    .dot-l { background: #ef4444; }
+
+    /* Pillar Rate Cell */
+    .pillar-cell {
+        font-size: 10px;
+        font-weight: 700;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Zona Degradasi Divider */
+    .relegation-divider {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        margin: 6px 0 2px 0;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px dashed rgba(239, 68, 68, 0.5);
+        border-radius: 6px;
+        font-size: 9.5px;
+        font-weight: 800;
+        color: #f87171;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    }
+    .form-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        font-size: 8.5px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #000;
+    }
+    .form-w { background: #34d399; }
+    .form-d { background: #fbbf24; }
+    .form-l { background: #ef4444; color: #fff; }
+
+    /* League Status Tag */
+    .league-status-badge {
+        font-size: 9.5px;
+        font-weight: 800;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-align: center;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       RIGHT COLUMN: F1 GRAND PRIX SAFETY RACE CIRCUIT & TELEMETRY
+       ══════════════════════════════════════════════════════════════════════════ */
+    .f1-container {
+        display: grid;
+        grid-template-rows: auto auto 1.35fr 1fr;
+        gap: 8px;
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    /* F1 Telemetry Top Quick Cards */
+    .f1-top-cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+    .f1-card {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 7px 10px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .f1-card-lbl {
+        font-size: 9.5px;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .f1-card-val {
+        font-size: 14px;
+        font-weight: 900;
+        color: #ffffff;
+        font-family: 'Chakra Petch', sans-serif;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 1px;
+    }
+
+    /* ── Sector Speed Trap & Leaders Bar ── */
+    .sector-leader-bar {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        flex-shrink: 0;
+    }
+    .sector-leader-card {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 5px 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .sector-leader-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 9.5px;
+        font-weight: 700;
+        color: #cbd5e1;
+        text-transform: uppercase;
+    }
+    .sector-leader-val {
+        font-family: 'Chakra Petch', sans-serif;
+        font-size: 11.5px;
+        font-weight: 900;
+        color: #38bdf8;
+    }
+
+    /* ── The 4-Lane F1 Race Circuit Track ── */
+    .racetrack-panel {
+        background: #080d1a;
+        border: 1px solid var(--border-bright);
+        border-radius: var(--r);
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8), 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Track Markers & Curbs Background */
+    .track-grid-header {
+        display: flex;
+        justify-content: space-between;
+        padding: 0 24px 0 0;
+        font-size: 10.5px;
+        font-weight: 800;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+    }
+
+    .race-lanes-wrap {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        justify-content: space-around;
+        position: relative;
+        min-height: 0;
+    }
+
+    .race-lane {
+        height: 76px;
+        background: #090f1d;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        box-shadow: inset 0 3px 12px rgba(0,0,0,0.8);
+        overflow: visible;
+    }
+
+    /* Rumble Curbs (Red & White F1 Track Edge) */
+    .race-lane::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 3.5px;
+        background: repeating-linear-gradient(90deg, #ef4444, #ef4444 14px, #ffffff 14px, #ffffff 28px);
+        opacity: 0.9;
+        border-radius: 12px 12px 0 0;
+    }
+    .race-lane::after {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; right: 0; height: 3.5px;
+        background: repeating-linear-gradient(90deg, #ef4444, #ef4444 14px, #ffffff 14px, #ffffff 28px);
+        opacity: 0.9;
+        border-radius: 0 0 12px 12px;
+    }
+
+    /* Track Start Grid & Sector Lines */
+    .track-start-line {
+        position: absolute;
+        left: 270px;
+        top: 0; bottom: 0; width: 3px;
+        background: rgba(255, 255, 255, 0.4);
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+    }
+    .track-line-s1 {
+        position: absolute;
+        left: calc(270px + 0.33 * (100% - 310px));
+        top: 0; bottom: 0; width: 1px;
+        border-left: 1.5px dashed rgba(56, 189, 248, 0.4);
+    }
+    .track-line-s2 {
+        position: absolute;
+        left: calc(270px + 0.66 * (100% - 310px));
+        top: 0; bottom: 0; width: 1px;
+        border-left: 1.5px dashed rgba(52, 211, 153, 0.4);
+    }
+    .track-finish-line {
+        position: absolute;
+        right: 18px;
+        top: 0; bottom: 0; width: 18px;
+        background: repeating-conic-gradient(#000 0% 25%, #fff 0% 50%) 50% / 6px 6px;
+        opacity: 0.95;
+        border-left: 3px solid #fbbf24;
+        box-shadow: 0 0 16px rgba(251, 191, 36, 0.8);
+        border-radius: 0 8px 8px 0;
+    }
+
+    /* Team Label Box (Left Side of Lane - 270px WIDE & CRYSTAL CLEAR) */
+    .team-hud-label {
+        width: 270px;
+        padding: 8px 14px;
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background: linear-gradient(90deg, rgba(8, 14, 28, 0.98) 85%, rgba(8, 14, 28, 0));
+        height: 100%;
+        border-radius: 10px 0 0 10px;
+        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        flex-shrink: 0;
+    }
+    .team-hud-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2px;
+    }
+    .team-hud-pos {
+        font-size: 11px;
+        font-weight: 900;
+        font-family: 'Chakra Petch', sans-serif;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        letter-spacing: 0.5px;
+    }
+    .team-pos-pill {
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.4px;
+    }
+    .team-code-pill {
+        background: rgba(255, 255, 255, 0.08);
+        color: #e2e8f0;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 800;
+    }
+    .team-hud-name {
+        font-size: 13.5px;
+        font-weight: 800;
+        color: #ffffff;
+        line-height: 1.25;
+        letter-spacing: 0.2px;
+        margin: 2px 0;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .team-hud-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 10px;
+        color: #94a3b8;
+        font-weight: 700;
+        margin-top: 1px;
+    }
+    .team-hud-speed {
+        font-size: 11px;
+        font-weight: 800;
+        font-family: 'Orbitron', monospace;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Dynamic F1 Car Container */
+    .f1-car-positioner {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        transition: left 1.8s cubic-bezier(0.34, 1.3, 0.64, 1);
+        z-index: 10;
+        display: flex;
+        align-items: center;
+    }
+
+    /* F1 Race Car SVG Container (LARGE, VIBRANT & HIGH RESOLUTION) */
+    .f1-car-sprite {
+        width: 148px;
+        height: 48px;
+        filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.95));
+        position: relative;
+        animation: f1DriveMotion 0.16s infinite alternate ease-in-out;
+    }
+    @@keyframes f1DriveMotion {
+        0%   { transform: translateY(0px) scale(1) rotate(0deg); }
+        50%  { transform: translateY(-1.2px) scale(1.008) rotate(-0.3deg); }
+        100% { transform: translateY(0.5px) scale(0.998) rotate(0.2deg); }
+    }
+
+    /* Nitro / Plasma Jet Flame Stream */
+    .exhaust-nitro-stream {
+        position: absolute;
+        left: -32px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 36px;
+        height: 18px;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+    .nitro-flame-core {
+        position: absolute;
+        right: 0;
+        width: 26px;
+        height: 10px;
+        background: radial-gradient(ellipse at right, #ffffff 0%, #00f0ff 45%, #3b82f6 75%, transparent 100%);
+        border-radius: 50% 0 0 50%;
+        filter: blur(0.8px) drop-shadow(0 0 8px #00f0ff);
+        animation: nitroCoreFlicker 0.08s infinite alternate ease-in-out;
+    }
+    .nitro-flame-outer {
+        position: absolute;
+        right: -6px;
+        width: 38px;
+        height: 18px;
+        background: radial-gradient(ellipse at right, rgba(255, 0, 119, 0.9) 0%, rgba(245, 158, 11, 0.7) 45%, transparent 80%);
+        border-radius: 50% 0 0 50%;
+        filter: blur(2.5px);
+        animation: nitroOuterBlast 0.12s infinite alternate ease-in-out;
+    }
+    @@keyframes nitroCoreFlicker {
+        0%   { transform: scaleX(0.85) scaleY(0.9); opacity: 0.8; }
+        100% { transform: scaleX(1.35) scaleY(1.25); opacity: 1; filter: blur(0.5px) drop-shadow(0 0 12px #00f0ff); }
+    }
+    @@keyframes nitroOuterBlast {
+        0%   { transform: scaleX(0.9) scaleY(0.85); opacity: 0.6; }
+        100% { transform: scaleX(1.4) scaleY(1.3); opacity: 0.95; }
+    }
+
+    /* Rain Safety LED Flashing */
+    @@keyframes rainLedBlink {
+        0%, 100% { opacity: 1; filter: drop-shadow(0 0 8px #ef4444); }
+        50%      { opacity: 0.15; filter: none; }
+    }
+
+    /* Car Overhead Floating Telemetry Badge */
+    .car-hud-badge {
+        position: absolute;
+        top: -21px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(8, 13, 26, 0.97);
+        border: 1.5px solid var(--border-bright);
+        border-radius: 6px;
+        padding: 2px 9px;
+        font-size: 10.5px;
+        font-weight: 900;
+        color: #fff;
+        white-space: nowrap;
+        font-family: 'Chakra Petch', sans-serif;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* Pit Stop State Box */
+    .pit-box-mode {
+        position: absolute;
+        left: 285px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px dashed rgba(239, 68, 68, 0.7);
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-size: 11.5px;
+        font-weight: 800;
+        color: #f87171;
+        box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       BOTTOM RIGHT: F1 RACE WINNER DRIVER PROFILE & PADDOCK GARAGE GRID
+       ══════════════════════════════════════════════════════════════════════════ */
+    .f1-bottom-grid {
+        display: grid;
+        grid-template-columns: 46% 54%;
+        gap: 10px;
+        min-height: 0;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    /* ── F1 Grand Prix Driver Carousel & 6-Pillar SAP Telemetry Panel ── */
+    .driver-winner-panel {
+        background: linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(8, 14, 28, 0.99));
+        border: 1.5px solid rgba(251, 191, 36, 0.4);
+        border-radius: var(--r);
+        padding: 8px 12px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), inset 0 0 30px rgba(0, 0, 0, 0.5);
+        transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+    .driver-winner-panel::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 3.5px;
+        background: var(--active-driver-grad, linear-gradient(90deg, #fbbf24, #f59e0b, #ef4444));
+        box-shadow: 0 0 14px rgba(251, 191, 36, 0.8);
+        transition: all 0.4s ease;
+    }
+    .driver-winner-hdr {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        flex-shrink: 0;
+    }
+    .driver-winner-title {
+        font-size: 11px;
+        font-weight: 800;
+        color: #f1f5f9;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+    }
+    
+    /* 4-Team Position Tabs (POS 1, POS 2, POS 3, POS 4) */
+    .driver-team-tabs {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .driver-team-pill {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #94a3b8;
+        padding: 3px 10px;
+        border-radius: 5px;
+        font-size: 10px;
+        font-weight: 900;
+        font-family: 'Chakra Petch', sans-serif;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        letter-spacing: 0.4px;
+    }
+    .driver-team-pill .driver-tab-pos {
+        font-weight: 900;
+        font-size: 9.5px;
+        padding: 1px 5px;
+        border-radius: 3px;
+        background: rgba(0, 0, 0, 0.35);
+    }
+    .driver-team-pill:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+    }
+    .driver-team-pill.active {
+        color: #000 !important;
+        font-weight: 900;
+        box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+    }
+
+    /* ── Main Body Split ── */
+    .driver-winner-body {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 155px 1fr;
+        gap: 12px;
+        align-items: stretch;
+        min-height: 0;
+        height: 100%;
+    }
+
+    /* Left: Driver Persona Box */
+    .driver-persona-col {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        height: 100%;
+        justify-content: space-between;
+        min-height: 0;
+    }
+    .driver-avatar-wrap {
+        position: relative;
+        width: 100%;
+        flex: 1;
+        min-height: 140px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #090f1d;
+        border: 2px solid #fbbf24;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.7);
+        transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+    .driver-avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top center;
+        transition: transform 0.4s ease;
+    }
+    .driver-avatar-img:hover {
+        transform: scale(1.05);
+    }
+    .driver-number-stamp {
+        position: absolute;
+        bottom: 2px;
+        right: 4px;
+        font-family: 'Orbitron', monospace;
+        font-size: 15px;
+        font-weight: 900;
+        color: #ffffff;
+        text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 0 4px #000;
+        font-style: italic;
+    }
+    .driver-flag-badge {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        background: rgba(0,0,0,0.75);
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 7.5px;
+        font-weight: 800;
+        color: #fff;
+    }
+    .driver-speed-bar {
+        background: rgba(0, 0, 0, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        padding: 4px 6px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 3px;
+        align-items: center;
+        text-align: center;
+        font-family: 'Chakra Petch', sans-serif;
+        flex-shrink: 0;
+    }
+    .driver-speed-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        line-height: 1.1;
+    }
+    .driver-speed-lbl {
+        font-size: 7px;
+        color: #94a3b8;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+    .driver-speed-num {
+        font-size: 10.5px;
+        font-weight: 900;
+        font-family: 'Orbitron', monospace;
+    }
+
+    /* Right: Full 6 SAP Pillars Loading Bar Telemetry Matrix */
+    .driver-sap-col {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+        min-width: 0;
+        gap: 6px;
+    }
+    .driver-team-header-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 4px 8px;
+        border-radius: 6px;
+        flex-shrink: 0;
+    }
+    .driver-comp-title {
+        font-size: 12px;
+        font-weight: 900;
+        color: #ffffff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        letter-spacing: 0.3px;
+    }
+    .driver-pjo-title {
+        font-size: 9.5px;
+        font-weight: 700;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .driver-status-badge {
+        font-size: 9px;
+        font-weight: 900;
+        padding: 2px 7px;
+        border-radius: 4px;
+        letter-spacing: 0.4px;
+        font-family: 'Chakra Petch', sans-serif;
+        flex-shrink: 0;
+    }
+
+    /* 6-Pillar Loading Bar Grid (2 Columns x 3 Rows - Stretch to fill available height) */
+    .driver-telemetry-loading-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 5px 10px;
+        flex: 1;
+        align-content: stretch;
+    }
+    .sap-loading-meter {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 5px;
+        padding: 4px 8px;
+        transition: all 0.2s ease;
+    }
+    .sap-loading-meter:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.16);
+    }
+    .sap-meter-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 9px;
+        line-height: 1.2;
+    }
+    .sap-meter-title {
+        font-weight: 800;
+        color: #e2e8f0;
+        letter-spacing: 0.3px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        text-transform: uppercase;
+    }
+    .sap-meter-counts {
+        font-size: 8px;
+        color: #94a3b8;
+        font-weight: 700;
+        font-family: 'Chakra Petch', sans-serif;
+    }
+    .sap-meter-pct {
+        font-size: 11px;
+        font-weight: 900;
+        font-family: 'Orbitron', monospace;
+    }
+    .sap-loading-track {
+        height: 7px;
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 3.5px;
+        overflow: hidden;
+        position: relative;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.8);
+    }
+    .sap-loading-bar {
+        height: 100%;
+        border-radius: 3.5px;
+        transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+    }
+    .sap-loading-bar::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 100%);
+        animation: sapMeterShimmer 2.2s infinite;
+    }
+    @@keyframes sapMeterShimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    /* Bottom Telemetry Footer Strip (Eliminate any remaining vertical blank) */
+    .driver-telemetry-footer-bar {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        padding: 3.5px 8px;
+        border-radius: 5px;
+        font-size: 8px;
+        font-weight: 800;
+        font-family: 'Chakra Petch', sans-serif;
+        flex-shrink: 0;
+    }
+    .telemetry-footer-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 4px;
+        border-right: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .telemetry-footer-item:last-child {
+        border-right: none;
+    }
+
+    /* ── Paddock Fast Lane Fleet Panel ── */
+    .mge-fleet-panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 9px 12px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        min-height: 0;
+        position: relative;
+    }
+    .mge-fleet-title {
+        font-size: 11.5px;
+        font-weight: 800;
+        color: #34d399;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        flex-shrink: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .mge-fleet-thead {
+        display: grid;
+        grid-template-columns: 32px 1fr 42px 42px 75px 68px 75px;
+        gap: 4px;
+        padding: 4px 6px;
+        background: rgba(15, 23, 42, 0.8);
+        border-bottom: 1px solid var(--border);
+        font-size: 8.5px;
+        font-weight: 800;
+        color: #94a3b8;
+        text-transform: uppercase;
+        border-radius: 6px 6px 0 0;
+        flex-shrink: 0;
+        align-items: center;
+    }
+    .mge-fleet-scroll-wrap {
+        flex: 1;
+        overflow-y: hidden;
+        position: relative;
+        min-height: 0;
+    }
+    .mge-fleet-scroll-content {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 3px 0;
+        transition: transform 0.1s linear;
+    }
+    .mge-child-row {
+        display: grid;
+        grid-template-columns: 32px 1fr 42px 42px 75px 68px 75px;
+        gap: 4px;
+        padding: 4px 6px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 5px;
+        align-items: center;
+        font-size: 10px;
+        transition: background 0.15s ease;
+    }
+    .mge-child-row:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.09);
+    }
+    .mge-child-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 700;
+        color: #fff;
+    }
+    /* ── Screen Flash Effect ── */
+    .screen-flash { position: fixed; inset: 0; background: #38bdf8; z-index: 9999; opacity: 0; pointer-events: none; }
+    .screen-flash.flash { animation: flashAnim 1.2s ease-out; }
+    @@keyframes flashAnim { 0%{opacity:0} 25%{opacity:.2} 100%{opacity:0} }
+
+    /* ── Premium Notification Alert Card ── */
+    .notif-card {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        width: 440px;
+        background: rgba(10, 16, 32, 0.96);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        border-radius: 16px;
+        z-index: 10000;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 35px rgba(56, 189, 248, 0.25);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transform: translateX(120%) scale(0.9);
+        opacity: 0;
+        transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: none;
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+    }
+    .notif-card.show {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+    }
+    .notif-card-progress {
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        width: 100%;
+    }
+    .notif-card-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        font-size: 11.5px;
+        font-weight: 800;
+        color: #38bdf8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .notif-card-body {
+        display: grid;
+        grid-template-columns: 110px 1fr;
+        gap: 12px;
+        padding: 14px 16px;
+        align-items: center;
+    }
+    .notif-card-img {
+        width: 110px;
+        height: 110px;
+        object-fit: cover;
+        border-radius: 10px;
+        background: #0f172a;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .notif-card-noimg {
+        width: 110px;
+        height: 110px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        font-size: 32px;
+    }
+    .notif-card-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+    .notif-card-user-loc {
+        font-size: 10.5px;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .notif-card-title {
+        font-size: 13px;
+        font-weight: 800;
+        color: #ffffff;
+        line-height: 1.25;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .notif-card-desc {
+        font-size: 11px;
+        color: #cbd5e1;
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    </style>
+</head>
+<body>
+
+<!-- Screen Flash on New Data -->
+<div class="screen-flash" id="screenFlash"></div>
+
+<!-- 5-Minute Slide Progress Bar -->
+<div class="slide-progress-container">
+    <div class="slide-progress-bar" id="slideProgressBar"></div>
+</div>
+
+<div class="tv">
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         HEADER
+         ══════════════════════════════════════════════════════════════════════ -->
+    <header class="tv-hdr">
+        <div class="hdr-brand">
+            <img src="~/images/logo_mbs.png" style="height: 38px; width: auto; object-fit: contain; filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.3));" alt="MBS Logo" />
+            <div>
+                <div class="hdr-title">
+                    <span>Mari Berbudaya Safety</span>
+                    <span style="font-size: 11px; font-weight: 800; background: linear-gradient(135deg, #fbbf24, #ef4444); color: #000; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Display 2</span>
+                </div>
+                <div class="hdr-sub">Klasemen Liga Keselamatan &amp; F1 Grand Prix Telemetry</div>
+            </div>
+        </div>
+
+        <!-- 5-Minute Slide Transition Bar Controller -->
+        <div class="slide-indicator-widget">
+            <div class="slide-pill">
+                <i class="bi bi-display"></i> Slide 2 / 2
+            </div>
+            <div class="slide-timer-text">
+                <i class="bi bi-clock-history" style="color:#38bdf8;"></i> Ganti ke Display 1 dalam: <span id="slideCountdown">05:00</span>
+            </div>
+            <a href="/Display" class="slide-btn" title="Pindah ke Display 1 sekarang">
+                <i class="bi bi-arrow-left-right"></i> Display 1
+            </a>
+            <button class="slide-btn" id="togglePauseBtn" onclick="togglePauseSlide()" title="Jeda rotasi otomatis">
+                <i class="bi bi-pause-fill" id="pauseIcon"></i> <span id="pauseText">Jeda</span>
+            </button>
+        </div>
+
+        <div class="hdr-center">
+            <!-- Audio Unlock Alert Badge (if autoplay restricted) -->
+            <div class="audio-unlock-badge" id="audioUnlockBadge" onclick="unlockAudio()" title="Klik untuk mengaktifkan audio notifikasi suara" style="display:none; cursor:pointer; background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#fca5a5; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800;">
+                <i class="bi bi-volume-mute-fill"></i> Klik Aktifkan Suara
+            </div>
+            <div class="refresh-badge">
+                <span class="sonar-ping"></span>
+                <span class="refresh-label">LIVE CIRCUIT</span>
+            </div>
+        </div>
+
+        <div class="hdr-clock">
+            <div class="clock-time" id="liveClock">--:--:--</div>
+            <div class="clock-date" id="liveDate">--</div>
+        </div>
+    </header>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         RUNNING TEXT TICKER
+         ══════════════════════════════════════════════════════════════════════ -->
+    <div class="running-text-wrap">
+        <div class="marquee-badge">
+            <i class="bi bi-flag-fill"></i> RACE BULLETIN
+        </div>
+        <div class="marquee-container">
+            <div class="marquee-text" id="marqueeText">
+                🏁 SAFETY GRAND PRIX &amp; PREMIER LEAGUE &mdash; Pacu Kepatuhan K3 Menuju Zero Incident! &bull; PT INDEXIM COALINDO &amp; SELURUH MITRA KERJA
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         MAIN SPLIT: LEAGUE STANDINGS (LEFT) + F1 CIRCUIT (RIGHT)
+         ══════════════════════════════════════════════════════════════════════ -->
+    <div class="tv-main-grid">
+
+        <!-- ── LEFT: PREMIER LEAGUE FOOTBALL STANDINGS BOARD ── -->
+        <div class="glass-panel" style="padding: 10px 12px;">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">
+                        <i class="bi bi-trophy-fill" style="color:#fbbf24;"></i>
+                        <span id="leaguePanelTitle">Liga Safety Perusahaan Inti</span>
+                    </div>
+                    <div class="panel-subtitle">Evaluasi &amp; Klasemen 5 Pilar K3 (Model Sepak Bola)</div>
+                </div>
+                <!-- View Switcher Tabs + Auto-Rotate Countdown -->
+                <div class="league-view-tabs">
+                    <div class="tab-rotator-pill" title="Rotasi otomatis tab bergantian setiap 1,5 menit">
+                        <i class="bi bi-arrow-repeat spin-icon"></i>
+                        <span id="tabCountdown">01:30</span>
+                    </div>
+                    <button class="tab-btn active" id="tabCoreBtn" onclick="switchLeagueTab('core')" title="Tampilkan Liga Perusahaan Inti">
+                        <i class="bi bi-star-fill" style="color:#fbbf24;"></i> Liga Inti (<span id="coreCountBadge">19</span>)
+                    </button>
+                    <button class="tab-btn" id="tabAllBtn" onclick="switchLeagueTab('all')" title="Tampilkan Seluruh Mitra Kerja">
+                        <i class="bi bi-globe"></i> Semua Mitra (<span id="allCountBadge">106</span>)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Live Safety Pulse Matrix KPI Bar -->
+            <div class="league-kpi-bar">
+                <div class="league-kpi-card" style="border-left: 2.5px solid #38bdf8;">
+                    <div class="league-kpi-icon" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;"><i class="bi bi-people-fill"></i></div>
+                    <div class="league-kpi-info">
+                        <div class="league-kpi-lbl">Total Skuad</div>
+                        <div class="league-kpi-val" id="kpiSquadVal">-- Org</div>
+                    </div>
+                </div>
+                <div class="league-kpi-card" style="border-left: 2.5px solid #fbbf24;">
+                    <div class="league-kpi-icon" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24;"><i class="bi bi-speedometer2"></i></div>
+                    <div class="league-kpi-info">
+                        <div class="league-kpi-lbl">Rata-Rata Capaian</div>
+                        <div class="league-kpi-val" id="kpiAvgVal">--%</div>
+                    </div>
+                </div>
+                <div class="league-kpi-card" style="border-left: 2.5px solid #34d399;">
+                    <div class="league-kpi-icon" style="background: rgba(52, 211, 153, 0.15); color: #34d399;"><i class="bi bi-shield-fill-check"></i></div>
+                    <div class="league-kpi-info">
+                        <div class="league-kpi-lbl">Zona Hijau (≥80%)</div>
+                        <div class="league-kpi-val" id="kpiGreenVal">-- Tim</div>
+                    </div>
+                </div>
+                <div class="league-kpi-card" style="border-left: 2.5px solid #ef4444;">
+                    <div class="league-kpi-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;"><i class="bi bi-exclamation-octagon-fill"></i></div>
+                    <div class="league-kpi-info">
+                        <div class="league-kpi-lbl">Zona Rawan / Deg</div>
+                        <div class="league-kpi-val" id="kpiRedVal">-- Tim</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1. VIEW PERUSAHAAN INTI (FOOTBALL STANDINGS TABLE) -->
+            <div class="league-table-wrap" id="coreStandingsView">
+                <div class="league-thead">
+                    <div style="text-align:center;">POS</div>
+                    <div>KLUB (PERUSAHAAN)</div>
+                    <div style="text-align:center;" title="Jumlah Skuad Karyawan">SKUAD</div>
+                    <div style="text-align:right;" title="Points / % Capaian MTD">PTS (%)</div>
+                    <div style="text-align:center;" title="Form 5 Pilar (W/D/L)">FORM</div>
+                    <div style="text-align:center;" title="Hazard Report">HZ</div>
+                    <div style="text-align:center;" title="Inspeksi">IP</div>
+                    <div style="text-align:center;" title="Safety Talk">ST</div>
+                    <div style="text-align:center;" title="Observasi">OB</div>
+                    <div style="text-align:center;" title="Coaching">CC</div>
+                    <div style="text-align:center; color:#fbbf24;" title="P5M">P5M</div>
+                </div>
+
+                <div class="league-tbody-scroll-container" id="coreScrollBox" onmouseenter="isCorePaused=true" onmouseleave="isCorePaused=false">
+                    <div class="league-tbody-scroll-content" id="coreTableBody">
+                        <div style="text-align:center; padding: 40px; color: var(--muted);">
+                            <div class="spinner-border spinner-border-sm text-warning" role="status"></div> Memuat klasemen liga perusahaan inti...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. VIEW ALL CONTRACTORS (SUPER LEAGUE TABLE) -->
+            <div class="league-table-wrap" id="allStandingsView" style="display: none;">
+                <div class="league-thead">
+                    <div style="text-align:center;">POS</div>
+                    <div>KLUB (PERUSAHAAN)</div>
+                    <div style="text-align:center;" title="Jumlah Skuad Karyawan">SKUAD</div>
+                    <div style="text-align:right;" title="Points / % Capaian MTD">PTS (%)</div>
+                    <div style="text-align:center;" title="Form 5 Pilar (W/D/L)">FORM</div>
+                    <div style="text-align:center;" title="Hazard Report">HZ</div>
+                    <div style="text-align:center;" title="Inspeksi">IP</div>
+                    <div style="text-align:center;" title="Safety Talk">ST</div>
+                    <div style="text-align:center;" title="Observasi">OB</div>
+                    <div style="text-align:center;" title="Coaching">CC</div>
+                    <div style="text-align:center; color:#fbbf24;" title="P5M">P5M</div>
+                </div>
+
+                <div class="league-tbody-scroll-container" id="leagueScrollBox" onmouseenter="isLeaguePaused=true" onmouseleave="isLeaguePaused=false">
+                    <div class="league-tbody-scroll-content" id="leagueTableBody">
+                        <div style="text-align:center; padding: 40px; color: var(--muted);">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div> Memuat data semua mitra...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom League Standings Legend & Aggregate Bar -->
+            <div class="league-footer-strip">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span><i class="bi bi-info-circle-fill" style="color:#38bdf8;"></i> Legend:</span>
+                    <span>🥇 <strong>Juara</strong></span> &bull;
+                    <span>🥈 <strong>Podium</strong></span> &bull;
+                    <span style="color:#38bdf8;">🔵 <strong>UCL</strong></span> &bull;
+                    <span style="color:#34d399;">🟢 <strong>Europa</strong></span> &bull;
+                    <span style="color:#ef4444;">🔴 <strong>Degradasi (0%)</strong></span>
+                </div>
+                <div>
+                    <span>Total Realisasi: <strong id="kpiTotalLapsVal" style="color:#fff; font-family:'Chakra Petch', sans-serif;">--</strong> Laps</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── RIGHT: F1 GRAND PRIX RACE CIRCUIT & TELEMETRY ── -->
+        <div class="f1-container">
+
+            <!-- F1 Quick Telemetry Stat Cards -->
+            <div class="f1-top-cards">
+                <div class="f1-card" style="border-left: 3px solid #fbbf24;">
+                    <div class="f1-card-lbl"><i class="bi bi-award-fill" style="color:#fbbf24;"></i> Pole Position (P1)</div>
+                    <div class="f1-card-val" id="poleLeaderName">--</div>
+                </div>
+                <div class="f1-card" style="border-left: 3px solid #00d2ff;">
+                    <div class="f1-card-lbl"><i class="bi bi-speedometer2" style="color:#00d2ff;"></i> Top Speed</div>
+                    <div class="f1-card-val" id="topSpeedVal">-- km/h</div>
+                </div>
+                <div class="f1-card" style="border-left: 3px solid #34d399;">
+                    <div class="f1-card-lbl"><i class="bi bi-shield-check" style="color:#34d399;"></i> Track Status</div>
+                    <div class="f1-card-val" id="trackStatusVal" style="color:#34d399;">GREEN FLAG</div>
+                </div>
+                <div class="f1-card" style="border-left: 3px solid #f472b6;">
+                    <div class="f1-card-lbl"><i class="bi bi-stopwatch" style="color:#f472b6;"></i> Safe Days</div>
+                    <div class="f1-card-val" id="safeDaysVal">-- HARI</div>
+                </div>
+            </div>
+
+            <!-- Sector Leaders & Speed Trap Telemetry Strip -->
+            <div class="sector-leader-bar">
+                <div class="sector-leader-card" style="border-left: 2.5px solid #ef4444;">
+                    <div class="sector-leader-title">
+                        <i class="bi bi-exclamation-triangle-fill" style="color:#ef4444;"></i> Sector 1 (Hazard)
+                    </div>
+                    <div class="sector-leader-val" id="sec1LeaderVal">--</div>
+                </div>
+                <div class="sector-leader-card" style="border-left: 2.5px solid #38bdf8;">
+                    <div class="sector-leader-title">
+                        <i class="bi bi-clipboard2-check-fill" style="color:#38bdf8;"></i> Sector 2 (Inspeksi/Talk)
+                    </div>
+                    <div class="sector-leader-val" id="sec2LeaderVal">--</div>
+                </div>
+                <div class="sector-leader-card" style="border-left: 2.5px solid #a855f7;">
+                    <div class="sector-leader-title">
+                        <i class="bi bi-person-video3" style="color:#a855f7;"></i> Sector 3 (Coach/Obs)
+                    </div>
+                    <div class="sector-leader-val" id="sec3LeaderVal">--</div>
+                </div>
+            </div>
+
+            <!-- F1 4-Lane Circuit Track -->
+            <div class="racetrack-panel">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                    <div style="font-size:12px; font-weight:800; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.8px; display:flex; align-items:center; gap:6px;">
+                        <i class="bi bi-flag-fill" style="color:#ef4444;"></i> F1 Grand Prix Safety Race Track &mdash; Real-Time Telemetry
+                    </div>
+                    <div style="font-size:10.5px; font-weight:800; color:#38bdf8; font-family:'Orbitron', monospace;">
+                        🏁 FINISH LINE = 100% TARGET
+                    </div>
+                </div>
+
+                <!-- Sector Markers Line -->
+                <div class="track-grid-header">
+                    <span style="width:270px; text-align:left; padding-left:14px; color:#94a3b8;"><i class="bi bi-speedometer2"></i> TEAM TELEMETRY HUD</span>
+                    <span>🏁 START GRID</span>
+                    <span>SECTOR 1 (HAZARD)</span>
+                    <span>SECTOR 2 (INSPEKSI/TALK)</span>
+                    <span>SECTOR 3 (COACH/OBS)</span>
+                    <span>FINISH (100%) 🏁</span>
+                </div>
+
+                <!-- 4 Race Lanes for the 4 Key Companies -->
+                <div class="race-lanes-wrap" id="f1LanesContainer">
+                    <!-- Populated via JS for:
+                         1. PT INDEXIM COALINDO
+                         2. PT KALIMANTAN PRIMA PERSADA
+                         3. PT UNGGUL DINAMIKA UTAMA
+                         4. PT MEGA GLOBAL ENERGY
+                    -->
+                </div>
+            </div>
+
+            <!-- Bottom Split: F1 Driver Carousel & MGE Paddock Fleet -->
+            <div class="f1-bottom-grid">
+                <!-- 1. F1 Driver & SAP 6-Pillar Telemetry Carousel Card -->
+                <div class="driver-winner-panel" id="f1DriverWinnerPanel">
+                    <div class="driver-winner-hdr">
+                        <div class="driver-winner-title">
+                            <i class="bi bi-cpu-fill" style="color:var(--accent);"></i>
+                            <span>TELEMETRY CONTROL &amp; 6 PILAR SAP</span>
+                        </div>
+                        <!-- 4-Team Position Tabs (POS 1, POS 2, POS 3, POS 4) -->
+                        <div class="driver-team-tabs" id="driverTeamTabs">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="driver-winner-body" id="driverWinnerBody">
+                        <div style="text-align:center; padding: 20px; color: var(--muted); font-size:11px;">
+                            Memuat telemetri pembalap &amp; 6 pilar SAP...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Paddock Fast Lane — Top 5 Mitra Tercepat Naik -->
+                <div class="mge-fleet-panel">
+                    <div class="mge-fleet-title">
+                        <div>
+                            <i class="bi bi-speedometer2" style="color:#34d399;"></i>
+                            <span>PADDOCK FAST LANE &mdash; TOP 5 MITRA TERCEPAT</span>
+                        </div>
+                        <span style="font-size:9.5px; color:#34d399; font-weight:800; background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.3); padding:1px 6px; border-radius:4px;" id="fastestMitraBadge">5 MITRA TERCEPAT</span>
+                    </div>
+
+                    <div class="mge-fleet-thead">
+                        <div style="text-align:center;">POS</div>
+                        <div>MITRA KERJA</div>
+                        <div style="text-align:center;">TGT</div>
+                        <div style="text-align:center;">REAL</div>
+                        <div style="text-align:right;">% CAPAIAN</div>
+                        <div style="text-align:center;">SPEED</div>
+                        <div style="text-align:center;">STATUS</div>
+                    </div>
+
+                    <div class="mge-fleet-scroll-wrap" id="fastestScrollBox" onmouseenter="isMgePaused=true" onmouseleave="isMgePaused=false">
+                        <div class="mge-fleet-scroll-content" id="fastestMitraBody">
+                            <div style="text-align:center; padding: 15px; color: var(--muted); font-size:11px;">
+                                Memuat data top 5 mitra tercepat...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     LIVE K3 ACTIVITY POPUP ALERT CARD
+     ══════════════════════════════════════════════════════════════════════ -->
+<div class="notif-card" id="notifPopup">
+    <div class="notif-card-progress" id="notifProgressBar"></div>
+    <div class="notif-card-badge">
+        <i class="bi bi-bell-fill"></i> <span id="notifTypeHeader">Laporan K3 Baru</span>
+    </div>
+    <div class="notif-card-body">
+        <div class="notif-card-img-wrap" id="notifImgContainer"></div>
+        <div class="notif-card-content">
+            <div class="notif-card-user-loc" id="notifUserLoc">--</div>
+            <div class="notif-card-title" id="notifTitle">--</div>
+            <div class="notif-card-desc" id="notifDesc">--</div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ──────────────────────────────────────────────────────────────────────────
+   AUDIO SYNTHESIZER & REAL VOICE NOTIFICATIONS
+   ────────────────────────────────────────────────────────────────────────── */
+const defaultSound = new Audio('/notifikasi/freesound_community-plopp-84863.mp3');
+defaultSound.preload = 'auto';
+
+const customSounds = {
+    'hazard': new Audio('/notifikasi/laporan hazard baru telah masuk.MP3'),
+    'inspection': new Audio('/notifikasi/LAPORAN INSPEKSI BARU TELAH MASUK.MP3'),
+    'inspeksi': new Audio('/notifikasi/LAPORAN INSPEKSI BARU TELAH MASUK.MP3'),
+    'safetytalk': new Audio('/notifikasi/SAEFTY TALK.MP3'),
+    'p5m': new Audio('/notifikasi/P5M.MP3'),
+    'observation': new Audio('/notifikasi/OBSERVASI.MP3'),
+    'coaching': new Audio('/notifikasi/COACHING.MP3')
+};
+
+defaultSound.volume = 0.05;
+defaultSound.load();
+for (const key in customSounds) {
+    customSounds[key].preload = 'auto';
+    customSounds[key].volume = key === 'hazard' ? 0.2 : 0.05;
+    customSounds[key].load();
+}
+
+function beep(type) {
+    let activeSound = defaultSound;
+    if (type && customSounds[type.toLowerCase()]) {
+        activeSound = customSounds[type.toLowerCase()];
+    }
+    activeSound.currentTime = 0;
+    activeSound.play()
+        .then(() => {
+            const badge = document.getElementById('audioUnlockBadge');
+            if (badge) badge.style.display = 'none';
+        })
+        .catch(e => {
+            console.warn("Failed to play sound: ", e);
+            const badge = document.getElementById('audioUnlockBadge');
+            if (badge) badge.style.display = 'flex';
+        });
+}
+
+function unlockAudio() {
+    defaultSound.currentTime = 0;
+    defaultSound.play()
+        .then(() => console.log("Default sound unlocked."))
+        .catch(e => console.warn(e));
+        
+    for (const key in customSounds) {
+        const sound = customSounds[key];
+        const origVolume = sound.volume;
+        sound.volume = 0;
+        sound.play()
+            .then(() => {
+                sound.pause();
+                sound.volume = origVolume;
+                sound.currentTime = 0;
+            })
+            .catch(e => console.warn(e));
+    }
+    const badge = document.getElementById('audioUnlockBadge');
+    if (badge) badge.style.display = 'none';
+}
+
+function checkAutoplay() {
+    const origVol = defaultSound.volume;
+    defaultSound.volume = 0;
+    defaultSound.play()
+        .then(() => {
+            defaultSound.pause();
+            defaultSound.volume = origVol;
+            defaultSound.currentTime = 0;
+            const badge = document.getElementById('audioUnlockBadge');
+            if (badge) badge.style.display = 'none';
+        })
+        .catch(err => {
+            defaultSound.volume = origVol;
+            const badge = document.getElementById('audioUnlockBadge');
+            if (badge) badge.style.display = 'flex';
+        });
+}
+document.addEventListener('DOMContentLoaded', () => {
+    checkAutoplay();
+
+    const badge = document.getElementById('audioUnlockBadge');
+    if (badge) {
+        badge.addEventListener('click', (e) => {
+            e.stopPropagation();
+            unlockAudio();
+        });
+    }
+
+    // Unlock on the very first interaction anywhere on the page
+    const unlockEvents = ['click', 'keydown', 'mousedown', 'pointerdown', 'touchstart'];
+    function unlockOnFirstInteraction() {
+        unlockAudio();
+        unlockEvents.forEach(evt => document.removeEventListener(evt, unlockOnFirstInteraction));
+    }
+    unlockEvents.forEach(evt => document.addEventListener(evt, unlockOnFirstInteraction, { once: true }));
+});
+
+/* ──────────────────────────────────────────────────────────────────────────
+   LIVE FEED LISTENER & ACTIVITY POPUP TRIGGER
+   ────────────────────────────────────────────────────────────────────────── */
+let lastTopKey = '';
+let isFirstFeedLoad = true;
+
+function getCardBackupBgAndIcon(type) {
+    const t = (type || '').toLowerCase();
+    if (t === 'hazard') return { bg: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', icon: 'bi-exclamation-triangle-fill' };
+    if (t === 'inspection' || t === 'inspeksi') return { bg: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', icon: 'bi-clipboard2-check-fill' };
+    if (t === 'safetytalk') return { bg: 'rgba(168, 85, 247, 0.2)', color: '#a855f7', icon: 'bi-megaphone-fill' };
+    if (t === 'p5m') return { bg: 'rgba(16, 185, 129, 0.2)', color: '#10b981', icon: 'bi-shield-fill-check' };
+    if (t === 'observation') return { bg: 'rgba(20, 184, 166, 0.2)', color: '#14b8a6', icon: 'bi-binoculars-fill' };
+    if (t === 'coaching') return { bg: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b', icon: 'bi-person-video3' };
+    return { bg: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', icon: 'bi-activity' };
+}
+
+function triggerNewAlert(item) {
+    beep(item.type || '');
+    
+    // Screen Flash Anim
+    const f = document.getElementById('screenFlash');
+    if (f) {
+        f.classList.add('flash'); 
+        setTimeout(() => f.classList.remove('flash'), 1200);
+    }
+
+    const colors = {
+        'hazard': '#ef4444',
+        'inspection': '#38bdf8',
+        'inspeksi': '#38bdf8',
+        'safetytalk': '#a855f7',
+        'p5m': '#10b981',
+        'observation': '#14b8a6',
+        'coaching': '#f59e0b'
+    };
+    const notifColor = colors[(item.type || '').toLowerCase()] || '#38bdf8';
+
+    // Populate data
+    const hdr = document.getElementById('notifTypeHeader');
+    if (hdr) hdr.innerText = `Laporan K3 Baru: ${(item.type || 'Kegiatan').toUpperCase()}`;
+    
+    const uloc = document.getElementById('notifUserLoc');
+    if (uloc) {
+        uloc.innerHTML = `<strong style="color:#fff;">${item.name || 'Karyawan'}</strong> (${item.nik || '-'}) &bull; <i class="bi bi-geo-alt-fill"></i> ${item.area || item.location || 'Site PT Indexim'}`;
+    }
+
+    const ttl = document.getElementById('notifTitle');
+    if (ttl) ttl.innerText = item.title || 'Aktivitas K3';
+
+    const desc = document.getElementById('notifDesc');
+    const descText = item.description || item.konten || '';
+    if (desc) desc.innerText = descText.length > 90 ? descText.substring(0, 90) + '...' : descText;
+
+    const imgContainer = document.getElementById('notifImgContainer');
+    const backup = getCardBackupBgAndIcon(item.type);
+    if (imgContainer) {
+        if (item.imageUrl) {
+            imgContainer.innerHTML = `<img src="${item.imageUrl}" class="notif-card-img" 
+                onerror="this.outerHTML='<div class=notif-card-noimg style=\\'background: ${backup.bg}; color: ${backup.color};\\'><i class=\\'bi ${backup.icon}\\'></i></div>'" />`;
+        } else {
+            imgContainer.innerHTML = `<div class="notif-card-noimg" style="background: ${backup.bg}; color: ${backup.color};"><i class="bi ${backup.icon}"></i></div>`;
+        }
+    }
+
+    const p = document.getElementById('notifPopup');
+    if (p) {
+        p.style.border = `1px solid ${notifColor}`;
+        p.style.boxShadow = `0 20px 50px rgba(0,0,0,0.8), 0 0 35px ${notifColor}4D`;
+
+        const progressBar = document.getElementById('notifProgressBar');
+        if (progressBar) {
+            progressBar.style.transition = 'none';
+            progressBar.style.width = '100%';
+            progressBar.style.background = `linear-gradient(90deg, ${notifColor}, #fff)`;
+        }
+
+        p.classList.add('show');
+
+        setTimeout(() => {
+            if (progressBar) {
+                progressBar.style.transition = 'width 6s linear';
+                progressBar.style.width = '0%';
+            }
+        }, 50);
+
+        setTimeout(() => {
+            p.classList.remove('show');
+        }, 6000);
+    }
+}
+
+async function fetchFeed() {
+    try {
+        const res = await fetch('/Display/GetLatestFeed');
+        if (!res.ok) return;
+        const items = await res.json();
+        if (!items || !items.length) return;
+
+        const topKey = `${items[0].type}_${items[0].id}_${items[0].createdAt}`;
+        if (topKey !== lastTopKey) {
+            const hasNew = !isFirstFeedLoad && lastTopKey !== '';
+            lastTopKey = topKey;
+            if (hasNew) {
+                triggerNewAlert(items[0]);
+                fetchDisplay2Data();
+            }
+        }
+        isFirstFeedLoad = false;
+    } catch(e) {
+        console.warn('Feed fetch error in Display 2:', e);
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   1. REALTIME DIGITAL CLOCK
+   ────────────────────────────────────────────────────────────────────────── */
+function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('liveClock').innerText = `${h}:${m}:${s}`;
+
+    const opts = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+    document.getElementById('liveDate').innerText = now.toLocaleDateString('id-ID', opts);
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ──────────────────────────────────────────────────────────────────────────
+   2. 5-MINUTE AUTO SLIDE ROTATION (/Display2 -> /Display)
+   ────────────────────────────────────────────────────────────────────────── */
+const SLIDE_DURATION_SECONDS = 300; // 5 minutes = 300 seconds
+let slideTimeRemaining = SLIDE_DURATION_SECONDS;
+let isSlidePaused = false;
+
+function updateSlideTimer() {
+    if (isSlidePaused) return;
+
+    slideTimeRemaining--;
+    if (slideTimeRemaining < 0) {
+        // Transition to Display 1
+        window.location.href = '/Display';
+        return;
+    }
+
+    const mins = Math.floor(slideTimeRemaining / 60);
+    const secs = slideTimeRemaining % 60;
+    document.getElementById('slideCountdown').innerText = 
+        `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+    const progressPct = ((SLIDE_DURATION_SECONDS - slideTimeRemaining) / SLIDE_DURATION_SECONDS) * 100;
+    document.getElementById('slideProgressBar').style.width = `${progressPct}%`;
+}
+setInterval(updateSlideTimer, 1000);
+
+function togglePauseSlide() {
+    isSlidePaused = !isSlidePaused;
+    const icon = document.getElementById('pauseIcon');
+    const text = document.getElementById('pauseText');
+    if (isSlidePaused) {
+        icon.className = 'bi bi-play-fill';
+        text.innerText = 'Lanjut';
+        document.getElementById('togglePauseBtn').style.background = 'rgba(239, 68, 68, 0.3)';
+        document.getElementById('togglePauseBtn').style.borderColor = '#ef4444';
+    } else {
+        icon.className = 'bi bi-pause-fill';
+        text.innerText = 'Jeda';
+        document.getElementById('togglePauseBtn').style.background = 'rgba(255, 255, 255, 0.06)';
+        document.getElementById('togglePauseBtn').style.borderColor = 'rgba(255, 255, 255, 0.12)';
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   3. HIGH-DEFINITION 3D F1 CAR SVG GENERATOR WITH REALISTIC RACING LIVERY
+   ────────────────────────────────────────────────────────────────────────── */
+function generateF1CarSvg(primaryColor, secondaryColor, teamCode, gridPos) {
+    const uid = `${teamCode}_${gridPos}`;
+    return `
+    <svg viewBox="0 0 190 62" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <!-- Body Gradient -->
+            <linearGradient id="bodyGrad_${uid}" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#0f172a" />
+                <stop offset="25%" stop-color="${primaryColor}" />
+                <stop offset="75%" stop-color="${secondaryColor}" />
+                <stop offset="100%" stop-color="#ffffff" />
+            </linearGradient>
+            <!-- Glossy Highlight -->
+            <linearGradient id="glossGrad_${uid}" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6" />
+                <stop offset="50%" stop-color="#ffffff" stop-opacity="0.1" />
+                <stop offset="100%" stop-color="#000000" stop-opacity="0.4" />
+            </linearGradient>
+            <!-- Carbon Fiber Wing Gradient -->
+            <linearGradient id="carbonGrad_${uid}" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#334155" />
+                <stop offset="100%" stop-color="#0f172a" />
+            </linearGradient>
+            <!-- Halo Titanium Gradient -->
+            <linearGradient id="haloGrad_${uid}" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#f8fafc" />
+                <stop offset="50%" stop-color="#94a3b8" />
+                <stop offset="100%" stop-color="#334155" />
+            </linearGradient>
+            <!-- Helmet Visor Iridescent Gradient -->
+            <linearGradient id="visorGrad_${uid}" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#fbbf24" />
+                <stop offset="50%" stop-color="#f43f5e" />
+                <stop offset="100%" stop-color="#00f0ff" />
+            </linearGradient>
+        </defs>
+
+        <!-- 1. Neon Asphalt Ground Underglow -->
+        <ellipse cx="98" cy="54" rx="80" ry="6" fill="${primaryColor}" opacity="0.65" filter="blur(3px)" />
+
+        <!-- 2. Rear Wing Assembly -->
+        <!-- Rear Wing Endplate (Carbon) -->
+        <path d="M 8 10 L 22 8 L 22 38 L 10 38 Z" fill="url(#carbonGrad_${uid})" stroke="${primaryColor}" stroke-width="1.2" />
+        <!-- Top DRS Main Aerofoil -->
+        <rect x="10" y="8" width="22" height="4.5" rx="1.5" fill="${primaryColor}" />
+        <rect x="10" y="15" width="22" height="3" rx="1" fill="#ffffff" />
+        <!-- Lower Beam Wing -->
+        <rect x="14" y="32" width="18" height="3" rx="1" fill="url(#carbonGrad_${uid})" />
+        <!-- DRS Actuator Pod -->
+        <rect x="20" y="6" width="3" height="12" rx="1" fill="#fbbf24" />
+
+        <!-- Flashing Rain/Safety LED on Rear Crash Structure -->
+        <circle cx="9" cy="35" r="2.5" fill="#ef4444" style="animation: rainLedBlink 0.5s infinite alternate;" />
+
+        <!-- 3. Rear Tire (Pirelli P-Zero Soft with Red Rim Stripe) -->
+        <!-- Tire Rubber -->
+        <rect x="24" y="8" width="22" height="42" rx="7" fill="#0b0f19" stroke="#1e293b" stroke-width="1.5" />
+        <!-- Pirelli Red Compound Outer Ring -->
+        <rect x="27" y="11" width="16" height="36" rx="5" fill="none" stroke="#ef4444" stroke-width="1.8" />
+        <!-- Wheel Rim Center & Carbon Brake Caliper Glow -->
+        <circle cx="35" cy="29" r="7" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <circle cx="35" cy="29" r="5" fill="#ff3300" opacity="0.8" />
+        <!-- Rim Spokes -->
+        <line x1="30" y1="29" x2="40" y2="29" stroke="#94a3b8" stroke-width="1.2" />
+        <line x1="35" y1="24" x2="35" y2="34" stroke="#94a3b8" stroke-width="1.2" />
+        <circle cx="35" cy="29" r="2" fill="#fbbf24" />
+
+        <!-- 4. Aerodynamic Bodywork & Sidepods -->
+        <!-- Engine Cover & Shark Fin Spine -->
+        <path d="M 22 28 L 50 20 L 78 17 L 85 24 L 60 30 L 22 34 Z" fill="url(#bodyGrad_${uid})" />
+        <path d="M 22 28 L 52 20 L 75 18 Z" fill="url(#carbonGrad_${uid})" opacity="0.7" />
+
+        <!-- Main Sculpted Chassis & Sidepod Undercut -->
+        <path d="M 26 34 L 55 33 L 95 24 L 140 33 L 172 38 L 172 41 L 140 43 L 95 44 L 55 42 L 26 40 Z" fill="url(#bodyGrad_${uid})" stroke="rgba(255,255,255,0.4)" stroke-width="0.8" />
+        <!-- Gloss Reflection Highlight -->
+        <path d="M 55 33 L 95 24 L 140 33 L 138 35 L 95 27 L 55 35 Z" fill="url(#glossGrad_${uid})" />
+
+        <!-- Side Radiator Air Intake Vent -->
+        <path d="M 68 28 L 92 27 L 98 34 L 68 35 Z" fill="#020617" stroke="${secondaryColor}" stroke-width="1" />
+
+        <!-- 5. Cockpit, Driver Helmet & Titanium Halo -->
+        <!-- Cockpit Opening -->
+        <ellipse cx="86" cy="28" rx="14" ry="5" fill="#020617" />
+        <!-- Driver Helmet -->
+        <circle cx="84" cy="26" r="6" fill="#fbbf24" stroke="#000000" stroke-width="0.8" />
+        <!-- Helmet Visor (Iridescent) -->
+        <path d="M 85 24 Q 90 26 87 29 Z" fill="url(#visorGrad_${uid})" />
+        <!-- Overhead Airbox Intake Scoop & T-Cam -->
+        <path d="M 70 17 L 78 17 L 82 23 L 72 23 Z" fill="url(#carbonGrad_${uid})" />
+        <rect x="74" y="14" width="3" height="3" fill="#eab308" rx="0.5" />
+
+        <!-- Titanium Halo Safety Arch -->
+        <path d="M 72 27 Q 85 19 98 28" fill="none" stroke="url(#haloGrad_${uid})" stroke-width="3" stroke-linecap="round" />
+        <line x1="85" y1="22" x2="85" y2="28" stroke="url(#haloGrad_${uid})" stroke-width="2.5" />
+
+        <!-- 6. Front Wheel Assembly -->
+        <!-- Front Tire Rubber -->
+        <rect x="136" y="11" width="18" height="37" rx="6" fill="#0b0f19" stroke="#1e293b" stroke-width="1.5" />
+        <!-- Pirelli Red Compound Outer Ring -->
+        <rect x="138" y="13" width="14" height="33" rx="4.5" fill="none" stroke="#ef4444" stroke-width="1.6" />
+        <!-- Front Rim Center & Brake Caliper Glow -->
+        <circle cx="145" cy="29.5" r="5.5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <circle cx="145" cy="29.5" r="4" fill="#ff3300" opacity="0.8" />
+        <!-- Spokes -->
+        <line x1="141" y1="29.5" x2="149" y2="29.5" stroke="#94a3b8" stroke-width="1" />
+        <line x1="145" y1="25.5" x2="145" y2="33.5" stroke="#94a3b8" stroke-width="1" />
+        <circle cx="145" cy="29.5" r="1.5" fill="#fbbf24" />
+
+        <!-- 7. Front Nose Cone & Multi-Deck Front Wing -->
+        <path d="M 135 34 L 176 39.5 L 176 40.5 L 135 42 Z" fill="${primaryColor}" stroke="#ffffff" stroke-width="0.5" />
+        <!-- Front Wing Flaps (3 Tiers) -->
+        <rect x="160" y="18" width="9" height="34" rx="2" fill="url(#carbonGrad_${uid})" stroke="${primaryColor}" stroke-width="1" />
+        <line x1="158" y1="22" x2="172" y2="22" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" />
+        <line x1="158" y1="48" x2="172" y2="48" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" />
+        <!-- Front Endplate Winglet -->
+        <path d="M 166 16 L 174 16 L 170 54 L 166 54 Z" fill="${primaryColor}" />
+
+        <!-- 8. Team Livery Branding & Race Number Badge -->
+        <!-- Team Code on Sidepod -->
+        <text x="64" y="38" font-family="'Orbitron', sans-serif" font-size="7.5" font-weight="900" fill="#ffffff" letter-spacing="0.8" filter="drop-shadow(0 1px 2px #000)">${teamCode}</text>
+        <!-- Grid Position Badge on Nose -->
+        <circle cx="152" cy="38" r="3.5" fill="#0f172a" stroke="#ffffff" stroke-width="0.8" />
+        <text x="152" y="40.5" font-family="'Chakra Petch', sans-serif" font-size="5" font-weight="900" fill="${primaryColor}" text-anchor="middle">P${gridPos}</text>
+    </svg>
+    `;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   4. DATA FETCH, AUTO TAB ROTATION & UI RENDERING
+   ────────────────────────────────────────────────────────────────────────── */
+let currentData = null;
+let currentLeagueTab = 'core';
+
+async function fetchDisplay2Data() {
+    try {
+        const res = await fetch('/Display/GetDisplay2Data');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (data && data.success) {
+            currentData = data;
+            renderAll(data);
+        }
+    } catch (e) {
+        console.error('Error fetching Display2 data:', e);
+    }
+}
+
+const TAB_ROTATION_SECONDS = 90; // 1.5 minutes = 90 seconds
+let tabTimeRemaining = TAB_ROTATION_SECONDS;
+
+function updateTabTimer() {
+    tabTimeRemaining--;
+    if (tabTimeRemaining < 0) {
+        const nextTab = currentLeagueTab === 'core' ? 'all' : 'core';
+        switchLeagueTab(nextTab, false);
+        tabTimeRemaining = TAB_ROTATION_SECONDS;
+    }
+    const mins = Math.floor(tabTimeRemaining / 60);
+    const secs = tabTimeRemaining % 60;
+    const badge = document.getElementById('tabCountdown');
+    if (badge) {
+        badge.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+}
+setInterval(updateTabTimer, 1000);
+
+function switchLeagueTab(tab, resetTimer = true) {
+    currentLeagueTab = tab;
+    if (resetTimer) {
+        tabTimeRemaining = TAB_ROTATION_SECONDS;
+    }
+    document.getElementById('tabCoreBtn').classList.toggle('active', tab === 'core');
+    document.getElementById('tabAllBtn').classList.toggle('active', tab === 'all');
+    
+    document.getElementById('coreStandingsView').style.display = tab === 'core' ? 'flex' : 'none';
+    document.getElementById('allStandingsView').style.display = tab === 'all' ? 'flex' : 'none';
+    
+    document.getElementById('leaguePanelTitle').innerText = 
+        tab === 'core' ? 'Liga Safety Perusahaan Inti' : 'Klasemen Semua Kontraktor';
+
+    if (currentData) {
+        renderLeagueKPIs(currentData);
+    }
+}
+
+function renderLeagueKPIs(data) {
+    const stats = data.stats || {};
+    const isCore = currentLeagueTab === 'core';
+
+    const squadVal = isCore ? (stats.totalCoreSquad || '--') : (stats.totalAllSquad || '--');
+    const avgVal = isCore ? (Number(stats.coreAvgPct || 0).toFixed(1)) : (Number(stats.allAvgPct || 0).toFixed(1));
+    const greenVal = isCore ? (stats.coreChampionsCount || 0) : (stats.allChampionsCount || 0);
+    const redVal = isCore ? (stats.coreRedCount || 0) : (stats.allRedCount || 0);
+
+    const elSquad = document.getElementById('kpiSquadVal');
+    if (elSquad) elSquad.innerText = `${squadVal} Org`;
+
+    const elAvg = document.getElementById('kpiAvgVal');
+    if (elAvg) elAvg.innerText = `${avgVal}%`;
+
+    const elGreen = document.getElementById('kpiGreenVal');
+    if (elGreen) elGreen.innerText = `${greenVal} Klub`;
+
+    const elRed = document.getElementById('kpiRedVal');
+    if (elRed) elRed.innerText = `${redVal} Klub`;
+
+    const elTotalReal = document.getElementById('kpiTotalLapsVal');
+    if (elTotalReal) {
+        elTotalReal.innerText = `${stats.totalLapsReal || 0} / ${stats.totalLapsTarget || 0}`;
+    }
+}
+
+function renderSectorLeaders(f1Teams) {
+    if (!f1Teams || f1Teams.length === 0) return;
+
+    // Sector 1: Hazard Leader
+    const s1List = [...f1Teams].sort((a,b) => {
+        const pA = a.sector1?.percentage ?? a.Sector1?.Percentage ?? a.hazard?.percentage ?? 0;
+        const pB = b.sector1?.percentage ?? b.Sector1?.Percentage ?? b.hazard?.percentage ?? 0;
+        return pB - pA;
+    });
+    if (s1List.length > 0) {
+        const top1 = s1List[0];
+        const name = top1.shortName || top1.ShortName || top1.teamCode || 'P1';
+        const p = top1.sector1?.percentage ?? top1.Sector1?.Percentage ?? top1.hazard?.percentage ?? 0;
+        document.getElementById('sec1LeaderVal').innerText = `${name} (${Number(p).toFixed(0)}%)`;
+    }
+
+    // Sector 2: Inspeksi & Talk Leader
+    const s2List = [...f1Teams].sort((a,b) => {
+        const pA = a.sector2?.percentage ?? a.Sector2?.Percentage ?? 0;
+        const pB = b.sector2?.percentage ?? b.Sector2?.Percentage ?? 0;
+        return pB - pA;
+    });
+    if (s2List.length > 0) {
+        const top2 = s2List[0];
+        const name = top2.shortName || top2.ShortName || top2.teamCode || 'P1';
+        const p = top2.sector2?.percentage ?? top2.Sector2?.Percentage ?? 0;
+        document.getElementById('sec2LeaderVal').innerText = `${name} (${Number(p).toFixed(0)}%)`;
+    }
+
+    // Sector 3: Coaching & Observasi Leader
+    const s3List = [...f1Teams].sort((a,b) => {
+        const pA = a.sector3?.percentage ?? a.Sector3?.Percentage ?? 0;
+        const pB = b.sector3?.percentage ?? b.Sector3?.Percentage ?? 0;
+        return pB - pA;
+    });
+    if (s3List.length > 0) {
+        const top3 = s3List[0];
+        const name = top3.shortName || top3.ShortName || top3.teamCode || 'P1';
+        const p = top3.sector3?.percentage ?? top3.Sector3?.Percentage ?? 0;
+        document.getElementById('sec3LeaderVal').innerText = `${name} (${Number(p).toFixed(0)}%)`;
+    }
+}
+
+function renderAll(data) {
+    renderMarquee(data.marqueeText);
+    renderTopCards(data);
+    renderLeagueKPIs(data);
+    renderSectorLeaders(data.f1Teams || []);
+    
+    // Update tab counters
+    const coreCount = data.totalCore || ((data.coreStandings?.length || 0) + (data.coreRedZone?.length || 0));
+    const allCount = data.totalCompanies || ((data.leagueStandings?.length || 0) + (data.leagueRedZone?.length || 0));
+    
+    const coreBadge = document.getElementById('coreCountBadge');
+    if (coreBadge) coreBadge.innerText = coreCount;
+    
+    const allBadge = document.getElementById('allCountBadge');
+    if (allBadge) allBadge.innerText = allCount;
+
+    // Render Football Standings Tables
+    renderFootballTable('coreTableBody', data.coreStandings || [], data.coreRedZone || []);
+    renderFootballTable('leagueTableBody', data.leagueStandings || [], data.leagueRedZone || []);
+
+    // Render F1 Track, Winner Driver Profile & Paddock Fast Lane
+    renderF1Circuit(data.f1Teams || []);
+    renderDriverWinnerProfile(data.f1Teams || [], data.coreStandings || []);
+    renderPaddockFastLane(data.fastestMitra || [], data.f1Teams || []);
+}
+
+function getCompanyInitials(name) {
+    if (!name) return 'FC';
+    let clean = name.replace(/^(PT|CV|UD|KOPERASI)\.?\s+/i, '').trim();
+    const parts = clean.split(/\s+/);
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return clean.substring(0, 2).toUpperCase();
+}
+
+function getShieldGradient(companyId, companyName) {
+    const nameUpper = (companyName || '').toUpperCase();
+    if (nameUpper.includes('INDEXIM')) return ['#ff7b00', '#c2410c'];
+    if (nameUpper.includes('KALIMANTAN PRIMA')) return ['#10b981', '#047857'];
+    if (nameUpper.includes('UNGGUL')) return ['#eab308', '#ca8a04'];
+    if (nameUpper.includes('MEG GLOBAL') || nameUpper.includes('MEGA GLOBAL')) return ['#00d2ff', '#0284c7'];
+    if (nameUpper.includes('DAHANA')) return ['#3b82f6', '#1d4ed8'];
+    if (nameUpper.includes('SUCOFINDO')) return ['#06b6d4', '#0e7490'];
+    if (nameUpper.includes('ORICA')) return ['#8b5cf6', '#6d28d9'];
+    if (nameUpper.includes('GANESHA')) return ['#ec4899', '#be185d'];
+    if (nameUpper.includes('SURYA')) return ['#f97316', '#c2410c'];
+    if (nameUpper.includes('BUMA')) return ['#10b981', '#065f46'];
+
+    const palettes = [
+        ['#0284c7', '#0369a1'],
+        ['#059669', '#047857'],
+        ['#d97706', '#b45309'],
+        ['#7c3aed', '#6d28d9'],
+        ['#db2777', '#be185d'],
+        ['#dc2626', '#b91c1c'],
+        ['#ea580c', '#c2410c'],
+        ['#0891b2', '#0e7490'],
+        ['#4f46e5', '#4338ca'],
+        ['#16a34a', '#15803d']
+    ];
+    const idx = Math.abs((typeof companyId === 'number' ? companyId : 0) + (companyName ? companyName.length : 0)) % palettes.length;
+    return palettes[idx];
+}
+
+function formatPillarCell(rate, target, real) {
+    const val = Number(rate || 0);
+    let color = '#64748b'; // default 0%
+    if (val >= 100) color = '#34d399';
+    else if (val >= 80) color = '#38bdf8';
+    else if (val >= 40) color = '#fbbf24';
+    else if (val > 0) color = '#f97316';
+    else if (target > 0 && real === 0) color = '#ef4444';
+
+    return `<div class="pillar-cell" style="color: ${color};" title="Target: ${target} | Real: ${real}">${val.toFixed(0)}%</div>`;
+}
+
+function formatFormDots(formArray) {
+    if (!formArray || !Array.isArray(formArray)) {
+        formArray = ['D','D','D','D','D'];
+    }
+    return formArray.slice(0, 5).map(f => {
+        const char = (f || 'D').toUpperCase();
+        let cls = 'dot-d';
+        if (char === 'W') cls = 'dot-w';
+        else if (char === 'L') cls = 'dot-l';
+        return `<span class="league-form-dot ${cls}">${char}</span>`;
+    }).join('');
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   5. RENDER PREMIER LEAGUE FOOTBALL STANDINGS TABLE (CORE & ALL MITRAS)
+   ────────────────────────────────────────────────────────────────────────── */
+function renderFootballTable(containerId, standings, redZone) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if ((!standings || standings.length === 0) && (!redZone || redZone.length === 0)) {
+        container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--muted); font-size:12px;">Tidak ada data klasemen liga untuk periode ini.</div>`;
+        return;
+    }
+
+    let rowsHtml = '';
+
+    // 1. Regular Standings Rows
+    if (standings && standings.length > 0) {
+        rowsHtml += standings.map((item, idx) => {
+            const rank = item.rank ?? item.Rank ?? (idx + 1);
+            const compId = item.companyId ?? item.CompanyId ?? idx;
+            const compName = item.companyName ?? item.CompanyName ?? 'Perusahaan';
+            const compCode = item.companyCode ?? item.CompanyCode ?? '';
+            const pjoName = item.pjoName ?? item.PjoName ?? '';
+            const isMaincon = item.isMaincon ?? item.IsMaincon ?? false;
+            const empCount = item.employeeCount ?? item.EmployeeCount ?? '-';
+            const target = item.target ?? item.Target ?? 0;
+            const realization = item.realization ?? item.Realization ?? 0;
+            const pct = Number(item.percentage ?? item.Percentage ?? 0);
+            const form = item.form ?? item.Form ?? ['D','D','D','D','D'];
+
+            // Pillar rates
+            const hRate = item.mtdHazardRate ?? item.MtdHazardRate ?? item.hazard?.rate ?? item.Hazard?.Rate ?? 0;
+            const iRate = item.mtdInspeksiRate ?? item.MtdInspeksiRate ?? item.inspeksi?.rate ?? item.Inspeksi?.Rate ?? 0;
+            const stRate = item.mtdSafetyTalkRate ?? item.MtdSafetyTalkRate ?? item.safetyTalk?.rate ?? item.SafetyTalk?.Rate ?? 0;
+            const oRate = item.mtdObservasiRate ?? item.MtdObservasiRate ?? item.observasi?.rate ?? item.Observasi?.Rate ?? 0;
+            const cRate = item.mtdCoachingRate ?? item.MtdCoachingRate ?? item.coaching?.rate ?? item.Coaching?.Rate ?? 0;
+            const p5Rate = item.mtdP5mRate ?? item.MtdP5mRate ?? item.p5m?.rate ?? item.P5m?.Rate ?? 0;
+
+            const hTgt = item.hazard?.target ?? item.Hazard?.Target ?? 0;
+            const hReal = item.hazard?.real ?? item.Hazard?.Real ?? 0;
+            const iTgt = item.inspeksi?.target ?? item.Inspeksi?.Target ?? 0;
+            const iReal = item.inspeksi?.real ?? item.Inspeksi?.Real ?? 0;
+            const stTgt = item.safetyTalk?.target ?? item.SafetyTalk?.Target ?? 0;
+            const stReal = item.safetyTalk?.real ?? item.SafetyTalk?.Real ?? 0;
+            const oTgt = item.observasi?.target ?? item.Observasi?.Target ?? 0;
+            const oReal = item.observasi?.real ?? item.Observasi?.Real ?? 0;
+            const cTgt = item.coaching?.target ?? item.Coaching?.Target ?? 0;
+            const cReal = item.coaching?.real ?? item.Coaching?.Real ?? 0;
+            const p5Tgt = item.p5m?.target ?? item.P5m?.Target ?? 0;
+            const p5Real = item.p5m?.real ?? item.P5m?.Real ?? 0;
+
+            // Row CSS class & Rank Medals
+            let rowCls = '';
+            let rankBadge = `<span class="league-rank-pill">${rank}</span>`;
+            if (rank === 1 && pct > 0) {
+                rowCls = 'league-tr-champions';
+                rankBadge = `<span class="league-rank-pill rank-pill-1">🥇 1</span>`;
+            } else if (rank === 2) {
+                rowCls = 'league-tr-ucl';
+                rankBadge = `<span class="league-rank-pill rank-pill-2">🥈 2</span>`;
+            } else if (rank === 3) {
+                rowCls = 'league-tr-ucl';
+                rankBadge = `<span class="league-rank-pill rank-pill-3">🥉 3</span>`;
+            } else if (rank <= 4) {
+                rowCls = 'league-tr-ucl';
+            } else if (rank <= 8) {
+                rowCls = 'league-tr-europa';
+            }
+
+            // Shield Initials & Gradient
+            const initials = getCompanyInitials(compName);
+            const [sc1, sc2] = getShieldGradient(compId, compName);
+
+            // Bar Color
+            let barColor = '#38bdf8';
+            if (pct >= 100) barColor = '#fbbf24';
+            else if (pct >= 80) barColor = '#34d399';
+            else if (pct >= 50) barColor = '#38bdf8';
+            else if (pct > 0) barColor = '#f59e0b';
+            else barColor = '#ef4444';
+
+            // Subtitle info
+            const subText = pjoName ? `PJO: ${pjoName}` : (isMaincon ? 'MAIN CONTRACTOR' : (compCode ? `KODE: ${compCode}` : 'MITRA KERJA'));
+
+            return `
+            <div class="league-row ${rowCls}">
+                <!-- Pos -->
+                <div style="text-align:center;">${rankBadge}</div>
+
+                <!-- Club Info -->
+                <div class="club-info">
+                    <div class="football-badge" style="background: linear-gradient(145deg, ${sc1}, ${sc2});">${initials}</div>
+                    <div class="club-name-box">
+                        <div class="club-name" title="${compName}">${compName}</div>
+                        <div class="club-tag" title="${subText}">${subText}</div>
+                    </div>
+                </div>
+
+                <!-- Skuad -->
+                <div class="stat-num" style="color:#cbd5e1; font-size:10px;">${empCount}</div>
+
+                <!-- PTS (%) -->
+                <div class="pct-box">
+                    <div class="pct-val" style="color: ${barColor}; font-size:10.5px;">${pct.toFixed(1)}%</div>
+                    <div class="pct-bar-bg">
+                        <div class="pct-bar-fill" style="width: ${Math.min(100, pct)}%; background: ${barColor};"></div>
+                    </div>
+                </div>
+
+                <!-- Form (5 Pillars W/D/L) -->
+                <div class="form-dots">${formatFormDots(form)}</div>
+
+                <!-- 6 Pillars (HZ, IP, ST, OB, CC, P5M) -->
+                ${formatPillarCell(hRate, hTgt, hReal)}
+                ${formatPillarCell(iRate, iTgt, iReal)}
+                ${formatPillarCell(stRate, stTgt, stReal)}
+                ${formatPillarCell(oRate, oTgt, oReal)}
+                ${formatPillarCell(cRate, cTgt, cReal)}
+                ${formatPillarCell(p5Rate, p5Tgt, p5Real)}
+            </div>
+            `;
+        }).join('');
+    }
+
+    // 2. Red Zone (Relegation Zone)
+    if (redZone && redZone.length > 0) {
+        rowsHtml += `
+        <div class="relegation-divider">
+            <i class="bi bi-exclamation-octagon-fill"></i> ZONA DEGRADASI / PERFORMA 0% (${redZone.length} Tim)
+        </div>
+        `;
+
+        rowsHtml += redZone.map((item, idx) => {
+            const compId = item.companyId ?? item.CompanyId ?? (100 + idx);
+            const compName = item.companyName ?? item.CompanyName ?? 'Perusahaan';
+            const pjoName = item.pjoName ?? item.PjoName ?? '';
+            const empCount = item.employeeCount ?? item.EmployeeCount ?? '-';
+            const initials = getCompanyInitials(compName);
+            const subText = pjoName ? `PJO: ${pjoName}` : 'REALISASI BULAN INI 0%';
+
+            return `
+            <div class="league-row league-tr-relegation">
+                <!-- Pos -->
+                <div style="text-align:center;">
+                    <span class="league-rank-pill rank-pill-relegation">⚠️</span>
+                </div>
+
+                <!-- Club Info -->
+                <div class="club-info">
+                    <div class="football-badge" style="background: linear-gradient(145deg, #7f1d1d, #450a0a); border-color:#ef4444;">${initials}</div>
+                    <div class="club-name-box">
+                        <div class="club-name" style="color:#fca5a5;" title="${compName}">${compName}</div>
+                        <div class="club-tag" style="color:#f87171;">${subText}</div>
+                    </div>
+                </div>
+
+                <!-- Skuad -->
+                <div class="stat-num" style="color:#fca5a5; font-size:10px;">${empCount}</div>
+
+                <!-- PTS (0.0%) -->
+                <div class="pct-box">
+                    <div class="pct-val" style="color: #ef4444; font-size:10.5px;">0.0%</div>
+                    <div class="pct-bar-bg">
+                        <div class="pct-bar-fill" style="width: 0%; background: #ef4444;"></div>
+                    </div>
+                </div>
+
+                <!-- Form (All L) -->
+                <div class="form-dots">${formatFormDots(['L','L','L','L','L'])}</div>
+
+                <!-- 6 Pillars -->
+                <div class="pillar-cell" style="color:#ef4444;">0%</div>
+                <div class="pillar-cell" style="color:#ef4444;">0%</div>
+                <div class="pillar-cell" style="color:#ef4444;">0%</div>
+                <div class="pillar-cell" style="color:#ef4444;">0%</div>
+                <div class="pillar-cell" style="color:#ef4444;">0%</div>
+                <div class="pillar-cell" style="color:#ef4444;">0%</div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    container.innerHTML = rowsHtml;
+}
+
+function renderMarquee(text) {
+    if (text) {
+        document.getElementById('marqueeText').innerText = text;
+    }
+}
+
+function renderTopCards(data) {
+    const teams = data.f1Teams || [];
+    if (teams.length > 0) {
+        const p1 = teams[0];
+        const p1Name = p1.shortName || p1.ShortName || p1.teamName || p1.TeamName || 'P1';
+        const p1Pct = Number(p1.percentage ?? p1.Percentage ?? 0).toFixed(1);
+        document.getElementById('poleLeaderName').innerText = `P1: ${p1Name} (${p1Pct}%)`;
+
+        let maxSpeed = 0;
+        teams.forEach(t => {
+            const s = Number(t.speedKmh ?? t.SpeedKmh ?? 0);
+            if (s > maxSpeed) maxSpeed = s;
+        });
+        document.getElementById('topSpeedVal').innerText = `${maxSpeed.toFixed(1)} km/h`;
+    }
+    document.getElementById('safeDaysVal').innerText = `${data.safeDays || 0} HARI`;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   6. RENDER F1 GRAND PRIX RACE CIRCUIT & REAL-TIME TELEMETRY
+   ────────────────────────────────────────────────────────────────────────── */
+function renderF1Circuit(f1Teams) {
+    if (!f1Teams || f1Teams.length === 0) return;
+
+    const container = document.getElementById('f1LanesContainer');
+
+    const html = f1Teams.map((team, idx) => {
+        const gridPos = team.gridPosition ?? team.GridPosition ?? (idx + 1);
+        const teamCode = team.teamCode ?? team.TeamCode ?? 'F1';
+        const teamName = team.teamName ?? team.TeamName ?? 'Team';
+        const colorPrimary = team.colorPrimary ?? team.ColorPrimary ?? '#00d2ff';
+        const colorSecondary = team.colorSecondary ?? team.ColorSecondary ?? '#3b82f6';
+        const pct = Number(team.percentage ?? team.Percentage ?? 0);
+        const speed = Number(team.speedKmh ?? team.SpeedKmh ?? 0);
+        const lapCount = team.lapCount ?? team.LapCount ?? '0/0';
+        const drsStatus = team.drsStatus ?? team.DrsStatus ?? 'DISABLED';
+        const isPit = pct === 0;
+
+        // Position on track:
+        // Lane starts at 270px from left (right next to team HUD label).
+        // Finish line is at right: 18px.
+        // At 0% -> car is at 270px (Start Grid).
+        // At 100% -> car is right at the finish checkered line.
+        const carLeft = isPit ? '275px' : `calc(275px + (${Math.min(100, Math.max(0, pct)) / 100} * (100% - 470px)))`;
+
+        const carSvg = generateF1CarSvg(colorPrimary, colorSecondary, teamCode, gridPos);
+
+        // DRS Indicator
+        let drsBadge = '';
+        if (drsStatus.includes('TURBO')) {
+            drsBadge = `<span style="background:#fbbf24; color:#000; padding:1px 5px; border-radius:3px; font-weight:900;">⚡ TURBO</span>`;
+        } else if (drsStatus.includes('OPEN') || drsStatus.includes('ACTIVE')) {
+            drsBadge = `<span style="background:#34d399; color:#000; padding:1px 5px; border-radius:3px; font-weight:900;">DRS ON</span>`;
+        }
+
+        const speedColor = pct >= 80 ? '#34d399' : (pct >= 40 ? '#38bdf8' : '#fbbf24');
+
+        return `
+        <div class="race-lane">
+            <!-- Start Grid, Sector lines & Checkered finish line -->
+            <div class="track-start-line"></div>
+            <div class="track-line-s1"></div>
+            <div class="track-line-s2"></div>
+            <div class="track-finish-line" title="Finish Line (100% Target)"></div>
+
+            <!-- Team HUD Label on Left (270px WIDE & FULL NAME) -->
+            <div class="team-hud-label">
+                <div class="team-hud-header">
+                    <div class="team-hud-pos">
+                        <span class="team-pos-pill" style="background:${colorPrimary}; color:#000;">P${gridPos}</span>
+                        <span class="team-code-pill">${teamCode}</span>
+                    </div>
+                    <div class="team-hud-speed" style="color: ${speedColor};">
+                        <i class="bi bi-speedometer2"></i>
+                        ${isPit ? '<span style="color:#ef4444; font-weight:900;">BOX BOX</span>' : speed.toFixed(1) + ' KM/H'}
+                    </div>
+                </div>
+
+                <div class="team-hud-name" title="${teamName}">
+                    ${teamName}
+                </div>
+
+                <div class="team-hud-footer">
+                    <span><i class="bi bi-flag-fill" style="color:${colorPrimary}; font-size:9px;"></i> ${lapCount} LAPS</span>
+                    <span style="color:${colorPrimary}; font-weight:900; font-family:'Orbitron', monospace; font-size:11px;">${pct.toFixed(1)}%</span>
+                </div>
+            </div>
+
+            ${isPit ? `
+            <!-- Pit Box Mode when 0% -->
+            <div class="pit-box-mode">
+                <i class="bi bi-wrench-adjustable-circle-fill" style="font-size:14px;"></i>
+                <span>PIT STOP / 0% REALISASI BULAN INI</span>
+            </div>
+            ` : ''}
+
+            <!-- Dynamic Animated F1 Race Car -->
+            <div class="f1-car-positioner" style="left: ${carLeft};">
+                <!-- Glowing Particle Exhaust Jet Stream -->
+                ${!isPit ? `
+                <div class="exhaust-nitro-stream">
+                    <div class="nitro-flame-outer"></div>
+                    <div class="nitro-flame-core"></div>
+                </div>
+                ` : ''}
+
+                <!-- Overhead Telemetry HUD Badge -->
+                <div class="car-hud-badge" style="border-color: ${colorPrimary}; box-shadow: 0 4px 14px rgba(0,0,0,0.8), 0 0 10px ${colorPrimary}44;">
+                    <span style="color:${colorPrimary}; font-weight:900; font-size:11px;">${pct.toFixed(1)}%</span>
+                    <span>&bull;</span>
+                    <span>${lapCount} LAPS</span>
+                    ${drsBadge}
+                </div>
+
+                <!-- Car 3D Graphic -->
+                <div class="f1-car-sprite">
+                    ${carSvg}
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+
+    container.innerHTML = html;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   7. RENDER F1 DRIVER CAROUSEL & 6-PILLAR SAP PERFORMANCE TELEMETRY
+   ────────────────────────────────────────────────────────────────────────── */
+let currentDriverIndex = 0;
+let driverCarouselTimer = null;
+let savedF1Teams = [];
+let savedCoreStandings = [];
+
+function selectDriver(index) {
+    if (!savedF1Teams || savedF1Teams.length === 0) return;
+    currentDriverIndex = Math.max(0, Math.min(index, savedF1Teams.length - 1));
+    renderActiveDriver();
+}
+
+function rotateDriverProfile() {
+    if (!savedF1Teams || savedF1Teams.length === 0) return;
+    currentDriverIndex = (currentDriverIndex + 1) % savedF1Teams.length;
+    renderActiveDriver();
+}
+
+// Auto-rotate driver carousel every 7 seconds
+if (!driverCarouselTimer) {
+    driverCarouselTimer = setInterval(rotateDriverProfile, 7000);
+}
+
+function renderDriverWinnerProfile(f1Teams, coreStandings) {
+    savedF1Teams = f1Teams || [];
+    savedCoreStandings = coreStandings || [];
+    renderActiveDriver();
+}
+
+function renderActiveDriver() {
+    const container = document.getElementById('driverWinnerBody');
+    const tabsContainer = document.getElementById('driverTeamTabs');
+    if (!container || !savedF1Teams || savedF1Teams.length === 0) return;
+
+    // Render 4-Team Position Tabs in Header (cukup POS saja)
+    if (tabsContainer) {
+        tabsContainer.innerHTML = savedF1Teams.map((t, idx) => {
+            const color = t.colorPrimary ?? t.ColorPrimary ?? '#fbbf24';
+            const isActive = idx === currentDriverIndex;
+            const pos = t.gridPosition ?? t.GridPosition ?? (idx + 1);
+            const medal = pos === 1 ? '🥇' : (pos === 2 ? '🥈' : (pos === 3 ? '🥉' : '🏁'));
+            return `
+            <div class="driver-team-pill ${isActive ? 'active' : ''}" 
+                style="${isActive ? `background:${color}; border-color:${color}; color:#000; font-weight:900;` : `border-color:${color}55; color:${color};`}"
+                onclick="selectDriver(${idx})" title="Lihat telemetri POS ${pos}">
+                <span style="font-size:11px;">${medal}</span>
+                <span class="driver-tab-pos">POS ${pos}</span>
+            </div>
+            `;
+        }).join('');
+    }
+
+    const team = savedF1Teams[currentDriverIndex] || savedF1Teams[0];
+    const gridPos = team.gridPosition ?? team.GridPosition ?? (currentDriverIndex + 1);
+    const teamName = team.teamName ?? team.TeamName ?? 'Team';
+    const shortName = team.shortName ?? team.ShortName ?? team.teamCode ?? 'F1';
+    const teamCode = team.teamCode ?? team.TeamCode ?? `P${gridPos}`;
+    const primaryColor = team.colorPrimary ?? team.ColorPrimary ?? '#fbbf24';
+    const secondaryColor = team.colorSecondary ?? team.ColorSecondary ?? '#d97706';
+    const pct = Number(team.percentage ?? team.Percentage ?? 0);
+    const speed = Number(team.speedKmh ?? team.SpeedKmh ?? 0);
+    const tgt = team.target ?? team.Target ?? 0;
+    const real = team.realization ?? team.Realization ?? 0;
+
+    // PJO Name
+    let pjoName = team.pjoName ?? team.PjoName ?? '';
+    if (!pjoName && savedCoreStandings && savedCoreStandings.length > 0) {
+        const found = savedCoreStandings.find(c => (c.companyName || '').toUpperCase().includes(shortName.toUpperCase()) || (c.companyId ?? c.CompanyId) === (team.teamId ?? team.TeamId));
+        if (found) {
+            pjoName = found.pjoName || found.PjoName || '';
+        }
+    }
+    const driverSubtitle = pjoName ? `PJO: ${pjoName}` : `${shortName} RACING DRIVER #${String(gridPos).padStart(2, '0')}`;
+
+    // Select dynamic driver avatar with cache-buster
+    let driverImgSrc = '/images/f1_driver_udu.jpg?v=clean_20260905';
+    const tUpper = (teamName + ' ' + shortName + ' ' + teamCode).toUpperCase();
+    if (tUpper.includes('UNGGUL') || tUpper.includes('UDU')) {
+        driverImgSrc = '/images/f1_driver_udu.jpg?v=clean_20260905';
+    } else if (tUpper.includes('MEGA') || tUpper.includes('MEG') || tUpper.includes('MGE')) {
+        driverImgSrc = '/images/f1_driver_mge.jpg?v=clean_20260905';
+    } else if (tUpper.includes('INDEXIM') || tUpper.includes('IDX')) {
+        driverImgSrc = '/images/f1_driver_idx.jpg?v=clean_20260905';
+    } else if (tUpper.includes('KALIMANTAN') || tUpper.includes('KPP')) {
+        driverImgSrc = '/images/f1_driver_kpp.jpg?v=clean_20260905';
+    }
+
+    // 6 Pillars data
+    const hzTgt = Number(team.hazard?.target ?? team.Hazard?.Target ?? 0);
+    const hzReal = Number(team.hazard?.real ?? team.Hazard?.Real ?? 0);
+    const hzRate = hzTgt > 0 ? (hzReal / hzTgt * 100) : (team.hazard?.rate ?? team.Hazard?.Rate ?? (team.sector1?.percentage ?? 0));
+
+    const ipTgt = Number(team.inspeksi?.target ?? team.Inspeksi?.Target ?? 0);
+    const ipReal = Number(team.inspeksi?.real ?? team.Inspeksi?.Real ?? 0);
+    const ipRate = ipTgt > 0 ? (ipReal / ipTgt * 100) : (team.inspeksi?.rate ?? team.Inspeksi?.Rate ?? 0);
+
+    const stTgt = Number(team.safetyTalk?.target ?? team.SafetyTalk?.Target ?? 0);
+    const stReal = Number(team.safetyTalk?.real ?? team.SafetyTalk?.Real ?? 0);
+    const stRate = stTgt > 0 ? (stReal / stTgt * 100) : (team.safetyTalk?.rate ?? team.SafetyTalk?.Rate ?? 0);
+
+    const p5Tgt = Number(team.p5m?.target ?? team.P5m?.Target ?? 0);
+    const p5Real = Number(team.p5m?.real ?? team.P5m?.Real ?? 0);
+    const p5Rate = p5Tgt > 0 ? (p5Real / p5Tgt * 100) : (team.p5m?.rate ?? team.P5m?.Rate ?? 0);
+
+    const ccTgt = Number(team.coaching?.target ?? team.Coaching?.Target ?? 0);
+    const ccReal = Number(team.coaching?.real ?? team.Coaching?.Real ?? 0);
+    const ccRate = ccTgt > 0 ? (ccReal / ccTgt * 100) : (team.coaching?.rate ?? team.Coaching?.Rate ?? 0);
+
+    const obTgt = Number(team.observasi?.target ?? team.Observasi?.Target ?? 0);
+    const obReal = Number(team.observasi?.real ?? team.Observasi?.Real ?? 0);
+    const obRate = obTgt > 0 ? (obReal / obTgt * 100) : (team.observasi?.rate ?? team.Observasi?.Rate ?? 0);
+
+    const statusBadgeText = gridPos === 1 ? 'POLE POSITION' : (gridPos === 2 ? 'PODIUM P2' : (gridPos === 3 ? 'PODIUM P3' : 'GRID P4'));
+
+    const driverHtml = `
+        <!-- Left: Driver Persona Column -->
+        <div class="driver-persona-col">
+            <div class="driver-avatar-wrap" style="border-color: ${primaryColor}; box-shadow: 0 0 16px ${primaryColor}40;">
+                <img src="${driverImgSrc}" class="driver-avatar-img" alt="${teamName} Driver" 
+                    onerror="this.style.display='none'; document.getElementById('driverSvgFallback').style.display='block';" />
+                <div id="driverSvgFallback" style="display:none; width:100%; height:100%;">
+                    <svg viewBox="0 0 100 120" width="100%" height="100%">
+                        <rect width="100" height="120" fill="#0b1329" />
+                        <circle cx="50" cy="42" r="24" fill="${primaryColor}" />
+                        <ellipse cx="52" cy="44" rx="17" ry="11" fill="#090f1d" stroke="#fff" stroke-width="1" />
+                        <path d="M 40 44 Q 52 40 64 44" stroke="#00f0ff" stroke-width="2.5" fill="none" />
+                        <path d="M 22 120 L 28 72 L 72 72 L 78 120 Z" fill="${primaryColor}" />
+                        <path d="M 42 72 L 50 120 L 58 72 Z" fill="#0f172a" />
+                    </svg>
+                </div>
+                <div class="driver-number-stamp" style="color: ${primaryColor};">#${String(gridPos).padStart(2, '0')}</div>
+                <div class="driver-flag-badge">🇮🇩 ID</div>
+            </div>
+
+            <div class="driver-speed-bar" style="border-color: ${primaryColor}44;">
+                <div class="driver-speed-item">
+                    <span class="driver-speed-lbl">CAPAIAN</span>
+                    <span class="driver-speed-num" style="color:${primaryColor};">${pct.toFixed(1)}%</span>
+                </div>
+                <div class="driver-speed-item" style="border-left: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08);">
+                    <span class="driver-speed-lbl">SPEED</span>
+                    <span class="driver-speed-num" style="color:#38bdf8;">${speed.toFixed(0)} <small style="font-size:7px; color:#64748b;">km/h</small></span>
+                </div>
+                <div class="driver-speed-item">
+                    <span class="driver-speed-lbl">TOTAL LAPS</span>
+                    <span class="driver-speed-num" style="color:#ffffff; font-size:9.5px;">${real}<small style="color:#94a3b8; font-size:7.5px;">/${tgt}</small></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: 6 SAP Pillars Loading Bar Telemetry Matrix -->
+        <div class="driver-sap-col">
+            <div class="driver-team-header-bar" style="border-left: 3px solid ${primaryColor};">
+                <div style="min-width:0;">
+                    <div class="driver-comp-title" title="${teamName}">
+                        <span style="color:${primaryColor}; font-weight:900;">[${teamCode}]</span> ${teamName}
+                    </div>
+                    <div class="driver-pjo-title">
+                        <i class="bi bi-person-badge-fill" style="color:${primaryColor};"></i> ${driverSubtitle}
+                    </div>
+                </div>
+                <div class="driver-status-badge" style="background:${primaryColor}; color:#000;">
+                    POS ${gridPos} &bull; ${statusBadgeText}
+                </div>
+            </div>
+
+            <div class="driver-telemetry-loading-grid">
+                <!-- 1. Hazard Report -->
+                <div class="sap-loading-meter">
+                    <div class="sap-meter-header">
+                        <span class="sap-meter-title"><i class="bi bi-exclamation-triangle-fill" style="color:#ef4444;"></i> HAZARD REPORT</span>
+                        <span class="sap-meter-counts">${hzReal} / ${hzTgt} Temuan</span>
+                        <span class="sap-meter-pct" style="color:#ef4444;">${hzRate.toFixed(1)}%</span>
+                    </div>
+                    <div class="sap-loading-track">
+                        <div class="sap-loading-bar" style="width:${Math.min(100, Math.max(0, hzRate))}%; background: linear-gradient(90deg, #dc2626, #f87171); box-shadow: 0 0 8px rgba(239,68,68,0.5);"></div>
+                    </div>
+                </div>
+
+                <!-- 2. Inspeksi K3 -->
+                <div class="sap-loading-meter">
+                    <div class="sap-meter-header">
+                        <span class="sap-meter-title"><i class="bi bi-clipboard2-check-fill" style="color:#38bdf8;"></i> INSPEKSI K3</span>
+                        <span class="sap-meter-counts">${ipReal} / ${ipTgt} Agenda</span>
+                        <span class="sap-meter-pct" style="color:#38bdf8;">${ipRate.toFixed(1)}%</span>
+                    </div>
+                    <div class="sap-loading-track">
+                        <div class="sap-loading-bar" style="width:${Math.min(100, Math.max(0, ipRate))}%; background: linear-gradient(90deg, #0284c7, #38bdf8); box-shadow: 0 0 8px rgba(56,189,248,0.5);"></div>
+                    </div>
+                </div>
+
+                <!-- 3. Safety Talk -->
+                <div class="sap-loading-meter">
+                    <div class="sap-meter-header">
+                        <span class="sap-meter-title"><i class="bi bi-megaphone-fill" style="color:#c084fc;"></i> SAFETY TALK</span>
+                        <span class="sap-meter-counts">${stReal} / ${stTgt} Sesi</span>
+                        <span class="sap-meter-pct" style="color:#c084fc;">${stRate.toFixed(1)}%</span>
+                    </div>
+                    <div class="sap-loading-track">
+                        <div class="sap-loading-bar" style="width:${Math.min(100, Math.max(0, stRate))}%; background: linear-gradient(90deg, #9333ea, #c084fc); box-shadow: 0 0 8px rgba(192,132,252,0.5);"></div>
+                    </div>
+                </div>
+
+                <!-- 4. P5M Briefing -->
+                <div class="sap-loading-meter">
+                    <div class="sap-meter-header">
+                        <span class="sap-meter-title"><i class="bi bi-shield-fill-check" style="color:#34d399;"></i> P5M BRIEFING</span>
+                        <span class="sap-meter-counts">${p5Real} / ${p5Tgt} Briefing</span>
+                        <span class="sap-meter-pct" style="color:#34d399;">${p5Rate.toFixed(1)}%</span>
+                    </div>
+                    <div class="sap-loading-track">
+                        <div class="sap-loading-bar" style="width:${Math.min(100, Math.max(0, p5Rate))}%; background: linear-gradient(90deg, #059669, #34d399); box-shadow: 0 0 8px rgba(52,211,153,0.5);"></div>
+                    </div>
+                </div>
+
+                <!-- 5. Coaching K3 -->
+                <div class="sap-loading-meter">
+                    <div class="sap-meter-header">
+                        <span class="sap-meter-title"><i class="bi bi-person-video3" style="color:#fbbf24;"></i> COACHING K3</span>
+                        <span class="sap-meter-counts">${ccReal} / ${ccTgt} Orang</span>
+                        <span class="sap-meter-pct" style="color:#fbbf24;">${ccRate.toFixed(1)}%</span>
+                    </div>
+                    <div class="sap-loading-track">
+                        <div class="sap-loading-bar" style="width:${Math.min(100, Math.max(0, ccRate))}%; background: linear-gradient(90deg, #d97706, #fbbf24); box-shadow: 0 0 8px rgba(251,191,36,0.5);"></div>
+                    </div>
+                </div>
+
+                <!-- 6. Observasi Tugas -->
+                <div class="sap-loading-meter">
+                    <div class="sap-meter-header">
+                        <span class="sap-meter-title"><i class="bi bi-binoculars-fill" style="color:#2dd4bf;"></i> OBSERVASI TUGAS</span>
+                        <span class="sap-meter-counts">${obReal} / ${obTgt} Observasi</span>
+                        <span class="sap-meter-pct" style="color:#2dd4bf;">${obRate.toFixed(1)}%</span>
+                    </div>
+                    <div class="sap-loading-track">
+                        <div class="sap-loading-bar" style="width:${Math.min(100, Math.max(0, obRate))}%; background: linear-gradient(90deg, #0d9488, #2dd4bf); box-shadow: 0 0 8px rgba(45,212,191,0.5);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Telemetry Footer Row -->
+            <div class="driver-telemetry-footer-bar">
+                <div class="telemetry-footer-item">
+                    <span style="color:#94a3b8;">SEC 1 (HZ):</span>
+                    <span style="color:#ef4444; font-family:'Orbitron', monospace;">${hzRate.toFixed(0)}%</span>
+                </div>
+                <div class="telemetry-footer-item">
+                    <span style="color:#94a3b8;">SEC 2 (IP/ST):</span>
+                    <span style="color:#38bdf8; font-family:'Orbitron', monospace;">${((ipTgt + stTgt) > 0 ? Math.round((ipReal + stReal)/(ipTgt + stTgt)*100) : 0)}%</span>
+                </div>
+                <div class="telemetry-footer-item">
+                    <span style="color:#94a3b8;">SEC 3 (CC/OB):</span>
+                    <span style="color:#34d399; font-family:'Orbitron', monospace;">${((ccTgt + obTgt) > 0 ? Math.round((ccReal + obReal)/(ccTgt + obTgt)*100) : 0)}%</span>
+                </div>
+                <div class="telemetry-footer-item" style="text-align:right;">
+                    <span style="color:${primaryColor}; font-weight:900;">⚡ TELEMETRY OK</span>
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = driverHtml;
+
+    const panel = document.getElementById('f1DriverWinnerPanel');
+    if (panel) {
+        panel.style.borderColor = `${primaryColor}88`;
+        panel.style.boxShadow = `0 8px 24px rgba(0,0,0,0.6), inset 0 0 30px ${primaryColor}18`;
+        panel.style.setProperty('--active-driver-grad', `linear-gradient(90deg, ${primaryColor}, ${secondaryColor}, #ef4444)`);
+    }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   8. RENDER PADDOCK FAST LANE — TOP 5 MITRA TERCEPAT NAIK
+   ────────────────────────────────────────────────────────────────────────── */
+function renderPaddockFastLane(fastestList, f1Teams) {
+    const list = (fastestList && fastestList.length > 0) 
+        ? fastestList.slice(0, 5) 
+        : (f1Teams || []).slice(0, 5);
+
+    const body = document.getElementById('fastestMitraBody');
+    if (!body) return;
+
+    if (!list || list.length === 0) {
+        body.innerHTML = `
+            <div style="text-align:center; padding: 15px; color: var(--muted); font-size:11px;">
+                Belum ada data capaian mitra tercepat.
+            </div>`;
+        return;
+    }
+
+    const html = list.map((item, idx) => {
+        const rank = item.rank ?? item.Rank ?? (idx + 1);
+        const compName = item.companyName ?? item.CompanyName ?? 'Mitra Kerja';
+        const compCode = item.companyCode ?? item.CompanyCode ?? '';
+        const target = item.target ?? item.Target ?? 0;
+        const real = item.realization ?? item.Realization ?? 0;
+        const pct = Number(item.percentage ?? item.Percentage ?? 0);
+        const speed = Number(item.speedKmh ?? item.SpeedKmh ?? 0);
+        
+        let rankColor = rank === 1 ? '#fbbf24' : (rank === 2 ? '#38bdf8' : (rank === 3 ? '#fb923c' : '#a3e635'));
+        let rankLabel = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : `#0${rank}`));
+        let barColor = pct >= 100 ? '#fbbf24' : (pct >= 80 ? '#34d399' : (pct >= 40 ? '#38bdf8' : (pct > 0 ? '#fb923c' : '#ef4444')));
+        
+        let statusBadge = pct >= 80 
+            ? '<span style="color:#34d399; font-weight:900; font-size:8.5px;"><i class="bi bi-lightning-charge-fill"></i> DRS OPEN</span>'
+            : (pct >= 40 
+                ? '<span style="color:#38bdf8; font-weight:800; font-size:8.5px;">⚡ TOP PACE</span>' 
+                : '<span style="color:#a3e635; font-weight:700; font-size:8.5px;">🏎️ ON TRACK</span>');
+
+        return `
+        <div class="mge-child-row">
+            <div style="text-align:center; font-weight:900; color:${rankColor}; font-size:10.5px; font-family:'Orbitron', monospace;">
+                ${rankLabel}
+            </div>
+            <div class="mge-child-name" title="${compName}">
+                <span style="color:${rankColor}; font-weight:900; font-size:8.5px;">[${compCode || 'CORP'}]</span> ${compName}
+            </div>
+            <div style="text-align:center; color:#94a3b8; font-weight:700;">${target}</div>
+            <div style="text-align:center; color:#fff; font-weight:800;">${real}</div>
+            <div style="text-align:right;">
+                <div style="font-weight:900; color:${barColor}; font-size:10.5px; font-family:'Orbitron', monospace;">${pct.toFixed(1)}%</div>
+                <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-top:2px; overflow:hidden;">
+                    <div style="height:100%; width:${Math.min(100, pct)}%; background:${barColor}; border-radius:2px; box-shadow: 0 0 6px ${barColor}88;"></div>
+                </div>
+            </div>
+            <div style="text-align:center; color:#38bdf8; font-family:'Orbitron', monospace; font-size:9.5px; font-weight:800;">
+                ${speed.toFixed(1)} <small style="font-size:7px; color:#64748b;">km/h</small>
+            </div>
+            <div style="text-align:center;">
+                ${statusBadge}
+            </div>
+        </div>
+        `;
+    }).join('');
+
+    body.innerHTML = html;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   8. SMOOTH AUTO-SCROLLER LOOPS (CORE LEAGUE, ALL MITRAS & MGE FLEET)
+   ────────────────────────────────────────────────────────────────────────── */
+let isCorePaused = false;
+let isLeaguePaused = false;
+let isMgePaused = false;
+
+let coreScrollPos = 0;
+let leagueScrollPos = 0;
+let mgeScrollPos = 0;
+
+function runAutoScroll() {
+    // 1. Core League Auto-Scroll (active when tab is 'core')
+    if (!isCorePaused && currentLeagueTab === 'core') {
+        const box = document.getElementById('coreScrollBox');
+        const content = document.getElementById('coreTableBody');
+        if (box && content) {
+            const maxScroll = content.scrollHeight - box.clientHeight;
+            if (maxScroll > 10) {
+                coreScrollPos += 0.55;
+                if (coreScrollPos >= maxScroll) {
+                    coreScrollPos = maxScroll;
+                    isCorePaused = true;
+                    setTimeout(() => {
+                        coreScrollPos = 0;
+                        content.style.transform = `translateY(-${coreScrollPos}px)`;
+                        setTimeout(() => { isCorePaused = false; }, 1500);
+                    }, 3500);
+                }
+                content.style.transform = `translateY(-${coreScrollPos}px)`;
+            }
+        }
+    }
+
+    // 2. All Mitras League Auto-Scroll (active when tab is 'all')
+    if (!isLeaguePaused && currentLeagueTab === 'all') {
+        const box = document.getElementById('leagueScrollBox');
+        const content = document.getElementById('leagueTableBody');
+        if (box && content) {
+            const maxScroll = content.scrollHeight - box.clientHeight;
+            if (maxScroll > 10) {
+                leagueScrollPos += 0.65;
+                if (leagueScrollPos >= maxScroll) {
+                    leagueScrollPos = maxScroll;
+                    isLeaguePaused = true;
+                    setTimeout(() => {
+                        leagueScrollPos = 0;
+                        content.style.transform = `translateY(-${leagueScrollPos}px)`;
+                        setTimeout(() => { isLeaguePaused = false; }, 1500);
+                    }, 3500);
+                }
+                content.style.transform = `translateY(-${leagueScrollPos}px)`;
+            }
+        }
+    }
+
+    // 3. MGE Fleet Auto-Scroll
+    if (!isMgePaused) {
+        const boxM = document.getElementById('mgeScrollBox');
+        const contentM = document.getElementById('mgeFleetBody');
+        if (boxM && contentM) {
+            const maxScrollM = contentM.scrollHeight - boxM.clientHeight;
+            if (maxScrollM > 10) {
+                mgeScrollPos += 0.5;
+                if (mgeScrollPos >= maxScrollM) {
+                    mgeScrollPos = maxScrollM;
+                    isMgePaused = true;
+                    setTimeout(() => {
+                        mgeScrollPos = 0;
+                        contentM.style.transform = `translateY(-${mgeScrollPos}px)`;
+                        setTimeout(() => { isMgePaused = false; }, 1500);
+                    }, 3000);
+                }
+                contentM.style.transform = `translateY(-${mgeScrollPos}px)`;
+            }
+        }
+    }
+
+    requestAnimationFrame(runAutoScroll);
+}
+requestAnimationFrame(runAutoScroll);
+
+/* ──────────────────────────────────────────────────────────────────────────
+   9. INITIALIZATION & REFRESH INTERVAL (EVERY 30 SECONDS / 6S FEED)
+   ────────────────────────────────────────────────────────────────────────── */
+fetchDisplay2Data();
+setInterval(fetchDisplay2Data, 30000); // 30 seconds data refresh
+
+fetchFeed();
+setInterval(fetchFeed, 6000); // 6 seconds fast feed polling for real-time popups
+</script>
+</body>
+</html>
