@@ -813,6 +813,8 @@
     <!-- Maincon Group Comparison & Spotlight Row -->
     @if (mainconComparison != null && mainconComparison.Any())
     {
+        bool isNewPolicy = ViewBag.IsNewPolicyPeriod as bool? ?? true;
+
         <div class="row g-4 mb-4">
             <!-- Left Card: Maincon Group Comparison -->
             <div class="col-12">
@@ -820,10 +822,10 @@
                     <div class="premium-header">
                         <h5 class="premium-title">
                             <i class="bi bi-bar-chart-line-fill me-2 text-primary" style="font-size: 18px;"></i>Perbandingan Kepatuhan Maincon Utama (MTD Group)
-                            <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 14px; cursor: help;" data-bs-toggle="tooltip" title="Skor Terbobot 50:50 = (50% Pembuatan Target SAP) + (50% Tingkat Penyelesaian / Closure Action Plan)."></i>
+                            <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 14px; cursor: help;" data-bs-toggle="tooltip" title="@(isNewPolicy ? "Skor Terbobot 50:50 = (50% Pembuatan Target SAP) + (50% Tingkat Penyelesaian / Closure Action Plan)." : "Perhitungan Historis = 100% Target Submisi Program SAP.")"></i>
                         </h5>
                         <span class="premium-badge">
-                            Bobot: 50% Pembuatan + 50% Closure
+                            @(isNewPolicy ? "Bobot: 50% Pembuatan + 50% Closure" : "Kepatuhan Submisi SAP (Historis)")
                         </span>
                     </div>
                     <div class="premium-body p-4">
@@ -839,7 +841,7 @@
                         <!-- Divider & Section Header -->
                         <div class="d-flex align-items-center gap-3 mt-4 mb-4">
                             <h6 class="text-primary fw-bold text-uppercase m-0" style="font-size: 13px; letter-spacing: 1px; font-family: 'Outfit', sans-serif;">
-                                <i class="bi bi-grid-3x3-gap-fill me-2"></i>Rincian Kepatuhan Per Maincon (Bobot 50:50)
+                                <i class="bi bi-grid-3x3-gap-fill me-2"></i>Rincian Kepatuhan Per Maincon @(isNewPolicy ? "(Bobot 50:50)" : "(Historis Submisi)")
                             </h6>
                             <div class="flex-grow-1" style="height: 1px; background: var(--border-color); opacity: 0.8;"></div>
                         </div>
@@ -865,46 +867,62 @@
                                                     rateBadgeStyle = "background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25);";
                                                 }
                                             }
-                                            <span class="badge" style="@rateBadgeStyle font-weight: 800; font-size: 11.5px; border-radius: 8px; padding: 5px 10px;" title="Formula: (50% Pembuatan SAP) + (50% Closure Action Plan)">
-                                                Skor Total: @item.OverallComplianceRate%
+                                            <span class="badge" style="@rateBadgeStyle font-weight: 800; font-size: 11.5px; border-radius: 8px; padding: 5px 10px;" title="@(isNewPolicy ? "Formula: (50% Pembuatan SAP) + (50% Closure Action Plan)" : "Kepatuhan Target Submisi SAP")">
+                                                @(isNewPolicy ? $"Skor Total: {item.OverallComplianceRate}%" : $"Kepatuhan: {item.OverallComplianceRate}%")
                                             </span>
                                         </div>
                                         
-                                        <!-- 50/50 Dual Metric Cards -->
-                                        <div class="p-2.5 rounded-3 mb-3" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
-                                            <div class="row g-2 align-items-center">
-                                                <div class="col-6">
-                                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                                        <span style="font-size: 10.5px; font-weight: 700; color: #38bdf8;">
-                                                            <i class="bi bi-pencil-square me-1"></i>1. Pembuatan (50%)
-                                                        </span>
-                                                        <span style="font-size: 11px; font-weight: 800; color: #38bdf8;">@item.SapSubmissionRate%</span>
+                                        @if (isNewPolicy)
+                                        {
+                                            <!-- 50/50 Dual Metric Cards -->
+                                            <div class="p-2.5 rounded-3 mb-3" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
+                                                <div class="row g-2 align-items-center">
+                                                    <div class="col-6">
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <span style="font-size: 10.5px; font-weight: 700; color: #38bdf8;">
+                                                                <i class="bi bi-pencil-square me-1"></i>1. Pembuatan (50%)
+                                                            </span>
+                                                            <span style="font-size: 11px; font-weight: 800; color: #38bdf8;">@item.SapSubmissionRate%</span>
+                                                        </div>
+                                                        <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06);">
+                                                            <div class="progress-bar" role="progressbar" style="width: @Math.Min(item.SapSubmissionRate, 100)%; background: linear-gradient(90deg, #0284c7, #38bdf8);"></div>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between mt-1 text-muted" style="font-size: 9.5px;">
+                                                            <span>Submisi:</span>
+                                                            <span class="fw-bold">@(item.ActualHazard+item.ActualInspeksi+item.ActualSafetyTalk+item.ActualObservasi+item.ActualCoaching)/@(item.TargetHazard+item.TargetInspeksi+item.TargetSafetyTalk+item.TargetObservasi+item.TargetCoaching)</span>
+                                                        </div>
                                                     </div>
-                                                    <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06);">
-                                                        <div class="progress-bar" role="progressbar" style="width: @Math.Min(item.SapSubmissionRate, 100)%; background: linear-gradient(90deg, #0284c7, #38bdf8);"></div>
-                                                    </div>
-                                                    <div class="d-flex justify-content-between mt-1 text-muted" style="font-size: 9.5px;">
-                                                        <span>Submisi:</span>
-                                                        <span class="fw-bold">@(item.ActualHazard+item.ActualInspeksi+item.ActualSafetyTalk+item.ActualObservasi+item.ActualCoaching)/@(item.TargetHazard+item.TargetInspeksi+item.TargetSafetyTalk+item.TargetObservasi+item.TargetCoaching)</span>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6" style="border-left: 1px solid var(--border-color); padding-left: 10px;">
-                                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                                        <span style="font-size: 10.5px; font-weight: 700; color: #34d399;">
-                                                            <i class="bi bi-check2-circle me-1"></i>2. Closure AP (50%)
-                                                        </span>
-                                                        <span style="font-size: 11px; font-weight: 800; color: #34d399;">@item.ActionPlanClosureRate%</span>
-                                                    </div>
-                                                    <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06);">
-                                                        <div class="progress-bar" role="progressbar" style="width: @Math.Min(item.ActionPlanClosureRate, 100)%; background: linear-gradient(90deg, #059669, #34d399);"></div>
-                                                    </div>
-                                                    <div class="d-flex justify-content-between mt-1 text-muted" style="font-size: 9.5px;">
-                                                        <span>Closed/Total:</span>
-                                                        <span class="fw-bold">@item.ClosedActionPlans/@item.TotalActionPlans (@item.OpenActionPlans Open)</span>
+                                                    <div class="col-6" style="border-left: 1px solid var(--border-color); padding-left: 10px;">
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <span style="font-size: 10.5px; font-weight: 700; color: #34d399;">
+                                                                <i class="bi bi-check2-circle me-1"></i>2. Closure AP (50%)
+                                                            </span>
+                                                            <span style="font-size: 11px; font-weight: 800; color: #34d399;">@item.ActionPlanClosureRate%</span>
+                                                        </div>
+                                                        <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06);">
+                                                            <div class="progress-bar" role="progressbar" style="width: @Math.Min(item.ActionPlanClosureRate, 100)%; background: linear-gradient(90deg, #059669, #34d399);"></div>
+                                                        </div>
+                                                        <div class="d-flex justify-content-between mt-1 text-muted" style="font-size: 9.5px;">
+                                                            <span>Closed/Total:</span>
+                                                            <span class="fw-bold">@item.ClosedActionPlans/@item.TotalActionPlans (@item.OpenActionPlans Open)</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        }
+                                        else
+                                        {
+                                            <!-- Single Progress Bar for Historical Periods -->
+                                            <div class="p-2 rounded-3 mb-3" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
+                                                <div class="d-flex justify-content-between align-items-center mb-1" style="font-size: 11px;">
+                                                    <span class="text-muted">Realisasi Submisi SAP:</span>
+                                                    <span class="fw-bold" style="color: var(--text-main);">@(item.ActualHazard+item.ActualInspeksi+item.ActualSafetyTalk+item.ActualObservasi+item.ActualCoaching) / @(item.TargetHazard+item.TargetInspeksi+item.TargetSafetyTalk+item.TargetObservasi+item.TargetCoaching)</span>
+                                                </div>
+                                                <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06);">
+                                                    <div class="progress-bar" role="progressbar" style="width: @Math.Min(item.OverallComplianceRate, 100)%; background: linear-gradient(90deg, #10b981, #3b82f6);"></div>
+                                                </div>
+                                            </div>
+                                        }
 
                                         <!-- Employee count and subcons details -->
                                         @{

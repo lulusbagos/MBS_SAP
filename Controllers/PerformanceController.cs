@@ -7101,8 +7101,12 @@ namespace MBS_SAP.Controllers
                 int totalGroupTarget = totalTargetH + totalTargetI + totalTargetS + totalTargetO + totalTargetC;
                 int totalGroupActual = totalActualH + totalActualI + totalActualS + totalActualO + totalActualC;
 
+                bool isNewPolicyPeriod = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
+
                 double sapSubmissionRate = totalGroupTarget > 0 ? Math.Round(Math.Min(100.0, (double)totalGroupActual / totalGroupTarget * 100.0), 1) : 0.0;
-                double overallComplianceRate = Math.Round((0.5 * sapSubmissionRate) + (0.5 * groupClosureRate), 1);
+                double overallComplianceRate = isNewPolicyPeriod 
+                    ? Math.Round((0.5 * sapSubmissionRate) + (0.5 * groupClosureRate), 1)
+                    : sapSubmissionRate;
 
                 var compVm = new MainconGroupComparisonViewModel
                 {
@@ -7134,6 +7138,9 @@ namespace MBS_SAP.Controllers
 
                 mainconGroupComparisonList.Add(compVm);
             }
+
+            bool isCurrentNewPolicy = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
+            ViewBag.IsNewPolicyPeriod = isCurrentNewPolicy;
 
             var orderedSubcons = allSubconStats.OrderByDescending(s => s.ComplianceRate).ThenByDescending(s => s.TotalSubmissions).ToList();
             ViewBag.MostActiveSubcon = orderedSubcons.FirstOrDefault();
