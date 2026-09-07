@@ -174,9 +174,11 @@ namespace MBS_SAP.Controllers
                                       join j in _context.Jabatans on k.IdJabatan equals j.JabatanId into jg
                                       from j in jg.DefaultIfEmpty()
                                       where k.IdPerusahaan == companyId && k.StatusAktif == true
+                                         && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth)
                                       select new {
                                           k.IdKaryawan,
                                           k.NoNik,
+                                          k.TanggalMasuk,
                                           NamaLengkap = p.NamaLengkap,
                                           NamaDepartemen = d != null ? d.NamaDepartemen : "General",
                                           NamaJabatan = j != null ? j.NamaJabatan : "Staff/Operator",
@@ -352,23 +354,39 @@ namespace MBS_SAP.Controllers
                 int onsiteDays = totalDaysInMonth; // default if no roster setting
                 bool hasRoster = false;
 
+                DateTime effectiveEmpStart = (k.TanggalMasuk.HasValue && k.TanggalMasuk.Value > startOfMonth)
+                    ? k.TanggalMasuk.Value
+                    : startOfMonth;
+
                 if (rostersByNik.TryGetValue(nik, out var empRosters))
                 {
                     int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
-                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
+                        hasAnyRoster = true;
+                        if (r.TipeRoster == "TUGAS")
+                        {
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                        }
+
+                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
                         var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
                         if (overlapStart <= overlapEnd)
                         {
                             computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
-                    if (computedOnsite > 0)
+                    if (hasAnyRoster)
                     {
                         hasRoster = true;
                         onsiteDays = computedOnsite;
                     }
+                }
+                else if (effectiveEmpStart > startOfMonth)
+                {
+                    hasRoster = true;
+                    onsiteDays = (endOfMonth.Date - effectiveEmpStart.Date).Days + 1;
                 }
 
                 double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonth : 1.0;
@@ -407,6 +425,9 @@ namespace MBS_SAP.Controllers
                 double compliance = totalTgt > 0 ? Math.Round((double)totalAct / totalTgt * 100.0, 1) : 0;
                 compliance = Math.Min(compliance, 100.0);
 
+                bool isNewHire = k.TanggalMasuk.HasValue && k.TanggalMasuk.Value >= startOfMonth && k.TanggalMasuk.Value <= endOfMonth;
+                string? tanggalMasukStr = k.TanggalMasuk.HasValue ? k.TanggalMasuk.Value.ToString("dd MMM yyyy") : null;
+
                 result.Add(new {
                     karyawanName = k.NamaLengkap,
                     nik = nik,
@@ -418,6 +439,8 @@ namespace MBS_SAP.Controllers
                     complianceRate = compliance,
                     onsiteDays = onsiteDays,
                     hasRoster = hasRoster,
+                    isNewHire = isNewHire,
+                    tanggalMasukStr = tanggalMasukStr,
                     hazard = new { target = mtdTgtH, actual = mtdActH },
                     inspeksi = new { target = mtdTgtI, actual = mtdActI },
                     safetyTalk = new { target = mtdTgtST, actual = mtdActST },
@@ -622,9 +645,9 @@ namespace MBS_SAP.Controllers
 
             var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
 
-            // Active Karyawans
+            // Active Karyawans (excluding those joined after selected period)
             var allKaryawans = await _context.Karyawans.AsNoTracking()
-                .Where(k => k.StatusAktif && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan))
+                .Where(k => k.StatusAktif && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan) && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth))
                 .ToListAsync();
 
             var activeKaryawanIds = allKaryawans.Select(k => k.IdKaryawan).ToList();
@@ -668,25 +691,41 @@ namespace MBS_SAP.Controllers
                     cTar = m.TargetCoaching ?? 0;
                 }
 
+                DateTime effectiveEmpStart = (emp.TanggalMasuk.HasValue && emp.TanggalMasuk.Value > startOfMonth)
+                    ? emp.TanggalMasuk.Value
+                    : startOfMonth;
+
                 int onsiteDays = totalDaysInMonth;
                 bool hasRoster = false;
                 if (rostersByNik.TryGetValue(nik, out var empRosters))
                 {
                     int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
-                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
+                        hasAnyRoster = true;
+                        if (r.TipeRoster == "TUGAS")
+                        {
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                        }
+
+                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
                         var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
                         if (overlapStart <= overlapEnd)
                         {
                             computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
-                    if (computedOnsite > 0)
+                    if (hasAnyRoster)
                     {
                         hasRoster = true;
                         onsiteDays = computedOnsite;
                     }
+                }
+                else if (effectiveEmpStart > startOfMonth)
+                {
+                    hasRoster = true;
+                    onsiteDays = (endOfMonth.Date - effectiveEmpStart.Date).Days + 1;
                 }
 
                 double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonth : 1.0;
@@ -1129,6 +1168,7 @@ namespace MBS_SAP.Controllers
                         join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into cg
                         from c in cg.DefaultIfEmpty()
                         where k.StatusAktif == true && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan)
+                           && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth)
                         select new
                         {
                             k.IdKaryawan,
@@ -1515,10 +1555,10 @@ namespace MBS_SAP.Controllers
 
             // 1. Total Karyawan Aktif
             var totalKaryawan = await _context.Karyawans
-                .CountAsync(k => k.StatusAktif && (companyId == null || allowedCompanyIds.Contains(k.IdPerusahaan)));
+                .CountAsync(k => k.StatusAktif && (companyId == null || allowedCompanyIds.Contains(k.IdPerusahaan)) && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth));
 
             var activeKaryawanList = await _context.Karyawans.AsNoTracking()
-                .Where(k => k.StatusAktif && (companyId == null || allowedCompanyIds.Contains(k.IdPerusahaan)))
+                .Where(k => k.StatusAktif && (companyId == null || allowedCompanyIds.Contains(k.IdPerusahaan)) && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth))
                 .ToListAsync();
 
             var activeKaryawanIds = activeKaryawanList.Select(k => k.IdKaryawan).ToList();
@@ -1567,23 +1607,39 @@ namespace MBS_SAP.Controllers
                 int onsiteDays = totalDaysInMonthM;
                 bool hasRoster = false;
 
+                DateTime effectiveEmpStart = (emp.TanggalMasuk.HasValue && emp.TanggalMasuk.Value > startOfMonth)
+                    ? emp.TanggalMasuk.Value
+                    : startOfMonth;
+
                 if (!string.IsNullOrEmpty(nik) && activeRostersByNik.TryGetValue(nik, out var empRosters))
                 {
                     int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
-                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
+                        hasAnyRoster = true;
+                        if (r.TipeRoster == "TUGAS")
+                        {
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                        }
+
+                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
                         var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
                         if (overlapStart <= overlapEnd)
                         {
                             computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
-                    if (computedOnsite > 0)
+                    if (hasAnyRoster)
                     {
                         hasRoster = true;
                         onsiteDays = computedOnsite;
                     }
+                }
+                else if (effectiveEmpStart > startOfMonth)
+                {
+                    hasRoster = true;
+                    onsiteDays = (endOfMonth.Date - effectiveEmpStart.Date).Days + 1;
                 }
 
                 double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonthM : 1.0;
@@ -1840,7 +1896,7 @@ namespace MBS_SAP.Controllers
 
             // 6. Leaderboard Perusahaan
             var allKaryawans = await _context.Karyawans
-                .Where(k => k.StatusAktif && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan))
+                .Where(k => k.StatusAktif && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan) && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth))
                 .ToListAsync();
 
             var mappingsDict = new Dictionary<int, KaryawanJabatanMappingPreviewView>();
@@ -3564,6 +3620,8 @@ namespace MBS_SAP.Controllers
                         mtdTotalTarget = (int)e.mtdTotalTarget,
                         onsiteDays = (int)e.onsiteDays,
                         hasRoster = (bool)e.hasRoster,
+                        isNewHire = (bool)(e.isNewHire ?? false),
+                        tanggalMasukStr = (string?)e.tanggalMasukStr,
                         hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
                         inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
                         safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
@@ -3647,6 +3705,8 @@ namespace MBS_SAP.Controllers
                     mtdTotalTarget = (int)e.mtdTotalTarget,
                     onsiteDays = (int)e.onsiteDays,
                     hasRoster = (bool)e.hasRoster,
+                    isNewHire = (bool)(e.isNewHire ?? false),
+                    tanggalMasukStr = (string?)e.tanggalMasukStr,
                     hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
                     inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
                     safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
@@ -4385,7 +4445,7 @@ namespace MBS_SAP.Controllers
 
             // Employee scope
             var employeesQuery = _context.Karyawans.AsNoTracking()
-                .Where(k => targetCompanyIds.Contains(k.IdPerusahaan) && k.StatusAktif == true);
+                .Where(k => targetCompanyIds.Contains(k.IdPerusahaan) && k.StatusAktif == true && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth));
 
             if (!string.IsNullOrEmpty(departmentName))
             {
@@ -6107,7 +6167,7 @@ namespace MBS_SAP.Controllers
                 var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
 
                 var allChildKaryawans = await _context.Karyawans
-                    .Where(k => k.StatusAktif && childCompanyIds.Contains(k.IdPerusahaan))
+                    .Where(k => k.StatusAktif && childCompanyIds.Contains(k.IdPerusahaan) && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth))
                     .ToListAsync();
 
                 allChildKaryawans = FilterEmployeesByParentScope(allChildKaryawans, selectedCompanyId, allCompanies, relations);
@@ -6223,8 +6283,15 @@ namespace MBS_SAP.Controllers
                             if (!string.IsNullOrEmpty(nik) && childRostersByNik.TryGetValue(nik, out var empRosters))
                             {
                                 int computedOnsite = 0;
+                                bool hasAnyRoster = false;
                                 foreach (var r in empRosters)
                                 {
+                                    hasAnyRoster = true;
+                                    if (r.TipeRoster == "TUGAS")
+                                    {
+                                        continue; // Periode Tugas is exempt from SAP (target = 0)
+                                    }
+
                                     var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
                                     var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
                                     if (overlapStart <= overlapEnd)
@@ -6232,7 +6299,7 @@ namespace MBS_SAP.Controllers
                                         computedOnsite += (overlapEnd - overlapStart).Days + 1;
                                     }
                                 }
-                                if (computedOnsite > 0)
+                                if (hasAnyRoster)
                                 {
                                     hasRoster = true;
                                     onsiteDays = computedOnsite;
@@ -6287,7 +6354,7 @@ namespace MBS_SAP.Controllers
             var relatedCompanyIds = allowedCompanies.Select(c => c.PerusahaanId).ToList();
 
             var activeKaryawans = await _context.Karyawans
-                .Where(k => k.StatusAktif && relatedCompanyIds.Contains(k.IdPerusahaan))
+                .Where(k => k.StatusAktif && relatedCompanyIds.Contains(k.IdPerusahaan) && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonthM))
                 .ToListAsync();
 
             activeKaryawans = FilterEmployeesByParentScope(activeKaryawans, selectedCompanyId, allCompanies, relations);
@@ -6414,8 +6481,15 @@ namespace MBS_SAP.Controllers
                 if (!string.IsNullOrEmpty(nik) && activeRostersByNik.TryGetValue(nik, out var empRosters))
                 {
                     int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
+                        hasAnyRoster = true;
+                        if (r.TipeRoster == "TUGAS")
+                        {
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                        }
+
                         var overlapStart = r.AwalDinas > startOfMonthM ? r.AwalDinas : startOfMonthM;
                         var overlapEnd = r.AkhirDinas < endOfMonthM ? r.AkhirDinas : endOfMonthM;
                         if (overlapStart <= overlapEnd)
@@ -6423,7 +6497,7 @@ namespace MBS_SAP.Controllers
                             computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
-                    if (computedOnsite > 0)
+                    if (hasAnyRoster)
                     {
                         hasRoster = true;
                         onsiteDays = computedOnsite;
@@ -6736,7 +6810,7 @@ namespace MBS_SAP.Controllers
 
                 // Batch retrieval for employees
                 var allGroupKaryawans = await _context.Karyawans.AsNoTracking()
-                    .Where(k => k.StatusAktif && companyIds.Contains(k.IdPerusahaan))
+                    .Where(k => k.StatusAktif && companyIds.Contains(k.IdPerusahaan) && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonthM))
                     .ToListAsync();
 
                 allGroupKaryawans = FilterEmployeesByParentScope(allGroupKaryawans, grp.ScopeParentId, allCompanies, relations);
@@ -6840,8 +6914,15 @@ namespace MBS_SAP.Controllers
                     if (!string.IsNullOrEmpty(nik) && groupRostersByNik.TryGetValue(nik, out var empRosters))
                     {
                         int computedOnsite = 0;
+                        bool hasAnyRoster = false;
                         foreach (var r in empRosters)
                         {
+                            hasAnyRoster = true;
+                            if (r.TipeRoster == "TUGAS")
+                            {
+                                continue; // Periode Tugas is exempt from SAP (target = 0)
+                            }
+
                             var overlapStart = r.AwalDinas > startOfMonthMaincon ? r.AwalDinas : startOfMonthMaincon;
                             var overlapEnd = r.AkhirDinas < endOfMonthMaincon ? r.AkhirDinas : endOfMonthMaincon;
                             if (overlapStart <= overlapEnd)
@@ -6849,7 +6930,7 @@ namespace MBS_SAP.Controllers
                                 computedOnsite += (overlapEnd - overlapStart).Days + 1;
                             }
                         }
-                        if (computedOnsite > 0)
+                        if (hasAnyRoster)
                         {
                             hasRoster = true;
                             onsiteDays = computedOnsite;
@@ -6933,8 +7014,15 @@ namespace MBS_SAP.Controllers
                         if (!string.IsNullOrEmpty(nik) && groupRostersByNik.TryGetValue(nik, out var empRosters))
                         {
                             int computedOnsite = 0;
+                            bool hasAnyRoster = false;
                             foreach (var r in empRosters)
                             {
+                                hasAnyRoster = true;
+                                if (r.TipeRoster == "TUGAS")
+                                {
+                                    continue; // Periode Tugas is exempt from SAP (target = 0)
+                                }
+
                                 var overlapStart = r.AwalDinas > startOfMonthMaincon ? r.AwalDinas : startOfMonthMaincon;
                                 var overlapEnd = r.AkhirDinas < endOfMonthMaincon ? r.AkhirDinas : endOfMonthMaincon;
                                 if (overlapStart <= overlapEnd)
@@ -6942,7 +7030,7 @@ namespace MBS_SAP.Controllers
                                     computedOnsite += (overlapEnd - overlapStart).Days + 1;
                                 }
                             }
-                            if (computedOnsite > 0)
+                            if (hasAnyRoster)
                             {
                                 hasRoster = true;
                                 onsiteDays = computedOnsite;
@@ -7201,7 +7289,7 @@ namespace MBS_SAP.Controllers
 
             // Scaled targets by company
             var allActiveKaryawans = await _context.Karyawans.AsNoTracking()
-                .Where(k => k.StatusAktif == true)
+                .Where(k => k.StatusAktif == true && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonthM))
                 .ToListAsync();
 
             var allActiveKaryawanIds = allActiveKaryawans.Select(k => k.IdKaryawan).ToList();
@@ -7253,8 +7341,15 @@ namespace MBS_SAP.Controllers
                 if (!string.IsNullOrEmpty(nik) && allActiveRostersByNik.TryGetValue(nik, out var empRosters))
                 {
                     int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
+                        hasAnyRoster = true;
+                        if (r.TipeRoster == "TUGAS")
+                        {
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                        }
+
                         var overlapStart = r.AwalDinas > startOfMonthM ? r.AwalDinas : startOfMonthM;
                         var overlapEnd = r.AkhirDinas < endOfMonthM ? r.AkhirDinas : endOfMonthM;
                         if (overlapStart <= overlapEnd)
@@ -7262,7 +7357,7 @@ namespace MBS_SAP.Controllers
                             computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
-                    if (computedOnsite > 0)
+                    if (hasAnyRoster)
                     {
                         hasRoster = true;
                         onsiteDays = computedOnsite;

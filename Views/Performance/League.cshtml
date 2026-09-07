@@ -1106,7 +1106,15 @@
                                                 <div class="league-rank-pill @rankClass" style="font-size: 9px; min-width: 26px;">@rankText</div>
                                             </td>
                                             <td class="align-left">
-                                                <div class="fw-bold" style="color: #334155; font-size: 13px;">@emp.name</div>
+                                                <div class="fw-bold d-inline-flex align-items-center flex-wrap gap-1" style="color: #334155; font-size: 13px;">
+                                                    <span>@emp.name</span>
+                                                    @if (emp.isNewHire == true)
+                                                    {
+                                                        <span class="badge" style="background: linear-gradient(135deg, #06b6d4, #0284c7); color: #ffffff; font-size: 9px; padding: 2px 6px; border-radius: 6px; font-weight: 800; box-shadow: 0 1px 3px rgba(6, 182, 212, 0.4);" title="Karyawan baru masuk periode @(emp.tanggalMasukStr ?? "bulan ini") (Target dihitung proporsional)">
+                                                            <i class="bi bi-person-plus-fill me-1"></i> Baru (@(emp.tanggalMasukStr ?? "Bulan Ini"))
+                                                        </span>
+                                                    }
+                                                </div>
                                                 <div style="font-size: 10px; color: #64748b;">
                                                     @emp.nik &bull; <span class="badge bg-light text-dark py-0" style="font-size: 9px;">@emp.departmentName</span> &bull; <span style="font-size: 9px; color: #94a3b8;">@(emp.jabatanName ?? "-")</span>
                                                     @if (emp.hasRoster)

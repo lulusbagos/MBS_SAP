@@ -30,5 +30,11 @@ namespace MBS_SAP.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedAt { get; set; } = DateTime.Now;
+
+        [MaxLength(50)]
+        public string TipeRoster { get; set; } = "REGULER"; // "REGULER" or "TUGAS"
+
+        [MaxLength(255)]
+        public string? Keterangan { get; set; }
     }
 }

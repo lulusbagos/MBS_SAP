@@ -86,6 +86,8 @@ namespace MBS_SAP.Controllers
                         stats.RosterAkhirDinas = latestRoster.AkhirDinas.ToString("yyyy-MM-dd");
                         stats.RosterAwalCuti = latestRoster.AwalCuti.ToString("yyyy-MM-dd");
                         stats.RosterAkhirCuti = latestRoster.AkhirCuti.ToString("yyyy-MM-dd");
+                        stats.RosterTipe = latestRoster.TipeRoster ?? "REGULER";
+                        stats.RosterKeterangan = latestRoster.Keterangan ?? string.Empty;
                         stats.IsEditMode = true;
                     }
                     else
@@ -103,6 +105,8 @@ namespace MBS_SAP.Controllers
                         stats.RosterAkhirDinas = nextAkhirDinas.ToString("yyyy-MM-dd");
                         stats.RosterAwalCuti = nextAwalCuti.ToString("yyyy-MM-dd");
                         stats.RosterAkhirCuti = nextAkhirCuti.ToString("yyyy-MM-dd");
+                        stats.RosterTipe = "REGULER";
+                        stats.RosterKeterangan = string.Empty;
                         stats.IsEditMode = false;
                     }
                 }
@@ -146,8 +150,15 @@ namespace MBS_SAP.Controllers
                 if (stats.RosterHistory != null && stats.RosterHistory.Any())
                 {
                     int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in stats.RosterHistory)
                     {
+                        hasAnyRoster = true;
+                        if (r.TipeRoster == "TUGAS")
+                        {
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                        }
+
                         var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
                         var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
                         if (overlapStart <= overlapEnd)
@@ -155,7 +166,7 @@ namespace MBS_SAP.Controllers
                             computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
-                    if (computedOnsite > 0)
+                    if (hasAnyRoster)
                     {
                         hasRoster = true;
                         computedOnsiteDays = computedOnsite;
@@ -452,6 +463,8 @@ namespace MBS_SAP.Controllers
             ViewData["RosterAkhirDinas"] = stats.RosterAkhirDinas;
             ViewData["RosterAwalCuti"] = stats.RosterAwalCuti;
             ViewData["RosterAkhirCuti"] = stats.RosterAkhirCuti;
+            ViewData["RosterTipe"] = stats.RosterTipe;
+            ViewData["RosterKeterangan"] = stats.RosterKeterangan;
             ViewData["IsEditMode"] = stats.IsEditMode;
 
             ViewData["KategoriPengawas"] = stats.KategoriPengawas;
@@ -505,6 +518,8 @@ namespace MBS_SAP.Controllers
             public string RosterAkhirDinas { get; set; } = string.Empty;
             public string RosterAwalCuti { get; set; } = string.Empty;
             public string RosterAkhirCuti { get; set; } = string.Empty;
+            public string RosterTipe { get; set; } = "REGULER";
+            public string RosterKeterangan { get; set; } = string.Empty;
             public bool IsEditMode { get; set; }
             
             public string? KategoriPengawas { get; set; }

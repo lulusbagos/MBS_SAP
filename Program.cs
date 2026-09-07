@@ -206,9 +206,22 @@ using (var scope = app.Services.CreateScope())
                     [akhir_dinas] DATE NOT NULL,
                     [awal_cuti] DATE NOT NULL,
                     [akhir_cuti] DATE NOT NULL,
+                    [tipe_roster] NVARCHAR(50) NOT NULL DEFAULT 'REGULER',
+                    [keterangan] NVARCHAR(255) NULL,
                     [created_at] DATETIME NOT NULL DEFAULT GETDATE(),
                     [updated_at] DATETIME NULL
                 );
+            END
+            ELSE
+            BEGIN
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'tbl_m_roster' AND COLUMN_NAME = 'tipe_roster')
+                BEGIN
+                    ALTER TABLE tbl_m_roster ADD tipe_roster NVARCHAR(50) NOT NULL DEFAULT 'REGULER' WITH VALUES;
+                END
+                IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'tbl_m_roster' AND COLUMN_NAME = 'keterangan')
+                BEGIN
+                    ALTER TABLE tbl_m_roster ADD keterangan NVARCHAR(255) NULL;
+                END
             END
 
             IF OBJECT_ID(N'[dbo].[tbl_m_penilaian_kualitas_sap]', N'U') IS NULL

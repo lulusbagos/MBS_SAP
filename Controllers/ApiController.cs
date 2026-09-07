@@ -843,6 +843,59 @@ ORDER BY nama_perusahaan";
 
             // Allowed for all companies during testing / usage
 
+            bool isTugas = string.Equals(req?.TipeRoster, "TUGAS", StringComparison.OrdinalIgnoreCase);
+
+            if (isTugas)
+            {
+                if (req == null || 
+                    !DateTime.TryParse(req.AwalDinas, out DateTime awalTugas) ||
+                    !DateTime.TryParse(req.AkhirDinas, out DateTime akhirTugas))
+                {
+                    return BadRequest("Format tanggal periode tugas tidak valid.");
+                }
+
+                if (awalTugas > akhirTugas)
+                {
+                    return BadRequest("Tanggal mulai tugas tidak boleh lebih besar dari akhir tugas.");
+                }
+
+                var latestRosterTugas = await _context.Rosters
+                    .Where(r => r.Nik == userNik)
+                    .OrderByDescending(r => r.AkhirCuti)
+                    .FirstOrDefaultAsync();
+
+                if (latestRosterTugas != null && latestRosterTugas.AkhirCuti >= DateTime.Today)
+                {
+                    latestRosterTugas.AwalDinas = awalTugas;
+                    latestRosterTugas.AkhirDinas = akhirTugas;
+                    latestRosterTugas.AwalCuti = akhirTugas;
+                    latestRosterTugas.AkhirCuti = akhirTugas;
+                    latestRosterTugas.TipeRoster = "TUGAS";
+                    latestRosterTugas.Keterangan = req.Keterangan;
+                    latestRosterTugas.UpdatedAt = DateTime.Now;
+                    _context.Rosters.Update(latestRosterTugas);
+                }
+                else
+                {
+                    var newRosterTugas = new Roster
+                    {
+                        Nik = userNik,
+                        AwalDinas = awalTugas,
+                        AkhirDinas = akhirTugas,
+                        AwalCuti = akhirTugas,
+                        AkhirCuti = akhirTugas,
+                        TipeRoster = "TUGAS",
+                        Keterangan = req.Keterangan,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    };
+                    _context.Rosters.Add(newRosterTugas);
+                }
+
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "Periode Tugas berhasil disimpan. Anda dibebaskan dari kewajiban target SAP selama periode ini." });
+            }
+
             if (req == null || 
                 !DateTime.TryParse(req.AwalDinas, out DateTime awalDinas) ||
                 !DateTime.TryParse(req.AkhirDinas, out DateTime akhirDinas) ||
@@ -927,6 +980,8 @@ ORDER BY nama_perusahaan";
                 latestRoster.AkhirDinas = akhirDinas;
                 latestRoster.AwalCuti = awalCuti;
                 latestRoster.AkhirCuti = akhirCuti;
+                latestRoster.TipeRoster = "REGULER";
+                latestRoster.Keterangan = null;
                 latestRoster.UpdatedAt = DateTime.Now;
                 _context.Rosters.Update(latestRoster);
             }
@@ -939,6 +994,8 @@ ORDER BY nama_perusahaan";
                     AkhirDinas = akhirDinas,
                     AwalCuti = awalCuti,
                     AkhirCuti = akhirCuti,
+                    TipeRoster = "REGULER",
+                    Keterangan = null,
                     CreatedAt = DateTime.Now,
                     UpdatedAt = DateTime.Now
                 };
@@ -977,6 +1034,8 @@ ORDER BY nama_perusahaan";
 
     public class RosterSaveRequest
     {
+        public string? TipeRoster { get; set; } = "REGULER"; // "REGULER" or "TUGAS"
+        public string? Keterangan { get; set; }
         public string AwalDinas { get; set; } = string.Empty;
         public string AkhirDinas { get; set; } = string.Empty;
         public string AwalCuti { get; set; } = string.Empty;

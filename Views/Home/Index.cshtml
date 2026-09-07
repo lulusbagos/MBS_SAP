@@ -20,7 +20,15 @@
                         <div style="color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 500;">Selamat Bekerja,</div>
                         <h5 style="color: white; font-weight: 800; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">@User.Identity?.Name</h5>
                         <div style="color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 500; margin-top: 2px; font-family: var(--font-family-monospace, monospace);">
-                            NIK: @(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "-") | Roster: @(ViewData["MitraHariOnsite"] ?? "42") Hari Onsite / @(ViewData["MitraHariOffsite"] ?? "14") Hari Offsite
+                            NIK: @(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "-") | 
+                            @if (ViewData["RosterTipe"]?.ToString() == "TUGAS")
+                            {
+                                <span style="color: #38bdf8; font-weight: 700;"><i class="bi bi-airplane-fill"></i> Periode Tugas (Bebas SAP)</span>
+                            }
+                            else
+                            {
+                                <span>Roster: @(ViewData["MitraHariOnsite"] ?? "42") Hari Onsite / @(ViewData["MitraHariOffsite"] ?? "14") Hari Offsite</span>
+                            }
                         </div>
                     </div>
                 </div>
@@ -100,10 +108,30 @@
                     <h4 class="mb-1" style="font-weight: 800; color: var(--text-main);">@complianceScore% <span style="font-size: 13px; font-weight: 500; color: var(--color-green);">Kepatuhan</span></h4>
                     <p class="mb-0" style="font-size: 12px; color: var(--text-muted);">Skor dihitung dari target minimal 1 aktivitas/minggu (4 minggu terakhir): @compliantWeeks/@targetWeeks minggu terpenuhi.</p>
                     <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-                        <i class="bi bi-calendar-check me-1"></i> Roster Kerja: <strong>@(ViewData["MitraHariOnsite"] ?? "42") Hari Dinas (Onsite)</strong> / <strong>@(ViewData["MitraHariOffsite"] ?? "14") Hari Cuti (Offsite)</strong>
+                        @if (ViewData["RosterTipe"]?.ToString() == "TUGAS")
+                        {
+                            <span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.3); font-size: 10.5px; padding: 3px 8px; border-radius: 6px; font-weight: 700;">
+                                <i class="bi bi-airplane-fill me-1"></i> Status: Periode Tugas (Bebas SAP)
+                            </span>
+                            @if (!string.IsNullOrEmpty(ViewData["RosterKeterangan"]?.ToString()))
+                            {
+                                <span class="ms-1 text-muted" style="font-size: 10.5px;">- @ViewData["RosterKeterangan"]</span>
+                            }
+                        }
+                        else
+                        {
+                            <i class="bi bi-calendar-check me-1"></i> <span>Roster Kerja: <strong>@(ViewData["MitraHariOnsite"] ?? "42") Hari Dinas (Onsite)</strong> / <strong>@(ViewData["MitraHariOffsite"] ?? "14") Hari Cuti (Offsite)</strong></span>
+                        }
                     </div>
                     
-                    @if (ViewData["MyTotalMonthTarget"] != null && (ViewData["MyTotalMonthTarget"] as int?) == 0 && !string.IsNullOrEmpty(alasanTargetZero))
+                    @if (ViewData["RosterTipe"]?.ToString() == "TUGAS")
+                    {
+                        <div class="mt-2 px-3 py-1.5 d-inline-flex align-items-center gap-2 rounded-3" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #059669; font-size: 11px; line-height: 1.3; font-weight: 600;">
+                            <i class="bi bi-check-circle-fill" style="font-size: 13px;"></i>
+                            <span>Sedang dalam <strong>Periode Penugasan Luar</strong>: Bebas dari seluruh kewajiban target SAP bulanan (Target = 0).</span>
+                        </div>
+                    }
+                    else if (ViewData["MyTotalMonthTarget"] != null && (ViewData["MyTotalMonthTarget"] as int?) == 0 && !string.IsNullOrEmpty(alasanTargetZero))
                     {
                         <div class="mt-2 px-3 py-1.5 d-inline-flex align-items-center gap-2 rounded-3" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b; font-size: 11px; line-height: 1.3; font-weight: 500;">
                             <i class="bi bi-info-circle-fill" style="font-size: 13px;"></i>
@@ -475,6 +503,17 @@
         body.light-theme .btn-roster-cancel:hover {
             background: rgba(0, 0, 0, 0.05) !important;
         }
+        .roster-tab-btn {
+            color: var(--text-muted);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        .roster-tab-btn.active {
+            background: linear-gradient(135deg, #a855f7, #3b82f6) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 10px rgba(168, 85, 247, 0.3) !important;
+        }
     </style>
 
     <div class="modal fade" id="rosterSettingsModal" tabindex="-1" aria-labelledby="rosterSettingsModalLabel" aria-hidden="true">
@@ -485,26 +524,28 @@
                         <i class="bi bi-calendar-check-fill"></i>
                     </div>
                     <h5 style="font-weight: 800; color: var(--text-main); margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        Pengaturan Roster
+                        Pengaturan Roster & Penugasan
                         @if (ViewData["IsEditMode"] is bool edit && edit)
                         {
-                            <span style="font-size: 9.5px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Edit Roster Aktif</span>
+                            <span style="font-size: 9.5px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Edit Status Aktif</span>
                         }
                         else
                         {
-                            <span style="font-size: 9.5px; background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Siklus Roster Baru</span>
+                            <span style="font-size: 9.5px; background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Siklus Baru</span>
                         }
                     </h5>
-                    <p style="font-size: 11.5px; color: var(--text-muted); max-width: 340px; margin: 0 auto;">Sesuaikan siklus dinas dan cuti Anda untuk sinkronisasi target program keselamatan.</p>
+                    <p style="font-size: 11.5px; color: var(--text-muted); max-width: 340px; margin: 0 auto;">Sesuaikan siklus dinas/cuti atau periode penugasan luar Anda.</p>
                     <button type="button" class="btn-close position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 20px; right: 20px; filter: invert(var(--text-contrast));"></button>
                 </div>
                 
                 <div class="modal-body" style="padding: 20px; max-height: calc(100vh - 200px); overflow-y: auto;">
                     <form id="rosterSettingsForm">
                         @{
-                            var isEditMode = ViewData["IsEditMode"] is bool edit && edit;
+                            var isEditMode = ViewData["IsEditMode"] is bool editMode && editMode;
                             var readonlyAttr = isEditMode ? "readonly" : "";
                             var readonlyClass = isEditMode ? "roster-readonly-field" : "";
+                            var currentTipe = (ViewData["RosterTipe"] as string) ?? "REGULER";
+                            var isTugasActive = currentTipe.Equals("TUGAS", StringComparison.OrdinalIgnoreCase);
                         }
                         <div id="rosterFormAlert" class="alert alert-danger d-none" style="font-size: 12px; border-radius: 12px; padding: 10px 14px;"></div>
 
@@ -513,86 +554,146 @@
                             <div id="rosterEditWarning" class="alert alert-warning d-flex align-items-center justify-content-between border-0 mb-3" style="background-color: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2) !important; border-radius: 16px; padding: 12px 16px; gap: 10px;">
                                 <div class="d-flex align-items-center gap-2">
                                     <i class="bi bi-lock-fill" id="rosterLockIcon" style="color: #f59e0b; font-size: 16px;"></i>
-                                    <span id="rosterLockText" style="font-size: 11px; color: var(--text-main); font-weight: 700; line-height: 1.3;">Roster aktif terkunci dari perubahan tidak sengaja.</span>
+                                    <span id="rosterLockText" style="font-size: 11px; color: var(--text-main); font-weight: 700; line-height: 1.3;">Status aktif terkunci dari perubahan tidak sengaja.</span>
                                 </div>
                                 <button type="button" id="btnToggleEditRoster" class="btn btn-sm animate-pop-in" style="background: #f59e0b; color: #fff; font-size: 11px; font-weight: 700; border-radius: 8px; padding: 6px 12px; border: none; white-space: nowrap;">
-                                    <i class="bi bi-pencil-square me-1"></i> Revisi Roster
+                                    <i class="bi bi-pencil-square me-1"></i> Revisi
                                 </button>
                             </div>
                         }
 
-                        <!-- Target Calculation Info Banner -->
-                        <div style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 2px solid #0ea5e9; border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.05);">
-                            <span style="font-size: 9px; background: #0ea5e9; color: #ffffff; padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px;">Informasi Target</span>
-                            <h5 style="color: #0369a1; font-weight: 850; font-size: 13px; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
-                                Perhitungan Target dihitung dari jumlah hari Onsite
-                            </h5>
+                        <!-- Segmented Switcher for Tipe Roster -->
+                        <div class="roster-type-switcher mb-3" style="display: flex; background: rgba(0,0,0,0.06); padding: 4px; border-radius: 14px; border: 1px solid var(--border-color); gap: 4px;">
+                            <button type="button" class="btn btn-sm flex-fill roster-tab-btn @(!isTugasActive ? "active" : "")" id="tabRosterReguler" style="border-radius: 10px; font-weight: 700; font-size: 11.5px; padding: 8px 12px; transition: all 0.2s;">
+                                <i class="bi bi-briefcase-fill me-1"></i> Roster Reguler
+                            </button>
+                            <button type="button" class="btn btn-sm flex-fill roster-tab-btn @(isTugasActive ? "active" : "")" id="tabPeriodeTugas" style="border-radius: 10px; font-weight: 700; font-size: 11.5px; padding: 8px 12px; transition: all 0.2s;">
+                                <i class="bi bi-airplane-fill me-1"></i> Periode Tugas (Bebas SAP)
+                            </button>
                         </div>
-                        
-                        <!-- Warning Compliance Notice -->
-                        <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: start;">
-                            <i class="bi bi-exclamation-triangle-fill" style="color: #f59e0b; font-size: 18px; line-height: 1;"></i>
-                            <div>
-                                <h6 style="color: #f59e0b; font-weight: 800; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">PANDUAN PENYESUAIAN ROSTER AKTUAL</h6>
-                                <p style="color: var(--text-main); font-size: 11px; margin: 0; line-height: 1.5; opacity: 0.9;">
-                                    Rencana Roster OneEv: <strong>@(ViewData["MitraHariOnsite"] ?? "42") Hari Dinas / @(ViewData["MitraHariOffsite"] ?? "14") Hari Cuti</strong>.
-                                </p>
-                                <p style="color: var(--text-main); font-size: 11px; margin: 8px 0 0 0; line-height: 1.5; font-weight: 700;">
-                                    <i class="bi bi-info-circle-fill text-warning me-1"></i> Jika Aktual Berbeda (Misal: Dinas 35 Hari / Cuti 21 Hari):
-                                </p>
-                                <p style="color: var(--text-muted); font-size: 10.5px; margin: 3px 0 0 0; line-height: 1.5; opacity: 0.85;">
-                                    Anda <strong>dapat langsung memilih tanggal Mulai & Akhir Dinas/Cuti secara manual</strong> pada kolom input di bawah ini sesuai jadwal kepulangan dan keberangkatan Anda yang sebenarnya. 
-                                </p>
-                                <p style="color: var(--text-muted); font-size: 10.5px; margin: 4px 0 0 0; line-height: 1.5; opacity: 0.85;">
-                                    Sistem MBS memberikan toleransi pergeseran secara otomatis sebesar <strong>±14 hari untuk dinas</strong> dan <strong>±7 hari untuk cuti</strong> dari standar OneEv.
-                                </p>
+                        <input type="hidden" id="tipeRosterSelected" name="tipeRosterSelected" value="@currentTipe" />
+
+                        <!-- SECTION 1: ROSTER REGULER -->
+                        <div id="sectionRosterReguler" style="@(isTugasActive ? "display: none;" : "")">
+                            <!-- Target Calculation Info Banner -->
+                            <div style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 2px solid #0ea5e9; border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.05);">
+                                <span style="font-size: 9px; background: #0ea5e9; color: #ffffff; padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px;">Informasi Target</span>
+                                <h5 style="color: #0369a1; font-weight: 850; font-size: 13px; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
+                                    Perhitungan Target dihitung dari jumlah hari Onsite
+                                </h5>
+                            </div>
+                            
+                            <!-- Warning Compliance Notice -->
+                            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: start;">
+                                <i class="bi bi-exclamation-triangle-fill" style="color: #f59e0b; font-size: 18px; line-height: 1;"></i>
+                                <div>
+                                    <h6 style="color: #f59e0b; font-weight: 800; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">PANDUAN PENYESUAIAN ROSTER AKTUAL</h6>
+                                    <p style="color: var(--text-main); font-size: 11px; margin: 0; line-height: 1.5; opacity: 0.9;">
+                                        Rencana Roster OneEv: <strong>@(ViewData["MitraHariOnsite"] ?? "42") Hari Dinas / @(ViewData["MitraHariOffsite"] ?? "14") Hari Cuti</strong>.
+                                    </p>
+                                    <p style="color: var(--text-main); font-size: 11px; margin: 8px 0 0 0; line-height: 1.5; font-weight: 700;">
+                                        <i class="bi bi-info-circle-fill text-warning me-1"></i> Jika Aktual Berbeda (Misal: Dinas 35 Hari / Cuti 21 Hari):
+                                    </p>
+                                    <p style="color: var(--text-muted); font-size: 10.5px; margin: 3px 0 0 0; line-height: 1.5; opacity: 0.85;">
+                                        Anda <strong>dapat langsung memilih tanggal Mulai & Akhir Dinas/Cuti secara manual</strong> pada kolom input di bawah ini sesuai jadwal aktual Anda. 
+                                    </p>
+                                    <p style="color: var(--text-muted); font-size: 10.5px; margin: 4px 0 0 0; line-height: 1.5; opacity: 0.85;">
+                                        Sistem MBS memberikan toleransi pergeseran secara otomatis sebesar <strong>±14 hari untuk dinas</strong> dan <strong>±7 hari untuk cuti</strong> dari standar OneEv.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Dinas Section Card -->
+                            <div class="roster-card">
+                                <h6 style="font-size: 11.5px; font-weight: 800; color: var(--color-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="bi bi-geo-alt-fill"></i> Periode Dinas (Onsite)
+                                </h6>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="roster-label">Mulai Dinas</label>
+                                        <input type="date" class="roster-date-input @readonlyClass" id="awalDinas" name="awalDinas" value="@ViewData["RosterAwalDinas"]" @readonlyAttr required />
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="roster-label">Akhir Dinas</label>
+                                        <input type="date" class="roster-date-input @readonlyClass" id="akhirDinas" name="akhirDinas" value="@ViewData["RosterAkhirDinas"]" @readonlyAttr required />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cuti Section Card -->
+                            <div class="roster-card">
+                                <h6 style="font-size: 11.5px; font-weight: 800; color: var(--color-orange); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="bi bi-airplane-fill"></i> Periode Roster (Cuti)
+                                </h6>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="roster-label">Mulai Cuti</label>
+                                        <input type="date" class="roster-date-input @readonlyClass" id="awalCuti" name="awalCuti" value="@ViewData["RosterAwalCuti"]" @readonlyAttr required />
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="roster-label">Akhir Cuti</label>
+                                        <input type="date" class="roster-date-input @readonlyClass" id="akhirCuti" name="akhirCuti" value="@ViewData["RosterAkhirCuti"]" @readonlyAttr required />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Info Box Notice -->
+                            <div class="roster-info-box" style="margin-bottom: 24px;">
+                                <i class="bi bi-info-circle-fill"></i>
+                                <p>Target K3 bulanan Anda wajib dipenuhi secara proporsional sesuai jumlah hari dinas aktif (onsite). Saat cuti, target program ditiadakan.</p>
                             </div>
                         </div>
 
-                        <!-- Dinas Section Card -->
-                        <div class="roster-card">
-                            <h6 style="font-size: 11.5px; font-weight: 800; color: var(--color-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                                <i class="bi bi-geo-alt-fill"></i> Periode Dinas (Onsite)
-                            </h6>
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <label class="roster-label">Mulai Dinas</label>
-                                    <input type="date" class="roster-date-input @readonlyClass" id="awalDinas" name="awalDinas" value="@ViewData["RosterAwalDinas"]" @readonlyAttr required />
-                                </div>
-                                <div class="col-6">
-                                    <label class="roster-label">Akhir Dinas</label>
-                                    <input type="date" class="roster-date-input @readonlyClass" id="akhirDinas" name="akhirDinas" value="@ViewData["RosterAkhirDinas"]" @readonlyAttr required />
+                        <!-- SECTION 2: PERIODE TUGAS (BEBAS SAP) -->
+                        <div id="sectionPeriodeTugas" style="@(!isTugasActive ? "display: none;" : "")">
+                            <!-- Free SAP Banner -->
+                            <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 182, 212, 0.12)); border: 2px solid #10b981; border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.05);">
+                                <span style="font-size: 9px; background: #10b981; color: #ffffff; padding: 2px 8px; border-radius: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px;">Bebas SAP</span>
+                                <h5 style="color: #059669; font-weight: 850; font-size: 13px; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.4;">
+                                    Target SAP = 0 Selama Masa Penugasan
+                                </h5>
+                            </div>
+
+                            <!-- Ketentuan Periode Tugas Notice -->
+                            <div style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.2); border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: start;">
+                                <i class="bi bi-info-circle-fill" style="color: #0284c7; font-size: 18px; line-height: 1;"></i>
+                                <div>
+                                    <h6 style="color: #0284c7; font-weight: 800; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">KETENTUAN PERIODE TUGAS</h6>
+                                    <p style="color: var(--text-main); font-size: 11px; margin: 0; line-height: 1.5; opacity: 0.9;">
+                                        Fitur ini digunakan jika Anda mendapatkan surat penugasan khusus, dinas luar site, audit HO, training eksternal, atau bebas tugas di site.
+                                    </p>
+                                    <p style="color: var(--text-muted); font-size: 10.5px; margin: 4px 0 0 0; line-height: 1.5; opacity: 0.85;">
+                                        Selama periode penugasan ini, Anda <strong>tidak memiliki kewajiban pengisian target bulanan SAP (Target = 0)</strong>.
+                                    </p>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Cuti Section Card -->
-                        <div class="roster-card">
-                            <h6 style="font-size: 11.5px; font-weight: 800; color: var(--color-orange); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-                                <i class="bi bi-airplane-fill"></i> Periode Roster (Cuti)
-                            </h6>
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <label class="roster-label">Mulai Cuti</label>
-                                    <input type="date" class="roster-date-input @readonlyClass" id="awalCuti" name="awalCuti" value="@ViewData["RosterAwalCuti"]" @readonlyAttr required />
+                            <!-- Tugas Card -->
+                            <div class="roster-card">
+                                <h6 style="font-size: 11.5px; font-weight: 800; color: #0284c7; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="bi bi-calendar-range-fill"></i> Jadwal & Keterangan Penugasan
+                                </h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <label class="roster-label">Mulai Tugas</label>
+                                        <input type="date" class="roster-date-input @readonlyClass" id="awalTugas" name="awalTugas" value="@(isTugasActive ? ViewData["RosterAwalDinas"] : (ViewData["RosterAwalDinas"] ?? DateTime.Today.ToString("yyyy-MM-dd")))" @readonlyAttr required />
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="roster-label">Akhir Tugas</label>
+                                        <input type="date" class="roster-date-input @readonlyClass" id="akhirTugas" name="akhirTugas" value="@(isTugasActive ? ViewData["RosterAkhirDinas"] : (ViewData["RosterAkhirDinas"] ?? DateTime.Today.AddDays(30).ToString("yyyy-MM-dd")))" @readonlyAttr required />
+                                    </div>
                                 </div>
-                                <div class="col-6">
-                                    <label class="roster-label">Akhir Cuti</label>
-                                    <input type="date" class="roster-date-input @readonlyClass" id="akhirCuti" name="akhirCuti" value="@ViewData["RosterAkhirCuti"]" @readonlyAttr required />
+                                <div>
+                                    <label class="roster-label">Keterangan / Keperluan Penugasan</label>
+                                    <input type="text" class="roster-date-input @readonlyClass" id="keteranganTugas" name="keteranganTugas" placeholder="Contoh: Tugas HO / Diklat Luar / Penugasan Khusus" value="@(ViewData["RosterKeterangan"] ?? "")" @readonlyAttr maxlength="255" />
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Info Box Notice -->
-                        <div class="roster-info-box" style="margin-bottom: 24px;">
-                            <i class="bi bi-info-circle-fill"></i>
-                            <p>Target K3 bulanan Anda wajib dipenuhi secara proporsional sesuai jumlah hari dinas aktif (onsite). Saat cuti, target program ditiadakan.</p>
                         </div>
 
                         <!-- Roster History Section -->
                         <div class="roster-card" style="margin-bottom: 0; padding-top: 14px; background: rgba(255,255,255,0.01);">
                             <h6 style="font-size: 11.5px; font-weight: 800; color: var(--text-main); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                <i class="bi bi-clock-history" style="color: #a855f7;"></i> Riwayat Pengaturan Roster
+                                <i class="bi bi-clock-history" style="color: #a855f7;"></i> Riwayat Pengaturan
                             </h6>
                             
                             @{
@@ -611,8 +712,8 @@
                                         <table class="table table-borderless" style="font-size: 11px; margin-bottom: 0; color: var(--text-main);">
                                             <thead>
                                                 <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-weight: 700;">
-                                                    <th class="ps-0" style="padding-bottom: 6px;">Periode Dinas</th>
-                                                    <th style="padding-bottom: 6px;">Periode Cuti</th>
+                                                    <th class="ps-0" style="padding-bottom: 6px;">Tipe & Periode</th>
+                                                    <th style="padding-bottom: 6px;">Detail / Cuti</th>
                                                     <th class="text-end pe-0" style="padding-bottom: 6px;">Diatur Pada</th>
                                                 </tr>
                                             </thead>
@@ -620,17 +721,46 @@
                                                 @foreach (var h in historyList)
                                                 {
                                                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.02);">
-                                                        <td class="ps-0 py-2">
-                                                            <div class="fw-bold">@h.AwalDinas.ToString("dd MMM") - @h.AkhirDinas.ToString("dd MMM yy")</div>
-                                                            <div class="text-muted" style="font-size: 10px;">@((h.AkhirDinas - h.AwalDinas).Days + 1) hari dinas</div>
-                                                        </td>
-                                                        <td class="py-2">
-                                                            <div class="fw-bold" style="color: var(--color-orange);">@h.AwalCuti.ToString("dd MMM") - @h.AkhirCuti.ToString("dd MMM yy")</div>
-                                                            <div class="text-muted" style="font-size: 10px;">@((h.AkhirCuti - h.AwalCuti).Days + 1) hari cuti</div>
-                                                        </td>
-                                                        <td class="text-end pe-0 py-2 text-muted" style="font-size: 10px; vertical-align: middle;">
-                                                            @h.CreatedAt.ToString("dd/MM/yy HH:mm")
-                                                        </td>
+                                                        @if (h.TipeRoster == "TUGAS")
+                                                        {
+                                                            <td class="ps-0 py-2">
+                                                                <div class="d-flex align-items-center gap-1.5 mb-1">
+                                                                    <span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.3); font-size: 9.5px; padding: 2px 6px; border-radius: 6px; font-weight: 700;">
+                                                                        <i class="bi bi-airplane-fill me-1"></i> Periode Tugas
+                                                                    </span>
+                                                                </div>
+                                                                <div class="fw-bold" style="color: #0284c7;">@h.AwalDinas.ToString("dd MMM") - @h.AkhirDinas.ToString("dd MMM yy")</div>
+                                                                <div class="text-muted" style="font-size: 10px;">@((h.AkhirDinas - h.AwalDinas).Days + 1) hari penugasan</div>
+                                                            </td>
+                                                            <td class="py-2">
+                                                                <div class="fw-bold" style="color: #10b981;"><i class="bi bi-check-circle-fill me-1"></i> Bebas SAP</div>
+                                                                <div class="text-muted" style="font-size: 10px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                                    @(string.IsNullOrEmpty(h.Keterangan) ? "Target SAP = 0" : h.Keterangan)
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-end pe-0 py-2 text-muted" style="font-size: 10px; vertical-align: middle;">
+                                                                @h.CreatedAt.ToString("dd/MM/yy HH:mm")
+                                                            </td>
+                                                        }
+                                                        else
+                                                        {
+                                                            <td class="ps-0 py-2">
+                                                                <div class="d-flex align-items-center gap-1.5 mb-1">
+                                                                    <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 9.5px; padding: 2px 6px; border-radius: 6px; font-weight: 700;">
+                                                                        <i class="bi bi-briefcase-fill me-1"></i> Roster Reguler
+                                                                    </span>
+                                                                </div>
+                                                                <div class="fw-bold">@h.AwalDinas.ToString("dd MMM") - @h.AkhirDinas.ToString("dd MMM yy")</div>
+                                                                <div class="text-muted" style="font-size: 10px;">@((h.AkhirDinas - h.AwalDinas).Days + 1) hari dinas</div>
+                                                            </td>
+                                                            <td class="py-2">
+                                                                <div class="fw-bold" style="color: var(--color-orange);">@h.AwalCuti.ToString("dd MMM") - @h.AkhirCuti.ToString("dd MMM yy")</div>
+                                                                <div class="text-muted" style="font-size: 10px;">@((h.AkhirCuti - h.AwalCuti).Days + 1) hari cuti</div>
+                                                            </td>
+                                                            <td class="text-end pe-0 py-2 text-muted" style="font-size: 10px; vertical-align: middle;">
+                                                                @h.CreatedAt.ToString("dd/MM/yy HH:mm")
+                                                            </td>
+                                                        }
                                                     </tr>
                                                 }
                                             </tbody>
@@ -647,13 +777,13 @@
                         @if (ViewData["IsEditMode"] is bool deleteAllowed && deleteAllowed)
                         {
                             <button type="button" id="btnDeleteRoster" class="btn btn-danger animate-pop-in" style="background-color: var(--color-red, #dc2626); border-color: var(--color-red, #dc2626); border-radius: 12px; padding: 10px 16px; font-weight: 600; font-size: 13px; color: white;">
-                                <i class="bi bi-trash3-fill me-1"></i> Hapus Roster
+                                <i class="bi bi-trash3-fill me-1"></i> Hapus Status
                             </button>
                         }
                     </div>
                     <div style="display: flex; gap: 8px;">
                         <button type="button" class="btn btn-roster-cancel" data-bs-dismiss="modal">Batal</button>
-                        <button type="button" id="btnSaveRoster" class="btn btn-roster-save">Simpan Roster</button>
+                        <button type="button" id="btnSaveRoster" class="btn btn-roster-save">Simpan</button>
                     </div>
                 </div>
             </div>
@@ -822,10 +952,119 @@
                     }
                 });
 
+                // Tab switching between Roster Reguler and Periode Tugas
+                $('#tabRosterReguler').on('click', function() {
+                    $(this).addClass('active');
+                    $('#tabPeriodeTugas').removeClass('active');
+                    $('#sectionRosterReguler').show();
+                    $('#sectionPeriodeTugas').hide();
+                    $('#tipeRosterSelected').val('REGULER');
+                });
+
+                $('#tabPeriodeTugas').on('click', function() {
+                    $(this).addClass('active');
+                    $('#tabRosterReguler').removeClass('active');
+                    $('#sectionPeriodeTugas').show();
+                    $('#sectionRosterReguler').hide();
+                    $('#tipeRosterSelected').val('TUGAS');
+                });
+
                 $('#btnSaveRoster').on('click', function() {
                     const alertContainer = $('#rosterFormAlert');
                     alertContainer.addClass('d-none').text('');
 
+                    const currentTipe = $('#tipeRosterSelected').val() || 'REGULER';
+
+                    if (currentTipe === 'TUGAS') {
+                        const awalTugasVal = $('#awalTugas').val();
+                        const akhirTugasVal = $('#akhirTugas').val();
+                        const keteranganVal = $('#keteranganTugas').val();
+
+                        if (!awalTugasVal || !akhirTugasVal) {
+                            alertContainer.removeClass('d-none')
+                                .removeClass('alert-success')
+                                .addClass('alert-danger')
+                                .css({
+                                    'background-color': 'rgba(244, 63, 94, 0.12)',
+                                    'border-color': 'rgba(244, 63, 94, 0.2)',
+                                    'color': 'var(--color-red)'
+                                })
+                                .text('Tanggal mulai dan selesai tugas wajib diisi!');
+                            return;
+                        }
+
+                        const awalTugas = new Date(awalTugasVal);
+                        const akhirTugas = new Date(akhirTugasVal);
+
+                        if (awalTugas > akhirTugas) {
+                            alertContainer.removeClass('d-none')
+                                .removeClass('alert-success')
+                                .addClass('alert-danger')
+                                .css({
+                                    'background-color': 'rgba(244, 63, 94, 0.12)',
+                                    'border-color': 'rgba(244, 63, 94, 0.2)',
+                                    'color': 'var(--color-red)'
+                                })
+                                .text('Tanggal mulai tugas tidak boleh melebihi selesai tugas.');
+                            return;
+                        }
+
+                        const btn = $(this);
+                        const originalText = btn.text();
+                        btn.prop('disabled', true).text('Menyimpan...');
+
+                        const requestData = {
+                            tipeRoster: 'TUGAS',
+                            awalDinas: awalTugasVal,
+                            akhirDinas: akhirTugasVal,
+                            keterangan: keteranganVal
+                        };
+
+                        $.ajax({
+                            url: '/Api/SaveRoster',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(requestData),
+                            success: function(response) {
+                                window.rosterSavedSuccess = true;
+                                localStorage.removeItem('roster_popup_dismissed_date');
+                                alertContainer.removeClass('d-none')
+                                    .removeClass('alert-danger')
+                                    .addClass('alert-success')
+                                    .css({
+                                        'background-color': 'rgba(16, 185, 129, 0.15)',
+                                        'border-color': 'rgba(16, 185, 129, 0.2)',
+                                        'color': '#10b981'
+                                    })
+                                    .text(response.message || 'Periode tugas berhasil disimpan!');
+
+                                setTimeout(function() {
+                                    const modalEl = document.getElementById('rosterSettingsModal');
+                                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                                    if (modalInstance) {
+                                        modalInstance.hide();
+                                    }
+                                    window.location.reload();
+                                }, 1000);
+                            },
+                            error: function(xhr) {
+                                btn.prop('disabled', false).text(originalText);
+                                const errorMsg = xhr.responseJSON?.message || xhr.responseText || 'Gagal menyimpan periode tugas. Coba lagi.';
+                                alertContainer.removeClass('d-none')
+                                    .removeClass('alert-success')
+                                    .addClass('alert-danger')
+                                    .css({
+                                        'background-color': 'rgba(244, 63, 94, 0.12)',
+                                        'border-color': 'rgba(244, 63, 94, 0.2)',
+                                        'color': 'var(--color-red)'
+                                    })
+                                    .text(errorMsg);
+                            }
+                        });
+                        return;
+                    }
+
+                    // ROSTER REGULER
                     const awalDinasVal = $('#awalDinas').val();
                     const akhirDinasVal = $('#akhirDinas').val();
                     const awalCutiVal = $('#awalCuti').val();
@@ -840,7 +1079,7 @@
                                 'border-color': 'rgba(244, 63, 94, 0.2)',
                                 'color': 'var(--color-red)'
                             })
-                            .text('Semua tanggal wajib diisi!');
+                            .text('Semua tanggal dinas dan cuti wajib diisi!');
                         return;
                     }
 
@@ -891,6 +1130,7 @@
                     btn.prop('disabled', true).text('Menyimpan...');
 
                     const requestData = {
+                        tipeRoster: 'REGULER',
                         awalDinas: awalDinasVal,
                         akhirDinas: akhirDinasVal,
                         awalCuti: awalCutiVal,
