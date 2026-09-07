@@ -67,11 +67,14 @@
     }
 
     private string GetEmpDotHtml(int act, int tgt, string programName) {
-        if (tgt == 0) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Bebas Target - WIN\">W</span>";
+        if (tgt == 0) {
+            if (act > 0) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Realisasi {act} (Bebas Target) - WIN\">W</span>";
+            return $"<span class=\"league-form-dot dot-off\" style=\"background: #94a3b8; color: #ffffff;\" title=\"{programName} Bebas Target (0 Hari Onsite / Cuti)\">-</span>";
+        }
         double rate = ((double)act / tgt) * 100;
-        if (rate >= 80) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Tercapai (80%+) - WIN\">W</span>";
-        if (rate >= 40) return $"<span class=\"league-form-dot dot-d\" title=\"{programName} Sebagian (40%-79%) - DRAW\">D</span>";
-        return $"<span class=\"league-form-dot dot-l\" title=\"{programName} Kurang (<40%) - LOSS\">L</span>";
+        if (rate >= 80) return $"<span class=\"league-form-dot dot-w\" title=\"{programName} Tercapai ({act}/{tgt}) - WIN\">W</span>";
+        if (rate >= 40) return $"<span class=\"league-form-dot dot-d\" title=\"{programName} Sebagian ({act}/{tgt}) - DRAW\">D</span>";
+        return $"<span class=\"league-form-dot dot-l\" title=\"{programName} Kurang ({act}/{tgt}) - LOSS\">L</span>";
     }
 
     public string GetRateColor(double rate) {
@@ -248,6 +251,19 @@
     .dot-w { background: #10b981; }
     .dot-d { background: #f59e0b; }
     .dot-l { background: #ef4444; }
+    .dot-off { background: #94a3b8; }
+    .badge-newhire {
+        background: linear-gradient(135deg, #0284c7, #0369a1);
+        color: #ffffff;
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        display: inline-flex;
+        align-items: center;
+        box-shadow: 0 1px 2px rgba(2, 132, 199, 0.25);
+    }
 
     .btn-club-filter {
         transition: all 0.2s ease-in-out;
@@ -1072,18 +1088,22 @@
                                 else
                                 {
                                     int empIdx = 0;
+                                    var activeEmployeesList = employees.Cast<dynamic>().Where(e => (int)e.mtdTotalTarget > 0).ToList();
+                                    int activePlayerCount = activeEmployeesList.Count;
+
                                     foreach (dynamic emp in employees)
                                     {
                                         empIdx++;
                                         var rowClass = "league-tr-normal";
                                         var rankClass = "";
                                         var rankText = empIdx.ToString();
-                                        var zeroTarget = (emp.mtdTotalTarget == 0);
+                                        var zeroTarget = (emp.mtdTotalTarget == 0 || (emp.hasRoster && emp.onsiteDays == 0));
 
-                                        if (emp.complianceRate == 0 && !zeroTarget)
+                                        if (zeroTarget)
                                         {
-                                            rowClass = "league-tr-no-movement";
+                                            rowClass = "league-tr-normal";
                                             rankClass = "league-rank-no-movement";
+                                            rankText = "-";
                                         }
                                         else if (empIdx <= 3)
                                         {
@@ -1093,15 +1113,20 @@
                                             else if (empIdx == 2) rankText = "🥈 2";
                                             else if (empIdx == 3) rankText = "🥉 3";
                                         }
-                                        else if (empIdx >= employees.Count - 2 && employees.Count > 5)
+                                        else if (emp.complianceRate == 0)
+                                        {
+                                            rowClass = "league-tr-no-movement";
+                                            rankClass = "league-rank-no-movement";
+                                        }
+                                        else if (empIdx >= activePlayerCount - 1 && activePlayerCount > 4)
                                         {
                                             rowClass = "league-tr-relegation";
                                             rankClass = "league-rank-relegation";
                                         }
 
-                                        var rowStyle = zeroTarget ? "background-color: #f0fdf4;" : "";
+                                        var rowStyle = zeroTarget ? "background-color: #f8fafc !important;" : $"background-color: {GetRowBgColor((double)emp.complianceRate)} !important;";
 
-                                        <tr class="@rowClass player-row" style="@rowStyle background-color: @GetRowBgColor((double)emp.complianceRate) !important;" data-dept="@emp.departmentName">
+                                        <tr class="@rowClass player-row" style="@rowStyle" data-dept="@emp.departmentName">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass" style="font-size: 9px; min-width: 26px;">@rankText</div>
                                             </td>
@@ -1110,8 +1135,8 @@
                                                     <span>@emp.name</span>
                                                     @if (emp.isNewHire == true)
                                                     {
-                                                        <span class="badge" style="background: linear-gradient(135deg, #06b6d4, #0284c7); color: #ffffff; font-size: 9px; padding: 2px 6px; border-radius: 6px; font-weight: 800; box-shadow: 0 1px 3px rgba(6, 182, 212, 0.4);" title="Karyawan baru masuk periode @(emp.tanggalMasukStr ?? "bulan ini") (Target dihitung proporsional)">
-                                                            <i class="bi bi-person-plus-fill me-1"></i> Baru (@(emp.tanggalMasukStr ?? "Bulan Ini"))
+                                                        <span class="badge badge-newhire" title="Karyawan baru bergabung (@(emp.tanggalMasukStr ?? "Baru")) (Target dihitung proporsional)">
+                                                            <i class="bi bi-sparkles me-1 text-warning"></i>New Hire
                                                         </span>
                                                     }
                                                 </div>
@@ -1119,7 +1144,15 @@
                                                     @emp.nik &bull; <span class="badge bg-light text-dark py-0" style="font-size: 9px;">@emp.departmentName</span> &bull; <span style="font-size: 9px; color: #94a3b8;">@(emp.jabatanName ?? "-")</span>
                                                     @if (emp.hasRoster)
                                                     {
-                                                        <span>&bull;</span> <span class="badge bg-info text-white py-0" style="font-size: 9px; background-color: #0ea5e9 !important;">@emp.onsiteDays Hari Onsite</span>
+                                                        <span>&bull;</span>
+                                                        if (emp.onsiteDays == 0)
+                                                        {
+                                                            <span class="badge bg-secondary text-white py-0" style="font-size: 9px; background-color: #64748b !important;" title="Sedang tidak bertugas / Cuti di periode ini"><i class="bi bi-pause-circle me-1"></i>0 Hari Onsite (Cuti)</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-info text-white py-0" style="font-size: 9px; background-color: #0ea5e9 !important;">@emp.onsiteDays Hari Onsite</span>
+                                                        }
                                                     }
                                                     else
                                                     {
@@ -1127,7 +1160,18 @@
                                                     }
                                                 </div>
                                             </td>
-                                            <td class="text-center fw-bold" style="color: @GetRateColor(emp.complianceRate); font-size: 13px;">@emp.complianceRate%</td>
+                                            <td class="text-center fw-bold" style="font-size: 13px;">
+                                                @if (zeroTarget)
+                                                {
+                                                    <span class="badge" style="background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;" title="Bebas target (0 Hari Onsite / Cuti)">
+                                                        CUTI / OFF
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span style="color: @GetRateColor(emp.complianceRate);">@emp.complianceRate%</span>
+                                                }
+                                            </td>
                                             <td class="text-center" style="white-space: nowrap;">
                                                 @GetEmpFormDotsHtml(emp.hazard.actual, emp.hazard.target, emp.inspeksi.actual, emp.inspeksi.target, emp.safetyTalk.actual, emp.safetyTalk.target, emp.observasi.actual, emp.observasi.target, emp.coaching.actual, emp.coaching.target)
                                             </td>
