@@ -919,32 +919,16 @@ ORDER BY nama_perusahaan";
                 return BadRequest("Tanggal awal cuti tidak boleh lebih besar dari akhir cuti.");
             }
 
-            // Validasi durasi terhadap ONE_DB_MITRA.dbo.vw_m_roster jika ada (dengan toleransi pergeseran)
-            var mitraRoster = await _context.MitraRosters.FirstOrDefaultAsync(m => m.NoNik == userNik);
-            if (!isSiteManagement && mitraRoster != null && mitraRoster.HariOnsite.HasValue && mitraRoster.HariOffsite.HasValue)
+            int actualOnsite = (akhirDinas - awalDinas).Days + 1;
+            int actualOffsite = (akhirCuti - awalCuti).Days + 1;
+
+            if (actualOnsite < 1 || actualOnsite > 365)
             {
-                int expectedOnsite = mitraRoster.HariOnsite.Value;
-                int expectedOffsite = mitraRoster.HariOffsite.Value;
-
-                int actualOnsite = (akhirDinas - awalDinas).Days + 1;
-                int actualOffsite = (akhirCuti - awalCuti).Days + 1;
-
-                // Toleransi dinas: +/- 14 hari (2 minggu)
-                if (Math.Abs(actualOnsite - expectedOnsite) > 14)
-                {
-                    return BadRequest($"Durasi dinas (onsite) Anda ({actualOnsite} hari) menyimpang lebih dari 14 hari dari ketentuan database OneEv ({expectedOnsite} hari).");
-                }
-
-                // Toleransi cuti: +/- 7 hari (1 minggu)
-                if (Math.Abs(actualOffsite - expectedOffsite) > 7)
-                {
-                    return BadRequest($"Durasi cuti (offsite) Anda ({actualOffsite} hari) menyimpang lebih dari 7 hari dari ketentuan database OneEv ({expectedOffsite} hari).");
-                }
-
-                if ((awalCuti - akhirDinas).Days != 1)
-                {
-                    return BadRequest("Masa cuti harus dimulai tepat 1 hari setelah masa dinas aktif berakhir.");
-                }
+                return BadRequest("Durasi dinas (onsite) harus antara 1 sampai 365 hari.");
+            }
+            if (actualOffsite < 1 || actualOffsite > 180)
+            {
+                return BadRequest("Durasi cuti (offsite) harus antara 1 sampai 180 hari.");
             }
 
             // Cari roster terbaru dari user
@@ -952,25 +936,6 @@ ORDER BY nama_perusahaan";
                 .Where(r => r.Nik == userNik)
                 .OrderByDescending(r => r.AkhirCuti)
                 .FirstOrDefaultAsync();
-
-            // Validasi fleksibilitas pergeseran jadwal (maju/mundur maks 14 hari / 2 minggu)
-            int activeRosterId = (latestRoster != null && latestRoster.AkhirCuti >= DateTime.Today) ? latestRoster.Id : 0;
-            var previousRoster = await _context.Rosters
-                .Where(r => r.Nik == userNik && r.Id != activeRosterId)
-                .OrderByDescending(r => r.AkhirCuti)
-                .FirstOrDefaultAsync();
-
-            if (!isSiteManagement && previousRoster != null)
-            {
-                DateTime expectedStart = previousRoster.AkhirCuti.AddDays(1);
-                int shiftDays = (awalDinas - expectedStart).Days;
-
-                if (Math.Abs(shiftDays) > 14)
-                {
-                    string direction = shiftDays > 0 ? "maju" : "mundur";
-                    return BadRequest($"Tanggal mulai dinas Anda hanya diperbolehkan maju/mundur maksimal 14 hari dari jadwal seharusnya ({expectedStart:dd MMM yyyy}). Anda mencoba {direction} {Math.Abs(shiftDays)} hari.");
-                }
-            }
 
             // Jika roster terakhir ada dan belum expired (atau kita mau update roster yang sedang berjalan),
             // kita update roster tersebut. Jika tidak, buat baru.
