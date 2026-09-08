@@ -139,13 +139,13 @@ namespace MBS_SAP.Controllers
             return Json(result);
         }
 
-        private async Task<List<dynamic>> GetEmployeesComplianceData(int companyId, string? departmentNameFilter = null, int? year = null, int? month = null, int? parentIdFilter = null)
+        private async Task<List<dynamic>> GetEmployeesComplianceData(int companyId, string? departmentNameFilter = null, int? year = null, int? month = null, int? parentIdFilter = null, bool includeNonTarget = false)
         {
             var selectedYear = year ?? DateTime.Today.Year;
             var selectedMonth = month ?? DateTime.Today.Month;
             
             var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
-            var cacheKey = $"EmployeesComplianceData_{companyId}_{departmentNameFilter ?? "All"}_{selectedYear}_{selectedMonth}_{parentIdFilter ?? 0}";
+            var cacheKey = $"EmployeesComplianceData_{companyId}_{departmentNameFilter ?? "All"}_{selectedYear}_{selectedMonth}_{parentIdFilter ?? 0}_{(includeNonTarget ? "WithNonTarget" : "TargetOnly")}";
             
             bool forceRefresh = HttpContext.Request.Query.ContainsKey("refresh") && 
                                string.Equals(HttpContext.Request.Query["refresh"], "true", StringComparison.OrdinalIgnoreCase);
@@ -345,7 +345,9 @@ namespace MBS_SAP.Controllers
                     jabatanName = m.NamaJabatanStandar ?? m.NamaJabatanExisting ?? "-";
                 }
 
-                if (hTar + insTar + stTar + obsTar + cTar == 0)
+                bool isTargetSap = (hTar + insTar + stTar + obsTar + cTar > 0);
+
+                if (!includeNonTarget && !isTargetSap)
                 {
                     continue;
                 }
@@ -399,12 +401,12 @@ namespace MBS_SAP.Controllers
                     return Math.Max(scaled, 1);
                 }
 
-                int mtdTgtH = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
-                int mtdTgtI = hasRoster ? ScaleTarget(insTar, ratio, onsiteDays) : insTar;
-                int mtdTgtST = hasRoster ? ScaleTarget(stTar, ratio, onsiteDays) : stTar;
-                int mtdTgtO = hasRoster ? ScaleTarget(obsTar, ratio, onsiteDays) : obsTar;
-                int mtdTgtC = hasRoster ? ScaleTarget(cTar, ratio, onsiteDays) : cTar;
-                int mtdTgtP5 = p5mTar;
+                int mtdTgtH = (isTargetSap && hasRoster) ? ScaleTarget(hTar, ratio, onsiteDays) : (isTargetSap ? hTar : 0);
+                int mtdTgtI = (isTargetSap && hasRoster) ? ScaleTarget(insTar, ratio, onsiteDays) : (isTargetSap ? insTar : 0);
+                int mtdTgtST = (isTargetSap && hasRoster) ? ScaleTarget(stTar, ratio, onsiteDays) : (isTargetSap ? stTar : 0);
+                int mtdTgtO = (isTargetSap && hasRoster) ? ScaleTarget(obsTar, ratio, onsiteDays) : (isTargetSap ? obsTar : 0);
+                int mtdTgtC = (isTargetSap && hasRoster) ? ScaleTarget(cTar, ratio, onsiteDays) : (isTargetSap ? cTar : 0);
+                int mtdTgtP5 = isTargetSap ? p5mTar : 0;
 
                 int mtdActH = hazards.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int mtdActI = inspections.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
@@ -413,16 +415,20 @@ namespace MBS_SAP.Controllers
                 int mtdActC = coachings.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int mtdActP5 = p5ms.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
 
-                int cappedActH = Math.Min(mtdActH, mtdTgtH);
-                int cappedActI = Math.Min(mtdActI, mtdTgtI);
-                int cappedActST = Math.Min(mtdActST, mtdTgtST);
-                int cappedActO = Math.Min(mtdActO, mtdTgtO);
-                int cappedActC = Math.Min(mtdActC, mtdTgtC);
+                int totalActualAll = mtdActH + mtdActI + mtdActST + mtdActO + mtdActC + mtdActP5;
 
-                int totalTgt = mtdTgtH + mtdTgtI + mtdTgtST + mtdTgtO + mtdTgtC;
-                int totalAct = cappedActH + cappedActI + cappedActST + cappedActO + cappedActC;
+                int cappedActH = isTargetSap ? Math.Min(mtdActH, mtdTgtH) : mtdActH;
+                int cappedActI = isTargetSap ? Math.Min(mtdActI, mtdTgtI) : mtdActI;
+                int cappedActST = isTargetSap ? Math.Min(mtdActST, mtdTgtST) : mtdActST;
+                int cappedActO = isTargetSap ? Math.Min(mtdActO, mtdTgtO) : mtdActO;
+                int cappedActC = isTargetSap ? Math.Min(mtdActC, mtdTgtC) : mtdActC;
 
-                double compliance = totalTgt > 0 ? Math.Round((double)totalAct / totalTgt * 100.0, 1) : 0;
+                int totalTgt = isTargetSap ? (mtdTgtH + mtdTgtI + mtdTgtST + mtdTgtO + mtdTgtC) : 0;
+                int totalAct = isTargetSap ? (cappedActH + cappedActI + cappedActST + cappedActO + cappedActC) : totalActualAll;
+
+                double compliance = isTargetSap 
+                    ? (totalTgt > 0 ? Math.Round((double)totalAct / totalTgt * 100.0, 1) : 0)
+                    : (totalActualAll > 0 ? 100.0 : 0.0);
                 compliance = Math.Min(compliance, 100.0);
 
                 bool isNewHire = k.TanggalMasuk.HasValue && k.TanggalMasuk.Value >= startOfMonth && k.TanggalMasuk.Value <= endOfMonth;
@@ -434,8 +440,12 @@ namespace MBS_SAP.Controllers
                     departmentName = k.NamaDepartemen,
                     jabatanName = jabatanName,
                     companyId = companyId,
+                    isTargetSap = isTargetSap,
+                    isNonTarget = !isTargetSap,
+                    isActivelyReporting = (totalActualAll > 0),
                     mtdTotalTarget = totalTgt,
                     mtdTotalActual = totalAct,
+                    totalActualAll = totalActualAll,
                     complianceRate = compliance,
                     onsiteDays = onsiteDays,
                     hasRoster = hasRoster,
@@ -3382,11 +3392,12 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> League(int? companyId = null, string mode = "dept", int? year = null, int? month = null)
+        public async Task<IActionResult> League(int? companyId = null, string mode = "dept", int? year = null, int? month = null, string targetFilter = "target")
         {
             ViewData["HeaderTitle"] = "League SAP";
             ViewData["ActiveTab"] = "Performance";
             ViewBag.Mode = mode; // "dept" or "company"
+            ViewBag.TargetFilter = targetFilter;
 
             var today = DateTime.Today;
             int selectedYear = year ?? today.Year;
@@ -3497,9 +3508,6 @@ namespace MBS_SAP.Controllers
             }
             GetDescendants(rootId);
 
-            // Do not filter the dropdown options by dropdownCompanyIds, so that all allowed companies (e.g. 172 companies for Indexim Coalindo or Admin) are always selectable.
-            // allowedCompanies = allowedCompanies.Where(c => dropdownCompanyIds.Contains(c.PerusahaanId)).ToList();
-
             ViewBag.Companies = allowedCompanies;
             ViewBag.SelectedCompanyId = selectedCompany.PerusahaanId;
             ViewBag.CompanyName = selectedCompany.NamaPerusahaan;
@@ -3553,32 +3561,36 @@ namespace MBS_SAP.Controllers
                     companiesToCompare = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan ?? "")).ToList();
                 }
 
+                bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
+
                 foreach (var comp in companiesToCompare)
                 {
-                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId);
+                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
 
                     allEmployees.AddRange(compEmps);
 
-                    int totalTarget = compEmps.Sum(e => (int)e.mtdTotalTarget);
-                    int totalActual = compEmps.Sum(e => (int)e.mtdTotalActual);
+                    var targetEmps = compEmps.Where(e => (bool)e.isTargetSap).ToList();
 
-                    int hAct = compEmps.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
-                    int hTgt = compEmps.Sum(e => (int)e.hazard.target);
+                    int totalTarget = targetEmps.Sum(e => (int)e.mtdTotalTarget);
+                    int totalActual = targetEmps.Sum(e => (int)e.mtdTotalActual);
 
-                    int iAct = compEmps.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
-                    int iTgt = compEmps.Sum(e => (int)e.inspeksi.target);
+                    int hAct = targetEmps.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
+                    int hTgt = targetEmps.Sum(e => (int)e.hazard.target);
 
-                    int stAct = compEmps.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
-                    int stTgt = compEmps.Sum(e => (int)e.safetyTalk.target);
+                    int iAct = targetEmps.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
+                    int iTgt = targetEmps.Sum(e => (int)e.inspeksi.target);
 
-                    int oAct = compEmps.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
-                    int oTgt = compEmps.Sum(e => (int)e.observasi.target);
+                    int stAct = targetEmps.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
+                    int stTgt = targetEmps.Sum(e => (int)e.safetyTalk.target);
 
-                    int cAct = compEmps.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
-                    int cTgt = compEmps.Sum(e => (int)e.coaching.target);
+                    int oAct = targetEmps.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
+                    int oTgt = targetEmps.Sum(e => (int)e.observasi.target);
 
-                    int p5mAct = compEmps.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
-                    int p5mTgt = compEmps.Sum(e => (int)e.p5m.target);
+                    int cAct = targetEmps.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
+                    int cTgt = targetEmps.Sum(e => (int)e.coaching.target);
+
+                    int p5mAct = targetEmps.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
+                    int p5mTgt = targetEmps.Sum(e => (int)e.p5m.target);
 
                     double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
                     double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : -1;
@@ -3592,7 +3604,7 @@ namespace MBS_SAP.Controllers
                         CompanyId = comp.PerusahaanId,
                         CompanyName = comp.NamaPerusahaan,
                         PjoName = comp.NamaPjo,
-                        EmployeeCount = compEmps.Count,
+                        EmployeeCount = targetEmps.Count,
                         TotalTarget = totalTarget,
                         MtdAchievementRate = mtdRate,
                         MtdHazardRate = hRate,
@@ -3609,13 +3621,37 @@ namespace MBS_SAP.Controllers
                 ViewBag.CompanyRedZone = allStandings.Where(x => (int)x.TotalTarget > 0 && (double)x.MtdAchievementRate == 0).ToList();
 
                 // Non-admin can only see their own squad players even in global league mode
-                var sortedEmployees = allEmployees
-                    .Where(e => isAdmin || (isSafetyRole && allowedCompanyIds.Contains((int)e.companyId)) || (int)e.companyId == resolvedCompanyId)
+                var scopedEmployees = allEmployees
+                    .Where(e => isAdmin || (isSafetyRole && allowedCompanyIds.Contains((int)e.companyId)) || (int)e.companyId == resolvedCompanyId);
+
+                IEnumerable<dynamic> filteredEmployees;
+                if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmployees = scopedEmployees.Where(e => (bool)e.isNonTarget && (bool)e.isActivelyReporting);
+                }
+                else if (string.Equals(targetFilter, "nontarget", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmployees = scopedEmployees.Where(e => (bool)e.isNonTarget);
+                }
+                else if (string.Equals(targetFilter, "all", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmployees = scopedEmployees;
+                }
+                else // default "target"
+                {
+                    filteredEmployees = scopedEmployees.Where(e => (bool)e.isTargetSap);
+                }
+
+                var sortedEmployees = filteredEmployees
                     .Select(e => new {
                         name = (string)e.karyawanName,
                         nik = (string)e.nik,
                         departmentName = (string)e.departmentName,
                         jabatanName = (string)e.jabatanName,
+                        isTargetSap = (bool)e.isTargetSap,
+                        isNonTarget = (bool)e.isNonTarget,
+                        isActivelyReporting = (bool)e.isActivelyReporting,
+                        totalActualAll = (int)e.totalActualAll,
                         complianceRate = (double)e.complianceRate,
                         mtdTotalTarget = (int)e.mtdTotalTarget,
                         onsiteDays = (int)e.onsiteDays,
@@ -3629,7 +3665,7 @@ namespace MBS_SAP.Controllers
                         coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
                         p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
                     })
-                    .OrderBy(e => e.mtdTotalTarget == 0 ? 1 : 0)
+                    .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
                     .ThenByDescending(e => e.complianceRate)
                     .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                     .ToList();
@@ -3639,9 +3675,11 @@ namespace MBS_SAP.Controllers
             else
             {
                 // Liga Internal: Departments
-                var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId);
-                
-                var deptAchievements = employees
+                bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
+                var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
+                var targetEmployees = employees.Where(e => (bool)e.isTargetSap).ToList();
+
+                var deptAchievements = targetEmployees
                     .GroupBy(e => (string)e.departmentName)
                     .Select(g => {
                         int employeeCount = g.Count();
@@ -3696,11 +3734,33 @@ namespace MBS_SAP.Controllers
                 ViewBag.DepartmentAchievements = activeDeptAchievements.Where(d => !(d.TotalTarget > 0 && d.MtdAchievementRate == 0)).ToList();
                 ViewBag.DepartmentRedZone = activeDeptAchievements.Where(d => d.TotalTarget > 0 && d.MtdAchievementRate == 0).ToList();
 
-                var sortedEmployees = employees.Select(e => new {
+                IEnumerable<dynamic> filteredEmployees;
+                if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmployees = employees.Where(e => (bool)e.isNonTarget && (bool)e.isActivelyReporting);
+                }
+                else if (string.Equals(targetFilter, "nontarget", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmployees = employees.Where(e => (bool)e.isNonTarget);
+                }
+                else if (string.Equals(targetFilter, "all", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmployees = employees;
+                }
+                else // default "target"
+                {
+                    filteredEmployees = employees.Where(e => (bool)e.isTargetSap);
+                }
+
+                var sortedEmployees = filteredEmployees.Select(e => new {
                     name = (string)e.karyawanName,
                     nik = (string)e.nik,
                     departmentName = (string)e.departmentName,
                     jabatanName = (string)e.jabatanName,
+                    isTargetSap = (bool)e.isTargetSap,
+                    isNonTarget = (bool)e.isNonTarget,
+                    isActivelyReporting = (bool)e.isActivelyReporting,
+                    totalActualAll = (int)e.totalActualAll,
                     complianceRate = (double)e.complianceRate,
                     mtdTotalTarget = (int)e.mtdTotalTarget,
                     onsiteDays = (int)e.onsiteDays,
@@ -3714,7 +3774,7 @@ namespace MBS_SAP.Controllers
                     coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
                     p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
                 })
-                .OrderBy(e => e.mtdTotalTarget == 0 ? 1 : 0)
+                .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
                 .ThenByDescending(e => e.complianceRate)
                 .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                 .ToList();
@@ -3726,7 +3786,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportLeagueToExcel(int? companyId = null, string mode = "dept", string? departmentName = null, int? year = null, int? month = null)
+        public async Task<IActionResult> ExportLeagueToExcel(int? companyId = null, string mode = "dept", string? departmentName = null, int? year = null, int? month = null, string targetFilter = "target")
         {
             var today = DateTime.Today;
             int selectedYear = year ?? today.Year;
@@ -3835,32 +3895,35 @@ namespace MBS_SAP.Controllers
                     }
                 }
 
+                bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
                 var allEmployees = new List<dynamic>();
                 foreach (var comp in companiesToCompare)
                 {
-                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId);
+                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
                     allEmployees.AddRange(compEmps);
 
-                    int totalTarget = compEmps.Sum(e => (int)e.mtdTotalTarget);
-                    int totalActual = compEmps.Sum(e => (int)e.mtdTotalActual);
+                    var targetEmps = compEmps.Where(e => (bool)e.isTargetSap).ToList();
 
-                    int hAct = compEmps.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
-                    int hTgt = compEmps.Sum(e => (int)e.hazard.target);
+                    int totalTarget = targetEmps.Sum(e => (int)e.mtdTotalTarget);
+                    int totalActual = targetEmps.Sum(e => (int)e.mtdTotalActual);
 
-                    int iAct = compEmps.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
-                    int iTgt = compEmps.Sum(e => (int)e.inspeksi.target);
+                    int hAct = targetEmps.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
+                    int hTgt = targetEmps.Sum(e => (int)e.hazard.target);
 
-                    int stAct = compEmps.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
-                    int stTgt = compEmps.Sum(e => (int)e.safetyTalk.target);
+                    int iAct = targetEmps.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
+                    int iTgt = targetEmps.Sum(e => (int)e.inspeksi.target);
 
-                    int oAct = compEmps.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
-                    int oTgt = compEmps.Sum(e => (int)e.observasi.target);
+                    int stAct = targetEmps.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
+                    int stTgt = targetEmps.Sum(e => (int)e.safetyTalk.target);
 
-                    int cAct = compEmps.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
-                    int cTgt = compEmps.Sum(e => (int)e.coaching.target);
+                    int oAct = targetEmps.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
+                    int oTgt = targetEmps.Sum(e => (int)e.observasi.target);
 
-                    int p5mAct = compEmps.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
-                    int p5mTgt = compEmps.Sum(e => (int)e.p5m.target);
+                    int cAct = targetEmps.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
+                    int cTgt = targetEmps.Sum(e => (int)e.coaching.target);
+
+                    int p5mAct = targetEmps.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
+                    int p5mTgt = targetEmps.Sum(e => (int)e.p5m.target);
 
                     double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
                     double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : -1;
@@ -3874,7 +3937,7 @@ namespace MBS_SAP.Controllers
                         CompanyId = comp.PerusahaanId,
                         CompanyName = comp.NamaPerusahaan,
                         PjoName = comp.NamaPjo,
-                        EmployeeCount = compEmps.Count,
+                        EmployeeCount = targetEmps.Count,
                         TotalTarget = totalTarget,
                         MtdAchievementRate = mtdRate,
                         MtdHazardRate = hRate,
@@ -3892,10 +3955,13 @@ namespace MBS_SAP.Controllers
             }
             else
             {
-                var rawEmployees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId);
+                bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
+                var rawEmployees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
                 employeesData = rawEmployees;
 
-                deptAchievements = rawEmployees
+                var targetEmployees = rawEmployees.Where(e => (bool)e.isTargetSap).ToList();
+
+                deptAchievements = targetEmployees
                     .GroupBy(e => (string)e.departmentName)
                     .Select(g => {
                         int employeeCount = g.Count();
@@ -3954,12 +4020,32 @@ namespace MBS_SAP.Controllers
                     .ToList();
             }
 
+            if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
+            {
+                employeesData = employeesData.Where(e => (bool)e.isNonTarget && (bool)e.isActivelyReporting).ToList();
+            }
+            else if (string.Equals(targetFilter, "nontarget", StringComparison.OrdinalIgnoreCase))
+            {
+                employeesData = employeesData.Where(e => (bool)e.isNonTarget).ToList();
+            }
+            else if (string.Equals(targetFilter, "all", StringComparison.OrdinalIgnoreCase))
+            {
+                // keep all
+            }
+            else // default "target"
+            {
+                employeesData = employeesData.Where(e => (bool)e.isTargetSap).ToList();
+            }
+
             var sorted = employeesData
                 .Select(e => new {
                     name = (string)e.karyawanName,
                     nik = (string)e.nik,
                     departmentName = (string)e.departmentName,
                     jabatanName = (string)e.jabatanName,
+                    isTargetSap = (bool)e.isTargetSap,
+                    isNonTarget = (bool)e.isNonTarget,
+                    isActivelyReporting = (bool)e.isActivelyReporting,
                     complianceRate = (double)e.complianceRate,
                     mtdTotalTarget = (int)e.mtdTotalTarget,
                     onsiteDays = (int)e.onsiteDays,
@@ -3971,7 +4057,7 @@ namespace MBS_SAP.Controllers
                     coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
                     p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
                 })
-                .OrderBy(e => e.mtdTotalTarget == 0 ? 1 : 0)
+                .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
                 .ThenByDescending(e => e.complianceRate)
                 .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                 .ToList();
@@ -4188,14 +4274,15 @@ namespace MBS_SAP.Controllers
                 wsSquad.Cell(3, 1).Style.Font.Bold = true;
                 wsSquad.Cell(3, 1).Style.Font.FontSize = 10;
 
-                wsSquad.Cell(4, 1).Value = $"Kategori: {modeLabel} | Total Pemain: {sorted.Count} Orang | Waktu Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
+                string targetFilterLabel = targetFilter == "nontarget_active" ? "Non-Target Aktif SAP" : (targetFilter == "all" ? "Semua Karyawan (+ Non-Target)" : (targetFilter == "nontarget" ? "Non-Target SAP" : "Hanya Target SAP"));
+                wsSquad.Cell(4, 1).Value = $"Kategori: {modeLabel} | Filter Target: {targetFilterLabel} | Total Pemain: {sorted.Count} Orang | Waktu Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
                 wsSquad.Cell(4, 1).Style.Font.Italic = true;
                 wsSquad.Cell(4, 1).Style.Font.FontSize = 9;
                 wsSquad.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
 
                 // Setup Table Headers
                 string[] squadHeaders = new[] {
-                    "Peringkat", "Nama Karyawan", "NIK", "Departemen", "Jabatan", "Status Roster", "Kepatuhan (%)",
+                    "Peringkat", "Nama Karyawan", "NIK", "Departemen", "Jabatan", "Kategori SAP", "Status Roster", "Kepatuhan (%)",
                     "Hazard Actual", "Hazard Target", "Inspeksi Actual", "Inspeksi Target",
                     "Safety Talk Actual", "Safety Talk Target", "Observasi Actual", "Observasi Target",
                     "Coaching Actual", "Coaching Target", "P5M Actual *", "P5M Target"
@@ -4209,7 +4296,7 @@ namespace MBS_SAP.Controllers
                     cell.Style.Font.FontSize = 10;
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                    if (i == 17 || i == 18) // P5M
+                    if (i == 18 || i == 19) // P5M
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber
                     else
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
@@ -4226,29 +4313,30 @@ namespace MBS_SAP.Controllers
                     wsSquad.Cell(row, 3).Value = emp.nik;
                     wsSquad.Cell(row, 4).Value = emp.departmentName;
                     wsSquad.Cell(row, 5).Value = emp.jabatanName;
-                    wsSquad.Cell(row, 6).Value = emp.hasRoster ? $"{emp.onsiteDays} Hari Onsite" : "Belum Roster";
+                    wsSquad.Cell(row, 6).Value = emp.isTargetSap ? "Target SAP" : (emp.isActivelyReporting ? "Non-Target (Aktif)" : "Non-Target");
+                    wsSquad.Cell(row, 7).Value = emp.hasRoster ? $"{emp.onsiteDays} Hari Onsite" : "Belum Roster";
                     
-                    var compCell = wsSquad.Cell(row, 7);
+                    var compCell = wsSquad.Cell(row, 8);
                     compCell.Value = emp.complianceRate;
                     compCell.Style.NumberFormat.Format = "0.0\"%\"";
 
-                    wsSquad.Cell(row, 8).Value = emp.hazard.actual;
-                    wsSquad.Cell(row, 9).Value = emp.hazard.target;
+                    wsSquad.Cell(row, 9).Value = emp.hazard.actual;
+                    wsSquad.Cell(row, 10).Value = emp.hazard.target;
                     
-                    wsSquad.Cell(row, 10).Value = emp.inspeksi.actual;
-                    wsSquad.Cell(row, 11).Value = emp.inspeksi.target;
+                    wsSquad.Cell(row, 11).Value = emp.inspeksi.actual;
+                    wsSquad.Cell(row, 12).Value = emp.inspeksi.target;
 
-                    wsSquad.Cell(row, 12).Value = emp.safetyTalk.actual;
-                    wsSquad.Cell(row, 13).Value = emp.safetyTalk.target;
+                    wsSquad.Cell(row, 13).Value = emp.safetyTalk.actual;
+                    wsSquad.Cell(row, 14).Value = emp.safetyTalk.target;
 
-                    wsSquad.Cell(row, 14).Value = emp.observasi.actual;
-                    wsSquad.Cell(row, 15).Value = emp.observasi.target;
+                    wsSquad.Cell(row, 15).Value = emp.observasi.actual;
+                    wsSquad.Cell(row, 16).Value = emp.observasi.target;
 
-                    wsSquad.Cell(row, 16).Value = emp.coaching.actual;
-                    wsSquad.Cell(row, 17).Value = emp.coaching.target;
+                    wsSquad.Cell(row, 17).Value = emp.coaching.actual;
+                    wsSquad.Cell(row, 18).Value = emp.coaching.target;
 
-                    wsSquad.Cell(row, 18).Value = emp.p5m.actual;
-                    wsSquad.Cell(row, 19).Value = emp.p5m.target;
+                    wsSquad.Cell(row, 19).Value = emp.p5m.actual;
+                    wsSquad.Cell(row, 20).Value = emp.p5m.target;
 
                     // Alignments
                     wsSquad.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -4257,17 +4345,18 @@ namespace MBS_SAP.Controllers
                     wsSquad.Cell(row, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
                     wsSquad.Cell(row, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
                     wsSquad.Cell(row, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsSquad.Cell(row, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                    for (int c = 8; c <= 19; c++)
+                    wsSquad.Cell(row, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsSquad.Cell(row, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    for (int c = 9; c <= 20; c++)
                     {
                         wsSquad.Cell(row, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     }
 
                     // Format values as number
-                    for (int c = 8; c <= 19; c++)
+                    for (int c = 9; c <= 20; c++)
                     {
                         wsSquad.Cell(row, c).Style.NumberFormat.Format = "#,##0";
-                        if (c % 2 == 0) // Actual columns
+                        if (c % 2 != 0) // Actual columns: 9, 11, 13, 15, 17, 19
                         {
                             wsSquad.Cell(row, c).Style.Font.Bold = true;
                         }
@@ -4284,7 +4373,7 @@ namespace MBS_SAP.Controllers
                     compCell.Style.Font.Bold = true;
 
                     // Border styling
-                    var rowRange = wsSquad.Range(row, 1, row, 19);
+                    var rowRange = wsSquad.Range(row, 1, row, 20);
                     rowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     rowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                     rowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -4322,8 +4411,8 @@ namespace MBS_SAP.Controllers
                 // Add thick outer border to the entire table
                 if (row > 7)
                 {
-                    wsSquad.Range(6, 1, row - 1, 19).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    wsSquad.Range(6, 1, row - 1, 19).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
+                    wsSquad.Range(6, 1, row - 1, 20).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    wsSquad.Range(6, 1, row - 1, 20).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
                 }
 
                 // Auto fit columns
@@ -4346,7 +4435,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportSapDetailToExcel(int? companyId = null, string mode = "dept", string? departmentName = null, int? year = null, int? month = null)
+        public async Task<IActionResult> ExportSapDetailToExcel(int? companyId = null, string mode = "dept", string? departmentName = null, int? year = null, int? month = null, string targetFilter = "target")
         {
             await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
 
@@ -4443,19 +4532,33 @@ namespace MBS_SAP.Controllers
                 targetCompanyIds.Add(selectedCompany.PerusahaanId);
             }
 
-            // Employee scope
-            var employeesQuery = _context.Karyawans.AsNoTracking()
-                .Where(k => targetCompanyIds.Contains(k.IdPerusahaan) && k.StatusAktif == true && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth));
-
-            if (!string.IsNullOrEmpty(departmentName))
+            // Fetch compliance data to properly apply targetFilter
+            bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
+            var allEmpsList = new List<dynamic>();
+            foreach (var cId in targetCompanyIds)
             {
-                employeesQuery = from k in employeesQuery
-                                 join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId
-                                 where d.NamaDepartemen == departmentName
-                                 select k;
+                var emps = await GetEmployeesComplianceData(cId, departmentName, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
+                allEmpsList.AddRange(emps);
             }
 
-            var employeeNiksList = await employeesQuery.Select(k => k.NoNik).Where(n => !string.IsNullOrEmpty(n)).ToListAsync();
+            if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
+            {
+                allEmpsList = allEmpsList.Where(e => (bool)e.isNonTarget && (bool)e.isActivelyReporting).ToList();
+            }
+            else if (string.Equals(targetFilter, "nontarget", StringComparison.OrdinalIgnoreCase))
+            {
+                allEmpsList = allEmpsList.Where(e => (bool)e.isNonTarget).ToList();
+            }
+            else if (string.Equals(targetFilter, "all", StringComparison.OrdinalIgnoreCase))
+            {
+                // keep all
+            }
+            else // default "target"
+            {
+                allEmpsList = allEmpsList.Where(e => (bool)e.isTargetSap).ToList();
+            }
+
+            var employeeNiksList = allEmpsList.Select(e => (string)e.nik).Where(n => !string.IsNullOrEmpty(n)).ToList();
             var employeeNiksSet = new HashSet<string>(employeeNiksList.Select(n => n.Trim()), StringComparer.OrdinalIgnoreCase);
 
             string modeLabel = mode == "company" ? "Super League (Antar Perusahaan)" : (mode == "core" ? "Liga Perusahaan Inti" : "Klasemen Internal (Departemen)");
@@ -4538,6 +4641,8 @@ namespace MBS_SAP.Controllers
                 };
             }
 
+            string targetFilterLabel = targetFilter == "nontarget_active" ? "Non-Target Aktif SAP" : (targetFilter == "all" ? "Semua Karyawan (+ Non-Target)" : (targetFilter == "nontarget" ? "Non-Target SAP" : "Hanya Target SAP"));
+
             void StyleSheetHeader(IXLWorksheet ws, string title, int colCount, int dataCount)
             {
                 ws.ShowGridLines = true;
@@ -4556,7 +4661,7 @@ namespace MBS_SAP.Controllers
                 ws.Cell(3, 1).Style.Font.Bold = true;
                 ws.Cell(3, 1).Style.Font.FontSize = 10;
 
-                ws.Cell(4, 1).Value = $"Kategori: {modeLabel} | Total Data: {dataCount} Laporan | Tanggal Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
+                ws.Cell(4, 1).Value = $"Kategori: {modeLabel} | Filter Target: {targetFilterLabel} | Total Data: {dataCount} Laporan | Tanggal Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
                 ws.Cell(4, 1).Style.Font.Italic = true;
                 ws.Cell(4, 1).Style.Font.FontSize = 9;
                 ws.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");

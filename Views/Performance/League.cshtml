@@ -11,6 +11,7 @@
     var isSafetyRole = ViewBag.IsSafetyRole as bool? ?? false;
     var isAdmin = ViewBag.IsAdmin as bool? ?? User.IsInRole("Admin");
     var canDownloadDetail = isAdmin || isSafetyRole;
+    var targetFilter = ViewBag.TargetFilter as string ?? "target";
 }
 
 
@@ -623,6 +624,53 @@
                     <i class="bi bi-funnel-fill"></i> Filter
                 </button>
             </div>
+
+            <!-- Radio Button Target SAP Filter -->
+            <div class="col-12 mt-2 pt-2 border-top">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="text-muted fw-bold d-flex align-items-center" style="font-size: 11px; text-transform: uppercase;">
+                            <i class="bi bi-person-lines-fill text-primary me-1"></i>Filter Skuad SAP:
+                        </span>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Target Filter">
+                            <input type="radio" class="btn-check" name="targetFilter" id="tf_target" value="target" @(targetFilter == "target" ? "checked" : "") onchange="this.form.submit();">
+                            <label class="btn btn-outline-primary fw-bold" for="tf_target" style="font-size: 11px; border-radius: 6px 0 0 6px;">
+                                <i class="bi bi-bullseye me-1"></i>Hanya Target SAP
+                            </label>
+
+                            <input type="radio" class="btn-check" name="targetFilter" id="tf_nontarget_active" value="nontarget_active" @(targetFilter == "nontarget_active" ? "checked" : "") onchange="this.form.submit();">
+                            <label class="btn btn-outline-success fw-bold" for="tf_nontarget_active" style="font-size: 11px;">
+                                <i class="bi bi-lightning-charge-fill me-1"></i>Non-Target Aktif SAP
+                            </label>
+
+                            <input type="radio" class="btn-check" name="targetFilter" id="tf_all" value="all" @(targetFilter == "all" ? "checked" : "") onchange="this.form.submit();">
+                            <label class="btn btn-outline-secondary fw-bold" for="tf_all" style="font-size: 11px; border-radius: 0 6px 6px 0;">
+                                <i class="bi bi-people-fill me-1"></i>Semua Skuad (+ Non-Target)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="text-muted" style="font-size: 11px;">
+                        @if (targetFilter == "nontarget_active")
+                        {
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                <i class="bi bi-lightning-charge-fill me-1"></i>Menampilkan karyawan di luar target yang aktif membuat laporan SAP
+                            </span>
+                        }
+                        else if (targetFilter == "all")
+                        {
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">
+                                <i class="bi bi-people-fill me-1"></i>Menampilkan seluruh karyawan (Target &amp; Non-Target)
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                <i class="bi bi-shield-check me-1"></i>Menampilkan skuad pemain wajib target SAP
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
         </form>
     </div>
 
@@ -680,13 +728,13 @@
  
      <!-- League Mode Navigation Tab -->
      <div class="d-flex flex-wrap gap-2 mb-4 bg-light p-2 rounded-3 shadow-sm border" style="width: fit-content; max-width: 100%;">
-        <button class="btn btn-sm @(currentMode == "dept" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=dept&year=@selectedYear&month=@selectedMonth';">
+        <button class="btn btn-sm @(currentMode == "dept" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=dept&year=@selectedYear&month=@selectedMonth&targetFilter=@targetFilter';">
             <i class="bi bi-shield-shaded me-1"></i> Klasemen Internal (Klub / Departemen)
         </button>
-        <button class="btn btn-sm @(currentMode == "core" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=core&year=@selectedYear&month=@selectedMonth';">
+        <button class="btn btn-sm @(currentMode == "core" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=core&year=@selectedYear&month=@selectedMonth&targetFilter=@targetFilter';">
             <i class="bi bi-star-fill me-1"></i> Liga Perusahaan Inti
         </button>
-        <button class="btn btn-sm @(currentMode == "company" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=company&year=@selectedYear&month=@selectedMonth';">
+        <button class="btn btn-sm @(currentMode == "company" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=company&year=@selectedYear&month=@selectedMonth&targetFilter=@targetFilter';">
             <i class="bi bi-globe me-1"></i> Super League (Antar Company)
         </button>
     </div>
@@ -1139,6 +1187,21 @@
                                                             <i class="bi bi-sparkles me-1 text-warning"></i>New Hire
                                                         </span>
                                                     }
+                                                    @if (emp.isNonTarget == true)
+                                                    {
+                                                        if (emp.isActivelyReporting == true)
+                                                        {
+                                                            <span class="badge bg-success text-white py-0 px-1" style="font-size: 9px; font-weight: 700;" title="Karyawan Non-Target yang aktif membuat laporan SAP (@emp.totalActualAll laporan)">
+                                                                <i class="bi bi-lightning-charge-fill me-1"></i>Non-Target Aktif (@emp.totalActualAll SAP)
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-light text-muted border py-0 px-1" style="font-size: 9px;" title="Karyawan Bebas Target SAP">
+                                                                Non-Target
+                                                            </span>
+                                                        }
+                                                    }
                                                 </div>
                                                 <div style="font-size: 10px; color: #64748b;">
                                                     @emp.nik &bull; <span class="badge bg-light text-dark py-0" style="font-size: 9px;">@emp.departmentName</span> &bull; <span style="font-size: 9px; color: #94a3b8;">@(emp.jabatanName ?? "-")</span>
@@ -1161,7 +1224,22 @@
                                                 </div>
                                             </td>
                                             <td class="text-center fw-bold" style="font-size: 13px;">
-                                                @if (zeroTarget)
+                                                @if (emp.isNonTarget == true)
+                                                {
+                                                    if (emp.isActivelyReporting == true)
+                                                    {
+                                                        <span class="badge bg-success text-white" style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px;" title="Aktif membuat @emp.totalActualAll laporan SAP">
+                                                            AKTIF (@emp.totalActualAll)
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge" style="background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;" title="Non-Target SAP">
+                                                            NON-TARGET
+                                                        </span>
+                                                    }
+                                                }
+                                                else if (zeroTarget)
                                                 {
                                                     <span class="badge" style="background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;" title="Bebas target (0 Hari Onsite / Cuti)">
                                                         CUTI / OFF
@@ -1496,12 +1574,18 @@
 
     let currentSquadDeptFilter = null; // Track active filter
 
+    function getSelectedTargetFilter() {
+        const radio = document.querySelector('input[name="targetFilter"]:checked');
+        return radio ? radio.value : '@targetFilter';
+    }
+
     function downloadSquadExcel(clickedBtn) {
         const companyId = '@selectedCompanyId';
         const mode = '@currentMode';
         const year = '@selectedYear';
         const month = '@selectedMonth';
-        let url = '@Url.Action("ExportLeagueToExcel", "Performance")?companyId=' + companyId + '&mode=' + encodeURIComponent(mode) + '&year=' + year + '&month=' + month;
+        const targetFilter = getSelectedTargetFilter();
+        let url = '@Url.Action("ExportLeagueToExcel", "Performance")?companyId=' + companyId + '&mode=' + encodeURIComponent(mode) + '&year=' + year + '&month=' + month + '&targetFilter=' + encodeURIComponent(targetFilter);
         if (currentSquadDeptFilter) {
             url += '&departmentName=' + encodeURIComponent(currentSquadDeptFilter);
         }
@@ -1518,7 +1602,8 @@
         const mode = '@currentMode';
         const year = '@selectedYear';
         const month = '@selectedMonth';
-        let url = '@Url.Action("ExportSapDetailToExcel", "Performance")?companyId=' + companyId + '&mode=' + encodeURIComponent(mode) + '&year=' + year + '&month=' + month;
+        const targetFilter = getSelectedTargetFilter();
+        let url = '@Url.Action("ExportSapDetailToExcel", "Performance")?companyId=' + companyId + '&mode=' + encodeURIComponent(mode) + '&year=' + year + '&month=' + month + '&targetFilter=' + encodeURIComponent(targetFilter);
         if (currentSquadDeptFilter) {
             url += '&departmentName=' + encodeURIComponent(currentSquadDeptFilter);
         }
