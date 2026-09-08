@@ -1358,12 +1358,20 @@ namespace MBS_SAP.Controllers
                                      h.Temuan.ToLower().Contains(normalizedSearch));
                 }
 
-                var list = await q.Select(h => new { h.Id, h.Tanggal, h.Nik, h.Nama, h.PerusahaanId, h.Temuan, h.Lokasi, h.FotoTemuan }).ToListAsync();
+                var list = await q.Select(h => new { 
+                    h.Id, h.Tanggal, h.Nik, h.Nama, h.PerusahaanId, h.Temuan, h.Lokasi, h.Area, h.DetilLokasi, 
+                    h.KategoriBahaya, h.JenisBahaya, h.TingkatResiko, h.Perbaikan, h.StatusTemuan, h.FotoTemuan 
+                }).ToListAsync();
+
                 foreach (var r in list)
                 {
                     var comp = companies.FirstOrDefault(c => c.PerusahaanId == r.PerusahaanId)?.NamaPerusahaan ?? "Unknown";
                     var key = $"hazard_{r.Id}";
                     assessmentDict.TryGetValue(key, out var assess);
+
+                    var aiAnalysis = Services.SapQualityMlEngine.AnalyzeHazard(
+                        r.Temuan, r.KategoriBahaya, r.JenisBahaya, r.TingkatResiko, r.Lokasi, r.DetilLokasi, r.Perbaikan, r.StatusTemuan, r.Tanggal
+                    );
 
                     records.Add(new SapQualityRecordViewModel
                     {
@@ -1379,7 +1387,18 @@ namespace MBS_SAP.Controllers
                         Lokasi = r.Lokasi,
                         PhotoUrl = NormalizeImagePath(r.FotoTemuan),
                         Rating = assess?.Rating,
-                        Notes = assess?.Notes
+                        Notes = assess?.Notes,
+                        HazardPriority = aiAnalysis.PriorityLevel,
+                        HazardPriorityLabel = aiAnalysis.PriorityLabel,
+                        HazardPriorityBadgeText = aiAnalysis.PriorityBadgeText,
+                        HazardDueDateText = aiAnalysis.RecommendedDueDateText,
+                        HazardDueDate = aiAnalysis.RecommendedDeadline,
+                        HazardBadgeColor = aiAnalysis.PriorityBadgeColor,
+                        HazardDueDateStatus = aiAnalysis.DueDateStatus,
+                        HazardDueDateStatusColor = aiAnalysis.DueDateStatusColor,
+                        HazardDays = aiAnalysis.RecommendedDays,
+                        HazardAiReasoning = aiAnalysis.AiReasoning,
+                        HazardAiRecommendation = aiAnalysis.ActionRecommendation
                     });
                 }
             }
@@ -1677,10 +1696,25 @@ namespace MBS_SAP.Controllers
             string description = "";
             DateTime programCreatedAt = DateTime.Now;
 
+            int suggestedRating = 0;
+            string aiNotes = "";
+
             if (typeLower == "hazard")
             {
                 var r = await _context.HazardReports.FindAsync(programId);
-                if (r != null) { title = "Temuan Hazard"; description = r.Temuan ?? ""; programCreatedAt = r.Tanggal; }
+                if (r != null) 
+                { 
+                    title = "Temuan Hazard"; 
+                    description = r.Temuan ?? ""; 
+                    programCreatedAt = r.Tanggal; 
+
+                    var aiAnalysis = Services.SapQualityMlEngine.AnalyzeHazard(
+                        r.Temuan, r.KategoriBahaya, r.JenisBahaya, r.TingkatResiko, r.Lokasi, r.DetilLokasi, r.Perbaikan, r.StatusTemuan, r.Tanggal
+                    );
+                    string qualityBadge = aiAnalysis.QualityScore >= 4 ? "Kualitas Baik" : (aiAnalysis.QualityScore == 3 ? "Kualitas Cukup" : "Kualitas Rendah");
+                    suggestedRating = aiAnalysis.QualityScore;
+                    aiNotes = $"[{qualityBadge}] Prioritas Close: {aiAnalysis.PriorityLevel} ({aiAnalysis.PriorityBadgeText}) | Target Batas Waktu: {aiAnalysis.DueDateFormatted} ({aiAnalysis.DueDateStatus}). Diagnosa AI: {aiAnalysis.AiReasoning}";
+                }
             }
             else if (typeLower == "inspection")
             {
@@ -1734,8 +1768,13 @@ namespace MBS_SAP.Controllers
                 return NotFound("Data SAP tidak ditemukan.");
             }
 
-            // Run quality assessment using ML Heuristics Engine
-            var (suggestedRating, aiNotes) = Services.SapQualityMlEngine.AssessQuality(programType, title, description);
+            // Run quality assessment using ML Heuristics Engine if not already evaluated
+            if (suggestedRating == 0)
+            {
+                var result = Services.SapQualityMlEngine.AssessQuality(programType, title, description);
+                suggestedRating = result.SuggestedRating;
+                aiNotes = result.AiNotes;
+            }
 
             var assessment = await _context.SapQualityAssessments
                 .FirstOrDefaultAsync(a => a.ProgramType.ToLower() == typeLower && a.ProgramId == programId);
@@ -1773,6 +1812,42 @@ namespace MBS_SAP.Controllers
             return Json(new { success = true, rating = assessment.Rating, notes = assessment.Notes });
         }
 
+        [HttpGet("Admin/AnalyzeHazardAi")]
+        public async Task<IActionResult> AnalyzeHazardAi(int id)
+        {
+            var r = await _context.HazardReports.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+            if (r == null) return NotFound(new { success = false, message = "Data Hazard tidak ditemukan." });
+
+            var comp = (await _context.Perusahaans.FindAsync(r.PerusahaanId))?.NamaPerusahaan ?? "-";
+            var aiResult = Services.SapQualityMlEngine.AnalyzeHazard(
+                r.Temuan, r.KategoriBahaya, r.JenisBahaya, r.TingkatResiko, r.Lokasi, r.DetilLokasi, r.Perbaikan, r.StatusTemuan, r.Tanggal
+            );
+
+            return Json(new {
+                success = true,
+                id = r.Id,
+                nama = r.Nama,
+                nik = r.Nik,
+                companyName = comp,
+                tanggal = r.Tanggal.ToString("yyyy-MM-dd"),
+                waktu = r.Waktu.ToString(@"hh\:mm"),
+                lokasi = r.Lokasi ?? "-",
+                area = r.Area ?? "-",
+                detilLokasi = r.DetilLokasi ?? "-",
+                temuan = r.Temuan ?? "-",
+                kategoriBahaya = r.KategoriBahaya ?? "-",
+                jenisBahaya = r.JenisBahaya ?? "-",
+                tingkatResiko = r.TingkatResiko ?? "-",
+                statusTemuan = r.StatusTemuan,
+                perbaikan = r.Perbaikan ?? "-",
+                tindakanPerbaikan = r.TindakanPerbaikan ?? "-",
+                pja = r.Pja ?? "-",
+                departemenPja = r.DepartemenPja ?? "-",
+                photoUrl = NormalizeImagePath(r.FotoTemuan),
+                ai = aiResult
+            });
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetSapDetails(string programType, int programId)
         {
@@ -1790,6 +1865,10 @@ namespace MBS_SAP.Controllers
                 if (r != null)
                 {
                     var comp = (await _context.Perusahaans.FindAsync(r.PerusahaanId))?.NamaPerusahaan ?? "Unknown";
+                    var aiAnalysis = Services.SapQualityMlEngine.AnalyzeHazard(
+                        r.Temuan, r.KategoriBahaya, r.JenisBahaya, r.TingkatResiko, r.Lokasi, r.DetilLokasi, r.Perbaikan, r.StatusTemuan, r.Tanggal
+                    );
+
                     data = new {
                         Type = "Hazard",
                         r.Id,
@@ -1801,10 +1880,29 @@ namespace MBS_SAP.Controllers
                         r.Area,
                         r.Lokasi,
                         r.DetilLokasi,
+                        StatusTemuan = r.StatusTemuan,
                         Title = "Temuan Hazard",
                         Description = r.Temuan ?? "-",
                         ExtraInfo = $"Kategori: {r.KategoriBahaya} | Jenis: {r.JenisBahaya} | Resiko: {r.TingkatResiko} | Perbaikan: {r.Perbaikan}",
-                        PhotoUrl = NormalizeImagePath(r.FotoTemuan)
+                        PhotoUrl = NormalizeImagePath(r.FotoTemuan),
+                        HazardAi = new {
+                            aiAnalysis.PriorityLevel,
+                            aiAnalysis.PriorityLabel,
+                            aiAnalysis.PriorityBadgeText,
+                            aiAnalysis.PriorityBadgeColor,
+                            aiAnalysis.RecommendedDays,
+                            aiAnalysis.DueDateFormatted,
+                            aiAnalysis.RecommendedDueDateText,
+                            aiAnalysis.DueDateStatus,
+                            aiAnalysis.DueDateStatusColor,
+                            aiAnalysis.RiskCategory,
+                            aiAnalysis.AiReasoning,
+                            aiAnalysis.ActionRecommendation,
+                            aiAnalysis.IsGoldenRuleViolation,
+                            aiAnalysis.GoldenRuleTopic,
+                            aiAnalysis.QualityScore,
+                            aiAnalysis.QualityScoreNotes
+                        }
                     };
                 }
             }
@@ -2677,5 +2775,18 @@ namespace MBS_SAP.Controllers
         public string? PhotoUrl { get; set; }
         public int? Rating { get; set; }
         public string? Notes { get; set; }
+
+        // Hazard AI Urgency & Due Date fields
+        public string? HazardPriority { get; set; }
+        public string? HazardPriorityLabel { get; set; }
+        public string? HazardPriorityBadgeText { get; set; }
+        public string? HazardDueDateText { get; set; }
+        public DateTime? HazardDueDate { get; set; }
+        public string? HazardBadgeColor { get; set; }
+        public string? HazardDueDateStatus { get; set; }
+        public string? HazardDueDateStatusColor { get; set; }
+        public int? HazardDays { get; set; }
+        public string? HazardAiReasoning { get; set; }
+        public string? HazardAiRecommendation { get; set; }
     }
 }

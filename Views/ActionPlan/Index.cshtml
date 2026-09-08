@@ -107,6 +107,32 @@
     /* ─── Card accent ─────────────────────────────────────────────── */
     .border-red-accent  { border-left: 3px solid var(--color-red)  !important; }
     .border-green-accent { border-left: 3px solid var(--color-green) !important; }
+
+    /* ─── Large & Clear Photos (Mobile & Desktop) ──────────────────── */
+    .ap-finding-img {
+        height: 240px;
+        object-fit: cover;
+        display: block;
+        transition: transform 0.25s ease, filter 0.25s ease;
+        border-radius: 8px;
+    }
+
+    .ap-finding-img:hover {
+        transform: scale(1.02);
+        filter: brightness(1.05);
+    }
+
+    @@media (max-width: 768px) {
+        .ap-finding-img {
+            height: 220px;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .ap-finding-img {
+            height: 200px;
+        }
+    }
 </style>
 
 <div class="animate-fade-in pb-4">
@@ -316,7 +342,7 @@
                                             @item.TingkatResiko
                                         </span>
                                     }
-                                    <h6 class="text-white mt-1 mb-0" style="font-weight: 800; font-size: 16px;">
+                                    <h6 class="mt-1 mb-0" style="font-weight: 800; font-size: 16px; color: var(--text-main);">
                                         @item.KategoriTemuan
                                     </h6>
                                 </div>
@@ -367,10 +393,26 @@
                             </div>
 
                             <!-- ── Location & Date ── -->
-                            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-                                <i class="bi bi-geo-alt-fill me-1"></i>@(item.Lokasi ?? item.Area ?? "General")
-                                &bull;
-                                <i class="bi bi-calendar3 me-1"></i>@item.Tanggal.ToString("dd MMM yyyy")
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-1 mb-2" style="font-size: 12px; color: var(--text-muted);">
+                                <div>
+                                    <i class="bi bi-geo-alt-fill me-1"></i>@(item.Lokasi ?? item.Area ?? "General")
+                                    &bull;
+                                    <i class="bi bi-calendar3 me-1"></i>@item.Tanggal.ToString("dd MMM yyyy")
+                                </div>
+                                @if (item.CalculatedDueDate.HasValue)
+                                {
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="badge" style="background: @(item.DueDateStatusColor ?? "#10b981"); font-size: 9.5px; font-weight: 700; border-radius: 4px;">
+                                            <i class="bi bi-clock-history me-1"></i>Due Date: @item.CalculatedDueDate.Value.ToString("dd MMM yyyy") (@item.DueDateStatus)
+                                        </span>
+                                        @if (!string.IsNullOrEmpty(item.PriorityLevel))
+                                        {
+                                            <span class="badge" style="background: @(item.PriorityBadgeColor ?? "#eab308"); font-size: 9.5px; font-weight: 700; border-radius: 4px;" title="Ambang batas waktu penyelesaian">
+                                                SLA: @(item.RecommendedDays ?? 7) Hari
+                                            </span>
+                                        }
+                                    </div>
+                                }
                             </div>
 
                             <!-- ── Dialihkan Banner ── -->
@@ -387,7 +429,7 @@
                                         }
                                         @if (!string.IsNullOrEmpty(item.ReassignNote))
                                         {
-                                            <div class="mt-1" style="font-size: 11px; opacity: 0.95; font-style: italic; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; border-left: 2px solid var(--color-warning);">
+                                            <div class="mt-1" style="font-size: 11px; opacity: 0.95; font-style: italic; background: rgba(0,0,0,0.03); padding: 4px 8px; border-radius: 4px; border-left: 2px solid var(--color-warning);">
                                                 <strong>Alasan:</strong> @item.ReassignNote
                                             </div>
                                         }
@@ -400,7 +442,7 @@
                                 <strong>Temuan:</strong> @item.DetilTemuan
                             </p>
 
-                            <!-- ── Foto ── -->
+                            <!-- ── Foto (Jelas & Besar di Mobile & Web) ── -->
                              @{
                                  var hasPhotos = !string.IsNullOrEmpty(item.FotoTemuan) || !string.IsNullOrEmpty(item.FotoPerbaikan);
                              }
@@ -414,33 +456,93 @@
                                          @if (!string.IsNullOrEmpty(item.FotoTemuan))
                                          {
                                              var proxyFotoTemuan = item.FotoTemuan.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoTemuan) : item.FotoTemuan;
-                                             <div class="col-6">
-                                                 <span class="d-block text-muted mb-1" style="font-size: 10px; font-weight: 600;">FOTO TEMUAN (BEFORE)</span>
-                                                 <a href="@proxyFotoTemuan" target="_blank">
-                                                     <img src="@proxyFotoTemuan" alt="Before" class="img-fluid rounded border" style="max-height: 100px; object-fit: cover; width: 100%;" />
-                                                 </a>
+                                             <div class="@(!string.IsNullOrEmpty(item.FotoPerbaikan) ? "col-12 col-sm-6" : "col-12")">
+                                                 <div class="position-relative overflow-hidden rounded-3 border" style="background: #f8fafc; border-color: var(--border-color) !important;">
+                                                     <span class="badge position-absolute top-0 start-0 m-2 px-2 py-1 text-white fw-bold shadow-sm" style="font-size: 10px; z-index: 2; background: rgba(15,23,42,0.8); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2);">
+                                                         <i class="bi bi-camera-fill me-1 text-warning"></i>FOTO TEMUAN (BEFORE)
+                                                     </span>
+                                                     <a href="@proxyFotoTemuan" target="_blank" title="Klik untuk memperbesar foto dalam resolusi penuh">
+                                                         <img src="@proxyFotoTemuan" alt="Foto Temuan" class="ap-finding-img w-100" />
+                                                     </a>
+                                                     <div class="position-absolute bottom-0 end-0 m-2 px-2 py-0.5 rounded text-white" style="font-size: 9.5px; z-index: 2; background: rgba(15,23,42,0.75); pointer-events: none;">
+                                                         <i class="bi bi-arrows-fullscreen me-1"></i>Perbesar
+                                                     </div>
+                                                 </div>
                                              </div>
                                          }
                                          @if (!string.IsNullOrEmpty(item.FotoPerbaikan))
                                          {
                                              var proxyFotoPerbaikan = item.FotoPerbaikan.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoPerbaikan) : item.FotoPerbaikan;
-                                             <div class="col-6">
-                                                 <span class="d-block text-muted mb-1" style="font-size: 10px; font-weight: 600;">FOTO PERBAIKAN (AFTER)</span>
-                                                 <a href="@proxyFotoPerbaikan" target="_blank">
-                                                     <img src="@proxyFotoPerbaikan" alt="After" class="img-fluid rounded border" style="max-height: 100px; object-fit: cover; width: 100%;" />
-                                                 </a>
+                                             <div class="@(!string.IsNullOrEmpty(item.FotoTemuan) ? "col-12 col-sm-6" : "col-12")">
+                                                 <div class="position-relative overflow-hidden rounded-3 border" style="background: #f8fafc; border-color: var(--border-color) !important;">
+                                                     <span class="badge position-absolute top-0 start-0 m-2 px-2 py-1 text-white fw-bold shadow-sm" style="font-size: 10px; z-index: 2; background: rgba(15,23,42,0.8); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2);">
+                                                         <i class="bi bi-check-circle-fill me-1 text-success"></i>FOTO PERBAIKAN (AFTER)
+                                                     </span>
+                                                     <a href="@proxyFotoPerbaikan" target="_blank" title="Klik untuk memperbesar foto dalam resolusi penuh">
+                                                         <img src="@proxyFotoPerbaikan" alt="Foto Perbaikan" class="ap-finding-img w-100" />
+                                                     </a>
+                                                     <div class="position-absolute bottom-0 end-0 m-2 px-2 py-0.5 rounded text-white" style="font-size: 9.5px; z-index: 2; background: rgba(15,23,42,0.75); pointer-events: none;">
+                                                         <i class="bi bi-arrows-fullscreen me-1"></i>Perbesar
+                                                     </div>
+                                                 </div>
                                              </div>
                                          }
                                      </div>
                                  }
                                  else
                                  {
-                                     <div class="px-2 py-1.5 d-flex align-items-center gap-1.5 mb-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; max-width: fit-content;">
+                                     <div class="px-2 py-1.5 d-flex align-items-center gap-1.5 mb-3" style="background: rgba(0,0,0,0.02); border: 1px solid var(--border-color); border-radius: 8px; max-width: fit-content;">
                                          <i class="bi bi-shield-lock-fill text-warning" style="font-size: 13px;"></i>
-                                         <span class="text-muted" style="font-size: 10px;">Foto dikunci</span>
+                                         <span class="text-muted" style="font-size: 10px;">Foto dikunci (Akses Terbatas)</span>
                                      </div>
                                  }
                              }
+
+                            <!-- ── Analisa by AI (K3LH Urgency & Recommendation - Light Theme Match) ── -->
+                            @if (item.AiAnalysis != null)
+                            {
+                                <div class="mb-3 rounded-3 p-3 position-relative overflow-hidden" 
+                                     style="background: #f8fafc; border: 1px solid var(--border-color); border-left: 4px solid @(item.PriorityBadgeColor ?? "var(--color-primary)"); box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2" style="border-bottom: 1px solid var(--border-color) !important;">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="p-1 rounded-2 d-flex align-items-center justify-content-center" style="background: rgba(2, 132, 199, 0.1); width: 26px; height: 26px;">
+                                                <i class="bi bi-robot" style="font-size: 14px; color: var(--color-primary);"></i>
+                                            </div>
+                                            <div>
+                                                <strong style="font-size: 12px; color: var(--color-primary); letter-spacing: 0.3px; font-family: 'Outfit', sans-serif;">ANALISA BY AI</strong>
+                                                <span class="text-muted ms-1" style="font-size: 10px;">• Prioritas K3LH</span>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                            <span class="badge px-2.5 py-1 text-white fw-bold shadow-sm" style="background: @(item.PriorityBadgeColor ?? "#eab308"); font-size: 10px; border-radius: 5px;">
+                                                <i class="bi bi-lightning-charge-fill me-0.5"></i> @(item.PriorityLevel ?? "MEDIUM") (Max @(item.RecommendedDays ?? 7) Hari)
+                                            </span>
+                                            @if (item.AiAnalysis.IsGoldenRuleViolation)
+                                            {
+                                                <span class="badge bg-danger text-white px-2 py-1" style="font-size: 9.5px; border-radius: 5px;" title="@item.AiAnalysis.GoldenRuleTopic">
+                                                    <i class="bi bi-exclamation-octagon-fill me-1"></i>Golden Rule
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(item.AiAnalysis.AiReasoning))
+                                    {
+                                        <div class="mb-2" style="font-size: 11.5px; color: var(--text-main); line-height: 1.45;">
+                                            <strong style="color: #ea580c;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Diagnosa Risiko:</strong>
+                                            <span style="color: #334155;">@item.AiAnalysis.AiReasoning</span>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrEmpty(item.AiAnalysis.ActionRecommendation))
+                                    {
+                                        <div class="p-2.5 rounded-2" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 3px solid #10b981; font-size: 11px; line-height: 1.45;">
+                                            <strong style="color: #059669;" class="d-block mb-1"><i class="bi bi-shield-check me-1"></i>Rekomendasi Mitigasi / Tindakan:</strong>
+                                            <div style="white-space: pre-line; color: #166534; font-weight: 500;">@item.AiAnalysis.ActionRecommendation</div>
+                                        </div>
+                                    }
+                                </div>
+                            }
 
                             <!-- ── Pihak Terkait ── -->
                             @{
@@ -449,8 +551,8 @@
                                 var pjaCompany = nikCompanyMap != null && !string.IsNullOrEmpty(item.NikPja) && nikCompanyMap.TryGetValue(item.NikPja, out var pjc) ? pjc : null;
                                 var picCompany = nikCompanyMap != null && !string.IsNullOrEmpty(item.NikPic) && nikCompanyMap.TryGetValue(item.NikPic, out var picc) ? picc : null;
                             }
-                            <div class="mb-3" style="font-size: 11px; color: var(--text-muted); background-color: var(--bg-card-hover); padding: 10px 12px; border-radius: 8px;">
-                                <div class="mb-2 pb-2 border-bottom" style="border-color: rgba(255,255,255,0.1) !important;">
+                            <div class="mb-3" style="font-size: 11px; color: var(--text-muted); background-color: var(--bg-card-hover); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                                <div class="mb-2 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
                                     <i class="bi bi-person-circle me-1" style="color: #6366f1;"></i>
                                     <strong>Pelapor:</strong> @item.Nama (@item.Nik) — @item.Departemen @(pelaporCompany != null ? $" — {pelaporCompany}" : "")
                                 </div>
@@ -537,7 +639,7 @@
                                                 </div>
                                                 <div class="col-md-6 form-group-sap">
                                                     <label class="form-label-sap" style="font-size: 11px;">Target Tanggal</label>
-                                                    <input type="date" name="tanggalRencanaPerbaikan" class="input-sap" style="height: 36px; font-size: 12px;" value="@DateTime.Today.AddDays(7).ToString("yyyy-MM-dd")" required />
+                                                    <input type="date" name="tanggalRencanaPerbaikan" class="input-sap" style="height: 36px; font-size: 12px;" value="@(item.TanggalRencanaPerbaikan?.ToString("yyyy-MM-dd") ?? (item.CalculatedDueDate?.ToString("yyyy-MM-dd") ?? DateTime.Today.AddDays(7).ToString("yyyy-MM-dd")))" required />
                                                 </div>
                                             </div>
 

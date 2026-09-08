@@ -107,5 +107,29 @@ namespace MBS_SAP.Models
 
         [NotMapped]
         public string? TingkatResiko { get; set; }
+
+        [NotMapped]
+        public MBS_SAP.Services.HazardAiAnalysisResult? AiAnalysis { get; set; }
+
+        [NotMapped]
+        public string? DueDateDisplay { get; set; }
+
+        [NotMapped]
+        public DateTime? CalculatedDueDate { get; set; }
+
+        [NotMapped]
+        public string? DueDateStatus { get; set; }
+
+        [NotMapped]
+        public string? DueDateStatusColor { get; set; }
+
+        [NotMapped]
+        public string? PriorityLevel { get; set; }
+
+        [NotMapped]
+        public string? PriorityBadgeColor { get; set; }
+
+        [NotMapped]
+        public int? RecommendedDays { get; set; }
     }
 }

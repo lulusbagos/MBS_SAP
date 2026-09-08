@@ -109,6 +109,28 @@ namespace MBS_SAP.Controllers
                         r.TingkatResiko = observations[oId];
                     }
                 }
+
+                // AI Hazard Urgency & Due Date Analysis
+                var aiAnalysis = Services.SapQualityMlEngine.AnalyzeHazard(
+                    r.DetilTemuan, 
+                    r.KategoriTemuan, 
+                    r.ItemSap, 
+                    r.TingkatResiko, 
+                    r.Lokasi, 
+                    r.DetilLokasi, 
+                    r.RencanaPerbaikan ?? r.Perbaikan, 
+                    r.Status, 
+                    r.Tanggal
+                );
+
+                r.AiAnalysis = aiAnalysis;
+                r.PriorityLevel = aiAnalysis.PriorityLevel;
+                r.PriorityBadgeColor = aiAnalysis.PriorityBadgeColor;
+                r.RecommendedDays = aiAnalysis.RecommendedDays;
+                r.CalculatedDueDate = aiAnalysis.RecommendedDeadline;
+                r.DueDateDisplay = aiAnalysis.DueDateFormatted;
+                r.DueDateStatus = aiAnalysis.DueDateStatus;
+                r.DueDateStatusColor = aiAnalysis.DueDateStatusColor;
             }
 
             var allNiks = reports.Select(r => r.Nik)
@@ -139,9 +161,14 @@ namespace MBS_SAP.Controllers
                                          .OrderBy(d => d)
                                          .ToList();
 
+            var today = DateTime.Today;
             ViewBag.CountOutstanding = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(r.RencanaPerbaikan));
             ViewBag.CountProgress = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(r.RencanaPerbaikan));
             ViewBag.CountClosed = reports.Count(r => string.Equals(r.Status, "Closed", StringComparison.OrdinalIgnoreCase));
+            ViewBag.CountOverdue = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && r.CalculatedDueDate.HasValue && today > r.CalculatedDueDate.Value.Date);
+            ViewBag.CountDueToday = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && r.CalculatedDueDate.HasValue && today == r.CalculatedDueDate.Value.Date);
+            ViewBag.CountCritical = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && r.PriorityLevel == "CRITICAL");
+            ViewBag.CountHigh = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && r.PriorityLevel == "HIGH");
 
             return View(reports);
         }

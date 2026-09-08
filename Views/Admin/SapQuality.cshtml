@@ -165,14 +165,39 @@
                                 </div>
                             </td>
                             <td class="pe-3">
-                                <div class="fw-extrabold text-dark mb-1" style="font-size: 13.5px; font-family: 'Outfit', sans-serif; letter-spacing: 0.25px;">@item.Title</div>
+                                <div class="d-flex align-items-center justify-content-between mb-1 flex-wrap gap-1">
+                                    <div class="fw-extrabold text-dark" style="font-size: 13.5px; font-family: 'Outfit', sans-serif; letter-spacing: 0.25px;">@item.Title</div>
+                                    @if (item.ProgramType.Equals("Hazard", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(item.HazardPriority))
+                                    {
+                                        <span class="badge py-1 px-2.5 d-inline-flex align-items-center gap-1 shadow-sm" 
+                                              style="background: @item.HazardBadgeColor; color: #fff; font-size: 10.5px; font-weight: 800; border-radius: 6px; letter-spacing: 0.3px;" 
+                                              title="Target Due Date: @item.HazardDueDateText">
+                                            <i class="bi bi-lightning-charge-fill animate-pulse"></i> Prioritas Close: @item.HazardPriority (@(item.HazardDays) Hari)
+                                        </span>
+                                    }
+                                </div>
+                                @if (item.ProgramType.Equals("Hazard", StringComparison.OrdinalIgnoreCase) && item.HazardDueDate.HasValue)
+                                {
+                                    <div class="mb-1.5 d-flex align-items-center gap-2 flex-wrap" style="font-size: 11px;">
+                                        <span class="text-secondary fw-bold"><i class="bi bi-stopwatch text-danger me-1"></i>Batas Waktu (Due Date): <strong class="text-dark">@item.HazardDueDate.Value.ToString("dd MMM yyyy")</strong></span>
+                                        <span class="badge px-2 py-0.5" style="background: @(item.HazardDueDateStatusColor ?? "#10b981"); color: #fff; font-size: 9.5px; font-weight: 700; border-radius: 4px;">
+                                            @item.HazardDueDateStatus
+                                        </span>
+                                    </div>
+                                }
                                 <div class="text-wrap text-secondary mb-2" style="font-size: 12.5px; max-height: 95px; overflow-y: auto; line-height: 1.5; padding-right: 4px;">
                                     @item.Description
                                 </div>
-                                <div class="d-flex gap-2">
+                                <div class="d-flex gap-2 flex-wrap">
                                     <button class="btn btn-outline-primary btn-sm py-1 px-2.5 d-flex align-items-center gap-1" style="font-size: 11px; border-radius: 6px; font-weight: 700;" onclick="showSapDetails('@item.ProgramType', @item.Id)">
                                         <i class="bi bi-image"></i> Detail & Foto
                                     </button>
+                                    @if (item.ProgramType.Equals("Hazard", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <button class="btn btn-outline-danger btn-sm py-1 px-2.5 d-flex align-items-center gap-1 fw-bold" style="font-size: 11px; border-radius: 6px; border-color: #ef4444; color: #dc2626;" onclick="showHazardAiModal(@item.Id)">
+                                            <i class="bi bi-cpu-fill text-danger"></i> Analisa AI Hazard
+                                        </button>
+                                    }
                                     <button class="btn btn-outline-success btn-sm py-1 px-2.5 d-flex align-items-center gap-1" style="font-size: 11px; border-radius: 6px; font-weight: 700;" onclick="runAutoAudit('@item.ProgramType', @item.Id)">
                                         <i class="bi bi-robot"></i> Auto Audit AI
                                     </button>
@@ -244,16 +269,39 @@
                     }
 
                     <div class="p-3 rounded-3 mb-3" style="background: #f8fafc; border: 1.5px solid #e2e8f0;">
-                        <div class="fw-extrabold text-dark mb-1" style="font-size: 13px; font-family: 'Outfit', sans-serif;">@item.Title</div>
+                        <div class="d-flex align-items-center justify-content-between mb-1 flex-wrap gap-1">
+                            <div class="fw-extrabold text-dark" style="font-size: 13px; font-family: 'Outfit', sans-serif;">@item.Title</div>
+                            @if (item.ProgramType.Equals("Hazard", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(item.HazardPriority))
+                            {
+                                <span class="badge py-1 px-2 text-white" style="background: @item.HazardBadgeColor; font-size: 9.5px; font-weight: 800; border-radius: 5px;">
+                                    <i class="bi bi-lightning-charge-fill"></i> @item.HazardPriority (@(item.HazardDays) Hari)
+                                </span>
+                            }
+                        </div>
+                        @if (item.ProgramType.Equals("Hazard", StringComparison.OrdinalIgnoreCase) && item.HazardDueDate.HasValue)
+                        {
+                            <div class="mb-2 d-flex align-items-center justify-content-between flex-wrap gap-1" style="font-size: 10.5px;">
+                                <span class="text-secondary"><i class="bi bi-stopwatch text-danger me-1"></i>Due: <strong>@item.HazardDueDate.Value.ToString("dd MMM yyyy")</strong></span>
+                                <span class="badge px-1.5 py-0.5 text-white" style="background: @(item.HazardDueDateStatusColor ?? "#10b981"); font-size: 9px; font-weight: 700; border-radius: 4px;">
+                                    @item.HazardDueDateStatus
+                                </span>
+                            </div>
+                        }
                         <div class="text-secondary mb-2.5" style="font-size: 12px; line-height: 1.5; word-wrap: break-word;">
                             @item.Description
                         </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-outline-primary btn-sm w-50 py-1.5 fw-bold d-flex align-items-center justify-content-center gap-1" style="font-size: 11px; border-radius: 8px;" onclick="showSapDetails('@item.ProgramType', @item.Id)">
-                                <i class="bi bi-image"></i> Detail & Foto
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-outline-primary btn-sm flex-fill py-1.5 fw-bold d-flex align-items-center justify-content-center gap-1" style="font-size: 11px; border-radius: 8px;" onclick="showSapDetails('@item.ProgramType', @item.Id)">
+                                <i class="bi bi-image"></i> Detail
                             </button>
-                            <button class="btn btn-outline-success btn-sm w-50 py-1.5 fw-bold d-flex align-items-center justify-content-center gap-1" style="font-size: 11px; border-radius: 8px;" onclick="runAutoAudit('@item.ProgramType', @item.Id)">
-                                <i class="bi bi-robot"></i> Auto Audit AI
+                            @if (item.ProgramType.Equals("Hazard", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <button class="btn btn-outline-danger btn-sm flex-fill py-1.5 fw-bold d-flex align-items-center justify-content-center gap-1" style="font-size: 11px; border-radius: 8px; border-color: #ef4444; color: #dc2626;" onclick="showHazardAiModal(@item.Id)">
+                                    <i class="bi bi-cpu-fill"></i> AI Hazard
+                                </button>
+                            }
+                            <button class="btn btn-outline-success btn-sm flex-fill py-1.5 fw-bold d-flex align-items-center justify-content-center gap-1" style="font-size: 11px; border-radius: 8px;" onclick="runAutoAudit('@item.ProgramType', @item.Id)">
+                                <i class="bi bi-robot"></i> AI Audit
                             </button>
                         </div>
                     </div>
@@ -389,8 +437,122 @@
                             <label class="fw-bold text-dark mb-1" style="font-size: 12px;">INFORMASI TAMBAHAN:</label>
                             <div class="text-secondary font-monospace" id="modalExtraInfo" style="font-size: 11.5px;"></div>
                         </div>
+
+                        <!-- Hazard AI Block in Detail Modal -->
+                        <div class="mt-3 p-3 rounded-3" id="modalHazardAiBlock" style="display: none; background: #fff1f2; border: 1.5px solid #fecdd3;">
+                            <div class="d-flex align-items-center justify-content-between mb-1.5 flex-wrap gap-1">
+                                <span class="fw-bold text-danger" style="font-size: 11.5px;"><i class="bi bi-cpu-fill me-1"></i>ANALISIS AI DUE DATE & PRIORITAS</span>
+                                <span id="modalAiPriorityBadge" class="badge px-2 py-1 text-white fw-bold" style="font-size: 10px; border-radius: 5px;"></span>
+                            </div>
+                            <div class="mb-1.5 text-dark fw-bold" style="font-size: 12px;">
+                                Target Batas Waktu: <span id="modalAiDueDate" class="text-danger"></span>
+                            </div>
+                            <div class="text-secondary mb-2" id="modalAiReasoning" style="font-size: 11.5px; line-height: 1.4;"></div>
+                            <div class="p-2.5 rounded bg-white" style="border: 1px dashed #f43f5e; font-size: 11.5px;">
+                                <strong class="text-dark d-block mb-1"><i class="bi bi-shield-check text-success me-1"></i>Rekomendasi Tindakan Mitigasi:</strong>
+                                <span id="modalAiAction" class="text-secondary" style="white-space: pre-line; line-height: 1.5;"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Hazard Urgency & Due Date Analysis Modal -->
+<div class="modal fade" id="hazardAiModal" tabindex="-1" aria-labelledby="hazardAiModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 20px; overflow: hidden; border: none; box-shadow: 0 25px 60px rgba(0,0,0,0.2);">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-bottom: 2px solid #ef4444; padding: 18px 24px;">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="p-2 rounded-3 bg-danger bg-opacity-25 text-danger d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-cpu-fill fs-5 text-danger animate-pulse"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-extrabold mb-0 text-white" id="hazardAiModalLabel" style="font-family: 'Outfit', sans-serif; font-size: 17px; letter-spacing: 0.25px;">
+                            Analisis AI Urgensi & Rekomendasi Due Date Hazard
+                        </h5>
+                        <span class="text-white text-opacity-75" style="font-size: 11.5px;">Evaluasi Tingkat Prioritas Segera Di-Close & Tindakan Mitigasi Lapangan</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" style="background: #ffffff; color: #1e293b;">
+                <div id="hazardAiLoading" class="text-center py-5">
+                    <div class="spinner-border text-danger mb-3" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Menganalisis...</span>
+                    </div>
+                    <h6 class="fw-bold text-dark">AI Sedang Mengevaluasi Tingkat Urgensi Temuan...</h6>
+                    <p class="text-muted" style="font-size: 12.5px;">Memeriksa Golden Rules K3LH, lokasi, tingkat keparahan risiko & rekomendasi due date...</p>
+                </div>
+
+                <div id="hazardAiContent" style="display: none;">
+                    <!-- Top Summary Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6 col-12">
+                            <div class="p-3 rounded-4 h-100" style="background: #f8fafc; border: 1.5px solid #e2e8f0;">
+                                <label class="fw-bold text-secondary mb-1" style="font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;">Prioritas Penutupan (Closure):</label>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span id="aiPriorityBadge" class="badge px-3 py-1.5 text-white fw-extrabold shadow-sm" style="font-size: 13px; border-radius: 8px;"></span>
+                                </div>
+                                <div class="small text-muted" id="aiRiskCategoryText" style="font-size: 12px;"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-12">
+                            <div class="p-3 rounded-4 h-100" style="background: #f8fafc; border: 1.5px solid #e2e8f0;">
+                                <label class="fw-bold text-secondary mb-1" style="font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;">Rekomendasi Batas Waktu (Due Date):</label>
+                                <div class="d-flex align-items-center gap-2 mb-1.5 flex-wrap">
+                                    <span class="fw-extrabold text-dark fs-5" id="aiDueDateTarget" style="font-family: 'Outfit', sans-serif;"></span>
+                                    <span id="aiDueDateStatusBadge" class="badge px-2.5 py-1 text-white fw-bold" style="font-size: 11px; border-radius: 6px;"></span>
+                                </div>
+                                <div class="small text-muted" style="font-size: 11.5px;">
+                                    <i class="bi bi-clock-history me-1"></i>Durasi Target: <strong id="aiRecommendedDays" class="text-dark"></strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hazard Context Box -->
+                    <div class="p-3 rounded-3 mb-3 bg-light" style="border: 1.5px solid #e2e8f0; font-size: 12.5px;">
+                        <div class="row g-2">
+                            <div class="col-md-6 col-12">
+                                <span class="text-muted">Pelapor:</span> <strong id="aiPelapor" class="text-dark"></strong>
+                            </div>
+                            <div class="col-md-6 col-12">
+                                <span class="text-muted">Lokasi / Area:</span> <strong id="aiLokasi" class="text-dark"></strong>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <span class="text-muted d-block mb-1">Deskripsi Temuan:</span>
+                                <div id="aiTemuan" class="p-2.5 rounded bg-white border text-dark fw-semibold" style="font-size: 12.5px; line-height: 1.5;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Diagnostic Reasoning -->
+                    <div class="mb-3 p-3 rounded-4" style="background: #eff6ff; border: 1.5px solid #bfdbfe;">
+                        <div class="d-flex align-items-center gap-2 mb-2 text-primary fw-bold" style="font-size: 13px;">
+                            <i class="bi bi-lightbulb-fill"></i> DIAGNOSA & REASONING AI:
+                        </div>
+                        <div id="aiReasoningText" style="font-size: 12.8px; line-height: 1.6; color: #1e3a8a;"></div>
+                    </div>
+
+                    <!-- Action Recommendation -->
+                    <div class="mb-2 p-3 rounded-4" style="background: #f0fdf4; border: 1.5px solid #bbf7d0;">
+                        <div class="d-flex align-items-center gap-2 mb-2 text-success fw-bold" style="font-size: 13px;">
+                            <i class="bi bi-shield-check"></i> REKOMENDASI LANGKAH MITIGASI LAPANGAN:
+                        </div>
+                        <div id="aiActionText" class="text-dark" style="font-size: 12.8px; line-height: 1.6; white-space: pre-line;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light d-flex justify-content-between py-3 px-4" style="border-top: 1.5px solid #e2e8f0;">
+                <button type="button" class="btn btn-secondary px-3 py-2 fw-bold" style="border-radius: 10px; font-size: 12.5px;" data-bs-dismiss="modal">
+                    Tutup
+                </button>
+                <button type="button" id="btnApplyAiRecommendation" class="btn btn-primary px-4 py-2 fw-bold d-flex align-items-center gap-2 text-white" style="border-radius: 10px; font-size: 12.5px; background: #3b82f6; border: none; box-shadow: 0 4px 12px rgba(59,130,246,0.3);" onclick="applyHazardAiToAudit()">
+                    <i class="bi bi-check2-circle"></i> Terapkan ke Catatan Audit & Rating
+                </button>
             </div>
         </div>
     </div>
@@ -545,6 +707,7 @@
             $('#modalDescription').text('');
             $('#modalExtraInfoBlock').hide();
             $('#modalExtraInfo').text('');
+            $('#modalHazardAiBlock').hide();
 
             modal.show();
 
@@ -570,6 +733,17 @@
                         $('#modalExtraInfo').text(data.extraInfo);
                     }
 
+                    if (data.hazardAi) {
+                        $('#modalHazardAiBlock').show();
+                        $('#modalAiPriorityBadge').text(data.hazardAi.priorityBadgeText || data.hazardAi.priorityLevel)
+                                                 .css('background-color', data.hazardAi.priorityBadgeColor || '#ef4444');
+                        $('#modalAiDueDate').text(data.hazardAi.dueDateFormatted + ' (' + data.hazardAi.dueDateStatus + ')');
+                        $('#modalAiReasoning').text(data.hazardAi.aiReasoning);
+                        $('#modalAiAction').text(data.hazardAi.actionRecommendation);
+                    } else {
+                        $('#modalHazardAiBlock').hide();
+                    }
+
                     if (data.photoUrl) {
                         $('#modalPhotoContainer').html(`<img src="${data.photoUrl}" class="img-fluid rounded border" style="max-height: 380px; object-fit: contain; width: 100%; cursor: pointer;" onclick="window.open('${data.photoUrl}', '_blank')" alt="Foto Submisi" />`);
                     } else {
@@ -579,6 +753,129 @@
                 error: function(err) {
                     $('#modalTitle').text('Gagal Memuat Detail');
                     $('#modalPhotoContainer').html('<div class="text-danger">Gagal memuat data detail.</div>');
+                }
+            });
+        }
+
+        let currentHazardAiData = null;
+
+        function showHazardAiModal(hazardId) {
+            const modal = new bootstrap.Modal(document.getElementById('hazardAiModal'));
+            $('#hazardAiLoading').show();
+            $('#hazardAiContent').hide();
+            $('#btnApplyAiRecommendation').prop('disabled', true);
+            currentHazardAiData = null;
+
+            modal.show();
+
+            $.ajax({
+                url: '/Admin/AnalyzeHazardAi',
+                type: 'GET',
+                data: { id: hazardId },
+                success: function(res) {
+                    if (res.success && res.ai) {
+                        currentHazardAiData = res;
+                        const ai = res.ai;
+
+                        // Priority Badge
+                        $('#aiPriorityBadge').text(ai.priorityLabel || ai.priorityLevel)
+                                             .css('background-color', ai.priorityBadgeColor || '#ef4444');
+                        $('#aiRiskCategoryText').html('Kategori Risiko: <strong class="text-dark">' + (ai.riskCategory || '-') + '</strong>' + 
+                            (ai.isGoldenRuleViolation ? ' <span class="badge bg-danger text-white ms-1"><i class="bi bi-exclamation-octagon-fill me-1"></i>Golden Rule: ' + ai.goldenRuleTopic + '</span>' : ''));
+
+                        // Due Date Target
+                        $('#aiDueDateTarget').text(ai.dueDateFormatted || '-');
+                        $('#aiDueDateStatusBadge').text(ai.dueDateStatus || 'Aktif')
+                                                  .css('background-color', ai.dueDateStatusColor || '#10b981');
+                        $('#aiRecommendedDays').text(ai.recommendedDueDateText || (ai.recommendedDays + ' Hari'));
+
+                        // Context Info
+                        $('#aiPelapor').text(res.nama + ' (' + res.nik + ') - ' + res.companyName);
+                        let loc = res.lokasi;
+                        if (res.area) loc += ' (' + res.area + ')';
+                        if (res.detilLokasi) loc += ' - ' + res.detilLokasi;
+                        $('#aiLokasi').text(loc);
+                        $('#aiTemuan').text(res.temuan);
+
+                        // Reasoning & Action
+                        $('#aiReasoningText').text(ai.aiReasoning);
+                        $('#aiActionText').text(ai.actionRecommendation);
+
+                        $('#hazardAiLoading').hide();
+                        $('#hazardAiContent').fadeIn();
+                        $('#btnApplyAiRecommendation').prop('disabled', false);
+                    } else {
+                        alert('Gagal memuat analisis AI: ' + (res.message || 'Data tidak valid'));
+                        modal.hide();
+                    }
+                },
+                error: function(err) {
+                    alert('Gagal memproses analisa AI: ' + (err.responseText || 'Server error'));
+                    modal.hide();
+                }
+            });
+        }
+
+        function applyHazardAiToAudit() {
+            if (!currentHazardAiData || !currentHazardAiData.ai) return;
+
+            const res = currentHazardAiData;
+            const ai = res.ai;
+            const programType = 'Hazard';
+            const programId = res.id;
+            const rowId = 'hazard_' + programId;
+
+            const ratingValue = ai.qualityScore || 4;
+            const noteText = `[AI Auto Audit - Prioritas ${ai.priorityLevel}] Batas Waktu: ${ai.dueDateFormatted} (${ai.dueDateStatus}). Diagnosa: ${ai.aiReasoning} | Rekomendasi: ${ai.actionRecommendation.replace(/[\r\n]+/g, ' ')}`;
+
+            // Update UI fields
+            $('#notes-' + rowId).val(noteText);
+            $('#notes-mobile-' + rowId).val(noteText);
+
+            // Save to database via RateSap
+            $.ajax({
+                url: '@Url.Action("RateSap", "Admin")',
+                type: 'POST',
+                data: {
+                    programType: programType,
+                    programId: programId,
+                    rating: ratingValue,
+                    notes: noteText,
+                    __RequestVerificationToken: token
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update stars
+                        const container = $(`.star-rating-container[data-type="${programType}"][data-id="${programId}"]`);
+                        const stars = container.find('.star-icon');
+                        stars.each(function(index) {
+                            if (index < ratingValue) {
+                                $(this).removeClass('text-secondary empty-star').addClass('text-warning fill-star');
+                            } else {
+                                $(this).removeClass('text-warning fill-star').addClass('text-secondary empty-star');
+                            }
+                        });
+
+                        // Update quality label
+                        const labelHtml = ratingValue <= 2 
+                            ? "<span class='quality-pill quality-pill-target'><i class='bi bi-exclamation-circle-fill'></i>Hanya Kejar Target</span>" 
+                            : "<span class='quality-pill quality-pill-good'><i class='bi bi-check-circle-fill'></i>Kualitas Baik</span>";
+                        container.find('.quality-label').html(labelHtml);
+
+                        // Flash success status
+                        const statusEl = $('#status-' + rowId);
+                        const statusMobileEl = $('#status-mobile-' + rowId);
+                        statusEl.fadeIn().delay(2000).fadeOut();
+                        statusMobileEl.fadeIn().delay(2000).fadeOut();
+
+                        // Close modal
+                        const modalEl = document.getElementById('hazardAiModal');
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                    }
+                },
+                error: function(err) {
+                    alert('Gagal menerapkan rekomendasi AI: ' + err.responseText);
                 }
             });
         }
