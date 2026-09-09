@@ -274,7 +274,7 @@ namespace MBS_SAP.Services
         /// <summary>
         /// Retrieves list of active companies from [ONE_DB_MITRA].dbo.vw_m_departemen_dropdown (or vw_perusahaan).
         /// </summary>
-        public async Task<List<object>> GetCompaniesAsync()
+        public async Task<List<CompanyDropdownItem>> GetCompaniesAsync()
         {
             // 1. Primary Source: [ONE_DB_MITRA].dbo.vw_m_departemen_dropdown via ADO.NET
             try
@@ -293,7 +293,7 @@ namespace MBS_SAP.Services
                           AND nama_perusahaan IS NOT NULL AND RTRIM(LTRIM(nama_perusahaan)) <> ''
                         ORDER BY sort_order, nama_perusahaan";
 
-                    var companies = new List<object>();
+                    var companies = new List<CompanyDropdownItem>();
                     var seenIds = new HashSet<int>();
                     using var reader = await cmd.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
@@ -306,7 +306,7 @@ namespace MBS_SAP.Services
                                 seenIds.Add(cid);
                                 var cNama = reader["nama_perusahaan"]?.ToString()?.Trim() ?? "";
                                 var cKode = reader["kode_perusahaan"]?.ToString()?.Trim() ?? "";
-                                companies.Add(new { id = cid, nama = cNama, kode = cKode });
+                                companies.Add(new CompanyDropdownItem { Id = cid, Nama = cNama, Kode = cKode });
                             }
                         }
                     }
@@ -330,14 +330,14 @@ namespace MBS_SAP.Services
                 .AsNoTracking()
                 .Where(p => p.StatusAktif)
                 .OrderBy(p => p.NamaPerusahaan)
-                .Select(p => new {
-                    id = p.PerusahaanId,
-                    nama = p.NamaPerusahaan ?? string.Empty,
-                    kode = p.KodePerusahaan ?? string.Empty
+                .Select(p => new CompanyDropdownItem {
+                    Id = p.PerusahaanId,
+                    Nama = p.NamaPerusahaan ?? string.Empty,
+                    Kode = p.KodePerusahaan ?? string.Empty
                 })
                 .ToListAsync();
 
-            return fallback.Cast<object>().ToList();
+            return fallback;
         }
     }
 }

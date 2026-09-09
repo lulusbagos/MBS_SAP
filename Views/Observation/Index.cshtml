@@ -121,20 +121,23 @@
 
                 <div class="row">
                     <div class="col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="companySearch">Perusahaan Yang Diamati</label>
-                        <div class="position-relative mb-0">
-                            <div class="input-sap-wrapper mb-0">
-                                <i class="bi bi-building input-sap-icon"></i>
-                                <input type="text" id="companySearch" class="input-sap text-uppercase" placeholder="Ketik / pilih perusahaan..." value="@(editModel?.PerusahaanYangDiamati ?? "")" autocomplete="off" style="padding-right: 36px;" required />
-                                <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleCompanyDropdown"></i>
-                            </div>
-                            <!-- Hidden inputs for actual form submission -->
-                            <input type="hidden" id="PerusahaanId" name="PerusahaanId" value="@(editModel?.PerusahaanId > 0 ? editModel.PerusahaanId.ToString() : "")" />
+                        <label class="form-label-sap" for="PerusahaanId">Perusahaan Yang Diamati</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-building input-sap-icon"></i>
+                            <select id="PerusahaanId" name="PerusahaanId" class="input-sap" required onchange="onCompanyChange(this)">
+                                <option value="" disabled selected="@(editModel == null || editModel.PerusahaanId <= 0)">Pilih Perusahaan...</option>
+                                @if (ViewBag.CompanyList != null)
+                                {
+                                    foreach (var comp in (IEnumerable<MBS_SAP.Models.CompanyDropdownItem>)ViewBag.CompanyList)
+                                    {
+                                        var isSelected = (editModel != null && editModel.PerusahaanId == comp.Id);
+                                        <option value="@comp.Id" data-nama="@comp.Nama" selected="@isSelected">
+                                            @comp.Nama @(!string.IsNullOrEmpty(comp.Kode) ? $"({comp.Kode})" : "")
+                                        </option>
+                                    }
+                                }
+                            </select>
                             <input type="hidden" id="PerusahaanYangDiamati" name="PerusahaanYangDiamati" value="@(editModel?.PerusahaanYangDiamati ?? "")" />
-                            <!-- Dropdown list -->
-                            <div id="companyDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
-                                <!-- Populated by JS -->
-                            </div>
                         </div>
                     </div>
                     <div class="col-md-6 form-group-sap">
@@ -536,49 +539,18 @@
         var defaultUserCompanyId = @Html.Raw(ViewBag.UserCompanyId != null ? ViewBag.UserCompanyId.ToString() : "null");
         var defaultUserCompanyName = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.UserCompanyName ?? ""));
 
-        window.renderCompanyDropdown = function(filterText) {
-            var menu = $('#companyDropdownMenu');
-            menu.empty();
-            var clean = (filterText || '').trim().toLowerCase();
-            var filtered = globalCompaniesList.filter(function(c) {
-                var nama = ((c.nama || c.Nama) || '').toLowerCase();
-                var kode = ((c.kode || c.Kode) || '').toLowerCase();
-                return clean === '' || nama.includes(clean) || kode.includes(clean);
-            });
-
-            if (filtered.length > 0) {
-                var html = '';
-                filtered.slice(0, 60).forEach(function(item) {
-                    var id = item.id != null ? item.id : item.Id;
-                    var nama = (item.nama || item.Nama || '').replace(/'/g, "\\'");
-                    var displayNama = item.nama || item.Nama || '';
-                    var kode = item.kode || item.Kode || '';
-                    var kodeBadge = kode ? `<span class="badge bg-secondary ms-2" style="font-size: 10px;">${kode}</span>` : '';
-                    html += `<button type="button" class="d-block w-100 text-start py-2 px-3 border-0 company-option-btn" onmousedown="selectCompany(${id}, '${nama}')" style="background:none; color:var(--text-main); font-size:13px; border-bottom:1px solid var(--border-color); cursor:pointer;">
-                        <i class="bi bi-building me-2 text-primary"></i>${displayNama}${kodeBadge}
-                    </button>`;
-                });
-                menu.html(html);
-            } else if (clean.length > 0) {
-                menu.html('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Perusahaan "' + filterText + '" tidak ditemukan</div>');
-            } else {
-                menu.html('<div class="p-3 text-center text-muted" style="font-size:12px;">Tidak ada data perusahaan.</div>');
+        window.onCompanyChange = function(selectEl) {
+            var val = $(selectEl).val();
+            if (!val) {
+                $('#PerusahaanYangDiamati').val('');
+                loadDepartments(null);
+                return;
             }
-            
-            if (menu.children().length > 0) menu.show(); else menu.hide();
-        };
-
-        window.selectCompany = function(companyId, namaPerusahaan, preselectDept) {
-            if (!companyId) return;
-            companyId = parseInt(companyId, 10);
-
-            $('#companySearch').val(namaPerusahaan);
-            $('#PerusahaanId').val(companyId);
-            $('#PerusahaanYangDiamati').val(namaPerusahaan || '');
-            $('#companyDropdownMenu').hide();
-            $('#companySearch').removeClass('is-invalid');
-            
-            loadDepartments(companyId, preselectDept);
+            var opt = $(selectEl).find('option:selected');
+            var nama = opt.attr('data-nama') || opt.text().trim();
+            $('#PerusahaanYangDiamati').val(nama);
+            $(selectEl).removeClass('is-invalid');
+            loadDepartments(val);
         };
 
         window.loadDepartments = function(companyId, preselectDept) {
@@ -592,7 +564,6 @@
 
             companyId = parseInt(companyId, 10);
 
-            // Show loading badge & placeholder
             function populateOptions(deptList) {
                 deptSelect.empty();
                 deptSelect.append('<option value="" disabled ' + (!preselectDept ? 'selected' : '') + '>Pilih Departemen...</option>');
@@ -611,20 +582,19 @@
                 loadingBadge.stop(true, true).fadeOut(200);
             }
 
-            // 1. Try fast instant local lookup from preloaded companyDeptMap
+            // 1. Fast instant local lookup from preloaded companyDeptMap
             var localDepts = globalCompanyDeptMap[companyId] || globalCompanyDeptMap[companyId.toString()];
             if (localDepts && localDepts.length > 0) {
-                loadingBadge.stop(true, true).fadeIn(100);
                 populateOptions(localDepts);
                 return;
             }
 
-            // 2. Fallback to AJAX request if not found in preloaded map
-            loadingBadge.stop(true, true).fadeIn(150);
+            // 2. Fallback to AJAX request
+            loadingBadge.stop(true, true).fadeIn(100);
             deptSelect.prop('disabled', true).html('<option value="" disabled selected>⏳ Memuat departemen...</option>');
 
             $.ajax({
-                url: '@Url.Action("GetDepartmentsByCompany", "Observation")',
+                url: '/Observation/GetDepartmentsByCompany',
                 type: 'GET',
                 cache: false,
                 data: { companyId: companyId },
@@ -643,6 +613,7 @@
                     console.error("Error loading departments for company " + companyId + ":", error);
                     deptSelect.prop('disabled', false);
                     deptSelect.html('<option value="" disabled selected>Gagal memuat departemen</option>');
+                    loadingBadge.stop(true, true).fadeOut(200);
                 }
             });
         };
@@ -1024,123 +995,18 @@
 
             // Initialize company only if in edit mode (editModel exists with PerusahaanId)
             var existingPerusahaanId = $('#PerusahaanId').val();
-            var existingPerusahaanNama = $('#PerusahaanYangDiamati').val();
-            if (existingPerusahaanId && existingPerusahaanNama) {
-                $('#companySearch').val(existingPerusahaanNama);
+            if (existingPerusahaanId && parseInt(existingPerusahaanId, 10) > 0) {
                 loadDepartments(existingPerusahaanId, '@(editModel?.DepartemenYangDiamati ?? "")');
             } else {
-                $('#companySearch').val('');
                 $('#PerusahaanId').val('');
                 $('#PerusahaanYangDiamati').val('');
                 $('#DepartemenYangDiamati').empty().append('<option value="" disabled selected>Pilih Perusahaan terlebih dahulu...</option>');
             }
 
-            // Toggle company dropdown on chevron click
-            $('#toggleCompanyDropdown').on('click', function() {
-                var menu = $('#companyDropdownMenu');
-                if (menu.is(':visible')) {
-                    menu.hide();
-                } else {
-                    renderCompanyDropdown($('#companySearch').val());
-                    menu.show();
-                }
-            });
-
-            // Filter company dropdown on keyup/input
-            $('#companySearch').on('input', function() {
-                var val = $(this).val();
-                renderCompanyDropdown(val);
-
-                var clean = (val || '').trim().toLowerCase();
-                if (clean.length > 0) {
-                    var exactMatch = globalCompaniesList.find(function(c) {
-                        var n = ((c.nama || c.Nama) || '').toLowerCase();
-                        var k = ((c.kode || c.Kode) || '').toLowerCase();
-                        return n === clean || k === clean;
-                    });
-                    if (exactMatch) {
-                        var matchId = exactMatch.id != null ? exactMatch.id : exactMatch.Id;
-                        var matchNama = exactMatch.nama || exactMatch.Nama || '';
-                        if (matchId != $('#PerusahaanId').val()) {
-                            selectCompany(matchId, matchNama);
-                        }
-                    }
-                }
-            });
-
-            // Keyboard navigation on company search
-            $('#companySearch').on('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    var firstBtn = $('#companyDropdownMenu').find('.company-option-btn').first();
-                    if (firstBtn.length > 0) {
-                        var cid = firstBtn.attr('data-id');
-                        var cnama = firstBtn.attr('data-nama');
-                        selectCompany(cid, cnama);
-                    }
-                    return false;
-                } else if (e.key === 'Escape') {
-                    $('#companyDropdownMenu').hide();
-                }
-            });
-
-            // Open company dropdown on focus/click
-            $('#companySearch').on('focus click', function() {
-                renderCompanyDropdown($(this).val());
-                $('#companyDropdownMenu').show();
-            });
-
-            // Delegated click/mousedown for company options
-            $(document).on('mouseenter', '.company-option-btn', function() {
-                $(this).css('background', 'var(--bg-layout)');
-            }).on('mouseleave', '.company-option-btn', function() {
-                $(this).css('background', 'none');
-            });
-
-            $(document).on('mousedown', '.company-option-btn', function(e) {
-                e.preventDefault(); // Prevents input blur before click
-            }).on('click', '.company-option-btn', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                var cid = $(this).attr('data-id');
-                var cnama = $(this).attr('data-nama');
-                if (cid && cnama) {
-                    selectCompany(cid, cnama);
-                }
-            });
-
-            // Auto-resolve on blur if typed text differs from selected company
-            $('#companySearch').on('blur', function() {
-                setTimeout(function() {
-                    var val = ($('#companySearch').val() || '').trim().toLowerCase();
-                    var currentNama = ($('#PerusahaanYangDiamati').val() || '').trim().toLowerCase();
-                    if (val.length > 0 && val !== currentNama) {
-                        var match = globalCompaniesList.find(function(c) {
-                            var n = ((c.nama || c.Nama) || '').toLowerCase();
-                            var k = ((c.kode || c.Kode) || '').toLowerCase();
-                            return n === val || k === val || n.includes(val) || val.includes(n);
-                        });
-                        if (match) {
-                            var matchId = match.id != null ? match.id : match.Id;
-                            var matchNama = match.nama || match.Nama || '';
-                            selectCompany(matchId, matchNama);
-                        } else {
-                            $('#companySearch').val($('#PerusahaanYangDiamati').val());
-                        }
-                    } else if (val.length === 0) {
-                        $('#PerusahaanId').val('');
-                        $('#PerusahaanYangDiamati').val('');
-                        loadDepartments(null);
-                    }
-                }, 200);
-            });
-
             // Guide user to select company if clicking Departemen when company is empty
             $('#DepartemenYangDiamati').on('click mousedown', function() {
                 if (!$('#PerusahaanId').val()) {
-                    $('#companySearch').focus();
-                    renderCompanyDropdown($('#companySearch').val());
-                    $('#companyDropdownMenu').show();
+                    $('#PerusahaanId').focus();
                 }
             });
 
@@ -1151,9 +1017,6 @@
                 }
                 if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
                     $('#areaDropdownMenu').hide();
-                }
-                if (!$(e.target).closest('#companySearch, #companyDropdownMenu, #toggleCompanyDropdown').length) {
-                    $('#companyDropdownMenu').hide();
                 }
             });
             getLocation();
@@ -1195,7 +1058,7 @@
                     'Area': 'Area Utama',
                     'Lokasi': 'Lokasi Spesifik',
                     'KegiatanYangDiamati': 'Kegiatan Yang Diamati',
-                    'companySearch': 'Perusahaan Yang Diamati',
+                    'PerusahaanId': 'Perusahaan Yang Diamati',
                     'DepartemenYangDiamati': 'Departemen Yang Diamati',
                     'TingkatResiko': 'Tingkat Resiko',
                     'PerihalYangDiamati': 'Perihal Yang Diamati'
