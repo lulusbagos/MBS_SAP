@@ -565,7 +565,9 @@
                         .html('<i class="bi bi-building me-2 text-primary"></i>' + item.nama + kodeBadge)
                         .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
                         .on('mouseleave', function() { $(this).css('background', 'none'); })
-                        .on('click', function() {
+                        .on('mousedown click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
                             selectCompany(item.id, item.nama);
                         });
                     menu.append(btn);
@@ -599,7 +601,7 @@
             deptSelect.prop('disabled', true).html('<option value="" disabled selected>Memuat departemen...</option>');
 
             $.ajax({
-                url: '/Observation/GetDepartmentsByCompany',
+                url: '@Url.Action("GetDepartmentsByCompany", "Observation")',
                 type: 'GET',
                 data: { companyId: companyId },
                 success: function(departments) {
@@ -610,13 +612,16 @@
                             var isSelected = (preselectDept && preselectDept.toUpperCase() === d.toUpperCase()) ? 'selected' : '';
                             deptSelect.append('<option value="' + d + '" ' + isSelected + '>' + d + '</option>');
                         });
+                    } else {
+                        deptSelect.append('<option value="" disabled selected>(Tidak ada departemen terdaftar)</option>');
                     }
                     deptSelect.prop('disabled', false);
                     if (preselectDept) {
                         deptSelect.val(preselectDept);
                     }
                 },
-                error: function() {
+                error: function(xhr, status, error) {
+                    console.error("Error loading departments for company " + companyId + ":", error);
                     deptSelect.prop('disabled', false);
                     deptSelect.html('<option value="" disabled selected>Gagal memuat departemen</option>');
                 }
@@ -1022,14 +1027,28 @@
                 }
             });
 
-            // Filter company dropdown on keyup
+            // Filter company dropdown on keyup/input
             $('#companySearch').on('input keyup', function() {
-                renderCompanyDropdown($(this).val());
+                var val = $(this).val();
+                renderCompanyDropdown(val);
+
+                var clean = (val || '').trim().toLowerCase();
+                if (clean.length > 0) {
+                    var exactMatch = globalCompaniesList.find(function(c) {
+                        return (c.nama || '').toLowerCase() === clean || (c.kode || '').toLowerCase() === clean;
+                    });
+                    if (exactMatch && exactMatch.id != $('#PerusahaanId').val()) {
+                        $('#PerusahaanId').val(exactMatch.id);
+                        $('#PerusahaanYangDiamati').val(exactMatch.nama);
+                        loadDepartments(exactMatch.id);
+                    }
+                }
             });
 
-            // Open company dropdown on focus
-            $('#companySearch').on('focus', function() {
+            // Open company dropdown on focus/click
+            $('#companySearch').on('focus click', function() {
                 renderCompanyDropdown($(this).val());
+                $('#companyDropdownMenu').show();
             });
 
             // Close dropdown when clicking outside
