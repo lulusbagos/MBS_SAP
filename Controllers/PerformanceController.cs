@@ -627,7 +627,7 @@ namespace MBS_SAP.Controllers
 
             var (scopeCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
             var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
-            var cacheKey = $"CompanyAnalytics_v5_{scopeCompanyId}_{selectedYear}_{selectedMonth}";
+            var cacheKey = $"CompanyAnalytics_v6_{scopeCompanyId}_{selectedYear}_{selectedMonth}";
 
             bool forceRefresh = HttpContext.Request.Query.ContainsKey("refresh") &&
                                 string.Equals(HttpContext.Request.Query["refresh"], "true", StringComparison.OrdinalIgnoreCase);
@@ -1110,8 +1110,20 @@ namespace MBS_SAP.Controllers
             };
 
             // 3-Month Categorized Hazard Trend (Unsafe Action vs Unsafe Condition)
-            DateTime m3Start = startOfMonth;
-            DateTime m3End = endOfMonth;
+            // Aturan Bisnis: Jika periode aktif saat ini dan tanggal <= 15, periode 3 bulan adalah 3 bulan sebelumnya (cth: Jun, Jul, Aug).
+            // Setelah tanggal 15 (hari > 15), periode bergeser ke (Jul, Aug, Sep).
+            DateTime m3TargetMonth;
+            if (selectedYear == today.Year && selectedMonth == today.Month)
+            {
+                m3TargetMonth = today.Day <= 15 ? startOfMonth.AddMonths(-1) : startOfMonth;
+            }
+            else
+            {
+                m3TargetMonth = startOfMonth;
+            }
+
+            DateTime m3Start = new DateTime(m3TargetMonth.Year, m3TargetMonth.Month, 1);
+            DateTime m3End = m3Start.AddMonths(1).AddTicks(-1);
             DateTime m2Start = m3Start.AddMonths(-1);
             DateTime m2End = m3Start.AddTicks(-1);
             DateTime m1Start = m2Start.AddMonths(-1);
