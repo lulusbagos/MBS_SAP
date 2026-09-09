@@ -531,12 +531,12 @@
             }
         }
 
-                var globalCompaniesList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.CompanyList ?? new object[] { }));
+        var globalCompaniesList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.CompanyList ?? new object[] { }));
         var globalCompanyDeptMap = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.CompanyDeptMap ?? new Dictionary<int, List<string>>()));
         var defaultUserCompanyId = @Html.Raw(ViewBag.UserCompanyId != null ? ViewBag.UserCompanyId.ToString() : "null");
         var defaultUserCompanyName = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.UserCompanyName ?? ""));
 
-        function renderCompanyDropdown(filterText) {
+        window.renderCompanyDropdown = function(filterText) {
             var menu = $('#companyDropdownMenu');
             menu.empty();
             var clean = (filterText || '').trim().toLowerCase();
@@ -550,11 +550,12 @@
                 var html = '';
                 filtered.slice(0, 60).forEach(function(item) {
                     var id = item.id != null ? item.id : item.Id;
-                    var nama = item.nama || item.Nama || '';
+                    var nama = (item.nama || item.Nama || '').replace(/'/g, "\\'");
+                    var displayNama = item.nama || item.Nama || '';
                     var kode = item.kode || item.Kode || '';
                     var kodeBadge = kode ? `<span class="badge bg-secondary ms-2" style="font-size: 10px;">${kode}</span>` : '';
-                    html += `<button type="button" class="d-block w-100 text-start py-2 px-3 border-0 company-option-btn" data-id="${id}" data-nama="${nama}" style="background:none; color:var(--text-main); font-size:13px; border-bottom:1px solid var(--border-color); cursor:pointer;">
-                        <i class="bi bi-building me-2 text-primary"></i>${nama}${kodeBadge}
+                    html += `<button type="button" class="d-block w-100 text-start py-2 px-3 border-0 company-option-btn" onmousedown="selectCompany(${id}, '${nama}')" style="background:none; color:var(--text-main); font-size:13px; border-bottom:1px solid var(--border-color); cursor:pointer;">
+                        <i class="bi bi-building me-2 text-primary"></i>${displayNama}${kodeBadge}
                     </button>`;
                 });
                 menu.html(html);
@@ -565,9 +566,9 @@
             }
             
             if (menu.children().length > 0) menu.show(); else menu.hide();
-        }
+        };
 
-        function selectCompany(companyId, namaPerusahaan, preselectDept) {
+        window.selectCompany = function(companyId, namaPerusahaan, preselectDept) {
             if (!companyId) return;
             companyId = parseInt(companyId, 10);
 
@@ -578,9 +579,9 @@
             $('#companySearch').removeClass('is-invalid');
             
             loadDepartments(companyId, preselectDept);
-        }
+        };
 
-        function loadDepartments(companyId, preselectDept) {
+        window.loadDepartments = function(companyId, preselectDept) {
             var deptSelect = $('#DepartemenYangDiamati');
             var loadingBadge = $('#deptLoadingBadge');
 
@@ -642,10 +643,9 @@
                     console.error("Error loading departments for company " + companyId + ":", error);
                     deptSelect.prop('disabled', false);
                     deptSelect.html('<option value="" disabled selected>Gagal memuat departemen</option>');
-                    loadingBadge.stop(true, true).fadeOut(200);
                 }
             });
-        }
+        };
 
         var globalAreasList = [
             { id: 1, namaArea: "Port/Jetty - Indexim" },
