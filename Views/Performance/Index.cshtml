@@ -2532,7 +2532,10 @@
                                     <i class="bi bi-table me-1"></i> Tabel
                                 </button>
                                 <button type="button" class="btn btn-outline-success" id="btnHazViewChart" onclick="switchHazView('chart')">
-                                    <i class="bi bi-bar-chart-line me-1"></i> Grafik
+                                    <i class="bi bi-bar-chart-line me-1"></i> Tren
+                                </button>
+                                <button type="button" class="btn btn-outline-success" id="btnHazViewPie" onclick="switchHazView('pie')">
+                                    <i class="bi bi-pie-chart-fill me-1"></i> Diagram Pie (%)
                                 </button>
                             </div>
                             <a href="/Performance/ExportHazardSummaryExcel" class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1 shadow-sm px-3" style="border-radius: 8px;">
@@ -2594,7 +2597,7 @@
                             </div>
                         </div>
 
-                        <!-- Chart View -->
+                        <!-- Chart View (Bar Trend) -->
                         <div id="containerHazChartView" class="row g-4 d-none">
                             <div class="col-12 col-xl-6">
                                 <div class="p-3 border rounded-3 bg-light-subtle h-100">
@@ -2609,6 +2612,205 @@
                                     <h6 class="fw-bold mb-3" style="color: #007A3D;"><i class="bi bi-bar-chart-fill me-2"></i>Tren Unsafe Condition (KTA) 3 Bulan</h6>
                                     <div style="height: 320px; position: relative;">
                                         <canvas id="chartKtaTrendCanvas"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pie Chart View (Percentage Distribution YTD & 3M) -->
+                        <div id="containerHazPieView" class="d-none">
+                            <!-- Sub-navigation filter for Pie charts -->
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 p-2 rounded-3 bg-light-subtle border">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-bold">
+                                        <i class="bi bi-pie-chart-fill me-1"></i> Distribusi Persentase (%) Kategori
+                                    </span>
+                                    <small class="text-muted d-none d-sm-inline">Pilih periode tampilan:</small>
+                                </div>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-success active" id="btnHazPieTabAll" onclick="switchHazPiePeriod('all')">
+                                        <i class="bi bi-grid-fill me-1"></i> Komparasi (3 Bulan vs YTD)
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success" id="btnHazPieTab3M" onclick="switchHazPiePeriod('3m')">
+                                        <i class="bi bi-calendar3 me-1"></i> 3 Bulan (<span class="lblHaz3MText"></span>)
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success" id="btnHazPieTabYtd" onclick="switchHazPiePeriod('ytd')">
+                                        <i class="bi bi-calendar-check me-1"></i> YTD (<span class="lblHazYtdText"></span>)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Summary Ratio Row: Global KTA vs TTA -->
+                            <div class="row g-3 mb-4" id="rowHazRatioSummary">
+                                <div class="col-12 col-md-6" id="cardHazRatio3M">
+                                    <div class="p-3 border rounded-3 bg-light-subtle h-100 shadow-sm">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="fw-bold mb-0" style="color: #007A3D; font-size: 13px;">
+                                                <i class="bi bi-pie-chart me-1"></i> Rasio Global KTA vs TTA (3 Bulan: <span class="lblHaz3MText"></span>)
+                                            </h6>
+                                            <span class="badge bg-success font-monospace" id="badgeTotalHaz3M">0 Temuan</span>
+                                        </div>
+                                        <div class="row align-items-center">
+                                            <div class="col-5" style="height: 150px; position: relative;">
+                                                <canvas id="chartHazRatio3mCanvas"></canvas>
+                                            </div>
+                                            <div class="col-7">
+                                                <div class="d-flex flex-column gap-2" id="statHazRatio3M">
+                                                    <!-- Dynamic ratio stats -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-6" id="cardHazRatioYTD">
+                                    <div class="p-3 border rounded-3 bg-light-subtle h-100 shadow-sm">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <h6 class="fw-bold mb-0" style="color: #007A3D; font-size: 13px;">
+                                                <i class="bi bi-pie-chart me-1"></i> Rasio Global KTA vs TTA (YTD <span class="lblHazYtdText"></span>)
+                                            </h6>
+                                            <span class="badge bg-primary font-monospace" id="badgeTotalHazYtd">0 Temuan</span>
+                                        </div>
+                                        <div class="row align-items-center">
+                                            <div class="col-5" style="height: 150px; position: relative;">
+                                                <canvas id="chartHazRatioYtdCanvas"></canvas>
+                                            </div>
+                                            <div class="col-7">
+                                                <div class="d-flex flex-column gap-2" id="statHazRatioYtd">
+                                                    <!-- Dynamic ratio stats -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECTION 1: UNSAFE ACTION (TTA) PIE CHARTS -->
+                            <div class="mb-4">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="badge bg-warning text-dark fw-bold px-2 py-1">TTA</span>
+                                    <h6 class="fw-bold mb-0" style="color: #d97706;">Komposisi Kategori Unsafe Action (Tindakan Tidak Aman)</h6>
+                                </div>
+                                <div class="row g-3">
+                                    <!-- TTA 3 Bulan -->
+                                    <div class="col-12 col-xl-6" id="colTtaPie3M">
+                                        <div class="p-3 border rounded-3 bg-light-subtle h-100 shadow-sm">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-bold" style="font-size: 13px;">
+                                                    <i class="bi bi-calendar3 text-warning me-1"></i> 3 Bulan Terakhir (<span class="lblHaz3MText"></span>)
+                                                </span>
+                                                <span class="badge bg-warning text-dark font-monospace" id="badgeTtaTotal3M">0 Temuan</span>
+                                            </div>
+                                            <div style="height: 260px; position: relative;" class="mb-2">
+                                                <canvas id="chartTtaPie3MCanvas"></canvas>
+                                            </div>
+                                            <div class="table-responsive rounded-2 border" style="max-height: 200px; overflow-y: auto;">
+                                                <table class="table table-sm table-hover mb-0 align-middle" style="font-size: 11px;" id="tableTtaPie3MList">
+                                                    <thead class="table-light sticky-top">
+                                                        <tr>
+                                                            <th class="ps-2">Kategori TTA</th>
+                                                            <th class="text-center" style="width: 65px;">Temuan</th>
+                                                            <th class="text-center" style="width: 70px;">% TTA</th>
+                                                            <th class="text-center" style="width: 80px;">% Total Haz</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- TTA YTD -->
+                                    <div class="col-12 col-xl-6" id="colTtaPieYTD">
+                                        <div class="p-3 border rounded-3 bg-light-subtle h-100 shadow-sm">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-bold" style="font-size: 13px;">
+                                                    <i class="bi bi-calendar-check text-warning me-1"></i> Year-to-Date (YTD <span class="lblHazYtdText"></span>)
+                                                </span>
+                                                <span class="badge bg-warning text-dark font-monospace" id="badgeTtaTotalYtd">0 Temuan</span>
+                                            </div>
+                                            <div style="height: 260px; position: relative;" class="mb-2">
+                                                <canvas id="chartTtaPieYtdCanvas"></canvas>
+                                            </div>
+                                            <div class="table-responsive rounded-2 border" style="max-height: 200px; overflow-y: auto;">
+                                                <table class="table table-sm table-hover mb-0 align-middle" style="font-size: 11px;" id="tableTtaPieYtdList">
+                                                    <thead class="table-light sticky-top">
+                                                        <tr>
+                                                            <th class="ps-2">Kategori TTA</th>
+                                                            <th class="text-center" style="width: 65px;">Temuan</th>
+                                                            <th class="text-center" style="width: 70px;">% TTA</th>
+                                                            <th class="text-center" style="width: 80px;">% Total Haz</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SECTION 2: UNSAFE CONDITION (KTA) PIE CHARTS -->
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="badge bg-primary text-white fw-bold px-2 py-1">KTA</span>
+                                    <h6 class="fw-bold mb-0" style="color: #2563eb;">Komposisi Kategori Unsafe Condition (Kondisi Tidak Aman)</h6>
+                                </div>
+                                <div class="row g-3">
+                                    <!-- KTA 3 Bulan -->
+                                    <div class="col-12 col-xl-6" id="colKtaPie3M">
+                                        <div class="p-3 border rounded-3 bg-light-subtle h-100 shadow-sm">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-bold" style="font-size: 13px;">
+                                                    <i class="bi bi-calendar3 text-primary me-1"></i> 3 Bulan Terakhir (<span class="lblHaz3MText"></span>)
+                                                </span>
+                                                <span class="badge bg-primary font-monospace" id="badgeKtaTotal3M">0 Temuan</span>
+                                            </div>
+                                            <div style="height: 260px; position: relative;" class="mb-2">
+                                                <canvas id="chartKtaPie3MCanvas"></canvas>
+                                            </div>
+                                            <div class="table-responsive rounded-2 border" style="max-height: 200px; overflow-y: auto;">
+                                                <table class="table table-sm table-hover mb-0 align-middle" style="font-size: 11px;" id="tableKtaPie3MList">
+                                                    <thead class="table-light sticky-top">
+                                                        <tr>
+                                                            <th class="ps-2">Kategori KTA</th>
+                                                            <th class="text-center" style="width: 65px;">Temuan</th>
+                                                            <th class="text-center" style="width: 70px;">% KTA</th>
+                                                            <th class="text-center" style="width: 80px;">% Total Haz</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- KTA YTD -->
+                                    <div class="col-12 col-xl-6" id="colKtaPieYTD">
+                                        <div class="p-3 border rounded-3 bg-light-subtle h-100 shadow-sm">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="fw-bold" style="font-size: 13px;">
+                                                    <i class="bi bi-calendar-check text-primary me-1"></i> Year-to-Date (YTD <span class="lblHazYtdText"></span>)
+                                                </span>
+                                                <span class="badge bg-primary font-monospace" id="badgeKtaTotalYtd">0 Temuan</span>
+                                            </div>
+                                            <div style="height: 260px; position: relative;" class="mb-2">
+                                                <canvas id="chartKtaPieYtdCanvas"></canvas>
+                                            </div>
+                                            <div class="table-responsive rounded-2 border" style="max-height: 200px; overflow-y: auto;">
+                                                <table class="table table-sm table-hover mb-0 align-middle" style="font-size: 11px;" id="tableKtaPieYtdList">
+                                                    <thead class="table-light sticky-top">
+                                                        <tr>
+                                                            <th class="ps-2">Kategori KTA</th>
+                                                            <th class="text-center" style="width: 65px;">Temuan</th>
+                                                            <th class="text-center" style="width: 70px;">% KTA</th>
+                                                            <th class="text-center" style="width: 80px;">% Total Haz</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -6786,8 +6988,15 @@
     let _chartYtdProgressionInstance = null;
     let _chartTtaTrendInstance = null;
     let _chartKtaTrendInstance = null;
+    let _chartHazRatio3mInstance = null;
+    let _chartHazRatioYtdInstance = null;
+    let _chartTtaPie3mInstance = null;
+    let _chartTtaPieYtdInstance = null;
+    let _chartKtaPie3mInstance = null;
+    let _chartKtaPieYtdInstance = null;
     let _hazCurrentView = 'table';
     let _hazCurrentScope = 'top5'; // 'top5', 'top10ytd', 'all'
+    let _hazPieCurrentPeriod = 'all'; // 'all', '3m', 'ytd'
 
     window.switchHazScope = function(scope) {
         _hazCurrentScope = scope;
@@ -6802,25 +7011,71 @@
         renderHazardCategoryTrends();
     };
 
+    window.switchHazPiePeriod = function(period) {
+        _hazPieCurrentPeriod = period;
+        ['btnHazPieTabAll', 'btnHazPieTab3M', 'btnHazPieTabYtd'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.classList.remove('active');
+        });
+        if (period === 'all') document.getElementById('btnHazPieTabAll')?.classList.add('active');
+        else if (period === '3m') document.getElementById('btnHazPieTab3M')?.classList.add('active');
+        else if (period === 'ytd') document.getElementById('btnHazPieTabYtd')?.classList.add('active');
+
+        const card3m = document.getElementById('cardHazRatio3M');
+        const cardYtd = document.getElementById('cardHazRatioYTD');
+        const colTta3m = document.getElementById('colTtaPie3M');
+        const colTtaYtd = document.getElementById('colTtaPieYTD');
+        const colKta3m = document.getElementById('colKtaPie3M');
+        const colKtaYtd = document.getElementById('colKtaPieYTD');
+
+        if (period === 'all') {
+            if (card3m) { card3m.classList.remove('d-none'); card3m.className = 'col-12 col-md-6'; }
+            if (cardYtd) { cardYtd.classList.remove('d-none'); cardYtd.className = 'col-12 col-md-6'; }
+            if (colTta3m) { colTta3m.classList.remove('d-none'); colTta3m.className = 'col-12 col-xl-6'; }
+            if (colTtaYtd) { colTtaYtd.classList.remove('d-none'); colTtaYtd.className = 'col-12 col-xl-6'; }
+            if (colKta3m) { colKta3m.classList.remove('d-none'); colKta3m.className = 'col-12 col-xl-6'; }
+            if (colKtaYtd) { colKtaYtd.classList.remove('d-none'); colKtaYtd.className = 'col-12 col-xl-6'; }
+        } else if (period === '3m') {
+            if (card3m) { card3m.classList.remove('d-none'); card3m.className = 'col-12'; }
+            if (cardYtd) cardYtd.classList.add('d-none');
+            if (colTta3m) { colTta3m.classList.remove('d-none'); colTta3m.className = 'col-12'; }
+            if (colTtaYtd) colTtaYtd.classList.add('d-none');
+            if (colKta3m) { colKta3m.classList.remove('d-none'); colKta3m.className = 'col-12'; }
+            if (colKtaYtd) colKtaYtd.classList.add('d-none');
+        } else if (period === 'ytd') {
+            if (card3m) card3m.classList.add('d-none');
+            if (cardYtd) { cardYtd.classList.remove('d-none'); cardYtd.className = 'col-12'; }
+            if (colTta3m) colTta3m.classList.add('d-none');
+            if (colTtaYtd) { colTtaYtd.classList.remove('d-none'); colTtaYtd.className = 'col-12'; }
+            if (colKta3m) colKta3m.classList.add('d-none');
+            if (colKtaYtd) { colKtaYtd.classList.remove('d-none'); colKtaYtd.className = 'col-12'; }
+        }
+
+        renderHazardCategoryPieCharts();
+    };
+
     window.switchHazView = function(view) {
         _hazCurrentView = view;
         const btnTable = document.getElementById('btnHazViewTable');
         const btnChart = document.getElementById('btnHazViewChart');
+        const btnPie = document.getElementById('btnHazViewPie');
         const containerTable = document.getElementById('containerHazTableView');
         const containerChart = document.getElementById('containerHazChartView');
+        const containerPie = document.getElementById('containerHazPieView');
 
-        if (btnTable && btnChart && containerTable && containerChart) {
-            if (view === 'table') {
-                btnTable.classList.add('active');
-                btnChart.classList.remove('active');
-                containerTable.classList.remove('d-none');
-                containerChart.classList.add('d-none');
-            } else {
-                btnChart.classList.add('active');
-                btnTable.classList.remove('active');
-                containerChart.classList.remove('d-none');
-                containerTable.classList.add('d-none');
+        if (btnTable && btnChart && btnPie && containerTable && containerChart && containerPie) {
+            btnTable.classList.toggle('active', view === 'table');
+            btnChart.classList.toggle('active', view === 'chart');
+            btnPie.classList.toggle('active', view === 'pie');
+
+            containerTable.classList.toggle('d-none', view !== 'table');
+            containerChart.classList.toggle('d-none', view !== 'chart');
+            containerPie.classList.toggle('d-none', view !== 'pie');
+
+            if (view === 'chart') {
                 renderHazardCategoryCharts();
+            } else if (view === 'pie') {
+                renderHazardCategoryPieCharts();
             }
         }
     };
@@ -7166,6 +7421,8 @@
 
         if (_hazCurrentView === 'chart') {
             renderHazardCategoryCharts();
+        } else if (_hazCurrentView === 'pie') {
+            renderHazardCategoryPieCharts();
         }
     }
 
@@ -7309,6 +7566,348 @@
                         }
                     }
                 });
+            }
+        }
+    }
+
+    function renderHazardCategoryPieCharts() {
+        if (!_analyticsData || !_analyticsData.hazardCategories3M) return;
+        const haz3M = _analyticsData.hazardCategories3M;
+        const months = haz3M.monthLabels || ['Jun', 'Jul', 'Aug'];
+        const selYear = _analyticsData.selectedYear || new Date().getFullYear();
+        const sum = haz3M.summary || {};
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                       document.body.classList.contains('dark') || 
+                       document.body.classList.contains('dark-theme');
+        const textColor = isDark ? '#f8fafc' : '#0f172a';
+        const borderColor = isDark ? '#1e293b' : '#ffffff';
+
+        // Update dynamic label text
+        document.querySelectorAll('.lblHaz3MText').forEach(el => el.textContent = months.join(', '));
+        document.querySelectorAll('.lblHazYtdText').forEach(el => el.textContent = `${selYear}`);
+
+        // Update badges
+        const b3m = document.getElementById('badgeTotalHaz3M');
+        if (b3m) b3m.textContent = `${(sum.total3M || 0).toLocaleString('id-ID')} Temuan`;
+        const bytd = document.getElementById('badgeTotalHazYtd');
+        if (bytd) bytd.textContent = `${(sum.totalYtd || 0).toLocaleString('id-ID')} Temuan`;
+        const bTta3m = document.getElementById('badgeTtaTotal3M');
+        if (bTta3m) bTta3m.textContent = `${(sum.totalTta || 0).toLocaleString('id-ID')} Temuan (${sum.ttaPct || 0}%)`;
+        const bTtaYtd = document.getElementById('badgeTtaTotalYtd');
+        if (bTtaYtd) bTtaYtd.textContent = `${(sum.totalTtaYtd || 0).toLocaleString('id-ID')} Temuan (${sum.ttaYtdPct || 0}%)`;
+        const bKta3m = document.getElementById('badgeKtaTotal3M');
+        if (bKta3m) bKta3m.textContent = `${(sum.totalKta || 0).toLocaleString('id-ID')} Temuan (${sum.ktaPct || 0}%)`;
+        const bKtaYtd = document.getElementById('badgeKtaTotalYtd');
+        if (bKtaYtd) bKtaYtd.textContent = `${(sum.totalKtaYtd || 0).toLocaleString('id-ID')} Temuan (${sum.ktaYtdPct || 0}%)`;
+
+        // 1. Ratio 3M Donut Chart & Stats
+        const ctxRatio3M = document.getElementById('chartHazRatio3mCanvas');
+        if (ctxRatio3M && (_hazPieCurrentPeriod === 'all' || _hazPieCurrentPeriod === '3m')) {
+            if (_chartHazRatio3mInstance) _chartHazRatio3mInstance.destroy();
+            _chartHazRatio3mInstance = new Chart(ctxRatio3M.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['KTA (Kondisi Tidak Aman)', 'TTA (Tindakan Tidak Aman)'],
+                    datasets: [{
+                        data: [sum.totalKta || 0, sum.totalTta || 0],
+                        backgroundColor: ['#3b82f6', '#f59e0b'],
+                        borderWidth: 2,
+                        borderColor: borderColor
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(c) {
+                                    const val = c.raw || 0;
+                                    const tot = (sum.total3M || 1);
+                                    const pct = ((val / tot) * 100).toFixed(1);
+                                    return ` ${c.label}: ${val.toLocaleString('id-ID')} (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '62%'
+                }
+            });
+
+            const statEl = document.getElementById('statHazRatio3M');
+            if (statEl) {
+                statEl.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 11px;">
+                        <div><span class="d-inline-block rounded-circle me-1" style="width: 8px; height: 8px; background: #3b82f6;"></span><strong>KTA</strong></div>
+                        <div class="font-monospace fw-bold">${(sum.totalKta || 0).toLocaleString('id-ID')} (${sum.ktaPct || 0}%)</div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 11px;">
+                        <div><span class="d-inline-block rounded-circle me-1" style="width: 8px; height: 8px; background: #f59e0b;"></span><strong>TTA</strong></div>
+                        <div class="font-monospace fw-bold">${(sum.totalTta || 0).toLocaleString('id-ID')} (${sum.ttaPct || 0}%)</div>
+                    </div>
+                `;
+            }
+        }
+
+        // 2. Ratio YTD Donut Chart & Stats
+        const ctxRatioYtd = document.getElementById('chartHazRatioYtdCanvas');
+        if (ctxRatioYtd && (_hazPieCurrentPeriod === 'all' || _hazPieCurrentPeriod === 'ytd')) {
+            if (_chartHazRatioYtdInstance) _chartHazRatioYtdInstance.destroy();
+            _chartHazRatioYtdInstance = new Chart(ctxRatioYtd.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['KTA (Kondisi Tidak Aman)', 'TTA (Tindakan Tidak Aman)'],
+                    datasets: [{
+                        data: [sum.totalKtaYtd || 0, sum.totalTtaYtd || 0],
+                        backgroundColor: ['#3b82f6', '#f59e0b'],
+                        borderWidth: 2,
+                        borderColor: borderColor
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(c) {
+                                    const val = c.raw || 0;
+                                    const tot = (sum.totalYtd || 1);
+                                    const pct = ((val / tot) * 100).toFixed(1);
+                                    return ` ${c.label}: ${val.toLocaleString('id-ID')} (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '62%'
+                }
+            });
+
+            const statEl = document.getElementById('statHazRatioYtd');
+            if (statEl) {
+                statEl.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 11px;">
+                        <div><span class="d-inline-block rounded-circle me-1" style="width: 8px; height: 8px; background: #3b82f6;"></span><strong>KTA</strong></div>
+                        <div class="font-monospace fw-bold">${(sum.totalKtaYtd || 0).toLocaleString('id-ID')} (${sum.ktaYtdPct || 0}%)</div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center p-2 rounded bg-warning-subtle text-warning-emphasis border border-warning-subtle" style="font-size: 11px;">
+                        <div><span class="d-inline-block rounded-circle me-1" style="width: 8px; height: 8px; background: #f59e0b;"></span><strong>TTA</strong></div>
+                        <div class="font-monospace fw-bold">${(sum.totalTtaYtd || 0).toLocaleString('id-ID')} (${sum.ttaYtdPct || 0}%)</div>
+                    </div>
+                `;
+            }
+        }
+
+        const ttaPalette = [
+            '#f59e0b', '#ef4444', '#10b981', '#6366f1', '#ec4899', 
+            '#8b5cf6', '#14b8a6', '#f97316', '#06b6d4', '#84cc16', 
+            '#a855f7', '#64748b'
+        ];
+
+        const ktaPalette = [
+            '#3b82f6', '#0ea5e9', '#06b6d4', '#10b981', '#f59e0b', 
+            '#8b5cf6', '#ec4899', '#f97316', '#64748b', '#ef4444', 
+            '#14b8a6'
+        ];
+
+        // Helper for category Pie chart options
+        function getPieOptions(totalGroup, totalHaz, groupName) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: textColor,
+                            font: { size: 10 },
+                            boxWidth: 10,
+                            padding: 6
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) {
+                                const val = c.raw || 0;
+                                const pctG = totalGroup > 0 ? ((val / totalGroup) * 100).toFixed(1) : 0;
+                                return ` ${c.label}: ${val.toLocaleString('id-ID')} (${pctG}% dari ${groupName})`;
+                            },
+                            afterLabel: function(c) {
+                                const val = c.raw || 0;
+                                const pctAll = totalHaz > 0 ? ((val / totalHaz) * 100).toFixed(1) : 0;
+                                return ` ${pctAll}% dari Semua Hazard (${totalHaz.toLocaleString('id-ID')})`;
+                            }
+                        }
+                    }
+                },
+                cutout: '45%'
+            };
+        }
+
+        // 3. TTA 3M Pie Chart & Table
+        const ctxTta3M = document.getElementById('chartTtaPie3MCanvas');
+        if (ctxTta3M && (_hazPieCurrentPeriod === 'all' || _hazPieCurrentPeriod === '3m')) {
+            if (_chartTtaPie3mInstance) _chartTtaPie3mInstance.destroy();
+            const listTta3M = [...(haz3M.tta || [])].sort((a, b) => b.total - a.total);
+            const chartData = listTta3M.filter(x => x.total > 0);
+            
+            _chartTtaPie3mInstance = new Chart(ctxTta3M.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.map(x => x.name),
+                    datasets: [{
+                        data: chartData.map(x => x.total),
+                        backgroundColor: ttaPalette.slice(0, chartData.length),
+                        borderColor: borderColor,
+                        borderWidth: 1.5
+                    }]
+                },
+                options: getPieOptions(sum.totalTta || 1, sum.total3M || 1, 'TTA')
+            });
+
+            const tbody = document.querySelector('#tableTtaPie3MList tbody');
+            if (tbody) {
+                tbody.innerHTML = listTta3M.map((item, idx) => {
+                    const color = ttaPalette[idx % ttaPalette.length];
+                    const pctAll = sum.total3M > 0 ? ((item.total / sum.total3M) * 100).toFixed(1) : '0.0';
+                    return `
+                        <tr>
+                            <td class="ps-2 text-truncate" style="max-width: 170px;" title="${item.name}">
+                                <span class="d-inline-block rounded-circle me-1" style="width: 8px; height: 8px; background: ${color};"></span>
+                                ${item.name}
+                            </td>
+                            <td class="text-center font-monospace fw-bold">${item.total.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace fw-semibold text-warning-emphasis">${item.pct}%</td>
+                            <td class="text-center font-monospace text-muted">${pctAll}%</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 4. TTA YTD Pie Chart & Table
+        const ctxTtaYtd = document.getElementById('chartTtaPieYtdCanvas');
+        if (ctxTtaYtd && (_hazPieCurrentPeriod === 'all' || _hazPieCurrentPeriod === 'ytd')) {
+            if (_chartTtaPieYtdInstance) _chartTtaPieYtdInstance.destroy();
+            const listTtaYtd = [...(haz3M.ttaYtd || [])].sort((a, b) => b.total - a.total);
+            const chartData = listTtaYtd.filter(x => x.total > 0);
+
+            _chartTtaPieYtdInstance = new Chart(ctxTtaYtd.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.map(x => x.name),
+                    datasets: [{
+                        data: chartData.map(x => x.total),
+                        backgroundColor: ttaPalette.slice(0, chartData.length),
+                        borderColor: borderColor,
+                        borderWidth: 1.5
+                    }]
+                },
+                options: getPieOptions(sum.totalTtaYtd || 1, sum.totalYtd || 1, 'TTA')
+            });
+
+            const tbody = document.querySelector('#tableTtaPieYtdList tbody');
+            if (tbody) {
+                tbody.innerHTML = listTtaYtd.map((item, idx) => {
+                    const color = ttaPalette[idx % ttaPalette.length];
+                    const pctAll = sum.totalYtd > 0 ? ((item.total / sum.totalYtd) * 100).toFixed(1) : '0.0';
+                    return `
+                        <tr>
+                            <td class="ps-2 text-truncate" style="max-width: 170px;" title="${item.name}">
+                                <span class="d-inline-block rounded-circle me-1" style="width: 8px; height: 8px; background: ${color};"></span>
+                                ${item.name}
+                            </td>
+                            <td class="text-center font-monospace fw-bold">${item.total.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace fw-semibold text-warning-emphasis">${item.pct}%</td>
+                            <td class="text-center font-monospace text-muted">${pctAll}%</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 5. KTA 3M Pie Chart & Table
+        const ctxKta3M = document.getElementById('chartKtaPie3MCanvas');
+        if (ctxKta3M && (_hazPieCurrentPeriod === 'all' || _hazPieCurrentPeriod === '3m')) {
+            if (_chartKtaPie3mInstance) _chartKtaPie3mInstance.destroy();
+            const listKta3M = [...(haz3M.kta || [])].sort((a, b) => b.total - a.total);
+            const chartData = listKta3M.filter(x => x.total > 0);
+
+            _chartKtaPie3mInstance = new Chart(ctxKta3M.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.map(x => x.name),
+                    datasets: [{
+                        data: chartData.map(x => x.total),
+                        backgroundColor: ktaPalette.slice(0, chartData.length),
+                        borderColor: borderColor,
+                        borderWidth: 1.5
+                    }]
+                },
+                options: getPieOptions(sum.totalKta || 1, sum.total3M || 1, 'KTA')
+            });
+
+            const tbody = document.querySelector('#tableKtaPie3MList tbody');
+            if (tbody) {
+                tbody.innerHTML = listKta3M.map((item, idx) => {
+                    const color = ktaPalette[idx % ktaPalette.length];
+                    const pctAll = sum.total3M > 0 ? ((item.total / sum.total3M) * 100).toFixed(1) : '0.0';
+                    return `
+                        <tr>
+                            <td class="ps-2 text-truncate" style="max-width: 170px;" title="${item.name}">
+                                <span class="d-inline-block rounded-circle me-1" style="width: 8px; height: 8px; background: ${color};"></span>
+                                ${item.name}
+                            </td>
+                            <td class="text-center font-monospace fw-bold">${item.total.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace fw-semibold text-primary">${item.pct}%</td>
+                            <td class="text-center font-monospace text-muted">${pctAll}%</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 6. KTA YTD Pie Chart & Table
+        const ctxKtaYtd = document.getElementById('chartKtaPieYtdCanvas');
+        if (ctxKtaYtd && (_hazPieCurrentPeriod === 'all' || _hazPieCurrentPeriod === 'ytd')) {
+            if (_chartKtaPieYtdInstance) _chartKtaPieYtdInstance.destroy();
+            const listKtaYtd = [...(haz3M.ktaYtd || [])].sort((a, b) => b.total - a.total);
+            const chartData = listKtaYtd.filter(x => x.total > 0);
+
+            _chartKtaPieYtdInstance = new Chart(ctxKtaYtd.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: chartData.map(x => x.name),
+                    datasets: [{
+                        data: chartData.map(x => x.total),
+                        backgroundColor: ktaPalette.slice(0, chartData.length),
+                        borderColor: borderColor,
+                        borderWidth: 1.5
+                    }]
+                },
+                options: getPieOptions(sum.totalKtaYtd || 1, sum.totalYtd || 1, 'KTA')
+            });
+
+            const tbody = document.querySelector('#tableKtaPieYtdList tbody');
+            if (tbody) {
+                tbody.innerHTML = listKtaYtd.map((item, idx) => {
+                    const color = ktaPalette[idx % ktaPalette.length];
+                    const pctAll = sum.totalYtd > 0 ? ((item.total / sum.totalYtd) * 100).toFixed(1) : '0.0';
+                    return `
+                        <tr>
+                            <td class="ps-2 text-truncate" style="max-width: 170px;" title="${item.name}">
+                                <span class="d-inline-block rounded-circle me-1" style="width: 8px; height: 8px; background: ${color};"></span>
+                                ${item.name}
+                            </td>
+                            <td class="text-center font-monospace fw-bold">${item.total.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace fw-semibold text-primary">${item.pct}%</td>
+                            <td class="text-center font-monospace text-muted">${pctAll}%</td>
+                        </tr>
+                    `;
+                }).join('');
             }
         }
     }
