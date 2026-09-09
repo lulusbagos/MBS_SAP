@@ -315,25 +315,16 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> GetDepartmentsByCompany(int companyId)
         {
-            var depts = await _context.Departemens
-                .Where(d => d.IdPerusahaan == companyId && (d.StatusAktif == null || (d.StatusAktif != "N" && d.StatusAktif != "0")))
-                .OrderBy(d => d.NamaDepartemen)
-                .Select(d => d.NamaDepartemen ?? string.Empty)
-                .Where(name => !string.IsNullOrEmpty(name))
-                .Distinct()
-                .ToListAsync();
+            var depts = await _companyHierarchyService.GetDepartmentsByCompanyAsync(companyId);
 
             if (!depts.Any())
             {
                 depts = new List<string>
                 {
-                    "MINING OPERATION",
+                    "GENERAL",
+                    "OPERATION",
                     "MAINTENANCE",
-                    "PIT SERVICE AND DEVELOPMENT",
-                    "HRM, EARTHWORKS & INFRAS",
-                    "ENGINEERING DEPARTMENT",
-                    "GENERAL AFFAIR",
-                    "HSE AND TRAINING"
+                    "HSE"
                 };
             }
 
@@ -418,17 +409,11 @@ namespace MBS_SAP.Controllers
             var userComp = userCompanyId.HasValue ? companyList.FirstOrDefault(c => c.id == userCompanyId.Value) : null;
             ViewBag.UserCompanyName = userComp?.nama ?? "";
 
-            // Load departments from dynamic partner DB view matching current user's company
+            // Load departments using hierarchy-aware service
             List<string> deptList = new List<string>();
             if (userCompanyId.HasValue)
             {
-                deptList = await _context.Departemens
-                    .Where(d => d.IdPerusahaan == userCompanyId.Value && (d.StatusAktif == null || (d.StatusAktif != "N" && d.StatusAktif != "0")))
-                    .OrderBy(d => d.NamaDepartemen)
-                    .Select(d => d.NamaDepartemen ?? string.Empty)
-                    .Where(name => !string.IsNullOrEmpty(name))
-                    .Distinct()
-                    .ToListAsync();
+                deptList = await _companyHierarchyService.GetDepartmentsByCompanyAsync(userCompanyId.Value);
             }
 
             // Fallback to default list if empty
