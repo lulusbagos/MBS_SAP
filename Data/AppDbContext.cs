@@ -36,6 +36,7 @@ namespace MBS_SAP.Data
         public DbSet<CoachingParticipant> CoachingParticipants { get; set; } = null!;
         public DbSet<Roster> Rosters { get; set; } = null!;
         public DbSet<MitraRosterView> MitraRosters { get; set; } = null!;
+        public DbSet<MitraDepartmentDropdownView> MitraDepartmentDropdowns { get; set; } = null!;
         public DbSet<SapQualityAssessment> SapQualityAssessments { get; set; } = null!;
 
         // View entities
@@ -188,6 +189,10 @@ namespace MBS_SAP.Data
             modelBuilder.Entity<MitraRosterView>()
                 .ToSqlQuery("SELECT karyawan_id, no_nik, hari_onsite, hari_offsite FROM ONE_DB_MITRA.dbo.vw_m_roster")
                 .HasKey(r => r.KaryawanId);
+
+            modelBuilder.Entity<MitraDepartmentDropdownView>()
+                .ToSqlQuery("SELECT id_perusahaan, kode_perusahaan, nama_perusahaan, id_departemen, kode_departemen, nama_departemen, label_dropdown, perusahaan_status_aktif, departemen_status_aktif, perusahaan_deleted_at, group_label, option_label, sort_order FROM ONE_DB_MITRA.dbo.vw_m_departemen_dropdown")
+                .HasNoKey();
 
             // Apply snake_case column names mapping
             foreach (var entity in modelBuilder.Model.GetEntityTypes())

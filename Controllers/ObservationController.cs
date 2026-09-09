@@ -376,21 +376,17 @@ namespace MBS_SAP.Controllers
             ViewBag.UserDept = User.FindFirst("Department")?.Value ?? "General";
             ViewBag.UserCompanyId = userCompanyId;
 
-            // Load list of active companies for searchable company picker
-            var companyList = await _context.Perusahaans
-                .Where(p => p.StatusAktif)
-                .OrderBy(p => p.NamaPerusahaan)
-                .Select(p => new {
-                    id = p.PerusahaanId,
-                    nama = p.NamaPerusahaan ?? string.Empty,
-                    kode = p.KodePerusahaan ?? string.Empty
-                })
-                .ToListAsync();
-
+            // Load list of active companies for searchable company picker from [ONE_DB_MITRA].dbo.vw_m_departemen_dropdown
+            var companyList = await _companyHierarchyService.GetCompaniesAsync();
             ViewBag.CompanyList = companyList;
 
-            var userComp = userCompanyId.HasValue ? companyList.FirstOrDefault(c => c.id == userCompanyId.Value) : null;
-            ViewBag.UserCompanyName = userComp?.nama ?? "";
+            string userCompName = "";
+            if (userCompanyId.HasValue)
+            {
+                var userComp = await _context.Perusahaans.AsNoTracking().FirstOrDefaultAsync(p => p.PerusahaanId == userCompanyId.Value);
+                userCompName = userComp?.NamaPerusahaan ?? "";
+            }
+            ViewBag.UserCompanyName = userCompName;
 
             // Load full pre-resolved company-department map for instant reactive UI
             ViewBag.CompanyDeptMap = await _companyHierarchyService.GetAllCompanyDepartmentsMapAsync();
