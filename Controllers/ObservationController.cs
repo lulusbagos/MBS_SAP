@@ -109,6 +109,8 @@ namespace MBS_SAP.Controllers
                     report.Lokasi = SafeTruncate(observation.Lokasi, 150);
                     report.DetilLokasi = SafeTruncate(observation.DetilLokasi, 250);
                     report.KegiatanYangDiamati = SafeTruncate(observation.KegiatanYangDiamati, 250);
+                    report.PerusahaanId = observation.PerusahaanId;
+                    report.PerusahaanYangDiamati = SafeTruncate(observation.PerusahaanYangDiamati, 200);
                     report.DepartemenYangDiamati = SafeTruncate(observation.DepartemenYangDiamati, 100);
                     report.DokumenPendukung = SafeTruncate(observation.DokumenPendukung, 100);
                     report.ResikoKritis = SafeTruncate(observation.ResikoKritis, 100);
@@ -201,6 +203,8 @@ namespace MBS_SAP.Controllers
                         Lokasi = SafeTruncate(observation.Lokasi, 150),
                         DetilLokasi = SafeTruncate(observation.DetilLokasi, 250),
                         KegiatanYangDiamati = SafeTruncate(observation.KegiatanYangDiamati, 250),
+                        PerusahaanId = observation.PerusahaanId,
+                        PerusahaanYangDiamati = SafeTruncate(observation.PerusahaanYangDiamati, 200),
                         DepartemenYangDiamati = SafeTruncate(observation.DepartemenYangDiamati, 100),
                         DokumenPendukung = SafeTruncate(observation.DokumenPendukung, 100),
                         ResikoKritis = SafeTruncate(observation.ResikoKritis, 100),
@@ -295,6 +299,8 @@ namespace MBS_SAP.Controllers
                 lokasi = report.Lokasi,
                 detilLokasi = report.DetilLokasi,
                 kegiatanYangDiamati = report.KegiatanYangDiamati,
+                perusahaanId = report.PerusahaanId,
+                perusahaanYangDiamati = report.PerusahaanYangDiamati,
                 departemenYangDiamati = report.DepartemenYangDiamati,
                 dokumenPendukung = report.DokumenPendukung,
                 resikoKritis = report.ResikoKritis,
@@ -304,6 +310,34 @@ namespace MBS_SAP.Controllers
                 keterangan = report.Keterangan,
                 fotoUrl = report.FotoUrl
             });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetDepartmentsByCompany(int companyId)
+        {
+            var depts = await _context.Departemens
+                .Where(d => d.IdPerusahaan == companyId && (d.StatusAktif == null || (d.StatusAktif != "N" && d.StatusAktif != "0")))
+                .OrderBy(d => d.NamaDepartemen)
+                .Select(d => d.NamaDepartemen ?? string.Empty)
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Distinct()
+                .ToListAsync();
+
+            if (!depts.Any())
+            {
+                depts = new List<string>
+                {
+                    "MINING OPERATION",
+                    "MAINTENANCE",
+                    "PIT SERVICE AND DEVELOPMENT",
+                    "HRM, EARTHWORKS & INFRAS",
+                    "ENGINEERING DEPARTMENT",
+                    "GENERAL AFFAIR",
+                    "HSE AND TRAINING"
+                };
+            }
+
+            return Json(depts);
         }
 
         [HttpPost]
@@ -366,6 +400,23 @@ namespace MBS_SAP.Controllers
             ViewBag.UserNama = User.Identity?.Name ?? "Anonymous";
             ViewBag.UserNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "00000";
             ViewBag.UserDept = User.FindFirst("Department")?.Value ?? "General";
+            ViewBag.UserCompanyId = userCompanyId;
+
+            // Load list of active companies for searchable company picker
+            var companyList = await _context.Perusahaans
+                .Where(p => p.StatusAktif)
+                .OrderBy(p => p.NamaPerusahaan)
+                .Select(p => new {
+                    id = p.PerusahaanId,
+                    nama = p.NamaPerusahaan ?? string.Empty,
+                    kode = p.KodePerusahaan ?? string.Empty
+                })
+                .ToListAsync();
+
+            ViewBag.CompanyList = companyList;
+
+            var userComp = userCompanyId.HasValue ? companyList.FirstOrDefault(c => c.id == userCompanyId.Value) : null;
+            ViewBag.UserCompanyName = userComp?.nama ?? "";
 
             // Load departments from dynamic partner DB view matching current user's company
             List<string> deptList = new List<string>();

@@ -29,6 +29,11 @@ namespace MBS_SAP.Models
 
         public string? KegiatanYangDiamati { get; set; }
 
+        public int? PerusahaanId { get; set; }
+
+        [MaxLength(200)]
+        public string? PerusahaanYangDiamati { get; set; }
+
         [MaxLength(100)]
         public string? DepartemenYangDiamati { get; set; }
 
