@@ -592,9 +592,6 @@
             companyId = parseInt(companyId, 10);
 
             // Show loading badge & placeholder
-            loadingBadge.stop(true, true).fadeIn(150);
-            deptSelect.prop('disabled', true).html('<option value="" disabled selected>⏳ Memuat departemen...</option>');
-
             function populateOptions(deptList) {
                 deptSelect.empty();
                 deptSelect.append('<option value="" disabled ' + (!preselectDept ? 'selected' : '') + '>Pilih Departemen...</option>');
@@ -610,18 +607,21 @@
                 if (preselectDept) {
                     deptSelect.val(preselectDept);
                 }
-                setTimeout(function() {
-                    loadingBadge.stop(true, true).fadeOut(250);
-                }, 200);
+                loadingBadge.stop(true, true).fadeOut(200);
             }
 
-            // Try fast instant local lookup from preloaded companyDeptMap
+            // 1. Try fast instant local lookup from preloaded companyDeptMap
             var localDepts = globalCompanyDeptMap[companyId] || globalCompanyDeptMap[companyId.toString()];
             if (localDepts && localDepts.length > 0) {
+                loadingBadge.stop(true, true).fadeIn(100);
                 populateOptions(localDepts);
+                return;
             }
 
-            // Run AJAX request to guarantee server-side consistency
+            // 2. Fallback to AJAX request if not found in preloaded map
+            loadingBadge.stop(true, true).fadeIn(150);
+            deptSelect.prop('disabled', true).html('<option value="" disabled selected>⏳ Memuat departemen...</option>');
+
             $.ajax({
                 url: '@Url.Action("GetDepartmentsByCompany", "Observation")',
                 type: 'GET',
@@ -629,24 +629,20 @@
                 data: { companyId: companyId },
                 success: function(departments) {
                     if (typeof departments === "string") {
-                        try { departments = JSON.parse(departments); } catch(e) { departments = localDepts; }
+                        try { departments = JSON.parse(departments); } catch(e) { departments = []; }
                     }
                     if (Array.isArray(departments) && departments.length > 0) {
                         globalCompanyDeptMap[companyId] = departments;
                         populateOptions(departments);
-                    } else if (!localDepts || localDepts.length === 0) {
+                    } else {
                         populateOptions([]);
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error("Error loading departments for company " + companyId + ":", error);
-                    if (localDepts && localDepts.length > 0) {
-                        populateOptions(localDepts);
-                    } else {
-                        deptSelect.prop('disabled', false);
-                        deptSelect.html('<option value="" disabled selected>Gagal memuat departemen</option>');
-                        loadingBadge.stop(true, true).fadeOut(250);
-                    }
+                    deptSelect.prop('disabled', false);
+                    deptSelect.html('<option value="" disabled selected>Gagal memuat departemen</option>');
+                    loadingBadge.stop(true, true).fadeOut(200);
                 }
             });
         }
@@ -1099,7 +1095,11 @@
                 $(this).css('background', 'var(--bg-layout)');
             }).on('mouseleave', '.company-option-btn', function() {
                 $(this).css('background', 'none');
-            }).on('mousedown click', '.company-option-btn', function(e) {
+            });
+
+            $(document).on('mousedown', '.company-option-btn', function(e) {
+                e.preventDefault(); // Prevents input blur before click
+            }).on('click', '.company-option-btn', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var cid = $(this).attr('data-id');
@@ -1132,7 +1132,16 @@
                         $('#PerusahaanYangDiamati').val('');
                         loadDepartments(null);
                     }
-                }, 250);
+                }, 200);
+            });
+
+            // Guide user to select company if clicking Departemen when company is empty
+            $('#DepartemenYangDiamati').on('click mousedown', function() {
+                if (!$('#PerusahaanId').val()) {
+                    $('#companySearch').focus();
+                    renderCompanyDropdown($('#companySearch').val());
+                    $('#companyDropdownMenu').show();
+                }
             });
 
             // Close dropdown when clicking outside
