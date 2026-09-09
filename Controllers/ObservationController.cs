@@ -28,27 +28,17 @@ namespace MBS_SAP.Controllers
             ViewData["HeaderTitle"] = "Observasi Lapangan";
             ViewData["ActiveTab"] = "Observation";
 
-            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
-            var companyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
-
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
             var satuBulanLalu = DateTime.Now.AddMonths(-1);
             var query = _context.Observations.Where(r => !r.IsDeleted && r.CreatedAt >= satuBulanLalu);
 
-            if (isAdmin)
-            {
-                if (companyId.HasValue)
-                {
-                    query = from r in query
-                            join k in _context.Karyawans on r.Nik equals k.NoNik
-                            where k.IdPerusahaan == companyId.Value
-                            select r;
-                }
-            }
-            else if (!string.IsNullOrEmpty(userNik))
+            if (!string.IsNullOrEmpty(userNik))
             {
                 query = query.Where(r => r.Nik == userNik);
+            }
+            else
+            {
+                query = query.Where(r => false);
             }
 
             var observations = await query
@@ -239,27 +229,19 @@ namespace MBS_SAP.Controllers
 
             await PopulateViewBagAsync();
             
-            var query = _context.Observations.Where(r => !r.IsDeleted);
-            var userNikForError = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var companyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+            var userNikForError = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
+            var satuBulanLaluForError = DateTime.Now.AddMonths(-1);
+            var query = _context.Observations.Where(r => !r.IsDeleted && r.CreatedAt >= satuBulanLaluForError);
 
-            if (companyId.HasValue)
+            if (!string.IsNullOrEmpty(userNikForError))
             {
-                query = from r in query
-                        join k in _context.Karyawans on r.Nik equals k.NoNik
-                        where k.IdPerusahaan == companyId.Value
-                        select r;
+                query = query.Where(r => r.Nik == userNikForError);
             }
             else
             {
                 query = query.Where(r => false);
             }
 
-            if (!User.IsInRole("Admin") && !string.IsNullOrEmpty(userNikForError))
-            {
-                query = query.Where(r => r.Nik == userNikForError);
-            }
             var observations = await query.OrderByDescending(r => r.CreatedAt).ToListAsync();
             return View("Index", observations);
         }
