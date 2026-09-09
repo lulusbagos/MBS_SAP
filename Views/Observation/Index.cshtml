@@ -138,7 +138,12 @@
                         </div>
                     </div>
                     <div class="col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="DepartemenYangDiamati">Departemen Yang Diamati</label>
+                        <label class="form-label-sap d-flex justify-content-between align-items-center" for="DepartemenYangDiamati">
+                            <span>Departemen Yang Diamati</span>
+                            <span id="deptLoadingBadge" class="badge bg-primary text-white" style="display: none; font-size: 10px; font-weight: normal; padding: 3px 8px; border-radius: 6px;">
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" style="width: 10px; height: 10px; vertical-align: -1px;"></span> Memuat...
+                            </span>
+                        </label>
                         <div class="input-sap-wrapper">
                             <i class="bi bi-people-fill input-sap-icon"></i>
                             <select id="DepartemenYangDiamati" name="DepartemenYangDiamati" class="input-sap" required>
@@ -537,6 +542,7 @@
         }
 
                 var globalCompaniesList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.CompanyList ?? new object[] { }));
+        var globalCompanyDeptMap = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.CompanyDeptMap ?? new Dictionary<int, List<string>>()));
         var defaultUserCompanyId = @Html.Raw(ViewBag.UserCompanyId != null ? ViewBag.UserCompanyId.ToString() : "null");
         var defaultUserCompanyName = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.UserCompanyName ?? ""));
 
@@ -598,38 +604,69 @@
 
         function loadDepartments(companyId, preselectDept) {
             var deptSelect = $('#DepartemenYangDiamati');
+            var loadingBadge = $('#deptLoadingBadge');
+
             if (!companyId) {
                 deptSelect.empty().append('<option value="" disabled selected>Pilih Perusahaan terlebih dahulu...</option>');
                 return;
             }
 
-            deptSelect.prop('disabled', true).html('<option value="" disabled selected>Memuat departemen...</option>');
+            // Show loading badge & placeholder
+            loadingBadge.stop(true, true).fadeIn(150);
+            deptSelect.prop('disabled', true).html('<option value="" disabled selected>⏳ Memuat departemen...</option>');
 
+            function populateOptions(deptList) {
+                deptSelect.empty();
+                deptSelect.append('<option value="" disabled ' + (!preselectDept ? 'selected' : '') + '>Pilih Departemen...</option>');
+                if (deptList && deptList.length > 0) {
+                    deptList.forEach(function(d) {
+                        var isSelected = (preselectDept && preselectDept.toUpperCase() === d.toUpperCase()) ? 'selected' : '';
+                        deptSelect.append('<option value="' + d + '" ' + isSelected + '>' + d + '</option>');
+                    });
+                } else {
+                    deptSelect.append('<option value="" disabled selected>(Tidak ada departemen terdaftar)</option>');
+                }
+                deptSelect.prop('disabled', false);
+                if (preselectDept) {
+                    deptSelect.val(preselectDept);
+                }
+                setTimeout(function() {
+                    loadingBadge.stop(true, true).fadeOut(250);
+                }, 300);
+            }
+
+            // Try fast instant local lookup from preloaded companyDeptMap
+            var localDepts = globalCompanyDeptMap[companyId] || globalCompanyDeptMap[companyId.toString()];
+            if (localDepts && localDepts.length > 0) {
+                populateOptions(localDepts);
+            }
+
+            // Run AJAX request to guarantee server-side consistency
             $.ajax({
                 url: '@Url.Action("GetDepartmentsByCompany", "Observation")',
                 type: 'GET',
                 cache: false,
                 data: { companyId: companyId },
                 success: function(departments) {
-                    deptSelect.empty();
-                    deptSelect.append('<option value="" disabled ' + (!preselectDept ? 'selected' : '') + '>Pilih Departemen...</option>');
-                    if (departments && departments.length > 0) {
-                        departments.forEach(function(d) {
-                            var isSelected = (preselectDept && preselectDept.toUpperCase() === d.toUpperCase()) ? 'selected' : '';
-                            deptSelect.append('<option value="' + d + '" ' + isSelected + '>' + d + '</option>');
-                        });
-                    } else {
-                        deptSelect.append('<option value="" disabled selected>(Tidak ada departemen terdaftar)</option>');
+                    if (typeof departments === "string") {
+                        try { departments = JSON.parse(departments); } catch(e) { departments = localDepts; }
                     }
-                    deptSelect.prop('disabled', false);
-                    if (preselectDept) {
-                        deptSelect.val(preselectDept);
+                    if (Array.isArray(departments) && departments.length > 0) {
+                        globalCompanyDeptMap[companyId] = departments;
+                        populateOptions(departments);
+                    } else if (!localDepts || localDepts.length === 0) {
+                        populateOptions([]);
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error("Error loading departments for company " + companyId + ":", error);
-                    deptSelect.prop('disabled', false);
-                    deptSelect.html('<option value="" disabled selected>Gagal memuat departemen</option>');
+                    if (localDepts && localDepts.length > 0) {
+                        populateOptions(localDepts);
+                    } else {
+                        deptSelect.prop('disabled', false);
+                        deptSelect.html('<option value="" disabled selected>Gagal memuat departemen</option>');
+                        loadingBadge.stop(true, true).fadeOut(250);
+                    }
                 }
             });
         }

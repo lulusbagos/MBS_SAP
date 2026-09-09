@@ -135,5 +135,68 @@ namespace MBS_SAP.Services
 
             return new List<string>();
         }
+
+        /// <summary>
+        /// Retrieves a dictionary of CompanyId to list of department names for all active companies,
+        /// resolving hierarchy parent departments for child companies.
+        /// </summary>
+        public async Task<Dictionary<int, List<string>>> GetAllCompanyDepartmentsMapAsync()
+        {
+            var deptList = await _context.Departemens
+                .AsNoTracking()
+                .Where(d => (d.StatusAktif == null || (d.StatusAktif != "N" && d.StatusAktif != "0")) && !string.IsNullOrEmpty(d.NamaDepartemen) && d.IdPerusahaan.HasValue)
+                .OrderBy(d => d.NamaDepartemen)
+                .Select(d => new { d.IdPerusahaan, d.NamaDepartemen })
+                .ToListAsync();
+
+            var map = new Dictionary<int, List<string>>();
+            foreach (var item in deptList)
+            {
+                if (item.IdPerusahaan.HasValue)
+                {
+                    int cid = item.IdPerusahaan.Value;
+                    if (!map.ContainsKey(cid))
+                    {
+                        map[cid] = new List<string>();
+                    }
+                    if (!map[cid].Contains(item.NamaDepartemen!))
+                    {
+                        map[cid].Add(item.NamaDepartemen!);
+                    }
+                }
+            }
+
+            // Resolve hierarchy relations for child companies without direct departments
+            var relations = await _context.PerusahaanHierarchyRelations
+                .AsNoTracking()
+                .Where(h => h.ChildCompanyId.HasValue && h.ParentCompanyId.HasValue)
+                .Select(h => new { ChildId = h.ChildCompanyId!.Value, ParentId = h.ParentCompanyId!.Value })
+                .ToListAsync();
+
+            foreach (var rel in relations)
+            {
+                if ((!map.ContainsKey(rel.ChildId) || !map[rel.ChildId].Any()) && map.ContainsKey(rel.ParentId))
+                {
+                    map[rel.ChildId] = new List<string>(map[rel.ParentId]);
+                }
+            }
+
+            // Also check PerusahaanIndukId
+            var companiesWithInduk = await _context.Perusahaans
+                .AsNoTracking()
+                .Where(p => p.StatusAktif && p.PerusahaanIndukId.HasValue && p.PerusahaanIndukId.Value > 0)
+                .Select(p => new { p.PerusahaanId, IndukId = p.PerusahaanIndukId!.Value })
+                .ToListAsync();
+
+            foreach (var c in companiesWithInduk)
+            {
+                if ((!map.ContainsKey(c.PerusahaanId) || !map[c.PerusahaanId].Any()) && map.ContainsKey(c.IndukId))
+                {
+                    map[c.PerusahaanId] = new List<string>(map[c.IndukId]);
+                }
+            }
+
+            return map;
+        }
     }
 }

@@ -295,6 +295,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> GetDepartmentsByCompany(int companyId)
         {
             var depts = await _companyHierarchyService.GetDepartmentsByCompanyAsync(companyId);
@@ -391,7 +392,10 @@ namespace MBS_SAP.Controllers
             var userComp = userCompanyId.HasValue ? companyList.FirstOrDefault(c => c.id == userCompanyId.Value) : null;
             ViewBag.UserCompanyName = userComp?.nama ?? "";
 
-            // Load departments using hierarchy-aware service
+            // Load full pre-resolved company-department map for instant reactive UI
+            ViewBag.CompanyDeptMap = await _companyHierarchyService.GetAllCompanyDepartmentsMapAsync();
+
+            // Load departments using hierarchy-aware service for initial current user company
             List<string> deptList = new List<string>();
             if (userCompanyId.HasValue)
             {
