@@ -2739,16 +2739,14 @@ namespace MBS_SAP.Controllers
                     return Json(new { success = false, message = "Perusahaan parent yang dipilih tidak valid untuk perusahaan karyawan ini." });
                 }
 
-                await _context.Database.ExecuteSqlRawAsync(
-                    "UPDATE ONE_DB_MITRA.dbo.tbl_t_karyawan SET perusahaan_node_id = {0} WHERE id_karyawan = {1}",
-                    newParentId, idKaryawan
+                await _context.Database.ExecuteSqlInterpolatedAsync(
+                    $"UPDATE ONE_DB_MITRA.dbo.tbl_t_karyawan SET perusahaan_node_id = {newParentId} WHERE id_karyawan = {idKaryawan}"
                 );
 
                 var userName = User.Identity?.Name ?? "Admin";
-                await _context.Database.ExecuteSqlRawAsync(
-                    @"INSERT INTO tbl_h_karyawan_parent_history (karyawan_id, nik, nama_karyawan, perusahaan_id, old_parent_id, new_parent_id, changed_by, changed_at)
-                      VALUES ({0}, {1}, {2}, {3}, {4}, {5}, {6}, GETDATE())",
-                    idKaryawan, karyawan.NoNik ?? "", karyawan.NamaLengkap ?? "", karyawan.IdPerusahaan, karyawan.PerusahaanNodeId, newParentId, userName
+                await _context.Database.ExecuteSqlInterpolatedAsync(
+                    $@"INSERT INTO tbl_h_karyawan_parent_history (karyawan_id, nik, nama_karyawan, perusahaan_id, old_parent_id, new_parent_id, changed_by, changed_at)
+                       VALUES ({idKaryawan}, {karyawan.NoNik ?? ""}, {karyawan.NamaLengkap ?? ""}, {karyawan.IdPerusahaan}, {karyawan.PerusahaanNodeId}, {newParentId}, {userName}, GETDATE())"
                 );
 
                 return Json(new { success = true, message = "Mapping parent berhasil diperbarui." });

@@ -7,6 +7,7 @@ using MBS_SAP.Services;
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -70,14 +71,6 @@ namespace MBS_SAP.Controllers
         {
             var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
 
-            if (string.IsNullOrEmpty(judul))
-            {
-                var errRequired = "Judul Safety Talk wajib diisi!";
-                if (isAjax) return BadRequest(new { success = false, message = errRequired });
-                TempData["ErrorMessage"] = errRequired;
-                return RedirectToAction(nameof(Index));
-            }
-
             try
             {
                 TimeSpan waktu = DateTime.Now.TimeOfDay;
@@ -132,6 +125,26 @@ namespace MBS_SAP.Controllers
                     };
                 }
 
+                var validationErrors = new List<string>();
+                if (tanggal == default) validationErrors.Add("Tanggal Safety Talk wajib diisi.");
+                if (string.IsNullOrWhiteSpace(waktuStr)) validationErrors.Add("Waktu Safety Talk wajib diisi.");
+                if (string.IsNullOrWhiteSpace(area)) validationErrors.Add("Area utama wajib dipilih dari daftar.");
+                if (string.IsNullOrWhiteSpace(lokasi)) validationErrors.Add("Lokasi spesifik wajib diisi.");
+                if (string.IsNullOrWhiteSpace(judul)) validationErrors.Add("Topik atau judul Safety Talk wajib diisi.");
+                if ((fotoDiri == null || fotoDiri.Length == 0) && string.IsNullOrWhiteSpace(talk.FotoDiri))
+                {
+                    validationErrors.Add("Foto diri presenter wajib diunggah.");
+                }
+                if ((fotoKegiatan == null || fotoKegiatan.Length == 0) && string.IsNullOrWhiteSpace(talk.FotoKegiatan))
+                {
+                    validationErrors.Add("Foto kegiatan briefing wajib diunggah.");
+                }
+
+                if (validationErrors.Any())
+                {
+                    return ValidationErrorResponse(isAjax, validationErrors, "Laporan Safety Talk belum lengkap.");
+                }
+
                 talk.Tanggal = tanggal == default ? DateTime.Today : tanggal;
                 talk.Waktu = waktu;
                 talk.Area = SafeTruncate(area, 150);
@@ -173,9 +186,13 @@ namespace MBS_SAP.Controllers
                     {
                         talk.FotoDiri = await _imageUploadService.UploadAndCompressImageAsync(fotoDiri, "safetytalks", "diri");
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        talk.FotoDiri = null;
+                        Console.WriteLine($"[ERROR-SAFETYTALK-FOTO-DIRI] {ex.Message}");
+                        return ValidationErrorResponse(isAjax, new List<string>
+                        {
+                            "Foto diri presenter gagal diunggah. Coba pilih foto lain atau perkecil ukuran file."
+                        }, "Gagal mengunggah foto Safety Talk.");
                     }
                 }
 
@@ -186,9 +203,13 @@ namespace MBS_SAP.Controllers
                     {
                         talk.FotoKegiatan = await _imageUploadService.UploadAndCompressImageAsync(fotoKegiatan, "safetytalks", "keg");
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        talk.FotoKegiatan = null;
+                        Console.WriteLine($"[ERROR-SAFETYTALK-FOTO-KEGIATAN] {ex.Message}");
+                        return ValidationErrorResponse(isAjax, new List<string>
+                        {
+                            "Foto kegiatan briefing gagal diunggah. Coba pilih foto lain atau perkecil ukuran file."
+                        }, "Gagal mengunggah foto Safety Talk.");
                     }
                 }
 
@@ -222,6 +243,17 @@ namespace MBS_SAP.Controllers
                 TempData["ErrorMessage"] = fullErr;
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        private IActionResult ValidationErrorResponse(bool isAjax, List<string> errors, string message)
+        {
+            if (isAjax)
+            {
+                return BadRequest(new { success = false, message, errors });
+            }
+
+            TempData["ErrorMessage"] = $"{message} {string.Join(" ", errors)}";
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpGet]

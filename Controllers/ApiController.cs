@@ -822,25 +822,6 @@ ORDER BY nama_perusahaan";
                 return Unauthorized("NIK tidak ditemukan.");
             }
 
-            // Check if user is from "Site Management" department
-            var isSiteManagement = false;
-            var userDeptClaim = User.FindFirst("Department")?.Value;
-            if (!string.IsNullOrEmpty(userDeptClaim) && userDeptClaim.Contains("Site Management", StringComparison.OrdinalIgnoreCase))
-            {
-                isSiteManagement = true;
-            }
-            else
-            {
-                var deptName = await (from k in _context.Karyawans
-                                      join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId
-                                      where k.NoNik == userNik
-                                      select d.NamaDepartemen).FirstOrDefaultAsync();
-                if (!string.IsNullOrEmpty(deptName) && deptName.Contains("Site Management", StringComparison.OrdinalIgnoreCase))
-                {
-                    isSiteManagement = true;
-                }
-            }
-
             // Allowed for all companies during testing / usage
 
             bool isTugas = string.Equals(req?.TipeRoster, "TUGAS", StringComparison.OrdinalIgnoreCase);

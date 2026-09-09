@@ -237,7 +237,7 @@ namespace MBS_SAP.Controllers
             }
             else
             {
-                query = query.Where(d => accessibleCompanyIds.Contains(d.IdPerusahaan.Value));
+                query = query.Where(d => d.IdPerusahaan.HasValue && accessibleCompanyIds.Contains(d.IdPerusahaan.Value));
             }
 
             var depts = await query

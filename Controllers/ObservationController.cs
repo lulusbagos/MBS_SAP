@@ -299,18 +299,10 @@ namespace MBS_SAP.Controllers
         public async Task<IActionResult> GetDepartmentsByCompany(int companyId)
         {
             var depts = await _companyHierarchyService.GetDepartmentsByCompanyAsync(companyId);
-
-            if (!depts.Any())
-            {
-                depts = new List<string>
-                {
-                    "GENERAL",
-                    "OPERATION",
-                    "MAINTENANCE",
-                    "HSE"
-                };
-            }
-
+            _logger.LogInformation("Observation department dropdown requested for companyId {CompanyId}. Returned {DepartmentCount} departments: {Departments}",
+                companyId,
+                depts.Count,
+                string.Join(", ", depts));
             return Json(depts);
         }
 
@@ -396,21 +388,6 @@ namespace MBS_SAP.Controllers
             if (userCompanyId.HasValue)
             {
                 deptList = await _companyHierarchyService.GetDepartmentsByCompanyAsync(userCompanyId.Value);
-            }
-
-            // Fallback to default list if empty
-            if (deptList == null || !deptList.Any())
-            {
-                deptList = new List<string>
-                {
-                    "MINING OPERATION",
-                    "MAINTENANCE",
-                    "PIT SERVICE AND DEVELOPMENT",
-                    "HRM, EARTHWORKS & INFRAS",
-                    "ENGINEERING DEPARTMENT",
-                    "GENERAL AFFAIR",
-                    "HSE AND TRAINING"
-                };
             }
 
             ViewBag.DeptList = deptList;

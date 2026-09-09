@@ -176,6 +176,72 @@ namespace MBS_SAP.Controllers
                     };
                 }
 
+                var existingLampiranDict = new System.Collections.Generic.Dictionary<string, string>();
+                if (!string.IsNullOrEmpty(inspection.LampiranJson))
+                {
+                    try
+                    {
+                        existingLampiranDict = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, string>>(inspection.LampiranJson)
+                            ?? new System.Collections.Generic.Dictionary<string, string>();
+                    }
+                    catch { }
+                }
+
+                var validationErrors = new List<string>();
+                if (tanggal == default) validationErrors.Add("Tanggal inspeksi wajib diisi.");
+                if (string.IsNullOrWhiteSpace(waktuStr)) validationErrors.Add("Waktu inspeksi wajib diisi.");
+                if (string.IsNullOrWhiteSpace(jenisInspeksi)) validationErrors.Add("Jenis inspeksi wajib diisi.");
+                if (string.IsNullOrWhiteSpace(area)) validationErrors.Add("Area utama wajib dipilih dari daftar.");
+                if (string.IsNullOrWhiteSpace(lokasi)) validationErrors.Add("Lokasi spesifik wajib diisi.");
+                if (string.IsNullOrWhiteSpace(pja)) validationErrors.Add("Penanggung Jawab Area (PJA) wajib dipilih dari hasil pencarian.");
+
+                var scoreItems = new[]
+                {
+                    new { Key = "1_1", Label = "Modul 1 Pertanyaan 1", Score = q1_1 },
+                    new { Key = "1_2", Label = "Modul 1 Pertanyaan 2", Score = q1_2 },
+                    new { Key = "1_3", Label = "Modul 1 Pertanyaan 3", Score = q1_3 },
+                    new { Key = "2_1", Label = "Modul 2 Pertanyaan 1", Score = q2_1 },
+                    new { Key = "2_2", Label = "Modul 2 Pertanyaan 2", Score = q2_2 },
+                    new { Key = "2_3", Label = "Modul 2 Pertanyaan 3", Score = q2_3 },
+                    new { Key = "3_1", Label = "Modul 3 Pertanyaan 1", Score = q3_1 },
+                    new { Key = "3_2", Label = "Modul 3 Pertanyaan 2", Score = q3_2 },
+                    new { Key = "3_3", Label = "Modul 3 Pertanyaan 3", Score = q3_3 },
+                    new { Key = "4_1", Label = "Modul 4 Pertanyaan 1", Score = q4_1 },
+                    new { Key = "4_2", Label = "Modul 4 Pertanyaan 2", Score = q4_2 },
+                    new { Key = "4_3", Label = "Modul 4 Pertanyaan 3", Score = q4_3 },
+                    new { Key = "5_1", Label = "Modul 5 Pertanyaan 1", Score = q5_1 },
+                    new { Key = "5_2", Label = "Modul 5 Pertanyaan 2", Score = q5_2 },
+                    new { Key = "5_3", Label = "Modul 5 Pertanyaan 3", Score = q5_3 }
+                };
+
+                foreach (var item in scoreItems)
+                {
+                    if (item.Score < 0 || item.Score > 2)
+                    {
+                        validationErrors.Add($"{item.Label} memiliki nilai jawaban tidak valid.");
+                    }
+
+                    if (item.Score == 0)
+                    {
+                        var file = Request.Form.Files[$"foto_{item.Key}"];
+                        var hasExistingFile = existingLampiranDict.ContainsKey(item.Key) && !string.IsNullOrWhiteSpace(existingLampiranDict[item.Key]);
+                        if ((file == null || file.Length == 0) && !hasExistingFile)
+                        {
+                            validationErrors.Add($"{item.Label} dijawab TIDAK, foto lampiran bukti wajib diunggah.");
+                        }
+                    }
+                }
+
+                if (scoreItems.Any(x => x.Score == 0) && string.IsNullOrWhiteSpace(catatan))
+                {
+                    validationErrors.Add("Catatan atau rencana tindakan wajib diisi jika ada item inspeksi yang dijawab TIDAK.");
+                }
+
+                if (validationErrors.Any())
+                {
+                    return ValidationErrorResponse(isAjax, validationErrors, "Laporan inspeksi belum lengkap.");
+                }
+                
                 // Allow backdate up to 1 week (7 days)
                 var validatedTanggal = tanggal.Date;
                 if (validatedTanggal < DateTime.Today.AddDays(-7) || validatedTanggal > DateTime.Today)
@@ -255,11 +321,7 @@ namespace MBS_SAP.Controllers
                 inspection.Catatan = catatan;
 
                 // Handle Photo Uploads for 15 questions
-                var lampiranDict = new System.Collections.Generic.Dictionary<string, string>();
-                if (!string.IsNullOrEmpty(inspection.LampiranJson))
-                {
-                    try { lampiranDict = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, string>>(inspection.LampiranJson) ?? new System.Collections.Generic.Dictionary<string, string>(); } catch {}
-                }
+                var lampiranDict = existingLampiranDict;
 
                 for (int m = 1; m <= 5; m++)
                 {
@@ -277,7 +339,14 @@ namespace MBS_SAP.Controllers
                                     lampiranDict[key] = path;
                                 }
                             }
-                            catch (Exception) { }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"[ERROR-INSPECTION-PHOTO-{key}] {ex.Message}");
+                                return ValidationErrorResponse(isAjax, new List<string>
+                                {
+                                    $"Foto lampiran bukti Modul {m} Pertanyaan {q} gagal diunggah. Coba pilih foto lain atau perkecil ukuran file."
+                                }, "Gagal mengunggah foto inspeksi.");
+                            }
                         }
                     }
                 }
@@ -384,6 +453,17 @@ namespace MBS_SAP.Controllers
                 TempData["ErrorMessage"] = fullErr;
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        private IActionResult ValidationErrorResponse(bool isAjax, List<string> errors, string message)
+        {
+            if (isAjax)
+            {
+                return BadRequest(new { success = false, message, errors });
+            }
+
+            TempData["ErrorMessage"] = $"{message} {string.Join(" ", errors)}";
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpGet]

@@ -114,12 +114,6 @@ namespace MBS_SAP.Controllers
             List<string> selectedParticipants, // List of NIKs
             IFormFile? foto)
         {
-            if (string.IsNullOrEmpty(tema))
-            {
-                TempData["ErrorMessage"] = "Tema Coaching wajib diisi!";
-                return RedirectToAction(nameof(Index));
-            }
-
             // Restrict date to +/- 7 days
             var minDate = DateTime.Today.AddDays(-7);
             var maxDate = DateTime.Today.AddDays(7);
@@ -174,13 +168,6 @@ namespace MBS_SAP.Controllers
             }
             else
             {
-                // Photo is required for new coaching sessions
-                if (foto == null || foto.Length == 0)
-                {
-                    TempData["ErrorMessage"] = "Foto bukti kegiatan coaching wajib diunggah!";
-                    return RedirectToAction(nameof(Index));
-                }
-
                 coaching = new Coaching
                 {
                     Nama = userName,
@@ -189,6 +176,24 @@ namespace MBS_SAP.Controllers
                     PerusahaanId = userCompanyId,
                     CreatedAt = DateTime.Now
                 };
+            }
+
+            var validationErrors = new List<string>();
+            if (tanggal == default) validationErrors.Add("Tanggal coaching wajib diisi.");
+            if (string.IsNullOrWhiteSpace(waktuStr)) validationErrors.Add("Waktu coaching wajib diisi.");
+            if (string.IsNullOrWhiteSpace(area)) validationErrors.Add("Area utama wajib dipilih dari daftar.");
+            if (string.IsNullOrWhiteSpace(lokasi)) validationErrors.Add("Lokasi spesifik wajib diisi.");
+            if (string.IsNullOrWhiteSpace(tema)) validationErrors.Add("Tema coaching wajib dipilih.");
+            if (selectedParticipants == null || !selectedParticipants.Any()) validationErrors.Add("Minimal satu peserta coaching wajib dipilih.");
+            if ((foto == null || foto.Length == 0) && string.IsNullOrWhiteSpace(coaching.Foto))
+            {
+                validationErrors.Add("Foto bukti kegiatan coaching wajib diunggah.");
+            }
+
+            if (validationErrors.Any())
+            {
+                TempData["ErrorMessage"] = $"Laporan coaching belum lengkap. {string.Join(" ", validationErrors)}";
+                return RedirectToAction(nameof(Index));
             }
 
             coaching.Tanggal = tanggal == default ? DateTime.Today : tanggal;
@@ -203,10 +208,19 @@ namespace MBS_SAP.Controllers
             // Handle Photo Upload
             if (foto != null && foto.Length > 0)
             {
-                var relativePath = await _imageUploadService.UploadAndCompressImageAsync(foto, "CoachingKegiatan", userNik);
-                if (!string.IsNullOrEmpty(relativePath))
+                try
                 {
-                    coaching.Foto = relativePath;
+                    var relativePath = await _imageUploadService.UploadAndCompressImageAsync(foto, "CoachingKegiatan", userNik);
+                    if (!string.IsNullOrEmpty(relativePath))
+                    {
+                        coaching.Foto = relativePath;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ERROR-COACHING-PHOTO] {ex.Message}");
+                    TempData["ErrorMessage"] = "Gagal mengunggah foto coaching. Coba pilih foto lain atau perkecil ukuran file.";
+                    return RedirectToAction(nameof(Index));
                 }
             }
 

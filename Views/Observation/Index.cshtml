@@ -121,23 +121,17 @@
 
                 <div class="row">
                     <div class="col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="PerusahaanId">Perusahaan Yang Diamati</label>
-                        <div class="input-sap-wrapper">
-                            <i class="bi bi-building input-sap-icon"></i>
-                            <select id="PerusahaanId" name="PerusahaanId" class="input-sap" required onchange="onCompanyChange(this)">
-                                <option value="" disabled selected="@(editModel == null || editModel.PerusahaanId <= 0)">Pilih Perusahaan...</option>
-                                @if (ViewBag.CompanyList != null)
-                                {
-                                    foreach (var comp in (IEnumerable<MBS_SAP.Models.CompanyDropdownItem>)ViewBag.CompanyList)
-                                    {
-                                        var isSelected = (editModel != null && editModel.PerusahaanId == comp.Id);
-                                        <option value="@comp.Id" data-nama="@comp.Nama" selected="@isSelected">
-                                            @comp.Nama @(!string.IsNullOrEmpty(comp.Kode) ? $"({comp.Kode})" : "")
-                                        </option>
-                                    }
-                                }
-                            </select>
+                        <label class="form-label-sap" for="companySearch">Perusahaan Yang Diamati</label>
+                        <div class="position-relative mb-0">
+                            <div class="input-sap-wrapper mb-0">
+                                <i class="bi bi-building input-sap-icon"></i>
+                                <input type="text" id="companySearch" class="input-sap" placeholder="Ketik untuk mencari perusahaan..." autocomplete="off" style="padding-right: 36px;" value="@(editModel?.PerusahaanYangDiamati ?? "")" required />
+                                <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleCompanyDropdown"></i>
+                            </div>
+                            <input type="hidden" id="PerusahaanId" name="PerusahaanId" value="@(editModel != null && editModel.PerusahaanId > 0 ? editModel.PerusahaanId.ToString() : "")" />
                             <input type="hidden" id="PerusahaanYangDiamati" name="PerusahaanYangDiamati" value="@(editModel?.PerusahaanYangDiamati ?? "")" />
+                            <div id="companyDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:260px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6 form-group-sap">
@@ -539,11 +533,123 @@
         var defaultUserCompanyId = @Html.Raw(ViewBag.UserCompanyId != null ? ViewBag.UserCompanyId.ToString() : "null");
         var defaultUserCompanyName = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.UserCompanyName ?? ""));
 
+        function getCompanyId(item) {
+            return item.id || item.Id || item.perusahaanId || item.PerusahaanId;
+        }
+
+        function getCompanyName(item) {
+            return item.nama || item.Nama || item.namaPerusahaan || item.NamaPerusahaan || '';
+        }
+
+        function getCompanyCode(item) {
+            return item.kode || item.Kode || item.kodePerusahaan || item.KodePerusahaan || '';
+        }
+
+        function getCompanyDisplayName(item) {
+            var name = getCompanyName(item);
+            var code = getCompanyCode(item);
+            return name + (code ? ' (' + code + ')' : '');
+        }
+
+        function renderCompanyDropdown(filterText) {
+            var menu = $('#companyDropdownMenu');
+            menu.empty();
+
+            var clean = (filterText || '').trim().toLowerCase();
+            var filtered = (globalCompaniesList || []).filter(function(item) {
+                var haystack = (getCompanyName(item) + ' ' + getCompanyCode(item)).toLowerCase();
+                return !clean || haystack.indexOf(clean) !== -1;
+            }).slice(0, 80);
+
+            if (filtered.length > 0) {
+                filtered.forEach(function(item) {
+                    var companyId = getCompanyId(item);
+                    var displayName = getCompanyDisplayName(item);
+                    var btn = $('<button type="button"></button>')
+                        .addClass('d-block w-100 text-start py-2 px-3 border-0 company-option-btn')
+                        .css({
+                            background: 'none',
+                            color: 'var(--text-main)',
+                            fontSize: '13px',
+                            borderBottom: '1px solid var(--border-color)',
+                            cursor: 'pointer'
+                        })
+                        .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
+                        .on('mouseleave', function() { $(this).css('background', 'none'); })
+                        .on('click', function() {
+                            selectCompany(companyId, displayName, getCompanyName(item));
+                        });
+
+                    btn.append($('<i class="bi bi-building me-2 text-primary"></i>'));
+                    btn.append(document.createTextNode(displayName));
+                    menu.append(btn);
+                });
+            } else if (clean.length > 0) {
+                menu.append($('<div class="p-3 text-center text-muted" style="font-size:12px;"></div>')
+                    .append($('<i class="bi bi-search me-1"></i>'))
+                    .append(document.createTextNode('Perusahaan "' + filterText + '" tidak ditemukan')));
+            } else {
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada perusahaan aktif.</div>');
+            }
+
+            if (menu.children().length > 0) menu.show(); else menu.hide();
+        }
+
+        function selectCompany(companyId, displayName, companyName) {
+            var cleanId = companyId ? companyId.toString() : '';
+            $('#companySearch').val(displayName || companyName || '');
+            $('#PerusahaanId').val(cleanId);
+            $('#PerusahaanYangDiamati').val(companyName || displayName || '');
+            $('#companyDropdownMenu').hide();
+            $('#companySearch').removeClass('is-invalid');
+            console.log('[Observation] Perusahaan autocomplete dipilih:', {
+                companyId: cleanId,
+                displayName: displayName,
+                companyName: companyName
+            });
+            loadDepartments(cleanId);
+        }
+
+        function selectCompanyById(companyId, fallbackName, shouldLoadDepartments) {
+            var cleanId = companyId ? companyId.toString() : '';
+            var match = (globalCompaniesList || []).find(function(item) {
+                var itemId = getCompanyId(item);
+                return itemId && itemId.toString() === cleanId;
+            });
+
+            if (match) {
+                $('#companySearch').val(getCompanyDisplayName(match));
+                $('#PerusahaanYangDiamati').val(getCompanyName(match));
+            } else {
+                $('#companySearch').val(fallbackName || '');
+                $('#PerusahaanYangDiamati').val(fallbackName || '');
+            }
+
+            $('#PerusahaanId').val(cleanId);
+            if (shouldLoadDepartments !== false && cleanId) {
+                loadDepartments(cleanId);
+            }
+        }
+
+        function clearCompanySelection() {
+            $('#PerusahaanId').val('');
+            $('#PerusahaanYangDiamati').val('');
+            $('#DepartemenYangDiamati')
+                .empty()
+                .append('<option value="" disabled selected>Pilih Perusahaan terlebih dahulu...</option>')
+                .trigger('change')
+                .trigger('refresh');
+        }
+
         window.onCompanyChange = function(selectEl) {
             var val = $(selectEl).val();
+            console.groupCollapsed('[Observation] Perusahaan dipilih');
+            console.log('select value:', val);
+            console.log('selected option:', $(selectEl).find('option:selected').text().trim());
             if (!val) {
                 $('#PerusahaanYangDiamati').val('');
                 loadDepartments(null);
+                console.groupEnd();
                 return;
             }
             var opt = $(selectEl).find('option:selected');
@@ -551,43 +657,67 @@
             $('#PerusahaanYangDiamati').val(nama);
             $(selectEl).removeClass('is-invalid');
             loadDepartments(val);
+            console.groupEnd();
         };
 
         window.loadDepartments = function(companyId, preselectDept) {
             var deptSelect = $('#DepartemenYangDiamati');
             var loadingBadge = $('#deptLoadingBadge');
+            console.groupCollapsed('[Observation] Load departemen');
+            console.log('companyId raw:', companyId);
+            console.log('preselectDept:', preselectDept);
 
             if (!companyId) {
                 deptSelect.empty().append('<option value="" disabled selected>Pilih Perusahaan terlebih dahulu...</option>');
+                deptSelect.trigger('change').trigger('refresh');
+                console.warn('[Observation] companyId kosong, departemen tidak diload.');
+                console.groupEnd();
                 return;
             }
 
             companyId = parseInt(companyId, 10);
+            if (Number.isNaN(companyId) || companyId <= 0) {
+                deptSelect.empty().append('<option value="" disabled selected>Perusahaan tidak valid</option>');
+                deptSelect.trigger('change').trigger('refresh');
+                console.error('[Observation] companyId tidak valid setelah parse:', companyId);
+                console.groupEnd();
+                return;
+            }
 
             function populateOptions(deptList) {
                 deptSelect.empty();
                 deptSelect.append('<option value="" disabled ' + (!preselectDept ? 'selected' : '') + '>Pilih Departemen...</option>');
                 if (deptList && deptList.length > 0) {
                     deptList.forEach(function(d) {
-                        var isSelected = (preselectDept && preselectDept.toUpperCase() === d.toUpperCase()) ? 'selected' : '';
-                        deptSelect.append('<option value="' + d + '" ' + isSelected + '>' + d + '</option>');
+                        var deptName = (d || '').toString().trim();
+                        if (!deptName) return;
+                        var isSelected = preselectDept && preselectDept.toString().toUpperCase() === deptName.toUpperCase();
+                        deptSelect.append($('<option></option>').val(deptName).text(deptName).prop('selected', !!isSelected));
                     });
+                    console.log('[Observation] Departemen berhasil dimuat:', deptList.length);
+                    console.table(deptList);
                 } else {
                     deptSelect.append('<option value="" disabled selected>(Tidak ada departemen terdaftar)</option>');
+                    console.warn('[Observation] View vw_m_departemen_dropdown tidak mengembalikan departemen untuk companyId:', companyId);
                 }
                 deptSelect.prop('disabled', false);
                 if (preselectDept) {
                     deptSelect.val(preselectDept);
                 }
+                deptSelect.trigger('change').trigger('refresh');
                 loadingBadge.stop(true, true).fadeOut(200);
+                console.log('option count sekarang:', deptSelect.find('option').length);
+                console.groupEnd();
             }
 
             // 1. Fast instant local lookup from preloaded companyDeptMap
             var localDepts = globalCompanyDeptMap[companyId] || globalCompanyDeptMap[companyId.toString()];
             if (localDepts && localDepts.length > 0) {
+                console.log('[Observation] Pakai preloaded globalCompanyDeptMap untuk companyId:', companyId);
                 populateOptions(localDepts);
                 return;
             }
+            console.warn('[Observation] Preloaded map kosong untuk companyId, fallback ke AJAX:', companyId);
 
             // 2. Fallback to AJAX request
             loadingBadge.stop(true, true).fadeIn(100);
@@ -599,6 +729,7 @@
                 cache: false,
                 data: { companyId: companyId },
                 success: function(departments) {
+                    console.log('[Observation] AJAX departemen success. response:', departments);
                     if (typeof departments === "string") {
                         try { departments = JSON.parse(departments); } catch(e) { departments = []; }
                     }
@@ -611,9 +742,12 @@
                 },
                 error: function(xhr, status, error) {
                     console.error("Error loading departments for company " + companyId + ":", error);
+                    console.error('[Observation] AJAX status:', status, 'HTTP:', xhr.status, 'response:', xhr.responseText);
                     deptSelect.prop('disabled', false);
                     deptSelect.html('<option value="" disabled selected>Gagal memuat departemen</option>');
+                    deptSelect.trigger('change').trigger('refresh');
                     loadingBadge.stop(true, true).fadeOut(200);
+                    console.groupEnd();
                 }
             });
         };
@@ -846,9 +980,7 @@
             }
 
             $('#companySearch').val('');
-            $('#PerusahaanId').val('');
-            $('#PerusahaanYangDiamati').val('');
-            $('#DepartemenYangDiamati').empty().append('<option value="" disabled selected>Pilih Perusahaan terlebih dahulu...</option>');
+            clearCompanySelection();
 
             $('#formTitle').html('<i class="bi bi-eye-fill me-2" style="color: var(--color-primary);"></i>Form Observasi');
             $('#btnCancelEdit').addClass('d-none');
@@ -866,9 +998,7 @@
                     
                     // Company and Departments
                     if (data.perusahaanId || data.perusahaanYangDiamati) {
-                        $('#PerusahaanId').val(data.perusahaanId || '');
-                        $('#PerusahaanYangDiamati').val(data.perusahaanYangDiamati || '');
-                        $('#companySearch').val(data.perusahaanYangDiamati || '');
+                        selectCompanyById(data.perusahaanId, data.perusahaanYangDiamati, false);
                         loadDepartments(data.perusahaanId, data.departemenYangDiamati);
                     } else if (data.departemenYangDiamati) {
                         $('#DepartemenYangDiamati').val(data.departemenYangDiamati).change();
@@ -993,25 +1123,65 @@
                 renderBenchmarkDropdown($(this).val());
             });
 
+            $('#toggleCompanyDropdown').on('click', function() {
+                var menu = $('#companyDropdownMenu');
+                if (menu.is(':visible')) {
+                    menu.hide();
+                } else {
+                    renderCompanyDropdown($('#companySearch').val());
+                    menu.show();
+                }
+            });
+
+            $('#companySearch').on('input keyup', function() {
+                $('#PerusahaanId').val('');
+                $('#PerusahaanYangDiamati').val('');
+                $('#DepartemenYangDiamati')
+                    .empty()
+                    .append('<option value="" disabled selected>Pilih perusahaan dari rekomendasi...</option>')
+                    .trigger('change')
+                    .trigger('refresh');
+                renderCompanyDropdown($(this).val());
+            });
+
+            $('#companySearch').on('focus', function() {
+                renderCompanyDropdown($(this).val());
+            });
+
+            $('#companySearch').on('blur', function() {
+                var typed = ($(this).val() || '').trim().toLowerCase();
+                if (!typed || $('#PerusahaanId').val()) return;
+
+                var exact = (globalCompaniesList || []).find(function(item) {
+                    return getCompanyDisplayName(item).toLowerCase() === typed || getCompanyName(item).toLowerCase() === typed || getCompanyCode(item).toLowerCase() === typed;
+                });
+
+                if (exact) {
+                    selectCompany(getCompanyId(exact), getCompanyDisplayName(exact), getCompanyName(exact));
+                }
+            });
+
             // Initialize company only if in edit mode (editModel exists with PerusahaanId)
             var existingPerusahaanId = $('#PerusahaanId').val();
             if (existingPerusahaanId && parseInt(existingPerusahaanId, 10) > 0) {
+                selectCompanyById(existingPerusahaanId, $('#PerusahaanYangDiamati').val(), false);
                 loadDepartments(existingPerusahaanId, '@(editModel?.DepartemenYangDiamati ?? "")');
             } else {
-                $('#PerusahaanId').val('');
-                $('#PerusahaanYangDiamati').val('');
-                $('#DepartemenYangDiamati').empty().append('<option value="" disabled selected>Pilih Perusahaan terlebih dahulu...</option>');
+                clearCompanySelection();
             }
 
             // Guide user to select company if clicking Departemen when company is empty
             $('#DepartemenYangDiamati').on('click mousedown', function() {
                 if (!$('#PerusahaanId').val()) {
-                    $('#PerusahaanId').focus();
+                    $('#companySearch').focus();
                 }
             });
 
             // Close dropdown when clicking outside
             $(document).on('click', function(e) {
+                if (!$(e.target).closest('#companySearch, #companyDropdownMenu, #toggleCompanyDropdown').length) {
+                    $('#companyDropdownMenu').hide();
+                }
                 if (!$(e.target).closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown').length) {
                     $('#benchmarkDropdownMenu').hide();
                 }
@@ -1086,6 +1256,17 @@
                         }
                     }
                 });
+
+                if (!$('#PerusahaanId').val()) {
+                    isValid = false;
+                    const $companySearch = $('#companySearch');
+                    if (!$companySearch.hasClass('is-invalid')) {
+                        $companySearch.addClass('is-invalid');
+                        const errHtml = '<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Perusahaan Yang Diamati wajib dipilih dari rekomendasi.</span>';
+                        $companySearch.closest('.position-relative').after(errHtml);
+                    }
+                    if (!firstInvalid) firstInvalid = $companySearch;
+                }
 
                 // Validate observation results
                 const hasilSelects = document.querySelectorAll('.hasil-observasi-select');

@@ -211,7 +211,7 @@
 
                 <!-- Event Photo -->
                 <div class="form-group-sap mb-4">
-                    <label class="form-label-sap">Foto Kegiatan Coaching</label>
+                    <label class="form-label-sap">Foto Kegiatan Coaching <span class="text-danger">*</span></label>
                     <input type="file" id="fotoInput" name="foto" accept="image/*" class="d-none" onchange="previewFoto(this)" />
                     <div class="upload-card" onclick="document.getElementById('fotoInput').click()" style="padding: 24px 12px; border-color: rgba(168, 85, 247, 0.4);">
                         <div id="fotoPlaceholder">
@@ -358,6 +358,42 @@
 
         function escapeHtml(str) {
             return String(str ?? '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function showSapErrorPopup(title, errors, fallbackMessage) {
+            const cleanErrors = Array.isArray(errors) && errors.length > 0 ? errors : [fallbackMessage || 'Data belum lengkap.'];
+            $('#sapErrorModal').remove();
+
+            const listHtml = cleanErrors.map(item => `<li style="margin-bottom: 8px;">${escapeHtml(item)}</li>`).join('');
+            const modalHtml = `
+                <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: var(--bg-card); color: var(--text-main); border: 1px solid rgba(239,68,68,0.45); border-radius: 12px;">
+                            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                                <h5 class="modal-title" style="font-size: 16px; font-weight: 800;"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>${escapeHtml(title || 'Data belum lengkap')}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body" style="font-size: 13px; line-height: 1.6;">
+                                <div class="mb-2">Periksa bagian berikut sebelum menyimpan:</div>
+                                <ul class="mb-0 ps-3">${listHtml}</ul>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Mengerti</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            $('body').append(modalHtml);
+
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('sapErrorModal')).show();
+            } else {
+                alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
+            }
+        }
+        const serverErrorMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ErrorMessage"]));
+        if (serverErrorMessage) {
+            setTimeout(() => showSapErrorPopup("Terjadi kesalahan", [serverErrorMessage]), 250);
         }
 
         function getSelectedCompanyId() {
@@ -736,6 +772,7 @@
                 // Custom validation
                 let isValid = true;
                 let firstInvalid = null;
+                let errorMessages = [];
                 
                 $('#coachingForm').find('.is-invalid').removeClass('is-invalid');
                 $('#coachingForm').find('.sap-err-msg').remove();
@@ -745,9 +782,9 @@
                     'waktuStr': 'Waktu',
                     'area': 'Area Utama',
                     'lokasi': 'Lokasi Spesifik',
-                    'kategori': 'Kategori Coaching',
-                    'materi': 'Materi / Topik',
-                    'catatan': 'Catatan Pembahasan'
+                    'tema': 'Tema Coaching',
+                    'feedback': 'Feedback / Catatan Pembahasan',
+                    'komitmen': 'Komitmen Bersama'
                 };
 
                 // Validate visible input/select/textarea
@@ -762,7 +799,9 @@
                         if (!firstInvalid) firstInvalid = $el;
                         
                         const labelName = fieldsToValidate[id] || $el.closest('.form-group-sap').find('label').text() || 'Field';
-                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${labelName.replace(':', '').replace('*', '').trim()} wajib diisi.</span>`;
+                        const cleanLabel = labelName.replace(':', '').replace('*', '').trim();
+                        errorMessages.push(cleanLabel + " wajib diisi.");
+                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${cleanLabel} wajib diisi.</span>`;
                         
                         const $wrapper = $el.closest('.input-sap-wrapper');
                         if ($wrapper.length) {
@@ -774,11 +813,20 @@
                 });
 
                 // Verify at least one participant is selected
+                const areaVal = $('#area').val();
+                if (!areaVal || areaVal.trim() === '') {
+                    isValid = false;
+                    $('#areaSearch').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#areaSearch');
+                    errorMessages.push("Area Utama wajib dipilih dari daftar.");
+                    $('#areaSearch').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Area Utama wajib dipilih dari daftar.</span>');
+                }
+
                 if (selectedTrainees.length === 0) {
                     isValid = false;
-                    alert("Silakan pilih minimal satu peserta coaching!");
                     $('#traineeSearchInput').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#traineeSearchInput');
+                    errorMessages.push("Minimal satu peserta coaching wajib dipilih.");
                     $('#traineeSearchInput').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Peserta coaching wajib dipilih.</span>');
                 }
 
@@ -786,12 +834,14 @@
                 if (!coachingId && (!fotoInput.files || fotoInput.files.length === 0)) {
                     isValid = false;
                     $(fotoInput).addClass('is-invalid');
-                    if (!firstInvalid) firstInvalid = $(fotoInput);
-                    $(fotoInput).closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti kegiatan coaching wajib diunggah.</span>');
+                    if (!firstInvalid) firstInvalid = $('.upload-card').last();
+                    errorMessages.push("Foto bukti kegiatan coaching wajib diunggah.");
+                    $(fotoInput).closest('.form-group-sap').find('.upload-card').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti kegiatan coaching wajib diunggah.</span>');
                 }
 
                 if (!isValid) {
                     e.preventDefault();
+                    showSapErrorPopup("Laporan coaching belum lengkap", errorMessages);
                     if (firstInvalid) {
                         $('html, body').animate({
                             scrollTop: firstInvalid.offset().top - 120

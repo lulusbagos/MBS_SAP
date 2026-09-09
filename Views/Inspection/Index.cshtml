@@ -812,6 +812,43 @@
             }, 4000);
         }
 
+        function showSapErrorPopup(title, errors, fallbackMessage) {
+            const cleanErrors = Array.isArray(errors) && errors.length > 0 ? errors : [fallbackMessage || 'Data belum lengkap.'];
+            const escapePopupHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            $('#sapErrorModal').remove();
+
+            const listHtml = cleanErrors.map(item => `<li style="margin-bottom: 8px;">${escapePopupHtml(item)}</li>`).join('');
+            const modalHtml = `
+                <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: var(--bg-card); color: var(--text-main); border: 1px solid rgba(239,68,68,0.45); border-radius: 12px;">
+                            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                                <h5 class="modal-title" style="font-size: 16px; font-weight: 800;"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>${escapePopupHtml(title || 'Data belum lengkap')}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body" style="font-size: 13px; line-height: 1.6;">
+                                <div class="mb-2">Periksa bagian berikut sebelum menyimpan:</div>
+                                <ul class="mb-0 ps-3">${listHtml}</ul>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Mengerti</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            $('body').append(modalHtml);
+
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('sapErrorModal')).show();
+            } else {
+                alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
+            }
+        }
+        const serverErrorMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ErrorMessage"]));
+        if (serverErrorMessage) {
+            setTimeout(() => showSapErrorPopup("Terjadi kesalahan", [serverErrorMessage]), 250);
+        }
+
         function previewImage(input) {
             const file = input.files[0];
             if (file) {
@@ -1388,8 +1425,8 @@
 
             if (score === 0) { // TIDAK
                 commentContainer.slideDown('fast');
-                reqImg.hide();
-                fotoInput.prop('required', false);
+                reqImg.show();
+                fotoInput.prop('required', true);
                 divRencana.slideDown('fast');
                 commentInput.prop('required', true);
             } else if (score === 1) { // N/A
@@ -1687,6 +1724,7 @@
                 // Custom validation
                 let isValid = true;
                 let firstInvalid = null;
+                let errorMessages = [];
                 
                 $('#inspectionForm').find('.is-invalid').removeClass('is-invalid');
                 $('#inspectionForm').find('.sap-err-msg').remove();
@@ -1712,7 +1750,9 @@
                         if (!firstInvalid) firstInvalid = $el;
                         
                         const labelName = fieldsToValidate[id] || $el.closest('.form-group-sap').find('label').text() || 'Field';
-                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${labelName.replace(':', '').replace('*', '').trim()} wajib diisi.</span>`;
+                        const cleanLabel = labelName.replace(':', '').replace('*', '').trim();
+                        errorMessages.push(cleanLabel + " wajib diisi.");
+                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${cleanLabel} wajib diisi.</span>`;
                         
                         const $wrapper = $el.closest('.input-sap-wrapper');
                         if ($wrapper.length) {
@@ -1729,13 +1769,44 @@
                     isValid = false;
                     $('#pjaSearchInput').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#pjaSearchInput');
+                    errorMessages.push("Penanggung Jawab Area (PJA) wajib dipilih dari pencarian.");
                     
                     if ($('#pjaSearchInput').closest('.form-group-sap').find('.sap-err-msg').length === 0) {
                         $('#pjaSearchInput').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Penanggung Jawab Area (PJA) wajib dipilih dari pencarian.</span>');
                     }
                 }
 
+                for (let m = 1; m <= 5; m++) {
+                    for (let q = 1; q <= 3; q++) {
+                        const score = $('#valQ' + m + '_' + q).val();
+                        if (score == '0') {
+                            const $comment = $('#commentQ' + m + '_' + q);
+                            const $photo = $('#foto_' + m + '_' + q);
+                            const $card = $('#commentContainer' + m + '_' + q).closest('.checkpoint-card');
+                            const itemLabel = 'Modul ' + m + ' Pertanyaan ' + q;
+
+                            if (!$comment.val() || $comment.val().trim() === '') {
+                                isValid = false;
+                                $comment.addClass('is-invalid');
+                                if (!firstInvalid) firstInvalid = $comment;
+                                errorMessages.push(itemLabel + " dijawab TIDAK, rencana tindakan wajib diisi.");
+                                $comment.after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Rencana tindakan wajib diisi untuk jawaban TIDAK.</span>');
+                            }
+
+                            if (!$photo[0].files || $photo[0].files.length === 0) {
+                                isValid = false;
+                                $photo.addClass('is-invalid');
+                                $card.css('border-color', 'rgba(239, 68, 68, 0.65)');
+                                if (!firstInvalid) firstInvalid = $photo;
+                                errorMessages.push(itemLabel + " dijawab TIDAK, foto lampiran bukti wajib diunggah.");
+                                $photo.after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti wajib diunggah untuk jawaban TIDAK.</span>');
+                            }
+                        }
+                    }
+                }
+
                 if (!isValid) {
+                    showSapErrorPopup("Laporan inspeksi belum lengkap", errorMessages);
                     if (firstInvalid) {
                         $('html, body').animate({
                             scrollTop: firstInvalid.offset().top - 120
@@ -1865,15 +1936,18 @@
                             btn.prop('disabled', false).html(originalText);
                             
                             let errMessage = "Gagal mengirim data. Silakan periksa koneksi internet Anda.";
-                            if (xhr.status === 400 || xhr.status === 500) {
-                                errMessage = "Terjadi kesalahan di server. Silakan hubungi admin.";
+                            let errList = [];
+                            if (xhr.responseJSON) {
+                                errMessage = xhr.responseJSON.message || errMessage;
+                                errList = xhr.responseJSON.errors || [];
+                            } else if (xhr.responseText) {
+                                try {
+                                    const parsed = JSON.parse(xhr.responseText);
+                                    errMessage = parsed.message || errMessage;
+                                    errList = parsed.errors || [];
+                                } catch(e) {}
                             }
-                            
-                            if (typeof showSapToast === 'function') {
-                                showSapToast(errMessage, "danger");
-                            } else if (typeof alert === 'function') {
-                                alert(errMessage);
-                            }
+                            showSapErrorPopup(errMessage, errList, errMessage);
                         }
                     });
                 }

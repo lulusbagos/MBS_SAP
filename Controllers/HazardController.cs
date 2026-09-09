@@ -102,14 +102,6 @@ namespace MBS_SAP.Controllers
         {
             var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
 
-            if (string.IsNullOrEmpty(temuan))
-            {
-                var errRequired = "Kolom Detil Temuan wajib diisi!";
-                if (isAjax) return BadRequest(new { success = false, message = errRequired });
-                TempData["ErrorMessage"] = errRequired;
-                return RedirectToAction(nameof(Index));
-            }
-
             try
             {
                 // Parse time
@@ -165,6 +157,26 @@ namespace MBS_SAP.Controllers
                         StatusTemuan = "Open",
                         CreatedAt = DateTime.Now
                     };
+                }
+
+                var validationErrors = new List<string>();
+                if (tanggal == default) validationErrors.Add("Tanggal temuan wajib diisi.");
+                if (string.IsNullOrWhiteSpace(waktuStr)) validationErrors.Add("Waktu temuan wajib diisi.");
+                if (string.IsNullOrWhiteSpace(area)) validationErrors.Add("Area utama wajib dipilih dari daftar.");
+                if (string.IsNullOrWhiteSpace(lokasi)) validationErrors.Add("Lokasi spesifik wajib diisi.");
+                if (string.IsNullOrWhiteSpace(kategoriBahaya)) validationErrors.Add("Kategori bahaya wajib dipilih.");
+                if (string.IsNullOrWhiteSpace(jenisBahaya)) validationErrors.Add("Jenis bahaya wajib dipilih.");
+                if (string.IsNullOrWhiteSpace(tingkatResiko)) validationErrors.Add("Tingkat risiko wajib dipilih.");
+                if (string.IsNullOrWhiteSpace(temuan)) validationErrors.Add("Detail temuan hazard wajib diisi.");
+                if (string.IsNullOrWhiteSpace(pja)) validationErrors.Add("Penanggung Jawab Area (PJA) wajib dipilih dari hasil pencarian.");
+                if ((fotoTemuan == null || fotoTemuan.Length == 0) && string.IsNullOrWhiteSpace(report.FotoTemuan))
+                {
+                    validationErrors.Add("Foto bukti temuan wajib diunggah.");
+                }
+
+                if (validationErrors.Any())
+                {
+                    return ValidationErrorResponse(isAjax, validationErrors, "Laporan hazard belum lengkap.");
                 }
 
                 report.Tanggal = DateTime.Today;
@@ -234,9 +246,13 @@ namespace MBS_SAP.Controllers
                     {
                         report.FotoTemuan = await _imageUploadService.UploadAndCompressImageAsync(fotoTemuan, "hazards");
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        report.FotoTemuan = null;
+                        Console.WriteLine($"[ERROR-HAZARD-PHOTO] {ex.Message}");
+                        return ValidationErrorResponse(isAjax, new List<string>
+                        {
+                            "Foto bukti temuan gagal diunggah. Coba pilih foto lain atau perkecil ukuran file."
+                        }, "Gagal mengunggah foto hazard.");
                     }
                 }
 
@@ -375,6 +391,17 @@ namespace MBS_SAP.Controllers
                 TempData["ErrorMessage"] = fullErr;
                 return RedirectToAction(nameof(Index));
             }
+        }
+
+        private IActionResult ValidationErrorResponse(bool isAjax, List<string> errors, string message)
+        {
+            if (isAjax)
+            {
+                return BadRequest(new { success = false, message, errors });
+            }
+
+            TempData["ErrorMessage"] = $"{message} {string.Join(" ", errors)}";
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpGet]

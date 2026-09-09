@@ -132,7 +132,7 @@
                 <div class="row">
                     <!-- Presenter Photo -->
                     <div class="col-6 form-group-sap mb-4">
-                        <label class="form-label-sap">Foto Diri Presenter</label>
+                        <label class="form-label-sap">Foto Diri Presenter <span class="text-danger">*</span></label>
                         <input type="file" id="fotoDiriInput" name="fotoDiri" accept="image/*" class="d-none" onchange="previewDiri(this)" />
                         <div class="upload-card" onclick="document.getElementById('fotoDiriInput').click()" style="padding: 16px 8px;">
                             <div id="diriPlaceholder">
@@ -147,7 +147,7 @@
 
                     <!-- Event Photo -->
                     <div class="col-6 form-group-sap mb-4">
-                        <label class="form-label-sap">Foto Kegiatan Briefing</label>
+                        <label class="form-label-sap">Foto Kegiatan Briefing <span class="text-danger">*</span></label>
                         <input type="file" id="fotoKegiatanInput" name="fotoKegiatan" accept="image/*" class="d-none" onchange="previewKegiatan(this)" />
                         <div class="upload-card" onclick="document.getElementById('fotoKegiatanInput').click()" style="padding: 16px 8px;">
                             <div id="kegiatanPlaceholder">
@@ -356,6 +356,43 @@
                 }
                 reader.readAsDataURL(file);
             }
+        }
+
+        function showSapErrorPopup(title, errors, fallbackMessage) {
+            const cleanErrors = Array.isArray(errors) && errors.length > 0 ? errors : [fallbackMessage || 'Data belum lengkap.'];
+            const escapePopupHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            $('#sapErrorModal').remove();
+
+            const listHtml = cleanErrors.map(item => `<li style="margin-bottom: 8px;">${escapePopupHtml(item)}</li>`).join('');
+            const modalHtml = `
+                <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: var(--bg-card); color: var(--text-main); border: 1px solid rgba(239,68,68,0.45); border-radius: 12px;">
+                            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                                <h5 class="modal-title" style="font-size: 16px; font-weight: 800;"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>${escapePopupHtml(title || 'Data belum lengkap')}</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body" style="font-size: 13px; line-height: 1.6;">
+                                <div class="mb-2">Periksa bagian berikut sebelum menyimpan:</div>
+                                <ul class="mb-0 ps-3">${listHtml}</ul>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Mengerti</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            $('body').append(modalHtml);
+
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('sapErrorModal')).show();
+            } else {
+                alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
+            }
+        }
+        const serverErrorMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ErrorMessage"]));
+        if (serverErrorMessage) {
+            setTimeout(() => showSapErrorPopup("Terjadi kesalahan", [serverErrorMessage]), 250);
         }
 
         // Geolocation Function
@@ -760,6 +797,7 @@
                 // Custom validation
                 let isValid = true;
                 let firstInvalid = null;
+                let errorMessages = [];
                 
                 $('#safetyTalkForm').find('.is-invalid').removeClass('is-invalid');
                 $('#safetyTalkForm').find('.sap-err-msg').remove();
@@ -784,7 +822,9 @@
                         if (!firstInvalid) firstInvalid = $el;
                         
                         const labelName = fieldsToValidate[id] || $el.closest('.form-group-sap').find('label').text() || 'Field';
-                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${labelName.replace(':', '').replace('*', '').trim()} wajib diisi.</span>`;
+                        const cleanLabel = labelName.replace(':', '').replace('*', '').trim();
+                        errorMessages.push(cleanLabel + " wajib diisi.");
+                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${cleanLabel} wajib diisi.</span>`;
                         
                         const $wrapper = $el.closest('.input-sap-wrapper');
                         if ($wrapper.length) {
@@ -796,6 +836,7 @@
                 });
 
                 if (!isValid) {
+                    showSapErrorPopup("Laporan Safety Talk belum lengkap", errorMessages);
                     if (firstInvalid) {
                         $('html, body').animate({
                             scrollTop: firstInvalid.offset().top - 120
@@ -813,6 +854,28 @@
                     }
                     $('html, body').animate({
                         scrollTop: $('#areaSearch').offset().top - 120
+                    }, 300);
+                    showSapErrorPopup("Laporan Safety Talk belum lengkap", ["Area Utama wajib dipilih dari dropdown."]);
+                    return false;
+                }
+
+                const fotoDiriInput = document.getElementById('fotoDiriInput');
+                const fotoKegiatanInput = document.getElementById('fotoKegiatanInput');
+                const photoErrors = [];
+                if ((!fotoDiriInput.files || fotoDiriInput.files.length === 0) && $('#diriPreviewContainer').hasClass('d-none')) {
+                    photoErrors.push("Foto diri presenter wajib diunggah.");
+                    $('#fotoDiriInput').addClass('is-invalid');
+                    $('#fotoDiriInput').closest('.form-group-sap').find('.upload-card').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto diri presenter wajib diunggah.</span>');
+                }
+                if ((!fotoKegiatanInput.files || fotoKegiatanInput.files.length === 0) && $('#kegiatanPreviewContainer').hasClass('d-none')) {
+                    photoErrors.push("Foto kegiatan briefing wajib diunggah.");
+                    $('#fotoKegiatanInput').addClass('is-invalid');
+                    $('#fotoKegiatanInput').closest('.form-group-sap').find('.upload-card').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto kegiatan briefing wajib diunggah.</span>');
+                }
+                if (photoErrors.length > 0) {
+                    showSapErrorPopup("Foto Safety Talk belum lengkap", photoErrors);
+                    $('html, body').animate({
+                        scrollTop: $('.upload-card').first().offset().top - 120
                     }, 300);
                     return false;
                 }
@@ -879,16 +942,19 @@
                         safetyTalkSubmitting = false;
                         
                         let errMessage = "Gagal mengirim data. Silakan periksa koneksi internet Anda.";
+                        let errList = [];
                         if (xhr.responseJSON && xhr.responseJSON.message) {
                             errMessage = xhr.responseJSON.message;
+                            errList = xhr.responseJSON.errors || [];
                         } else if (xhr.responseText) {
                             try {
                                 const parsed = JSON.parse(xhr.responseText);
                                 if (parsed && parsed.message) errMessage = parsed.message;
+                                if (parsed && parsed.errors) errList = parsed.errors;
                             } catch(e) {}
                         }
                         
-                        alert(errMessage);
+                        showSapErrorPopup(errMessage, errList, errMessage);
                     }
                 });
 
