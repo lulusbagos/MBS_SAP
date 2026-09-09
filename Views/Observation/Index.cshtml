@@ -553,58 +553,41 @@
             var filtered = globalCompaniesList.filter(function(c) {
                 var nama = ((c.nama || c.Nama) || '').toLowerCase();
                 var kode = ((c.kode || c.Kode) || '').toLowerCase();
-                return nama.includes(clean) || kode.includes(clean);
+                return clean === '' || nama.includes(clean) || kode.includes(clean);
             });
 
             if (filtered.length > 0) {
-                filtered.forEach(function(item) {
+                var html = '';
+                filtered.slice(0, 60).forEach(function(item) {
                     var id = item.id != null ? item.id : item.Id;
                     var nama = item.nama || item.Nama || '';
                     var kode = item.kode || item.Kode || '';
                     var kodeBadge = kode ? `<span class="badge bg-secondary ms-2" style="font-size: 10px;">${kode}</span>` : '';
-                    var btn = $('<button type="button"></button>')
-                        .addClass('d-block w-100 text-start py-2 px-3 border-0 company-option-btn')
-                        .attr('data-id', id)
-                        .attr('data-nama', nama)
-                        .css({
-                            background: 'none',
-                            color: 'var(--text-main)',
-                            fontSize: '13px',
-                            borderBottom: '1px solid var(--border-color)',
-                            cursor: 'pointer'
-                        })
-                        .html('<i class="bi bi-building me-2 text-primary"></i>' + nama + kodeBadge)
-                        .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
-                        .on('mouseleave', function() { $(this).css('background', 'none'); })
-                        .on('mousedown', function(e) {
-                            e.preventDefault();
-                            selectCompany(id, nama);
-                        })
-                        .on('click', function(e) {
-                            e.preventDefault();
-                            selectCompany(id, nama);
-                        });
-                    menu.append(btn);
+                    html += `<button type="button" class="d-block w-100 text-start py-2 px-3 border-0 company-option-btn" data-id="${id}" data-nama="${nama}" style="background:none; color:var(--text-main); font-size:13px; border-bottom:1px solid var(--border-color); cursor:pointer;">
+                        <i class="bi bi-building me-2 text-primary"></i>${nama}${kodeBadge}
+                    </button>`;
                 });
+                menu.html(html);
             } else if (clean.length > 0) {
-                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Perusahaan "' + filterText + '" tidak ditemukan</div>');
+                menu.html('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Perusahaan "' + filterText + '" tidak ditemukan</div>');
             } else {
-                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Tidak ada data perusahaan.</div>');
+                menu.html('<div class="p-3 text-center text-muted" style="font-size:12px;">Tidak ada data perusahaan.</div>');
             }
             
             if (menu.children().length > 0) menu.show(); else menu.hide();
         }
 
         function selectCompany(companyId, namaPerusahaan, preselectDept) {
+            if (!companyId) return;
+            companyId = parseInt(companyId, 10);
+
             $('#companySearch').val(namaPerusahaan);
-            $('#PerusahaanId').val(companyId || '');
+            $('#PerusahaanId').val(companyId);
             $('#PerusahaanYangDiamati').val(namaPerusahaan || '');
             $('#companyDropdownMenu').hide();
             $('#companySearch').removeClass('is-invalid');
             
-            if (companyId) {
-                loadDepartments(companyId, preselectDept);
-            }
+            loadDepartments(companyId, preselectDept);
         }
 
         function loadDepartments(companyId, preselectDept) {
@@ -615,6 +598,8 @@
                 deptSelect.empty().append('<option value="" disabled selected>Pilih Perusahaan terlebih dahulu...</option>');
                 return;
             }
+
+            companyId = parseInt(companyId, 10);
 
             // Show loading badge & placeholder
             loadingBadge.stop(true, true).fadeIn(150);
@@ -637,7 +622,7 @@
                 }
                 setTimeout(function() {
                     loadingBadge.stop(true, true).fadeOut(250);
-                }, 300);
+                }, 200);
             }
 
             // Try fast instant local lookup from preloaded companyDeptMap
@@ -1091,9 +1076,7 @@
                         var matchId = exactMatch.id != null ? exactMatch.id : exactMatch.Id;
                         var matchNama = exactMatch.nama || exactMatch.Nama || '';
                         if (matchId != $('#PerusahaanId').val()) {
-                            $('#PerusahaanId').val(matchId);
-                            $('#PerusahaanYangDiamati').val(matchNama);
-                            loadDepartments(matchId);
+                            selectCompany(matchId, matchNama);
                         }
                     }
                 }
@@ -1121,23 +1104,45 @@
                 $('#companyDropdownMenu').show();
             });
 
+            // Delegated click/mousedown for company options
+            $(document).on('mouseenter', '.company-option-btn', function() {
+                $(this).css('background', 'var(--bg-layout)');
+            }).on('mouseleave', '.company-option-btn', function() {
+                $(this).css('background', 'none');
+            }).on('mousedown click', '.company-option-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var cid = $(this).attr('data-id');
+                var cnama = $(this).attr('data-nama');
+                if (cid && cnama) {
+                    selectCompany(cid, cnama);
+                }
+            });
+
+            // Auto-resolve on blur if typed text differs from selected company
             $('#companySearch').on('blur', function() {
-                // If user typed something and blurred, check for best match
                 setTimeout(function() {
                     var val = ($('#companySearch').val() || '').trim().toLowerCase();
-                    if (val.length > 0 && !$('#PerusahaanId').val()) {
+                    var currentNama = ($('#PerusahaanYangDiamati').val() || '').trim().toLowerCase();
+                    if (val.length > 0 && val !== currentNama) {
                         var match = globalCompaniesList.find(function(c) {
                             var n = ((c.nama || c.Nama) || '').toLowerCase();
                             var k = ((c.kode || c.Kode) || '').toLowerCase();
-                            return n.includes(val) || k === val;
+                            return n === val || k === val || n.includes(val) || val.includes(n);
                         });
                         if (match) {
                             var matchId = match.id != null ? match.id : match.Id;
                             var matchNama = match.nama || match.Nama || '';
                             selectCompany(matchId, matchNama);
+                        } else {
+                            $('#companySearch').val($('#PerusahaanYangDiamati').val());
                         }
+                    } else if (val.length === 0) {
+                        $('#PerusahaanId').val('');
+                        $('#PerusahaanYangDiamati').val('');
+                        loadDepartments(null);
                     }
-                }, 200);
+                }, 250);
             });
 
             // Close dropdown when clicking outside
