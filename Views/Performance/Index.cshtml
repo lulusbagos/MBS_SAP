@@ -2503,6 +2503,121 @@
             </div>
         </div>
 
+        <!-- Charts Row 3.5: Detailed Hazard Categories 3-Month Trend (Unsafe Action vs Unsafe Condition) -->
+        <div class="row g-3 mb-4 animate-fade-in" id="rowHazardCategories3M">
+            <div class="col-12">
+                <div class="premium-card">
+                    <div class="premium-header flex-wrap gap-2 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="premium-title">
+                                <i class="bi bi-shield-shaded text-success me-2"></i>
+                                Analisis Kategori Hazard: Unsafe Action (TTA) &amp; Unsafe Condition (KTA)
+                            </h6>
+                            <small class="text-muted"><span id="lblHazScopeTitle">Top 5 Kategori (MTD 3 Bulan: <span id="lblHaz3MMonths">Jun, Jul, Aug</span>)</span>, persentase kontribusi, dan status tren</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <div class="btn-group btn-group-sm" role="group" id="groupHazScope">
+                                <button type="button" class="btn btn-outline-success active" id="btnHazScopeTop5" onclick="switchHazScope('top5')">
+                                    <i class="bi bi-fire me-1"></i> Top 5 (3 Bulan MTD)
+                                </button>
+                                <button type="button" class="btn btn-outline-success" id="btnHazScopeTop10Ytd" onclick="switchHazScope('top10ytd')">
+                                    <i class="bi bi-trophy me-1"></i> Top 10 YTD
+                                </button>
+                                <button type="button" class="btn btn-outline-success" id="btnHazScopeAll" onclick="switchHazScope('all')">
+                                    <i class="bi bi-list-check me-1"></i> Semua Kategori
+                                </button>
+                            </div>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-success active" id="btnHazViewTable" onclick="switchHazView('table')">
+                                    <i class="bi bi-table me-1"></i> Tabel
+                                </button>
+                                <button type="button" class="btn btn-outline-success" id="btnHazViewChart" onclick="switchHazView('chart')">
+                                    <i class="bi bi-bar-chart-line me-1"></i> Grafik
+                                </button>
+                            </div>
+                            <a href="/Performance/ExportHazardSummaryExcel" class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1 shadow-sm px-3" style="border-radius: 8px;">
+                                <i class="bi bi-file-earmark-excel-fill"></i> Download Excel Summary
+                            </a>
+                        </div>
+                    </div>
+                    <div class="premium-body">
+                        <!-- Table View -->
+                        <div id="containerHazTableView" class="row g-4">
+                            <!-- Table Left: UNSAFE ACTION (TTA) -->
+                            <div class="col-12 col-xl-6">
+                                <div class="table-responsive rounded-3 border" style="overflow: hidden; border-color: #007A3D !important;">
+                                    <table class="table table-hover table-sm mb-0 align-middle" style="font-size: 12px;" id="tableUnsafeAction">
+                                        <thead style="background: #007A3D; color: #ffffff;" id="theadUnsafeAction">
+                                            <tr style="height: 38px;">
+                                                <th class="text-white ps-3 fw-bold" style="background: #007A3D; border: none; letter-spacing: 0.5px;" id="thTtaTitle">UNSAFE ACTION</th>
+                                                <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 62px;" id="thTtaM1">Jun</th>
+                                                <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 78px;" id="thTtaM2">Jul</th>
+                                                <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 78px;" id="thTtaM3">Aug</th>
+                                                <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 65px;" id="thTtaTotal">Total</th>
+                                                <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 55px;" id="thTtaPct">%</th>
+                                                <th class="text-white text-center fw-bold pe-3" style="background: #007A3D; border: none; width: 52px;" id="thTtaTrend">Trend</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbodyUnsafeAction">
+                                            <!-- Dynamic Rows populated by JS -->
+                                        </tbody>
+                                        <tfoot id="tfootUnsafeAction" style="background: rgba(0, 122, 61, 0.08); font-weight: 700; border-top: 2px solid #007A3D;">
+                                            <!-- Total Row -->
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Table Right: UNSAFE CONDITION (KTA) -->
+                            <div class="col-12 col-xl-6">
+                                <div class="table-responsive rounded-3 border" style="overflow: hidden; border-color: #007A3D !important;">
+                                    <table class="table table-hover table-sm mb-0 align-middle" style="font-size: 12px;" id="tableUnsafeCondition">
+                                        <thead style="background: #007A3D; color: #ffffff;" id="theadUnsafeCondition">
+                                            <tr style="height: 38px;">
+                                                <th class="text-white ps-3 fw-bold" style="background: #007A3D; border: none; letter-spacing: 0.5px;" id="thKtaTitle">UNSAFE CONDITION</th>
+                                                <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 68px;" id="thKtaM1">Jun</th>
+                                                <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 85px;" id="thKtaM2">Jul</th>
+                                                <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 85px;" id="thKtaM3">Aug</th>
+                                                <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 68px;" id="thKtaTotal">Total</th>
+                                                <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 55px;" id="thKtaPct">%</th>
+                                                <th class="text-white text-center fw-bold pe-3" style="background: #007A3D; border: none; width: 52px;" id="thKtaTrend">Trend</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbodyUnsafeCondition">
+                                            <!-- Dynamic Rows populated by JS -->
+                                        </tbody>
+                                        <tfoot id="tfootUnsafeCondition" style="background: rgba(0, 122, 61, 0.08); font-weight: 700; border-top: 2px solid #007A3D;">
+                                            <!-- Total Row -->
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chart View -->
+                        <div id="containerHazChartView" class="row g-4 d-none">
+                            <div class="col-12 col-xl-6">
+                                <div class="p-3 border rounded-3 bg-light-subtle h-100">
+                                    <h6 class="fw-bold mb-3" style="color: #007A3D;"><i class="bi bi-bar-chart-fill me-2"></i>Tren Unsafe Action (TTA) 3 Bulan</h6>
+                                    <div style="height: 320px; position: relative;">
+                                        <canvas id="chartTtaTrendCanvas"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-xl-6">
+                                <div class="p-3 border rounded-3 bg-light-subtle h-100">
+                                    <h6 class="fw-bold mb-3" style="color: #007A3D;"><i class="bi bi-bar-chart-fill me-2"></i>Tren Unsafe Condition (KTA) 3 Bulan</h6>
+                                    <div style="height: 320px; position: relative;">
+                                        <canvas id="chartKtaTrendCanvas"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Super League Preview & Dedicated Page Link Card -->
         <div class="row mb-4 animate-fade-in">
             <div class="col-12">
@@ -6525,6 +6640,9 @@
             }
         }
 
+        // 5c. Render 3-Month Categorized Hazard Trend (Unsafe Action vs Unsafe Condition)
+        renderHazardCategoryTrends();
+
         // 6. Populate Super League Company Standings (Top 5 Preview)
         const tbodyComp = document.getElementById('tbodyCompanyStandings');
         if (tbodyComp) {
@@ -6666,6 +6784,534 @@
 
     let _progressionCumulativeMode = false;
     let _chartYtdProgressionInstance = null;
+    let _chartTtaTrendInstance = null;
+    let _chartKtaTrendInstance = null;
+    let _hazCurrentView = 'table';
+    let _hazCurrentScope = 'top5'; // 'top5', 'top10ytd', 'all'
+
+    window.switchHazScope = function(scope) {
+        _hazCurrentScope = scope;
+        ['btnHazScopeTop5', 'btnHazScopeTop10Ytd', 'btnHazScopeAll'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.classList.remove('active');
+        });
+        if (scope === 'top5') document.getElementById('btnHazScopeTop5')?.classList.add('active');
+        else if (scope === 'top10ytd') document.getElementById('btnHazScopeTop10Ytd')?.classList.add('active');
+        else if (scope === 'all') document.getElementById('btnHazScopeAll')?.classList.add('active');
+
+        renderHazardCategoryTrends();
+    };
+
+    window.switchHazView = function(view) {
+        _hazCurrentView = view;
+        const btnTable = document.getElementById('btnHazViewTable');
+        const btnChart = document.getElementById('btnHazViewChart');
+        const containerTable = document.getElementById('containerHazTableView');
+        const containerChart = document.getElementById('containerHazChartView');
+
+        if (btnTable && btnChart && containerTable && containerChart) {
+            if (view === 'table') {
+                btnTable.classList.add('active');
+                btnChart.classList.remove('active');
+                containerTable.classList.remove('d-none');
+                containerChart.classList.add('d-none');
+            } else {
+                btnChart.classList.add('active');
+                btnTable.classList.remove('active');
+                containerChart.classList.remove('d-none');
+                containerTable.classList.add('d-none');
+                renderHazardCategoryCharts();
+            }
+        }
+    };
+
+    function renderHazardCategoryTrends() {
+        if (!_analyticsData || !_analyticsData.hazardCategories3M) return;
+
+        const haz3M = _analyticsData.hazardCategories3M;
+        const months = haz3M.monthLabels || ['Jun', 'Jul', 'Aug'];
+        const lblMonths = document.getElementById('lblHaz3MMonths');
+        if (lblMonths) lblMonths.textContent = months.join(', ');
+
+        const lblTitle = document.getElementById('lblHazScopeTitle');
+        const theadTta = document.getElementById('theadUnsafeAction');
+        const theadKta = document.getElementById('theadUnsafeCondition');
+        const tbodyTta = document.getElementById('tbodyUnsafeAction');
+        const tfootTta = document.getElementById('tfootUnsafeAction');
+        const tbodyKta = document.getElementById('tbodyUnsafeCondition');
+        const tfootKta = document.getElementById('tfootUnsafeCondition');
+
+        if (_hazCurrentScope === 'top10ytd') {
+            // ══════════════════════════════════════════════════
+            // VIEW MODE: TOP 10 YTD (Year-to-Date)
+            // ══════════════════════════════════════════════════
+            const ytdYear = _analyticsData.selectedYear || new Date().getFullYear();
+            const ytdMonth = months[2] || 'Bulan Berjalan';
+            if (lblTitle) lblTitle.innerHTML = `Top 10 Kategori (YTD Jan - ${ytdMonth} ${ytdYear})`;
+
+            if (theadTta) {
+                theadTta.innerHTML = `
+                    <tr style="height: 38px;">
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 38px;">#</th>
+                        <th class="text-white ps-2 fw-bold" style="background: #007A3D; border: none; letter-spacing: 0.5px;">TOP 10 UNSAFE ACTION (YTD)</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 85px;">Total YTD</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 65px;">% YTD</th>
+                        <th class="text-white text-center fw-bold pe-3" style="background: #007A3D; border: none; width: 110px;">Distribusi</th>
+                    </tr>
+                `;
+            }
+
+            if (theadKta) {
+                theadKta.innerHTML = `
+                    <tr style="height: 38px;">
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 38px;">#</th>
+                        <th class="text-white ps-2 fw-bold" style="background: #007A3D; border: none; letter-spacing: 0.5px;">TOP 10 UNSAFE CONDITION (YTD)</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 85px;">Total YTD</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 65px;">% YTD</th>
+                        <th class="text-white text-center fw-bold pe-3" style="background: #007A3D; border: none; width: 110px;">Distribusi</th>
+                    </tr>
+                `;
+            }
+
+            // Populate Top 10 TTA YTD
+            const listTtaYtd = (haz3M.ttaYtd || haz3M.tta || []).slice(0, 10);
+            let htmlTta = '';
+            let sumTtaYtd = 0, sumTtaPct = 0;
+            listTtaYtd.forEach((item, idx) => {
+                sumTtaYtd += item.total;
+                sumTtaPct += item.pct;
+                const bgRow = idx % 2 === 1 ? 'style="background: rgba(0, 122, 61, 0.02);"' : '';
+                const rankColor = idx === 0 ? '#fbbf24' : (idx === 1 ? '#94a3b8' : (idx === 2 ? '#b45309' : '#64748b'));
+                htmlTta += `
+                    <tr ${bgRow}>
+                        <td class="text-center font-monospace fw-bold" style="color: ${rankColor};">#${idx + 1}</td>
+                        <td class="ps-2 fw-medium text-truncate" style="max-width: 190px;" title="${item.name}">${item.name}</td>
+                        <td class="text-center fw-bold font-monospace">${item.total.toLocaleString('id-ID')}</td>
+                        <td class="text-center font-monospace text-muted">${item.pct}%</td>
+                        <td class="pe-3">
+                            <div class="progress rounded-pill" style="height: 7px; background: rgba(0, 122, 61, 0.1);">
+                                <div class="progress-bar" style="width: ${Math.min(100, item.pct * 2)}%; background: #007A3D;"></div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            if (tbodyTta) tbodyTta.innerHTML = htmlTta;
+            if (tfootTta) {
+                tfootTta.innerHTML = `
+                    <tr>
+                        <td class="text-center font-monospace fw-bold text-success">Σ</td>
+                        <td class="ps-2 fw-bold text-success">TOTAL TOP 10 TTA YTD</td>
+                        <td class="text-center font-monospace fw-bold text-success">${sumTtaYtd.toLocaleString('id-ID')}</td>
+                        <td class="text-center font-monospace fw-bold">${Math.round(sumTtaPct)}%</td>
+                        <td class="pe-3"></td>
+                    </tr>
+                `;
+            }
+
+            // Populate Top 10 KTA YTD
+            const listKtaYtd = (haz3M.ktaYtd || haz3M.kta || []).slice(0, 10);
+            let htmlKta = '';
+            let sumKtaYtd = 0, sumKtaPct = 0;
+            listKtaYtd.forEach((item, idx) => {
+                sumKtaYtd += item.total;
+                sumKtaPct += item.pct;
+                const bgRow = idx % 2 === 1 ? 'style="background: rgba(0, 122, 61, 0.02);"' : '';
+                const rankColor = idx === 0 ? '#fbbf24' : (idx === 1 ? '#94a3b8' : (idx === 2 ? '#b45309' : '#64748b'));
+                htmlKta += `
+                    <tr ${bgRow}>
+                        <td class="text-center font-monospace fw-bold" style="color: ${rankColor};">#${idx + 1}</td>
+                        <td class="ps-2 fw-medium text-truncate" style="max-width: 190px;" title="${item.name}">${item.name}</td>
+                        <td class="text-center fw-bold font-monospace">${item.total.toLocaleString('id-ID')}</td>
+                        <td class="text-center font-monospace text-muted">${item.pct}%</td>
+                        <td class="pe-3">
+                            <div class="progress rounded-pill" style="height: 7px; background: rgba(0, 122, 61, 0.1);">
+                                <div class="progress-bar" style="width: ${Math.min(100, item.pct * 2)}%; background: #007A3D;"></div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            if (tbodyKta) tbodyKta.innerHTML = htmlKta;
+            if (tfootKta) {
+                tfootKta.innerHTML = `
+                    <tr>
+                        <td class="text-center font-monospace fw-bold text-success">Σ</td>
+                        <td class="ps-2 fw-bold text-success">TOTAL TOP 10 KTA YTD</td>
+                        <td class="text-center font-monospace fw-bold text-success">${sumKtaYtd.toLocaleString('id-ID')}</td>
+                        <td class="text-center font-monospace fw-bold">${Math.round(sumKtaPct)}%</td>
+                        <td class="pe-3"></td>
+                    </tr>
+                `;
+            }
+
+        } else {
+            // ══════════════════════════════════════════════════
+            // VIEW MODE: TOP 5 MTD (3 Bulan) OR SEMUA KATEGORI
+            // ══════════════════════════════════════════════════
+            const isTop5 = _hazCurrentScope === 'top5';
+            if (lblTitle) {
+                lblTitle.innerHTML = isTop5 
+                    ? `Top 5 Kategori (MTD 3 Bulan: <span id="lblHaz3MMonths">${months.join(', ')}</span>)`
+                    : `Semua Kategori (3 Bulan: <span id="lblHaz3MMonths">${months.join(', ')}</span>)`;
+            }
+
+            const titleTta = isTop5 ? 'TOP 5 UNSAFE ACTION (3 BULAN)' : 'UNSAFE ACTION';
+            const titleKta = isTop5 ? 'TOP 5 UNSAFE CONDITION (3 BULAN)' : 'UNSAFE CONDITION';
+
+            if (theadTta) {
+                theadTta.innerHTML = `
+                    <tr style="height: 38px;">
+                        <th class="text-white ps-3 fw-bold" style="background: #007A3D; border: none; letter-spacing: 0.5px;">${titleTta}</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 62px;">${months[0] || 'M1'}</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 78px;">${months[1] || 'M2'}</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 78px;">${months[2] || 'M3'}</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 65px;">Total</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 55px;">%</th>
+                        <th class="text-white text-center fw-bold pe-3" style="background: #007A3D; border: none; width: 52px;">Trend</th>
+                    </tr>
+                `;
+            }
+
+            if (theadKta) {
+                theadKta.innerHTML = `
+                    <tr style="height: 38px;">
+                        <th class="text-white ps-3 fw-bold" style="background: #007A3D; border: none; letter-spacing: 0.5px;">${titleKta}</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 68px;">${months[0] || 'M1'}</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 85px;">${months[1] || 'M2'}</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 85px;">${months[2] || 'M3'}</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 68px;">Total</th>
+                        <th class="text-white text-center fw-bold" style="background: #007A3D; border: none; width: 55px;">%</th>
+                        <th class="text-white text-center fw-bold pe-3" style="background: #007A3D; border: none; width: 52px;">Trend</th>
+                    </tr>
+                `;
+            }
+
+            // TTA List
+            let listTta = haz3M.tta ? [...haz3M.tta] : [];
+            if (isTop5) {
+                listTta.sort((a, b) => b.total - a.total);
+                listTta = listTta.slice(0, 5);
+            }
+
+            if (tbodyTta && listTta.length > 0) {
+                let htmlTta = '';
+                let sumM1 = 0, sumM2 = 0, sumM3 = 0, sumTotal = 0, sumPct = 0;
+
+                listTta.forEach((item, idx) => {
+                    sumM1 += item.m1;
+                    sumM2 += item.m2;
+                    sumM3 += item.m3;
+                    sumTotal += item.total;
+                    sumPct += item.pct;
+
+                    // Month 2 trend vs Month 1 (Naik = Merah, Turun = Hijau)
+                    const d1 = item.m2 - item.m1;
+                    let m2Arrow = '';
+                    if (d1 > 0) {
+                        m2Arrow = ` <span class="fw-bold" style="color: #dc2626; font-size: 11px;" title="+${d1.toLocaleString('id-ID')} vs ${months[0]}">▲</span>`;
+                    } else if (d1 < 0) {
+                        m2Arrow = ` <span class="fw-bold" style="color: #16a34a; font-size: 11px;" title="${d1.toLocaleString('id-ID')} vs ${months[0]}">▼</span>`;
+                    } else {
+                        m2Arrow = ` <span class="text-muted" style="font-size: 11px;" title="Tetap vs ${months[0]}">━</span>`;
+                    }
+
+                    // Month 3 trend vs Month 2 (Naik = Merah, Turun = Hijau)
+                    const d2 = item.m3 - item.m2;
+                    let m3Arrow = '';
+                    if (d2 > 0) {
+                        m3Arrow = ` <span class="fw-bold" style="color: #dc2626; font-size: 11px;" title="+${d2.toLocaleString('id-ID')} vs ${months[1]}">▲</span>`;
+                    } else if (d2 < 0) {
+                        m3Arrow = ` <span class="fw-bold" style="color: #16a34a; font-size: 11px;" title="${d2.toLocaleString('id-ID')} vs ${months[1]}">▼</span>`;
+                    } else {
+                        m3Arrow = ` <span class="text-muted" style="font-size: 11px;" title="Tetap vs ${months[1]}">━</span>`;
+                    }
+
+                    let trendBadge = '';
+                    if (item.trend === 'up') {
+                        trendBadge = '<span class="fw-bold" style="color: #dc2626; font-size: 14px;" title="Naik">▲</span>';
+                    } else if (item.trend === 'down') {
+                        trendBadge = '<span class="fw-bold" style="color: #16a34a; font-size: 14px;" title="Turun">▼</span>';
+                    } else {
+                        trendBadge = '<span class="text-muted fw-bold" style="font-size: 14px;" title="Tetap">━</span>';
+                    }
+
+                    const bgRow = idx % 2 === 1 ? 'style="background: rgba(0, 122, 61, 0.02);"' : '';
+                    htmlTta += `
+                        <tr ${bgRow}>
+                            <td class="ps-3 fw-medium text-truncate" style="max-width: 190px;" title="${item.name}">${item.name}</td>
+                            <td class="text-center font-monospace" style="white-space: nowrap;">${item.m1.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace" style="white-space: nowrap;">${item.m2.toLocaleString('id-ID')}${m2Arrow}</td>
+                            <td class="text-center font-monospace" style="white-space: nowrap;">${item.m3.toLocaleString('id-ID')}${m3Arrow}</td>
+                            <td class="text-center fw-bold font-monospace">${item.total.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace text-muted">${item.pct}%</td>
+                            <td class="text-center pe-3">${trendBadge}</td>
+                        </tr>
+                    `;
+                });
+                tbodyTta.innerHTML = htmlTta;
+
+                if (tfootTta) {
+                    const sumD1 = sumM2 - sumM1;
+                    const sumM2Arrow = sumD1 > 0 ? ` <span class="fw-bold" style="color: #dc2626; font-size: 11px;" title="+${sumD1.toLocaleString('id-ID')} vs ${months[0]}">▲</span>` : (sumD1 < 0 ? ` <span class="fw-bold" style="color: #16a34a; font-size: 11px;" title="${sumD1.toLocaleString('id-ID')} vs ${months[0]}">▼</span>` : ` <span class="text-muted" style="font-size: 11px;">━</span>`);
+                    
+                    const sumD2 = sumM3 - sumM2;
+                    const sumM3Arrow = sumD2 > 0 ? ` <span class="fw-bold" style="color: #dc2626; font-size: 11px;" title="+${sumD2.toLocaleString('id-ID')} vs ${months[1]}">▲</span>` : (sumD2 < 0 ? ` <span class="fw-bold" style="color: #16a34a; font-size: 11px;" title="${sumD2.toLocaleString('id-ID')} vs ${months[1]}">▼</span>` : ` <span class="text-muted" style="font-size: 11px;">━</span>`);
+
+                    const totalTrend = sumD2 > 0 ? '<span class="fw-bold" style="color: #dc2626; font-size: 14px;">▲</span>' : (sumD2 < 0 ? '<span class="fw-bold" style="color: #16a34a; font-size: 14px;">▼</span>' : '<span class="text-muted fw-bold">━</span>');
+                    const totalLabel = isTop5 ? 'TOTAL TOP 5 TTA' : 'TOTAL TTA';
+                    const pctDisplay = isTop5 ? `${Math.round(sumPct)}%` : '100%';
+                    tfootTta.innerHTML = `
+                        <tr>
+                            <td class="ps-3 fw-bold text-success">${totalLabel}</td>
+                            <td class="text-center font-monospace fw-bold" style="white-space: nowrap;">${sumM1.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace fw-bold" style="white-space: nowrap;">${sumM2.toLocaleString('id-ID')}${sumM2Arrow}</td>
+                            <td class="text-center font-monospace fw-bold" style="white-space: nowrap;">${sumM3.toLocaleString('id-ID')}${sumM3Arrow}</td>
+                            <td class="text-center font-monospace fw-bold text-success">${sumTotal.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace fw-bold">${pctDisplay}</td>
+                            <td class="text-center pe-3">${totalTrend}</td>
+                        </tr>
+                    `;
+                }
+            }
+
+            // KTA List
+            let listKta = haz3M.kta ? [...haz3M.kta] : [];
+            if (isTop5) {
+                listKta.sort((a, b) => b.total - a.total);
+                listKta = listKta.slice(0, 5);
+            }
+
+            if (tbodyKta && listKta.length > 0) {
+                let htmlKta = '';
+                let sumM1 = 0, sumM2 = 0, sumM3 = 0, sumTotal = 0, sumPct = 0;
+
+                listKta.forEach((item, idx) => {
+                    sumM1 += item.m1;
+                    sumM2 += item.m2;
+                    sumM3 += item.m3;
+                    sumTotal += item.total;
+                    sumPct += item.pct;
+
+                    // Month 2 trend vs Month 1 (Naik = Merah, Turun = Hijau)
+                    const d1 = item.m2 - item.m1;
+                    let m2Arrow = '';
+                    if (d1 > 0) {
+                        m2Arrow = ` <span class="fw-bold" style="color: #dc2626; font-size: 11px;" title="+${d1.toLocaleString('id-ID')} vs ${months[0]}">▲</span>`;
+                    } else if (d1 < 0) {
+                        m2Arrow = ` <span class="fw-bold" style="color: #16a34a; font-size: 11px;" title="${d1.toLocaleString('id-ID')} vs ${months[0]}">▼</span>`;
+                    } else {
+                        m2Arrow = ` <span class="text-muted" style="font-size: 11px;" title="Tetap vs ${months[0]}">━</span>`;
+                    }
+
+                    // Month 3 trend vs Month 2 (Naik = Merah, Turun = Hijau)
+                    const d2 = item.m3 - item.m2;
+                    let m3Arrow = '';
+                    if (d2 > 0) {
+                        m3Arrow = ` <span class="fw-bold" style="color: #dc2626; font-size: 11px;" title="+${d2.toLocaleString('id-ID')} vs ${months[1]}">▲</span>`;
+                    } else if (d2 < 0) {
+                        m3Arrow = ` <span class="fw-bold" style="color: #16a34a; font-size: 11px;" title="${d2.toLocaleString('id-ID')} vs ${months[1]}">▼</span>`;
+                    } else {
+                        m3Arrow = ` <span class="text-muted" style="font-size: 11px;" title="Tetap vs ${months[1]}">━</span>`;
+                    }
+
+                    let trendBadge = '';
+                    if (item.trend === 'up') {
+                        trendBadge = '<span class="fw-bold" style="color: #dc2626; font-size: 14px;" title="Naik">▲</span>';
+                    } else if (item.trend === 'down') {
+                        trendBadge = '<span class="fw-bold" style="color: #16a34a; font-size: 14px;" title="Turun">▼</span>';
+                    } else {
+                        trendBadge = '<span class="text-muted fw-bold" style="font-size: 14px;" title="Tetap">━</span>';
+                    }
+
+                    const bgRow = idx % 2 === 1 ? 'style="background: rgba(0, 122, 61, 0.02);"' : '';
+                    htmlKta += `
+                        <tr ${bgRow}>
+                            <td class="ps-3 fw-medium text-truncate" style="max-width: 190px;" title="${item.name}">${item.name}</td>
+                            <td class="text-center font-monospace" style="white-space: nowrap;">${item.m1.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace" style="white-space: nowrap;">${item.m2.toLocaleString('id-ID')}${m2Arrow}</td>
+                            <td class="text-center font-monospace" style="white-space: nowrap;">${item.m3.toLocaleString('id-ID')}${m3Arrow}</td>
+                            <td class="text-center fw-bold font-monospace">${item.total.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace text-muted">${item.pct}%</td>
+                            <td class="text-center pe-3">${trendBadge}</td>
+                        </tr>
+                    `;
+                });
+                tbodyKta.innerHTML = htmlKta;
+
+                if (tfootKta) {
+                    const sumD1 = sumM2 - sumM1;
+                    const sumM2Arrow = sumD1 > 0 ? ` <span class="fw-bold" style="color: #dc2626; font-size: 11px;" title="+${sumD1.toLocaleString('id-ID')} vs ${months[0]}">▲</span>` : (sumD1 < 0 ? ` <span class="fw-bold" style="color: #16a34a; font-size: 11px;" title="${sumD1.toLocaleString('id-ID')} vs ${months[0]}">▼</span>` : ` <span class="text-muted" style="font-size: 11px;">━</span>`);
+                    
+                    const sumD2 = sumM3 - sumM2;
+                    const sumM3Arrow = sumD2 > 0 ? ` <span class="fw-bold" style="color: #dc2626; font-size: 11px;" title="+${sumD2.toLocaleString('id-ID')} vs ${months[1]}">▲</span>` : (sumD2 < 0 ? ` <span class="fw-bold" style="color: #16a34a; font-size: 11px;" title="${sumD2.toLocaleString('id-ID')} vs ${months[1]}">▼</span>` : ` <span class="text-muted" style="font-size: 11px;">━</span>`);
+
+                    const totalTrend = sumD2 > 0 ? '<span class="fw-bold" style="color: #dc2626; font-size: 14px;">▲</span>' : (sumD2 < 0 ? '<span class="fw-bold" style="color: #16a34a; font-size: 14px;">▼</span>' : '<span class="text-muted fw-bold">━</span>');
+                    const totalLabel = isTop5 ? 'TOTAL TOP 5 KTA' : 'TOTAL KTA';
+                    const pctDisplay = isTop5 ? `${Math.round(sumPct)}%` : '100%';
+                    tfootKta.innerHTML = `
+                        <tr>
+                            <td class="ps-3 fw-bold text-success">${totalLabel}</td>
+                            <td class="text-center font-monospace fw-bold" style="white-space: nowrap;">${sumM1.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace fw-bold" style="white-space: nowrap;">${sumM2.toLocaleString('id-ID')}${sumM2Arrow}</td>
+                            <td class="text-center font-monospace fw-bold" style="white-space: nowrap;">${sumM3.toLocaleString('id-ID')}${sumM3Arrow}</td>
+                            <td class="text-center font-monospace fw-bold text-success">${sumTotal.toLocaleString('id-ID')}</td>
+                            <td class="text-center font-monospace fw-bold">${pctDisplay}</td>
+                            <td class="text-center pe-3">${totalTrend}</td>
+                        </tr>
+                    `;
+                }
+            }
+        }
+
+        if (_hazCurrentView === 'chart') {
+            renderHazardCategoryCharts();
+        }
+    }
+
+    function renderHazardCategoryCharts() {
+        if (!_analyticsData || !_analyticsData.hazardCategories3M) return;
+        const haz3M = _analyticsData.hazardCategories3M;
+        const months = haz3M.monthLabels || ['Jun', 'Jul', 'Aug'];
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                       document.body.classList.contains('dark') || 
+                       document.body.classList.contains('dark-theme');
+        const textColor = isDark ? '#f8fafc' : '#0f172a';
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
+
+        const ctxTta = document.getElementById('chartTtaTrendCanvas');
+        if (ctxTta) {
+            if (_chartTtaTrendInstance) _chartTtaTrendInstance.destroy();
+
+            if (_hazCurrentScope === 'top10ytd') {
+                const listTta = (haz3M.ttaYtd || haz3M.tta || []).slice(0, 10);
+                _chartTtaTrendInstance = new Chart(ctxTta.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: listTta.map(x => x.name),
+                        datasets: [{
+                            label: 'Total Temuan YTD',
+                            data: listTta.map(x => x.total),
+                            backgroundColor: 'rgba(245, 158, 11, 0.85)',
+                            borderColor: '#d97706',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } },
+                            y: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } }
+                        }
+                    }
+                });
+            } else {
+                let listTta = haz3M.tta ? [...haz3M.tta] : [];
+                if (_hazCurrentScope === 'top5') {
+                    listTta.sort((a, b) => b.total - a.total);
+                    listTta = listTta.slice(0, 5);
+                } else {
+                    listTta = listTta.slice(0, 8);
+                }
+
+                _chartTtaTrendInstance = new Chart(ctxTta.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: listTta.map(x => x.name),
+                        datasets: [
+                            { label: months[0] || 'M1', data: listTta.map(x => x.m1), backgroundColor: 'rgba(245, 158, 11, 0.45)', borderColor: '#f59e0b', borderWidth: 1, borderRadius: 4 },
+                            { label: months[1] || 'M2', data: listTta.map(x => x.m2), backgroundColor: 'rgba(245, 158, 11, 0.7)', borderColor: '#f59e0b', borderWidth: 1, borderRadius: 4 },
+                            { label: months[2] || 'M3', data: listTta.map(x => x.m3), backgroundColor: 'rgba(245, 158, 11, 1)', borderColor: '#d97706', borderWidth: 1, borderRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { color: textColor, font: { size: 11, weight: 600 } } }
+                        },
+                        scales: {
+                            x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+                            y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } }
+                        }
+                    }
+                });
+            }
+        }
+
+        const ctxKta = document.getElementById('chartKtaTrendCanvas');
+        if (ctxKta) {
+            if (_chartKtaTrendInstance) _chartKtaTrendInstance.destroy();
+
+            if (_hazCurrentScope === 'top10ytd') {
+                const listKta = (haz3M.ktaYtd || haz3M.kta || []).slice(0, 10);
+                _chartKtaTrendInstance = new Chart(ctxKta.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: listKta.map(x => x.name),
+                        datasets: [{
+                            label: 'Total Temuan YTD',
+                            data: listKta.map(x => x.total),
+                            backgroundColor: 'rgba(59, 130, 246, 0.85)',
+                            borderColor: '#2563eb',
+                            borderWidth: 1,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } },
+                            y: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } }
+                        }
+                    }
+                });
+            } else {
+                let listKta = haz3M.kta ? [...haz3M.kta] : [];
+                if (_hazCurrentScope === 'top5') {
+                    listKta.sort((a, b) => b.total - a.total);
+                    listKta = listKta.slice(0, 5);
+                } else {
+                    listKta = listKta.slice(0, 8);
+                }
+
+                _chartKtaTrendInstance = new Chart(ctxKta.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: listKta.map(x => x.name),
+                        datasets: [
+                            { label: months[0] || 'M1', data: listKta.map(x => x.m1), backgroundColor: 'rgba(59, 130, 246, 0.45)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4 },
+                            { label: months[1] || 'M2', data: listKta.map(x => x.m2), backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: '#3b82f6', borderWidth: 1, borderRadius: 4 },
+                            { label: months[2] || 'M3', data: listKta.map(x => x.m3), backgroundColor: 'rgba(59, 130, 246, 1)', borderColor: '#2563eb', borderWidth: 1, borderRadius: 4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { color: textColor, font: { size: 11, weight: 600 } } }
+                        },
+                        scales: {
+                            x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+                            y: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } }
+                        }
+                    }
+                });
+            }
+        }
+    }
 
     function setProgressionCumulativeMode(isCumulative) {
         _progressionCumulativeMode = isCumulative;

@@ -81,7 +81,6 @@ namespace MBS_SAP.Controllers
             var overridePwd = await _context.PasswordOverrides.FirstOrDefaultAsync(p => p.Nrp == nrp);
             bool isValid = false;
             string fullName = "";
-            string role = "Operator";
             int? idPerusahaan = null;
             int? idDepartemen = null;
             int? idJabatan = null;
@@ -111,7 +110,6 @@ namespace MBS_SAP.Controllers
                         idPerusahaan = pengguna.PerusahaanId;
                         idDepartemen = pengguna.DepartemenId;
                         idJabatan = pengguna.JabatanId;
-                        role = pengguna.PeranId == 1 ? "Admin" : "Operator";
                     }
                     else if (password == "123456") // Fallback default password for active employees
                     {
@@ -123,7 +121,6 @@ namespace MBS_SAP.Controllers
                             idPerusahaan = karyawan.IdPerusahaan;
                             idDepartemen = karyawan.IdDepartemen;
                             idJabatan = karyawan.IdJabatan;
-                            role = "Operator";
                         }
                     }
                 }
@@ -137,7 +134,6 @@ namespace MBS_SAP.Controllers
                         idPerusahaan = karyawan.IdPerusahaan;
                         idDepartemen = karyawan.IdDepartemen;
                         idJabatan = karyawan.IdJabatan;
-                        role = "Operator";
                     }
                 }
             }
@@ -152,7 +148,6 @@ namespace MBS_SAP.Controllers
                     idPerusahaan ??= pg.PerusahaanId;
                     idDepartemen ??= pg.DepartemenId;
                     idJabatan ??= pg.JabatanId;
-                    role = pg.PeranId == 1 ? "Admin" : "Operator";
                 }
                 else
                 {
@@ -251,18 +246,20 @@ namespace MBS_SAP.Controllers
             }
 
             // Check for role override from AppUser (managed via User Management)
+            // Admin role is strictly restricted to users explicitly assigned Admin in AppUser (or default system admin)
+            string role;
             var existingAppUser = await _context.AppUsers.FindAsync(nrp);
             if (existingAppUser != null && !string.IsNullOrEmpty(existingAppUser.Role))
             {
                 role = NormalizeRole(existingAppUser.Role, mappedRole);
             }
+            else if (string.Equals(nrp, "admin.owner", StringComparison.OrdinalIgnoreCase))
+            {
+                role = "Admin";
+            }
             else
             {
-                // Jika tidak ada override manual, dan bukan Admin, gunakan role dari tipe perusahaan
-                if (role != "Admin")
-                {
-                    role = NormalizeRole(mappedRole, "Operator");
-                }
+                role = NormalizeRole(mappedRole, "Operator");
             }
 
             // Resolve PasswordHash for claim
@@ -299,35 +296,34 @@ namespace MBS_SAP.Controllers
                 authProperties);
 
             // Update or Insert AppUser (Login History)
-            var appUser = await _context.AppUsers.FindAsync(nrp);
-            if (appUser == null)
+            if (existingAppUser == null)
             {
-                appUser = new AppUser
+                var newAppUser = new AppUser
                 {
                     Nik = nrp,
                     Nama = fullName,
                     Departemen = deptName,
                     Perusahaan = companyName,
                     IdPerusahaan = idPerusahaan,
-                    Role = NormalizeRole(role, "Operator"),
+                    Role = role,
                     KaryawanId = karyawanMaster?.IdKaryawan,
                     LastLogin = DateTime.Now
                 };
-                _context.AppUsers.Add(appUser);
+                _context.AppUsers.Add(newAppUser);
             }
             else
             {
-                appUser.Nama = fullName;
-                appUser.Departemen = deptName;
-                appUser.Perusahaan = companyName;
-                appUser.IdPerusahaan = idPerusahaan;
-                appUser.KaryawanId = karyawanMaster?.IdKaryawan;
-                if (string.IsNullOrEmpty(appUser.Role))
+                existingAppUser.Nama = fullName;
+                existingAppUser.Departemen = deptName;
+                existingAppUser.Perusahaan = companyName;
+                existingAppUser.IdPerusahaan = idPerusahaan;
+                existingAppUser.KaryawanId = karyawanMaster?.IdKaryawan;
+                if (string.IsNullOrEmpty(existingAppUser.Role))
                 {
-                    appUser.Role = NormalizeRole(role, "Operator");
+                    existingAppUser.Role = role;
                 }
-                appUser.LastLogin = DateTime.Now;
-                _context.AppUsers.Update(appUser);
+                existingAppUser.LastLogin = DateTime.Now;
+                _context.AppUsers.Update(existingAppUser);
             }
             await _context.SaveChangesAsync();
 

@@ -627,7 +627,7 @@ namespace MBS_SAP.Controllers
 
             var (scopeCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
             var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
-            var cacheKey = $"CompanyAnalytics_{scopeCompanyId}_{selectedYear}_{selectedMonth}";
+            var cacheKey = $"CompanyAnalytics_v5_{scopeCompanyId}_{selectedYear}_{selectedMonth}";
 
             bool forceRefresh = HttpContext.Request.Query.ContainsKey("refresh") &&
                                 string.Equals(HttpContext.Request.Query["refresh"], "true", StringComparison.OrdinalIgnoreCase);
@@ -760,7 +760,7 @@ namespace MBS_SAP.Controllers
             // Fetch submissions from baseStartDate
             var dbHazards = await _context.HazardReports.AsNoTracking()
                 .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= baseStartDate && h.Tanggal <= endOfYear && !ExcludedCompanies.Ids.Contains(h.PerusahaanId!.Value))
-                .Select(h => new { CompId = h.PerusahaanId!.Value, Nik = h.Nik.Trim(), Date = h.Tanggal, KategoriBahaya = h.KategoriBahaya })
+                .Select(h => new { CompId = h.PerusahaanId!.Value, Nik = h.Nik.Trim(), Date = h.Tanggal, KategoriBahaya = h.KategoriBahaya, JenisKetidaksesuaian = h.JenisKetidaksesuaian, Temuan = h.Temuan, JenisBahaya = h.JenisBahaya, TingkatResiko = h.TingkatResiko, Area = h.Area })
                 .ToListAsync();
 
             bool IsTtaCategory(string? cat) => cat != null && (cat.Contains("Tindakan", StringComparison.OrdinalIgnoreCase) || cat.Contains("Act", StringComparison.OrdinalIgnoreCase) || cat.Contains("TTA", StringComparison.OrdinalIgnoreCase));
@@ -1109,6 +1109,190 @@ namespace MBS_SAP.Controllers
                 }
             };
 
+            // 3-Month Categorized Hazard Trend (Unsafe Action vs Unsafe Condition)
+            DateTime m3Start = startOfMonth;
+            DateTime m3End = endOfMonth;
+            DateTime m2Start = m3Start.AddMonths(-1);
+            DateTime m2End = m3Start.AddTicks(-1);
+            DateTime m1Start = m2Start.AddMonths(-1);
+            DateTime m1End = m2Start.AddTicks(-1);
+
+            string m1Label = m1Start.ToString("MMM", new System.Globalization.CultureInfo("en-US"));
+            string m2Label = m2Start.ToString("MMM", new System.Globalization.CultureInfo("en-US"));
+            string m3Label = m3Start.ToString("MMM", new System.Globalization.CultureInfo("en-US"));
+
+            string ClassifyTta(string? jk, string? tm, string? jb)
+            {
+                string text = $"{jk} {tm} {jb}".ToUpper();
+                if (text.Contains("APD") || text.Contains("HELM") || text.Contains("SARUNG TANGAN") || text.Contains("KACAMATA") || text.Contains("SAFETY SHOES") || text.Contains("FACESHIELD") || text.Contains("MASKER") || text.Contains("PELINDUNG"))
+                    return "APD";
+                if (text.Contains("PROSEDUR") || text.Contains("SOP") || text.Contains("WI") || text.Contains("IK") || text.Contains("INSTRUKSI") || text.Contains("MELANGGAR") || text.Contains("DUMPING") || text.Contains("LOTO"))
+                    return "Penyimpangan SOP";
+                if (text.Contains("HOUSE KEEPING") || text.Contains("HOUSEKEEPING") || text.Contains("5R") || text.Contains("KEBERSIHAN") || text.Contains("SAMPAH") || text.Contains("KERAPIHAN") || text.Contains("MESS") || text.Contains("TOILET"))
+                    return "Housekeeping / Kebersihan Pribadi";
+                if (text.Contains("AREA KERJA") || text.Contains("KELAYAKAN AREA") || text.Contains("FRONT") || text.Contains("DISPOSAL") || text.Contains("BENCH") || text.Contains("TEBING"))
+                    return "Kelayakan / Standard Area Kerja";
+                if (text.Contains("POSISI PEKERJA") || text.Contains("POSISI KERJA") || text.Contains("ERGONOMI") || text.Contains("DUDUK") || text.Contains("POSTUR") || text.Contains("ANGKAT"))
+                    return "Posisi Kerja / Ergonomi";
+                if (text.Contains("JALAN") || text.Contains("UNDULATING") || text.Contains("AMBLAS") || text.Contains("BERLUBANG") || text.Contains("MANUVER") || text.Contains("KECEPATAN") || text.Contains("SPEED") || text.Contains("JARAK IRING"))
+                    return "Kondisi Pengoperasian di Jalan";
+                if (text.Contains("RAMBU") || text.Contains("TRAFFIC SIGN") || text.Contains("PATOK") || text.Contains("SIGN BOARD") || text.Contains("TRAFFIC"))
+                    return "Kepatuhan Rambu & Traffic";
+                if (text.Contains("MATERIAL TERKONTAMINASI") || text.Contains("CECERAN") || text.Contains("LIMBAH") || text.Contains("B3") || text.Contains("TUMPAHAN") || text.Contains("OLI"))
+                    return "Material Terkontaminasi / B3";
+                if (text.Contains("SALAH PENEMPATAN") || text.Contains("PENYIMPANAN") || text.Contains("TOOLS") || text.Contains("PERKAKAS") || text.Contains("GANJAL"))
+                    return "Salah Penempatan Tools & Peralatan";
+                if (text.Contains("MOTIVASI") || text.Contains("DISIPLIN") || text.Contains("TIDUR") || text.Contains("CLOSE EYES") || text.Contains("FATIGUE") || text.Contains("HP") || text.Contains("HANDPHONE") || text.Contains("DISTRAKSI"))
+                    return "Disiplin Kerja / Fatigue / Distraksi";
+                if (text.Contains("ALAT KESELAMATAN") || text.Contains("APAR") || text.Contains("SAFETY DEVICE") || text.Contains("WHEEL CHOCK") || text.Contains("SEATBELT"))
+                    return "Penggunaan Alat Keselamatan";
+                return "Kategori lain-lain (Umum)";
+            }
+
+            string ClassifyKta(string? jk, string? tm, string? jb)
+            {
+                string text = $"{jk} {tm} {jb}".ToUpper();
+                if (text.Contains("JALAN") || text.Contains("UNDULATING") || text.Contains("AMBLAS") || text.Contains("BERLUBANG") || text.Contains("LICIN") || text.Contains("GRADE") || text.Contains("SEMPIT") || text.Contains("TANGGUL") || text.Contains("DRAINASE") || text.Contains("PARIT"))
+                    return "Kondisi Jalan";
+                if (text.Contains("HOUSE KEEPING") || text.Contains("HOUSEKEEPING") || text.Contains("5R") || text.Contains("KEBERSIHAN") || text.Contains("SAMPAH") || text.Contains("KERAPIHAN") || text.Contains("TOILET"))
+                    return "Housekeeping & 5R";
+                if (text.Contains("DEBU") || text.Contains("KABUT") || text.Contains("ASAP") || text.Contains("JARAK PANDANG") || text.Contains("PANDANGAN"))
+                    return "Debu & Jarak Pandang";
+                if (text.Contains("RAMBU") || text.Contains("TRAFFIC") || text.Contains("PATOK") || text.Contains("SIGN BOARD") || text.Contains("REFLEKTOR"))
+                    return "Rambu & Traffic";
+                if (text.Contains("UNIT") || text.Contains("P2H") || text.Contains("VEHICLE") || text.Contains("ALAT") || text.Contains("HOSE") || text.Contains("REM") || text.Contains("BAN") || text.Contains("LAMPU") || text.Contains("CRACK") || text.Contains("LEAK") || text.Contains("RUSAK") || text.Contains("MAINTENANCE") || text.Contains("PERAWATAN") || text.Contains("MEKANIKAL"))
+                    return "Kondisi Unit & P2H";
+                if (text.Contains("FRONT") || text.Contains("DISPOSAL") || text.Contains("BENCH") || text.Contains("TEBING") || text.Contains("LONGSOR") || text.Contains("AREA KERJA") || text.Contains("KELAYAKAN AREA") || text.Contains("SLOPE"))
+                    return "Kelayakan Area Kerja (Front/Disposal)";
+                if (text.Contains("MATERIAL TERKONTAMINASI") || text.Contains("CECERAN") || text.Contains("LIMBAH") || text.Contains("B3") || text.Contains("TUMPAHAN") || text.Contains("OLI"))
+                    return "Ceceran B3 & Lingkungan";
+                if (text.Contains("BATU BARA") || text.Contains("BATUBARA") || text.Contains("SPONTANEOUS") || text.Contains("TERBAKAR") || text.Contains("ASAP BATUBARA"))
+                    return "Batubara Terbakar";
+                if (text.Contains("LISTRIK") || text.Contains("ELECTRICAL") || text.Contains("KABEL") || text.Contains("PANEL") || text.Contains("GENSET"))
+                    return "Kelistrikan / Instalasi Elektrikal";
+                if (text.Contains("OBJEK TIDAK AMAN") || text.Contains("BENDA JATUH") || text.Contains("POTENSI BAHAYA"))
+                    return "Objek / Benda Tidak Aman";
+                return "Kategori lain-lain (Umum)";
+            }
+
+            var ttaUserOrder = new[] { "APD", "Penyimpangan SOP", "Housekeeping / Kebersihan Pribadi", "Kategori lain-lain (Umum)", "Kelayakan / Standard Area Kerja", "Posisi Kerja / Ergonomi", "Kondisi Pengoperasian di Jalan", "Kepatuhan Rambu & Traffic", "Material Terkontaminasi / B3", "Salah Penempatan Tools & Peralatan", "Disiplin Kerja / Fatigue / Distraksi", "Penggunaan Alat Keselamatan" };
+            var ktaUserOrder = new[] { "Kondisi Jalan", "Housekeeping & 5R", "Debu & Jarak Pandang", "Rambu & Traffic", "Kondisi Unit & P2H", "Kelayakan Area Kerja (Front/Disposal)", "Kategori lain-lain (Umum)", "Kelistrikan / Instalasi Elektrikal", "Ceceran B3 & Lingkungan", "Objek / Benda Tidak Aman", "Batubara Terbakar" };
+
+            var hazards3M = dbHazards.Where(x => x.Date >= m1Start && x.Date <= m3End).ToList();
+            var ttaHazards3M = hazards3M.Where(x => IsTtaCategory(x.KategoriBahaya)).ToList();
+            var ktaHazards3M = hazards3M.Where(x => IsKtaCategory(x.KategoriBahaya)).ToList();
+
+            int totalTta3M = ttaHazards3M.Count;
+            int totalKta3M = ktaHazards3M.Count;
+
+            var ttaCategoryList = new List<object>();
+            foreach (var catName in ttaUserOrder)
+            {
+                int c1 = ttaHazards3M.Count(x => x.Date >= m1Start && x.Date <= m1End && ClassifyTta(x.JenisKetidaksesuaian, x.Temuan, x.JenisBahaya) == catName);
+                int c2 = ttaHazards3M.Count(x => x.Date >= m2Start && x.Date <= m2End && ClassifyTta(x.JenisKetidaksesuaian, x.Temuan, x.JenisBahaya) == catName);
+                int c3 = ttaHazards3M.Count(x => x.Date >= m3Start && x.Date <= m3End && ClassifyTta(x.JenisKetidaksesuaian, x.Temuan, x.JenisBahaya) == catName);
+                int tot = c1 + c2 + c3;
+                double pct = totalTta3M > 0 ? Math.Round((double)tot / totalTta3M * 100.0, 1) : 0.0;
+                int d1 = c2 - c1;
+                int d2 = c3 - c2;
+                string trend = d2 > 0 ? "up" : (d2 < 0 ? "down" : "same");
+
+                ttaCategoryList.Add(new
+                {
+                    name = catName,
+                    m1 = c1,
+                    m2 = c2,
+                    m3 = c3,
+                    total = tot,
+                    pct,
+                    delta1 = d1,
+                    delta2 = d2,
+                    trend,
+                    isUp = d2 > 0
+                });
+            }
+
+            var ktaCategoryList = new List<object>();
+            foreach (var catName in ktaUserOrder)
+            {
+                int c1 = ktaHazards3M.Count(x => x.Date >= m1Start && x.Date <= m1End && ClassifyKta(x.JenisKetidaksesuaian, x.Temuan, x.JenisBahaya) == catName);
+                int c2 = ktaHazards3M.Count(x => x.Date >= m2Start && x.Date <= m2End && ClassifyKta(x.JenisKetidaksesuaian, x.Temuan, x.JenisBahaya) == catName);
+                int c3 = ktaHazards3M.Count(x => x.Date >= m3Start && x.Date <= m3End && ClassifyKta(x.JenisKetidaksesuaian, x.Temuan, x.JenisBahaya) == catName);
+                int tot = c1 + c2 + c3;
+                double pct = totalKta3M > 0 ? Math.Round((double)tot / totalKta3M * 100.0, 1) : 0.0;
+                int d1 = c2 - c1;
+                int d2 = c3 - c2;
+                string trend = d2 > 0 ? "up" : (d2 < 0 ? "down" : "same");
+
+                ktaCategoryList.Add(new
+                {
+                    name = catName,
+                    m1 = c1,
+                    m2 = c2,
+                    m3 = c3,
+                    total = tot,
+                    pct,
+                    delta1 = d1,
+                    delta2 = d2,
+                    trend,
+                    isUp = d2 > 0
+                });
+            }
+
+            // YTD Hazard breakdown by category
+            var ttaHazardsYtd = ytdHazards.Where(x => IsTtaCategory(x.KategoriBahaya)).ToList();
+            var ktaHazardsYtd = ytdHazards.Where(x => IsKtaCategory(x.KategoriBahaya)).ToList();
+            int totalTtaYtd = ttaHazardsYtd.Count;
+            int totalKtaYtd = ktaHazardsYtd.Count;
+
+            var ttaYtdCategoryList = new List<object>();
+            foreach (var catName in ttaUserOrder)
+            {
+                int cYtd = ttaHazardsYtd.Count(x => ClassifyTta(x.JenisKetidaksesuaian, x.Temuan, x.JenisBahaya) == catName);
+                double pctYtd = totalTtaYtd > 0 ? Math.Round((double)cYtd / totalTtaYtd * 100.0, 1) : 0.0;
+                ttaYtdCategoryList.Add(new
+                {
+                    name = catName,
+                    total = cYtd,
+                    pct = pctYtd
+                });
+            }
+
+            var ktaYtdCategoryList = new List<object>();
+            foreach (var catName in ktaUserOrder)
+            {
+                int cYtd = ktaHazardsYtd.Count(x => ClassifyKta(x.JenisKetidaksesuaian, x.Temuan, x.JenisBahaya) == catName);
+                double pctYtd = totalKtaYtd > 0 ? Math.Round((double)cYtd / totalKtaYtd * 100.0, 1) : 0.0;
+                ktaYtdCategoryList.Add(new
+                {
+                    name = catName,
+                    total = cYtd,
+                    pct = pctYtd
+                });
+            }
+
+            var hazardCategories3M = new
+            {
+                monthLabels = new[] { m1Label, m2Label, m3Label },
+                tta = ttaCategoryList,
+                kta = ktaCategoryList,
+                ttaYtd = ttaYtdCategoryList,
+                ktaYtd = ktaYtdCategoryList,
+                summary = new
+                {
+                    total3M = hazards3M.Count,
+                    totalTta = totalTta3M,
+                    totalKta = totalKta3M,
+                    ttaPct = hazards3M.Count > 0 ? Math.Round((double)totalTta3M / hazards3M.Count * 100.0, 1) : 0.0,
+                    ktaPct = hazards3M.Count > 0 ? Math.Round((double)totalKta3M / hazards3M.Count * 100.0, 1) : 0.0,
+                    totalYtd = ytdHazTotal,
+                    totalTtaYtd,
+                    totalKtaYtd,
+                    ttaYtdPct = ytdHazTotal > 0 ? Math.Round((double)totalTtaYtd / ytdHazTotal * 100.0, 1) : 0.0,
+                    ktaYtdPct = ytdHazTotal > 0 ? Math.Round((double)totalKtaYtd / ytdHazTotal * 100.0, 1) : 0.0
+                }
+            };
+
             var responseData = new
             {
                 success = true,
@@ -1126,6 +1310,7 @@ namespace MBS_SAP.Controllers
                     totalCompanies = companyStatsList.Count
                 },
                 hazardBreakdown,
+                hazardCategories3M,
                 companies = companyStatsList,
                 saTypes = new
                 {
@@ -8064,6 +8249,27 @@ namespace MBS_SAP.Controllers
                     return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
                 }
             }
+        }
+
+        [HttpGet]
+        [Route("/Performance/ExportHazardSummaryExcel")]
+        public async Task<IActionResult> ExportHazardSummaryExcel()
+        {
+            string primaryPath = @"D:\Summary_TTA_KTA_3Bulan.xlsx";
+            string fallbackPath = Path.Combine(Directory.GetCurrentDirectory(), "Summary_TTA_KTA_3Bulan.xlsx");
+
+            if (System.IO.File.Exists(primaryPath))
+            {
+                var bytes = await System.IO.File.ReadAllBytesAsync(primaryPath);
+                return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Summary_TTA_KTA_3Bulan.xlsx");
+            }
+            else if (System.IO.File.Exists(fallbackPath))
+            {
+                var bytes = await System.IO.File.ReadAllBytesAsync(fallbackPath);
+                return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Summary_TTA_KTA_3Bulan.xlsx");
+            }
+
+            return NotFound("File Summary TTA & KTA belum tersedia.");
         }
 
         private bool CheckIsSafetyRole(string? jobTitle, string? department, bool isAdmin)
