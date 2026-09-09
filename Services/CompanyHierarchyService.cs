@@ -1,7 +1,10 @@
 using MBS_SAP.Data;
 using MBS_SAP.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -55,33 +58,56 @@ namespace MBS_SAP.Services
         {
             if (companyId <= 0) return new List<string>();
 
-            // 1. Primary Source: [ONE_DB_MITRA].dbo.vw_m_departemen_dropdown
+            // 1. Primary Source: [ONE_DB_MITRA].dbo.vw_m_departemen_dropdown via ADO.NET
             try
             {
-                var mitraDepts = await _context.MitraDepartmentDropdowns
-                    .AsNoTracking()
-                    .Where(m => m.IdPerusahaan == companyId
-                             && (m.PerusahaanStatusAktif == null || m.PerusahaanStatusAktif == true)
-                             && (m.DepartemenStatusAktif == null || m.DepartemenStatusAktif == "1" || m.DepartemenStatusAktif != "0")
-                             && m.PerusahaanDeletedAt == null
-                             && !string.IsNullOrEmpty(m.NamaDepartemen))
-                    .OrderBy(m => m.SortOrder)
-                    .ThenBy(m => m.NamaDepartemen)
-                    .Select(m => m.NamaDepartemen!.Trim())
-                    .ToListAsync();
-
-                if (mitraDepts.Any())
+                var conn = _context.Database.GetDbConnection();
+                bool wasClosed = conn.State == ConnectionState.Closed;
+                if (wasClosed) await conn.OpenAsync();
+                try
                 {
-                    return mitraDepts.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        SELECT DISTINCT nama_departemen, ISNULL(sort_order, 999) AS sort_order
+                        FROM [ONE_DB_MITRA].[dbo].[vw_m_departemen_dropdown]
+                        WHERE id_perusahaan = @companyId
+                          AND (departemen_status_aktif IS NULL OR departemen_status_aktif = '1' OR departemen_status_aktif = 'Y' OR departemen_status_aktif = 'True' OR departemen_status_aktif <> '0')
+                          AND nama_departemen IS NOT NULL AND RTRIM(LTRIM(nama_departemen)) <> ''
+                        ORDER BY sort_order, nama_departemen";
+
+                    var p = cmd.CreateParameter();
+                    p.ParameterName = "@companyId";
+                    p.Value = companyId;
+                    cmd.Parameters.Add(p);
+
+                    var depts = new List<string>();
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        var dName = reader["nama_departemen"]?.ToString()?.Trim();
+                        if (!string.IsNullOrEmpty(dName) && !depts.Contains(dName, StringComparer.OrdinalIgnoreCase))
+                        {
+                            depts.Add(dName);
+                        }
+                    }
+
+                    if (depts.Any())
+                    {
+                        return depts;
+                    }
+                }
+                finally
+                {
+                    if (wasClosed) await conn.CloseAsync();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to local DB_SAP tables if ONE_DB_MITRA is unavailable
+                Console.WriteLine($"[GetDepartmentsByCompanyAsync] Error querying ONE_DB_MITRA: {ex.Message}");
             }
 
             // 2. Direct departments in vw_departemen
-            var depts = await _context.Departemens
+            var directDepts = await _context.Departemens
                 .AsNoTracking()
                 .Where(d => d.IdPerusahaan == companyId && (d.StatusAktif == null || (d.StatusAktif != "N" && d.StatusAktif != "0")) && !string.IsNullOrEmpty(d.NamaDepartemen))
                 .OrderBy(d => d.NamaDepartemen)
@@ -89,7 +115,7 @@ namespace MBS_SAP.Services
                 .Distinct()
                 .ToListAsync();
 
-            if (depts.Any()) return depts;
+            if (directDepts.Any()) return directDepts;
 
             // 3. Parent company departments via hierarchy relations
             var parentDepts = await (
@@ -130,33 +156,6 @@ namespace MBS_SAP.Services
 
             if (empDepts.Any()) return empDepts;
 
-            // 6. Name match heuristic (e.g. if company name contains parent name like "UNGGUL DINAMIKA UTAMA")
-            if (comp != null && !string.IsNullOrWhiteSpace(comp.NamaPerusahaan))
-            {
-                var targetName = comp.NamaPerusahaan.Trim();
-                var allActiveComps = await _context.Perusahaans.AsNoTracking()
-                    .Where(p => p.PerusahaanId != companyId && p.StatusAktif)
-                    .ToListAsync();
-
-                var matchingComp = allActiveComps.FirstOrDefault(p =>
-                    (!string.IsNullOrEmpty(p.NamaPerusahaan) && p.NamaPerusahaan.Length >= 5 && targetName.Contains(p.NamaPerusahaan, StringComparison.OrdinalIgnoreCase)) ||
-                    (!string.IsNullOrEmpty(p.NamaPerusahaan) && targetName.Length >= 5 && p.NamaPerusahaan.Contains(targetName, StringComparison.OrdinalIgnoreCase))
-                );
-
-                if (matchingComp != null)
-                {
-                    var matchedDepts = await _context.Departemens
-                        .AsNoTracking()
-                        .Where(d => d.IdPerusahaan == matchingComp.PerusahaanId && (d.StatusAktif == null || (d.StatusAktif != "N" && d.StatusAktif != "0")) && !string.IsNullOrEmpty(d.NamaDepartemen))
-                        .OrderBy(d => d.NamaDepartemen)
-                        .Select(d => d.NamaDepartemen!)
-                        .Distinct()
-                        .ToListAsync();
-
-                    if (matchedDepts.Any()) return matchedDepts;
-                }
-            }
-
             return new List<string>();
         }
 
@@ -168,37 +167,50 @@ namespace MBS_SAP.Services
         {
             var map = new Dictionary<int, List<string>>();
 
-            // 1. Primary Source: [ONE_DB_MITRA].dbo.vw_m_departemen_dropdown
+            // 1. Primary Source: [ONE_DB_MITRA].dbo.vw_m_departemen_dropdown via ADO.NET
             try
             {
-                var mitraDepts = await _context.MitraDepartmentDropdowns
-                    .AsNoTracking()
-                    .Where(m => (m.PerusahaanStatusAktif == null || m.PerusahaanStatusAktif == true)
-                             && (m.DepartemenStatusAktif == null || m.DepartemenStatusAktif == "1" || m.DepartemenStatusAktif != "0")
-                             && m.PerusahaanDeletedAt == null
-                             && !string.IsNullOrEmpty(m.NamaDepartemen))
-                    .OrderBy(m => m.SortOrder)
-                    .ThenBy(m => m.NamaDepartemen)
-                    .Select(m => new { m.IdPerusahaan, m.NamaDepartemen })
-                    .ToListAsync();
-
-                foreach (var item in mitraDepts)
+                var conn = _context.Database.GetDbConnection();
+                bool wasClosed = conn.State == ConnectionState.Closed;
+                if (wasClosed) await conn.OpenAsync();
+                try
                 {
-                    int cid = item.IdPerusahaan;
-                    if (!map.ContainsKey(cid))
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        SELECT id_perusahaan, nama_departemen, ISNULL(sort_order, 999) AS sort_order
+                        FROM [ONE_DB_MITRA].[dbo].[vw_m_departemen_dropdown]
+                        WHERE (perusahaan_status_aktif IS NULL OR perusahaan_status_aktif = 1 OR perusahaan_status_aktif = '1' OR perusahaan_status_aktif = 'Y' OR perusahaan_status_aktif = 'True' OR perusahaan_status_aktif <> '0')
+                          AND (departemen_status_aktif IS NULL OR departemen_status_aktif = 1 OR departemen_status_aktif = '1' OR departemen_status_aktif = 'Y' OR departemen_status_aktif = 'True' OR departemen_status_aktif <> '0')
+                          AND perusahaan_deleted_at IS NULL
+                          AND nama_departemen IS NOT NULL AND RTRIM(LTRIM(nama_departemen)) <> ''
+                        ORDER BY id_perusahaan, sort_order, nama_departemen";
+
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
                     {
-                        map[cid] = new List<string>();
-                    }
-                    var deptName = item.NamaDepartemen!.Trim();
-                    if (!string.IsNullOrEmpty(deptName) && !map[cid].Contains(deptName, StringComparer.OrdinalIgnoreCase))
-                    {
-                        map[cid].Add(deptName);
+                        var cidObj = reader["id_perusahaan"];
+                        if (cidObj != null && int.TryParse(cidObj.ToString(), out int cid))
+                        {
+                            if (!map.ContainsKey(cid))
+                            {
+                                map[cid] = new List<string>();
+                            }
+                            var deptName = reader["nama_departemen"]?.ToString()?.Trim();
+                            if (!string.IsNullOrEmpty(deptName) && !map[cid].Contains(deptName, StringComparer.OrdinalIgnoreCase))
+                            {
+                                map[cid].Add(deptName);
+                            }
+                        }
                     }
                 }
+                finally
+                {
+                    if (wasClosed) await conn.CloseAsync();
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback to local views if ONE_DB_MITRA is unavailable
+                Console.WriteLine($"[GetAllCompanyDepartmentsMapAsync] Error querying ONE_DB_MITRA: {ex.Message}");
             }
 
             // 2. Local vw_departemen fallback for any missing companies
@@ -264,29 +276,54 @@ namespace MBS_SAP.Services
         /// </summary>
         public async Task<List<object>> GetCompaniesAsync()
         {
+            // 1. Primary Source: [ONE_DB_MITRA].dbo.vw_m_departemen_dropdown via ADO.NET
             try
             {
-                var companies = await _context.MitraDepartmentDropdowns
-                    .AsNoTracking()
-                    .Where(m => (m.PerusahaanStatusAktif == null || m.PerusahaanStatusAktif == true)
-                             && m.PerusahaanDeletedAt == null
-                             && !string.IsNullOrEmpty(m.NamaPerusahaan))
-                    .Select(m => new {
-                        id = m.IdPerusahaan,
-                        nama = m.NamaPerusahaan!.Trim(),
-                        kode = m.KodePerusahaan != null ? m.KodePerusahaan.Trim() : ""
-                    })
-                    .Distinct()
-                    .OrderBy(m => m.nama)
-                    .ToListAsync();
-
-                if (companies.Any())
+                var conn = _context.Database.GetDbConnection();
+                bool wasClosed = conn.State == ConnectionState.Closed;
+                if (wasClosed) await conn.OpenAsync();
+                try
                 {
-                    return companies.Cast<object>().ToList();
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = @"
+                        SELECT DISTINCT id_perusahaan, kode_perusahaan, nama_perusahaan, ISNULL(sort_order, 999) AS sort_order
+                        FROM [ONE_DB_MITRA].[dbo].[vw_m_departemen_dropdown]
+                        WHERE (perusahaan_status_aktif IS NULL OR perusahaan_status_aktif = 1 OR perusahaan_status_aktif = '1' OR perusahaan_status_aktif = 'Y' OR perusahaan_status_aktif = 'True' OR perusahaan_status_aktif <> '0')
+                          AND perusahaan_deleted_at IS NULL
+                          AND nama_perusahaan IS NOT NULL AND RTRIM(LTRIM(nama_perusahaan)) <> ''
+                        ORDER BY sort_order, nama_perusahaan";
+
+                    var companies = new List<object>();
+                    var seenIds = new HashSet<int>();
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        var cidObj = reader["id_perusahaan"];
+                        if (cidObj != null && int.TryParse(cidObj.ToString(), out int cid))
+                        {
+                            if (!seenIds.Contains(cid))
+                            {
+                                seenIds.Add(cid);
+                                var cNama = reader["nama_perusahaan"]?.ToString()?.Trim() ?? "";
+                                var cKode = reader["kode_perusahaan"]?.ToString()?.Trim() ?? "";
+                                companies.Add(new { id = cid, nama = cNama, kode = cKode });
+                            }
+                        }
+                    }
+
+                    if (companies.Any())
+                    {
+                        return companies;
+                    }
+                }
+                finally
+                {
+                    if (wasClosed) await conn.CloseAsync();
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[GetCompaniesAsync] Error querying ONE_DB_MITRA: {ex.Message}");
             }
 
             var fallback = await _context.Perusahaans
