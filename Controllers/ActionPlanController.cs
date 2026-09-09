@@ -10,6 +10,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using ClosedXML.Excel;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace MBS_SAP.Controllers
 {
@@ -20,13 +21,15 @@ namespace MBS_SAP.Controllers
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly MBS_SAP.Services.ImageUploadService _imageUploadService;
         private readonly CompanyHierarchyService _companyHierarchyService;
+        private readonly IMemoryCache _cache;
 
-        public ActionPlanController(AppDbContext context, IWebHostEnvironment webHostEnvironment, MBS_SAP.Services.ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService)
+        public ActionPlanController(AppDbContext context, IWebHostEnvironment webHostEnvironment, MBS_SAP.Services.ImageUploadService imageUploadService, CompanyHierarchyService companyHierarchyService, IMemoryCache cache)
         {
             _context = context;
             _webHostEnvironment = webHostEnvironment;
             _imageUploadService = imageUploadService;
             _companyHierarchyService = companyHierarchyService;
+            _cache = cache;
         }
 
         // GET: ActionPlan
@@ -48,7 +51,7 @@ namespace MBS_SAP.Controllers
             ViewBag.StartDate = start.ToString("yyyy-MM-dd");
             ViewBag.EndDate = end.ToString("yyyy-MM-dd");
 
-            var query = _context.ActionPlans.Where(r => !r.IsDeleted && r.Tanggal >= start && r.Tanggal <= endOfDay);
+            var query = _context.ActionPlans.AsNoTracking().Where(r => !r.IsDeleted && r.Tanggal >= start && r.Tanggal <= endOfDay);
 
             if (!string.IsNullOrEmpty(filter))
             {
@@ -93,8 +96,8 @@ namespace MBS_SAP.Controllers
                 .Select(r => { int.TryParse(r.ItemSap!.Substring(12), out int id); return id; })
                 .Where(id => id > 0).ToList();
 
-            var hazards = await _context.HazardReports.Where(h => hazardIds.Contains(h.Id)).ToDictionaryAsync(h => h.Id, h => h.TingkatResiko);
-            var observations = await _context.Observations.Where(o => obsIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.TingkatResiko);
+            var hazards = await _context.HazardReports.AsNoTracking().Where(h => hazardIds.Contains(h.Id)).ToDictionaryAsync(h => h.Id, h => h.TingkatResiko);
+            var observations = await _context.Observations.AsNoTracking().Where(o => obsIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.TingkatResiko);
 
             foreach (var r in reports)
             {
@@ -110,18 +113,23 @@ namespace MBS_SAP.Controllers
                     }
                 }
 
-                // AI Hazard Urgency & Due Date Analysis
-                var aiAnalysis = Services.SapQualityMlEngine.AnalyzeHazard(
-                    r.DetilTemuan, 
-                    r.KategoriTemuan, 
-                    r.ItemSap, 
-                    r.TingkatResiko, 
-                    r.Lokasi, 
-                    r.DetilLokasi, 
-                    r.RencanaPerbaikan ?? r.Perbaikan, 
-                    r.Status, 
-                    r.Tanggal
-                );
+                // AI Hazard Urgency & Due Date Analysis — cached per content hash to avoid re-computation
+                var aiCacheKey = $"AiAnalysis_{r.DetilTemuan?.GetHashCode()}_{r.KategoriTemuan?.GetHashCode()}_{r.TingkatResiko}_{r.Status}";
+                var aiAnalysis = _cache.GetOrCreate(aiCacheKey, entry =>
+                {
+                    entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(60);
+                    return Services.SapQualityMlEngine.AnalyzeHazard(
+                        r.DetilTemuan,
+                        r.KategoriTemuan,
+                        r.ItemSap,
+                        r.TingkatResiko,
+                        r.Lokasi,
+                        r.DetilLokasi,
+                        r.RencanaPerbaikan ?? r.Perbaikan,
+                        r.Status,
+                        r.Tanggal
+                    );
+                })!;
 
                 r.AiAnalysis = aiAnalysis;
                 r.PriorityLevel = aiAnalysis.PriorityLevel;
@@ -139,8 +147,8 @@ namespace MBS_SAP.Controllers
                 .Distinct()
                 .ToList();
 
-            var nikCompanyList = await (from k in _context.Karyawans
-                                        join p in _context.Perusahaans on k.IdPerusahaan equals p.PerusahaanId
+            var nikCompanyList = await (from k in _context.Karyawans.AsNoTracking()
+                                        join p in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals p.PerusahaanId
                                         where allNiks.Contains(k.NoNik)
                                         select new { k.NoNik, k.StatusAktif, p.NamaPerusahaan })
                                         .ToListAsync();
@@ -152,7 +160,7 @@ namespace MBS_SAP.Controllers
             ViewBag.NikCompanyMap = nikCompanyMap;
 
             var perusahaanIds = reports.Where(r => r.PerusahaanId.HasValue).Select(r => r.PerusahaanId!.Value).Distinct().ToList();
-            var perusahaans = await _context.Perusahaans.Where(p => perusahaanIds.Contains(p.PerusahaanId)).ToListAsync();
+            var perusahaans = await _context.Perusahaans.AsNoTracking().Where(p => perusahaanIds.Contains(p.PerusahaanId)).ToListAsync();
             ViewBag.Perusahaans = perusahaans;
             
             ViewBag.Departemens = reports.Where(r => !string.IsNullOrEmpty(r.Departemen))

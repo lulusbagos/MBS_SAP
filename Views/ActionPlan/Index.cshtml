@@ -122,15 +122,120 @@
         filter: brightness(1.05);
     }
 
+    /* ─── FOTO TEMUAN Badge ──────────────────────────────────────── */
+    .foto-temuan-badge {
+        font-size: 11px !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.5px;
+        background: linear-gradient(135deg, #ea580c, #dc2626) !important;
+        color: #ffffff !important;
+        padding: 5px 10px !important;
+        border: 1.5px solid rgba(255,255,255,0.35) !important;
+        backdrop-filter: blur(6px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        border-radius: 6px !important;
+    }
+
+    .foto-perbaikan-badge {
+        font-size: 11px !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.5px;
+        background: linear-gradient(135deg, #059669, #047857) !important;
+        color: #ffffff !important;
+        padding: 5px 10px !important;
+        border: 1.5px solid rgba(255,255,255,0.35) !important;
+        backdrop-filter: blur(6px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        border-radius: 6px !important;
+    }
+
+    /* ─── AI Analysis Collapsible ────────────────────────────────── */
+    .ai-analysis-header {
+        cursor: pointer;
+        user-select: none;
+        transition: all 0.2s ease;
+        border-radius: 8px 8px 0 0;
+    }
+
+    .ai-analysis-header:hover {
+        background: rgba(2, 132, 199, 0.06) !important;
+    }
+
+    .ai-analysis-body {
+        overflow: hidden;
+        transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        max-height: 0;
+        opacity: 0;
+        will-change: max-height, opacity;
+    }
+
+    .ai-analysis-body.expanded {
+        max-height: 600px;
+        opacity: 1;
+    }
+
+    .ai-toggle-icon {
+        transition: transform 0.3s ease;
+        font-size: 12px;
+        color: var(--color-primary);
+    }
+
+    .ai-analysis-header.collapsed .ai-toggle-icon {
+        transform: rotate(-90deg);
+    }
+
+    /* ─── Mobile Professional ────────────────────────────────────── */
     @@media (max-width: 768px) {
         .ap-finding-img {
             height: 220px;
+        }
+
+        .action-plan-item .card-sap {
+            border-radius: 14px !important;
+        }
+
+        .ap-filter-bar {
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+
+        /* Mobile card header — stack badges vertically */
+        .action-plan-item .d-flex.justify-content-between.align-items-start {
+            gap: 8px;
+        }
+
+        /* Temuan text larger on mobile */
+        .action-plan-item p[style*="font-size: 12px"] {
+            font-size: 13px !important;
+            line-height: 1.55 !important;
+        }
+
+        /* Pihak terkait section */
+        .action-plan-item .mb-3[style*="font-size: 11px"] {
+            font-size: 12px !important;
+        }
+
+        /* Summary dashboard cards */
+        .row .card-sap.d-flex.align-items-center {
+            border-radius: 12px !important;
         }
     }
 
     @@media (max-width: 480px) {
         .ap-finding-img {
             height: 200px;
+        }
+
+        /* Full-width action buttons on very small screens */
+        .action-plan-item .d-flex.gap-2.pdf-exclude {
+            flex-direction: column;
+        }
+
+        .action-plan-item .d-flex.gap-2.pdf-exclude .btn {
+            flex-grow: 1 !important;
+            width: 100%;
         }
     }
 </style>
@@ -457,15 +562,16 @@
                                          {
                                              var proxyFotoTemuan = item.FotoTemuan.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoTemuan) : item.FotoTemuan;
                                              <div class="@(!string.IsNullOrEmpty(item.FotoPerbaikan) ? "col-12 col-sm-6" : "col-12")">
-                                                 <div class="position-relative overflow-hidden rounded-3 border" style="background: #f8fafc; border-color: var(--border-color) !important;">
-                                                     <span class="badge position-absolute top-0 start-0 m-2 px-2 py-1 text-white fw-bold shadow-sm" style="font-size: 10px; z-index: 2; background: rgba(15,23,42,0.8); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2);">
-                                                         <i class="bi bi-camera-fill me-1 text-warning"></i>FOTO TEMUAN (BEFORE)
+                                                 <div class="position-relative overflow-hidden rounded-3" style="background: #0f172a; border: 2px solid rgba(234,88,12,0.4) !important;">
+                                                     <span class="foto-temuan-badge position-absolute top-0 start-0 m-2 d-flex align-items-center gap-1" style="z-index: 2;">
+                                                         <i class="bi bi-camera-fill"></i>
+                                                         📸 FOTO TEMUAN (BEFORE)
                                                      </span>
                                                      <a href="@proxyFotoTemuan" target="_blank" title="Klik untuk memperbesar foto dalam resolusi penuh">
-                                                         <img src="@proxyFotoTemuan" alt="Foto Temuan" class="ap-finding-img w-100" />
+                                                         <img src="@proxyFotoTemuan" alt="Foto Temuan" class="ap-finding-img w-100" style="opacity: 0.97;" loading="lazy" decoding="async" />
                                                      </a>
-                                                     <div class="position-absolute bottom-0 end-0 m-2 px-2 py-0.5 rounded text-white" style="font-size: 9.5px; z-index: 2; background: rgba(15,23,42,0.75); pointer-events: none;">
-                                                         <i class="bi bi-arrows-fullscreen me-1"></i>Perbesar
+                                                     <div class="position-absolute bottom-0 end-0 m-2 d-flex align-items-center gap-1" style="font-size: 10px; z-index: 2; background: rgba(15,23,42,0.85); color:#fff; padding: 4px 8px; border-radius: 6px; pointer-events: none; border: 1px solid rgba(255,255,255,0.15);">
+                                                         <i class="bi bi-arrows-fullscreen"></i> Perbesar
                                                      </div>
                                                  </div>
                                              </div>
@@ -474,15 +580,16 @@
                                          {
                                              var proxyFotoPerbaikan = item.FotoPerbaikan.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.FotoPerbaikan) : item.FotoPerbaikan;
                                              <div class="@(!string.IsNullOrEmpty(item.FotoTemuan) ? "col-12 col-sm-6" : "col-12")">
-                                                 <div class="position-relative overflow-hidden rounded-3 border" style="background: #f8fafc; border-color: var(--border-color) !important;">
-                                                     <span class="badge position-absolute top-0 start-0 m-2 px-2 py-1 text-white fw-bold shadow-sm" style="font-size: 10px; z-index: 2; background: rgba(15,23,42,0.8); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2);">
-                                                         <i class="bi bi-check-circle-fill me-1 text-success"></i>FOTO PERBAIKAN (AFTER)
+                                                 <div class="position-relative overflow-hidden rounded-3" style="background: #0f172a; border: 2px solid rgba(16,185,129,0.4) !important;">
+                                                     <span class="foto-perbaikan-badge position-absolute top-0 start-0 m-2 d-flex align-items-center gap-1" style="z-index: 2;">
+                                                         <i class="bi bi-check-circle-fill"></i>
+                                                         ✅ FOTO PERBAIKAN (AFTER)
                                                      </span>
                                                      <a href="@proxyFotoPerbaikan" target="_blank" title="Klik untuk memperbesar foto dalam resolusi penuh">
-                                                         <img src="@proxyFotoPerbaikan" alt="Foto Perbaikan" class="ap-finding-img w-100" />
+                                                         <img src="@proxyFotoPerbaikan" alt="Foto Perbaikan" class="ap-finding-img w-100" style="opacity: 0.97;" loading="lazy" decoding="async" />
                                                      </a>
-                                                     <div class="position-absolute bottom-0 end-0 m-2 px-2 py-0.5 rounded text-white" style="font-size: 9.5px; z-index: 2; background: rgba(15,23,42,0.75); pointer-events: none;">
-                                                         <i class="bi bi-arrows-fullscreen me-1"></i>Perbesar
+                                                     <div class="position-absolute bottom-0 end-0 m-2 d-flex align-items-center gap-1" style="font-size: 10px; z-index: 2; background: rgba(15,23,42,0.85); color:#fff; padding: 4px 8px; border-radius: 6px; pointer-events: none; border: 1px solid rgba(255,255,255,0.15);">
+                                                         <i class="bi bi-arrows-fullscreen"></i> Perbesar
                                                      </div>
                                                  </div>
                                              </div>
@@ -498,24 +605,29 @@
                                  }
                              }
 
-                            <!-- ── Analisa by AI (K3LH Urgency & Recommendation - Light Theme Match) ── -->
+                            <!-- ── Analisa by AI (Collapsible – klik untuk tampilkan) ── -->
                             @if (item.AiAnalysis != null)
                             {
-                                <div class="mb-3 rounded-3 p-3 position-relative overflow-hidden" 
-                                     style="background: #f8fafc; border: 1px solid var(--border-color); border-left: 4px solid @(item.PriorityBadgeColor ?? "var(--color-primary)"); box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-                                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2" style="border-bottom: 1px solid var(--border-color) !important;">
+                                var aiId = $"ai-{item.Id}";
+                                <div class="mb-3 rounded-3 position-relative overflow-hidden" 
+                                     style="background: var(--bg-card); border: 1px solid var(--border-color); border-left: 4px solid @(item.PriorityBadgeColor ?? "var(--color-primary)"); box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                                    <!-- Header (selalu tampil, klik untuk expand) -->
+                                    <div class="ai-analysis-header d-flex align-items-center justify-content-between flex-wrap gap-2 p-3"
+                                         onclick="toggleAiAnalysis('@aiId')"
+                                         id="ai-header-@item.Id"
+                                         style="border-radius: 8px;">
                                         <div class="d-flex align-items-center gap-2">
-                                            <div class="p-1 rounded-2 d-flex align-items-center justify-content-center" style="background: rgba(2, 132, 199, 0.1); width: 26px; height: 26px;">
-                                                <i class="bi bi-robot" style="font-size: 14px; color: var(--color-primary);"></i>
+                                            <div class="p-1 rounded-2 d-flex align-items-center justify-content-center" style="background: rgba(2, 132, 199, 0.12); width: 28px; height: 28px; flex-shrink: 0;">
+                                                <i class="bi bi-robot" style="font-size: 15px; color: var(--color-primary);"></i>
                                             </div>
                                             <div>
-                                                <strong style="font-size: 12px; color: var(--color-primary); letter-spacing: 0.3px; font-family: 'Outfit', sans-serif;">ANALISA BY AI</strong>
+                                                <strong style="font-size: 12.5px; color: var(--color-primary); letter-spacing: 0.4px; font-family: 'Outfit', sans-serif;">ANALISA BY AI</strong>
                                                 <span class="text-muted ms-1" style="font-size: 10px;">• Prioritas K3LH</span>
                                             </div>
                                         </div>
-                                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                            <span class="badge px-2.5 py-1 text-white fw-bold shadow-sm" style="background: @(item.PriorityBadgeColor ?? "#eab308"); font-size: 10px; border-radius: 5px;">
-                                                <i class="bi bi-lightning-charge-fill me-0.5"></i> @(item.PriorityLevel ?? "MEDIUM") (Max @(item.RecommendedDays ?? 7) Hari)
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <span class="badge px-2 py-1 text-white fw-bold shadow-sm" style="background: @(item.PriorityBadgeColor ?? "#eab308"); font-size: 10px; border-radius: 5px;">
+                                                <i class="bi bi-lightning-charge-fill me-1"></i>@(item.PriorityLevel ?? "MEDIUM") (Max @(item.RecommendedDays ?? 7) Hari)
                                             </span>
                                             @if (item.AiAnalysis.IsGoldenRuleViolation)
                                             {
@@ -523,24 +635,44 @@
                                                     <i class="bi bi-exclamation-octagon-fill me-1"></i>Golden Rule
                                                 </span>
                                             }
+                                            <!-- Toggle chevron -->
+                                            <span class="ai-toggle-icon" id="ai-chevron-@item.Id">
+                                                <i class="bi bi-chevron-down"></i>
+                                            </span>
                                         </div>
                                     </div>
 
-                                    @if (!string.IsNullOrEmpty(item.AiAnalysis.AiReasoning))
-                                    {
-                                        <div class="mb-2" style="font-size: 11.5px; color: var(--text-main); line-height: 1.45;">
-                                            <strong style="color: #ea580c;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Diagnosa Risiko:</strong>
-                                            <span style="color: #334155;">@item.AiAnalysis.AiReasoning</span>
-                                        </div>
-                                    }
+                                    <!-- Body (collapsed by default) -->
+                                    <div class="ai-analysis-body" id="@aiId">
+                                        <div class="px-3 pb-3">
+                                            <div style="border-top: 1px solid var(--border-color); padding-top: 12px;">
+                                                @if (!string.IsNullOrEmpty(item.AiAnalysis.AiReasoning))
+                                                {
+                                                    // Determine risk context for smarter display
+                                                    var riskLevel = item.TingkatResiko?.ToLower() ?? "";
+                                                    var riskIcon = riskLevel == "high" || riskLevel == "tinggi" || riskLevel == "ekstrim"
+                                                        ? "bi-exclamation-octagon-fill" : "bi-exclamation-triangle-fill";
+                                                    var riskBg = riskLevel == "high" || riskLevel == "tinggi" || riskLevel == "ekstrim"
+                                                        ? "rgba(239,68,68,0.06)" : riskLevel == "medium" || riskLevel == "sedang"
+                                                        ? "rgba(245,158,11,0.06)" : "rgba(234,88,12,0.04)";
+                                                    var riskBorder = riskLevel == "high" || riskLevel == "tinggi" || riskLevel == "ekstrim"
+                                                        ? "#fca5a5" : riskLevel == "medium" || riskLevel == "sedang" ? "#fde68a" : "#fed7aa";
+                                                    <div class="mb-2 p-2 rounded-2" style="background: @riskBg; border: 1px solid @riskBorder; font-size: 12px; color: var(--text-main); line-height: 1.55;">
+                                                        <strong style="color: #ea580c; font-size: 11.5px;"><i class="bi @riskIcon me-1"></i>Diagnosa Risiko:</strong>
+                                                        <div style="color: #334155; margin-top: 4px;">@item.AiAnalysis.AiReasoning</div>
+                                                    </div>
+                                                }
 
-                                    @if (!string.IsNullOrEmpty(item.AiAnalysis.ActionRecommendation))
-                                    {
-                                        <div class="p-2.5 rounded-2" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 3px solid #10b981; font-size: 11px; line-height: 1.45;">
-                                            <strong style="color: #059669;" class="d-block mb-1"><i class="bi bi-shield-check me-1"></i>Rekomendasi Mitigasi / Tindakan:</strong>
-                                            <div style="white-space: pre-line; color: #166534; font-weight: 500;">@item.AiAnalysis.ActionRecommendation</div>
+                                                @if (!string.IsNullOrEmpty(item.AiAnalysis.ActionRecommendation))
+                                                {
+                                                    <div class="p-2 rounded-2" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 3px solid #10b981; font-size: 12px; line-height: 1.55;">
+                                                        <strong style="color: #059669;" class="d-block mb-1"><i class="bi bi-shield-check me-1"></i>Rekomendasi Mitigasi / Tindakan:</strong>
+                                                        <div style="white-space: pre-line; color: #166534; font-weight: 500;">@item.AiAnalysis.ActionRecommendation</div>
+                                                    </div>
+                                                }
+                                            </div>
                                         </div>
-                                    }
+                                    </div>
                                 </div>
                             }
 
@@ -685,62 +817,211 @@
 @section Scripts {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
-        function sharePdf(cardId, filename) {
+        // ── Toggle AI Analysis Section ──────────────────────────────────
+        function toggleAiAnalysis(bodyId) {
+            const body = document.getElementById(bodyId);
+            const itemId = bodyId.replace('ai-', '');
+            const chevron = document.getElementById('ai-chevron-' + itemId);
+            const header = document.getElementById('ai-header-' + itemId);
+
+            if (!body) return;
+
+            const isExpanded = body.classList.contains('expanded');
+
+            if (isExpanded) {
+                body.classList.remove('expanded');
+                if (chevron) chevron.style.transform = 'rotate(-90deg)';
+                if (header) header.classList.add('collapsed');
+            } else {
+                body.classList.add('expanded');
+                if (chevron) chevron.style.transform = 'rotate(0deg)';
+                if (header) header.classList.remove('collapsed');
+            }
+        }
+
+        // Initialize: collapse all AI headers on load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.ai-analysis-header').forEach(function(header) {
+                header.classList.add('collapsed');
+            });
+            document.querySelectorAll('.ai-toggle-icon').forEach(function(icon) {
+                icon.style.transform = 'rotate(-90deg)';
+            });
+        });
+
+        // ── Loading Overlay ──────────────────────────────────────────────
+        function showPdfLoading() {
+            let overlay = document.getElementById('pdf-loading-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'pdf-loading-overlay';
+                overlay.innerHTML = `
+                    <div style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+                        <div style="background:#fff;border-radius:20px;padding:36px 44px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-width:320px;">
+                            <div style="width:56px;height:56px;border:5px solid #e2e8f0;border-top-color:#f43f5e;border-radius:50%;animation:pdfSpin 0.8s linear infinite;margin:0 auto 20px;"></div>
+                            <div style="font-weight:800;font-size:16px;color:#1e293b;margin-bottom:8px;">Menyiapkan PDF...</div>
+                            <div style="font-size:12px;color:#64748b;">Memuat foto & menyusun dokumen.<br>Harap tunggu sebentar.</div>
+                        </div>
+                    </div>
+                    <style>@@keyframes pdfSpin{to{transform:rotate(360deg)}}</style>`;
+                document.body.appendChild(overlay);
+            }
+            overlay.style.display = 'block';
+        }
+        function hidePdfLoading() {
+            const overlay = document.getElementById('pdf-loading-overlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+
+        // ── Pre-load image as blob to bypass lazy-load & CORS ────────────
+        async function preloadImgAsBlob(img) {
+            try {
+                const res = await fetch(img.src, { mode: 'cors', cache: 'force-cache' });
+                const blob = await res.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                img.src = blobUrl;
+                img.removeAttribute('loading');
+                img._blobUrl = blobUrl; // track for cleanup
+                await new Promise((res, rej) => {
+                    if (img.complete) return res();
+                    img.onload = res;
+                    img.onerror = res; // don't reject on bad images
+                    setTimeout(res, 5000); // timeout failsafe
+                });
+                return blobUrl;
+            } catch(e) {
+                img.removeAttribute('loading');
+                return null;
+            }
+        }
+
+        // ── Main sharePdf ─────────────────────────────────────────────────
+        async function sharePdf(cardId, filename) {
             const element = document.getElementById(cardId);
             if (!element) return;
-            
-            // Temporary styles to make the PDF look better
-            const originalBorder = element.style.border;
-            const originalShadow = element.style.boxShadow;
+
+            showPdfLoading();
+
+            // 1. Force-expand AI analysis if collapsed
+            const aiBody = element.querySelector('.ai-analysis-body');
+            const aiWasCollapsed = aiBody && !aiBody.classList.contains('expanded');
+            if (aiWasCollapsed) {
+                aiBody.classList.add('expanded');
+                aiBody.style.maxHeight = '2000px';
+                aiBody.style.opacity = '1';
+            }
+
+            // 2. Force-load all lazy images in the card
+            const images = element.querySelectorAll('img');
+            const blobUrls = [];
+            const originalSrcs = [];
+            for (const img of images) {
+                originalSrcs.push(img.src);
+                const blobUrl = await preloadImgAsBlob(img);
+                if (blobUrl) blobUrls.push(blobUrl);
+            }
+
+            // 3. Temporarily show all hidden elements for PDF capture
+            const pdfExcludes = element.querySelectorAll('.pdf-exclude');
+            pdfExcludes.forEach(el => el.style.display = 'none');
+
+            // 4. Save & patch element styles for clean PDF
+            const origBorder = element.style.border;
+            const origShadow = element.style.boxShadow;
+            const origBg = element.style.background;
+            const origRadius = element.style.borderRadius;
             element.style.border = '1px solid #e2e8f0';
             element.style.boxShadow = 'none';
+            element.style.background = '#ffffff';
+            element.style.borderRadius = '0';
 
-            var opt = {
-                margin:       [0.3, 0.3], // top/bottom, left/right
-                filename:     filename + '.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { 
-                    scale: 2, 
+            // 5. PDF options — high quality, professional layout
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
+
+            const opt = {
+                margin:      [0.4, 0.4, 0.5, 0.4], // top, right, bottom, left (inches)
+                filename:    filename + '.pdf',
+                image:       { type: 'jpeg', quality: 0.97 },
+                html2canvas: {
+                    scale: 2.5,
                     useCORS: true,
+                    allowTaint: true,
+                    logging: false,
+                    imageTimeout: 8000,
+                    backgroundColor: '#ffffff',
                     ignoreElements: function(el) {
-                        return el.classList && el.classList.contains('pdf-exclude');
+                        return el.classList && (
+                            el.classList.contains('pdf-exclude') ||
+                            el.classList.contains('collapse') && !el.classList.contains('show')
+                        );
                     }
                 },
-                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                jsPDF: {
+                    unit: 'in',
+                    format: 'a4',
+                    orientation: 'portrait',
+                    compress: true
+                }
             };
 
-            // Generate PDF as blob for sharing
-            html2pdf().set(opt).from(element).outputPdf('blob').then(function(pdfBlob) {
-                // Restore styles
-                element.style.border = originalBorder;
-                element.style.boxShadow = originalShadow;
+            try {
+                // Small delay to let DOM repaint
+                await new Promise(r => setTimeout(r, 400));
 
-                var file = new File([pdfBlob], filename + ".pdf", { type: "application/pdf" });
-                
-                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                    navigator.share({
-                        title: 'Action Plan: ' + filename,
-                        text: 'Berikut adalah detail temuan Action Plan.',
-                        files: [file]
-                    }).then(() => {
-                        console.log('Share successful');
-                    }).catch((error) => {
-                        console.log('Sharing failed', error);
-                        // Fallback to download if user cancels or it fails
-                        saveAsFile(pdfBlob, filename + '.pdf');
-                    });
+                const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
+
+                // Cleanup blob URLs
+                blobUrls.forEach(url => URL.revokeObjectURL(url));
+
+                // Restore card styles
+                element.style.border       = origBorder;
+                element.style.boxShadow    = origShadow;
+                element.style.background   = origBg;
+                element.style.borderRadius = origRadius;
+
+                // Restore AI analysis state
+                if (aiWasCollapsed && aiBody) {
+                    aiBody.classList.remove('expanded');
+                    aiBody.style.maxHeight = '';
+                    aiBody.style.opacity   = '';
+                }
+
+                // Restore pdf-exclude elements
+                pdfExcludes.forEach(el => el.style.display = '');
+
+                hidePdfLoading();
+
+                // Share or download
+                const pdfFile = new File([pdfBlob], filename + '.pdf', { type: 'application/pdf' });
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                    try {
+                        await navigator.share({
+                            title: 'Action Plan Temuan Safety',
+                            text: `📋 Action Plan: ${filename}\n📅 ${dateStr}\n\nDokumen ini berisi detail temuan, foto kondisi, analisa risiko K3, dan rencana perbaikan.`,
+                            files: [pdfFile]
+                        });
+                    } catch(shareErr) {
+                        if (shareErr.name !== 'AbortError') saveAsFile(pdfBlob, filename + '.pdf');
+                    }
                 } else {
-                    // Fallback to direct download
                     saveAsFile(pdfBlob, filename + '.pdf');
                 }
-            });
+            } catch(err) {
+                hidePdfLoading();
+                console.error('PDF generation error:', err);
+                alert('Gagal membuat PDF. Silakan coba lagi.');
+            }
         }
 
         function saveAsFile(blob, filename) {
-            var link = document.createElement('a');
+            const link = document.createElement('a');
             link.href = window.URL.createObjectURL(blob);
             link.download = filename;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(link.href), 5000);
         }
 
         $(document).ready(function () {
@@ -751,6 +1032,16 @@
             let specialDept    = urlParams.get('dept');
             const currentUserNik = '@userNik';
             const currentUserDept = '@(User.FindFirst("Department")?.Value ?? "")'.toLowerCase();
+
+            // Debounce utility — prevents rapid-fire filter calls
+            function debounce(fn, delay) {
+                let timer;
+                return function(...args) {
+                    clearTimeout(timer);
+                    timer = setTimeout(() => fn.apply(this, args), delay);
+                };
+            }
+            const debouncedApplyFilters = debounce(applyFilters, 150);
 
             // Set initial active pill for status
             if (selectedStatus !== 'outstanding') {
@@ -779,17 +1070,17 @@
 
             $('#filterPerusahaan').on('change', function() {
                 selectedPerusahaan = $(this).val();
-                applyFilters();
+                debouncedApplyFilters();
             });
 
             $('#filterDepartemen').on('change', function() {
                 selectedDepartemen = $(this).val();
-                applyFilters();
+                debouncedApplyFilters();
             });
 
             $('#filterResiko').on('change', function() {
                 selectedResiko = $(this).val();
-                applyFilters();
+                debouncedApplyFilters();
             });
 
             function applyFilters() {

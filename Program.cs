@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.ResponseCompression;
 using MBS_SAP.Data;
 using MBS_SAP.Services;
 using Microsoft.Extensions.FileProviders;
 using System.IO;
+using System.IO.Compression;
 using System.Security.Claims;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -31,6 +33,21 @@ builder.Services.AddScoped<PostgresReplicationService>();
 builder.Services.AddHostedService<PostgresReplicationScheduler>();
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
+
+// Response Compression (Brotli + Gzip) — reduces bandwidth for 50K users significantly
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
+    {
+        "application/json", "text/html", "text/css",
+        "application/javascript", "image/svg+xml"
+    });
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(opt => opt.Level = CompressionLevel.Fastest);
+builder.Services.Configure<GzipCompressionProviderOptions>(opt => opt.Level = CompressionLevel.Fastest);
 
 // Forwarded headers for reverse proxy / IIS domain hosting
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -124,6 +141,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseForwardedHeaders();
+app.UseResponseCompression(); // Must be before UseStaticFiles
 app.UseStaticFiles();
 
 app.UseRouting();
@@ -347,6 +365,22 @@ using (var scope = app.Services.CreateScope())
             IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_action_plan_nik_pic' AND object_id = OBJECT_ID('tbl_t_action_plan'))
             BEGIN
                 CREATE NONCLUSTERED INDEX IX_tbl_t_action_plan_nik_pic ON tbl_t_action_plan (nik_pic) INCLUDE (is_deleted);
+            END
+
+            -- Critical: ActionPlan date-range + company filter index (used on every Index page load)
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_action_plan_deleted_tanggal_company' AND object_id = OBJECT_ID('tbl_t_action_plan'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_action_plan_deleted_tanggal_company
+                ON tbl_t_action_plan (is_deleted, tanggal, perusahaan_id)
+                INCLUDE (nik, nik_pja, nik_pic, status, rencana_perbaikan, departemen, departemen_pja, departemen_pic, created_at);
+            END
+
+            -- Critical: ActionPlan status filter index
+            IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_tbl_t_action_plan_status_deleted' AND object_id = OBJECT_ID('tbl_t_action_plan'))
+            BEGIN
+                CREATE NONCLUSTERED INDEX IX_tbl_t_action_plan_status_deleted
+                ON tbl_t_action_plan (status, is_deleted)
+                INCLUDE (tanggal, perusahaan_id, nik, nik_pja, nik_pic);
             END
         ");
      } catch {
