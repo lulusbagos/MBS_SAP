@@ -34,28 +34,9 @@ namespace MBS_SAP.Controllers
             var historyWindowStart = DateTime.Today.AddDays(-6);
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
-            var userCompanyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? userCompanyId = int.TryParse(userCompanyIdStr, out var cid) && cid > 0 ? cid : null;
-            if (!userCompanyId.HasValue && !string.IsNullOrEmpty(userNik))
-            {
-                var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
-                if (karyawan != null) userCompanyId = karyawan.IdPerusahaan;
-            }
-
             var satuBulanLalu = DateTime.Now.AddMonths(-1);
-            IQueryable<Inspection> query = _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= satuBulanLalu);
-
-            if (isAdmin && userCompanyId.HasValue)
-            {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
-                query = query.Where(i => i.PerusahaanId.HasValue && allowedIds.Contains(i.PerusahaanId.Value));
-            }
-            else
-            {
-                // Non-Admin (atau fallback) melihat miliknya sendiri / ditugaskan
-                query = query.Where(i => i.Nik == userNik || i.NikPja == userNik);
-            }
+            IQueryable<Inspection> query = _context.Inspections
+                .Where(i => !i.IsDeleted && i.CreatedAt >= satuBulanLalu && i.Nik == userNik);
 
             // History card only shows last 7 days (including today).
             query = query.Where(i => i.Tanggal >= historyWindowStart || i.CreatedAt >= historyWindowStart);

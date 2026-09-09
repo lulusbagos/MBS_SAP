@@ -35,18 +35,10 @@ namespace MBS_SAP.Controllers
             ViewData["HeaderTitle"] = "Safety Talk & Briefing";
             ViewData["ActiveTab"] = "SafetyTalk";
 
-            var companyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
-
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var satuBulanLalu = DateTime.Now.AddMonths(-1);
-            var query = _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= satuBulanLalu);
-
-            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin)
-            if (companyId.HasValue)
-            {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
-                query = query.Where(s => s.PerusahaanId.HasValue && allowedIds.Contains(s.PerusahaanId.Value));
-            }
+            var query = _context.SafetyTalks
+                .Where(s => !s.IsDeleted && s.CreatedAt >= satuBulanLalu && s.Nik == userNik);
 
             var reports = await query
                 .OrderByDescending(s => s.CreatedAt)

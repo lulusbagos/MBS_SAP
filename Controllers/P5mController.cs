@@ -36,28 +36,9 @@ namespace MBS_SAP.Controllers
             ViewData["ActiveTab"] = "P5m";
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
-            var companyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
-            if (!companyId.HasValue && !string.IsNullOrEmpty(userNik))
-            {
-                var karyawan = await _context.Karyawans.FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
-                if (karyawan != null) companyId = karyawan.IdPerusahaan;
-            }
-
             var satuBulanLalu = DateTime.Now.AddMonths(-1);
-            IQueryable<P5m> query = _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= satuBulanLalu);
-
-            if (isAdmin && companyId.HasValue)
-            {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
-                query = query.Where(p => p.PerusahaanId.HasValue && allowedIds.Contains(p.PerusahaanId.Value));
-            }
-            else
-            {
-                // Non-Admin (atau fallback) melihat data miliknya sendiri
-                query = query.Where(p => p.Nik == userNik);
-            }
+            IQueryable<P5m> query = _context.P5ms
+                .Where(p => !p.IsDeleted && p.CreatedAt >= satuBulanLalu && p.Nik == userNik);
 
             var reports = await query
                 .OrderByDescending(p => p.CreatedAt)

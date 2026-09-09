@@ -33,6 +33,7 @@ namespace MBS_SAP.Controllers
             ViewData["HeaderTitle"] = "Coaching & Pembinaan";
             ViewData["ActiveTab"] = "Coaching";
 
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var companyIdStr = User.FindFirst("CompanyId")?.Value;
             int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
 
@@ -51,14 +52,9 @@ namespace MBS_SAP.Controllers
             ViewBag.UserCompanyId = companyId;
 
             var satuBulanLalu = DateTime.Now.AddMonths(-1);
-            var query = _context.Coachings.Include(c => c.Participants).Where(c => !c.IsDeleted && c.CreatedAt >= satuBulanLalu);
-
-            // Apply hierarchy filtering
-            if (companyId.HasValue)
-            {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
-                query = query.Where(c => c.PerusahaanId.HasValue && allowedIds.Contains(c.PerusahaanId.Value));
-            }
+            var query = _context.Coachings
+                .Include(c => c.Participants)
+                .Where(c => !c.IsDeleted && c.CreatedAt >= satuBulanLalu && c.Nik == userNik);
 
             var reports = await query
                 .OrderByDescending(c => c.CreatedAt)
