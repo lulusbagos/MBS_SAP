@@ -125,12 +125,12 @@
                         <div class="position-relative mb-0">
                             <div class="input-sap-wrapper mb-0">
                                 <i class="bi bi-building input-sap-icon"></i>
-                                <input type="text" id="companySearch" class="input-sap text-uppercase" placeholder="Ketik untuk mencari perusahaan..." autocomplete="off" style="padding-right: 36px;" required />
+                                <input type="text" id="companySearch" class="input-sap text-uppercase" placeholder="Ketik / pilih perusahaan..." value="@(editModel?.PerusahaanYangDiamati ?? "")" autocomplete="off" style="padding-right: 36px;" required />
                                 <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleCompanyDropdown"></i>
                             </div>
                             <!-- Hidden inputs for actual form submission -->
-                            <input type="hidden" id="PerusahaanId" name="PerusahaanId" value="@(editModel?.PerusahaanId ?? ViewBag.UserCompanyId)" />
-                            <input type="hidden" id="PerusahaanYangDiamati" name="PerusahaanYangDiamati" value="@(editModel?.PerusahaanYangDiamati ?? ViewBag.UserCompanyName)" />
+                            <input type="hidden" id="PerusahaanId" name="PerusahaanId" value="@(editModel?.PerusahaanId > 0 ? editModel.PerusahaanId.ToString() : "")" />
+                            <input type="hidden" id="PerusahaanYangDiamati" name="PerusahaanYangDiamati" value="@(editModel?.PerusahaanYangDiamati ?? "")" />
                             <!-- Dropdown list -->
                             <div id="companyDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
                                 <!-- Populated by JS -->
@@ -147,20 +147,10 @@
                         <div class="input-sap-wrapper">
                             <i class="bi bi-people-fill input-sap-icon"></i>
                             <select id="DepartemenYangDiamati" name="DepartemenYangDiamati" class="input-sap" required>
-                                <option value="" disabled selected>Pilih Departemen...</option>
-                                @if (ViewBag.DeptList != null)
+                                <option value="" disabled selected>Pilih Perusahaan terlebih dahulu...</option>
+                                @if (editModel != null && !string.IsNullOrEmpty(editModel.DepartemenYangDiamati))
                                 {
-                                    foreach (var dept in (List<string>)ViewBag.DeptList)
-                                    {
-                                        if (editModel != null && editModel.DepartemenYangDiamati == dept)
-                                        {
-                                            <option value="@dept" selected>@dept</option>
-                                        }
-                                        else
-                                        {
-                                            <option value="@dept">@dept</option>
-                                        }
-                                    }
+                                    <option value="@editModel.DepartemenYangDiamati" selected>@editModel.DepartemenYangDiamati</option>
                                 }
                             </select>
                         </div>
@@ -888,16 +878,10 @@
                 updateResultItemLabels();
             }
 
-            $('#HasilObservasi').val('');
-            $('#Keterangan').val('');
-
-            if (defaultUserCompanyId && defaultUserCompanyName) {
-                selectCompany(defaultUserCompanyId, defaultUserCompanyName);
-            } else {
-                $('#companySearch').val('');
-                $('#PerusahaanId').val('');
-                $('#PerusahaanYangDiamati').val('');
-            }
+            $('#companySearch').val('');
+            $('#PerusahaanId').val('');
+            $('#PerusahaanYangDiamati').val('');
+            $('#DepartemenYangDiamati').empty().append('<option value="" disabled selected>Pilih Perusahaan terlebih dahulu...</option>');
 
             $('#formTitle').html('<i class="bi bi-eye-fill me-2" style="color: var(--color-primary);"></i>Form Observasi');
             $('#btnCancelEdit').addClass('d-none');
@@ -1042,11 +1026,17 @@
                 renderBenchmarkDropdown($(this).val());
             });
 
-            // Initialize company if default exists
-            if ($('#PerusahaanYangDiamati').val()) {
-                $('#companySearch').val($('#PerusahaanYangDiamati').val());
-            } else if (defaultUserCompanyName) {
-                selectCompany(defaultUserCompanyId, defaultUserCompanyName);
+            // Initialize company only if in edit mode (editModel exists with PerusahaanId)
+            var existingPerusahaanId = $('#PerusahaanId').val();
+            var existingPerusahaanNama = $('#PerusahaanYangDiamati').val();
+            if (existingPerusahaanId && existingPerusahaanNama) {
+                $('#companySearch').val(existingPerusahaanNama);
+                loadDepartments(existingPerusahaanId, '@(editModel?.DepartemenYangDiamati ?? "")');
+            } else {
+                $('#companySearch').val('');
+                $('#PerusahaanId').val('');
+                $('#PerusahaanYangDiamati').val('');
+                $('#DepartemenYangDiamati').empty().append('<option value="" disabled selected>Pilih Perusahaan terlebih dahulu...</option>');
             }
 
             // Toggle company dropdown on chevron click
