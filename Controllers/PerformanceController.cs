@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MBS_SAP.Data;
@@ -2794,725 +2794,6 @@ namespace MBS_SAP.Controllers
 
             ViewBag.CompanyHistory = companyHistory;
 
-            // ==================== 12. Company Hierarchy Tree ====================
-            // Build hierarchy strictly from DB_SAP.dbo.vw_m_hirarki_perusahaan active relations.
-            var hierarchyRelations = await _context.PerusahaanHierarchyRelations
-                .AsNoTracking()
-                .ToListAsync();
-
-            var activeCompanyNameById = new Dictionary<int, string>();
-            var parentByCompanyId = new Dictionary<int, int?>();
-
-            void UpsertActiveCompany(int companyId, string? companyName, int? parentCompanyId)
-            {
-                if (!activeCompanyNameById.ContainsKey(companyId))
-                {
-                    activeCompanyNameById[companyId] = string.IsNullOrWhiteSpace(companyName) ? $"Company {companyId}" : companyName!;
-                }
-
-                if (!parentByCompanyId.ContainsKey(companyId) && parentCompanyId.HasValue && parentCompanyId.Value > 0 && parentCompanyId.Value != companyId)
-                {
-                    parentByCompanyId[companyId] = parentCompanyId;
-                }
-            }
-
-            foreach (var rel in hierarchyRelations)
-            {
-                if (rel.ParentCompanyId.HasValue && rel.ParentIsActive == true)
-                {
-                    UpsertActiveCompany(rel.ParentCompanyId.Value, rel.ParentCompanyName, null);
-                }
-
-                if (rel.ChildCompanyId.HasValue && rel.ChildIsActive == true)
-                {
-                    int? parentId = rel.ParentCompanyId.HasValue && rel.ParentCompanyId.Value > 0
-                        ? rel.ParentCompanyId
-                        : null;
-                    UpsertActiveCompany(rel.ChildCompanyId.Value, rel.ChildCompanyName, parentId);
-                }
-            }
-
-            // Hierarchy achievement is hazard-only:
-            // - Weekly: rolling last 7 calendar days (today inclusive)
-            // - Monthly: from day 1 of current month
-            // - YTD: from Jan 1 of current year
-            // - Weekly: rolling last 7 calendar days (today inclusive)
-            // - Monthly: from day 1 of current month
-            // - YTD: from Jan 1 of current year
-            // Replaced DB GroupBy queries with in-memory aggregations below (ytdMetricsByCompanyNik)
-
-            var elapsedWeeksYtd = Math.Max(1, ((DateTime.Today - startOfYear.Date).Days / 7) + 1);
-
-            var departmentNameById = await _context.Departemens
-                .AsNoTracking()
-                .ToDictionaryAsync(d => d.DepartemenId, d => string.IsNullOrWhiteSpace(d.NamaDepartemen) ? "General" : d.NamaDepartemen!);
-
-            var activeNikByCompanyDept = new Dictionary<int, Dictionary<string, HashSet<string>>>();
-            foreach (var k in allKaryawans)
-            {
-                if (k.IdPerusahaan <= 0)
-                {
-                    continue;
-                }
-
-                var nik = (k.NoNik ?? string.Empty).Trim();
-                if (string.IsNullOrWhiteSpace(nik))
-                {
-                    continue;
-                }
-
-                var deptName = k.IdDepartemen.HasValue && departmentNameById.TryGetValue(k.IdDepartemen.Value, out var dName)
-                    ? dName
-                    : "General";
-
-                if (!activeNikByCompanyDept.TryGetValue(k.IdPerusahaan, out var deptMap))
-                {
-                    deptMap = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-                    activeNikByCompanyDept[k.IdPerusahaan] = deptMap;
-                }
-
-                if (!deptMap.TryGetValue(deptName, out var nikSet))
-                {
-                    nikSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    deptMap[deptName] = nikSet;
-                }
-
-                nikSet.Add(nik);
-            }
-
-            var hierarchyHazardRows = await _context.HazardReports
-                .AsNoTracking()
-                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfYear && !ExcludedCompanies.Ids.Contains(h.PerusahaanId!.Value))
-                .Select(h => new { CompanyId = h.PerusahaanId!.Value, h.Nik, h.CreatedAt })
-                .ToListAsync();
-
-            var hierarchyInspectionRows = await _context.Inspections
-                .AsNoTracking()
-                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && i.Tanggal >= startOfYear && !ExcludedCompanies.Ids.Contains(i.PerusahaanId!.Value))
-                .Select(i => new { CompanyId = i.PerusahaanId!.Value, i.Nik, i.CreatedAt })
-                .ToListAsync();
-
-            var hierarchySafetyTalkRows = await _context.SafetyTalks
-                .AsNoTracking()
-                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && s.Tanggal >= startOfYear && !ExcludedCompanies.Ids.Contains(s.PerusahaanId!.Value))
-                .Select(s => new { CompanyId = s.PerusahaanId!.Value, s.Nik, s.CreatedAt })
-                .ToListAsync();
-
-            var hierarchyP5mRows = await _context.P5ms
-                .AsNoTracking()
-                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && p.Tanggal >= startOfYear && !ExcludedCompanies.Ids.Contains(p.PerusahaanId!.Value))
-                .Select(p => new { CompanyId = p.PerusahaanId!.Value, p.Nik, p.CreatedAt })
-                .ToListAsync();
-
-            var coachingCreatorsRows = await _context.Coachings
-                .AsNoTracking()
-                .Where(c => !c.IsDeleted && c.PerusahaanId.HasValue && c.CreatedAt >= startOfYear && !ExcludedCompanies.Ids.Contains(c.PerusahaanId!.Value))
-                .Select(c => new { CompanyId = c.PerusahaanId!.Value, c.Nik, c.CreatedAt })
-                .ToListAsync();
-
-            var coachingParticipantsRows = await (from p in _context.CoachingParticipants
-                                                  join k in _context.Karyawans on p.Nik equals k.NoNik
-                                                  where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfYear && k.IdPerusahaan > 0 && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan)
-                                                  select new { CompanyId = k.IdPerusahaan, p.Nik, CreatedAt = p.Coaching!.CreatedAt })
-                                                  .AsNoTracking()
-                                                  .ToListAsync();
-
-            var hierarchyCoachingRows = coachingCreatorsRows.Concat(coachingParticipantsRows).ToList();
-
-            var hierarchyObservationRows = await (from o in _context.Observations
-                                                  join k in _context.Karyawans on o.Nik equals k.NoNik
-                                                  where !o.IsDeleted && o.CreatedAt >= startOfYear && k.IdPerusahaan > 0 && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan)
-                                                  select new { CompanyId = k.IdPerusahaan, o.Nik, o.CreatedAt })
-                                                 .AsNoTracking()
-                                                 .ToListAsync();
-
-            var ytdMetricsByCompanyNik = new Dictionary<int, Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>>();
-            var mtdMetricsByCompanyNik = new Dictionary<int, Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>>();
-            var weekMetricsByCompanyNik = new Dictionary<int, Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>>();
-
-            void ProcessRow(int companyId, string? rawNik, DateTime created, string type)
-            {
-                var nik = (rawNik ?? string.Empty).Trim();
-                if (string.IsNullOrWhiteSpace(nik)) return;
-
-                // 1. YTD
-                if (!ytdMetricsByCompanyNik.TryGetValue(companyId, out var nikMap))
-                {
-                    nikMap = new Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>(StringComparer.OrdinalIgnoreCase);
-                    ytdMetricsByCompanyNik[companyId] = nikMap;
-                }
-                (int h, int i, int st, int o, int c, int p5m, int total) current = nikMap.TryGetValue(nik, out var cVal) ? cVal : (0, 0, 0, 0, 0, 0, 0);
-                if (type == "H") current.h++;
-                else if (type == "I") current.i++;
-                else if (type == "ST") current.st++;
-                else if (type == "O") current.o++;
-                else if (type == "C") current.c++;
-                else if (type == "P5M") current.p5m++;
-                
-                if (type != "P5M") current.total++; // Exclude P5M from total SAP achievement
-                nikMap[nik] = current;
-
-                // 2. MTD
-                if (created >= startOfMonth)
-                {
-                    if (!mtdMetricsByCompanyNik.TryGetValue(companyId, out var mtdMap))
-                    {
-                        mtdMap = new Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>(StringComparer.OrdinalIgnoreCase);
-                        mtdMetricsByCompanyNik[companyId] = mtdMap;
-                    }
-                    (int h, int i, int st, int o, int c, int p5m, int total) mCurrent = mtdMap.TryGetValue(nik, out var mVal) ? mVal : (0, 0, 0, 0, 0, 0, 0);
-                    if (type == "H") mCurrent.h++;
-                    else if (type == "I") mCurrent.i++;
-                    else if (type == "ST") mCurrent.st++;
-                    else if (type == "O") mCurrent.o++;
-                    else if (type == "C") mCurrent.c++;
-                    else if (type == "P5M") mCurrent.p5m++;
-                    
-                    if (type != "P5M") mCurrent.total++; // Exclude P5M from total SAP achievement
-                    mtdMap[nik] = mCurrent;
-                }
-
-                // 3. WEEK
-                if (created >= startOfWeek)
-                {
-                    if (!weekMetricsByCompanyNik.TryGetValue(companyId, out var weekMap))
-                    {
-                        weekMap = new Dictionary<string, (int h, int i, int st, int o, int c, int p5m, int total)>(StringComparer.OrdinalIgnoreCase);
-                        weekMetricsByCompanyNik[companyId] = weekMap;
-                    }
-                    (int h, int i, int st, int o, int c, int p5m, int total) wCurrent = weekMap.TryGetValue(nik, out var wVal) ? wVal : (0, 0, 0, 0, 0, 0, 0);
-                    if (type == "H") wCurrent.h++;
-                    else if (type == "I") wCurrent.i++;
-                    else if (type == "ST") wCurrent.st++;
-                    else if (type == "O") wCurrent.o++;
-                    else if (type == "C") wCurrent.c++;
-                    else if (type == "P5M") wCurrent.p5m++;
-                    
-                    if (type != "P5M") wCurrent.total++; // Exclude P5M from total SAP achievement
-                    weekMap[nik] = wCurrent;
-                }
-            }
-
-            foreach (var row in hierarchyHazardRows) ProcessRow(row.CompanyId, row.Nik, row.CreatedAt, "H");
-            foreach (var row in hierarchyInspectionRows) ProcessRow(row.CompanyId, row.Nik, row.CreatedAt, "I");
-            foreach (var row in hierarchySafetyTalkRows) ProcessRow(row.CompanyId, row.Nik, row.CreatedAt, "ST");
-            foreach (var row in hierarchyP5mRows) ProcessRow(row.CompanyId, row.Nik, row.CreatedAt, "P5M");
-            foreach (var row in hierarchyCoachingRows) ProcessRow(row.CompanyId, row.Nik, row.CreatedAt, "C");
-            foreach (var row in hierarchyObservationRows) ProcessRow(row.CompanyId, row.Nik, row.CreatedAt, "O");
-
-            var nodeMap = new Dictionary<int, CompanyHierarchyNode>();
-            foreach (var company in activeCompanyNameById.OrderBy(x => x.Value))
-            {
-                int hierarchyCompanyId = company.Key;
-                int? parentCompanyId = parentByCompanyId.TryGetValue(hierarchyCompanyId, out var pId) ? pId : null;
-
-                var companyEmps = allKaryawans.Where(k => k.IdPerusahaan == hierarchyCompanyId).ToList();
-                int companyMonthlyHazardTarget = companyEmps.Sum(k => employeeTargets.TryGetValue(k.IdKaryawan, out var et) ? et.total : 7);
-
-                int weeklyCappedCount = 0;
-                int monthlyCappedCount = 0;
-                int ytdCappedCount = 0;
-
-                foreach (var emp in companyEmps)
-                {
-                    var empNik = (emp.NoNik ?? string.Empty).Trim();
-                    if (string.IsNullOrEmpty(empNik)) continue;
-
-                    int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0;
-                    if (employeeTargets.TryGetValue(emp.IdKaryawan, out var et))
-                    {
-                        hTar = et.hTar;
-                        insTar = et.insTar;
-                        stTar = et.stTar;
-                        obsTar = et.obsTar;
-                        cTar = et.cTar;
-                    }
-
-                    int mTgtH = hTar;
-                    int mTgtI = insTar;
-                    int mTgtST = stTar;
-                    int mTgtO = obsTar;
-                    int mTgtC = cTar;
-
-                    int wTgtH = hTar > 0 ? Math.Max(1, (int)Math.Round(hTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                    int wTgtI = insTar > 0 ? Math.Max(1, (int)Math.Round(insTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                    int wTgtST = stTar > 0 ? Math.Max(1, (int)Math.Round(stTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                    int wTgtO = obsTar > 0 ? Math.Max(1, (int)Math.Round(obsTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                    int wTgtC = cTar > 0 ? Math.Max(1, (int)Math.Round(cTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-
-                    int ytdTgtH = wTgtH * elapsedWeeksYtd;
-                    int ytdTgtI = wTgtI * elapsedWeeksYtd;
-                    int ytdTgtST = wTgtST * elapsedWeeksYtd;
-                    int ytdTgtO = wTgtO * elapsedWeeksYtd;
-                    int ytdTgtC = wTgtC * elapsedWeeksYtd;
-
-                    int wActH = 0, wActI = 0, wActST = 0, wActO = 0, wActC = 0;
-                    int mActH = 0, mActI = 0, mActST = 0, mActO = 0, mActC = 0;
-                    int yActH = 0, yActI = 0, yActST = 0, yActO = 0, yActC = 0;
-
-                    if (weekMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var weekNikMap) && weekNikMap.TryGetValue(empNik, out var wVal))
-                    {
-                        wActH = wVal.h; wActI = wVal.i; wActST = wVal.st; wActO = wVal.o; wActC = wVal.c;
-                    }
-                    if (mtdMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var mtdNikMap) && mtdNikMap.TryGetValue(empNik, out var mVal))
-                    {
-                        mActH = mVal.h; mActI = mVal.i; mActST = mVal.st; mActO = mVal.o; mActC = mVal.c;
-                    }
-                    if (ytdMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var ytdNikMap) && ytdNikMap.TryGetValue(empNik, out var yVal))
-                    {
-                        yActH = yVal.h; yActI = yVal.i; yActST = yVal.st; yActO = yVal.o; yActC = yVal.c;
-                    }
-
-                    weeklyCappedCount += Math.Min(wActH, wTgtH) + Math.Min(wActI, wTgtI) + Math.Min(wActST, wTgtST) + Math.Min(wActO, wTgtO) + Math.Min(wActC, wTgtC);
-                    monthlyCappedCount += Math.Min(mActH, mTgtH) + Math.Min(mActI, mTgtI) + Math.Min(mActST, mTgtST) + Math.Min(mActO, mTgtO) + Math.Min(mActC, mTgtC);
-                    ytdCappedCount += Math.Min(yActH, ytdTgtH) + Math.Min(yActI, ytdTgtI) + Math.Min(yActST, ytdTgtST) + Math.Min(yActO, ytdTgtO) + Math.Min(yActC, ytdTgtC);
-                }
-
-                int weeklyHazardCount = weeklyCappedCount;
-                int monthlyHazardCount = monthlyCappedCount;
-                int ytdHazardCount = ytdCappedCount;
-
-                int hierarchyMonthlyTarget = companyMonthlyHazardTarget;
-                int hierarchyWeeklyTarget = (int)Math.Round(hierarchyMonthlyTarget / 4.0, MidpointRounding.AwayFromZero);
-                if (hierarchyWeeklyTarget < 1 && hierarchyMonthlyTarget > 0) hierarchyWeeklyTarget = 1;
-                int hierarchyYtdTarget = hierarchyWeeklyTarget * elapsedWeeksYtd;
-
-                double weeklyRate = Math.Min(100.0, hierarchyWeeklyTarget > 0 ? (double)weeklyHazardCount / hierarchyWeeklyTarget * 100.0 : 0.0);
-                double monthlyRate = Math.Min(100.0, hierarchyMonthlyTarget > 0 ? (double)monthlyHazardCount / hierarchyMonthlyTarget * 100.0 : 0.0);
-                double ytdRate = Math.Min(100.0, hierarchyYtdTarget > 0 ? (double)ytdHazardCount / hierarchyYtdTarget * 100.0 : 0.0);
-
-                var node = new CompanyHierarchyNode
-                {
-                    CompanyId = hierarchyCompanyId,
-                    CompanyName = company.Value,
-                    ParentCompanyId = parentCompanyId,
-                    OwnEmployees = companyEmps.Count,
-                    OwnSubmissions = monthlyHazardCount,
-                    OwnTarget = hierarchyMonthlyTarget,
-                    OwnAchievementRate = Math.Round(monthlyRate, 1),
-                    OwnWeeklyHazards = weeklyHazardCount,
-                    OwnWeeklyTarget = hierarchyWeeklyTarget,
-                    OwnYtdHazards = ytdHazardCount,
-                    OwnYtdTarget = hierarchyYtdTarget,
-                    OwnWeeklyAchievementRate = Math.Round(weeklyRate, 1),
-                    OwnMonthlyAchievementRate = Math.Round(monthlyRate, 1),
-                    OwnYtdAchievementRate = Math.Round(ytdRate, 1)
-                };
-
-                var departmentAchievements = new List<DepartmentAchievementViewModel>();
-                if (activeNikByCompanyDept.TryGetValue(hierarchyCompanyId, out var deptNikMap))
-                {
-                    foreach (var dept in deptNikMap.OrderBy(x => x.Key))
-                    {
-                        var deptEmployeeCount = dept.Value.Count;
-                        if (deptEmployeeCount <= 0)
-                        {
-                            continue;
-                        }
-
-                        int deptYtdTotal = 0, deptMtdTotal = 0, deptWeekTotal = 0;
-                        int deptYtdH = 0, deptYtdI = 0, deptYtdSt = 0, deptYtdO = 0, deptYtdC = 0, deptYtdP5m = 0;
-                        int deptMtdH = 0, deptMtdI = 0, deptMtdSt = 0, deptMtdO = 0, deptMtdC = 0, deptMtdP5m = 0;
-
-                        int deptMtdTargetTotal = 0;
-                        int deptWeekTargetTotal = 0;
-                        int deptYtdTargetTotal = 0;
-                        int ytdTargetH = 0, ytdTargetI = 0, ytdTargetSt = 0, ytdTargetO = 0, ytdTargetC = 0, ytdTargetP5m = 0;
-                        int mtdTargetH = 0, mtdTargetI = 0, mtdTargetSt = 0, mtdTargetO = 0, mtdTargetC = 0, mtdTargetP5m = 0;
-
-                        foreach (var nik in dept.Value)
-                        {
-                            int hTar = 2, insTar = 1, stTar = 1, obsTar = 0, cTar = 0, p5mTar = 1;
-                            if (employeeTargetsByNik.TryGetValue(nik, out var et))
-                            {
-                                hTar = et.hTar;
-                                insTar = et.insTar;
-                                stTar = et.stTar;
-                                obsTar = et.obsTar;
-                                cTar = et.cTar;
-                                p5mTar = et.p5mTar;
-                            }
-
-                            int mTgtH = hTar;
-                            int mTgtI = insTar;
-                            int mTgtST = stTar;
-                            int mTgtO = obsTar;
-                            int mTgtC = cTar;
-                            int mTgtP5M = p5mTar;
-
-                            int wTgtH = hTar > 0 ? Math.Max(1, (int)Math.Round(hTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                            int wTgtI = insTar > 0 ? Math.Max(1, (int)Math.Round(insTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                            int wTgtST = stTar > 0 ? Math.Max(1, (int)Math.Round(stTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                            int wTgtO = obsTar > 0 ? Math.Max(1, (int)Math.Round(obsTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                            int wTgtC = cTar > 0 ? Math.Max(1, (int)Math.Round(cTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-                            int wTgtP5M = p5mTar > 0 ? Math.Max(1, (int)Math.Round(p5mTar / 4.0, MidpointRounding.AwayFromZero)) : 0;
-
-                            int ytdTgtH = wTgtH * elapsedWeeksYtd;
-                            int ytdTgtI = wTgtI * elapsedWeeksYtd;
-                            int ytdTgtST = wTgtST * elapsedWeeksYtd;
-                            int ytdTgtO = wTgtO * elapsedWeeksYtd;
-                            int ytdTgtC = wTgtC * elapsedWeeksYtd;
-                            int ytdTgtP5M = wTgtP5M * elapsedWeeksYtd;
-
-                            deptMtdTargetTotal += hTar + insTar + stTar + obsTar + cTar;
-                            deptWeekTargetTotal += wTgtH + wTgtI + wTgtST + wTgtO + wTgtC;
-                            deptYtdTargetTotal += ytdTgtH + ytdTgtI + ytdTgtST + ytdTgtO + ytdTgtC;
-
-                            ytdTargetH += ytdTgtH;
-                            ytdTargetI += ytdTgtI;
-                            ytdTargetSt += ytdTgtST;
-                            ytdTargetO += ytdTgtO;
-                            ytdTargetC += ytdTgtC;
-                            ytdTargetP5m += ytdTgtP5M;
-
-                            mtdTargetH += mTgtH;
-                            mtdTargetI += mTgtI;
-                            mtdTargetSt += mTgtST;
-                            mtdTargetO += mTgtO;
-                            mtdTargetC += mTgtC;
-                            mtdTargetP5m += mTgtP5M;
-
-                            int wActH = 0, wActI = 0, wActST = 0, wActO = 0, wActC = 0, wActP5M = 0;
-                            int mActH = 0, mActI = 0, mActST = 0, mActO = 0, mActC = 0, mActP5M = 0;
-                            int yActH = 0, yActI = 0, yActST = 0, yActO = 0, yActC = 0, yActP5M = 0;
-
-                            if (weekMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var weekNikMap) && weekNikMap.TryGetValue(nik, out var wVal))
-                            {
-                                wActH = wVal.h; wActI = wVal.i; wActST = wVal.st; wActO = wVal.o; wActC = wVal.c; wActP5M = wVal.p5m;
-                            }
-                            if (mtdMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var mtdNikMap) && mtdNikMap.TryGetValue(nik, out var mVal))
-                            {
-                                mActH = mVal.h; mActI = mVal.i; mActST = mVal.st; mActO = mVal.o; mActC = mVal.c; mActP5M = mVal.p5m;
-                            }
-                            if (ytdMetricsByCompanyNik.TryGetValue(hierarchyCompanyId, out var ytdNikMap) && ytdNikMap.TryGetValue(nik, out var yVal))
-                            {
-                                yActH = yVal.h; yActI = yVal.i; yActST = yVal.st; yActO = yVal.o; yActC = yVal.c; yActP5M = yVal.p5m;
-                            }
-
-                            deptWeekTotal += Math.Min(wActH, wTgtH) + Math.Min(wActI, wTgtI) + Math.Min(wActST, wTgtST) + Math.Min(wActO, wTgtO) + Math.Min(wActC, wTgtC);
-                            deptMtdTotal += Math.Min(mActH, mTgtH) + Math.Min(mActI, mTgtI) + Math.Min(mActST, mTgtST) + Math.Min(mActO, mTgtO) + Math.Min(mActC, mTgtC);
-                            deptYtdTotal += Math.Min(yActH, ytdTgtH) + Math.Min(yActI, ytdTgtI) + Math.Min(yActST, ytdTgtST) + Math.Min(yActO, ytdTgtO) + Math.Min(yActC, ytdTgtC);
-
-                            deptYtdH += Math.Min(yActH, ytdTgtH);
-                            deptYtdI += Math.Min(yActI, ytdTgtI);
-                            deptYtdSt += Math.Min(yActST, ytdTgtST);
-                            deptYtdO += Math.Min(yActO, ytdTgtO);
-                            deptYtdC += Math.Min(yActC, ytdTgtC);
-                            deptYtdP5m += Math.Min(yActP5M, ytdTgtP5M);
-
-                            deptMtdH += Math.Min(mActH, mTgtH);
-                            deptMtdI += Math.Min(mActI, mTgtI);
-                            deptMtdSt += Math.Min(mActST, mTgtST);
-                            deptMtdO += Math.Min(mActO, mTgtO);
-                            deptMtdC += Math.Min(mActC, mTgtC);
-                            deptMtdP5m += Math.Min(mActP5M, mTgtP5M);
-                        }
-
-                        int deptWeekTargetTotalVal = Math.Max(1, deptWeekTargetTotal);
-                        int deptYtdTargetTotalVal = Math.Max(1, deptYtdTargetTotal);
-                        int deptMtdTargetTotalVal = Math.Max(1, deptMtdTargetTotal);
-                        int ytdTargetHVal = Math.Max(1, ytdTargetH);
-                        int ytdTargetIVal = Math.Max(1, ytdTargetI);
-                        int ytdTargetStVal = Math.Max(1, ytdTargetSt);
-                        int ytdTargetOVal = Math.Max(1, ytdTargetO);
-                        int ytdTargetCVal = Math.Max(1, ytdTargetC);
-                        int ytdTargetP5mVal = Math.Max(1, ytdTargetP5m);
-
-                        int mtdTargetHVal = Math.Max(1, mtdTargetH);
-                        int mtdTargetIVal = Math.Max(1, mtdTargetI);
-                        int mtdTargetStVal = Math.Max(1, mtdTargetSt);
-                        int mtdTargetOVal = Math.Max(1, mtdTargetO);
-                        int mtdTargetCVal = Math.Max(1, mtdTargetC);
-                        int mtdTargetP5mVal = Math.Max(1, mtdTargetP5m);
-
-                        departmentAchievements.Add(new DepartmentAchievementViewModel
-                        {
-                            DepartmentName = dept.Key,
-                            EmployeeCount = deptEmployeeCount,
-                            YtdAchievementRate = deptYtdTargetTotalVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdTotal / deptYtdTargetTotalVal * 100.0, 1)) : 0,
-                            MtdAchievementRate = deptMtdTargetTotalVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdTotal / deptMtdTargetTotalVal * 100.0, 1)) : 0,
-                            WeeklyAchievementRate = deptWeekTargetTotalVal > 0 ? Math.Min(100.0, Math.Round((double)deptWeekTotal / deptWeekTargetTotalVal * 100.0, 1)) : 0,
-                            YtdHazardRate = ytdTargetHVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdH / ytdTargetHVal * 100.0, 1)) : 0,
-                            YtdInspeksiRate = ytdTargetIVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdI / ytdTargetIVal * 100.0, 1)) : 0,
-                            YtdSafetyTalkRate = ytdTargetStVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdSt / ytdTargetStVal * 100.0, 1)) : 0,
-                            YtdObservasiRate = ytdTargetOVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdO / ytdTargetOVal * 100.0, 1)) : 0,
-                            YtdCoachingRate = ytdTargetCVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdC / ytdTargetCVal * 100.0, 1)) : 0,
-                            YtdP5mRate = ytdTargetP5mVal > 0 ? Math.Min(100.0, Math.Round((double)deptYtdP5m / ytdTargetP5mVal * 100.0, 1)) : 0,
-
-                            MtdHazardRate = mtdTargetHVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdH / mtdTargetHVal * 100.0, 1)) : 0,
-                            MtdInspeksiRate = mtdTargetIVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdI / mtdTargetIVal * 100.0, 1)) : 0,
-                            MtdSafetyTalkRate = mtdTargetStVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdSt / mtdTargetStVal * 100.0, 1)) : 0,
-                            MtdObservasiRate = mtdTargetOVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdO / mtdTargetOVal * 100.0, 1)) : 0,
-                            MtdCoachingRate = mtdTargetCVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdC / mtdTargetCVal * 100.0, 1)) : 0,
-                            MtdP5mRate = mtdTargetP5mVal > 0 ? Math.Min(100.0, Math.Round((double)deptMtdP5m / mtdTargetP5mVal * 100.0, 1)) : 0
-                        });
-                    }
-                }
-
-                // Sort departments by MTD Achievement Rate descending
-                node.DepartmentAchievements = departmentAchievements.OrderByDescending(d => d.MtdAchievementRate).ToList();
-                nodeMap[hierarchyCompanyId] = node;
-            }
-
-            // Fix parent relationships using the authoritative source table (vw_perusahaan).
-            // vw_m_hirarki_perusahaan can have ROOT rows where the parent is actually defined
-            // in the underlying tbl_m_perusahaan — apply those overrides now.
-            var sourceParentMap = await _context.Perusahaans
-                .AsNoTracking()
-                .Where(p => p.StatusAktif && p.PerusahaanIndukId.HasValue && p.PerusahaanIndukId.Value > 0)
-                .Select(p => new { p.PerusahaanId, p.PerusahaanIndukId })
-                .ToListAsync();
-
-            foreach (var sp in sourceParentMap)
-            {
-                if (!parentByCompanyId.ContainsKey(sp.PerusahaanId)
-                    && nodeMap.ContainsKey(sp.PerusahaanId)
-                    && nodeMap.ContainsKey(sp.PerusahaanIndukId!.Value))
-                {
-                    // Override: correct the missing parent from authoritative source
-                    parentByCompanyId[sp.PerusahaanId] = sp.PerusahaanIndukId;
-                    nodeMap[sp.PerusahaanId].ParentCompanyId = sp.PerusahaanIndukId;
-                }
-            }
-
-            var rootNodes = new List<CompanyHierarchyNode>();
-            foreach (var kvp in nodeMap)
-            {
-                var node = kvp.Value;
-
-                if (node.ParentCompanyId.HasValue && node.ParentCompanyId.Value != 0 && nodeMap.ContainsKey(node.ParentCompanyId.Value))
-                {
-                    var parentNode = nodeMap[node.ParentCompanyId.Value];
-                    parentNode.Children.Add(node);
-                }
-                else
-                {
-                    rootNodes.Add(node);
-                }
-            }
-
-            // Recursive cumulative logic local function
-            void CalculateCumulative(CompanyHierarchyNode node)
-            {
-                node.CumulativeEmployees = node.OwnEmployees;
-                node.CumulativeSubmissions = node.OwnSubmissions;
-                node.CumulativeTarget = node.OwnTarget;
-                node.CumulativeWeeklyHazards = node.OwnWeeklyHazards;
-                node.CumulativeWeeklyTarget = node.OwnWeeklyTarget;
-                node.CumulativeYtdHazards = node.OwnYtdHazards;
-                node.CumulativeYtdTarget = node.OwnYtdTarget;
-
-                foreach (var child in node.Children)
-                {
-                    CalculateCumulative(child);
-                    node.CumulativeEmployees += child.CumulativeEmployees;
-                    node.CumulativeSubmissions += child.CumulativeSubmissions;
-                    node.CumulativeTarget += child.CumulativeTarget;
-                    node.CumulativeWeeklyHazards += child.CumulativeWeeklyHazards;
-                    node.CumulativeWeeklyTarget += child.CumulativeWeeklyTarget;
-                    node.CumulativeYtdHazards += child.CumulativeYtdHazards;
-                    node.CumulativeYtdTarget += child.CumulativeYtdTarget;
-                }
-
-                node.CumulativeAchievementRate = node.CumulativeTarget > 0
-                    ? Math.Round((double)node.CumulativeSubmissions / node.CumulativeTarget * 100.0, 1) 
-                    : 0.0;
-
-                node.CumulativeMonthlyAchievementRate = node.CumulativeTarget > 0
-                    ? Math.Round((double)node.CumulativeSubmissions / node.CumulativeTarget * 100.0, 1)
-                    : 0.0;
-
-                node.CumulativeWeeklyAchievementRate = node.CumulativeWeeklyTarget > 0
-                    ? Math.Round((double)node.CumulativeWeeklyHazards / node.CumulativeWeeklyTarget * 100.0, 1)
-                    : 0.0;
-
-                node.CumulativeYtdAchievementRate = node.CumulativeYtdTarget > 0
-                    ? Math.Round((double)node.CumulativeYtdHazards / node.CumulativeYtdTarget * 100.0, 1)
-                    : 0.0;
-
-                node.Children = node.Children.OrderBy(c => c.CompanyName).ToList();
-            }
-
-            foreach (var root in rootNodes)
-            {
-                CalculateCumulative(root);
-            }
-
-            rootNodes = rootNodes.OrderBy(r => r.CompanyName).ToList();
-
-            HashSet<int> CollectHierarchyIds(IEnumerable<CompanyHierarchyNode> roots)
-            {
-                var visited = new HashSet<int>();
-                var stack = new Stack<CompanyHierarchyNode>(roots);
-                while (stack.Count > 0)
-                {
-                    var node = stack.Pop();
-                    if (!visited.Add(node.CompanyId))
-                    {
-                        continue;
-                    }
-
-                    foreach (var child in node.Children)
-                    {
-                        stack.Push(child);
-                    }
-                }
-
-                return visited;
-            }
-
-            string NormalizeCompanyKey(string? name)
-            {
-                if (string.IsNullOrWhiteSpace(name))
-                {
-                    return string.Empty;
-                }
-
-                var compact = new string(name
-                    .ToUpperInvariant()
-                    .Where(char.IsLetterOrDigit)
-                    .ToArray());
-
-                // Treat ENERGI and ENERGY as equivalent naming variants.
-                return compact.Replace("ENERGI", "ENERGY");
-            }
-
-            var primaryChildTargets = new List<string>
-            {
-                "PT UNGGUL DINAMIKA UTAMA",
-                "PT KALIMANTAN PRIMA PERSADA",
-                "PT MEGA GLOBAL ENERGY",
-                "PT PELAYARAN GANESA LAUT JAYA"
-            };
-            var resolvedPrimaryChildNames = new List<string>();
-            var resolvedPrimaryChildIds = new List<int>();
-
-            if (!isAdmin && !isSafetyRole && companyId.HasValue)
-            {
-                // Scoped company user (e.g. PT Kalimantan Prima Persada):
-                // Filter the hierarchy to only show the user's company and its descendants.
-                if (nodeMap.TryGetValue(companyId.Value, out var userCompanyNode))
-                {
-                    void SortHierarchySimple(CompanyHierarchyNode node)
-                    {
-                        node.Children = node.Children
-                            .OrderBy(c => c.CompanyName)
-                            .ToList();
-
-                        foreach (var child in node.Children)
-                        {
-                            SortHierarchySimple(child);
-                        }
-                    }
-
-                    CalculateCumulative(userCompanyNode);
-                    SortHierarchySimple(userCompanyNode);
-                    rootNodes = new List<CompanyHierarchyNode> { userCompanyNode };
-                }
-                else
-                {
-                    rootNodes = new List<CompanyHierarchyNode>();
-                }
-            }
-            else
-            {
-                // Admin or Safety role can see the full hierarchy tree rooted at INDEXIM
-                var indeximRoot = nodeMap.Values
-                    .FirstOrDefault(r => (r.CompanyName ?? string.Empty).Contains("INDEXIM", StringComparison.OrdinalIgnoreCase));
-
-                if (indeximRoot != null)
-                {
-                    // Detach helper for display tree re-parenting without changing source data.
-                    void DetachFromCurrentParent(CompanyHierarchyNode child)
-                    {
-                        foreach (var node in nodeMap.Values)
-                        {
-                            node.Children.RemoveAll(c => c.CompanyId == child.CompanyId);
-                        }
-                        rootNodes.RemoveAll(r => r.CompanyId == child.CompanyId);
-                    }
-
-                    foreach (var childName in primaryChildTargets)
-                    {
-                        var childKey = NormalizeCompanyKey(childName);
-                        var primaryChild = nodeMap.Values.FirstOrDefault(n => NormalizeCompanyKey(n.CompanyName) == childKey);
-                        if (primaryChild == null || primaryChild.CompanyId == indeximRoot.CompanyId)
-                        {
-                            continue;
-                        }
-
-                        if (!resolvedPrimaryChildIds.Contains(primaryChild.CompanyId))
-                        {
-                            resolvedPrimaryChildIds.Add(primaryChild.CompanyId);
-                            resolvedPrimaryChildNames.Add(primaryChild.CompanyName);
-                        }
-
-                        if (!indeximRoot.Children.Any(c => c.CompanyId == primaryChild.CompanyId))
-                        {
-                            DetachFromCurrentParent(primaryChild);
-                            indeximRoot.Children.Add(primaryChild);
-                        }
-                    }
-
-                    int PrimarySortWeight(CompanyHierarchyNode node)
-                    {
-                        var idx = resolvedPrimaryChildIds.IndexOf(node.CompanyId);
-                        return idx >= 0 ? idx : int.MaxValue;
-                    }
-
-                    void SortHierarchy(CompanyHierarchyNode node)
-                    {
-                        node.Children = node.Children
-                            .OrderBy(c => PrimarySortWeight(c))
-                            .ThenBy(c => c.CompanyName)
-                            .ToList();
-
-                        foreach (var child in node.Children)
-                        {
-                            SortHierarchy(child);
-                        }
-                    }
-
-                    // Recalculate after display re-parenting to keep aggregate metrics consistent.
-                    CalculateCumulative(indeximRoot);
-                    SortHierarchy(indeximRoot);
-                    rootNodes = new List<CompanyHierarchyNode> { indeximRoot };
-                }
-            }
-
-            // Ensure hierarchy still contains all active companies from vw_m_hirarki_perusahaan source.
-            var renderedIds = CollectHierarchyIds(rootNodes);
-
-            // Only add missing active nodes as root nodes for Admin or Safety Role
-            if (isAdmin || isSafetyRole)
-            {
-                var missingActiveNodes = nodeMap.Values
-                    .Where(n => !renderedIds.Contains(n.CompanyId))
-                    .OrderBy(n => n.CompanyName)
-                    .ToList();
-
-                if (missingActiveNodes.Any())
-                {
-                    foreach (var missing in missingActiveNodes)
-                    {
-                        CalculateCumulative(missing);
-                        rootNodes.Add(missing);
-                    }
-
-                    rootNodes = rootNodes
-                        .GroupBy(n => n.CompanyId)
-                        .Select(g => g.First())
-                        .OrderBy(n => n.CompanyName)
-                        .ToList();
-                }
-            }
-
-            ViewBag.CompanyHierarchyPrimaryChildren = resolvedPrimaryChildNames;
-            ViewBag.CompanyHierarchy = rootNodes;
-            ViewBag.CompanyHierarchySource = "DB_SAP.vw_m_hirarki_perusahaan";
-            ViewBag.CompanyHierarchyActualActiveCount = activeCompanyNameById.Count;
-            ViewBag.CompanyHierarchyRenderedCount = CollectHierarchyIds(rootNodes).Count;
-
             var (mapCompanyId, mapAllowedCompanyIds) = await ResolveMapCompanyScopeAsync();
             var geoSafetyData = await BuildGeoSafetyRadarDataAsync(mapCompanyId, mapAllowedCompanyIds, Request.Query["area"].FirstOrDefault()?.Trim(), true, selectedYear, selectedMonth);
 
@@ -3536,27 +2817,33 @@ namespace MBS_SAP.Controllers
                         userDeptName = string.IsNullOrWhiteSpace(dView?.NamaDepartemen) ? "General" : dView.NamaDepartemen;
                     }
 
-                    // 1. Department rank within their company
-                    if (nodeMap.TryGetValue(myKaryawan.IdPerusahaan, out var userCompanyNode))
-                    {
-                        var sortedDepts = userCompanyNode.DepartmentAchievements.OrderByDescending(d => d.MtdAchievementRate).ToList();
-                        var myDeptRankInfo = sortedDepts
-                            .Select((d, idx) => new { Dept = d, Rank = idx + 1 })
-                            .FirstOrDefault(x => string.Equals(x.Dept.DepartmentName, userDeptName, StringComparison.OrdinalIgnoreCase));
+                    // Company Employees & Dept Calculation
+                    var companyEmployees = await GetEmployeesComplianceData(myKaryawan.IdPerusahaan, null, null, null, myKaryawan.PerusahaanNodeId);
 
-                        if (myDeptRankInfo != null)
-                        {
-                            ViewBag.UserDeptName = userDeptName;
-                            ViewBag.UserDeptMtdRate = myDeptRankInfo.Dept.MtdAchievementRate;
-                            ViewBag.UserDeptRank = myDeptRankInfo.Rank;
-                            ViewBag.UserDeptTotalCount = sortedDepts.Count;
-                            ViewBag.UserCompanyId = myKaryawan.IdPerusahaan;
-                        }
+                    // 1. Department rank within their company
+                    var deptGroups = companyEmployees
+                        .GroupBy(e => (string)e.departmentName)
+                        .Select(g => new {
+                            DepartmentName = g.Key,
+                            MtdRate = g.Any() ? g.Average(e => (double)e.complianceRate) : 0d
+                        })
+                        .OrderByDescending(d => d.MtdRate)
+                        .ToList();
+
+                    var myDeptRankInfo = deptGroups
+                        .Select((d, idx) => new { Dept = d, Rank = idx + 1 })
+                        .FirstOrDefault(x => string.Equals(x.Dept.DepartmentName, userDeptName, StringComparison.OrdinalIgnoreCase));
+
+                    if (myDeptRankInfo != null)
+                    {
+                        ViewBag.UserDeptName = userDeptName;
+                        ViewBag.UserDeptMtdRate = myDeptRankInfo.Dept.MtdRate;
+                        ViewBag.UserDeptRank = myDeptRankInfo.Rank;
+                        ViewBag.UserDeptTotalCount = deptGroups.Count;
+                        ViewBag.UserCompanyId = myKaryawan.IdPerusahaan;
                     }
 
                     // 2. Employee Rank
-                    var companyEmployees = await GetEmployeesComplianceData(myKaryawan.IdPerusahaan, null, null, null, myKaryawan.PerusahaanNodeId);
-                    
                     var myCompanyEmpRankInfo = companyEmployees
                         .Select((e, idx) => new { Emp = e, Rank = idx + 1 })
                         .FirstOrDefault(x => string.Equals((string)x.Emp.nik, userNik, StringComparison.OrdinalIgnoreCase));
@@ -6988,36 +6275,59 @@ namespace MBS_SAP.Controllers
                 List<PerusahaanView> DirectCompanies,
                 List<PerusahaanView> SubconCompanies,
                 string SubconParentName,
-                int SubconParentId
+                int SubconParentId,
+                string Category,
+                string ParentGroup,
+                int SortOrder
             )>();
 
-            if (mgeCompany != null)
+            // 1. PT INDEXIM COALINDO (ID 1)
+            if (indeximCompany != null)
             {
-                var mgeChildIdsRel = await _context.PerusahaanHierarchyRelations.AsNoTracking()
-                    .Where(r => r.ParentCompanyId == 5 && r.ChildIsActive == true && r.ChildCompanyId.HasValue)
-                    .Select(r => r.ChildCompanyId!.Value)
-                    .ToListAsync();
-                var mgeChildIdsDir = await _context.Perusahaans.AsNoTracking()
-                    .Where(p => p.PerusahaanIndukId == 5 && p.StatusAktif)
-                    .Select(p => p.PerusahaanId)
-                    .ToListAsync();
-                var mgeChildIds = mgeChildIdsRel.Concat(mgeChildIdsDir).Distinct().Where(id => id != 5).ToList();
-                var mgeSubcons = await _context.Perusahaans.AsNoTracking()
-                    .Where(p => mgeChildIds.Contains(p.PerusahaanId) && p.StatusAktif)
-                    .OrderBy(p => p.NamaPerusahaan)
-                    .ToListAsync();
-
+                // 1.1 Utama (Internal saja)
                 groupDefinitions.Add((
-                    5,
-                    mgeCompany.NamaPerusahaan ?? "PT MEGA GLOBAL ENERGY",
-                    5,
-                    new List<PerusahaanView> { mgeCompany },
-                    mgeSubcons,
-                    mgeCompany.NamaPerusahaan ?? "PT MEGA GLOBAL ENERGY",
-                    5
+                    1,
+                    indeximCompany.NamaPerusahaan ?? "PT INDEXIM COALINDO",
+                    1,
+                    new List<PerusahaanView> { indeximCompany },
+                    new List<PerusahaanView>(),
+                    indeximCompany.NamaPerusahaan ?? "PT INDEXIM COALINDO",
+                    1,
+                    "Utama",
+                    "INDEXIM",
+                    1
+                ));
+
+                // 1.2 Mitra Kerja Indexim
+                groupDefinitions.Add((
+                    1,
+                    "MITRA KERJA INDEXIM COALINDO",
+                    1,
+                    new List<PerusahaanView>(),
+                    indeximSubconCompanies,
+                    indeximCompany.NamaPerusahaan ?? "PT INDEXIM COALINDO",
+                    1,
+                    "Mitra",
+                    "INDEXIM",
+                    2
+                ));
+
+                // 1.3 Total Indexim & Mitra
+                groupDefinitions.Add((
+                    1,
+                    "TOTAL INDEXIM COALINDO & MITRA",
+                    1,
+                    new List<PerusahaanView> { indeximCompany },
+                    indeximSubconCompanies,
+                    indeximCompany.NamaPerusahaan ?? "PT INDEXIM COALINDO",
+                    1,
+                    "Total",
+                    "INDEXIM",
+                    3
                 ));
             }
 
+            // 2. PT KALIMANTAN PRIMA PERSADA (ID 4)
             if (kppCompany != null)
             {
                 var kppChildIdsRel = await _context.PerusahaanHierarchyRelations.AsNoTracking()
@@ -7034,17 +6344,50 @@ namespace MBS_SAP.Controllers
                     .OrderBy(p => p.NamaPerusahaan)
                     .ToListAsync();
 
+                // 2.1 Utama
                 groupDefinitions.Add((
                     4,
                     kppCompany.NamaPerusahaan ?? "PT KALIMANTAN PRIMA PERSADA",
                     4,
                     new List<PerusahaanView> { kppCompany },
+                    new List<PerusahaanView>(),
+                    kppCompany.NamaPerusahaan ?? "PT KALIMANTAN PRIMA PERSADA",
+                    4,
+                    "Utama",
+                    "KPP",
+                    4
+                ));
+
+                // 2.2 Mitra
+                groupDefinitions.Add((
+                    4,
+                    "MITRA KERJA KALIMANTAN PRIMA PERSADA",
+                    4,
+                    new List<PerusahaanView>(),
                     kppSubcons,
                     kppCompany.NamaPerusahaan ?? "PT KALIMANTAN PRIMA PERSADA",
-                    4
+                    4,
+                    "Mitra",
+                    "KPP",
+                    5
+                ));
+
+                // 2.3 Total
+                groupDefinitions.Add((
+                    4,
+                    "TOTAL KALIMANTAN PRIMA PERSADA & MITRA",
+                    4,
+                    new List<PerusahaanView> { kppCompany },
+                    kppSubcons,
+                    kppCompany.NamaPerusahaan ?? "PT KALIMANTAN PRIMA PERSADA",
+                    4,
+                    "Total",
+                    "KPP",
+                    6
                 ));
             }
 
+            // 3. PT UNGGUL DINAMIKA UTAMA (ID 3)
             if (uduCompany != null)
             {
                 var uduChildIdsRel = await _context.PerusahaanHierarchyRelations.AsNoTracking()
@@ -7061,42 +6404,106 @@ namespace MBS_SAP.Controllers
                     .OrderBy(p => p.NamaPerusahaan)
                     .ToListAsync();
 
+                // 3.1 Utama
                 groupDefinitions.Add((
                     3,
                     uduCompany.NamaPerusahaan ?? "PT UNGGUL DINAMIKA UTAMA",
                     3,
                     new List<PerusahaanView> { uduCompany },
+                    new List<PerusahaanView>(),
+                    uduCompany.NamaPerusahaan ?? "PT UNGGUL DINAMIKA UTAMA",
+                    3,
+                    "Utama",
+                    "UDU",
+                    7
+                ));
+
+                // 3.2 Mitra
+                groupDefinitions.Add((
+                    3,
+                    "MITRA KERJA UNGGUL DINAMIKA UTAMA",
+                    3,
+                    new List<PerusahaanView>(),
                     uduSubcons,
                     uduCompany.NamaPerusahaan ?? "PT UNGGUL DINAMIKA UTAMA",
-                    3
+                    3,
+                    "Mitra",
+                    "UDU",
+                    8
+                ));
+
+                // 3.3 Total
+                groupDefinitions.Add((
+                    3,
+                    "TOTAL UNGGUL DINAMIKA UTAMA & MITRA",
+                    3,
+                    new List<PerusahaanView> { uduCompany },
+                    uduSubcons,
+                    uduCompany.NamaPerusahaan ?? "PT UNGGUL DINAMIKA UTAMA",
+                    3,
+                    "Total",
+                    "UDU",
+                    9
                 ));
             }
 
-            if (indeximCompany != null)
+            // 4. PT MEGA GLOBAL ENERGY (ID 5)
+            if (mgeCompany != null)
             {
-                // PT INDEXIM COALINDO: Khusus karyawan internal Indexim saja (tanpa subkontraktor)
-                groupDefinitions.Add((
-                    1,
-                    indeximCompany.NamaPerusahaan ?? "PT INDEXIM COALINDO",
-                    1,
-                    new List<PerusahaanView> { indeximCompany },
-                    new List<PerusahaanView>(), // Kosong, tidak ada subcon di grup ini
-                    indeximCompany.NamaPerusahaan ?? "PT INDEXIM COALINDO",
-                    1
-                ));
-            }
+                var mgeChildIdsRel = await _context.PerusahaanHierarchyRelations.AsNoTracking()
+                    .Where(r => r.ParentCompanyId == 5 && r.ChildIsActive == true && r.ChildCompanyId.HasValue)
+                    .Select(r => r.ChildCompanyId!.Value)
+                    .ToListAsync();
+                var mgeChildIdsDir = await _context.Perusahaans.AsNoTracking()
+                    .Where(p => p.PerusahaanIndukId == 5 && p.StatusAktif)
+                    .Select(p => p.PerusahaanId)
+                    .ToListAsync();
+                var mgeChildIds = mgeChildIdsRel.Concat(mgeChildIdsDir).Distinct().Where(id => id != 5).ToList();
+                var mgeSubcons = await _context.Perusahaans.AsNoTracking()
+                    .Where(p => mgeChildIds.Contains(p.PerusahaanId) && p.StatusAktif)
+                    .OrderBy(p => p.NamaPerusahaan)
+                    .ToListAsync();
 
-            // MITRA KERJA INDEXIM COALINDO: Seluruh subkontraktor Indexim
-            if (indeximSubconCompanies.Any())
-            {
+                // 4.1 Utama
                 groupDefinitions.Add((
-                    0,
-                    "MITRA KERJA INDEXIM COALINDO",
-                    1,
-                    new List<PerusahaanView>(), // Tidak termasuk PT Indexim Coalindo
-                    indeximSubconCompanies,
-                    indeximCompany?.NamaPerusahaan ?? "PT INDEXIM COALINDO",
-                    1
+                    5,
+                    mgeCompany.NamaPerusahaan ?? "PT MEGA GLOBAL ENERGY",
+                    5,
+                    new List<PerusahaanView> { mgeCompany },
+                    new List<PerusahaanView>(),
+                    mgeCompany.NamaPerusahaan ?? "PT MEGA GLOBAL ENERGY",
+                    5,
+                    "Utama",
+                    "MGE",
+                    10
+                ));
+
+                // 4.2 Mitra
+                groupDefinitions.Add((
+                    5,
+                    "MITRA KERJA MEGA GLOBAL ENERGY",
+                    5,
+                    new List<PerusahaanView>(),
+                    mgeSubcons,
+                    mgeCompany.NamaPerusahaan ?? "PT MEGA GLOBAL ENERGY",
+                    5,
+                    "Mitra",
+                    "MGE",
+                    11
+                ));
+
+                // 4.3 Total
+                groupDefinitions.Add((
+                    5,
+                    "TOTAL MEGA GLOBAL ENERGY & MITRA",
+                    5,
+                    new List<PerusahaanView> { mgeCompany },
+                    mgeSubcons,
+                    mgeCompany.NamaPerusahaan ?? "PT MEGA GLOBAL ENERGY",
+                    5,
+                    "Total",
+                    "MGE",
+                    12
                 ));
             }
 
@@ -7104,6 +6511,7 @@ namespace MBS_SAP.Controllers
             var endOfMonthMaincon = startOfMonthMaincon.AddMonths(1).AddTicks(-1);
             var mainconGroupComparisonList = new List<MainconGroupComparisonViewModel>();
             var allSubconStats = new List<MostActiveSubconViewModel>();
+            var processedSubconIds = new HashSet<int>();
 
             foreach (var grp in groupDefinitions)
             {
@@ -7374,18 +6782,22 @@ namespace MBS_SAP.Controllers
                             uncompliantSubs.Add(sub.NamaPerusahaan ?? "Unknown");
                         }
 
-                        allSubconStats.Add(new MostActiveSubconViewModel
+                        if (!processedSubconIds.Contains(sub.PerusahaanId))
                         {
-                            PerusahaanId = sub.PerusahaanId,
-                            PerusahaanName = sub.NamaPerusahaan ?? "Unknown",
-                            ParentCompanyName = grp.SubconParentName,
-                            ParentCompanyId = grp.SubconParentId,
-                            TotalEmployees = subKaryawans.Count,
-                            EmployeesWithTarget = subEmpsWithTarget,
-                            ComplianceRate = subTargetTotal > 0 ? Math.Round((double)subActualTotal / subTargetTotal * 100.0, 1) : 0,
-                            TotalSubmissions = subRawSubmissions,
-                            TargetSubmissions = subTargetTotal
-                        });
+                            processedSubconIds.Add(sub.PerusahaanId);
+                            allSubconStats.Add(new MostActiveSubconViewModel
+                            {
+                                PerusahaanId = sub.PerusahaanId,
+                                PerusahaanName = sub.NamaPerusahaan ?? "Unknown",
+                                ParentCompanyName = grp.SubconParentName,
+                                ParentCompanyId = grp.SubconParentId,
+                                TotalEmployees = subKaryawans.Count,
+                                EmployeesWithTarget = subEmpsWithTarget,
+                                ComplianceRate = subTargetTotal > 0 ? Math.Round((double)subActualTotal / subTargetTotal * 100.0, 1) : 0,
+                                TotalSubmissions = subRawSubmissions,
+                                TargetSubmissions = subTargetTotal
+                            });
+                        }
                     }
                 }
 
@@ -7414,6 +6826,9 @@ namespace MBS_SAP.Controllers
                 {
                     MainconId = grp.GroupId,
                     MainconName = grp.GroupName,
+                    Category = grp.Category,
+                    ParentGroup = grp.ParentGroup,
+                    SortOrder = grp.SortOrder,
                     TotalEmployees = totalGroupEmployees,
                     EmployeesWithTargetCount = employeesWithTargetCount,
                     ChildCompanyNames = grp.SubconCompanies.Select(s => s.NamaPerusahaan ?? "Unknown").ToList(),
@@ -7443,7 +6858,6 @@ namespace MBS_SAP.Controllers
 
             bool isCurrentNewPolicy = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
             ViewBag.IsNewPolicyPeriod = isCurrentNewPolicy;
-
             var orderedSubcons = allSubconStats.OrderByDescending(s => s.ComplianceRate).ThenByDescending(s => s.TotalSubmissions).ToList();
             ViewBag.MostActiveSubcon = orderedSubcons.FirstOrDefault();
             ViewBag.AllSubconStats = orderedSubcons;
@@ -8523,6 +7937,9 @@ namespace MBS_SAP.Controllers
     {
         public int MainconId { get; set; }
         public string MainconName { get; set; } = string.Empty;
+        public string Category { get; set; } = "Utama"; // "Utama", "Mitra", "Total"
+        public string ParentGroup { get; set; } = string.Empty; // "INDEXIM", "KPP", "UDU", "MGE"
+        public int SortOrder { get; set; }
         public int TotalEmployees { get; set; }
         public int EmployeesWithTargetCount { get; set; }
         public List<string> ChildCompanyNames { get; set; } = new();

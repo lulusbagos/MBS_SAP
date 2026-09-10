@@ -35,18 +35,20 @@
     int endRow = Math.Min(currentPage * pageSize, totalCount);
 
     var mainconComparison = (ViewBag.MainconGroupComparison as List<MBS_SAP.Controllers.MainconGroupComparisonViewModel> ?? new List<MBS_SAP.Controllers.MainconGroupComparisonViewModel>())
-        .OrderByDescending(x => x.OverallComplianceRate)
+        .OrderBy(x => x.SortOrder)
         .ToList();
     var mostActiveSubcon = ViewBag.MostActiveSubcon as MBS_SAP.Controllers.MostActiveSubconViewModel;
-    var mainconLabelsJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-        mainconComparison.Select(x => {
-            if (x.MainconName.Equals("MITRA KERJA INDEXIM COALINDO", StringComparison.OrdinalIgnoreCase))
-            {
-                return new[] { "MITRA KERJA", "INDEXIM COALINDO" };
-            }
-            return x.MainconName.Replace("PT ", "").Split(' ');
-        })
-    ));
+    var utamaList = mainconComparison.Where(x => x.Category == "Utama").OrderByDescending(x => x.OverallComplianceRate).ToList();
+    var mitraList = mainconComparison.Where(x => x.Category == "Mitra").OrderByDescending(x => x.OverallComplianceRate).ToList();
+    var totalList = mainconComparison.Where(x => x.Category == "Total").OrderByDescending(x => x.OverallComplianceRate).ToList();
+
+    var labelsUtamaJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(utamaList.Select(x => x.ParentGroup)));
+    var labelsMitraJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(mitraList.Select(x => $"MITRA {x.ParentGroup}")));
+    var labelsTotalJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(totalList.Select(x => $"TOTAL {x.ParentGroup} & MITRA")));
+
+    var dataUtamaJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(utamaList));
+    var dataMitraJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(mitraList));
+    var dataTotalJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(totalList));
     
     // Top 5 Subcon Leaderboard data serialization
     var top5SubconsList = (ViewBag.AllSubconStats as List<MBS_SAP.Controllers.MostActiveSubconViewModel> ?? new List<MBS_SAP.Controllers.MostActiveSubconViewModel>()).Take(5).ToList();
@@ -432,9 +434,6 @@
             <button class="tab-btn px-4 py-2 tab-inactive" id="tabHitSafe" onclick="window.location.href='/Performance?tab=hitsafe'">
                 <i class="bi bi-geo-alt-fill me-1"></i> Safe Map
             </button>
-            <button class="tab-btn px-4 py-2 tab-inactive" id="tabHierarchy" onclick="window.location.href='/Performance?tab=hierarchy'">
-                <i class="bi bi-diagram-3-fill me-1"></i> Hirarki Perusahaan
-            </button>
             <button class="tab-btn px-4 py-2 tab-active" id="tabCompliance" onclick="void(0)">
                 <i class="bi bi-file-earmark-text-fill me-1"></i> Laporan Kepatuhan
             </button>
@@ -772,409 +771,251 @@
     </div>
 
     <!-- Maincon Group Comparison & Spotlight Row -->
+    <!-- Maincon Group Comparison: 3 Separate Focused Charts & 4x3 Card Grid -->
     @if (mainconComparison != null && mainconComparison.Any())
     {
+        <!-- ==================== 3 SEPARATE COMPARISON CHARTS (STACKED FULL-WIDTH) ==================== -->
         <div class="row g-4 mb-4">
-            <!-- Left Card: Maincon Group Comparison -->
+            <!-- Chart 1: 4 Perusahaan Utama -->
             <div class="col-12">
-                <div class="premium-card h-100 mb-0">
-                    <div class="premium-header">
-                        <h5 class="premium-title">
-                            <i class="bi bi-bar-chart-line-fill me-2 text-primary" style="font-size: 18px;"></i>Perbandingan Kepatuhan Maincon Utama (MTD Group)
-                            <i class="bi bi-info-circle ms-2 text-muted" style="font-size: 14px; cursor: help;" data-bs-toggle="tooltip" title="@(isNewPolicy ? "Skor Terbobot 50:50 = (50% Pembuatan Target SAP) + (50% Tingkat Penyelesaian / Closure Action Plan)." : "Perhitungan Historis = 100% Target Submisi Program SAP.")"></i>
-                        </h5>
-                        <span class="premium-badge">
-                            @(isNewPolicy ? "Bobot: 50% Pembuatan + 50% Closure" : "Kepatuhan Submisi SAP (Historis)")
-                        </span>
-                    </div>
-                    <div class="premium-body p-4">
-                        <!-- Top Row: Full-width Grouped Bar Chart -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <div style="height: 420px; position: relative;">
-                                    <canvas id="mainconComparisonChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Divider & Section Header -->
-                        <div class="d-flex align-items-center gap-3 mt-4 mb-4">
-                            <h6 class="text-primary fw-bold text-uppercase m-0" style="font-size: 13px; letter-spacing: 1px; font-family: 'Outfit', sans-serif;">
-                                <i class="bi bi-grid-3x3-gap-fill me-2"></i>Rincian Kepatuhan Per Maincon @(isNewPolicy ? "(Bobot 50:50)" : "(Historis Submisi)")
-                            </h6>
-                            <div class="flex-grow-1" style="height: 1px; background: var(--border-color); opacity: 0.8;"></div>
-                        </div>
-
-                        <!-- Bottom Row: Comparative Grid Details in a 2-column layout -->
-                        <div class="row g-4">
-                            @foreach (var item in mainconComparison)
-                            {
-                                <div class="col-lg-6 col-md-12">
-                                    <div class="maincon-item" style="cursor: @(item.MainconId > 0 ? "pointer" : "default");" @(item.MainconId > 0 ? Html.Raw($"onclick=\"window.location.href='/Performance/Compliance?companyId={item.MainconId}&month={selectedMonth}&year={selectedYear}'\"") : null)>
-                                        <div class="d-flex justify-content-between align-items-center mb-2.5">
-                                            <div style="font-size: 15px; font-weight: 800; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Outfit', sans-serif;">
-                                                <i class="bi bi-building-fill text-primary me-1.5"></i>@item.MainconName
-                                            </div>
-                                            @{
-                                                string rateBadgeStyle = "background-color: rgba(244, 63, 94, 0.1); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.25);"; // red default
-                                                if (item.OverallComplianceRate >= 85.0)
-                                                {
-                                                    rateBadgeStyle = "background-color: rgba(34, 197, 94, 0.1); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.25);";
-                                                }
-                                                else if (item.OverallComplianceRate >= 50.0)
-                                                {
-                                                    rateBadgeStyle = "background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25);";
-                                                }
-                                            }
-                                            <span class="badge" style="@rateBadgeStyle font-weight: 800; font-size: 11.5px; border-radius: 8px; padding: 5px 10px;" title="@(isNewPolicy ? "Formula: (50% Pembuatan SAP) + (50% Closure Action Plan)" : "Kepatuhan Target Submisi SAP")">
-                                                @(isNewPolicy ? $"Skor Total: {item.OverallComplianceRate}%" : $"Kepatuhan: {item.OverallComplianceRate}%")
-                                            </span>
-                                        </div>
-                                        
-                                        @if (isNewPolicy)
-                                        {
-                                            <!-- 50/50 Dual Metric Cards -->
-                                            <div class="p-2.5 rounded-3 mb-3" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
-                                                <div class="row g-2 align-items-center">
-                                                    <div class="col-6">
-                                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                                            <span style="font-size: 10.5px; font-weight: 700; color: #38bdf8;">
-                                                                <i class="bi bi-pencil-square me-1"></i>1. Pembuatan (50%)
-                                                            </span>
-                                                            <span style="font-size: 11px; font-weight: 800; color: #38bdf8;">@item.SapSubmissionRate%</span>
-                                                        </div>
-                                                        <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06);">
-                                                            <div class="progress-bar" role="progressbar" style="width: @Math.Min(item.SapSubmissionRate, 100)%; background: linear-gradient(90deg, #0284c7, #38bdf8);"></div>
-                                                        </div>
-                                                        <div class="d-flex justify-content-between mt-1 text-muted" style="font-size: 9.5px;">
-                                                            <span>Submisi:</span>
-                                                            <span class="fw-bold">@(item.ActualHazard+item.ActualInspeksi+item.ActualSafetyTalk+item.ActualObservasi+item.ActualCoaching)/@(item.TargetHazard+item.TargetInspeksi+item.TargetSafetyTalk+item.TargetObservasi+item.TargetCoaching)</span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-6" style="border-left: 1px solid var(--border-color); padding-left: 10px;">
-                                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                                            <span style="font-size: 10.5px; font-weight: 700; color: #34d399;">
-                                                                <i class="bi bi-check2-circle me-1"></i>2. Closure AP (50%)
-                                                            </span>
-                                                            <span style="font-size: 11px; font-weight: 800; color: #34d399;">@item.ActionPlanClosureRate%</span>
-                                                        </div>
-                                                        <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06);">
-                                                            <div class="progress-bar" role="progressbar" style="width: @Math.Min(item.ActionPlanClosureRate, 100)%; background: linear-gradient(90deg, #059669, #34d399);"></div>
-                                                        </div>
-                                                        <div class="d-flex justify-content-between mt-1 text-muted" style="font-size: 9.5px;">
-                                                            <span>Closed/Total:</span>
-                                                            <span class="fw-bold">@item.ClosedActionPlans/@item.TotalActionPlans (@item.OpenActionPlans Open)</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <!-- Single Progress Bar for Historical Periods -->
-                                            <div class="p-2 rounded-3 mb-3" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
-                                                <div class="d-flex justify-content-between align-items-center mb-1" style="font-size: 11px;">
-                                                    <span class="text-muted">Realisasi Submisi SAP:</span>
-                                                    <span class="fw-bold" style="color: var(--text-main);">@(item.ActualHazard+item.ActualInspeksi+item.ActualSafetyTalk+item.ActualObservasi+item.ActualCoaching) / @(item.TargetHazard+item.TargetInspeksi+item.TargetSafetyTalk+item.TargetObservasi+item.TargetCoaching)</span>
-                                                </div>
-                                                <div class="progress" style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06);">
-                                                    <div class="progress-bar" role="progressbar" style="width: @Math.Min(item.OverallComplianceRate, 100)%; background: linear-gradient(90deg, #10b981, #3b82f6);"></div>
-                                                </div>
-                                            </div>
-                                        }
-
-                                        <!-- Employee count and subcons details -->
-                                        @{
-                                            var activeCount = item.ChildCompanyNames.Count - item.UncompliantChildCompanyNames.Count - item.NoTargetChildCompanyNames.Count;
-                                            if (activeCount < 0) activeCount = 0;
-                                        }
-                                        <div class="d-flex flex-wrap gap-2 mb-3" style="font-size: 11px; color: var(--text-muted);">
-                                            <div>
-                                                <i class="bi bi-people-fill me-1"></i>
-                                                <span class="fw-bold" style="color: var(--text-main);">@item.EmployeesWithTargetCount.ToString("N0")</span> Karyawan Ber-Target
-                                            </div>
-                                            @if (item.ChildCompanyNames.Any())
-                                            {
-                                                <!-- Aktif (has target + has submissions) -->
-                                                <div class="position-relative" style="cursor: pointer;" onmouseenter="showTooltip('subcon-tooltip-@item.MainconId')" onmouseleave="hideTooltip('subcon-tooltip-@item.MainconId')" onclick="event.stopPropagation();">
-                                                    <span class="badge px-2 py-1 rounded-2" style="background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.25);font-size:10.5px;font-weight:700;">
-                                                        <i class="bi bi-check2-circle me-1"></i>@activeCount Aktif
-                                                    </span>
-                                                    <div class="subcon-tooltip" id="subcon-tooltip-@item.MainconId">
-                                                        <div class="fw-bold text-success mb-1" style="font-size:10px;border-bottom:1px solid rgba(34,197,94,0.2);padding-bottom:4px;">Subkontraktor Aktif Bergerak:</div>
-                                                        @{
-                                                            var activeSubs = item.ChildCompanyNames
-                                                                .Where(n => !item.UncompliantChildCompanyNames.Contains(n) && !item.NoTargetChildCompanyNames.Contains(n))
-                                                                .ToList();
-                                                        }
-                                                        @if (activeSubs.Any())
-                                                        {
-                                                            <ul class="list-unstyled mb-0" style="font-size:10.5px;max-height:120px;overflow-y:auto;line-height:1.6;">
-                                                                @foreach (var sub in activeSubs)
-                                                                {
-                                                                    <li style="color:rgba(255,255,255,0.7)"><i class="bi bi-check-circle-fill text-success me-1" style="font-size:8px;"></i>@sub</li>
-                                                                }
-                                                            </ul>
-                                                        }
-                                                        else { <span class="text-muted" style="font-size:10.5px;">Belum ada yang aktif bulan ini</span> }
-                                                    </div>
-                                                </div>
-                                                <!-- Belum Bergerak (has target + 0 submissions) -->
-                                                @if (item.UncompliantChildCompanyNames.Any())
-                                                {
-                                                    <div class="position-relative" style="cursor: pointer;" onmouseenter="showTooltip('uncompliant-tooltip-@item.MainconId')" onmouseleave="hideTooltip('uncompliant-tooltip-@item.MainconId')" onclick="event.stopPropagation();">
-                                                        <span class="badge px-2 py-1 rounded-2" style="background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25);font-size:10.5px;font-weight:700;">
-                                                            <i class="bi bi-exclamation-circle-fill me-1"></i>@item.UncompliantChildCompanyNames.Count Belum Bergerak
-                                                        </span>
-                                                        <div class="subcon-tooltip" id="uncompliant-tooltip-@item.MainconId" style="border-color:#ef4444;">
-                                                            <div class="fw-bold text-danger mb-1" style="font-size:10px;border-bottom:1px solid rgba(239,68,68,0.2);padding-bottom:4px;">Punya Target, Belum Ada Submisi:</div>
-                                                            <ul class="list-unstyled mb-0" style="font-size:10.5px;max-height:120px;overflow-y:auto;line-height:1.6;">
-                                                                @foreach (var sub in item.UncompliantChildCompanyNames)
-                                                                {
-                                                                    <li style="color:rgba(255,255,255,0.7)"><i class="bi bi-x-circle-fill text-danger me-1" style="font-size:8px;"></i>@sub</li>
-                                                                }
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                }
-                                                <!-- Tanpa Target (all targets=0, excluded from compliance) -->
-                                                @if (item.NoTargetChildCompanyNames.Any())
-                                                {
-                                                    <div class="position-relative" style="cursor: pointer;" onmouseenter="showTooltip('notarget-tooltip-@item.MainconId')" onmouseleave="hideTooltip('notarget-tooltip-@item.MainconId')" onclick="event.stopPropagation();">
-                                                        <span class="badge px-2 py-1 rounded-2" style="background:rgba(100,116,139,0.15);color:#94a3b8;border:1px solid rgba(100,116,139,0.25);font-size:10.5px;font-weight:700;">
-                                                            <i class="bi bi-dash-circle me-1"></i>@item.NoTargetChildCompanyNames.Count Tanpa Target
-                                                        </span>
-                                                        <div class="subcon-tooltip" id="notarget-tooltip-@item.MainconId" style="border-color:#64748b;">
-                                                            <div class="fw-bold text-muted mb-1" style="font-size:10px;border-bottom:1px solid rgba(100,116,139,0.2);padding-bottom:4px;">Tidak Ada Karyawan Ber-Target (Dikecualikan):</div>
-                                                            <ul class="list-unstyled mb-0" style="font-size:10.5px;max-height:120px;overflow-y:auto;line-height:1.6;">
-                                                                @foreach (var sub in item.NoTargetChildCompanyNames)
-                                                                {
-                                                                    <li style="color:rgba(255,255,255,0.5)"><i class="bi bi-dash-circle me-1 text-muted" style="font-size:8px;"></i>@sub</li>
-                                                                }
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                }
-                                            }
-                                        </div>
-          
-                                        <!-- SAP Breakdown metrics -->
-                                        <div class="sap-breakdown-grid">
-                                            <div class="sap-cell">
-                                                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-main); opacity: 0.75;">Hazard</div>
-                                                <div style="font-size: 15.5px; font-weight: 900; color: #6366f1; margin-top: 2px;">@item.HazardComplianceRate%</div>
-                                                <div style="font-size: 11px; font-weight: 800; color: var(--text-main); opacity: 0.65;">@item.ActualHazard/@item.TargetHazard</div>
-                                            </div>
-                                            <div class="sap-cell">
-                                                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-main); opacity: 0.75;">Inspeksi</div>
-                                                <div style="font-size: 15.5px; font-weight: 900; color: #3b82f6; margin-top: 2px;">@item.InspeksiComplianceRate%</div>
-                                                <div style="font-size: 11px; font-weight: 800; color: var(--text-main); opacity: 0.65;">@item.ActualInspeksi/@item.TargetInspeksi</div>
-                                            </div>
-                                            <div class="sap-cell">
-                                                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-main); opacity: 0.75;">S-Talk</div>
-                                                <div style="font-size: 15.5px; font-weight: 900; color: #d97706; margin-top: 2px;">@item.SafetyTalkComplianceRate%</div>
-                                                <div style="font-size: 11px; font-weight: 800; color: var(--text-main); opacity: 0.65;">@item.ActualSafetyTalk/@item.TargetSafetyTalk</div>
-                                            </div>
-                                            <div class="sap-cell">
-                                                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-main); opacity: 0.75;">Observasi</div>
-                                                <div style="font-size: 15.5px; font-weight: 900; color: #ec4899; margin-top: 2px;">@item.ObservasiComplianceRate%</div>
-                                                <div style="font-size: 11px; font-weight: 800; color: var(--text-main); opacity: 0.65;">@item.ActualObservasi/@item.TargetObservasi</div>
-                                            </div>
-                                            <div class="sap-cell">
-                                                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: var(--text-main); opacity: 0.75;">Coaching</div>
-                                                <div style="font-size: 15.5px; font-weight: 900; color: #a855f7; margin-top: 2px;">@item.CoachingComplianceRate%</div>
-                                                <div style="font-size: 11px; font-weight: 800; color: var(--text-main); opacity: 0.65;">@item.ActualCoaching/@item.TargetCoaching</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            @{
-                // AI Calculations based on mainconComparison
-                var sortedMaincons = mainconComparison.OrderByDescending(x => x.OverallComplianceRate).ToList();
-                var highestMaincon = sortedMaincons.FirstOrDefault();
-                var lowestMaincon = sortedMaincons.LastOrDefault();
-                var lowestClosureMaincon = mainconComparison.OrderBy(x => x.ActionPlanClosureRate).FirstOrDefault();
-
-                var programAverages = new Dictionary<string, double>();
-                if (mainconComparison.Any())
-                {
-                    programAverages["Hazard Report"] = mainconComparison.Average(x => x.HazardComplianceRate);
-                    programAverages["Inspeksi"] = mainconComparison.Average(x => x.InspeksiComplianceRate);
-                    programAverages["Safety Talk"] = mainconComparison.Average(x => x.SafetyTalkComplianceRate);
-                    programAverages["Observasi"] = mainconComparison.Average(x => x.ObservasiComplianceRate);
-                    programAverages["Coaching"] = mainconComparison.Average(x => x.CoachingComplianceRate);
-                }
-                var lowestProgram = programAverages.Any() ? programAverages.OrderBy(x => x.Value).First() : new KeyValuePair<string, double>("N/A", 0);
-                var highestProgram = programAverages.Any() ? programAverages.OrderByDescending(x => x.Value).First() : new KeyValuePair<string, double>("N/A", 0);
-
-                int totalUncompliantSubcons = mainconComparison.Sum(x => x.UncompliantChildCompanyNames.Count);
-                int totalActiveSubcons = mainconComparison.Sum(x => x.ChildCompanyNames.Count - x.UncompliantChildCompanyNames.Count - x.NoTargetChildCompanyNames.Count);
-            }
-
-            <!-- AI Executive Analysis & Recommendations -->
-            <div class="col-lg-7 col-md-12 mt-4">
-                <div class="premium-card mb-0 h-100" style="border: 1.5px solid rgba(168, 85, 247, 0.35); box-shadow: 0 10px 30px rgba(168, 85, 247, 0.08); background: radial-gradient(circle at 95% 10%, rgba(168, 85, 247, 0.04), transparent 60%), var(--bg-card); border-radius: 20px; overflow: hidden; position: relative;">
-                    <div class="premium-header" style="border-bottom: 1.5px solid rgba(168, 85, 247, 0.15); background: rgba(168, 85, 247, 0.02); padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
-                        <h5 class="premium-title" style="color: #a855f7; font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
-                            <i class="bi bi-robot animate-pulse" style="color: #a855f7; font-size: 20px;"></i>Analisis Eksekutif & Rekomendasi AI
-                        </h5>
-                        <span class="badge" style="background: rgba(168, 85, 247, 0.1); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.25); font-weight: 800; font-size: 10.5px; border-radius: 8px; padding: 4px 10px;">
-                            AI Safety Assistant
-                        </span>
-                    </div>
-                    <div class="premium-body p-4">
-                        <!-- Top Row: 3 Diagnostics Cards -->
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4 col-sm-12">
-                                <div class="p-3 rounded-3 h-100" style="background: rgba(244, 63, 94, 0.03); border: 1px solid rgba(244, 63, 94, 0.15);">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 600;">Kinerja Terendah</span>
-                                        <span class="badge" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e; font-size: 8.5px; font-weight: 700;">Critically Low</span>
-                                    </div>
-                                    <div class="fw-extrabold text-truncate" style="font-size: 13px; color: var(--text-main);" title="@lowestMaincon?.MainconName">@lowestMaincon?.MainconName</div>
-                                    <div class="d-flex align-items-center gap-1.5 mt-2">
-                                        <div class="progress flex-grow-1" style="height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px;">
-                                            <div class="progress-bar" role="progressbar" style="width: @(lowestMaincon?.OverallComplianceRate ?? 0)%; background-color: #f43f5e;" aria-valuenow="@(lowestMaincon?.OverallComplianceRate ?? 0)" aria-valuemin="0" aria-valuemax="100"></div>
-                                        </div>
-                                        <span class="fw-bold" style="font-size: 11px; color: #f43f5e;">@(lowestMaincon?.OverallComplianceRate ?? 0)%</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 col-sm-12">
-                                <div class="p-3 rounded-3 h-100" style="background: rgba(245, 158, 11, 0.03); border: 1px solid rgba(245, 158, 11, 0.15);">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 600;">Closure Terendah</span>
-                                        <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; font-size: 8.5px; font-weight: 700;">AP Gap</span>
-                                    </div>
-                                    <div class="fw-extrabold text-truncate" style="font-size: 13px; color: var(--text-main);" title="@lowestClosureMaincon?.MainconName">@lowestClosureMaincon?.MainconName</div>
-                                    <div class="d-flex align-items-center gap-1.5 mt-2">
-                                        <div class="progress flex-grow-1" style="height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px;">
-                                            <div class="progress-bar" role="progressbar" style="width: @(lowestClosureMaincon?.ActionPlanClosureRate ?? 0)%; background-color: #f59e0b;" aria-valuenow="@(lowestClosureMaincon?.ActionPlanClosureRate ?? 0)" aria-valuemin="0" aria-valuemax="100"></div>
-                                        </div>
-                                        <span class="fw-bold" style="font-size: 11px; color: #f59e0b;">@(lowestClosureMaincon?.ActionPlanClosureRate ?? 0)%</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 col-sm-12">
-                                <div class="p-3 rounded-3 h-100" style="background: rgba(239, 68, 68, 0.03); border: 1px solid rgba(239, 68, 68, 0.15);">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 600;">Mitra Belum Bergerak</span>
-                                        <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 8.5px; font-weight: 700;">Inactive</span>
-                                    </div>
-                                    <div class="fw-extrabold" style="font-size: 13px; color: #ef4444;">@totalUncompliantSubcons <span style="font-size: 10px; font-weight: 600; color: var(--text-muted);">Mitra Kerja</span></div>
-                                    <div class="mt-2" style="font-size: 10px; color: var(--text-muted); line-height: 1.2;">
-                                        Dari total @(totalActiveSubcons + totalUncompliantSubcons) subcon MTD Group.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Bottom Section: Recommendations List -->
-                        <h6 class="fw-bold mb-3" style="font-size: 12.5px; color: var(--text-main); font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <i class="bi bi-lightning-charge-fill text-warning me-1.5"></i>Rekomendasi Prioritas AI
+                <div class="premium-card mb-0">
+                    <div class="premium-header py-3 px-3.5">
+                        <h6 class="premium-title mb-0" style="font-size: 14px; font-family: 'Outfit', sans-serif;">
+                            <i class="bi bi-building-fill me-2 text-primary"></i>4 Perusahaan Utama (Peringkat Kepatuhan Tertinggi)
+                            <i class="bi bi-info-circle ms-1 text-muted" style="font-size: 12px; cursor: help;" data-bs-toggle="tooltip" title="@(isNewPolicy ? "Skor Terbobot 50:50 = 50% Submisi SAP + 50% Closure Action Plan." : "Perhitungan Historis = 100% Submisi SAP.")"></i>
                         </h6>
-                        <div class="d-flex flex-column gap-3">
-                            <div class="d-flex gap-3">
-                                <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2); color: #f43f5e; flex-shrink: 0;">
-                                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 15px;"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Intervensi Khusus @lowestMaincon?.MainconName</div>
-                                    <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
-                                        Lakukan evaluasi terpadu dengan pimpinan <span class="fw-extrabold text-danger" style="text-decoration: underline;">@lowestMaincon?.MainconName</span> (Skor Total: @(lowestMaincon?.OverallComplianceRate ?? 0)%, Pembuatan SAP: @(lowestMaincon?.SapSubmissionRate ?? 0)%, Closure AP: @(lowestMaincon?.ActionPlanClosureRate ?? 0)%).
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-3">
-                                <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); color: #f59e0b; flex-shrink: 0;">
-                                    <i class="bi bi-check-circle-fill" style="font-size: 15px;"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Akselerasi Penutupan Temuan (Action Plan)</div>
-                                    <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
-                                        Dorong PJA dan PIC dari <span class="fw-extrabold text-warning">@lowestClosureMaincon?.MainconName</span> untuk segera menuntaskan <span class="fw-extrabold text-warning">@lowestClosureMaincon?.OpenActionPlans temuan Open</span> (Tingkat Closure: @(lowestClosureMaincon?.ActionPlanClosureRate ?? 0)%) agar tidak mengurangi bobot 50% kepatuhan.
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-3">
-                                <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; flex-shrink: 0;">
-                                    <i class="bi bi-people-fill" style="font-size: 15px;"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Aktivasi Mitra Kerja Belum Bergerak</div>
-                                    <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
-                                        Sebanyak <span class="fw-extrabold text-danger">@totalUncompliantSubcons subkontraktor</span> terdaftar aktif namun belum memiliki data submisi bulan ini. Prioritaskan aktivasi mitra-mitra tersebut agar tidak mengurangi skor kepatuhan gabungan.
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="d-flex gap-3">
-                                <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #22c55e; flex-shrink: 0;">
-                                    <i class="bi bi-trophy-fill" style="font-size: 15px;"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Replikasi Best Practice @highestMaincon?.MainconName</div>
-                                    <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
-                                        Pelajari metode monitoring dan komitmen pengisian target dari manajemen <span class="fw-extrabold text-success">@highestMaincon?.MainconName</span> (Skor Total: @(highestMaincon?.OverallComplianceRate ?? 0)%, Closure AP: @(highestMaincon?.ActionPlanClosureRate ?? 0)%) untuk direplikasi di Maincon lain yang berkinerja rendah.
-                                    </p>
-                                </div>
-                            </div>
+                        <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-size: 10.5px; font-weight: 800; padding: 5px 10px; border-radius: 6px;">MAIN CONTRACTOR</span>
+                    </div>
+                    <div class="premium-body p-3.5">
+                        <div style="height: 380px; position: relative;">
+                            <canvas id="chartUtama"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Employee Safety Awareness Analysis -->
-            <div class="col-lg-5 col-md-12 mt-4">
-                <div class="premium-card mb-0 h-100" style="border: 1.5px solid rgba(16, 185, 129, 0.35); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.08); background: radial-gradient(circle at 95% 10%, rgba(16, 185, 129, 0.04), transparent 60%), var(--bg-card); border-radius: 20px; overflow: hidden; display: flex; flex-direction: column;">
-                    <div class="premium-header" style="border-bottom: 1.5px solid rgba(16, 185, 129, 0.15); background: rgba(16, 185, 129, 0.02); padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
-                        <h5 class="premium-title" style="color: #10b981; font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
-                            <i class="bi bi-person-check-fill animate-pulse" style="color: #10b981; font-size: 20px;"></i>Kesadaran Karyawan (Awareness)
-                        </h5>
-                        <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25); font-weight: 800; font-size: 10.5px; border-radius: 8px; padding: 4px 10px;">
-                            Participation
-                        </span>
+            <!-- Chart 2: Mitra under Perusahaan -->
+            <div class="col-12">
+                <div class="premium-card mb-0">
+                    <div class="premium-header py-3 px-3.5">
+                        <h6 class="premium-title mb-0" style="font-size: 14px; font-family: 'Outfit', sans-serif;">
+                            <i class="bi bi-diagram-3-fill me-2 text-warning"></i>Mitra under Perusahaan (Peringkat Kepatuhan Tertinggi)
+                            <i class="bi bi-info-circle ms-1 text-muted" style="font-size: 12px; cursor: help;" data-bs-toggle="tooltip" title="Akumulasi seluruh subkontraktor di bawah masing-masing perusahaan utama."></i>
+                        </h6>
+                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 10.5px; font-weight: 800; padding: 5px 10px; border-radius: 6px;">SUBCONTRACTORS</span>
                     </div>
-                    <div class="premium-body p-4 flex-grow-1 d-flex flex-column justify-content-between">
-                        <!-- Awareness Rate Gauge/Progress -->
-                        <div class="mb-4 text-center">
-                            <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle mb-3" style="width: 80px; height: 80px; background: rgba(16, 185, 129, 0.08); border: 2.5px solid rgba(16, 185, 129, 0.35);">
-                                <span class="fw-extrabold" style="font-size: 18px; color: #10b981; font-family: 'Outfit', sans-serif;">@ViewBag.EmployeeAwarenessRate%</span>
-                            </div>
-                            <h6 class="fw-bold mb-1" style="font-size: 13.5px; color: var(--text-main);">Score Partisipasi SAP Karyawan</h6>
-                            <p class="text-muted mb-0" style="font-size: 11.5px; line-height: 1.4;">
-                                Sebanyak <span class="fw-bold text-success">@ViewBag.ActiveEmployeesCount</span> dari <span class="fw-bold">@ViewBag.TotalEmployeesWithTarget</span> karyawan ber-target telah berpartisipasi aktif melakukan submisi program bulan ini.
-                            </p>
-                        </div>
-
-                        <!-- Daily Submissions Line Chart -->
-                        <div class="flex-grow-1" style="min-height: 150px; position: relative;">
-                            <h6 class="fw-bold mb-2.5" style="font-size: 12px; color: var(--text-main); font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <i class="bi bi-graph-up text-success me-1.5"></i>Tren Aktivitas Harian (14 Hari Terakhir)
-                            </h6>
-                            <div style="height: 140px;">
-                                <canvas id="dailyAwarenessChart"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Mini Analysis Description -->
-                        <div class="mt-3 text-muted" style="font-size: 11.5px; line-height: 1.5; border-top: 1px dashed var(--border-color); padding-top: 12px;">
-                            <i class="bi bi-journal-text me-1 text-success"></i><strong>Analisis Perubahan Harian:</strong> Kesadaran karyawan menunjukkan keterlibatan yang dinamis. Sisa <span class="fw-bold text-danger">@(ViewBag.TotalEmployeesWithTarget - ViewBag.ActiveEmployeesCount) karyawan</span> ber-target belum tergerak melakukan pengisian bulan ini.
+                    <div class="premium-body p-3.5">
+                        <div style="height: 380px; position: relative;">
+                            <canvas id="chartMitra"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Row: Top 10 Leaderboards -->
-            <div class="row mt-4 animate-fade-in">
-                <!-- Top 10 Terbaik -->
-                <div class="col-lg-6 col-md-12 mb-4 mb-lg-0">
-                    <div class="report-card premium-card h-100">
+            <!-- Chart 3: Total Masing-masing Mitra -->
+            <div class="col-12">
+                <div class="premium-card mb-0">
+                    <div class="premium-header py-3 px-3.5">
+                        <h6 class="premium-title mb-0" style="font-size: 14px; font-family: 'Outfit', sans-serif;">
+                            <i class="bi bi-layers-fill me-2 text-success"></i>Total Masing-masing Mitra (Konsolidasi - Peringkat Kepatuhan Tertinggi)
+                            <i class="bi bi-info-circle ms-1 text-muted" style="font-size: 12px; cursor: help;" data-bs-toggle="tooltip" title="Konsolidasi total entitas perusahaan utama beserta seluruh mitranya."></i>
+                        </h6>
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 10.5px; font-weight: 800; padding: 5px 10px; border-radius: 6px;">TOTAL KONSOLIDASI</span>
+                    </div>
+                    <div class="premium-body p-3.5">
+                        <div style="height: 380px; position: relative;">
+                            <canvas id="chartTotal"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @{
+        // AI Calculations based on mainconComparison
+        var sortedMaincons = (mainconComparison ?? new List<MBS_SAP.Controllers.MainconGroupComparisonViewModel>()).OrderByDescending(x => x.OverallComplianceRate).ToList();
+        var highestMaincon = sortedMaincons.FirstOrDefault();
+        var lowestMaincon = sortedMaincons.LastOrDefault();
+        var lowestClosureMaincon = (mainconComparison ?? new List<MBS_SAP.Controllers.MainconGroupComparisonViewModel>()).OrderBy(x => x.ActionPlanClosureRate).FirstOrDefault();
+
+        var programAverages = new Dictionary<string, double>();
+        if (mainconComparison != null && mainconComparison.Any())
+        {
+            programAverages["Hazard Report"] = mainconComparison.Average(x => x.HazardComplianceRate);
+            programAverages["Inspeksi"] = mainconComparison.Average(x => x.InspeksiComplianceRate);
+            programAverages["Safety Talk"] = mainconComparison.Average(x => x.SafetyTalkComplianceRate);
+            programAverages["Observasi"] = mainconComparison.Average(x => x.ObservasiComplianceRate);
+            programAverages["Coaching"] = mainconComparison.Average(x => x.CoachingComplianceRate);
+        }
+        var lowestProgram = programAverages.Any() ? programAverages.OrderBy(x => x.Value).First() : new KeyValuePair<string, double>("N/A", 0);
+        var highestProgram = programAverages.Any() ? programAverages.OrderByDescending(x => x.Value).First() : new KeyValuePair<string, double>("N/A", 0);
+
+        int totalUncompliantSubcons = mainconComparison?.Sum(x => x.UncompliantChildCompanyNames.Count) ?? 0;
+        int totalActiveSubcons = mainconComparison?.Sum(x => x.ChildCompanyNames.Count - x.UncompliantChildCompanyNames.Count - x.NoTargetChildCompanyNames.Count) ?? 0;
+    }
+
+    <!-- Row: AI Executive Analysis & Employee Safety Awareness -->
+    <div class="row g-4 mt-1">
+        <!-- AI Executive Analysis & Recommendations -->
+        <div class="col-lg-7 col-md-12">
+            <div class="premium-card mb-0 h-100" style="border: 1.5px solid rgba(168, 85, 247, 0.35); box-shadow: 0 10px 30px rgba(168, 85, 247, 0.08); background: radial-gradient(circle at 95% 10%, rgba(168, 85, 247, 0.04), transparent 60%), var(--bg-card); border-radius: 20px; overflow: hidden; position: relative;">
+                <div class="premium-header" style="border-bottom: 1.5px solid rgba(168, 85, 247, 0.15); background: rgba(168, 85, 247, 0.02); padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+                    <h5 class="premium-title" style="color: #a855f7; font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <i class="bi bi-robot animate-pulse" style="color: #a855f7; font-size: 20px;"></i>Analisis Eksekutif & Rekomendasi AI
+                    </h5>
+                    <span class="badge" style="background: rgba(168, 85, 247, 0.1); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.25); font-weight: 800; font-size: 10.5px; border-radius: 8px; padding: 4px 10px;">
+                        AI Safety Assistant
+                    </span>
+                </div>
+                <div class="premium-body p-4">
+                    <!-- Top Row: 3 Diagnostics Cards -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4 col-sm-12">
+                            <div class="p-3 rounded-3 h-100" style="background: rgba(244, 63, 94, 0.03); border: 1px solid rgba(244, 63, 94, 0.15);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 600;">Kinerja Terendah</span>
+                                    <span class="badge" style="background: rgba(244, 63, 94, 0.1); color: #f43f5e; font-size: 8.5px; font-weight: 700;">Critically Low</span>
+                                </div>
+                                <div class="fw-extrabold text-truncate" style="font-size: 13px; color: var(--text-main);" title="@lowestMaincon?.MainconName">@lowestMaincon?.MainconName</div>
+                                <div class="d-flex align-items-center gap-1.5 mt-2">
+                                    <div class="progress flex-grow-1" style="height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px;">
+                                        <div class="progress-bar" role="progressbar" style="width: @(lowestMaincon?.OverallComplianceRate ?? 0)%; background-color: #f43f5e;" aria-valuenow="@(lowestMaincon?.OverallComplianceRate ?? 0)" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="fw-bold" style="font-size: 11px; color: #f43f5e;">@(lowestMaincon?.OverallComplianceRate ?? 0)%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-12">
+                            <div class="p-3 rounded-3 h-100" style="background: rgba(245, 158, 11, 0.03); border: 1px solid rgba(245, 158, 11, 0.15);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 600;">Closure Terendah</span>
+                                    <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; font-size: 8.5px; font-weight: 700;">AP Gap</span>
+                                </div>
+                                <div class="fw-extrabold text-truncate" style="font-size: 13px; color: var(--text-main);" title="@lowestClosureMaincon?.MainconName">@lowestClosureMaincon?.MainconName</div>
+                                <div class="d-flex align-items-center gap-1.5 mt-2">
+                                    <div class="progress flex-grow-1" style="height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px;">
+                                        <div class="progress-bar" role="progressbar" style="width: @(lowestClosureMaincon?.ActionPlanClosureRate ?? 0)%; background-color: #f59e0b;" aria-valuenow="@(lowestClosureMaincon?.ActionPlanClosureRate ?? 0)" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="fw-bold" style="font-size: 11px; color: #f59e0b;">@(lowestClosureMaincon?.ActionPlanClosureRate ?? 0)%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-12">
+                            <div class="p-3 rounded-3 h-100" style="background: rgba(239, 68, 68, 0.03); border: 1px solid rgba(239, 68, 68, 0.15);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span style="font-size: 10.5px; color: var(--text-muted); font-weight: 600;">Mitra Belum Bergerak</span>
+                                    <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 8.5px; font-weight: 700;">Inactive</span>
+                                </div>
+                                <div class="fw-extrabold" style="font-size: 13px; color: #ef4444;">@totalUncompliantSubcons <span style="font-size: 10px; font-weight: 600; color: var(--text-muted);">Mitra Kerja</span></div>
+                                <div class="mt-2" style="font-size: 10px; color: var(--text-muted); line-height: 1.2;">
+                                    Dari total @(totalActiveSubcons + totalUncompliantSubcons) subcon MTD Group.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Section: Recommendations List -->
+                    <h6 class="fw-bold mb-3" style="font-size: 12.5px; color: var(--text-main); font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <i class="bi bi-lightning-charge-fill text-warning me-1.5"></i>Rekomendasi Prioritas AI
+                    </h6>
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex gap-3">
+                            <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2); color: #f43f5e; flex-shrink: 0;">
+                                <i class="bi bi-exclamation-triangle-fill" style="font-size: 15px;"></i>
+                            </div>
+                            <div>
+                                <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Intervensi Khusus @lowestMaincon?.MainconName</div>
+                                <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
+                                    Lakukan evaluasi terpadu dengan pimpinan <span class="fw-extrabold text-danger" style="text-decoration: underline;">@lowestMaincon?.MainconName</span> (Skor Total: @(lowestMaincon?.OverallComplianceRate ?? 0)%, Pembuatan SAP: @(lowestMaincon?.SapSubmissionRate ?? 0)%, Closure AP: @(lowestMaincon?.ActionPlanClosureRate ?? 0)%).
+                                </p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); color: #f59e0b; flex-shrink: 0;">
+                                <i class="bi bi-check-circle-fill" style="font-size: 15px;"></i>
+                            </div>
+                            <div>
+                                <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Akselerasi Penutupan Temuan (Action Plan)</div>
+                                <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
+                                    Dorong PJA dan PIC dari <span class="fw-extrabold text-warning">@lowestClosureMaincon?.MainconName</span> untuk segera menuntaskan <span class="fw-extrabold text-warning">@lowestClosureMaincon?.OpenActionPlans temuan Open</span> (Tingkat Closure: @(lowestClosureMaincon?.ActionPlanClosureRate ?? 0)%) agar tidak mengurangi bobot 50% kepatuhan.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; flex-shrink: 0;">
+                                <i class="bi bi-people-fill" style="font-size: 15px;"></i>
+                            </div>
+                            <div>
+                                <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Aktivasi Mitra Kerja Belum Bergerak</div>
+                                <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
+                                    Sebanyak <span class="fw-extrabold text-danger">@totalUncompliantSubcons subkontraktor</span> terdaftar aktif namun belum memiliki data submisi bulan ini. Prioritaskan aktivasi mitra-mitra tersebut agar tidak mengurangi skor kepatuhan gabungan.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <div class="d-flex align-items-center justify-content-center rounded-3" style="width: 34px; height: 34px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); color: #22c55e; flex-shrink: 0;">
+                                <i class="bi bi-trophy-fill" style="font-size: 15px;"></i>
+                            </div>
+                            <div>
+                                <div class="fw-extrabold" style="font-size: 13.5px; color: var(--text-main); font-family: 'Outfit', sans-serif;">Replikasi Best Practice @highestMaincon?.MainconName</div>
+                                <p class="mb-0 mt-1" style="font-size: 12.5px; line-height: 1.5; color: var(--text-main); opacity: 0.85; font-weight: 500;">
+                                    Pelajari metode monitoring dan komitmen pengisian target dari manajemen <span class="fw-extrabold text-success">@highestMaincon?.MainconName</span> (Skor Total: @(highestMaincon?.OverallComplianceRate ?? 0)%, Closure AP: @(highestMaincon?.ActionPlanClosureRate ?? 0)%) untuk direplikasi di Maincon lain yang berkinerja rendah.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Safety Awareness Analysis -->
+        <div class="col-lg-5 col-md-12">
+            <div class="premium-card mb-0 h-100" style="border: 1.5px solid rgba(16, 185, 129, 0.35); box-shadow: 0 10px 30px rgba(16, 185, 129, 0.08); background: radial-gradient(circle at 95% 10%, rgba(16, 185, 129, 0.04), transparent 60%), var(--bg-card); border-radius: 20px; overflow: hidden; display: flex; flex-direction: column;">
+                <div class="premium-header" style="border-bottom: 1.5px solid rgba(16, 185, 129, 0.15); background: rgba(16, 185, 129, 0.02); padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;">
+                    <h5 class="premium-title" style="color: #10b981; font-weight: 800; font-family: 'Outfit', sans-serif; font-size: 16px; margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <i class="bi bi-person-check-fill animate-pulse" style="color: #10b981; font-size: 20px;"></i>Kesadaran Karyawan (Awareness)
+                    </h5>
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25); font-weight: 800; font-size: 10.5px; border-radius: 8px; padding: 4px 10px;">
+                        Participation
+                    </span>
+                </div>
+                <div class="premium-body p-4 flex-grow-1 d-flex flex-column justify-content-between">
+                    <!-- Awareness Rate Gauge/Progress -->
+                    <div class="mb-4 text-center">
+                        <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle mb-3" style="width: 80px; height: 80px; background: rgba(16, 185, 129, 0.08); border: 2.5px solid rgba(16, 185, 129, 0.35);">
+                            <span class="fw-extrabold" style="font-size: 18px; color: #10b981; font-family: 'Outfit', sans-serif;">@ViewBag.EmployeeAwarenessRate%</span>
+                        </div>
+                        <h6 class="fw-bold mb-1" style="font-size: 13.5px; color: var(--text-main);">Score Partisipasi SAP Karyawan</h6>
+                        <p class="text-muted mb-0" style="font-size: 11.5px; line-height: 1.4;">
+                            Sebanyak <span class="fw-bold text-success">@ViewBag.ActiveEmployeesCount</span> dari <span class="fw-bold">@ViewBag.TotalEmployeesWithTarget</span> karyawan ber-target telah berpartisipasi aktif melakukan submisi program bulan ini.
+                        </p>
+                    </div>
+
+                    <!-- Daily Submissions Line Chart -->
+                    <div class="flex-grow-1" style="min-height: 150px; position: relative;">
+                        <h6 class="fw-bold mb-2.5" style="font-size: 12px; color: var(--text-main); font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="bi bi-graph-up text-success me-1.5"></i>Tren Aktivitas Harian (14 Hari Terakhir)
+                        </h6>
+                        <div style="height: 140px;">
+                            <canvas id="dailyAwarenessChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Mini Analysis Description -->
+                    <div class="mt-3 text-muted" style="font-size: 11.5px; line-height: 1.5; border-top: 1px dashed var(--border-color); padding-top: 12px;">
+                        <i class="bi bi-journal-text me-1 text-success"></i><strong>Analisis Perubahan Harian:</strong> Kesadaran karyawan menunjukkan keterlibatan yang dinamis. Sisa <span class="fw-bold text-danger">@(ViewBag.TotalEmployeesWithTarget - ViewBag.ActiveEmployeesCount) karyawan</span> ber-target belum tergerak melakukan pengisian bulan ini.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row: Top 10 Leaderboards -->
+    <div class="row mt-4 animate-fade-in">
+        <!-- Top 10 Terbaik -->
+        <div class="col-lg-6 col-md-12 mb-4 mb-lg-0">
+            <div class="report-card premium-card h-100">
                         <div class="report-header premium-header d-flex justify-content-between align-items-center">
                             <div>
                                 <h3 class="report-title text-primary m-0" style="font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 0.5px;">
@@ -1418,9 +1259,6 @@
                     </div>
                 </div>
             </div>
-
-        </div>
-    }
 
     <!-- SAP Program Fulfillment Summary Card -->
     @{
@@ -1693,14 +1531,14 @@
                 });
             }
 
-            // Chart 4: Maincon Group Comparison (Grouped Bar Chart)
-            const ctxMaincon = document.getElementById('mainconComparisonChart');
-            if (ctxMaincon) {
-                const ctxMaincon2d = ctxMaincon.getContext('2d');
+            // Maincon 3 Separate Focused Comparison Charts
+            function initMainconBarChart(canvasId, labels, dataItems, chartTitle) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas || !Array.isArray(dataItems) || dataItems.length === 0) return;
+                const ctx2d = canvas.getContext('2d');
 
-                // Dynamic gradients for premium visuals
                 const createGrad = (cStart, cEnd) => {
-                    const gradient = ctxMaincon2d.createLinearGradient(0, 0, 0, 360);
+                    const gradient = ctx2d.createLinearGradient(0, 0, 0, 300);
                     gradient.addColorStop(0, cStart);
                     gradient.addColorStop(1, cEnd);
                     return gradient;
@@ -1715,111 +1553,137 @@
                 const observasiGrad = createGrad('rgba(236, 72, 153, 0.95)', 'rgba(219, 39, 119, 0.6)');
                 const coachingGrad = createGrad('rgba(168, 85, 247, 0.95)', 'rgba(147, 51, 234, 0.6)');
 
-                new Chart(ctxMaincon2d, {
+                new Chart(ctx2d, {
                     type: 'bar',
                     data: {
-                        labels: @mainconLabelsJson,
+                        labels: labels,
                         datasets: [
                             {
-                                label: 'Skor Total (50/50)',
-                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.OverallComplianceRate))),
+                                label: '[1] Skor Total',
+                                data: dataItems.map(x => x.OverallComplianceRate),
                                 backgroundColor: overallGrad,
                                 hoverBackgroundColor: '#059669',
-                                borderRadius: 5,
+                                borderRadius: 4,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.8
+                                categoryPercentage: 0.75
                             },
                             {
-                                label: 'Pembuatan SAP (50%)',
-                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.SapSubmissionRate))),
+                                label: '[2] Pembuatan SAP',
+                                data: dataItems.map(x => x.SapSubmissionRate),
                                 backgroundColor: sapGrad,
                                 hoverBackgroundColor: '#0284c7',
-                                borderRadius: 5,
+                                borderRadius: 4,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.8
+                                categoryPercentage: 0.75
                             },
                             {
-                                label: 'Closure AP (50%)',
-                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.ActionPlanClosureRate))),
+                                label: '[3] Closure AP',
+                                data: dataItems.map(x => x.ActionPlanClosureRate),
                                 backgroundColor: apGrad,
                                 hoverBackgroundColor: '#10b981',
-                                borderRadius: 5,
+                                borderRadius: 4,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.8
+                                categoryPercentage: 0.75
                             },
                             {
-                                label: 'Hazard',
-                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.HazardComplianceRate))),
+                                label: '[4] Hazard',
+                                data: dataItems.map(x => x.HazardComplianceRate),
                                 backgroundColor: hazardGrad,
                                 hoverBackgroundColor: '#4f46e5',
-                                borderRadius: 5,
+                                borderRadius: 4,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.8
+                                categoryPercentage: 0.75
                             },
                             {
-                                label: 'Inspeksi',
-                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.InspeksiComplianceRate))),
+                                label: '[5] Inspeksi',
+                                data: dataItems.map(x => x.InspeksiComplianceRate),
                                 backgroundColor: inspeksiGrad,
                                 hoverBackgroundColor: '#2563eb',
-                                borderRadius: 5,
+                                borderRadius: 4,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.8
+                                categoryPercentage: 0.75
                             },
                             {
-                                label: 'Safety Talk',
-                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.SafetyTalkComplianceRate))),
+                                label: '[6] Safety Talk',
+                                data: dataItems.map(x => x.SafetyTalkComplianceRate),
                                 backgroundColor: safetyTalkGrad,
                                 hoverBackgroundColor: '#d97706',
-                                borderRadius: 5,
+                                borderRadius: 4,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.8
+                                categoryPercentage: 0.75
                             },
                             {
-                                label: 'Observasi',
-                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.ObservasiComplianceRate))),
+                                label: '[7] Observasi',
+                                data: dataItems.map(x => x.ObservasiComplianceRate),
                                 backgroundColor: observasiGrad,
                                 hoverBackgroundColor: '#db2777',
-                                borderRadius: 5,
+                                borderRadius: 4,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.8
+                                categoryPercentage: 0.75
                             },
                             {
-                                label: 'Coaching',
-                                data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(mainconComparison!.Select(x => x.CoachingComplianceRate))),
+                                label: '[8] Coaching',
+                                data: dataItems.map(x => x.CoachingComplianceRate),
                                 backgroundColor: coachingGrad,
                                 hoverBackgroundColor: '#9333ea',
-                                borderRadius: 5,
+                                borderRadius: 4,
                                 borderWidth: 0,
                                 barPercentage: 0.85,
-                                categoryPercentage: 0.8
+                                categoryPercentage: 0.75
                             }
                         ]
                     },
                     plugins: [
                         {
                             id: 'barLabels',
-                            afterDatasetsDraw(chart, args, options) {
+                            afterDatasetsDraw(chart) {
                                 const { ctx } = chart;
+                                const badgeColors = [
+                                    '#059669', // 1: Skor Total
+                                    '#0284c7', // 2: Pembuatan SAP
+                                    '#10b981', // 3: Closure AP
+                                    '#6366f1', // 4: Hazard
+                                    '#2563eb', // 5: Inspeksi
+                                    '#d97706', // 6: Safety Talk
+                                    '#db2777', // 7: Observasi
+                                    '#9333ea'  // 8: Coaching
+                                ];
                                 ctx.save();
                                 chart.data.datasets.forEach((dataset, i) => {
                                     const meta = chart.getDatasetMeta(i);
-                                    meta.data.forEach((bar, index) => {
-                                        const val = dataset.data[index];
-                                        if (val > 0) {
-                                            ctx.fillStyle = labelColor;
-                                            ctx.font = 'bold 11px "Outfit", sans-serif';
+                                    if (!meta.hidden) {
+                                        meta.data.forEach((bar, index) => {
+                                            const val = dataset.data[index];
+                                            // 1. Draw percentage value at top of bar if > 0
+                                            if (val > 0) {
+                                                ctx.fillStyle = labelColor;
+                                                ctx.font = 'bold 9.5px Outfit, sans-serif';
+                                                ctx.textAlign = 'center';
+                                                ctx.textBaseline = 'bottom';
+                                                ctx.fillText(val + '%', bar.x, bar.y - 2);
+                                            }
+
+                                            // 2. Draw color-matched number (1..8) at the base of each bar for colorblind accessibility
+                                            const badgeY = bar.base - 8;
+                                            ctx.fillStyle = badgeColors[i] || '#64748b';
+                                            ctx.beginPath();
+                                            ctx.arc(bar.x, badgeY, 5.5, 0, Math.PI * 2);
+                                            ctx.fill();
+
+                                            ctx.fillStyle = '#ffffff';
+                                            ctx.font = 'bold 8px Outfit, sans-serif';
                                             ctx.textAlign = 'center';
-                                            ctx.textBaseline = 'bottom';
-                                            ctx.fillText(val + '%', bar.x, bar.y - 6);
-                                        }
-                                    });
+                                            ctx.textBaseline = 'middle';
+                                            ctx.fillText((i + 1).toString(), bar.x, badgeY + 0.5);
+                                        });
+                                    }
                                 });
                                 ctx.restore();
                             }
@@ -1828,30 +1692,38 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
                         plugins: {
                             legend: {
                                 position: 'top',
-                                align: 'end',
+                                align: 'center',
                                 labels: {
                                     usePointStyle: true,
                                     pointStyle: 'circle',
-                                    padding: 16,
+                                    padding: 12,
+                                    boxWidth: 8,
                                     color: labelColor,
-                                    font: { size: 12, weight: '700', family: "'Outfit', 'Inter', sans-serif" }
+                                    font: { size: 10.5, weight: '700', family: "'Outfit', 'Inter', sans-serif" }
                                 }
                             },
                             tooltip: {
-                                backgroundColor: 'rgba(15, 23, 42, 0.92)',
-                                titleColor: '#fff',
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleColor: '#38bdf8',
                                 titleFont: { size: 12, weight: 'bold', family: "'Outfit', sans-serif" },
                                 bodyColor: '#cbd5e1',
                                 bodyFont: { size: 11, family: "'Inter', sans-serif" },
-                                borderColor: 'rgba(255, 255, 255, 0.1)',
+                                borderColor: 'rgba(255, 255, 255, 0.15)',
                                 borderWidth: 1,
                                 padding: 12,
-                                cornerRadius: 12,
+                                cornerRadius: 8,
                                 boxPadding: 6,
                                 callbacks: {
+                                    title: function(tooltipItems) {
+                                        if (tooltipItems.length > 0 && dataItems[tooltipItems[0].dataIndex]) {
+                                            return dataItems[tooltipItems[0].dataIndex].MainconName;
+                                        }
+                                        return tooltipItems[0].label;
+                                    },
                                     label: function(context) {
                                         return ' ' + context.dataset.label + ': ' + context.raw + '%';
                                     }
@@ -1869,7 +1741,7 @@
                             },
                             y: {
                                 min: 0,
-                                max: 100,
+                                max: 105,
                                 grid: { 
                                     color: gridColor,
                                     borderDash: [5, 5],
@@ -1877,7 +1749,7 @@
                                 },
                                 ticks: { 
                                     color: labelColor, 
-                                    font: { size: 12, weight: '700' },
+                                    font: { size: 10.5, weight: '700' },
                                     padding: 8,
                                     callback: function(value) { return value + '%'; }
                                 }
@@ -1886,6 +1758,10 @@
                     }
                 });
             }
+
+            initMainconBarChart('chartUtama', @labelsUtamaJson, @dataUtamaJson, '4 Perusahaan Utama');
+            initMainconBarChart('chartMitra', @labelsMitraJson, @dataMitraJson, 'Mitra under Perusahaan');
+            initMainconBarChart('chartTotal', @labelsTotalJson, @dataTotalJson, 'Total Masing-masing Mitra');
 
             // Chart 5: Subcon Leaderboard (Horizontal Bar Chart)
             const ctxSubcon = document.getElementById('subconLeaderboardChart');
@@ -2076,6 +1952,8 @@
                     });
                 });
             }
+
+
 
             // Global tooltip show/hide helpers (used by all 3 badge types)
             window.showTooltip = function(id) {
@@ -2321,47 +2199,49 @@
 <!-- Scoring Logic Modal -->
 <div class="modal fade" id="scoringModal" tabindex="-1" aria-labelledby="scoringModalLabel" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content shadow-lg" style="background-color: #1e293b; color: #f8fafc; border: 1px solid rgba(255,255,255,0.1); border-radius: 15px;">
-            <div class="modal-header border-bottom" style="border-color: rgba(255,255,255,0.1) !important;">
-                <h6 class="modal-title fw-bold" id="scoringModalLabel"><i class="bi bi-calculator me-2 text-warning"></i>Transparansi Sistem & Rumus Penilaian Performa</h6>
+        <div class="modal-content shadow-lg" style="background-color: #1e293b; color: #f8fafc; border: 1px solid rgba(255,255,255,0.15); border-radius: 15px;">
+            <div class="modal-header border-bottom" style="border-color: rgba(255,255,255,0.1) !important; background: rgba(0,0,0,0.15);">
+                <h6 class="modal-title fw-bold" id="scoringModalLabel" style="color: #ffffff !important; font-size: 15px; font-family: 'Outfit', sans-serif;">
+                    <i class="bi bi-calculator me-2 text-warning"></i>Transparansi Sistem &amp; Rumus Penilaian Performa
+                </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" style="font-size: 13px;">
+            <div class="modal-body p-4" style="font-size: 13px;">
                 @if (isNewPolicy)
                 {
-                    <div class="alert alert-success d-flex align-items-center mb-3 py-2 px-3" style="font-size: 12.5px; border-radius: 8px;">
-                        <i class="bi bi-check-circle-fill me-2 fs-5"></i>
-                        <div><strong>Periode Berjalan (&ge; September 2026):</strong> Menggunakan Kebijakan Evaluasi Seimbang <strong>50% Submisi SAP + 50% Action Plan Close Rate</strong>.</div>
+                    <div class="d-flex align-items-center mb-3 py-2.5 px-3 rounded-3" style="background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.4); color: #ffffff; font-size: 12.5px;">
+                        <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
+                        <div><strong class="text-white">Periode Berjalan (&ge; September 2026):</strong> Menggunakan Kebijakan Evaluasi Seimbang <strong style="color: #34d399;">50% Submisi SAP + 50% Action Plan Close Rate</strong>.</div>
                     </div>
 
                     <div class="card mb-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;">
                         <div class="card-body p-3">
-                            <h6 class="fw-bold text-warning mb-2" style="font-size: 13.5px;"><i class="bi bi-code-slash me-1"></i>Rumus Komposisi Skor:</h6>
-                            <div class="p-2.5 rounded bg-dark border border-secondary font-monospace text-center mb-3" style="font-size: 13px; color: #38bdf8;">
+                            <h6 class="fw-bold mb-2" style="font-size: 13.5px; color: #fbbf24;"><i class="bi bi-code-slash me-1"></i>Rumus Komposisi Skor:</h6>
+                            <div class="p-2.5 rounded font-monospace text-center mb-3" style="font-size: 13px; color: #38bdf8; background: #0f172a; border: 1px solid rgba(56, 189, 248, 0.3);">
                                 Total Skor = (50% &times; Capaian Submisi SAP) + (50% &times; Action Plan Close Rate)
                             </div>
 
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <div class="p-3 rounded h-100" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25);">
-                                        <div class="d-flex justify-content-between align-items-center mb-1.5">
-                                            <strong class="text-primary" style="font-size: 13px;">1. Submisi SAP (Bobot 50%)</strong>
-                                            <span class="badge bg-primary">Maks 50 Poin</span>
+                                    <div class="p-3 rounded h-100" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.3);">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <strong style="font-size: 13px; color: #60a5fa;"><i class="bi bi-journal-check me-1"></i>1. Submisi SAP (Bobot 50%)</strong>
+                                            <span class="badge bg-primary px-2 py-1" style="font-size: 11px;">Maks 50 Poin</span>
                                         </div>
-                                        <p class="text-muted mb-1" style="font-size: 11.5px;">Dihitung dari persentase total submisi aktual terhadap total target kewajiban seluruh karyawan di perusahaan tersebut:</p>
-                                        <div class="p-2 rounded bg-dark font-monospace text-center text-white" style="font-size: 11px;">
+                                        <p class="mb-2" style="font-size: 12px; color: #cbd5e1; line-height: 1.5;">Dihitung dari persentase total submisi aktual terhadap total target kewajiban seluruh karyawan di perusahaan tersebut:</p>
+                                        <div class="p-2 rounded font-monospace text-center" style="font-size: 11.5px; background: #0f172a; border: 1px solid rgba(59, 130, 246, 0.3); color: #93c5fd;">
                                             Skor 1 = (Submisi Aktual / Total Target) &times; 50%
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="p-3 rounded h-100" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
-                                        <div class="d-flex justify-content-between align-items-center mb-1.5">
-                                            <strong class="text-success" style="font-size: 13px;">2. Action Plan Close (Bobot 50%)</strong>
-                                            <span class="badge bg-success">Maks 50 Poin</span>
+                                    <div class="p-3 rounded h-100" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3);">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <strong style="font-size: 13px; color: #34d399;"><i class="bi bi-check2-circle me-1"></i>2. Action Plan Close (Bobot 50%)</strong>
+                                            <span class="badge bg-success px-2 py-1" style="font-size: 11px;">Maks 50 Poin</span>
                                         </div>
-                                        <p class="text-muted mb-1" style="font-size: 11.5px;">Dihitung dari persentase temuan Action Plan berstatus Closed yang berhasil ditindaklanjuti:</p>
-                                        <div class="p-2 rounded bg-dark font-monospace text-center text-white" style="font-size: 11px;">
+                                        <p class="mb-2" style="font-size: 12px; color: #cbd5e1; line-height: 1.5;">Dihitung dari persentase temuan Action Plan berstatus Closed yang berhasil ditindaklanjuti:</p>
+                                        <div class="p-2 rounded font-monospace text-center" style="font-size: 11.5px; background: #0f172a; border: 1px solid rgba(16, 185, 129, 0.3); color: #6ee7b7;">
                                             Skor 2 = (Temuan Closed / Total Temuan) &times; 50%
                                         </div>
                                     </div>
@@ -2372,36 +2252,37 @@
                 }
                 else
                 {
-                    <div class="alert alert-warning d-flex align-items-center mb-3 py-2 px-3" style="font-size: 12.5px; border-radius: 8px;">
-                        <i class="bi bi-clock-history me-2 fs-5"></i>
-                        <div><strong>Periode Historis (&le; Agustus 2026):</strong> Menggunakan Sistem Penilaian Multi-Faktor.</div>
+                    <div class="d-flex align-items-center mb-3 py-2.5 px-3 rounded-3" style="background: rgba(245, 158, 11, 0.18); border: 1px solid rgba(245, 158, 11, 0.4); color: #ffffff; font-size: 12.5px;">
+                        <i class="bi bi-clock-history me-2 fs-5 text-warning"></i>
+                        <div><strong class="text-white">Periode Historis (&le; Agustus 2026):</strong> Menggunakan Sistem Penilaian Multi-Faktor.</div>
                     </div>
                     <ul class="list-group list-group-flush mb-3" style="border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
                         <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
-                            <div><strong>1. Capaian Target (20%)</strong><br><small style="color: #94a3b8;">Total Aktual / Total Target. Maks 100%.</small></div>
+                            <div><strong style="color: #ffffff;">1. Capaian Target (20%)</strong><br><small style="color: #cbd5e1;">Total Aktual / Total Target. Maks 100%.</small></div>
                             <span class="badge bg-primary rounded-pill">20%</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
-                            <div><strong>2. Skala Beban / Effort (15%)</strong><br><small style="color: #94a3b8;">Apresiasi khusus berdasarkan jumlah target perusahaan.</small></div>
+                            <div><strong style="color: #ffffff;">2. Skala Beban / Effort (15%)</strong><br><small style="color: #cbd5e1;">Apresiasi khusus berdasarkan jumlah target perusahaan.</small></div>
                             <span class="badge bg-info rounded-pill">15%</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
-                            <div><strong>3. Close Rate (25%)</strong><br><small style="color: #94a3b8;">Persentase temuan yang berhasil ditutup.</small></div>
+                            <div><strong style="color: #ffffff;">3. Close Rate (25%)</strong><br><small style="color: #cbd5e1;">Persentase temuan yang berhasil ditutup.</small></div>
                             <span class="badge bg-success rounded-pill">25%</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
-                            <div><strong>4. Kualitas SAP (20%)</strong><br><small style="color: #94a3b8;">Rata-rata Rating Kualitas (1-5 Bintang).</small></div>
+                            <div><strong style="color: #ffffff;">4. Kualitas SAP (20%)</strong><br><small style="color: #cbd5e1;">Rata-rata Rating Kualitas (1-5 Bintang).</small></div>
                             <span class="badge bg-warning text-dark rounded-pill">20%</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
-                            <div><strong>5. Kecepatan (20%)</strong><br><small style="color: #94a3b8;">Rata-rata durasi penyelesaian temuan (Hari).</small></div>
+                            <div><strong style="color: #ffffff;">5. Kecepatan (20%)</strong><br><small style="color: #cbd5e1;">Rata-rata durasi penyelesaian temuan (Hari).</small></div>
                             <span class="badge bg-danger rounded-pill">20%</span>
                         </li>
                     </ul>
                 }
 
-                <div class="alert alert-info py-2 px-3 mb-0" style="font-size: 12px; border-radius: 8px;">
-                    <i class="bi bi-info-circle me-1"></i> Perusahaan dinilai adil dengan memadukan keaktifan pelaporan dan komitmen penyelesaian temuan lapangan.
+                <div class="d-flex align-items-center py-2.5 px-3 rounded-3 mb-0" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); color: #e0f2fe; font-size: 12px;">
+                    <i class="bi bi-info-circle-fill me-2 text-info fs-5"></i>
+                    <span>Perusahaan dinilai secara adil dengan memadukan <strong>keaktifan pelaporan</strong> dan <strong>komitmen penyelesaian temuan</strong> di lapangan.</span>
                 </div>
             </div>
         </div>
