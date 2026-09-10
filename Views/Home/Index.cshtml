@@ -442,14 +442,6 @@
             box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
             outline: none;
         }
-        .roster-readonly-field {
-            pointer-events: none;
-            opacity: 0.75;
-            background: rgba(255, 255, 255, 0.03) !important;
-        }
-        body.light-theme .roster-readonly-field {
-            background: rgba(0, 0, 0, 0.02) !important;
-        }
         .roster-info-box {
             background: rgba(56, 189, 248, 0.06);
             border: 1px solid rgba(56, 189, 248, 0.15);
@@ -541,26 +533,10 @@
                 <div class="modal-body" style="padding: 20px; max-height: calc(100vh - 200px); overflow-y: auto;">
                     <form id="rosterSettingsForm">
                         @{
-                            var isEditMode = ViewData["IsEditMode"] is bool editMode && editMode;
-                            var readonlyAttr = isEditMode ? "readonly" : "";
-                            var readonlyClass = isEditMode ? "roster-readonly-field" : "";
                             var currentTipe = (ViewData["RosterTipe"] as string) ?? "REGULER";
                             var isTugasActive = currentTipe.Equals("TUGAS", StringComparison.OrdinalIgnoreCase);
                         }
                         <div id="rosterFormAlert" class="alert alert-danger d-none" style="font-size: 12px; border-radius: 12px; padding: 10px 14px;"></div>
-
-                        @if (isEditMode)
-                        {
-                            <div id="rosterEditWarning" class="alert alert-warning d-flex align-items-center justify-content-between border-0 mb-3" style="background-color: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2) !important; border-radius: 16px; padding: 12px 16px; gap: 10px;">
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi bi-lock-fill" id="rosterLockIcon" style="color: #f59e0b; font-size: 16px;"></i>
-                                    <span id="rosterLockText" style="font-size: 11px; color: var(--text-main); font-weight: 700; line-height: 1.3;">Status aktif terkunci dari perubahan tidak sengaja.</span>
-                                </div>
-                                <button type="button" id="btnToggleEditRoster" class="btn btn-sm animate-pop-in" style="background: #f59e0b; color: #fff; font-size: 11px; font-weight: 700; border-radius: 8px; padding: 6px 12px; border: none; white-space: nowrap;">
-                                    <i class="bi bi-pencil-square me-1"></i> Revisi
-                                </button>
-                            </div>
-                        }
 
                         <!-- Segmented Switcher for Tipe Roster -->
                         <div class="roster-type-switcher mb-3" style="display: flex; background: rgba(0,0,0,0.06); padding: 4px; border-radius: 14px; border: 1px solid var(--border-color); gap: 4px;">
@@ -632,11 +608,11 @@
                                 <div class="row g-2">
                                     <div class="col-6">
                                         <label class="roster-label">Mulai Dinas</label>
-                                        <input type="date" class="roster-date-input @readonlyClass" id="awalDinas" name="awalDinas" value="@ViewData["RosterAwalDinas"]" @readonlyAttr required />
+                                        <input type="date" class="roster-date-input" id="awalDinas" name="awalDinas" value="@ViewData["RosterAwalDinas"]" required />
                                     </div>
                                     <div class="col-6">
                                         <label class="roster-label">Akhir Dinas</label>
-                                        <input type="date" class="roster-date-input @readonlyClass" id="akhirDinas" name="akhirDinas" value="@ViewData["RosterAkhirDinas"]" @readonlyAttr required />
+                                        <input type="date" class="roster-date-input" id="akhirDinas" name="akhirDinas" value="@ViewData["RosterAkhirDinas"]" required />
                                     </div>
                                 </div>
                             </div>
@@ -649,11 +625,11 @@
                                 <div class="row g-2">
                                     <div class="col-6">
                                         <label class="roster-label">Mulai Cuti</label>
-                                        <input type="date" class="roster-date-input @readonlyClass" id="awalCuti" name="awalCuti" value="@ViewData["RosterAwalCuti"]" @readonlyAttr required />
+                                        <input type="date" class="roster-date-input" id="awalCuti" name="awalCuti" value="@ViewData["RosterAwalCuti"]" required />
                                     </div>
                                     <div class="col-6">
                                         <label class="roster-label">Akhir Cuti</label>
-                                        <input type="date" class="roster-date-input @readonlyClass" id="akhirCuti" name="akhirCuti" value="@ViewData["RosterAkhirCuti"]" @readonlyAttr required />
+                                        <input type="date" class="roster-date-input" id="akhirCuti" name="akhirCuti" value="@ViewData["RosterAkhirCuti"]" required />
                                     </div>
                                 </div>
                             </div>
@@ -697,16 +673,16 @@
                                 <div class="row g-2 mb-3">
                                     <div class="col-6">
                                         <label class="roster-label">Mulai Tugas</label>
-                                        <input type="date" class="roster-date-input @readonlyClass" id="awalTugas" name="awalTugas" value="@(isTugasActive ? ViewData["RosterAwalDinas"] : (ViewData["RosterAwalDinas"] ?? DateTime.Today.ToString("yyyy-MM-dd")))" @readonlyAttr required />
+                                        <input type="date" class="roster-date-input" id="awalTugas" name="awalTugas" value="@(isTugasActive ? ViewData["RosterAwalDinas"] : (ViewData["RosterAwalDinas"] ?? DateTime.Today.ToString("yyyy-MM-dd")))" required />
                                     </div>
                                     <div class="col-6">
                                         <label class="roster-label">Akhir Tugas</label>
-                                        <input type="date" class="roster-date-input @readonlyClass" id="akhirTugas" name="akhirTugas" value="@(isTugasActive ? ViewData["RosterAkhirDinas"] : (ViewData["RosterAkhirDinas"] ?? DateTime.Today.AddDays(30).ToString("yyyy-MM-dd")))" @readonlyAttr required />
+                                        <input type="date" class="roster-date-input" id="akhirTugas" name="akhirTugas" value="@(isTugasActive ? ViewData["RosterAkhirDinas"] : (ViewData["RosterAkhirDinas"] ?? DateTime.Today.AddDays(30).ToString("yyyy-MM-dd")))" required />
                                     </div>
                                 </div>
                                 <div>
                                     <label class="roster-label">Keterangan / Keperluan Penugasan</label>
-                                    <input type="text" class="roster-date-input @readonlyClass" id="keteranganTugas" name="keteranganTugas" placeholder="Contoh: Tugas HO / Diklat Luar / Penugasan Khusus" value="@(ViewData["RosterKeterangan"] ?? "")" @readonlyAttr maxlength="255" />
+                                    <input type="text" class="roster-date-input" id="keteranganTugas" name="keteranganTugas" placeholder="Contoh: Tugas HO / Diklat Luar / Penugasan Khusus" value="@(ViewData["RosterKeterangan"] ?? "")" maxlength="255" />
                                 </div>
                             </div>
                         </div>
@@ -897,73 +873,10 @@
                 
                 updateRosterStatusLabel();
 
-                // Cache original dates to restore them if the user cancels editing
-                const originalDates = {
-                    awalDinas: $('#awalDinas').val(),
-                    akhirDinas: $('#akhirDinas').val(),
-                    awalCuti: $('#awalCuti').val(),
-                    akhirCuti: $('#akhirCuti').val(),
-                    awalTugas: $('#awalTugas').val(),
-                    akhirTugas: $('#akhirTugas').val(),
-                    keteranganTugas: $('#keteranganTugas').val()
-                };
-
-                let isEditRosterUnlocked = false;
-
-                $('#btnToggleEditRoster').on('click', function() {
-                    const btn = $(this);
-                    const warningBox = $('#rosterEditWarning');
-                    const lockIcon = $('#rosterLockIcon');
-                    const lockText = $('#rosterLockText');
-                    const dateInputs = $('#awalDinas, #akhirDinas, #awalCuti, #akhirCuti, #awalTugas, #akhirTugas, #keteranganTugas');
-
-                    if (!isEditRosterUnlocked) {
-                        // Unlock edit mode
-                        dateInputs.removeAttr('readonly').removeClass('roster-readonly-field');
-                        lockIcon.removeClass('bi-lock-fill').addClass('bi-unlock-fill');
-                        lockText.text('Mode edit aktif. Silakan ubah tanggal di bawah.');
-                        warningBox.removeClass('alert-warning').addClass('alert-success')
-                            .css({
-                                'background-color': 'rgba(16, 185, 129, 0.08)',
-                                'border-color': 'rgba(16, 185, 129, 0.2)'
-                            });
-                        btn.html('<i class="bi bi-x-circle me-1"></i> Batalkan');
-                        isEditRosterUnlocked = true;
-                    } else {
-                        // Cancel editing and lock back
-                        dateInputs.attr('readonly', true).addClass('roster-readonly-field');
-                        $('#awalDinas').val(originalDates.awalDinas);
-                        $('#akhirDinas').val(originalDates.akhirDinas);
-                        $('#awalCuti').val(originalDates.awalCuti);
-                        $('#akhirCuti').val(originalDates.akhirCuti);
-                        $('#awalTugas').val(originalDates.awalTugas);
-                        $('#akhirTugas').val(originalDates.akhirTugas);
-                        $('#keteranganTugas').val(originalDates.keteranganTugas);
-
-                        lockIcon.removeClass('bi-unlock-fill').addClass('bi-lock-fill');
-                        lockText.text('Status aktif terkunci dari perubahan tidak sengaja.');
-                        warningBox.removeClass('alert-success').addClass('alert-warning')
-                            .css({
-                                'background-color': 'rgba(245, 158, 11, 0.08)',
-                                'border-color': 'rgba(245, 158, 11, 0.2)'
-                            });
-                        btn.html('<i class="bi bi-pencil-square me-1"></i> Revisi');
-                        isEditRosterUnlocked = false;
-                        
-                        // Clear any error alerts if user cancels
-                        $('#rosterFormAlert').addClass('d-none').text('');
-                    }
-                });
-
                 // Quick preset button click handler (2:2, 2:1, 4:2, 6:2, 8:2, 10:2)
                 $('.btn-roster-preset').on('click', function() {
                     const onsite = parseInt($(this).data('onsite')) || 14;
                     const offsite = parseInt($(this).data('offsite')) || 14;
-
-                    // If inputs are locked in edit mode, unlock them first
-                    if ($('#rosterEditWarning').length && !isEditRosterUnlocked) {
-                        $('#btnToggleEditRoster').trigger('click');
-                    }
 
                     let startDateStr = $('#awalDinas').val();
                     let startDate = startDateStr ? new Date(startDateStr) : new Date();
