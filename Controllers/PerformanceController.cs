@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MBS_SAP.Data;
@@ -6551,7 +6551,7 @@ namespace MBS_SAP.Controllers
                 // Fetch MTD actual logs
                 var allGroupHazards = await _context.HazardReports.AsNoTracking()
                     .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && companyIds.Contains(h.PerusahaanId.Value) && h.Tanggal >= startOfMonthMaincon && h.Tanggal <= endOfMonthMaincon)
-                    .Select(h => new { PerusahaanId = h.PerusahaanId ?? 0, h.Nik })
+                    .Select(h => new { PerusahaanId = h.PerusahaanId ?? 0, h.Nik, h.StatusTemuan })
                     .ToListAsync();
 
                 var allGroupInspections = await _context.Inspections.AsNoTracking()
@@ -6583,7 +6583,7 @@ namespace MBS_SAP.Controllers
                                                    select new { PerusahaanId = k.IdPerusahaan, o.Nik })
                                                    .ToListAsync();
 
-                int totalGroupEmployees = 0;
+                int totalGroupEmployees = allGroupKaryawans.Count;
                 int employeesWithTargetCount = 0;
                 int totalTargetH = 0, totalActualH = 0;
                 int totalTargetI = 0, totalActualI = 0;
@@ -6615,7 +6615,6 @@ namespace MBS_SAP.Controllers
                         continue;
                     }
 
-                    totalGroupEmployees++;
                     employeesWithTargetCount++;
 
                     int onsiteDays = totalDaysInMonthGroup;
@@ -6801,6 +6800,17 @@ namespace MBS_SAP.Controllers
                     }
                 }
 
+                // Helper to check closed status robustly (supports "Closed", "Close", "Selesai", "Complete")
+                bool isClosedStatus(string? s)
+                {
+                    if (string.IsNullOrWhiteSpace(s)) return false;
+                    var trimmed = s.Trim();
+                    return trimmed.Equals("Closed", StringComparison.OrdinalIgnoreCase)
+                        || trimmed.Equals("Close", StringComparison.OrdinalIgnoreCase)
+                        || trimmed.Equals("Selesai", StringComparison.OrdinalIgnoreCase)
+                        || trimmed.Equals("Complete", StringComparison.OrdinalIgnoreCase);
+                }
+
                 // Fetch Action Plans for this group in MTD
                 var allGroupActionPlans = await _context.ActionPlans.AsNoTracking()
                     .Where(a => !a.IsDeleted && a.PerusahaanId.HasValue && companyIds.Contains(a.PerusahaanId.Value) && a.Tanggal >= startOfMonthMaincon && a.Tanggal <= endOfMonthMaincon)
@@ -6808,9 +6818,17 @@ namespace MBS_SAP.Controllers
                     .ToListAsync();
 
                 int totalGroupAps = allGroupActionPlans.Count;
-                int closedGroupAps = allGroupActionPlans.Count(a => a.Status != null && a.Status.Trim().Equals("Closed", StringComparison.OrdinalIgnoreCase));
-                int openGroupAps = totalGroupAps - closedGroupAps;
-                double groupClosureRate = totalGroupAps > 0 ? Math.Round(Math.Min(100.0, (double)closedGroupAps / totalGroupAps * 100.0), 1) : 100.0;
+                int closedGroupAps = allGroupActionPlans.Count(a => isClosedStatus(a.Status));
+
+                int totalGroupHazards = allGroupHazards.Count;
+                int closedGroupHazards = allGroupHazards.Count(h => isClosedStatus(h.StatusTemuan));
+
+                // Determine effective findings & closed findings to make sure all findings from PostgreSQL / HazardReports are included
+                int effectiveTotalAps = totalGroupAps >= totalGroupHazards && totalGroupAps > 0 ? totalGroupAps : totalGroupHazards;
+                int effectiveClosedAps = totalGroupAps >= totalGroupHazards && totalGroupAps > 0 ? closedGroupAps : closedGroupHazards;
+
+                int openGroupAps = Math.Max(0, effectiveTotalAps - effectiveClosedAps);
+                double groupClosureRate = effectiveTotalAps > 0 ? Math.Round(Math.Min(100.0, (double)effectiveClosedAps / effectiveTotalAps * 100.0), 1) : 100.0;
 
                 int totalGroupTarget = totalTargetH + totalTargetI + totalTargetS + totalTargetO + totalTargetC;
                 int totalGroupActual = totalActualH + totalActualI + totalActualS + totalActualO + totalActualC;
@@ -6836,8 +6854,8 @@ namespace MBS_SAP.Controllers
                     NoTargetChildCompanyNames = noTargetSubs,
                     SapSubmissionRate = sapSubmissionRate,
                     ActionPlanClosureRate = groupClosureRate,
-                    TotalActionPlans = totalGroupAps,
-                    ClosedActionPlans = closedGroupAps,
+                    TotalActionPlans = effectiveTotalAps,
+                    ClosedActionPlans = effectiveClosedAps,
                     OpenActionPlans = openGroupAps,
                     OverallComplianceRate = overallComplianceRate,
                     HazardComplianceRate = totalTargetH > 0 ? Math.Round(Math.Min(100.0, (double)totalActualH / totalTargetH * 100.0), 1) : 0,
@@ -7013,9 +7031,20 @@ namespace MBS_SAP.Controllers
 
             ViewBag.NeverLoggedInCompanies = neverLoggedInGrouped;
 
+            // Helper to check closed status robustly
+            bool isClosedStatusRank(string? s)
+            {
+                if (string.IsNullOrWhiteSpace(s)) return false;
+                var trimmed = s.Trim();
+                return trimmed.Equals("Closed", StringComparison.OrdinalIgnoreCase)
+                    || trimmed.Equals("Close", StringComparison.OrdinalIgnoreCase)
+                    || trimmed.Equals("Selesai", StringComparison.OrdinalIgnoreCase)
+                    || trimmed.Equals("Complete", StringComparison.OrdinalIgnoreCase);
+            }
+
             // 7. Top 10 Best Performance Companies
             var hazardCounts = groupHazards.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
-            var closedHazardCounts = groupHazards.Where(h => h.PerusahaanId.HasValue && string.Equals(h.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var closedHazardCounts = groupHazards.Where(h => h.PerusahaanId.HasValue && isClosedStatusRank(h.StatusTemuan)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
             var inspCounts = groupInspections.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
             var stCounts = groupSafetyTalks.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
             var obsCounts = groupObservations.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
@@ -7162,7 +7191,7 @@ namespace MBS_SAP.Controllers
                     totalAp = apList.Count;
                     foreach (var ap in apList)
                     {
-                        if (ap.Status == "Closed")
+                        if (isClosedStatusRank(ap.Status))
                         {
                             closedAp++;
                             if (ap.TanggalPerbaikan.HasValue)
@@ -7175,8 +7204,11 @@ namespace MBS_SAP.Controllers
                     }
                 }
 
-                double closeRate = totalAp > 0 ? ((double)closedAp / totalAp * 100.0) : (hC > 0 ? ((double)hCClosed / hC * 100.0) : 100.0);
-                double avgSpeed = apWithDays > 0 ? sumDays / apWithDays : (closedAp > 0 ? 1 : 14); // default speed
+                int effectiveTotalAp = totalAp >= hC && totalAp > 0 ? totalAp : hC;
+                int effectiveClosedAp = totalAp >= hC && totalAp > 0 ? closedAp : hCClosed;
+
+                double closeRate = effectiveTotalAp > 0 ? ((double)effectiveClosedAp / effectiveTotalAp * 100.0) : 100.0;
+                double avgSpeed = apWithDays > 0 ? sumDays / apWithDays : (effectiveClosedAp > 0 ? 1 : 14); // default speed
 
                 if (totalTemuan > 0)
                 {
@@ -7188,8 +7220,8 @@ namespace MBS_SAP.Controllers
                         TotalTarget = totalTarget,
                         TotalHazard = hC,
                         TotalClosedHazard = hCClosed,
-                        TotalActionPlan = totalAp,
-                        TotalClosedActionPlan = closedAp,
+                        TotalActionPlan = effectiveTotalAp,
+                        TotalClosedActionPlan = effectiveClosedAp,
                         CloseRate = closeRate,
                         AvgSpeedDays = avgSpeed,
                         AvgQuality = 5.0 // Default quality since SapQualityAssessment doesn't link to PerusahaanId easily
@@ -7199,6 +7231,7 @@ namespace MBS_SAP.Controllers
 
             foreach (var p in performanceList)
             {
+                p.MaxTargetAll = maxTargetAll;
                 p.ScorePencapaian = p.TotalTarget > 0 ? Math.Min(100.0, ((double)p.TotalTemuan / p.TotalTarget) * 100.0) : (p.TotalTemuan > 0 ? 100.0 : 0.0);
                 p.ScoreSkalaBeban = maxTargetAll > 0 ? (Math.Log10(p.TotalTarget + 1) / Math.Log10(maxTargetAll + 1)) * 100.0 : 0.0;
                 p.ScoreCloseRate = p.CloseRate;
@@ -7219,6 +7252,7 @@ namespace MBS_SAP.Controllers
                 }
             }
 
+            ViewBag.MaxTargetAll = maxTargetAll;
             ViewBag.TopPerformanceList = performanceList.OrderByDescending(p => p.TotalScore).Take(10).ToList();
 
             return View(new List<ComplianceEmployeeViewModel>());

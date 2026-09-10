@@ -987,6 +987,7 @@ ORDER BY nama_perusahaan";
     public class RosterSaveRequest
     {
         public string? TipeRoster { get; set; } = "REGULER"; // "REGULER" or "TUGAS"
+
         public string? Keterangan { get; set; }
         public string AwalDinas { get; set; } = string.Empty;
         public string AkhirDinas { get; set; } = string.Empty;

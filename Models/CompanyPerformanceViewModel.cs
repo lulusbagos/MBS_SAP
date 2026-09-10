@@ -26,6 +26,7 @@ namespace MBS_SAP.Models
 
         // Kalkulasi Skor Akhir
         public int TotalTarget { get; set; }
+        public int MaxTargetAll { get; set; }
         public double ScorePencapaian { get; set; }
         public double ScoreSkalaBeban { get; set; }
         public double ScoreCloseRate { get; set; }
