@@ -902,7 +902,10 @@
                     awalDinas: $('#awalDinas').val(),
                     akhirDinas: $('#akhirDinas').val(),
                     awalCuti: $('#awalCuti').val(),
-                    akhirCuti: $('#akhirCuti').val()
+                    akhirCuti: $('#akhirCuti').val(),
+                    awalTugas: $('#awalTugas').val(),
+                    akhirTugas: $('#akhirTugas').val(),
+                    keteranganTugas: $('#keteranganTugas').val()
                 };
 
                 let isEditRosterUnlocked = false;
@@ -912,7 +915,7 @@
                     const warningBox = $('#rosterEditWarning');
                     const lockIcon = $('#rosterLockIcon');
                     const lockText = $('#rosterLockText');
-                    const dateInputs = $('#awalDinas, #akhirDinas, #awalCuti, #akhirCuti');
+                    const dateInputs = $('#awalDinas, #akhirDinas, #awalCuti, #akhirCuti, #awalTugas, #akhirTugas, #keteranganTugas');
 
                     if (!isEditRosterUnlocked) {
                         // Unlock edit mode
@@ -933,15 +936,18 @@
                         $('#akhirDinas').val(originalDates.akhirDinas);
                         $('#awalCuti').val(originalDates.awalCuti);
                         $('#akhirCuti').val(originalDates.akhirCuti);
+                        $('#awalTugas').val(originalDates.awalTugas);
+                        $('#akhirTugas').val(originalDates.akhirTugas);
+                        $('#keteranganTugas').val(originalDates.keteranganTugas);
 
                         lockIcon.removeClass('bi-unlock-fill').addClass('bi-lock-fill');
-                        lockText.text('Roster aktif terkunci dari perubahan tidak sengaja.');
+                        lockText.text('Status aktif terkunci dari perubahan tidak sengaja.');
                         warningBox.removeClass('alert-success').addClass('alert-warning')
                             .css({
                                 'background-color': 'rgba(245, 158, 11, 0.08)',
                                 'border-color': 'rgba(245, 158, 11, 0.2)'
                             });
-                        btn.html('<i class="bi bi-pencil-square me-1"></i> Revisi Roster');
+                        btn.html('<i class="bi bi-pencil-square me-1"></i> Revisi');
                         isEditRosterUnlocked = false;
                         
                         // Clear any error alerts if user cancels
@@ -991,7 +997,7 @@
                 });
 
                 $('#btnDeleteRoster').on('click', function() {
-                    if (confirm('Apakah Anda yakin ingin menghapus roster aktif Anda? Tindakan ini akan mengembalikan status target bulanan Anda ke "Belum Set".')) {
+                    if (confirm('Apakah Anda yakin ingin menghapus status/roster aktif Anda? Tindakan ini akan mengembalikan status target bulanan Anda ke "Belum Set".')) {
                         const btn = $(this);
                         const originalText = btn.html();
                         btn.prop('disabled', true).text('Menghapus...');
@@ -1002,8 +1008,8 @@
                             success: function(response) {
                                 window.rosterSavedSuccess = true;
                                 localStorage.removeItem('roster_popup_dismissed_date');
-                                alert('Roster berhasil dihapus.');
-                                window.location.reload();
+                                alert('Status/roster berhasil dihapus.');
+                                window.location.href = '/Home/Index';
                             },
                             error: function(xhr) {
                                 btn.prop('disabled', false).html(originalText);
@@ -1106,7 +1112,7 @@
                                     if (modalInstance) {
                                         modalInstance.hide();
                                     }
-                                    window.location.reload();
+                                    window.location.href = '/Home/Index';
                                 }, 1000);
                             },
                             error: function(xhr) {
@@ -1224,7 +1230,7 @@
                                     modalInstance.hide();
                                 }
                                 updateRosterStatusLabel();
-                                window.location.reload();
+                                window.location.href = '/Home/Index';
                             }, 1000);
                         },
                         error: function(xhr) {

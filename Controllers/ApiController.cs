@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using MBS_SAP.Data;
 using MBS_SAP.Models;
 using System;
@@ -14,10 +15,12 @@ namespace MBS_SAP.Controllers
     public class ApiController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly IMemoryCache _cache;
 
-        public ApiController(AppDbContext context)
+        public ApiController(AppDbContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         [HttpGet]
@@ -874,6 +877,7 @@ ORDER BY nama_perusahaan";
                 }
 
                 await _context.SaveChangesAsync();
+                _cache.Remove($"UserDashboardStats_{userNik}");
                 return Ok(new { message = "Periode Tugas berhasil disimpan. Anda dibebaskan dari kewajiban target SAP selama periode ini." });
             }
 
@@ -949,6 +953,7 @@ ORDER BY nama_perusahaan";
             }
 
             await _context.SaveChangesAsync();
+            _cache.Remove($"UserDashboardStats_{userNik}");
             return Ok(new { message = "Roster berhasil disimpan." });
         }
 
@@ -973,6 +978,7 @@ ORDER BY nama_perusahaan";
 
             _context.Rosters.Remove(latestRoster);
             await _context.SaveChangesAsync();
+            _cache.Remove($"UserDashboardStats_{userNik}");
 
             return Ok(new { message = "Roster berhasil dihapus." });
         }
