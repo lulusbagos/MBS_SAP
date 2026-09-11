@@ -7242,12 +7242,12 @@ namespace MBS_SAP.Controllers
 
                 if (isCurrentNewPolicy)
                 {
-                    // Kebijakan Baru (Mulai September 2026): 50% Submisi SAP + 50% Close Rate Action Plan
-                    p.TotalScore = (p.ScorePencapaian * 0.50) + (p.ScoreCloseRate * 0.50);
+                    // Kebijakan Baru (Mulai September 2026): Close Rate 50% + Capaian 15% + Kualitas 15% + Skala Beban 10% + Kecepatan 10%
+                    p.TotalScore = (p.ScorePencapaian * 0.15) + (p.ScoreSkalaBeban * 0.10) + (p.ScoreCloseRate * 0.50) + (p.ScoreKualitas * 0.15) + (p.ScoreKecepatan * 0.10);
                 }
                 else
                 {
-                    // Kebijakan Historis (Sebelum September 2026): Multi-faktor
+                    // Kebijakan Historis (Sebelum September 2026 / Termasuk Agustus 2026): Multi-faktor 20-15-25-20-20
                     p.TotalScore = (p.ScorePencapaian * 0.20) + (p.ScoreSkalaBeban * 0.15) + (p.ScoreCloseRate * 0.25) + (p.ScoreKualitas * 0.20) + (p.ScoreKecepatan * 0.20);
                 }
             }
