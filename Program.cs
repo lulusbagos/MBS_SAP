@@ -56,6 +56,20 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
+// Disable Kestrel Server header disclosure
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.AddServerHeader = false;
+});
+
+// Configure HSTS (HTTP Strict Transport Security)
+builder.Services.AddHsts(options =>
+{
+    options.Preload = true;
+    options.IncludeSubDomains = true;
+    options.MaxAge = TimeSpan.FromDays(365);
+});
+
 // Register DbContext with SQL Server
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -138,9 +152,43 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
 }
 
 app.UseForwardedHeaders();
+
+// Security Headers Middleware (A+ Security Score)
+app.Use(async (context, next) =>
+{
+    // Prevent MIME-sniffing
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+
+    // Prevent Clickjacking
+    context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+
+    // Referrer policy
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+
+    // Hardware & Device permissions
+    context.Response.Headers["Permissions-Policy"] = "camera=(self), microphone=(), geolocation=(self)";
+
+    // Content Security Policy
+    context.Response.Headers["Content-Security-Policy"] =
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://unpkg.com; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://unpkg.com; " +
+        "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+        "img-src 'self' data: blob: https://erp.indexim.co.id https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.basemaps.cartocdn.com; " +
+        "connect-src 'self' https://nominatim.openstreetmap.org https://cdn.datatables.net; " +
+        "frame-ancestors 'self';";
+
+    // Hide Server information
+    context.Response.Headers.Remove("Server");
+    context.Response.Headers.Remove("X-Powered-By");
+
+    await next();
+});
+
 app.UseResponseCompression(); // Must be before UseStaticFiles
 app.UseStaticFiles();
 
