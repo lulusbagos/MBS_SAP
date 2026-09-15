@@ -161,247 +161,178 @@
             var totalUnclosedAll = assignedToMeCount + createdByMeOpenCount + deptOpenCount;
         }
 
-        <!-- Unclosed Action Plans & Findings Multi-Category Tracking Section -->
-        <div class="card-sap mb-4 animate-fade-in delay-2" style="border-left: 4px solid #0dcaf0; background: linear-gradient(135deg, rgba(13, 202, 240, 0.05) 0%, rgba(30, 41, 59, 0.4) 100%); border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); padding: 18px 20px;">
+        <!-- ── Premium Executive Action Plan & Findings Monitoring Section ── -->
+        <div class="mb-4 animate-fade-in delay-2">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <div class="d-flex align-items-center gap-3">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(13, 202, 240, 0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <i class="bi bi-list-check text-info animate-pulse" style="font-size: 22px;"></i>
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(56, 189, 248, 0.12); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-shield-exclamation text-info fs-6"></i>
                     </div>
                     <div>
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <h6 style="font-weight: 800; font-size: 15.5px; margin: 0; color: var(--text-main);">Monitoring Action Plan & Temuan (Belum Close)</h6>
-                            @if (totalUnclosedAll > 0)
-                            {
-                                <span class="badge bg-warning text-dark px-2.5 py-1 fw-bold" style="font-size: 11px; border-radius: 20px;">
-                                    <i class="bi bi-clock-history me-1"></i>Total @totalUnclosedAll Menunggu Close
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-success text-white px-2.5 py-1 fw-bold" style="font-size: 11px; border-radius: 20px;">
-                                    <i class="bi bi-check-circle-fill me-1"></i>Semua Clear
-                                </span>
-                            }
-                        </div>
-                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">
-                            Pantau temuan yang diarahkan ke Anda, temuan yang Anda buat, serta temuan dalam lingkup departemen Anda.
-                        </div>
+                        <h6 style="font-weight: 800; font-size: 14px; margin: 0; color: var(--text-main); letter-spacing: -0.2px;">
+                            Monitoring Action Plan & Temuan
+                        </h6>
+                        <small class="text-muted" style="font-size: 11px;">Status tindak lanjut temuan K3 (Belum Close)</small>
                     </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-startDate="2000-01-01" class="btn btn-sm btn-info text-dark fw-bold px-3 py-1.5 shadow-sm d-inline-flex align-items-center gap-1.5" style="border-radius: 10px; font-size: 12px;">
-                        <span>Kelola Action Plan</span>
-                        <i class="bi bi-arrow-right-short" style="font-size: 16px;"></i>
+                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-startDate="2000-01-01" class="btn btn-sm btn-outline-info px-3 py-1 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm" style="border-radius: 99px; font-size: 11.5px;">
+                    <i class="bi bi-journal-check"></i>
+                    <span>Buka Semua Action Plan</span>
+                    <i class="bi bi-arrow-right-short" style="font-size: 16px;"></i>
+                </a>
+            </div>
+
+            <!-- 3 Modern Executive Interactive Cards Grid -->
+            <div class="row g-3">
+                <!-- Card 1: Diarahkan ke Saya -->
+                <div class="col-md-4">
+                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="assigned" asp-route-startDate="2000-01-01" class="text-decoration-none h-100 d-block">
+                        <div class="card-sap h-100 p-3.5 d-flex flex-column justify-content-between position-relative overflow-hidden" 
+                             style="border-left: 4px solid #0284c7 !important; background: var(--bg-card); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border-radius: 14px;"
+                             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 24px rgba(2, 132, 199, 0.15)';"
+                             onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.04)';">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(2, 132, 199, 0.12); display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-person-check-fill text-info" style="font-size: 18px;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">Diarahkan ke Saya</div>
+                                        <div class="text-muted" style="font-size: 10.5px;">Peran: PIC / PJA</div>
+                                    </div>
+                                </div>
+                                <span class="badge @(assignedToMeCount > 0 ? "bg-danger" : "bg-success") text-white px-2 py-1" style="font-size: 10px; font-weight: 800; border-radius: 8px;">
+                                    @(assignedToMeCount > 0 ? $"{assignedToMeCount} Perlu Close" : "Clear")
+                                </span>
+                            </div>
+                            <div class="mt-2 pt-2 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                <span style="color: var(--text-muted);">Tugas aktif di-close</span>
+                                <span class="text-info fw-bold d-inline-flex align-items-center">
+                                    Lihat Data <i class="bi bi-chevron-right ms-1" style="font-size: 10px;"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Card 2: Dibuat Oleh Saya -->
+                <div class="col-md-4">
+                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="created" asp-route-startDate="2000-01-01" class="text-decoration-none h-100 d-block">
+                        <div class="card-sap h-100 p-3.5 d-flex flex-column justify-content-between position-relative overflow-hidden" 
+                             style="border-left: 4px solid #f59e0b !important; background: var(--bg-card); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border-radius: 14px;"
+                             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 24px rgba(245, 158, 11, 0.15)';"
+                             onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.04)';">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-pencil-square text-warning" style="font-size: 18px;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">Dibuat Oleh Saya</div>
+                                        <div class="text-muted" style="font-size: 10.5px;">Laporan Saya Belum Close</div>
+                                    </div>
+                                </div>
+                                <span class="badge @(createdByMeOpenCount > 0 ? "bg-warning text-dark" : "bg-success") px-2 py-1" style="font-size: 10px; font-weight: 800; border-radius: 8px;">
+                                    @(createdByMeOpenCount > 0 ? $"{createdByMeOpenCount} Menunggu" : "Tuntas")
+                                </span>
+                            </div>
+                            <div class="mt-2 pt-2 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                <span style="color: var(--text-muted);">Pantau perbaikan</span>
+                                <span class="text-warning fw-bold d-inline-flex align-items-center">
+                                    Pantau <i class="bi bi-chevron-right ms-1" style="font-size: 10px;"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Card 3: Departemen Saya -->
+                <div class="col-md-4">
+                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="dept" asp-route-dept="@userDeptName" asp-route-startDate="2000-01-01" class="text-decoration-none h-100 d-block">
+                        <div class="card-sap h-100 p-3.5 d-flex flex-column justify-content-between position-relative overflow-hidden" 
+                             style="border-left: 4px solid #6366f1 !important; background: var(--bg-card); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border-radius: 14px;"
+                             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 24px rgba(99, 102, 241, 0.15)';"
+                             onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.04)';">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center;">
+                                        <i class="bi bi-building text-primary" style="font-size: 18px; color: #818cf8 !important;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">Departemen Saya</div>
+                                        <div class="text-muted text-truncate" style="font-size: 10.5px; max-width: 130px;" title="@userDeptName">
+                                            @(!string.IsNullOrEmpty(userDeptName) ? userDeptName : "Dept")
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="badge @(deptOpenCount > 0 ? "bg-primary" : "bg-success") text-white px-2 py-1" style="font-size: 10px; font-weight: 800; border-radius: 8px;">
+                                    @(deptOpenCount > 0 ? $"{deptOpenCount} Open" : "Clear")
+                                </span>
+                            </div>
+                            <div class="mt-2 pt-2 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                <span style="color: var(--text-muted);">Lingkup tim departemen</span>
+                                <span class="fw-bold d-inline-flex align-items-center" style="color: #818cf8;">
+                                    Lihat Dept <i class="bi bi-chevron-right ms-1" style="font-size: 10px;"></i>
+                                </span>
+                            </div>
+                        </div>
                     </a>
                 </div>
             </div>
 
-            <!-- Nav Tabs Switcher -->
-            <ul class="nav nav-pills gap-2 mb-3 border-bottom border-secondary pb-2" id="taskCategoryTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active d-inline-flex align-items-center gap-2 py-1.5 px-3" id="tab-assigned-tab" data-bs-toggle="pill" data-bs-target="#tab-assigned" type="button" role="tab" style="font-size: 12px; font-weight: 700; border-radius: 10px;">
-                        <i class="bi bi-person-check-fill text-info"></i>
-                        <span>Diarahkan ke Saya (PIC/PJA)</span>
-                        <span class="badge @(assignedToMeCount > 0 ? "bg-danger" : "bg-secondary") rounded-pill" style="font-size: 10px;">@assignedToMeCount</span>
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link d-inline-flex align-items-center gap-2 py-1.5 px-3" id="tab-created-tab" data-bs-toggle="pill" data-bs-target="#tab-created" type="button" role="tab" style="font-size: 12px; font-weight: 700; border-radius: 10px;">
-                        <i class="bi bi-person-plus-fill text-warning"></i>
-                        <span>Dibuat Oleh Saya</span>
-                        <span class="badge @(createdByMeOpenCount > 0 ? "bg-warning text-dark" : "bg-secondary") rounded-pill" style="font-size: 10px;">@createdByMeOpenCount</span>
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link d-inline-flex align-items-center gap-2 py-1.5 px-3" id="tab-dept-tab" data-bs-toggle="pill" data-bs-target="#tab-dept" type="button" role="tab" style="font-size: 12px; font-weight: 700; border-radius: 10px;">
-                        <i class="bi bi-building text-primary"></i>
-                        <span>Departemen Saya @(!string.IsNullOrEmpty(userDeptName) ? $"({userDeptName})" : "")</span>
-                        <span class="badge @(deptOpenCount > 0 ? "bg-primary" : "bg-secondary") rounded-pill" style="font-size: 10px;">@deptOpenCount</span>
-                    </button>
-                </li>
-            </ul>
-
-            <!-- Tab Contents -->
-            <div class="tab-content" id="taskCategoryTabsContent">
-                
-                <!-- 1. TAB: DIARAHKAN KE SAYA -->
-                <div class="tab-pane fade show active" id="tab-assigned" role="tabpanel">
-                    @if (assignedTasks.Any())
-                    {
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted" style="font-size: 11px;">Temuan yang membutuhkan tindakan korektif & penutupan dari Anda:</span>
-                            <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="assigned" asp-route-startDate="2000-01-01" class="text-info text-decoration-none fw-bold" style="font-size: 11px;">
-                                Lihat Semua (@assignedToMeCount) &rarr;
-                            </a>
-                        </div>
-                        <div class="d-flex flex-column gap-2">
-                            @foreach (var task in assignedTasks)
-                            {
-                                var riskBadgeClass = task.TingkatResiko == "Ekstrim" || task.TingkatResiko == "Tinggi" ? "bg-danger" : task.TingkatResiko == "Sedang" ? "bg-warning text-dark" : "bg-success";
-                                <div class="p-2.5 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: var(--bg-card); border: 1px solid var(--border-color);">
-                                    <div class="d-flex align-items-start gap-2.5" style="max-width: 78%;">
-                                        @if (!string.IsNullOrEmpty(task.Foto))
-                                        {
-                                            var displayImg = task.Foto.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(task.Foto) : task.Foto;
-                                            <img src="@displayImg" alt="Foto Temuan" class="rounded-2 flex-shrink-0" style="width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--border-color);" />
-                                        }
-                                        else
-                                        {
-                                            <div class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px; background: rgba(13, 202, 240, 0.1); color: #0dcaf0;">
-                                                <i class="bi bi-shield-exclamation" style="font-size: 20px;"></i>
-                                            </div>
-                                        }
-                                        <div>
-                                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                <span class="badge @riskBadgeClass" style="font-size: 9.5px; font-weight: 700;">@task.TingkatResiko</span>
-                                                <span class="badge bg-secondary" style="font-size: 9.5px; font-weight: 600;">@task.Source</span>
-                                                <span style="font-weight: 700; font-size: 12px; color: var(--text-main);">@task.Lokasi</span>
-                                            </div>
-                                            <div class="text-truncate" style="font-size: 11.5px; color: var(--text-muted); max-width: 450px; margin-top: 2px;" title="@task.Temuan">
-                                                @task.Temuan
-                                            </div>
-                                            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">
-                                                Pelapor: <strong>@task.Pelapor</strong> (@task.Tanggal.ToString("dd MMM yyyy")) &bull; Peran: <span class="text-info fw-bold">@task.TargetRole</span>
-                                            </div>
+            @if (assignedTasks.Any())
+            {
+                <!-- Direct Quick Action Preview for Urgent Tasks -->
+                <div class="mt-3 p-3 rounded-3" style="background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+                    <div class="d-flex justify-content-between align-items-center mb-2.5">
+                        <span style="font-weight: 700; font-size: 12px; color: var(--text-main);">
+                            <i class="bi bi-bell-fill text-warning me-1.5"></i>Temuan Mendesak yang Diarahkan ke Anda:
+                        </span>
+                        <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="assigned" asp-route-startDate="2000-01-01" class="text-info fw-bold text-decoration-none" style="font-size: 11px;">
+                            Lihat Semua (@assignedToMeCount) &rarr;
+                        </a>
+                    </div>
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var task in assignedTasks.Take(3))
+                        {
+                            var riskBadgeClass = task.TingkatResiko == "Ekstrim" || task.TingkatResiko == "Tinggi" ? "bg-danger" : task.TingkatResiko == "Sedang" ? "bg-warning text-dark" : "bg-success";
+                            <div class="p-2.5 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
+                                <div class="d-flex align-items-start gap-2.5" style="max-width: 78%;">
+                                    @if (!string.IsNullOrEmpty(task.Foto))
+                                    {
+                                        var displayImg = task.Foto.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(task.Foto) : task.Foto;
+                                        <img src="@displayImg" alt="Foto Temuan" class="rounded-2 flex-shrink-0" style="width: 40px; height: 40px; object-fit: cover; border: 1px solid var(--border-color);" />
+                                    }
+                                    else
+                                    {
+                                        <div class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; background: rgba(2, 132, 199, 0.1); color: #0284c7;">
+                                            <i class="bi bi-shield-exclamation" style="font-size: 18px;"></i>
+                                        </div>
+                                    }
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <span class="badge @riskBadgeClass" style="font-size: 9px; font-weight: 700;">@task.TingkatResiko</span>
+                                            <span class="badge bg-secondary" style="font-size: 9px; font-weight: 600;">@task.Source</span>
+                                            <span style="font-weight: 700; font-size: 12px; color: var(--text-main);">@task.Lokasi</span>
+                                        </div>
+                                        <div class="text-truncate" style="font-size: 11.5px; color: var(--text-muted); max-width: 420px; margin-top: 2px;" title="@task.Temuan">
+                                            @task.Temuan
+                                        </div>
+                                        <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">
+                                            Pelapor: <strong>@task.Pelapor</strong> (@task.Tanggal.ToString("dd MMM yyyy")) &bull; Peran: <span class="text-info fw-bold">@task.TargetRole</span>
                                         </div>
                                     </div>
-                                    <div>
-                                        <a href="@task.ActionUrl" class="btn btn-sm btn-outline-success px-3 py-1 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 11px; border-radius: 8px;">
-                                            <i class="bi bi-check2-circle"></i> Selesaikan / Close &rarr;
-                                        </a>
-                                    </div>
                                 </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-3 text-muted" style="font-size: 12px; background: rgba(255,255,255,0.02); border-radius: 10px;">
-                            <i class="bi bi-shield-check text-success fs-4 d-block mb-1"></i>
-                            Tidak ada temuan yang sedang diarahkan ke Anda saat ini.
-                        </div>
-                    }
-                </div>
-
-                <!-- 2. TAB: DIBUAT OLEH SAYA -->
-                <div class="tab-pane fade" id="tab-created" role="tabpanel">
-                    @if (createdTasks.Any())
-                    {
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted" style="font-size: 11px;">Temuan yang Anda buat dan masih berstatus Open (menunggu perbaikan):</span>
-                            <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="created" asp-route-startDate="2000-01-01" class="text-warning text-decoration-none fw-bold" style="font-size: 11px;">
-                                Lihat Semua (@createdByMeOpenCount) &rarr;
-                            </a>
-                        </div>
-                        <div class="d-flex flex-column gap-2">
-                            @foreach (var task in createdTasks)
-                            {
-                                var riskBadgeClass = task.TingkatResiko == "Ekstrim" || task.TingkatResiko == "Tinggi" ? "bg-danger" : task.TingkatResiko == "Sedang" ? "bg-warning text-dark" : "bg-success";
-                                <div class="p-2.5 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: var(--bg-card); border: 1px solid var(--border-color);">
-                                    <div class="d-flex align-items-start gap-2.5" style="max-width: 78%;">
-                                        @if (!string.IsNullOrEmpty(task.Foto))
-                                        {
-                                            var displayImg = task.Foto.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(task.Foto) : task.Foto;
-                                            <img src="@displayImg" alt="Foto Temuan" class="rounded-2 flex-shrink-0" style="width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--border-color);" />
-                                        }
-                                        else
-                                        {
-                                            <div class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px; background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
-                                                <i class="bi bi-file-earmark-text" style="font-size: 20px;"></i>
-                                            </div>
-                                        }
-                                        <div>
-                                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                <span class="badge @riskBadgeClass" style="font-size: 9.5px; font-weight: 700;">@task.TingkatResiko</span>
-                                                <span class="badge bg-secondary" style="font-size: 9.5px; font-weight: 600;">@task.Source</span>
-                                                <span style="font-weight: 700; font-size: 12px; color: var(--text-main);">@task.Lokasi</span>
-                                            </div>
-                                            <div class="text-truncate" style="font-size: 11.5px; color: var(--text-muted); max-width: 450px; margin-top: 2px;" title="@task.Temuan">
-                                                @task.Temuan
-                                            </div>
-                                            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">
-                                                Tanggal: <strong>@task.Tanggal.ToString("dd MMM yyyy")</strong> &bull; PJA: <strong class="text-info">@task.Pja</strong> &bull; PIC: <strong class="text-warning">@task.Pic</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <a href="@task.ActionUrl" class="btn btn-sm btn-outline-warning px-3 py-1 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 11px; border-radius: 8px;">
-                                            <i class="bi bi-eye"></i> Detail / Pantau &rarr;
-                                        </a>
-                                    </div>
+                                <div>
+                                    <a href="@task.ActionUrl" class="btn btn-sm btn-outline-success px-3 py-1 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 11px; border-radius: 8px;">
+                                        <i class="bi bi-check2-circle"></i> Selesaikan / Close &rarr;
+                                    </a>
                                 </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-3 text-muted" style="font-size: 12px; background: rgba(255,255,255,0.02); border-radius: 10px;">
-                            <i class="bi bi-check2-all text-success fs-4 d-block mb-1"></i>
-                            Semua temuan yang Anda buat sudah berhasil di-close!
-                        </div>
-                    }
+                            </div>
+                        }
+                    </div>
                 </div>
-
-                <!-- 3. TAB: DEPARTEMEN SAYA -->
-                <div class="tab-pane fade" id="tab-dept" role="tabpanel">
-                    @if (deptTasks.Any())
-                    {
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-muted" style="font-size: 11px;">Temuan dalam lingkup Departemen @userDeptName yang masih berstatus Open:</span>
-                            <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="dept" asp-route-dept="@userDeptName" asp-route-startDate="2000-01-01" class="text-primary text-decoration-none fw-bold" style="font-size: 11px;">
-                                Lihat Semua (@deptOpenCount) &rarr;
-                            </a>
-                        </div>
-                        <div class="d-flex flex-column gap-2">
-                            @foreach (var task in deptTasks)
-                            {
-                                var riskBadgeClass = task.TingkatResiko == "Ekstrim" || task.TingkatResiko == "Tinggi" ? "bg-danger" : task.TingkatResiko == "Sedang" ? "bg-warning text-dark" : "bg-success";
-                                <div class="p-2.5 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: var(--bg-card); border: 1px solid var(--border-color);">
-                                    <div class="d-flex align-items-start gap-2.5" style="max-width: 78%;">
-                                        @if (!string.IsNullOrEmpty(task.Foto))
-                                        {
-                                            var displayImg = task.Foto.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(task.Foto) : task.Foto;
-                                            <img src="@displayImg" alt="Foto Temuan" class="rounded-2 flex-shrink-0" style="width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--border-color);" />
-                                        }
-                                        else
-                                        {
-                                            <div class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px; background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
-                                                <i class="bi bi-building-exclamation" style="font-size: 20px;"></i>
-                                            </div>
-                                        }
-                                        <div>
-                                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                <span class="badge @riskBadgeClass" style="font-size: 9.5px; font-weight: 700;">@task.TingkatResiko</span>
-                                                <span class="badge bg-secondary" style="font-size: 9.5px; font-weight: 600;">@task.Source</span>
-                                                <span style="font-weight: 700; font-size: 12px; color: var(--text-main);">@task.Lokasi</span>
-                                            </div>
-                                            <div class="text-truncate" style="font-size: 11.5px; color: var(--text-muted); max-width: 450px; margin-top: 2px;" title="@task.Temuan">
-                                                @task.Temuan
-                                            </div>
-                                            <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">
-                                                Pelapor: <strong>@task.Pelapor</strong> (@task.DepartemenPelapor) &bull; PJA: <strong class="text-info">@task.Pja</strong> &bull; PIC: <strong class="text-warning">@task.Pic</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <a href="@task.ActionUrl" class="btn btn-sm btn-outline-primary px-3 py-1 fw-bold d-inline-flex align-items-center gap-1" style="font-size: 11px; border-radius: 8px;">
-                                            <i class="bi bi-arrow-up-right-square"></i> Tindak Lanjuti &rarr;
-                                        </a>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-3 text-muted" style="font-size: 12px; background: rgba(255,255,255,0.02); border-radius: 10px;">
-                            <i class="bi bi-building-check text-success fs-4 d-block mb-1"></i>
-                            Tidak ada temuan open di Departemen @userDeptName saat ini.
-                        </div>
-                    }
-                </div>
-            </div>
+            }
         </div>
 
         <!-- Quick Action Menu Cards -->
