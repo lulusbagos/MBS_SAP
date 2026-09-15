@@ -1,3 +1,27 @@
+/* Cross-Browser Performance & Compatibility Reset (Safari WebKit & Mozilla Gecko) */
+html {
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+body {
+    -webkit-overflow-scrolling: touch;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+button, a, input, select, textarea {
+    touch-action: manipulation;
+}
+
 /* Core CSS Variables and Themes */
 :root {
     /* DEFAULT DARK THEME */
