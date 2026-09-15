@@ -149,16 +149,29 @@
             var assignedToMeCount = (int)(ViewData["AssignedToMeCount"] ?? 0);
             var assignedHazardsCount = (int)(ViewData["AssignedHazardsCount"] ?? 0);
             var assignedActionPlansCount = (int)(ViewData["AssignedActionPlansCount"] ?? 0);
+            var assignedTotalCount = (int)(ViewData["AssignedTotalCount"] ?? 0);
+            var assignedClosedCount = (int)(ViewData["AssignedClosedCount"] ?? 0);
+            var assignedCloseRate = (double)(ViewData["AssignedCloseRate"] ?? 100.0);
             var assignedTasks = ViewData["AssignedTasksToClose"] as List<MBS_SAP.Controllers.AssignedTaskToCloseItem> ?? new List<MBS_SAP.Controllers.AssignedTaskToCloseItem>();
 
             var createdByMeOpenCount = (int)(ViewData["CreatedByMeOpenCount"] ?? 0);
+            var createdByMeTotalCount = (int)(ViewData["CreatedByMeTotalCount"] ?? 0);
+            var createdByMeClosedCount = (int)(ViewData["CreatedByMeClosedCount"] ?? 0);
+            var createdByMeCloseRate = (double)(ViewData["CreatedByMeCloseRate"] ?? 100.0);
             var createdTasks = ViewData["CreatedByMeTasks"] as List<MBS_SAP.Controllers.AssignedTaskToCloseItem> ?? new List<MBS_SAP.Controllers.AssignedTaskToCloseItem>();
 
             var deptOpenCount = (int)(ViewData["DeptOpenCount"] ?? 0);
+            var deptTotalCount = (int)(ViewData["DeptTotalCount"] ?? 0);
+            var deptClosedCount = (int)(ViewData["DeptClosedCount"] ?? 0);
+            var deptCloseRate = (double)(ViewData["DeptCloseRate"] ?? 100.0);
             var deptTasks = ViewData["DeptTasks"] as List<MBS_SAP.Controllers.AssignedTaskToCloseItem> ?? new List<MBS_SAP.Controllers.AssignedTaskToCloseItem>();
             var userDeptName = ViewData["UserDept"] as string ?? "";
 
             var totalUnclosedAll = assignedToMeCount + createdByMeOpenCount + deptOpenCount;
+
+            string GetRateColor(double r) => r >= 80 ? "#10b981" : (r >= 50 ? "#f59e0b" : "#ef4444");
+            string GetRateBg(double r) => r >= 80 ? "rgba(16, 185, 129, 0.12)" : (r >= 50 ? "rgba(245, 158, 11, 0.12)" : "rgba(239, 68, 68, 0.12)");
+            string GetRateBorder(double r) => r >= 80 ? "rgba(16, 185, 129, 0.25)" : (r >= 50 ? "rgba(245, 158, 11, 0.25)" : "rgba(239, 68, 68, 0.25)");
         }
 
         <!-- ── Premium Executive Action Plan & Findings Monitoring Section ── -->
@@ -172,7 +185,7 @@
                         <h6 style="font-weight: 800; font-size: 14px; margin: 0; color: var(--text-main); letter-spacing: -0.2px;">
                             Monitoring Action Plan & Temuan
                         </h6>
-                        <small class="text-muted" style="font-size: 11px;">Status tindak lanjut temuan K3 (Belum Close)</small>
+                        <small class="text-muted" style="font-size: 11px;">Status tindak lanjut temuan K3 &amp; Tingkat Penutupan (Closing Rate)</small>
                     </div>
                 </div>
                 <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-startDate="2000-01-01" class="btn btn-sm btn-outline-info px-3 py-1 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm" style="border-radius: 99px; font-size: 11.5px;">
@@ -191,20 +204,40 @@
                              style="border-left: 4px solid #0284c7 !important; background: var(--bg-card); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border-radius: 14px;"
                              onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 24px rgba(2, 132, 199, 0.15)';"
                              onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.04)';">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div class="d-flex align-items-center gap-2.5">
-                                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(2, 132, 199, 0.12); display: flex; align-items: center; justify-content: center;">
-                                        <i class="bi bi-person-check-fill text-info" style="font-size: 18px;"></i>
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-2.5">
+                                        <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(2, 132, 199, 0.12); display: flex; align-items: center; justify-content: center;">
+                                            <i class="bi bi-person-check-fill text-info" style="font-size: 18px;"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">Diarahkan ke Saya</div>
+                                            <div class="text-muted" style="font-size: 10.5px;">Peran: PIC / PJA</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">Diarahkan ke Saya</div>
-                                        <div class="text-muted" style="font-size: 10.5px;">Peran: PIC / PJA</div>
+                                    <span class="badge @(assignedToMeCount > 0 ? "bg-danger" : "bg-success") text-white px-2 py-1" style="font-size: 10px; font-weight: 800; border-radius: 8px;">
+                                        @(assignedToMeCount > 0 ? $"{assignedToMeCount} Perlu Close" : "Clear")
+                                    </span>
+                                </div>
+
+                                <!-- Closing Rate Metric -->
+                                <div class="my-2.5 p-2 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Closing Rate</span>
+                                        <span class="badge" style="background: @GetRateBg(assignedCloseRate); color: @GetRateColor(assignedCloseRate); border: 1px solid @GetRateBorder(assignedCloseRate); font-size: 11px; font-weight: 800; padding: 2px 7px;">
+                                            @assignedCloseRate%
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height: 5px; background: rgba(148, 163, 184, 0.15); border-radius: 99px; overflow: hidden; margin-bottom: 4px;">
+                                        <div class="progress-bar" role="progressbar" style="width: @(Math.Min(100, Math.Max(0, assignedCloseRate)))%; background: @GetRateColor(assignedCloseRate); border-radius: 99px;" aria-valuenow="@assignedCloseRate" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center" style="font-size: 10px; color: var(--text-muted);">
+                                        <span>Selesai: <strong class="text-success">@assignedClosedCount</strong> / @assignedTotalCount</span>
+                                        <span>Open: <strong class="@(assignedToMeCount > 0 ? "text-danger" : "text-success")">@assignedToMeCount</strong></span>
                                     </div>
                                 </div>
-                                <span class="badge @(assignedToMeCount > 0 ? "bg-danger" : "bg-success") text-white px-2 py-1" style="font-size: 10px; font-weight: 800; border-radius: 8px;">
-                                    @(assignedToMeCount > 0 ? $"{assignedToMeCount} Perlu Close" : "Clear")
-                                </span>
                             </div>
+
                             <div class="mt-2 pt-2 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 11px;">
                                 <span style="color: var(--text-muted);">Tugas aktif di-close</span>
                                 <span class="text-info fw-bold d-inline-flex align-items-center">
@@ -222,20 +255,40 @@
                              style="border-left: 4px solid #f59e0b !important; background: var(--bg-card); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border-radius: 14px;"
                              onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 24px rgba(245, 158, 11, 0.15)';"
                              onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.04)';">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div class="d-flex align-items-center gap-2.5">
-                                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center;">
-                                        <i class="bi bi-pencil-square text-warning" style="font-size: 18px;"></i>
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-2.5">
+                                        <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center;">
+                                            <i class="bi bi-pencil-square text-warning" style="font-size: 18px;"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">Dibuat Oleh Saya</div>
+                                            <div class="text-muted" style="font-size: 10.5px;">Laporan Saya Belum Close</div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">Dibuat Oleh Saya</div>
-                                        <div class="text-muted" style="font-size: 10.5px;">Laporan Saya Belum Close</div>
+                                    <span class="badge @(createdByMeOpenCount > 0 ? "bg-warning text-dark" : "bg-success") px-2 py-1" style="font-size: 10px; font-weight: 800; border-radius: 8px;">
+                                        @(createdByMeOpenCount > 0 ? $"{createdByMeOpenCount} Menunggu" : "Tuntas")
+                                    </span>
+                                </div>
+
+                                <!-- Closing Rate Metric -->
+                                <div class="my-2.5 p-2 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Closing Rate</span>
+                                        <span class="badge" style="background: @GetRateBg(createdByMeCloseRate); color: @GetRateColor(createdByMeCloseRate); border: 1px solid @GetRateBorder(createdByMeCloseRate); font-size: 11px; font-weight: 800; padding: 2px 7px;">
+                                            @createdByMeCloseRate%
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height: 5px; background: rgba(148, 163, 184, 0.15); border-radius: 99px; overflow: hidden; margin-bottom: 4px;">
+                                        <div class="progress-bar" role="progressbar" style="width: @(Math.Min(100, Math.Max(0, createdByMeCloseRate)))%; background: @GetRateColor(createdByMeCloseRate); border-radius: 99px;" aria-valuenow="@createdByMeCloseRate" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center" style="font-size: 10px; color: var(--text-muted);">
+                                        <span>Selesai: <strong class="text-success">@createdByMeClosedCount</strong> / @createdByMeTotalCount</span>
+                                        <span>Menunggu: <strong class="@(createdByMeOpenCount > 0 ? "text-warning" : "text-success")">@createdByMeOpenCount</strong></span>
                                     </div>
                                 </div>
-                                <span class="badge @(createdByMeOpenCount > 0 ? "bg-warning text-dark" : "bg-success") px-2 py-1" style="font-size: 10px; font-weight: 800; border-radius: 8px;">
-                                    @(createdByMeOpenCount > 0 ? $"{createdByMeOpenCount} Menunggu" : "Tuntas")
-                                </span>
                             </div>
+
                             <div class="mt-2 pt-2 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 11px;">
                                 <span style="color: var(--text-muted);">Pantau perbaikan</span>
                                 <span class="text-warning fw-bold d-inline-flex align-items-center">
@@ -253,22 +306,42 @@
                              style="border-left: 4px solid #6366f1 !important; background: var(--bg-card); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border-radius: 14px;"
                              onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 24px rgba(99, 102, 241, 0.15)';"
                              onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.04)';">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div class="d-flex align-items-center gap-2.5">
-                                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center;">
-                                        <i class="bi bi-building text-primary" style="font-size: 18px; color: #818cf8 !important;"></i>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">Departemen Saya</div>
-                                        <div class="text-muted text-truncate" style="font-size: 10.5px; max-width: 130px;" title="@userDeptName">
-                                            @(!string.IsNullOrEmpty(userDeptName) ? userDeptName : "Dept")
+                            <div>
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center gap-2.5">
+                                        <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center;">
+                                            <i class="bi bi-building text-primary" style="font-size: 18px; color: #818cf8 !important;"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main);">Departemen Saya</div>
+                                            <div class="text-muted text-truncate" style="font-size: 10.5px; max-width: 130px;" title="@userDeptName">
+                                                @(!string.IsNullOrEmpty(userDeptName) ? userDeptName : "Dept")
+                                            </div>
                                         </div>
                                     </div>
+                                    <span class="badge @(deptOpenCount > 0 ? "bg-primary" : "bg-success") text-white px-2 py-1" style="font-size: 10px; font-weight: 800; border-radius: 8px;">
+                                        @(deptOpenCount > 0 ? $"{deptOpenCount} Open" : "Clear")
+                                    </span>
                                 </div>
-                                <span class="badge @(deptOpenCount > 0 ? "bg-primary" : "bg-success") text-white px-2 py-1" style="font-size: 10px; font-weight: 800; border-radius: 8px;">
-                                    @(deptOpenCount > 0 ? $"{deptOpenCount} Open" : "Clear")
-                                </span>
+
+                                <!-- Closing Rate Metric -->
+                                <div class="my-2.5 p-2 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Closing Rate</span>
+                                        <span class="badge" style="background: @GetRateBg(deptCloseRate); color: @GetRateColor(deptCloseRate); border: 1px solid @GetRateBorder(deptCloseRate); font-size: 11px; font-weight: 800; padding: 2px 7px;">
+                                            @deptCloseRate%
+                                        </span>
+                                    </div>
+                                    <div class="progress" style="height: 5px; background: rgba(148, 163, 184, 0.15); border-radius: 99px; overflow: hidden; margin-bottom: 4px;">
+                                        <div class="progress-bar" role="progressbar" style="width: @(Math.Min(100, Math.Max(0, deptCloseRate)))%; background: @GetRateColor(deptCloseRate); border-radius: 99px;" aria-valuenow="@deptCloseRate" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center" style="font-size: 10px; color: var(--text-muted);">
+                                        <span>Selesai: <strong class="text-success">@deptClosedCount</strong> / @deptTotalCount</span>
+                                        <span>Open: <strong class="@(deptOpenCount > 0 ? "text-primary" : "text-success")">@deptOpenCount</strong></span>
+                                    </div>
+                                </div>
                             </div>
+
                             <div class="mt-2 pt-2 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 11px;">
                                 <span style="color: var(--text-muted);">Lingkup tim departemen</span>
                                 <span class="fw-bold d-inline-flex align-items-center" style="color: #818cf8;">
