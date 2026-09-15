@@ -90,6 +90,7 @@ namespace MBS_SAP.Controllers
                 coaching.Tema,
                 coaching.Feedback,
                 coaching.Komitmen,
+                foto = coaching.Foto,
                 participants = coaching.Participants.Select(p => p.Nik).ToList()
             });
         }
@@ -110,12 +111,19 @@ namespace MBS_SAP.Controllers
             List<string> selectedParticipants, // List of NIKs
             IFormFile? foto)
         {
+            var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
             // Restrict date to +/- 7 days
             var minDate = DateTime.Today.AddDays(-7);
             var maxDate = DateTime.Today.AddDays(7);
             if (tanggal < minDate || tanggal > maxDate)
             {
-                TempData["ErrorMessage"] = "Tanggal Coaching harus berada dalam rentang 7 hari sebelum dan sesudah hari ini!";
+                var dateErrMsg = "Tanggal Coaching harus berada dalam rentang 7 hari sebelum dan sesudah hari ini!";
+                if (isAjax)
+                {
+                    return BadRequest(new { success = false, message = dateErrMsg, errors = new[] { dateErrMsg } });
+                }
+                TempData["ErrorMessage"] = dateErrMsg;
                 return RedirectToAction(nameof(Index));
             }
 
@@ -146,7 +154,9 @@ namespace MBS_SAP.Controllers
 
                 if (coaching.Nik != userNik && !User.IsInRole("Admin"))
                 {
-                    TempData["ErrorMessage"] = "Anda tidak memiliki akses untuk mengubah laporan ini.";
+                    var noAccessMsg = "Anda tidak memiliki akses untuk mengubah laporan ini.";
+                    if (isAjax) return StatusCode(403, new { success = false, message = noAccessMsg, errors = new[] { noAccessMsg } });
+                    TempData["ErrorMessage"] = noAccessMsg;
                     return RedirectToAction(nameof(Index));
                 }
 
@@ -156,7 +166,9 @@ namespace MBS_SAP.Controllers
                     var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
                     if (coaching.PerusahaanId.HasValue && !allowedIds.Contains(coaching.PerusahaanId.Value))
                     {
-                        TempData["ErrorMessage"] = "Anda tidak memiliki akses untuk mengubah laporan dari perusahaan lain.";
+                        var crossCompMsg = "Anda tidak memiliki akses untuk mengubah laporan dari perusahaan lain.";
+                        if (isAjax) return StatusCode(403, new { success = false, message = crossCompMsg, errors = new[] { crossCompMsg } });
+                        TempData["ErrorMessage"] = crossCompMsg;
                         return RedirectToAction(nameof(Index));
                     }
                 }
@@ -188,6 +200,10 @@ namespace MBS_SAP.Controllers
 
             if (validationErrors.Any())
             {
+                if (isAjax)
+                {
+                    return BadRequest(new { success = false, message = "Laporan coaching belum lengkap.", errors = validationErrors });
+                }
                 TempData["ErrorMessage"] = $"Laporan coaching belum lengkap. {string.Join(" ", validationErrors)}";
                 return RedirectToAction(nameof(Index));
             }
@@ -215,7 +231,12 @@ namespace MBS_SAP.Controllers
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[ERROR-COACHING-PHOTO] {ex.Message}");
-                    TempData["ErrorMessage"] = "Gagal mengunggah foto coaching. Coba pilih foto lain atau perkecil ukuran file.";
+                    var photoErrMsg = "Gagal mengunggah foto coaching. Coba pilih foto lain atau perkecil ukuran file.";
+                    if (isAjax)
+                    {
+                        return StatusCode(500, new { success = false, message = photoErrMsg, errors = new[] { photoErrMsg } });
+                    }
+                    TempData["ErrorMessage"] = photoErrMsg;
                     return RedirectToAction(nameof(Index));
                 }
             }
@@ -272,7 +293,14 @@ namespace MBS_SAP.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            TempData["SuccessMessage"] = isNew ? "Laporan Coaching baru berhasil disimpan!" : "Laporan Coaching berhasil diperbarui!";
+            var successMsg = isNew ? "Laporan Coaching baru berhasil disimpan!" : "Laporan Coaching berhasil diperbarui!";
+            if (isAjax)
+            {
+                TempData["SuccessMessage"] = successMsg;
+                return Ok(new { success = true, message = successMsg });
+            }
+
+            TempData["SuccessMessage"] = successMsg;
             return RedirectToAction(nameof(Index));
         }
 

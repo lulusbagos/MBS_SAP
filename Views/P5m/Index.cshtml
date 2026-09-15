@@ -871,51 +871,133 @@
         };
         var getGPSLocation = window.getGPSLocation;
 
-        window.showSapToast = function(message, type = 'warning') {
-            $('.sap-custom-toast').remove();
+        function showSapErrorPopup(title, errors, fallbackMessage) {
+            const cleanErrors = Array.isArray(errors) && errors.length > 0 
+                ? errors 
+                : (typeof errors === 'string' && errors.trim().length > 0 ? [errors] : [fallbackMessage || 'Data belum lengkap.']);
             
-            let iconClass = 'bi-exclamation-triangle-fill';
-            let bgColor = 'rgba(245, 158, 11, 0.95)';
-            let textColor = '#ffffff';
-            let borderStyle = '1px solid rgba(245, 158, 11, 0.3)';
-            
-            if (type === 'success') {
-                iconClass = 'bi-check-circle-fill';
-                bgColor = 'rgba(34, 197, 94, 0.95)';
-                borderStyle = '1px solid rgba(34, 197, 94, 0.3)';
-            } else if (type === 'danger' || type === 'error') {
-                iconClass = 'bi-x-circle-fill';
-                bgColor = 'rgba(239, 68, 68, 0.95)';
-                borderStyle = '1px solid rgba(239, 68, 68, 0.3)';
+            $('#sapErrorModal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+
+            const escapePopupHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            const listHtml = cleanErrors.map(item => `<li style="margin-bottom: 8px;">${escapePopupHtml(item)}</li>`).join('');
+            const modalHtml = `
+                <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); border: 1px solid rgba(239,68,68,0.5); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 16px 20px;">
+                                <h5 class="modal-title d-flex align-items-center" style="font-size: 16px; font-weight: 800; color: #ef4444;">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger me-2" style="font-size: 20px;"></i>
+                                    ${escapePopupHtml(title || 'Data Belum Lengkap')}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body" style="font-size: 13px; line-height: 1.6; padding: 20px;">
+                                <div class="mb-2 fw-semibold text-danger">Periksa dan lengkapi bagian berikut:</div>
+                                <ul class="mb-0 ps-3" style="color: var(--text-main, #f8fafc);">
+                                    ${listHtml}
+                                </ul>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 12px 20px;">
+                                <button type="button" class="btn btn-danger px-4 py-2" data-bs-dismiss="modal" style="border-radius: 8px; font-weight: 600; font-size: 13px;">
+                                    <i class="bi bi-check2 me-1"></i> Mengerti & Perbaiki
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            $('body').append(modalHtml);
+
+            try {
+                const modalEl = document.getElementById('sapErrorModal');
+                if (window.bootstrap && bootstrap.Modal) {
+                    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true, keyboard: true });
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapErrorModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    });
+                    myModal.show();
+                } else if ($.fn.modal) {
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapErrorModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    }).modal('show');
+                } else {
+                    alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
+                }
+            } catch(e) {
+                alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
             }
-            
-            const toastHtml = `
-                <div class="sap-custom-toast shadow" style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px); background: ${bgColor}; color: ${textColor}; border: ${borderStyle}; padding: 12px 24px; border-radius: 12px; z-index: 10000; display: flex; align-items: center; gap: 12px; font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 600; opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); backdrop-filter: blur(8px); min-width: 320px; justify-content: center; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);">
-                    <i class="bi ${iconClass}" style="font-size: 16px;"></i>
-                    <span>${message}</span>
-                </div>
-            `;
-            
-            $('body').append(toastHtml);
-            
-            setTimeout(function() {
-                $('.sap-custom-toast').css({
-                    'opacity': '1',
-                    'transform': 'translateX(-50%) translateY(0)'
-                });
-            }, 50);
-            
-            setTimeout(function() {
-                $('.sap-custom-toast').css({
-                    'opacity': '0',
-                    'transform': 'translateX(-50%) translateY(-20px)'
-                });
-                setTimeout(function() {
-                    $('.sap-custom-toast').remove();
-                }, 300);
-            }, 4000);
-        };
-        var showSapToast = window.showSapToast;
+        }
+
+        function showSapSuccessPopup(title, message) {
+            $('#sapSuccessModal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+
+            const escapePopupHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            const safeTitle = escapePopupHtml(title || 'Berhasil Disimpan!');
+            const safeMsg = escapePopupHtml(message || 'Laporan P5M berhasil disimpan ke sistem.');
+
+            const modalHtml = `
+                <div class="modal fade" id="sapSuccessModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); border: 1.5px solid rgba(16, 185, 129, 0.5); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden;">
+                            <div class="modal-body text-center p-4">
+                                <div style="width: 72px; height: 72px; background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                    <i class="bi bi-check2-circle" style="font-size: 40px; color: #10b981;"></i>
+                                </div>
+                                <h4 style="font-weight: 800; color: #10b981; margin-bottom: 8px;">${safeTitle}</h4>
+                                <p style="font-size: 14px; color: var(--text-muted, #94a3b8); margin-bottom: 24px; line-height: 1.5;">${safeMsg}</p>
+                                <button type="button" class="btn btn-success px-5 py-2.5 w-100" data-bs-dismiss="modal" style="background-color: #10b981; border-color: #059669; border-radius: 12px; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                    <i class="bi bi-check-lg me-1"></i> OK, Mengerti
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            $('body').append(modalHtml);
+
+            try {
+                const modalEl = document.getElementById('sapSuccessModal');
+                if (window.bootstrap && bootstrap.Modal) {
+                    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true, keyboard: true });
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    });
+                    myModal.show();
+                } else if ($.fn.modal) {
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    }).modal('show');
+                } else {
+                    alert(safeTitle + '\n\n' + safeMsg);
+                }
+            } catch(e) {
+                alert(safeTitle + '\n\n' + safeMsg);
+            }
+        }
+
+        const serverErrorMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ErrorMessage"]));
+        if (serverErrorMessage) {
+            setTimeout(() => showSapErrorPopup("Terjadi kesalahan", [serverErrorMessage]), 250);
+        }
+
+        const serverSuccessMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["SuccessMessage"]));
+        const sessionSuccess = sessionStorage.getItem('sap_success_message');
+        if (sessionSuccess) {
+            sessionStorage.removeItem('sap_success_message');
+            setTimeout(() => showSapSuccessPopup("Berhasil Disimpan!", sessionSuccess), 250);
+        } else if (serverSuccessMessage) {
+            setTimeout(() => showSapSuccessPopup("Berhasil Disimpan!", serverSuccessMessage), 250);
+        }
 
         $(document).ready(function() {
             loadAreas();
@@ -1011,6 +1093,7 @@
                 // Custom validation
                 let isValid = true;
                 let firstInvalid = null;
+                const errorMessages = [];
                 
                 $('#p5mForm').find('.is-invalid').removeClass('is-invalid');
                 $('#p5mForm').find('.sap-err-msg').remove();
@@ -1037,7 +1120,9 @@
                         if (!firstInvalid) firstInvalid = $el;
                         
                         const labelName = fieldsToValidate[id] || $el.closest('.form-group-sap').find('label').text() || 'Field';
-                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${labelName.replace(':', '').replace('*', '').trim()} wajib diisi.</span>`;
+                        const cleanLabel = labelName.replace(':', '').replace('*', '').trim();
+                        errorMessages.push(`${cleanLabel} wajib diisi`);
+                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${cleanLabel} wajib diisi.</span>`;
                         
                         const $wrapper = $el.closest('.input-sap-wrapper');
                         if ($wrapper.length) {
@@ -1057,6 +1142,7 @@
                             const $card = $(`input[name="answers[${i}]"]`).closest('.checkpoint-card');
                             $card.addClass('border-danger');
                             if (!firstInvalid) firstInvalid = $card;
+                            errorMessages.push(`Pertanyaan Checklist #${i+1} belum dijawab (Pilih YES atau NO)`);
                             
                             if ($card.find('.sap-err-msg').length === 0) {
                                 $card.append(`<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px; font-weight: 500; padding: 0 12px 12px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Jawaban YES/NO wajib dipilih.</span>`);
@@ -1067,7 +1153,7 @@
 
                 if (!isValid) {
                     e.preventDefault();
-                    showSapToast("Gagal menyimpan: Silakan lengkapi kolom yang wajib diisi!", "warning");
+                    showSapErrorPopup("Laporan P5M Belum Lengkap", errorMessages, "Silakan lengkapi semua isian wajib sebelum menyimpan.");
                     if (firstInvalid) {
                         $('html, body').animate({
                             scrollTop: firstInvalid.offset().top - 120
@@ -1075,6 +1161,9 @@
                     }
                     return false;
                 }
+
+                // Set session storage for popup after redirect
+                sessionStorage.setItem('sap_success_message', $('#p5mId').val() ? 'Laporan P5M berhasil diperbarui!' : 'Laporan P5M berhasil disimpan!');
 
                 // Show loading screen overlay
                 $('#loadingOverlay').css('display', 'flex');

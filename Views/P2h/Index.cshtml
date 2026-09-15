@@ -4,11 +4,62 @@
     var vehiclesList = ViewBag.Vehicles as List<MBS_SAP.Models.P2hVehicle> ?? new List<MBS_SAP.Models.P2hVehicle>();
     var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
     var isAdmin = User.IsInRole("Admin");
+    var minDate = DateTime.Today.AddDays(-7).ToString("yyyy-MM-dd");
+    var maxDate = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
 }
 
-<div class="animate-fade-in">
-    <div class="screen-title">P2H Kendaraan Harian</div>
-    <p class="screen-subtitle">Lakukan pemeriksaan kondisi unit harian sebelum memulai pekerjaan demi keselamatan kerja.</p>
+<style>
+    @@keyframes sap-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    @@keyframes sap-bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+    .unit-option-btn:hover {
+        background-color: rgba(2, 132, 199, 0.15) !important;
+        color: #38bdf8 !important;
+    }
+    .checkpoint-row {
+        transition: background-color 0.15s ease;
+    }
+    .checkpoint-row:hover {
+        background-color: rgba(255, 255, 255, 0.02);
+    }
+    .p2h-badge-log {
+        background-color: rgba(2, 132, 199, 0.18) !important;
+        border: 1px solid rgba(56, 189, 248, 0.45) !important;
+        color: #bae6fd !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        padding: 4px 10px !important;
+        border-radius: 20px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+    [data-bs-theme="light"] .p2h-badge-log,
+    body.light-theme .p2h-badge-log {
+        background-color: rgba(2, 132, 199, 0.12) !important;
+        border-color: rgba(2, 132, 199, 0.35) !important;
+        color: #0369a1 !important;
+    }
+</style>
+
+<div class="animate-fade-in pb-4">
+    <!-- Header with Banner -->
+    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #0284c7, #38bdf8); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
+            <!-- Decorative circles -->
+            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            
+            <i class="bi bi-truck-front-fill text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px; letter-spacing: 0.5px;">P2H - PEMERIKSAAN KENDARAAN</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Pemeriksaan kondisi unit dan kelayakan operasional harian sebelum bekerja.</p>
+        </div>
+    </div>
 
     @if (TempData["ErrorMessage"] != null)
     {
@@ -20,22 +71,23 @@
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(34, 197, 94, 0.15); color: var(--color-primary); border-radius: 12px;">
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(16, 185, 129, 0.15); color: #10b981; border-radius: 12px;">
             <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
+    <!-- Hybrid Grid Layout: Form and List side-by-side on laptop, stacked on mobile -->
     <div class="form-responsive-row">
         <!-- Form Column -->
         <div class="card-sap border-primary-accent" style="overflow: visible;">
-            <form asp-controller="P2h" asp-action="Create" method="post" id="p2hForm" enctype="multipart/form-data">
+            <form asp-controller="P2h" asp-action="Create" method="post" id="p2hForm" enctype="multipart/form-data" novalidate>
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="p2hId" name="id" value="" />
                 
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0 text-white" style="font-weight: 700;" id="formTitle">
-                        <i class="bi bi-shield-check me-2" style="color: var(--color-primary);"></i>Form Pemeriksaan P2H
+                    <h5 class="mb-0" style="font-weight: 700; color: var(--text-main);" id="formTitle">
+                        <i class="bi bi-truck-front-fill me-2 text-primary"></i>Form Pemeriksaan P2H Baru
                     </h5>
                     <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnCancelEdit" onclick="cancelEditP2h()">
                         <i class="bi bi-x-circle me-1"></i> Batal Edit
@@ -45,14 +97,14 @@
                 <!-- Date and Time -->
                 <div class="row">
                     <div class="col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="tanggal">Tanggal</label>
+                        <label class="form-label-sap" for="tanggal">Tanggal Pemeriksaan</label>
                         <div class="input-sap-wrapper">
                             <i class="bi bi-calendar-event-fill input-sap-icon"></i>
-                            <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                            <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" min="@minDate" max="@maxDate" required />
                         </div>
                     </div>
                     <div class="col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="waktuStr">Waktu</label>
+                        <label class="form-label-sap" for="waktuStr">Waktu Pemeriksaan</label>
                         <div class="input-sap-wrapper">
                             <i class="bi bi-clock-fill input-sap-icon"></i>
                             <input type="time" id="waktuStr" name="waktuStr" class="input-sap" value="@DateTime.Now.ToString("HH:mm")" required />
@@ -88,8 +140,8 @@
                                 <input type="text" id="noLambungInput" name="noLambung" class="input-sap text-uppercase" placeholder="Cari / Masukkan No Lambung..." autocomplete="off" required style="padding-right: 40px;" />
                                 <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleUnitDropdown"></i>
                             </div>
-                            <div id="unitDropdownMenu" class="dropdown-menu shadow-lg w-100" style="display: none; position: absolute; top: 100%; left: 0; z-index: 1050; background: #1a2332; border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px;">
-                                <!-- Will be loaded by JS -->
+                            <div id="unitDropdownMenu" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; background: var(--bg-card); border: 1px solid var(--border-color); max-height: 250px; overflow-y: auto; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); padding: 4px;">
+                                <!-- Loaded dynamically by JS -->
                             </div>
                         </div>
                         <small class="text-muted" style="font-size: 10px;">Ketik untuk mencari unit, atau masukkan nama baru jika belum terdaftar.</small>
@@ -145,14 +197,16 @@
                     </div>
 
                     <div class="col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="fotoSpeedometer">Foto Speedometer</label>
-                        <div class="input-sap-wrapper">
-                            <i class="bi bi-camera-fill input-sap-icon" style="top: 14px;"></i>
-                            <input type="file" id="fotoSpeedometer" name="fotoSpeedometer" class="input-sap" accept="image/*" style="height: auto; padding: 8px 12px; padding-left: 42px;" />
-                        </div>
-                        <div id="speedoPreviewWrapper" class="mt-2 d-none">
-                            <span class="text-muted" style="font-size: 11px;">Foto terunggah: </span>
-                            <a id="speedoPreviewLink" href="#" target="_blank" class="text-primary fw-semibold ms-1" style="font-size: 11px;">Lihat Foto</a>
+                        <label class="form-label-sap" for="fotoSpeedometer">Foto Speedometer <span class="text-danger">*</span></label>
+                        <input type="file" id="fotoSpeedometer" name="fotoSpeedometer" accept="image/*" class="d-none" onchange="previewSpeedo(this)" />
+                        <div class="upload-card" onclick="document.getElementById('fotoSpeedometer').click()" style="padding: 16px 12px; border-color: rgba(2, 132, 199, 0.4);">
+                            <div id="speedoPlaceholder">
+                                <i class="bi bi-speedometer2 text-primary" style="font-size: 24px;"></i>
+                                <span class="d-block" style="font-size: 12px; font-weight: 700; margin-top: 4px; color: var(--text-main);">Unggah Foto Speedometer</span>
+                            </div>
+                            <div id="speedoPreviewContainer" class="d-none">
+                                <img id="speedoPreview" src="" alt="Speedometer Preview" style="max-width: 100%; max-height: 100px; border-radius: 6px;" />
+                            </div>
                         </div>
                         <small class="text-muted" style="font-size: 10px;" id="speedoHelp">Wajib melampirkan foto speedometer terbaru.</small>
                     </div>
@@ -160,9 +214,9 @@
 
                 <!-- Checklist Header + Quick Actions -->
                 <div class="d-flex justify-content-between align-items-center mt-4 mb-3 flex-wrap gap-2">
-                    <h6 class="text-white mb-0" style="font-weight: 700; border-left: 3px solid var(--color-primary); padding-left: 8px;">CHECKLIST KONDISI UNIT</h6>
+                    <h6 class="mb-0" style="font-weight: 700; color: var(--text-main); border-left: 3px solid var(--color-primary); padding-left: 8px;">CHECKLIST KONDISI UNIT</h6>
                     <div class="d-flex gap-2" id="quickActionBtns">
-                        <button type="button" class="btn btn-sm px-3 py-1" id="btnAllGood" onclick="autoFillAll('GOOD')" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; box-shadow: 0 2px 8px rgba(34,197,94,0.3); transition: all 0.2s ease;">
+                        <button type="button" class="btn btn-sm px-3 py-1" id="btnAllGood" onclick="autoFillAll('GOOD')" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; box-shadow: 0 2px 8px rgba(16,185,129,0.3); transition: all 0.2s ease;">
                             <i class="bi bi-check-all me-1"></i>Semua BAIK
                         </button>
                         <button type="button" class="btn btn-sm px-3 py-1" id="btnAllBad" onclick="autoFillAll('NOT_GOOD')" style="background: linear-gradient(135deg, #f43f5e, #e11d48); color: white; border: none; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; box-shadow: 0 2px 8px rgba(244,63,94,0.3); transition: all 0.2s ease;">
@@ -171,16 +225,13 @@
                     </div>
                 </div>
 
-                <!-- Metadata validation gate overlay -->
-                <div id="checklistLockOverlay" style="position: relative;">
-
                 <!-- Accordion checklist -->
-                <div class="accordion" id="checklistAccordion">
+                <div class="accordion mb-4" id="checklistAccordion">
                     
                     <!-- GOLONGAN A -->
-                    <div class="accordion-item" style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 8px;">
+                    <div class="accordion-item" style="background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; margin-bottom: 8px;">
                         <h2 class="accordion-header" id="headingA">
-                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseA" aria-expanded="true" aria-controls="collapseA" style="background-color: rgba(255,255,255,0.01); color: white; font-weight: bold; border: none; box-shadow: none;">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseA" aria-expanded="true" aria-controls="collapseA" style="background-color: rgba(244, 63, 94, 0.08); color: var(--text-main); font-weight: bold; border: none; box-shadow: none;">
                                 <span class="badge bg-danger me-2">GOL. A</span> Kritis (Harus Baik - Total 16 Item)
                             </button>
                         </h2>
@@ -192,7 +243,7 @@
                                     var itemText = MBS_SAP.Controllers.P2hController.GolA[idx];
                                     <div class="checkpoint-row py-2 border-bottom border-secondary mb-2" id="row_golA_@idx">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                            <span class="text-white fs-13 fw-semibold">@(idx + 1). @itemText</span>
+                                            <span class="fs-13 fw-semibold" style="color: var(--text-main);">@(idx + 1). @itemText</span>
                                             
                                             <div class="d-flex gap-2">
                                                 <input type="radio" class="btn-check" name="golA_status_@idx" id="golA_good_@idx" value="GOOD" checked autocomplete="off" onchange="toggleDefectPhoto('golA', @idx, 'GOOD')">
@@ -221,9 +272,9 @@
                     </div>
 
                     <!-- GOLONGAN B -->
-                    <div class="accordion-item" style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 8px;">
+                    <div class="accordion-item" style="background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; margin-bottom: 8px;">
                         <h2 class="accordion-header" id="headingB">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseB" aria-expanded="false" aria-controls="collapseB" style="background-color: rgba(255,255,255,0.01); color: white; font-weight: bold; border: none; box-shadow: none;">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseB" aria-expanded="false" aria-controls="collapseB" style="background-color: rgba(234, 179, 8, 0.08); color: var(--text-main); font-weight: bold; border: none; box-shadow: none;">
                                 <span class="badge bg-warning text-dark me-2">GOL. B</span> Penting (Total 10 Item)
                             </button>
                         </h2>
@@ -235,7 +286,7 @@
                                     var itemText = MBS_SAP.Controllers.P2hController.GolB[idx];
                                     <div class="checkpoint-row py-2 border-bottom border-secondary mb-2" id="row_golB_@idx">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                            <span class="text-white fs-13 fw-semibold">@(idx + 1). @itemText</span>
+                                            <span class="fs-13 fw-semibold" style="color: var(--text-main);">@(idx + 1). @itemText</span>
                                             
                                             <div class="d-flex gap-2">
                                                 <input type="radio" class="btn-check" name="golB_status_@idx" id="golB_good_@idx" value="GOOD" checked autocomplete="off" onchange="toggleDefectPhoto('golB', @idx, 'GOOD')">
@@ -264,9 +315,9 @@
                     </div>
 
                     <!-- GOLONGAN C -->
-                    <div class="accordion-item" style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-bottom: 8px;">
+                    <div class="accordion-item" style="background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; margin-bottom: 8px;">
                         <h2 class="accordion-header" id="headingC">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseC" aria-expanded="false" aria-controls="collapseC" style="background-color: rgba(255,255,255,0.01); color: white; font-weight: bold; border: none; box-shadow: none;">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseC" aria-expanded="false" aria-controls="collapseC" style="background-color: rgba(2, 132, 199, 0.08); color: var(--text-main); font-weight: bold; border: none; box-shadow: none;">
                                 <span class="badge bg-info text-dark me-2">GOL. C</span> Umum (Total 11 Item)
                             </button>
                         </h2>
@@ -278,7 +329,7 @@
                                     var itemText = MBS_SAP.Controllers.P2hController.GolC[idx];
                                     <div class="checkpoint-row py-2 border-bottom border-secondary mb-2" id="row_golC_@idx">
                                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                            <span class="text-white fs-13 fw-semibold">@(idx + 1). @itemText</span>
+                                            <span class="fs-13 fw-semibold" style="color: var(--text-main);">@(idx + 1). @itemText</span>
                                             
                                             <div class="d-flex gap-2">
                                                 <input type="radio" class="btn-check" name="golC_status_@idx" id="golC_good_@idx" value="GOOD" checked autocomplete="off" onchange="toggleDefectPhoto('golC', @idx, 'GOOD')">
@@ -307,10 +358,9 @@
                     </div>
 
                 </div>
-                </div> <!-- close checklistLockOverlay -->
 
-                <button type="submit" class="btn btn-primary w-100 mt-4 mb-2 submit-btn-sap" id="btnSubmit">
-                    <i class="bi bi-send-fill me-2"></i>KIRIM LAPORAN P2H
+                <button type="submit" id="btnSubmitP2h" class="btn btn-sap-primary w-100 py-3" style="background: linear-gradient(135deg, #0284c7, #0ea5e9); border-color: #0284c7; font-weight: 700; border-radius: 12px; letter-spacing: 0.5px;">
+                    <i class="bi bi-check-circle-fill me-2"></i> KIRIM LAPORAN P2H
                 </button>
             </form>
         </div>
@@ -318,8 +368,8 @@
         <!-- History Column -->
         <div>
             <div class="history-header mb-3">
-                <h6 class="text-white" style="font-weight: 700;">
-                    <i class="bi bi-clock-history me-2" style="color: var(--color-primary);"></i>Histori P2H Anda
+                <h6 style="font-weight: 700; color: var(--text-main);">
+                    <i class="bi bi-clock-history me-2 text-primary"></i>Histori Pemeriksaan P2H
                 </h6>
             </div>
             
@@ -327,7 +377,7 @@
             {
                 <div class="card-sap text-center py-4 text-muted">
                     <i class="bi bi-inbox-fill d-block mb-2" style="font-size: 32px;"></i>
-                    Belum ada histori pemeriksaan P2H Anda.
+                    Belum ada histori pemeriksaan P2H tercatat.
                 </div>
             }
             else
@@ -338,7 +388,6 @@
                     {
                         var delayClass = "delay-" + (loopIndex > 6 ? 6 : loopIndex);
                         
-                        // Parse JSONs to display defects count and checklist details
                         var defectsA = new List<string>();
                         var defectsB = new List<string>();
                         var defectsC = new List<string>();
@@ -372,13 +421,16 @@
                         <div class="card-sap animate-fade-in @delayClass @borderClass mb-0">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="history-badge bg-primary" style="width: 28px; height: 28px; font-size: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
-                                        <i class="bi bi-truck"></i>
+                                    <div style="width: 32px; height: 32px; font-size: 15px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(2, 132, 199, 0.15); color: #38bdf8;">
+                                        <i class="bi bi-truck-front-fill"></i>
                                     </div>
-                                    <span style="font-weight: 700; font-size: 13px;">@item.NoLambung</span>
+                                    <div>
+                                        <span style="font-weight: 700; font-size: 14px; color: var(--text-main);">@item.NoLambung</span>
+                                        <span class="d-block text-muted" style="font-size: 11px;">@item.Merek (@item.JenisKendaraan)</span>
+                                    </div>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
-                                    <span class="badge @resultBadgeClass rounded-pill px-2 py-1 fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">@statusText</span>
+                                    <span class="badge @resultBadgeClass rounded-pill px-2.5 py-1 fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">@statusText</span>
                                     <div class="dropdown">
                                         <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                             <i class="bi bi-three-dots-vertical"></i>
@@ -386,9 +438,9 @@
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
                                             @if (string.Equals(item.Nik?.Trim(), userNik?.Trim(), StringComparison.OrdinalIgnoreCase) || isAdmin)
                                             {
-                                                <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="editP2h(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
+                                                <li><a class="dropdown-item" href="javascript:void(0)" style="color: var(--text-main);" onclick="editP2h(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
                                             }
-                                            <li><a class="dropdown-item text-white" href="javascript:void(0)" onclick="shareP2h('@item.NoLambung', '@item.Tanggal.ToString("dd MMM yyyy")', '@item.Merek', '@item.JenisKendaraan', @totalDefects, '@item.Nama')"><i class="bi bi-share-fill me-2" style="color: #38bdf8;"></i>Bagikan Hasil</a></li>
+                                            <li><a class="dropdown-item" href="javascript:void(0)" style="color: var(--text-main);" onclick="shareP2h('@item.NoLambung', '@item.Tanggal.ToString("dd MMM yyyy")', '@item.Merek', '@item.JenisKendaraan', @totalDefects, '@item.Nama')"><i class="bi bi-share-fill me-2" style="color: #38bdf8;"></i>Bagikan Hasil</a></li>
                                             @if (string.Equals(item.Nik?.Trim(), userNik?.Trim(), StringComparison.OrdinalIgnoreCase) || isAdmin)
                                             {
                                                 <li><hr class="dropdown-divider border-secondary"></li>
@@ -399,16 +451,18 @@
                                 </div>
                             </div>
 
-                            <div style="font-size: 12px; color: var(--text-main); margin-bottom: 8px;">
-                                <strong>Jenis Unit:</strong> @item.JenisKendaraan (@item.Merek) <br/>
-                                <strong>Kilometer / Odometer:</strong> @item.Kilometer KM <br/>
-                                <strong>Kepatuhan SIMPER:</strong> @item.SimperKimper
+                            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+                                <div><strong>Pemeriksa:</strong> @item.Nama (@item.Nik)</div>
+                                <div class="mt-1">
+                                    <span><strong>Odometer:</strong> @item.Kilometer KM</span> &bull; 
+                                    <span><strong>SIMPER:</strong> <span class="badge @(item.SimperKimper == "YA" ? "bg-success" : "bg-danger")" style="font-size: 9px;">@item.SimperKimper</span></span>
+                                </div>
                             </div>
 
                             <!-- List defects if exists -->
                             @if (!isGood)
                             {
-                                <div class="defect-list-box p-2 mb-2 rounded" style="background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.15);">
+                                <div class="defect-list-box p-2 mb-2 rounded" style="background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.2);">
                                     <span class="text-danger fw-bold d-block mb-1" style="font-size: 11px;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Daftar Temuan Kerusakan:</span>
                                     <ul class="mb-0 ps-3" style="font-size: 11px; color: var(--text-main); line-height: 1.4;">
                                         @foreach (var def in defectsA) { <li><span class="badge bg-danger py-0 px-1 me-1 text-uppercase" style="font-size: 8px;">GOL. A</span> @def</li> }
@@ -457,7 +511,6 @@
                                             </div>
                                         }
                                         
-                                        @* Dynamic rendering of defect photos *@
                                         @{
                                             var defectPhotos = new List<string>();
                                             try
@@ -501,8 +554,8 @@
                             }
 
                             <div class="d-flex justify-content-between align-items-center pt-2" style="border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
-                                <span><i class="bi bi-person me-1"></i>@item.Nama</span>
                                 <span><i class="bi bi-calendar-event me-1"></i>@item.Tanggal.ToString("dd MMM yyyy") @item.Waktu.ToString(@"hh\:mm")</span>
+                                <span><i class="bi bi-shield-check me-1"></i>P2H Selesai</span>
                             </div>
                         </div>
                         loopIndex++;
@@ -513,6 +566,22 @@
     </div>
 </div>
 
+<!-- Loading Overlay -->
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 99999; justify-content: center; align-items: center; flex-direction: column; color: white; font-family: 'Poppins', sans-serif;">
+    <div class="loader-spinner-container" style="position: relative; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 24px;">
+        <div class="loader-circle" style="box-sizing: border-box; width: 80px; height: 80px; border: 4px solid rgba(255, 255, 255, 0.15); border-radius: 50%; border-top-color: #38bdf8; border-bottom-color: #38bdf8; animation: sap-spin 1.5s linear infinite;"></div>
+        <i class="bi bi-truck-front-fill" style="position: absolute; font-size: 32px; color: white; animation: sap-bounce 2s ease-in-out infinite;"></i>
+    </div>
+    <h5 id="loadingTitle" style="font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Memproses Laporan P2H</h5>
+    <p id="loadingSubtitle" style="font-size: 13px; color: rgba(255,255,255,0.75); margin-bottom: 16px; text-align: center; max-width: 340px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">Sedang menyimpan laporan pemeriksaan kendaraan dan checklist kondisi unit...</p>
+
+    <!-- Progress Bar Container -->
+    <div style="width: 280px; background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05);">
+        <div id="loadingProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #0284c7, #38bdf8); transition: width 0.1s ease; border-radius: 4px;"></div>
+    </div>
+    <div id="loadingProgressPercent" style="font-size: 14px; font-weight: 700; color: #38bdf8; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">0%</div>
+</div>
+
 @section Scripts {
     <script>
         // Master list of vehicles from ViewBag for autocomplete search
@@ -521,27 +590,163 @@
         const GOL_B_COUNT = @MBS_SAP.Controllers.P2hController.GolB.Length;
         const GOL_C_COUNT = @MBS_SAP.Controllers.P2hController.GolC.Length;
 
-        // ========= METADATA GATE LOGIC =========
-        // Checklist unlocks as soon as 4 core vehicle fields are filled.
-        // Foto speedometer is still validated (required) at form submit.
-        function checkMetadataComplete() {
-            const $quickBtns = $('#quickActionBtns');
-            $quickBtns.css({ opacity: 1, pointerEvents: 'auto' });
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function previewSpeedo(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('speedoPreview').src = e.target.result;
+                    document.getElementById('speedoPlaceholder').classList.add('d-none');
+                    document.getElementById('speedoPreviewContainer').classList.remove('d-none');
+                    $(input).removeClass('is-invalid');
+                    $(input).closest('.form-group-sap').find('.sap-err-msg').remove();
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        let isP2hSubmitting = false;
+
+        function resetButtonState() {
+            isP2hSubmitting = false;
+            $('#loadingOverlay').css('display', 'none');
+            var p2hId = $('#p2hId').val();
+            var btnText = '<i class="bi bi-check-circle-fill me-2"></i> ' + (p2hId ? 'PERBARUI LAPORAN P2H' : 'KIRIM LAPORAN P2H');
+            var $btn = $('#btnSubmitP2h, #p2hForm button[type="submit"]');
+            $btn.prop('disabled', false).css('pointer-events', 'auto').html(btnText);
+        }
+
+        function showSapErrorPopup(title, errors, fallbackMessage) {
+            resetButtonState();
+            const cleanErrors = Array.isArray(errors) && errors.length > 0 
+                ? errors 
+                : (typeof errors === 'string' && errors.trim().length > 0 ? [errors] : [fallbackMessage || 'Data belum lengkap.']);
+            
+            $('#sapErrorModal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+
+            const listHtml = cleanErrors.map(item => `<li style="margin-bottom: 8px;">${escapeHtml(item)}</li>`).join('');
+            const modalHtml = `
+                <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); border: 1px solid rgba(239,68,68,0.5); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 16px 20px;">
+                                <h5 class="modal-title d-flex align-items-center" style="font-size: 16px; font-weight: 800; color: #ef4444;">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger me-2" style="font-size: 20px;"></i>
+                                    ${escapeHtml(title || 'Data Belum Lengkap')}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body" style="font-size: 13px; line-height: 1.6; padding: 20px;">
+                                <div class="mb-2 fw-semibold text-danger">Periksa dan lengkapi bagian berikut:</div>
+                                <ul class="mb-0 ps-3" style="color: var(--text-main, #f8fafc);">
+                                    ${listHtml}
+                                </ul>
+                            </div>
+                            <div class="modal-footer" style="border-top: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 12px 20px;">
+                                <button type="button" class="btn btn-danger px-4 py-2" data-bs-dismiss="modal" style="border-radius: 8px; font-weight: 600; font-size: 13px;">
+                                    <i class="bi bi-check2 me-1"></i> Mengerti & Perbaiki
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            $('body').append(modalHtml);
+
+            try {
+                const modalEl = document.getElementById('sapErrorModal');
+                if (window.bootstrap && bootstrap.Modal) {
+                    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true, keyboard: true });
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        resetButtonState();
+                        $('#sapErrorModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    });
+                    myModal.show();
+                } else if ($.fn.modal) {
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        resetButtonState();
+                        $('#sapErrorModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    }).modal('show');
+                } else {
+                    alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
+                }
+            } catch(e) {
+                alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
+            }
+        }
+
+        function showSapSuccessPopup(title, message) {
+            $('#sapSuccessModal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+
+            const safeTitle = escapeHtml(title || 'Berhasil Disimpan!');
+            const safeMsg = escapeHtml(message || 'Laporan P2H berhasil disimpan ke sistem.');
+
+            const modalHtml = `
+                <div class="modal fade" id="sapSuccessModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); border: 1.5px solid rgba(16, 185, 129, 0.5); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden;">
+                            <div class="modal-body text-center p-4">
+                                <div style="width: 72px; height: 72px; background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                    <i class="bi bi-check2-circle" style="font-size: 40px; color: #10b981;"></i>
+                                </div>
+                                <h4 style="font-weight: 800; color: #10b981; margin-bottom: 8px;">${safeTitle}</h4>
+                                <p style="font-size: 14px; color: var(--text-muted, #94a3b8); margin-bottom: 24px; line-height: 1.5;">${safeMsg}</p>
+                                <button type="button" class="btn btn-success px-5 py-2.5 w-100" data-bs-dismiss="modal" style="background-color: #10b981; border-color: #059669; border-radius: 12px; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                    <i class="bi bi-check-lg me-1"></i> OK, Mengerti
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            $('body').append(modalHtml);
+
+            try {
+                const modalEl = document.getElementById('sapSuccessModal');
+                if (window.bootstrap && bootstrap.Modal) {
+                    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true, keyboard: true });
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    });
+                    myModal.show();
+                } else if ($.fn.modal) {
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    }).modal('show');
+                } else {
+                    alert(safeTitle + '\n\n' + safeMsg);
+                }
+            } catch(e) {
+                alert(safeTitle + '\n\n' + safeMsg);
+            }
+        }
+
+        const serverErrorMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ErrorMessage"]));
+        if (serverErrorMessage) {
+            setTimeout(() => showSapErrorPopup("Terjadi kesalahan", [serverErrorMessage]), 250);
+        }
+
+        const serverSuccessMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["SuccessMessage"]));
+        if (serverSuccessMessage) {
+            setTimeout(() => showSapSuccessPopup("Berhasil Disimpan!", serverSuccessMessage), 250);
         }
 
         // ========= AUTO FILL ALL =========
         function autoFillAll(status) {
-            // Double check metadata is filled
-            const noLambung = $('#noLambungInput').val().trim();
-            const merek = $('#merek').val().trim();
-            const jenis = $('#jenisKendaraan').val();
-            const km = $('#kilometer').val().trim();
-
-            if (!noLambung || !merek || !jenis || !km) {
-                alert('Harap lengkapi data kendaraan (No. Lambung, Merek, Jenis, Odometer) terlebih dahulu.');
-                return;
-            }
-
             const suffix = status === 'GOOD' ? 'good' : 'bad';
             const categories = [
                 { prefix: 'golA', count: GOL_A_COUNT },
@@ -568,9 +773,8 @@
                 }
             });
 
-            // Visual feedback toast
-            const label = status === 'GOOD' ? 'BAIK ✅' : 'RUSAK ❌';
-            showToast(`Semua item telah diatur ke <strong>${label}</strong>`, status === 'GOOD' ? '#22c55e' : '#f43f5e');
+            const label = status === 'GOOD' ? 'BAIK' : 'RUSAK';
+            showToast(`Semua item diatur ke <strong>${label}</strong>`, status === 'GOOD' ? '#10b981' : '#f43f5e');
         }
 
         // Micro toast notification
@@ -602,15 +806,15 @@
 
         // ========= SHARE FUNCTIONALITY =========
         function shareP2h(noLambung, tanggal, merek, jenis, defects, nama) {
-            const statusLabel = defects === 0 ? '✅ AMAN (GOOD)' : `⚠️ ${defects} TEMUAN`;
-            const shareText = `📋 LAPORAN P2H KENDARAAN\n` +
-                              `━━━━━━━━━━━━━━━━━━━━\n` +
-                              `🚛 Unit: ${noLambung}\n` +
-                              `📅 Tanggal: ${tanggal}\n` +
-                              `🔧 Tipe: ${merek} (${jenis})\n` +
-                              `📊 Status: ${statusLabel}\n` +
-                              `👤 Pemeriksa: ${nama}\n` +
-                              `━━━━━━━━━━━━━━━━━━━━\n` +
+            const statusLabel = defects === 0 ? 'AMAN (GOOD)' : `${defects} TEMUAN`;
+            const shareText = `LAPORAN P2H KENDARAAN\n` +
+                              `--------------------\n` +
+                              `Unit: ${noLambung}\n` +
+                              `Tanggal: ${tanggal}\n` +
+                              `Tipe: ${merek} (${jenis})\n` +
+                              `Status: ${statusLabel}\n` +
+                              `Pemeriksa: ${nama}\n` +
+                              `--------------------\n` +
                               `INDEXIM Safety Accountability Program`;
 
             if (navigator.share) {
@@ -620,28 +824,32 @@
                 }).catch(() => {});
             } else {
                 navigator.clipboard.writeText(shareText).then(() => {
-                    showToast('<i class="bi bi-clipboard-check me-1"></i> Hasil P2H disalin ke clipboard!', '#6366f1');
+                    showToast('<i class="bi bi-clipboard-check me-1"></i> Hasil P2H disalin ke clipboard!', '#0284c7');
                 }).catch(() => {
-                    // Fallback for older browsers
                     const ta = document.createElement('textarea');
                     ta.value = shareText;
                     document.body.appendChild(ta);
                     ta.select();
                     document.execCommand('copy');
                     ta.remove();
-                    showToast('<i class="bi bi-clipboard-check me-1"></i> Hasil P2H disalin ke clipboard!', '#6366f1');
+                    showToast('<i class="bi bi-clipboard-check me-1"></i> Hasil P2H disalin ke clipboard!', '#0284c7');
                 });
             }
         }
 
-        $(document).ready(function() {
-            // ========= METADATA GATE LISTENERS =========
-            $('#noLambungInput, #merek, #kilometer').on('input change', checkMetadataComplete);
-            $('#jenisKendaraan').on('change', checkMetadataComplete);
-            // Initial check on page load
-            checkMetadataComplete();
+        function toggleDefectPhoto(category, index, status) {
+            const wrapper = document.getElementById(`photo_wrapper_${category}_${index}`);
+            const input = document.getElementById(`photo_input_${category}_${index}`);
+            
+            if (status === 'NOT_GOOD') {
+                $(wrapper).slideDown(150);
+            } else {
+                $(wrapper).slideUp(150);
+                if (input) input.value = '';
+            }
+        }
 
-            // Autocomplete Search-and-Select dropdown logic for No Lambung
+        $(document).ready(function() {
             const $input = $('#noLambungInput');
             const $menu = $('#unitDropdownMenu');
             const $toggle = $('#toggleUnitDropdown');
@@ -659,8 +867,9 @@
 
                 if (matches.length > 0) {
                     matches.forEach(v => {
-                        const itemHtml = `<button type="button" class="dropdown-item text-white py-2 border-bottom border-secondary select-vehicle-btn" data-no="${v.NoLambung}" data-merek="${v.Merek}" data-jenis="${v.JenisKendaraan}" style="text-align: left; font-size: 13px; background: none; border-left: none; border-right: none;">
-                                            <i class="bi bi-truck me-2 text-primary"></i><strong>${v.NoLambung}</strong> - ${v.Merek} (${v.JenisKendaraan})
+                        const itemHtml = `<button type="button" class="unit-option-btn d-flex align-items-center justify-content-between w-100 text-start py-2 px-3 border-0 select-vehicle-btn" data-no="${v.NoLambung}" data-merek="${v.Merek}" data-jenis="${v.JenisKendaraan}" style="font-size: 13px; color: var(--text-main); background: none; border-bottom: 1px solid var(--border-color); cursor: pointer; border-radius: 6px; margin-bottom: 2px;">
+                                            <span><i class="bi bi-truck me-2 text-primary"></i><strong>${v.NoLambung}</strong> - ${v.Merek}</span>
+                                            <span class="badge" style="background: rgba(2,132,199,0.15); color: #38bdf8; font-size: 10px;">${v.JenisKendaraan}</span>
                                           </button>`;
                         $menu.append(itemHtml);
                     });
@@ -669,7 +878,7 @@
                 // If typing and no exact match exists, offer to add as new unit
                 const exactMatch = registeredVehicles.some(v => v.NoLambung.toLowerCase() === cleanFilterText);
                 if (cleanFilterText.length > 0 && !exactMatch) {
-                    const addNewHtml = `<button type="button" class="dropdown-item text-warning py-2 select-new-vehicle-btn" data-no="${filterText.toUpperCase()}" style="text-align: left; font-size: 13px; font-weight: bold; background: rgba(255,193,7,0.05); border: none;">
+                    const addNewHtml = `<button type="button" class="unit-option-btn d-flex align-items-center w-100 text-start py-2 px-3 border-0 select-new-vehicle-btn" data-no="${filterText.toUpperCase()}" style="font-size: 13px; font-weight: 700; color: #f59e0b; background: rgba(245,158,11,0.1); border-radius: 6px; margin-bottom: 2px; cursor: pointer;">
                                             <i class="bi bi-plus-lg me-2"></i>Tambah "${filterText.toUpperCase()}" Sebagai Unit Baru
                                         </button>`;
                     $menu.append(addNewHtml);
@@ -698,10 +907,8 @@
             $menu.on('click', '.select-new-vehicle-btn', function() {
                 const newUnit = $(this).data('no');
                 
-                // Secondary check for duplicate
                 const exists = registeredVehicles.some(v => v.NoLambung.toLowerCase() === newUnit.toLowerCase());
                 if (exists) {
-                    alert(`Unit "${newUnit}" sudah ada di daftar. Silakan pilih dari daftar.`);
                     const matchedUnit = registeredVehicles.find(v => v.NoLambung.toLowerCase() === newUnit.toLowerCase());
                     $input.val(matchedUnit.NoLambung);
                     $merek.val(matchedUnit.Merek);
@@ -738,11 +945,22 @@
                 }
             });
 
-            // Prevent submitting form with duplicate unit check if typing new unit
+            // Real-time error clearing on user input
+            $('#p2hForm').on('input change', 'input, select, textarea', function() {
+                $(this).removeClass('is-invalid');
+                $(this).closest('.form-group-sap').find('.sap-err-msg').remove();
+                $(this).closest('.input-sap-wrapper').next('.sap-err-msg').remove();
+            });
+
+            // Form Submit handler
             $('#p2hForm').on('submit', function(e) {
-                const typedUnit = $input.val().trim().toUpperCase();
-                const isEdit = $('#p2hId').val() !== '';
-                
+                e.preventDefault();
+                if (isP2hSubmitting) return false;
+
+                const p2hId = $('#p2hId').val();
+                const isEdit = p2hId !== '';
+                const btn = $('#btnSubmitP2h, #p2hForm button[type="submit"]');
+
                 // Reset errors
                 $('#p2hForm').find('.is-invalid').removeClass('is-invalid');
                 $('#p2hForm').find('.sap-err-msg').remove();
@@ -751,9 +969,11 @@
                 const merek = $('#merek').val().trim();
                 const jenis = $('#jenisKendaraan').val();
                 const km = $('#kilometer').val().trim();
+                const fotoSpeedoInput = document.getElementById('fotoSpeedometer');
+                const hasSpeedoPreview = !$('#speedoPreviewContainer').hasClass('d-none') && $('#speedoPreview').attr('src');
                 const hasSpeedo = isEdit 
-                    ? (!$('#speedoPreviewWrapper').hasClass('d-none') || $('#fotoSpeedometer')[0].files.length > 0)
-                    : ($('#fotoSpeedometer')[0].files.length > 0);
+                    ? (hasSpeedoPreview || (fotoSpeedoInput && fotoSpeedoInput.files.length > 0))
+                    : (fotoSpeedoInput && fotoSpeedoInput.files.length > 0);
 
                 let isValid = true;
                 let firstInvalid = null;
@@ -763,40 +983,39 @@
                     isValid = false;
                     $('#noLambungInput').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#noLambungInput');
-                    $('#noLambungInput').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>No. Lambung / Fleet wajib diisi.</span>');
-                    missingFields.push("No. Lambung Kendaraan");
+                    $('#noLambungInput').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>No. Lambung Kendaraan wajib diisi.</span>');
+                    missingFields.push("No. Lambung Kendaraan wajib diisi.");
                 }
                 if (!merek) {
                     isValid = false;
                     $('#merek').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#merek');
-                    $('#merek').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Merek Kendaraan wajib diisi.</span>');
-                    missingFields.push("Merek / Tipe Kendaraan");
+                    $('#merek').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Merek / Tipe Kendaraan wajib diisi.</span>');
+                    missingFields.push("Merek / Tipe Kendaraan wajib diisi.");
                 }
                 if (!jenis) {
                     isValid = false;
                     $('#jenisKendaraan').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#jenisKendaraan');
-                    $('#jenisKendaraan').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Jenis Kendaraan wajib dipilih.</span>');
-                    missingFields.push("Jenis Kendaraan");
+                    $('#jenisKendaraan').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Jenis Kendaraan wajib dipilih.</span>');
+                    missingFields.push("Jenis Kendaraan wajib dipilih.");
                 }
                 if (!km) {
                     isValid = false;
                     $('#kilometer').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#kilometer');
-                    $('#kilometer').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Odometer / Kilometer wajib diisi.</span>');
-                    missingFields.push("Odometer / Kilometer");
+                    $('#kilometer').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Odometer / Kilometer wajib diisi.</span>');
+                    missingFields.push("Odometer / Kilometer wajib diisi.");
                 }
                 if (!hasSpeedo) {
                     isValid = false;
-                    $('#fotoSpeedometer').addClass('is-invalid');
-                    if (!firstInvalid) firstInvalid = $('#fotoSpeedometer');
-                    $('#fotoSpeedometer').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto Speedometer wajib diunggah.</span>');
-                    missingFields.push("Foto Speedometer");
+                    $(fotoSpeedoInput).addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $(fotoSpeedoInput).closest('.form-group-sap');
+                    $(fotoSpeedoInput).closest('.form-group-sap').find('.upload-card').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto Speedometer wajib diunggah.</span>');
+                    missingFields.push("Foto Speedometer wajib diunggah.");
                 }
 
                 // Check critical checklist items: if status is NOT_GOOD, photo must be uploaded
-                let photoMissing = false;
                 $('.btn-check[value="NOT_GOOD"]:checked').each(function() {
                     const nameAttr = $(this).attr('name'); // e.g. golA_status_3
                     const parts = nameAttr.split('_'); // ['golA', 'status', '3']
@@ -807,16 +1026,15 @@
                     const hasExistingPhoto = previewWrapper && !$(previewWrapper).hasClass('d-none');
                     
                     if (fileInput && fileInput.files.length === 0 && !hasExistingPhoto) {
+                        isValid = false;
                         $(fileInput).addClass('is-invalid');
                         if (!firstInvalid) firstInvalid = $(fileInput);
-                        const groupLabel = cat === 'golA' ? 'Golongan A' : cat === 'golB' ? 'Golongan B' : 'Golongan C';
-                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti kerusakan wajib diunggah.</span>`;
+                        const groupLabel = cat === 'golA' ? 'Gol. A' : cat === 'golB' ? 'Gol. B' : 'Gol. C';
+                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti kerusakan wajib diunggah.</span>`;
                         $(fileInput).after(errHtml);
-                        photoMissing = true;
                         
-                        // Get item text
                         let itemText = $(`#row_${cat}_${idx}`).find('.fs-13').text()?.trim() || `${groupLabel} Item #${idx + 1}`;
-                        missingFields.push(`Foto Kerusakan: ${itemText}`);
+                        missingFields.push(`Foto Kerusakan (${groupLabel}): ${itemText}`);
 
                         // Expand the respective accordion item
                         const collapseEl = document.getElementById(`collapse${cat.slice(-1).toUpperCase()}`);
@@ -826,11 +1044,9 @@
                     }
                 });
 
-                if (!isValid || photoMissing) {
-                    e.preventDefault();
-                    if (missingFields.length > 0) {
-                        alert("Harap lengkapi kolom yang belum diisi:\n- " + missingFields.join("\n- "));
-                    }
+                if (!isValid) {
+                    resetButtonState();
+                    showSapErrorPopup("Laporan P2H belum lengkap", missingFields);
                     if (firstInvalid) {
                         $('html, body').animate({
                             scrollTop: firstInvalid.offset().top - 120
@@ -838,30 +1054,115 @@
                     }
                     return false;
                 }
+
+                isP2hSubmitting = true;
+                btn.prop('disabled', true).css('pointer-events', 'none');
+                btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');
+
+                const $overlay = $('#loadingOverlay');
+                const $progressBar = $('#loadingProgressBar');
+                const $progressPercent = $('#loadingProgressPercent');
+                const $title = $('#loadingTitle');
+                const $subtitle = $('#loadingSubtitle');
+
+                $overlay.css('display', 'flex');
+                $title.text('Menyiapkan Data P2H...');
+                $subtitle.text('Sedang memproses pemeriksaan kendaraan dan checklist...');
+                $progressBar.css('width', '15%');
+                $progressPercent.text('15%');
+
+                const formData = new FormData(this);
+
+                $.ajax({
+                    url: '/P2h/Create',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    xhr: function() {
+                        const xhr = new window.XMLHttpRequest();
+                        xhr.upload.addEventListener('progress', function(evt) {
+                            if (evt.lengthComputable) {
+                                const percent = Math.round((evt.loaded / evt.total) * 100);
+                                const scaledPercent = Math.max(15, Math.min(95, percent));
+                                $progressBar.css('width', scaledPercent + '%');
+                                $progressPercent.text(scaledPercent + '%');
+                                if (percent >= 100) {
+                                    $title.text('Memproses di Server...');
+                                    $subtitle.text('Mohon tunggu, server sedang menyimpan data...');
+                                }
+                            }
+                        }, false);
+                        return xhr;
+                    },
+                    success: function(response) {
+                        $title.text('Selesai!');
+                        $subtitle.text(response && response.message ? response.message : 'Laporan P2H berhasil disimpan.');
+                        $progressBar.css('width', '100%');
+                        $progressPercent.text('100%');
+                        setTimeout(function() {
+                            window.location.href = '/P2h/Index';
+                        }, 500);
+                    },
+                    error: function(xhr, status, error) {
+                        resetButtonState();
+
+                        let errMessage = "Terjadi kesalahan saat menyimpan data P2H.";
+                        let errList = [];
+
+                        if (xhr.responseJSON) {
+                            if (xhr.responseJSON.message) errMessage = xhr.responseJSON.message;
+                            if (Array.isArray(xhr.responseJSON.errors)) errList = xhr.responseJSON.errors;
+                        } else if (xhr.responseText) {
+                            try {
+                                const parsed = JSON.parse(xhr.responseText);
+                                if (parsed.message) errMessage = parsed.message;
+                                if (Array.isArray(parsed.errors)) errList = parsed.errors;
+                            } catch(e) {}
+                        }
+
+                        if (errList.length === 0) {
+                            errList = [errMessage];
+                        }
+
+                        showSapErrorPopup(errMessage, errList);
+                    },
+                    complete: function() {
+                        setTimeout(function() {
+                            if ($('#sapErrorModal').is(':visible') || !isP2hSubmitting) {
+                                resetButtonState();
+                            }
+                        }, 100);
+                    }
+                });
+
+                return false;
             });
 
-        function toggleDefectPhoto(category, index, status) {
-            const wrapper = document.getElementById(`photo_wrapper_${category}_${index}`);
-            const input = document.getElementById(`photo_input_${category}_${index}`);
-            
-            if (status === 'NOT_GOOD') {
-                $(wrapper).slideDown(150);
-            } else {
-                $(wrapper).slideUp(150);
-                if (input) input.value = ''; // Reset file input
-            }
-        }
+            // Ensure button state is clean on page load
+            resetButtonState();
+            window.addEventListener('pageshow', function() {
+                resetButtonState();
+            });
+        });
 
         // Cancel Edit report function
         function cancelEditP2h() {
             $('#p2hForm')[0].reset();
             $('#p2hId').val('');
-            $('#formTitle').html('<i class="bi bi-shield-check me-2" style="color: var(--color-primary);"></i>Form Pemeriksaan P2H');
+            $('#formTitle').html('<i class="bi bi-truck-front-fill me-2 text-primary"></i>Form Pemeriksaan P2H Baru');
             $('#btnCancelEdit').addClass('d-none');
+            resetButtonState();
+            $('#p2hForm').find('.is-invalid').removeClass('is-invalid');
+            $('#p2hForm').find('.sap-err-msg').remove();
             
-            // Hide previews
-            $('#speedoPreviewWrapper').addClass('d-none');
-            $('#fotoSpeedometer').prop('required', true);
+            // Hide speedo preview
+            $('#speedoPreview').attr('src', '');
+            $('#speedoPreviewContainer').addClass('d-none');
+            $('#speedoPlaceholder').removeClass('d-none');
             $('#speedoHelp').text("Wajib melampirkan foto speedometer terbaru.");
 
             // Reset checklist photos wrappers
@@ -876,7 +1177,6 @@
             });
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
-            checkMetadataComplete();
         }
 
         // Edit report function
@@ -898,9 +1198,10 @@
 
                     // Speedometer photo preview
                     if (data.fotoSpeedometer) {
-                        $('#speedoPreviewLink').attr('href', data.fotoSpeedometer);
-                        $('#speedoPreviewWrapper').removeClass('d-none');
-                        $('#fotoSpeedometer').prop('required', false);
+                        var proxyFoto = data.fotoSpeedometer.startsWith("http") ? "/ImageProxy/Get?url=" + encodeURIComponent(data.fotoSpeedometer) : data.fotoSpeedometer;
+                        $('#speedoPreview').attr('src', proxyFoto);
+                        $('#speedoPlaceholder').addClass('d-none');
+                        $('#speedoPreviewContainer').removeClass('d-none');
                         $('#speedoHelp').text("Biarkan kosong jika tidak ingin mengubah foto.");
                     }
 
@@ -913,7 +1214,8 @@
                                 toggleDefectPhoto('golA', idx, 'NOT_GOOD');
                                 
                                 if (item.photoUrl) {
-                                    $(`#photo_preview_link_golA_${idx}`).attr('href', item.photoUrl);
+                                    var proxyDefect = item.photoUrl.startsWith("http") ? "/ImageProxy/Get?url=" + encodeURIComponent(item.photoUrl) : item.photoUrl;
+                                    $(`#photo_preview_link_golA_${idx}`).attr('href', proxyDefect);
                                     $(`#photo_preview_wrapper_golA_${idx}`).removeClass('d-none');
                                 }
                             } else {
@@ -931,7 +1233,8 @@
                                 toggleDefectPhoto('golB', idx, 'NOT_GOOD');
                                 
                                 if (item.photoUrl) {
-                                    $(`#photo_preview_link_golB_${idx}`).attr('href', item.photoUrl);
+                                    var proxyDefect = item.photoUrl.startsWith("http") ? "/ImageProxy/Get?url=" + encodeURIComponent(item.photoUrl) : item.photoUrl;
+                                    $(`#photo_preview_link_golB_${idx}`).attr('href', proxyDefect);
                                     $(`#photo_preview_wrapper_golB_${idx}`).removeClass('d-none');
                                 }
                             } else {
@@ -949,7 +1252,8 @@
                                 toggleDefectPhoto('golC', idx, 'NOT_GOOD');
                                 
                                 if (item.photoUrl) {
-                                    $(`#photo_preview_link_golC_${idx}`).attr('href', item.photoUrl);
+                                    var proxyDefect = item.photoUrl.startsWith("http") ? "/ImageProxy/Get?url=" + encodeURIComponent(item.photoUrl) : item.photoUrl;
+                                    $(`#photo_preview_link_golC_${idx}`).attr('href', proxyDefect);
                                     $(`#photo_preview_wrapper_golC_${idx}`).removeClass('d-none');
                                 }
                             } else {
@@ -959,10 +1263,10 @@
                     }
 
                     // Toggle Cancel button and scroll to top
-                    $('#formTitle').html('<i class="bi bi-pencil-square me-2" style="color: var(--color-primary);"></i>Edit Laporan P2H');
+                    $('#formTitle').html('<i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan P2H');
                     $('#btnCancelEdit').removeClass('d-none');
+                    $('#btnSubmitP2h').html('<i class="bi bi-check-circle-fill me-2"></i> PERBARUI LAPORAN P2H');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                    checkMetadataComplete();
                 }
             }).fail(function() {
                 alert("Gagal mengambil data P2H. Data mungkin sudah dihapus.");

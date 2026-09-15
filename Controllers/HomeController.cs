@@ -284,21 +284,213 @@ namespace MBS_SAP.Controllers
                     .FirstOrDefaultAsync();
                 int? userCompanyId = currentKaryawanForAP?.IdPerusahaan;
 
-                // Action plan Open milik saya (saya sebagai pembuat atau PJA)
-                stats.MyOpenActionPlans = await _context.ActionPlans
-                    .Where(a => !a.IsDeleted && a.Status == "Open"
-                        && (a.Nik == userNik || a.NikPja == userNik || a.NikPic == userNik))
-                    .CountAsync();
+                var userName = User.Identity?.Name ?? string.Empty;
 
-                // Action plan Open di departemen saya (berdasarkan field Departemen pada action plan)
-                stats.DeptOpenActionPlans = 0;
-                if (!string.IsNullOrEmpty(userDept) && userCompanyId.HasValue)
+                // 1. DIARAHKAN KE SAYA (PJA / PIC)
+                var assignedHazardsQuery = _context.HazardReports
+                    .AsNoTracking()
+                    .Where(h => !h.IsDeleted && h.StatusTemuan == "Open" 
+                        && (h.NikPja == userNik || (string.IsNullOrEmpty(h.NikPja) && !string.IsNullOrEmpty(h.Pja) && h.Pja.ToLower() == userName.ToLower())));
+
+                int assignedHazardsCount = await assignedHazardsQuery.CountAsync();
+
+                var assignedActionPlansQuery = _context.ActionPlans
+                    .AsNoTracking()
+                    .Where(a => !a.IsDeleted && a.Status == "Open" 
+                        && (a.NikPja == userNik || a.NikPic == userNik || (string.IsNullOrEmpty(a.NikPja) && !string.IsNullOrEmpty(a.Pja) && a.Pja.ToLower() == userName.ToLower()) || (string.IsNullOrEmpty(a.NikPic) && !string.IsNullOrEmpty(a.Pic) && a.Pic.ToLower() == userName.ToLower())));
+
+                int assignedActionPlansCount = await assignedActionPlansQuery.CountAsync();
+
+                var assignedHazardItems = await assignedHazardsQuery
+                    .OrderByDescending(h => h.CreatedAt)
+                    .Take(5)
+                    .Select(h => new AssignedTaskToCloseItem
+                    {
+                        Id = h.Id,
+                        Source = "Hazard",
+                        Area = h.Area ?? "-",
+                        Lokasi = h.Lokasi ?? h.Area ?? "-",
+                        Temuan = h.Temuan ?? string.Empty,
+                        Pelapor = h.Nama ?? "Pelapor",
+                        DepartemenPelapor = h.Departemen,
+                        Tanggal = h.Tanggal,
+                        TingkatResiko = h.TingkatResiko ?? "Sedang",
+                        Foto = h.FotoTemuan,
+                        TargetRole = "PJA",
+                        Pja = h.Pja ?? "-",
+                        Pic = "-",
+                        ActionUrl = "/Hazard/Index"
+                    })
+                    .ToListAsync();
+
+                var assignedActionPlanItems = await assignedActionPlansQuery
+                    .OrderByDescending(a => a.CreatedAt)
+                    .Take(5)
+                    .Select(a => new AssignedTaskToCloseItem
+                    {
+                        Id = a.Id,
+                        Source = a.ItemSap != null && a.ItemSap.StartsWith("hazard") ? "Action Plan (Hazard)" : "Action Plan",
+                        Area = a.Area ?? "-",
+                        Lokasi = a.Lokasi ?? a.Area ?? "-",
+                        Temuan = a.DetilTemuan ?? string.Empty,
+                        Pelapor = a.Nama ?? "Pelapor",
+                        DepartemenPelapor = a.Departemen,
+                        Tanggal = a.Tanggal,
+                        TingkatResiko = a.KategoriTemuan ?? "Temuan",
+                        Foto = a.FotoTemuan,
+                        TargetRole = a.NikPic == userNik ? "PIC" : "PJA",
+                        Pja = a.Pja ?? "-",
+                        Pic = a.Pic ?? "-",
+                        ActionUrl = "/ActionPlan/Index?startDate=2000-01-01&filter=assigned"
+                    })
+                    .ToListAsync();
+
+                stats.AssignedTasksToClose = assignedHazardItems
+                    .Concat(assignedActionPlanItems)
+                    .GroupBy(x => new { x.Lokasi, x.Temuan })
+                    .Select(g => g.First())
+                    .OrderByDescending(x => x.Tanggal)
+                    .Take(6)
+                    .ToList();
+
+                stats.AssignedHazardsCount = assignedHazardsCount;
+                stats.AssignedActionPlansCount = assignedActionPlansCount;
+                stats.AssignedToMeCount = assignedHazardsCount + assignedActionPlansCount;
+
+                // 2. DIBUAT OLEH SAYA (Created by me, Open)
+                var myCreatedHazardsQuery = _context.HazardReports
+                    .AsNoTracking()
+                    .Where(h => !h.IsDeleted && h.StatusTemuan == "Open" && h.Nik == userNik);
+                int myCreatedHazardsCount = await myCreatedHazardsQuery.CountAsync();
+
+                var myCreatedActionPlansQuery = _context.ActionPlans
+                    .AsNoTracking()
+                    .Where(a => !a.IsDeleted && a.Status == "Open" && a.Nik == userNik);
+                int myCreatedActionPlansCount = await myCreatedActionPlansQuery.CountAsync();
+
+                var myCreatedHazardItems = await myCreatedHazardsQuery
+                    .OrderByDescending(h => h.CreatedAt)
+                    .Take(5)
+                    .Select(h => new AssignedTaskToCloseItem
+                    {
+                        Id = h.Id,
+                        Source = "Hazard",
+                        Area = h.Area ?? "-",
+                        Lokasi = h.Lokasi ?? h.Area ?? "-",
+                        Temuan = h.Temuan ?? string.Empty,
+                        Pelapor = h.Nama ?? "Saya",
+                        DepartemenPelapor = h.Departemen,
+                        Tanggal = h.Tanggal,
+                        TingkatResiko = h.TingkatResiko ?? "Sedang",
+                        Foto = h.FotoTemuan,
+                        TargetRole = "Pembuat",
+                        Pja = h.Pja ?? "-",
+                        Pic = "-",
+                        ActionUrl = "/Hazard/Index"
+                    })
+                    .ToListAsync();
+
+                var myCreatedActionPlanItems = await myCreatedActionPlansQuery
+                    .OrderByDescending(a => a.CreatedAt)
+                    .Take(5)
+                    .Select(a => new AssignedTaskToCloseItem
+                    {
+                        Id = a.Id,
+                        Source = a.ItemSap != null && a.ItemSap.StartsWith("hazard") ? "Action Plan (Hazard)" : "Action Plan",
+                        Area = a.Area ?? "-",
+                        Lokasi = a.Lokasi ?? a.Area ?? "-",
+                        Temuan = a.DetilTemuan ?? string.Empty,
+                        Pelapor = a.Nama ?? "Saya",
+                        DepartemenPelapor = a.Departemen,
+                        Tanggal = a.Tanggal,
+                        TingkatResiko = a.KategoriTemuan ?? "Temuan",
+                        Foto = a.FotoTemuan,
+                        TargetRole = "Pembuat",
+                        Pja = a.Pja ?? "-",
+                        Pic = a.Pic ?? "-",
+                        ActionUrl = "/ActionPlan/Index?startDate=2000-01-01&filter=created"
+                    })
+                    .ToListAsync();
+
+                stats.CreatedByMeTasks = myCreatedHazardItems
+                    .Concat(myCreatedActionPlanItems)
+                    .GroupBy(x => new { x.Lokasi, x.Temuan })
+                    .Select(g => g.First())
+                    .OrderByDescending(x => x.Tanggal)
+                    .Take(6)
+                    .ToList();
+                stats.CreatedByMeOpenCount = myCreatedHazardsCount + myCreatedActionPlansCount;
+                stats.MyOpenActionPlans = stats.CreatedByMeOpenCount;
+
+                // 3. DEPARTEMEN SAYA (Department Open)
+                stats.DeptOpenCount = 0;
+                stats.DeptTasks = new List<AssignedTaskToCloseItem>();
+                if (!string.IsNullOrEmpty(userDept))
                 {
-                    stats.DeptOpenActionPlans = await _context.ActionPlans
-                        .Where(a => !a.IsDeleted && a.Status == "Open"
-                            && a.PerusahaanId == userCompanyId.Value
-                            && (a.Departemen == userDept || a.DepartemenPja == userDept || a.DepartemenPic == userDept))
-                        .CountAsync();
+                    var deptHazardsQuery = _context.HazardReports
+                        .AsNoTracking()
+                        .Where(h => !h.IsDeleted && h.StatusTemuan == "Open" && (h.Departemen == userDept || h.DepartemenPja == userDept));
+                    int deptHazardsCount = await deptHazardsQuery.CountAsync();
+
+                    var deptActionPlansQuery = _context.ActionPlans
+                        .AsNoTracking()
+                        .Where(a => !a.IsDeleted && a.Status == "Open" && (a.Departemen == userDept || a.DepartemenPja == userDept || a.DepartemenPic == userDept));
+                    int deptActionPlansCount = await deptActionPlansQuery.CountAsync();
+
+                    stats.DeptOpenCount = deptHazardsCount + deptActionPlansCount;
+                    stats.DeptOpenActionPlans = stats.DeptOpenCount;
+
+                    var deptHazardItems = await deptHazardsQuery
+                        .OrderByDescending(h => h.CreatedAt)
+                        .Take(5)
+                        .Select(h => new AssignedTaskToCloseItem
+                        {
+                            Id = h.Id,
+                            Source = "Hazard",
+                            Area = h.Area ?? "-",
+                            Lokasi = h.Lokasi ?? h.Area ?? "-",
+                            Temuan = h.Temuan ?? string.Empty,
+                            Pelapor = h.Nama ?? "Pelapor",
+                            DepartemenPelapor = h.Departemen,
+                            Tanggal = h.Tanggal,
+                            TingkatResiko = h.TingkatResiko ?? "Sedang",
+                            Foto = h.FotoTemuan,
+                            TargetRole = "Dept",
+                            Pja = h.Pja ?? "-",
+                            Pic = "-",
+                            ActionUrl = "/Hazard/Index"
+                        })
+                        .ToListAsync();
+
+                    var deptActionPlanItems = await deptActionPlansQuery
+                        .OrderByDescending(a => a.CreatedAt)
+                        .Take(5)
+                        .Select(a => new AssignedTaskToCloseItem
+                        {
+                            Id = a.Id,
+                            Source = a.ItemSap != null && a.ItemSap.StartsWith("hazard") ? "Action Plan (Hazard)" : "Action Plan",
+                            Area = a.Area ?? "-",
+                            Lokasi = a.Lokasi ?? a.Area ?? "-",
+                            Temuan = a.DetilTemuan ?? string.Empty,
+                            Pelapor = a.Nama ?? "Pelapor",
+                            DepartemenPelapor = a.Departemen,
+                            Tanggal = a.Tanggal,
+                            TingkatResiko = a.KategoriTemuan ?? "Temuan",
+                            Foto = a.FotoTemuan,
+                            TargetRole = "Dept",
+                            Pja = a.Pja ?? "-",
+                            Pic = a.Pic ?? "-",
+                            ActionUrl = "/ActionPlan/Index?startDate=2000-01-01&filter=dept&dept=" + Uri.EscapeDataString(userDept)
+                        })
+                        .ToListAsync();
+
+                    stats.DeptTasks = deptHazardItems
+                        .Concat(deptActionPlanItems)
+                        .GroupBy(x => new { x.Lokasi, x.Temuan })
+                        .Select(g => g.First())
+                        .OrderByDescending(x => x.Tanggal)
+                        .Take(6)
+                        .ToList();
                 }
 
                 stats.TotalSafetyTalks = totalSafetyTalksCount;
@@ -503,6 +695,17 @@ namespace MBS_SAP.Controllers
 
             ViewData["MyOpenActionPlans"] = stats.MyOpenActionPlans;
             ViewData["DeptOpenActionPlans"] = stats.DeptOpenActionPlans;
+            ViewData["AssignedToMeCount"] = stats.AssignedToMeCount;
+            ViewData["AssignedHazardsCount"] = stats.AssignedHazardsCount;
+            ViewData["AssignedActionPlansCount"] = stats.AssignedActionPlansCount;
+            ViewData["AssignedTasksToClose"] = stats.AssignedTasksToClose;
+
+            ViewData["CreatedByMeOpenCount"] = stats.CreatedByMeOpenCount;
+            ViewData["CreatedByMeTasks"] = stats.CreatedByMeTasks;
+
+            ViewData["DeptOpenCount"] = stats.DeptOpenCount;
+            ViewData["DeptTasks"] = stats.DeptTasks;
+
             ViewData["UserDept"] = userDept;
 
             return View(stats.RecentActivities);
@@ -550,6 +753,17 @@ namespace MBS_SAP.Controllers
             public int MyTotalMonthTarget { get; set; }
             public int MyOpenActionPlans { get; set; }
             public int DeptOpenActionPlans { get; set; }
+
+            public int AssignedToMeCount { get; set; }
+            public int AssignedHazardsCount { get; set; }
+            public int AssignedActionPlansCount { get; set; }
+            public List<AssignedTaskToCloseItem> AssignedTasksToClose { get; set; } = new();
+
+            public int CreatedByMeOpenCount { get; set; }
+            public List<AssignedTaskToCloseItem> CreatedByMeTasks { get; set; } = new();
+
+            public int DeptOpenCount { get; set; }
+            public List<AssignedTaskToCloseItem> DeptTasks { get; set; } = new();
             
             public int ThisMonthHazards { get; set; }
             public int ThisMonthInspections { get; set; }
@@ -567,6 +781,24 @@ namespace MBS_SAP.Controllers
             ViewData["ActiveTab"] = "Home";
             return View();
         }
+    }
+
+    public class AssignedTaskToCloseItem
+    {
+        public int Id { get; set; }
+        public string Source { get; set; } = string.Empty; // Hazard / Action Plan
+        public string Area { get; set; } = string.Empty;
+        public string Lokasi { get; set; } = string.Empty;
+        public string Temuan { get; set; } = string.Empty;
+        public string Pelapor { get; set; } = string.Empty;
+        public string? DepartemenPelapor { get; set; }
+        public DateTime Tanggal { get; set; }
+        public string TingkatResiko { get; set; } = "Sedang";
+        public string? Foto { get; set; }
+        public string TargetRole { get; set; } = "PJA"; // PJA / PIC / Pembuat / Dept
+        public string? Pja { get; set; }
+        public string? Pic { get; set; }
+        public string ActionUrl { get; set; } = string.Empty;
     }
 
     public class RecentActivityViewModel

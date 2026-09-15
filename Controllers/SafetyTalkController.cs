@@ -216,10 +216,10 @@ namespace MBS_SAP.Controllers
                 await _context.SaveChangesAsync();
 
                 var successMsg = isNew ? "Laporan Safety Talk berhasil disimpan!" : "Laporan Safety Talk berhasil diperbarui!";
+                TempData["SuccessMessage"] = successMsg;
                 if (isAjax) return Json(new { success = true, message = successMsg });
 
-                TempData["SuccessMessage"] = successMsg;
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {

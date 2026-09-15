@@ -10,7 +10,7 @@
     <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 9999; justify-content: center; align-items: center; flex-direction: column; color: white; font-family: 'Poppins', sans-serif;">
         <div class="loader-spinner-container" style="position: relative; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 24px;">
             <div class="loader-circle" style="box-sizing: border-box; width: 80px; height: 80px; border: 4px solid rgba(255, 255, 255, 0.1); border-radius: 50%; border-top-color: #0284c7; border-bottom-color: #0284c7; animation: sap-spin 1.5s linear infinite;"></div>
-            <i class="bi bi-cloud-arrow-up-fill" style="position: absolute; font-size: 32px; color: white; animation: sap-bounce 2s ease-in-out infinite;"></i>
+            <i class="bi bi-clipboard-check-fill" style="position: absolute; font-size: 32px; color: white; animation: sap-bounce 2s ease-in-out infinite;"></i>
         </div>
         <h5 id="loadingTitle" style="font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Memproses Laporan Inspeksi</h5>
         <p id="loadingSubtitle" style="font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 16px; text-align: center; max-width: 320px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">Sedang menyiapkan data...</p>
@@ -31,12 +31,15 @@
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-8px); }
         }
+        .checkpoint-card {
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
     </style>
 
     <!-- Header with Banner -->
     <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
-        <div style="background: linear-gradient(135deg, #0284c7, #38bdf8); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
-            <!-- Decorative circle -->
+        <div style="background: linear-gradient(135deg, #0284c7, #38bdf8); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(2, 132, 199, 0.25);">
+            <!-- Decorative circles -->
             <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
             <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
             
@@ -54,12 +57,20 @@
         </div>
     }
 
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(34, 197, 94, 0.15); color: var(--color-primary); border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
     <!-- Hybrid Grid Layout: Form and List side-by-side on laptop, stacked on mobile -->
     <div class="form-responsive-row">
         
         <!-- Form Column -->
         <div class="card-sap border-primary-accent">
-            <form asp-controller="Inspection" asp-action="Submit" method="post" enctype="multipart/form-data" id="inspectionForm">
+            <form asp-controller="Inspection" asp-action="Submit" method="post" enctype="multipart/form-data" id="inspectionForm" novalidate>
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="inspectionId" name="id" value="" />
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -74,14 +85,14 @@
                         <label class="form-label-sap" for="tanggal">Tanggal Inspeksi</label>
                         <div class="input-sap-wrapper">
                             <i class="bi bi-calendar-event-fill input-sap-icon"></i>
-                            <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(-7).ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                            <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" min="@DateTime.Today.AddDays(-7).ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
                         </div>
                     </div>
                     <div class="col-md-6 form-group-sap">
                         <label class="form-label-sap" for="waktuStr">Waktu Inspeksi</label>
                         <div class="input-sap-wrapper">
                             <i class="bi bi-clock-fill input-sap-icon"></i>
-                            <input type="time" id="waktuStr" name="waktuStr" class="input-sap" value="@DateTime.Now.ToString("HH:mm")" required />
+                            <input type="time" id="waktuStr" name="waktuStr" class="input-sap" value="@DateTime.Now.ToString("HH:mm")" />
                         </div>
                     </div>
                 </div>
@@ -91,7 +102,7 @@
                         <label class="form-label-sap" for="jenisInspeksi">Jenis Inspeksi</label>
                         <div class="input-sap-wrapper">
                             <i class="bi bi-check-square-fill input-sap-icon"></i>
-                            <input type="text" id="jenisInspeksi" name="jenisInspeksi" class="input-sap text-uppercase" list="jenisInspeksiList" placeholder="Pilih atau Ketik Jenis Inspeksi..." autocomplete="off" required />
+                            <input type="text" id="jenisInspeksi" name="jenisInspeksi" class="input-sap text-uppercase" list="jenisInspeksiList" placeholder="Pilih atau Ketik Jenis Inspeksi..." autocomplete="off" />
                             <datalist id="jenisInspeksiList">
                                 <option value="INSPEKSI TERENCANA (PLANNED)"></option>
                                 <option value="INSPEKSI TIDAK TERENCANA"></option>
@@ -122,7 +133,7 @@
                                 <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleAreaDropdown"></i>
                             </div>
                             <!-- Hidden select for actual form submission -->
-                            <select id="area" name="area" required style="display:none;">
+                            <select id="area" name="area" style="display:none;">
                                 <option value="" disabled selected></option>
                             </select>
                             <!-- Dropdown list -->
@@ -158,7 +169,7 @@
                     <label class="form-label-sap" for="lokasi">Lokasi Spesifik</label>
                     <div class="input-sap-wrapper">
                         <i class="bi bi-geo-fill input-sap-icon"></i>
-                        <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Masukkan lokasi spesifik / Klik ikon Lokasi Aktual GPS di kanan..." style="padding-right: 40px;" required />
+                        <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Masukkan lokasi spesifik / Klik ikon Lokasi Aktual GPS di kanan..." style="padding-right: 40px;" />
                         <button type="button" class="btn btn-link p-0 position-absolute" id="btnGetLocation" style="right: 12px; top: 10px; color: var(--color-primary);" onclick="getLocation()" title="Ambil Lokasi Aktual GPS">
                             <i class="bi bi-crosshair"></i>
                         </button>
@@ -211,7 +222,7 @@
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
                                 1. Apakah pekerjaan yang diamati dilakukan sesuai prosedur yang berlaku?
                             </div>
-                            <input type='hidden' name='q1_1' id='valQ1_1' value='2' required />
+                            <input type='hidden' name='q1_1' id='valQ1_1' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q1_1' id='btnQ1_1_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(1, 1, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q1_1' id='btnQ1_1_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(1, 1, 1)'>N/A</button>
@@ -231,7 +242,7 @@
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
                                 2. Apakah dokumen/izin yang diperlukan tersedia dan masih berlaku?
                             </div>
-                            <input type='hidden' name='q1_2' id='valQ1_2' value='2' required />
+                            <input type='hidden' name='q1_2' id='valQ1_2' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q1_2' id='btnQ1_2_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(1, 2, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q1_2' id='btnQ1_2_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(1, 2, 1)'>N/A</button>
@@ -251,7 +262,7 @@
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
                                 3. Apakah temuan inspeksi sebelumnya sudah ditindaklanjuti?
                             </div>
-                            <input type='hidden' name='q1_3' id='valQ1_3' value='2' required />
+                            <input type='hidden' name='q1_3' id='valQ1_3' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q1_3' id='btnQ1_3_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(1, 3, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q1_3' id='btnQ1_3_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(1, 3, 1)'>N/A</button>
@@ -274,7 +285,7 @@
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
                                 1. Apakah risiko utama pekerjaan telah diidentifikasi sebelum pekerjaan dilakukan?
                             </div>
-                            <input type='hidden' name='q2_1' id='valQ2_1' value='2' required />
+                            <input type='hidden' name='q2_1' id='valQ2_1' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q2_1' id='btnQ2_1_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(2, 1, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q2_1' id='btnQ2_1_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(2, 1, 1)'>N/A</button>
@@ -294,7 +305,7 @@
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
                                 2. Apakah pengendalian risiko diterapkan di lapangan?
                             </div>
-                            <input type='hidden' name='q2_2' id='valQ2_2' value='2' required />
+                            <input type='hidden' name='q2_2' id='valQ2_2' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q2_2' id='btnQ2_2_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(2, 2, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q2_2' id='btnQ2_2_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(2, 2, 1)'>N/A</button>
@@ -312,9 +323,9 @@
                         </div>
                         <div class='checkpoint-card mb-3 p-3' style='border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color);'>
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
-                                3. Apakah area kerja dalam kondisi aman saat inspeksi dilakukan?
+                                3. Apakah bahaya kritis dikendalikan secara memadai?
                             </div>
-                            <input type='hidden' name='q2_3' id='valQ2_3' value='2' required />
+                            <input type='hidden' name='q2_3' id='valQ2_3' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q2_3' id='btnQ2_3_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(2, 3, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q2_3' id='btnQ2_3_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(2, 3, 1)'>N/A</button>
@@ -332,12 +343,12 @@
                         </div>
                     </div>
                     <div class='mb-4'>
-                        <h6 class='text-primary fw-bold mb-3' style='font-size: 14px; color: var(--color-primary);'>Modul 3. SDM & Kesehatan Kerja</h6>
+                        <h6 class='text-primary fw-bold mb-3' style='font-size: 14px; color: var(--color-primary);'>Modul 3. Lingkungan Kerja & Housekeeping</h6>
                         <div class='checkpoint-card mb-3 p-3' style='border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color);'>
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
-                                1. Apakah personel yang bekerja memiliki kompetensi/otorisasi yang diperlukan?
+                                1. Apakah area kerja bersih, rapi, dan bebas dari rintangan?
                             </div>
-                            <input type='hidden' name='q3_1' id='valQ3_1' value='2' required />
+                            <input type='hidden' name='q3_1' id='valQ3_1' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q3_1' id='btnQ3_1_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(3, 1, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q3_1' id='btnQ3_1_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(3, 1, 1)'>N/A</button>
@@ -355,9 +366,9 @@
                         </div>
                         <div class='checkpoint-card mb-3 p-3' style='border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color);'>
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
-                                2. Apakah APD yang dipersyaratkan digunakan dengan benar?
+                                2. Apakah penerangan dan ventilasi memadai untuk pekerjaan yang dilakukan?
                             </div>
-                            <input type='hidden' name='q3_2' id='valQ3_2' value='2' required />
+                            <input type='hidden' name='q3_2' id='valQ3_2' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q3_2' id='btnQ3_2_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(3, 2, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q3_2' id='btnQ3_2_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(3, 2, 1)'>N/A</button>
@@ -375,9 +386,9 @@
                         </div>
                         <div class='checkpoint-card mb-3 p-3' style='border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color);'>
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
-                                3. Apakah tidak ditemukan kondisi yang berpotensi mengganggu kesehatan pekerja?
+                                3. Apakah material dan limbah dikelola/dibuang dengan benar?
                             </div>
-                            <input type='hidden' name='q3_3' id='valQ3_3' value='2' required />
+                            <input type='hidden' name='q3_3' id='valQ3_3' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q3_3' id='btnQ3_3_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(3, 3, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q3_3' id='btnQ3_3_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(3, 3, 1)'>N/A</button>
@@ -395,12 +406,12 @@
                         </div>
                     </div>
                     <div class='mb-4'>
-                        <h6 class='text-primary fw-bold mb-3' style='font-size: 14px; color: var(--color-primary);'>Modul 4. Operasi & Lingkungan</h6>
+                        <h6 class='text-primary fw-bold mb-3' style='font-size: 14px; color: var(--color-primary);'>Modul 4. Peralatan, Mesin & APD</h6>
                         <div class='checkpoint-card mb-3 p-3' style='border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color);'>
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
-                                1. Apakah peralatan dan fasilitas yang digunakan dalam kondisi layak operasi?
+                                1. Apakah alat dan mesin dalam kondisi layak pakai dan terawat?
                             </div>
-                            <input type='hidden' name='q4_1' id='valQ4_1' value='2' required />
+                            <input type='hidden' name='q4_1' id='valQ4_1' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q4_1' id='btnQ4_1_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(4, 1, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q4_1' id='btnQ4_1_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(4, 1, 1)'>N/A</button>
@@ -418,9 +429,9 @@
                         </div>
                         <div class='checkpoint-card mb-3 p-3' style='border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color);'>
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
-                                2. Apakah area kerja tertata dan terkendali?
+                                2. Apakah pelindung mesin / safety device terpasang dan berfungsi?
                             </div>
-                            <input type='hidden' name='q4_2' id='valQ4_2' value='2' required />
+                            <input type='hidden' name='q4_2' id='valQ4_2' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q4_2' id='btnQ4_2_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(4, 2, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q4_2' id='btnQ4_2_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(4, 2, 1)'>N/A</button>
@@ -438,9 +449,9 @@
                         </div>
                         <div class='checkpoint-card mb-3 p-3' style='border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color);'>
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
-                                3. Apakah tidak ditemukan dampak lingkungan yang tidak terkendali?
+                                3. Apakah APD yang sesuai digunakan dengan benar?
                             </div>
-                            <input type='hidden' name='q4_3' id='valQ4_3' value='2' required />
+                            <input type='hidden' name='q4_3' id='valQ4_3' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q4_3' id='btnQ4_3_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(4, 3, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q4_3' id='btnQ4_3_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(4, 3, 1)'>N/A</button>
@@ -463,7 +474,7 @@
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
                                 1. Apakah inspeksi dan pemantauan rutin dilakukan sesuai ketentuan?
                             </div>
-                            <input type='hidden' name='q5_1' id='valQ5_1' value='2' required />
+                            <input type='hidden' name='q5_1' id='valQ5_1' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q5_1' id='btnQ5_1_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(5, 1, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q5_1' id='btnQ5_1_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(5, 1, 1)'>N/A</button>
@@ -483,7 +494,7 @@
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
                                 2. Apakah temuan K3 dicatat dan ditindaklanjuti?
                             </div>
-                            <input type='hidden' name='q5_2' id='valQ5_2' value='2' required />
+                            <input type='hidden' name='q5_2' id='valQ5_2' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q5_2' id='btnQ5_2_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(5, 2, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q5_2' id='btnQ5_2_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(5, 2, 1)'>N/A</button>
@@ -503,7 +514,7 @@
                             <div class='mb-2' style='font-size: 13px; font-weight: 600; color: var(--text-main);'>
                                 3. Apakah tersedia bukti bahwa perbaikan telah dilakukan dan efektif?
                             </div>
-                            <input type='hidden' name='q5_3' id='valQ5_3' value='2' required />
+                            <input type='hidden' name='q5_3' id='valQ5_3' value='2' />
                             <div class='d-flex gap-2 mb-2'>
                                 <button type='button' class='btn btn-sm flex-fill btn-q5_3' id='btnQ5_3_2' style='background: #10b981; color: white; border: 1px solid #10b981; font-weight: 600;' onclick='setScore(5, 3, 2)'>YA</button>
                                 <button type='button' class='btn btn-sm flex-fill btn-q5_3' id='btnQ5_3_1' style='border: 1px solid var(--border-color); color: var(--text-muted); font-weight: 600;' onclick='setScore(5, 3, 1)'>N/A</button>
@@ -519,7 +530,8 @@
                                 </div>
                             </div>
                         </div>
-                    </div>                </div>
+                    </div>
+                </div>
 
                 <div class="form-group-sap mt-2">
                     <label class="form-label-sap" for="notes">Catatan Temuan Inspeksi</label>
@@ -608,7 +620,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-sap-primary w-100 py-3">
+                <button type="submit" id="btnSubmitInspection" class="btn btn-sap-primary w-100 py-3">
                     <i class="bi bi-check-circle-fill me-2"></i> KIRIM LAPORAN INSPEKSI
                 </button>
             </form>
@@ -718,6 +730,16 @@
 
 @section Scripts {
     <script>
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
         // Compress image client side
         function compressImage(file, maxWidth, maxHeight, quality) {
             return new Promise((resolve) => {
@@ -812,41 +834,151 @@
             }, 4000);
         }
 
-        function showSapErrorPopup(title, errors, fallbackMessage) {
-            const cleanErrors = Array.isArray(errors) && errors.length > 0 ? errors : [fallbackMessage || 'Data belum lengkap.'];
-            const escapePopupHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-            $('#sapErrorModal').remove();
+        let isInspectionSubmitting = false;
 
-            const listHtml = cleanErrors.map(item => `<li style="margin-bottom: 8px;">${escapePopupHtml(item)}</li>`).join('');
+        function resetButtonState() {
+            isInspectionSubmitting = false;
+            $('#loadingOverlay').css('display', 'none');
+            var inspId = $('#inspectionId').val();
+            var btnText = '<i class="bi bi-check-circle-fill me-2"></i> ' + (inspId ? 'PERBARUI LAPORAN INSPEKSI' : 'KIRIM LAPORAN INSPEKSI');
+            var $btn = $('#btnSubmitInspection, #inspectionForm button[type="submit"]');
+            $btn.prop('disabled', false).css('pointer-events', 'auto').html(btnText);
+        }
+
+        function showSapErrorPopup(title, errors, fallbackMessage) {
+            resetButtonState();
+            const cleanErrors = Array.isArray(errors) && errors.length > 0 
+                ? errors 
+                : (typeof errors === 'string' && errors.trim().length > 0 ? [errors] : [fallbackMessage || 'Data belum lengkap.']);
+            
+            $('#sapErrorModal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+
+            const listHtml = cleanErrors.map(item => `
+                <li class="d-flex align-items-start gap-2 mb-2" style="font-size: 13px;">
+                    <i class="bi bi-exclamation-circle-fill text-danger mt-1 flex-shrink-0"></i>
+                    <span>${escapeHtml(item)}</span>
+                </li>
+            `).join('');
             const modalHtml = `
-                <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true">
+                <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
                     <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content" style="background: var(--bg-card); color: var(--text-main); border: 1px solid rgba(239,68,68,0.45); border-radius: 12px;">
-                            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
-                                <h5 class="modal-title" style="font-size: 16px; font-weight: 800;"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>${escapePopupHtml(title || 'Data belum lengkap')}</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <div class="modal-content" style="background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); border: 1.5px solid rgba(239,68,68,0.5); border-radius: 18px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+                            <div class="modal-header" style="border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 16px 20px;">
+                                <h5 class="modal-title d-flex align-items-center mb-0" style="font-size: 16px; font-weight: 800; color: #ef4444;">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger me-2" style="font-size: 20px;"></i>
+                                    ${escapeHtml(title || 'Data Belum Lengkap')}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
-                            <div class="modal-body" style="font-size: 13px; line-height: 1.6;">
-                                <div class="mb-2">Periksa bagian berikut sebelum menyimpan:</div>
-                                <ul class="mb-0 ps-3">${listHtml}</ul>
+                            <div class="modal-body" style="font-size: 13px; line-height: 1.6; padding: 20px;">
+                                <div class="mb-3 fw-semibold text-danger" style="font-size: 13.5px;">
+                                    <i class="bi bi-info-circle me-1"></i> Mohon periksa dan lengkapi field berikut:
+                                </div>
+                                <ul class="list-unstyled mb-0" style="color: var(--text-main, #f8fafc); background: rgba(239, 68, 68, 0.06); padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.2);">
+                                    ${listHtml}
+                                </ul>
                             </div>
-                            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
-                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Mengerti</button>
+                            <div class="modal-footer" style="border-top: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 12px 20px;">
+                                <button type="button" class="btn btn-danger px-4 py-2 w-100" data-bs-dismiss="modal" style="border-radius: 10px; font-weight: 700; font-size: 13.5px;">
+                                    <i class="bi bi-pencil-square me-1"></i> Lengkapi Sekarang
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>`;
             $('body').append(modalHtml);
 
-            if (window.bootstrap && bootstrap.Modal) {
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('sapErrorModal')).show();
-            } else {
+            try {
+                const modalEl = document.getElementById('sapErrorModal');
+                if (window.bootstrap && bootstrap.Modal) {
+                    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true, keyboard: true });
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        resetButtonState();
+                        $('#sapErrorModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    });
+                    myModal.show();
+                } else if ($.fn.modal) {
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        resetButtonState();
+                        $('#sapErrorModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    }).modal('show');
+                } else {
+                    alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
+                }
+            } catch(e) {
                 alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
             }
         }
+
+        function showSapSuccessPopup(title, message) {
+            $('#sapSuccessModal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+
+            const safeTitle = escapeHtml(title || 'Berhasil Disimpan!');
+            const safeMsg = escapeHtml(message || 'Laporan inspeksi safety berhasil disimpan ke sistem.');
+
+            const modalHtml = `
+                <div class="modal fade" id="sapSuccessModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); border: 1.5px solid rgba(16, 185, 129, 0.5); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); overflow: hidden;">
+                            <div class="modal-body text-center p-4">
+                                <div style="width: 72px; height: 72px; background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                    <i class="bi bi-check2-circle" style="font-size: 40px; color: #10b981;"></i>
+                                </div>
+                                <h4 style="font-weight: 800; color: #10b981; margin-bottom: 8px;">${safeTitle}</h4>
+                                <p style="font-size: 14px; color: var(--text-muted, #94a3b8); margin-bottom: 24px; line-height: 1.5;">${safeMsg}</p>
+                                <button type="button" class="btn btn-success px-5 py-2.5 w-100" data-bs-dismiss="modal" style="background-color: #10b981; border-color: #059669; border-radius: 12px; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                    <i class="bi bi-check-lg me-1"></i> OK, Mengerti
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            $('body').append(modalHtml);
+
+            try {
+                const modalEl = document.getElementById('sapSuccessModal');
+                if (window.bootstrap && bootstrap.Modal) {
+                    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true, keyboard: true });
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    });
+                    myModal.show();
+                } else if ($.fn.modal) {
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    }).modal('show');
+                } else {
+                    alert(safeTitle + '\n\n' + safeMsg);
+                }
+            } catch(e) {
+                alert(safeTitle + '\n\n' + safeMsg);
+            }
+        }
+
         const serverErrorMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ErrorMessage"]));
         if (serverErrorMessage) {
             setTimeout(() => showSapErrorPopup("Terjadi kesalahan", [serverErrorMessage]), 250);
+        }
+
+        const serverSuccessMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["SuccessMessage"]));
+        const sessionSuccess = sessionStorage.getItem('sap_success_message');
+        if (sessionSuccess) {
+            sessionStorage.removeItem('sap_success_message');
+            setTimeout(() => showSapSuccessPopup("Berhasil Disimpan!", sessionSuccess), 250);
+        } else if (serverSuccessMessage) {
+            setTimeout(() => showSapSuccessPopup("Berhasil Disimpan!", serverSuccessMessage), 250);
         }
 
         function previewImage(input) {
@@ -897,100 +1029,47 @@
             }
         }
 
-        function setCheck(itemIndex, value, btn) {
-            document.getElementById('valCheck' + itemIndex).value = value;
-            
-            const parent = btn.parentElement;
-            const buttons = parent.querySelectorAll('.btn-option');
-            buttons.forEach(b => {
-                b.classList.remove('active');
-            });
-            
-            btn.classList.add('active');
-        }
-
-        // PJA Search Logic
-        let pjaTimeout = null;
-        let pjaIsLintasPerusahaan = true;
+        let pjaSearchTimeout = null;
 
         function toggleLintasPerusahaanSearch() {
-            pjaIsLintasPerusahaan = document.getElementById('lintasPerusahaanToggle').checked;
-            const input = document.getElementById('pjaSearchInput').value;
-            if(input.length >= 3) {
-                searchPja();
+            var term = $('#pjaSearchInput').val().trim();
+            if (term.length >= 2) {
+                searchPja(term);
             }
         }
 
         $('#pjaSearchInput').on('input', function() {
-            clearTimeout(pjaTimeout);
-            const query = $(this).val();
+            var term = $(this).val().trim();
+            clearTimeout(pjaSearchTimeout);
             
-            if (query.length < 1) {
-                $('#pjaSearchResults').hide();
+            if (term.length < 2) {
+                $('#pjaSearchResults').hide().empty();
                 return;
             }
 
-            pjaTimeout = setTimeout(searchPja, 300);
+            pjaSearchTimeout = setTimeout(function() {
+                searchPja(term);
+            }, 300);
         });
 
-        function searchPja() {
-            const query = $('#pjaSearchInput').val();
-            if (query.length < 1) return;
+        function searchPja(term) {
+            var resultsContainer = $('#pjaSearchResults');
+            resultsContainer.html('<div class="p-3 text-center text-muted" style="font-size: 12px;"><span class="spinner-border spinner-border-sm me-2"></span>Mencari PJA...</div>').show();
 
-            $.when(
-                $.get('/Api/GetPjaReference', {
-                    lintasPerusahaan: pjaIsLintasPerusahaan
-                }),
-                $.get('/Api/SearchEmployee', {
-                    query: query,
-                    lintasPerusahaan: pjaIsLintasPerusahaan
-                })
-            ).done(function(pjaRefResp, employeeResp) {
-                const pjaRefs = pjaRefResp[0] || [];
-                const employees = employeeResp[0] || [];
-                const lowerQuery = query.toLowerCase();
+            var lintasPerusahaan = $('#lintasPerusahaanToggle').is(':checked');
 
-                const filteredPjaRefs = pjaRefs.filter(function(x) {
-                    return (x.nama || '').toLowerCase().includes(lowerQuery)
-                        || (x.perusahaan || '').toLowerCase().includes(lowerQuery)
-                        || (x.nik || '').toLowerCase().includes(lowerQuery)
-                        || (x.jabatan || '').toLowerCase().includes(lowerQuery);
-                });
-
-                const merged = [];
-                const seen = new Set();
-
-                filteredPjaRefs.forEach(function(item) {
-                    const key = (item.nik || '') + '|' + (item.perusahaan || '');
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        merged.push(item);
-                    }
-                });
-
-                employees.forEach(function(item) {
-                    const key = (item.nik || '') + '|' + (item.perusahaan || '');
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        item.companyOnly = false;
-                        item.source = item.source || 'employee';
-                        merged.push(item);
-                    }
-                });
-
-                const resultsContainer = $('#pjaSearchResults');
+            $.get('/Api/SearchPja', { term: term, lintasPerusahaan: lintasPerusahaan }, function(data) {
                 resultsContainer.empty();
-                
-                if (merged.length === 0) {
-                    resultsContainer.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">PJA tidak ditemukan.</div>');
+                if (!data || data.length === 0) {
+                    resultsContainer.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">PJA tidak ditemukan. Pastikan kata kunci benar atau aktifkan "Lintas Perusahaan".</div>');
                 } else {
-                    const companies = merged.filter(x => !!x.companyOnly);
-                    const employees = merged.filter(x => !x.companyOnly);
+                    const companies = data.filter(x => x.companyOnly);
+                    const employees = data.filter(x => !x.companyOnly);
 
                     if (companies.length > 0) {
                         resultsContainer.append(`
                             <div class="dropdown-header text-primary fw-bold px-3 py-2 bg-dark-card border-bottom" style="font-size: 11px; letter-spacing: 0.5px; opacity: 0.9; cursor: default;">
-                                <i class="bi bi-building me-1"></i> PILIH PERUSAHAAN (COMPANY ONLY)
+                                <i class="bi bi-buildings me-1"></i> PILIH BADAN PERUSAHAAN (PJO / DEPT HEAD MITRA)
                             </div>
                         `);
                         companies.forEach(function(k) {
@@ -1077,8 +1156,11 @@
             clearSelectedPja();
             
             // Reset checklist UI
-            $('.btn-option').removeClass('active');
-            $('#valCheck1, #valCheck2, #valCheck3, #valCheck4').val('');
+            for (let m = 1; m <= 5; m++) {
+                for (let q = 1; q <= 3; q++) {
+                    setScore(m, q, 2);
+                }
+            }
             $('#checklistSection').show();
 
             // Clear custom questions
@@ -1086,6 +1168,7 @@
             renderCustomQuestions();
             toggleFormBuilder(false);
 
+            resetButtonState();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -1152,6 +1235,7 @@
 
                     $('#formTitle').html('<i class="bi bi-pencil-square me-2" style="color: var(--color-primary);"></i>Edit Inspeksi');
                     $('#btnCancelEdit').removeClass('d-none');
+                    resetButtonState();
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             }).fail(function() {
@@ -1263,6 +1347,7 @@
             $('#area').val(namaArea);
             $('#areaDropdownMenu').hide();
             $('#areaSearch').removeClass('is-invalid');
+            $('#areaSearch').closest('.form-group-sap').find('.sap-err-msg').remove();
             
             // Load Benchmarks for this area
             loadBenchmarks(namaArea);
@@ -1300,10 +1385,6 @@
                     } else {
                         $('#detilLokasi').val('');
                         renderBenchmarkDropdown('');
-                        $('#benchmarkDropdownMenu').show();
-                        setTimeout(function() {
-                            $('#benchmarkSearch').focus();
-                        }, 50);
                     }
                     renderBenchmarkDropdown('');
                 },
@@ -1422,6 +1503,12 @@
             var reqImg = $('#reqImg' + module + '_' + question);
             var fotoInput = $('#foto_' + module + '_' + question);
             var commentInput = $('#commentQ' + module + '_' + question);
+            var card = commentContainer.closest('.checkpoint-card');
+
+            card.css('border-color', 'var(--border-color)');
+            commentInput.removeClass('is-invalid');
+            fotoInput.removeClass('is-invalid');
+            commentContainer.find('.sap-err-msg').remove();
 
             if (score === 0) { // TIDAK
                 commentContainer.slideDown('fast');
@@ -1712,14 +1799,22 @@
                 getLocation();
             }
 
+            // Real-time error clearing on input change
+            $('#inspectionForm').on('input change', 'input, select, textarea', function() {
+                $(this).removeClass('is-invalid');
+                $(this).closest('.form-group-sap').find('.sap-err-msg').remove();
+                $(this).closest('.checkpoint-card').css('border-color', 'var(--border-color)');
+            });
+
             // Prevent double submission & submit via AJAX with compression and progress bar
             $('#inspectionForm').on('submit', function(e) {
                 e.preventDefault();
 
-                var btn = $(this).find('button[type="submit"]');
-                if (btn.prop('disabled')) {
+                if (isInspectionSubmitting) {
                     return false;
                 }
+
+                var btn = $('#btnSubmitInspection');
 
                 // Custom validation
                 let isValid = true;
@@ -1729,83 +1824,110 @@
                 $('#inspectionForm').find('.is-invalid').removeClass('is-invalid');
                 $('#inspectionForm').find('.sap-err-msg').remove();
 
-                const fieldsToValidate = {
-                    'tanggal': 'Tanggal',
-                    'waktuStr': 'Waktu',
-                    'area': 'Area Utama',
-                    'lokasi': 'Lokasi Spesifik',
-                    'penanggungJawabArea': 'Penanggung Jawab Area',
-                    'tipeInspeksi': 'Tipe Inspeksi'
-                };
+                // 1. Tanggal Inspeksi
+                const tanggalVal = $('#tanggal').val();
+                if (!tanggalVal || tanggalVal.trim() === '') {
+                    isValid = false;
+                    $('#tanggal').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#tanggal');
+                    errorMessages.push("Tanggal Inspeksi wajib diisi.");
+                    $('#tanggal').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Tanggal Inspeksi wajib diisi.</span>');
+                }
 
-                // Validate visible input/select/textarea
-                $('#inspectionForm').find('input[required]:visible, select[required]:visible, textarea[required]:visible').each(function() {
-                    const $el = $(this);
-                    const id = $el.attr('id') || $el.attr('name');
-                    const val = $el.val();
-                    
-                    if (!val || val.toString().trim() === '') {
-                        isValid = false;
-                        $el.addClass('is-invalid');
-                        if (!firstInvalid) firstInvalid = $el;
-                        
-                        const labelName = fieldsToValidate[id] || $el.closest('.form-group-sap').find('label').text() || 'Field';
-                        const cleanLabel = labelName.replace(':', '').replace('*', '').trim();
-                        errorMessages.push(cleanLabel + " wajib diisi.");
-                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${cleanLabel} wajib diisi.</span>`;
-                        
-                        const $wrapper = $el.closest('.input-sap-wrapper');
-                        if ($wrapper.length) {
-                            $wrapper.after(errHtml);
-                        } else {
-                            $el.after(errHtml);
-                        }
+                // 2. Waktu Inspeksi
+                const waktuVal = $('#waktuStr').val();
+                if (!waktuVal || waktuVal.trim() === '') {
+                    isValid = false;
+                    $('#waktuStr').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#waktuStr');
+                    errorMessages.push("Waktu Inspeksi wajib diisi.");
+                    $('#waktuStr').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Waktu Inspeksi wajib diisi.</span>');
+                }
+
+                // 3. Jenis Inspeksi
+                const jenisVal = $('#jenisInspeksi').val();
+                if (!jenisVal || jenisVal.trim() === '') {
+                    isValid = false;
+                    $('#jenisInspeksi').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#jenisInspeksi');
+                    errorMessages.push("Jenis Inspeksi wajib diisi.");
+                    $('#jenisInspeksi').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Jenis Inspeksi wajib diisi.</span>');
+                }
+
+                // 4. Area Utama
+                const areaVal = $('#area').val();
+                if (!areaVal || areaVal.trim() === '') {
+                    isValid = false;
+                    $('#areaSearch').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#areaSearch');
+                    errorMessages.push("Area Utama wajib dipilih dari dropdown.");
+                    if ($('#areaSearch').closest('.form-group-sap').find('.sap-err-msg').length === 0) {
+                        $('#areaSearch').closest('.position-relative').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Area Utama wajib dipilih dari dropdown.</span>');
                     }
-                });
+                }
 
-                // Validate PJA selection
+                // 5. Lokasi Spesifik
+                const lokasiVal = $('#lokasi').val();
+                if (!lokasiVal || lokasiVal.trim() === '') {
+                    isValid = false;
+                    $('#lokasi').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#lokasi');
+                    errorMessages.push("Lokasi Spesifik wajib diisi.");
+                    $('#lokasi').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Lokasi Spesifik wajib diisi.</span>');
+                }
+
+                // 6. Penanggung Jawab Area (PJA)
                 const pjaVal = $('#pja').val();
                 if (!pjaVal || pjaVal.trim() === '') {
                     isValid = false;
                     $('#pjaSearchInput').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#pjaSearchInput');
                     errorMessages.push("Penanggung Jawab Area (PJA) wajib dipilih dari pencarian.");
-                    
                     if ($('#pjaSearchInput').closest('.form-group-sap').find('.sap-err-msg').length === 0) {
-                        $('#pjaSearchInput').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Penanggung Jawab Area (PJA) wajib dipilih dari pencarian.</span>');
+                        $('#pjaSearchInput').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Penanggung Jawab Area (PJA) wajib dipilih dari pencarian.</span>');
                     }
                 }
 
-                for (let m = 1; m <= 5; m++) {
-                    for (let q = 1; q <= 3; q++) {
-                        const score = $('#valQ' + m + '_' + q).val();
-                        if (score == '0') {
-                            const $comment = $('#commentQ' + m + '_' + q);
-                            const $photo = $('#foto_' + m + '_' + q);
-                            const $card = $('#commentContainer' + m + '_' + q).closest('.checkpoint-card');
-                            const itemLabel = 'Modul ' + m + ' Pertanyaan ' + q;
+                // 7. Checklist checkpoints validation (Score 0 requires comment and photo)
+                const isEdit = !!$('#inspectionId').val();
+                if ($('#checklistSection').is(':visible')) {
+                    for (let m = 1; m <= 5; m++) {
+                        for (let q = 1; q <= 3; q++) {
+                            const score = $('#valQ' + m + '_' + q).val();
+                            if (score == '0') {
+                                const $comment = $('#commentQ' + m + '_' + q);
+                                const $photo = $('#foto_' + m + '_' + q);
+                                const $card = $('#commentContainer' + m + '_' + q).closest('.checkpoint-card');
+                                const itemLabel = 'Modul ' + m + ' Pertanyaan ' + q;
 
-                            if (!$comment.val() || $comment.val().trim() === '') {
-                                isValid = false;
-                                $comment.addClass('is-invalid');
-                                if (!firstInvalid) firstInvalid = $comment;
-                                errorMessages.push(itemLabel + " dijawab TIDAK, rencana tindakan wajib diisi.");
-                                $comment.after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Rencana tindakan wajib diisi untuk jawaban TIDAK.</span>');
-                            }
+                                if (!$comment.val() || $comment.val().trim() === '') {
+                                    isValid = false;
+                                    $comment.addClass('is-invalid');
+                                    $card.css('border-color', 'rgba(239, 68, 68, 0.65)');
+                                    if (!firstInvalid) firstInvalid = $comment;
+                                    errorMessages.push(itemLabel + " dijawab TIDAK, rencana tindakan wajib diisi.");
+                                    if ($comment.closest('#divRencana' + m + '_' + q).find('.sap-err-msg').length === 0) {
+                                        $comment.after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Rencana tindakan wajib diisi untuk jawaban TIDAK.</span>');
+                                    }
+                                }
 
-                            if (!$photo[0].files || $photo[0].files.length === 0) {
-                                isValid = false;
-                                $photo.addClass('is-invalid');
-                                $card.css('border-color', 'rgba(239, 68, 68, 0.65)');
-                                if (!firstInvalid) firstInvalid = $photo;
-                                errorMessages.push(itemLabel + " dijawab TIDAK, foto lampiran bukti wajib diunggah.");
-                                $photo.after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti wajib diunggah untuk jawaban TIDAK.</span>');
+                                if (!isEdit && (!$photo[0].files || $photo[0].files.length === 0)) {
+                                    isValid = false;
+                                    $photo.addClass('is-invalid');
+                                    $card.css('border-color', 'rgba(239, 68, 68, 0.65)');
+                                    if (!firstInvalid) firstInvalid = $photo;
+                                    errorMessages.push(itemLabel + " dijawab TIDAK, foto lampiran bukti wajib diunggah.");
+                                    if ($photo.parent().find('.sap-err-msg').length === 0) {
+                                        $photo.after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti wajib diunggah untuk jawaban TIDAK.</span>');
+                                    }
+                                }
                             }
                         }
                     }
                 }
 
                 if (!isValid) {
+                    resetButtonState();
                     showSapErrorPopup("Laporan inspeksi belum lengkap", errorMessages);
                     if (firstInvalid) {
                         $('html, body').animate({
@@ -1833,8 +1955,8 @@
                     $('#catatan').val(originalCatatan + extraText);
                 }
 
-                btn.prop('disabled', true);
-                var originalText = btn.html();
+                isInspectionSubmitting = true;
+                btn.prop('disabled', true).css('pointer-events', 'none');
                 btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');
 
                 // Form submit via AJAX with upload progress and client-side compression
@@ -1922,8 +2044,11 @@
                             return xhr;
                         },
                         success: function(response) {
+                            const successMsg = (response && response.message) ? response.message : 'Laporan inspeksi safety berhasil disimpan.';
+                            sessionStorage.setItem('sap_success_message', successMsg);
+
                             $title.text('Selesai!');
-                            $subtitle.text('Laporan inspeksi berhasil disimpan.');
+                            $subtitle.text(successMsg);
                             $progressBar.css('width', '100%');
                             $progressPercent.text('100%');
                             
@@ -1932,8 +2057,7 @@
                             }, 500);
                         },
                         error: function(xhr, status, error) {
-                            $overlay.css('display', 'none');
-                            btn.prop('disabled', false).html(originalText);
+                            resetButtonState();
                             
                             let errMessage = "Gagal mengirim data. Silakan periksa koneksi internet Anda.";
                             let errList = [];
@@ -1947,7 +2071,10 @@
                                     errList = parsed.errors || [];
                                 } catch(e) {}
                             }
-                            showSapErrorPopup(errMessage, errList, errMessage);
+                            if (errList.length === 0) {
+                                errList = [errMessage];
+                            }
+                            showSapErrorPopup("Laporan inspeksi belum lengkap", errList, errMessage);
                         }
                     });
                 }
@@ -2043,9 +2170,3 @@
         }
     </style>
 }
-
-
-
-
-
-

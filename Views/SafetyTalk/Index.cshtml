@@ -390,9 +390,70 @@
                 alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
             }
         }
+
+        function showSapSuccessPopup(title, message) {
+            $('#sapSuccessModal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+
+            const safeTitle = (title || 'Berhasil Disimpan!');
+            const safeMsg = (message || 'Laporan Safety Talk berhasil disimpan ke sistem.');
+
+            const modalHtml = `
+                <div class="modal fade" id="sapSuccessModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); border: 1.5px solid rgba(16, 185, 129, 0.5); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden;">
+                            <div class="modal-body text-center p-4">
+                                <div style="width: 72px; height: 72px; background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                    <i class="bi bi-check2-circle" style="font-size: 40px; color: #10b981;"></i>
+                                </div>
+                                <h4 style="font-weight: 800; color: #10b981; margin-bottom: 8px;">${safeTitle}</h4>
+                                <p style="font-size: 14px; color: var(--text-muted, #94a3b8); margin-bottom: 24px; line-height: 1.5;">${safeMsg}</p>
+                                <button type="button" class="btn btn-success px-5 py-2.5 w-100" data-bs-dismiss="modal" style="background-color: #10b981; border-color: #059669; border-radius: 12px; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                    <i class="bi bi-check-lg me-1"></i> OK, Mengerti
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            $('body').append(modalHtml);
+
+            try {
+                const modalEl = document.getElementById('sapSuccessModal');
+                if (window.bootstrap && bootstrap.Modal) {
+                    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true, keyboard: true });
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    });
+                    myModal.show();
+                } else if ($.fn.modal) {
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    }).modal('show');
+                } else {
+                    alert(safeTitle + '\n\n' + safeMsg);
+                }
+            } catch(e) {
+                alert(safeTitle + '\n\n' + safeMsg);
+            }
+        }
+
         const serverErrorMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ErrorMessage"]));
         if (serverErrorMessage) {
             setTimeout(() => showSapErrorPopup("Terjadi kesalahan", [serverErrorMessage]), 250);
+        }
+
+        const serverSuccessMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["SuccessMessage"]));
+        const sessionSuccess = sessionStorage.getItem('sap_success_message');
+        if (sessionSuccess) {
+            sessionStorage.removeItem('sap_success_message');
+            setTimeout(() => showSapSuccessPopup("Berhasil Disimpan!", sessionSuccess), 250);
+        } else if (serverSuccessMessage) {
+            setTimeout(() => showSapSuccessPopup("Berhasil Disimpan!", serverSuccessMessage), 250);
         }
 
         // Geolocation Function
@@ -925,14 +986,17 @@
                         return xhr;
                     },
                     success: function(response) {
+                        const successMsg = (response && response.message) ? response.message : 'Laporan Safety Talk berhasil disimpan.';
+                        sessionStorage.setItem('sap_success_message', successMsg);
+
                         $title.text('Selesai!');
-                        $subtitle.text(response.message || 'Laporan safety talk berhasil disimpan.');
+                        $subtitle.text(successMsg);
                         $progressBar.css('width', '100%');
                         $progressPercent.text('100%');
                         
                         setTimeout(() => {
-                            window.location.href = '/Home/Index';
-                        }, 800);
+                            window.location.href = '/SafetyTalk/Index';
+                        }, 500);
                     },
                     error: function(xhr, status, error) {
                         $overlay.css('display', 'none');

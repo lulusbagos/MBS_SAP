@@ -60,6 +60,14 @@ namespace MBS_SAP.Controllers
                     query = query.Where(r => 
                         r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik);
                 }
+                else if (filter == "created")
+                {
+                    query = query.Where(r => r.Nik == userNik);
+                }
+                else if (filter == "assigned")
+                {
+                    query = query.Where(r => r.NikPja == userNik || r.NikPic == userNik);
+                }
                 else if (filter == "dept" && !string.IsNullOrEmpty(dept))
                 {
                     query = query.Where(r => 

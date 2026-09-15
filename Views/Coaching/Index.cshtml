@@ -5,11 +5,75 @@
     var isAdmin = User.IsInRole("Admin");
     var minDate = DateTime.Today.AddDays(-7).ToString("yyyy-MM-dd");
     var maxDate = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
+
+    string selectedCompanyIdVal = "";
+    string selectedCompanyName = "";
+    if (ViewBag.CompanyList != null && ViewBag.UserCompanyId != null)
+    {
+        foreach (var comp in ViewBag.CompanyList)
+        {
+            if (comp.PerusahaanId == (int)ViewBag.UserCompanyId)
+            {
+                selectedCompanyIdVal = comp.PerusahaanId.ToString();
+                selectedCompanyName = comp.NamaPerusahaan;
+                break;
+            }
+        }
+    }
 }
 
 <style>
+    @@keyframes sap-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    @@keyframes sap-bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+    .suggestion-item {
+        transition: background 0.15s ease;
+    }
     .suggestion-item:hover {
-        background-color: rgba(124, 58, 237, 0.4);
+        background-color: rgba(124, 58, 237, 0.25) !important;
+    }
+    .company-option-btn:hover {
+        background-color: rgba(124, 58, 237, 0.15) !important;
+        color: #a855f7 !important;
+    }
+    .company-option-btn.active {
+        background-color: rgba(124, 58, 237, 0.25) !important;
+        color: #c084fc !important;
+        font-weight: 700;
+    }
+    .trainee-chip {
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.4), rgba(168, 85, 247, 0.25)) !important;
+        border: 1.5px solid #a855f7 !important;
+        border-radius: 20px !important;
+        padding: 6px 14px !important;
+        color: #ffffff !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25) !important;
+    }
+    .trainee-badge-log {
+        background-color: rgba(124, 58, 237, 0.18) !important;
+        border: 1px solid rgba(168, 85, 247, 0.45) !important;
+        color: #d8b4fe !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        padding: 4px 10px !important;
+        border-radius: 20px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+    [data-bs-theme="light"] .trainee-badge-log,
+    body.light-theme .trainee-badge-log {
+        background-color: rgba(124, 58, 237, 0.12) !important;
+        border-color: rgba(124, 58, 237, 0.35) !important;
+        color: #6d28d9 !important;
     }
 </style>
 
@@ -48,7 +112,7 @@
         
         <!-- Form Column -->
         <div class="card-sap border-purple-accent">
-            <form asp-controller="Coaching" asp-action="Submit" method="post" enctype="multipart/form-data" id="coachingForm">
+            <form asp-controller="Coaching" asp-action="Submit" method="post" enctype="multipart/form-data" id="coachingForm" novalidate>
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="coachingId" name="id" value="" />
                 
@@ -86,7 +150,7 @@
                                 <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleAreaDropdown"></i>
                             </div>
                             <!-- Hidden select for actual form submission -->
-                            <select id="area" name="area" required style="display:none;">
+                            <select id="area" name="area" style="display:none;">
                                 <option value="" disabled selected></option>
                             </select>
                             <!-- Dropdown list -->
@@ -146,27 +210,18 @@
                 <div class="form-group-sap position-relative">
                     <label class="form-label-sap">Pilih Peserta Coaching (Trainee)</label>
 
-                    <!-- Company filter row -->
-                    <div class="d-flex gap-2 mb-2 align-items-center">
-                        <div class="input-sap-wrapper flex-grow-1 mb-0">
+                    <!-- Company filter search dropdown -->
+                    <div class="position-relative mb-2">
+                        <div class="input-sap-wrapper mb-0">
                             <i class="bi bi-building input-sap-icon"></i>
-                            <select id="traineeCompanyFilter" class="input-sap" style="font-size: 12px;">
-                                <option value="">— Semua Perusahaan —</option>
-                                @if (ViewBag.CompanyList != null)
-                                {
-                                    foreach (var comp in ViewBag.CompanyList)
-                                    {
-                                        if (ViewBag.UserCompanyId != null && comp.PerusahaanId == (int)ViewBag.UserCompanyId)
-                                        {
-                                            <option value="@comp.PerusahaanId" selected>@comp.NamaPerusahaan</option>
-                                        }
-                                        else
-                                        {
-                                            <option value="@comp.PerusahaanId">@comp.NamaPerusahaan</option>
-                                        }
-                                    }
-                                }
-                            </select>
+                            <input type="text" id="traineeCompanySearch" class="input-sap" placeholder="Ketik untuk mencari / pilih perusahaan..." autocomplete="off" style="padding-right: 64px; font-size: 13px;" value="@selectedCompanyName" />
+                            <div class="position-absolute d-flex align-items-center gap-1" style="right: 12px; top: 12px; z-index: 5;">
+                                <i class="bi bi-x-circle-fill text-muted" id="clearTraineeCompany" style="cursor: pointer; font-size: 14px; display: @(!string.IsNullOrEmpty(selectedCompanyName) ? "inline-block" : "none");" title="Reset filter perusahaan"></i>
+                                <i class="bi bi-chevron-down text-muted" id="toggleTraineeCompanyDropdown" style="cursor: pointer; font-size: 13px;"></i>
+                            </div>
+                        </div>
+                        <input type="hidden" id="traineeCompanyFilter" value="@selectedCompanyIdVal" />
+                        <div id="traineeCompanyDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); padding: 4px;">
                         </div>
                     </div>
 
@@ -190,7 +245,7 @@
                     <div id="selectedTraineesContainer" class="d-flex flex-wrap gap-2 p-3 mb-2" style="border: 1px solid var(--border-color); border-radius: 12px; min-height: 54px; background: rgba(0,0,0,0.25); align-items: center;">
                         <span class="text-muted" id="noTraineesLabel" style="font-size: 13px;">Belum ada peserta yang dipilih. Ketik & pilih dari hasil pencarian di atas.</span>
                     </div>
-                    <small class="text-muted" style="font-size: 10px;">Gunakan filter perusahaan untuk mempersempit pencarian antar perusahaan</small>
+                    <small class="text-muted" style="font-size: 10px;">Gunakan pencarian perusahaan di atas untuk mempercepat mencari peserta per perusahaan</small>
                 </div>
 
                 <div class="form-group-sap">
@@ -224,7 +279,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-sap-primary w-100 py-3" style="background-color: #7c3aed; border-color: #6d28d9;">
+                <button type="submit" id="btnSubmitCoaching" class="btn btn-sap-primary w-100 py-3" style="background-color: #7c3aed; border-color: #6d28d9; font-weight: 700; border-radius: 12px; letter-spacing: 0.5px;">
                     <i class="bi bi-check-circle-fill me-2"></i> SIMPAN COACHING
                 </button>
             </form>
@@ -262,11 +317,13 @@
                             <div style="font-size: 12px; margin: 8px 0; color: var(--text-muted);">
                                 <div><strong>Coach:</strong> @item.Nama (@item.Nik)</div>
                                 <div class="mt-1">
-                                    <strong>Peserta (@item.Participants.Count):</strong>
+                                    <strong style="color: var(--text-main); font-size: 11px;"><i class="bi bi-people-fill me-1" style="color: #a855f7;"></i>Peserta Coaching (@item.Participants.Count):</strong>
                                     <div class="d-flex flex-wrap gap-1 mt-1">
                                         @foreach (var p in item.Participants)
                                         {
-                                            <span class="badge" style="background-color: var(--border-color); color: var(--text-main); font-size: 10px; font-weight: 500; padding: 4px 8px; border-radius: 6px;">@p.Nama</span>
+                                            <span class="trainee-badge-log">
+                                                <i class="bi bi-person-check-fill" style="color: #c084fc; font-size: 11px;"></i> @p.Nama
+                                            </span>
                                         }
                                     </div>
                                 </div>
@@ -334,6 +391,22 @@
     </div>
 </div>
 
+<!-- Loading Overlay -->
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 99999; justify-content: center; align-items: center; flex-direction: column; color: white; font-family: 'Poppins', sans-serif;">
+    <div class="loader-spinner-container" style="position: relative; width: 100px; height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 24px;">
+        <div class="loader-circle" style="box-sizing: border-box; width: 80px; height: 80px; border: 4px solid rgba(255, 255, 255, 0.15); border-radius: 50%; border-top-color: #a855f7; border-bottom-color: #a855f7; animation: sap-spin 1.5s linear infinite;"></div>
+        <i class="bi bi-people-fill" style="position: absolute; font-size: 32px; color: white; animation: sap-bounce 2s ease-in-out infinite;"></i>
+    </div>
+    <h5 id="loadingTitle" style="font-weight: 700; margin-bottom: 8px; letter-spacing: 0.5px; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Memproses Laporan Coaching</h5>
+    <p id="loadingSubtitle" style="font-size: 13px; color: rgba(255,255,255,0.75); margin-bottom: 16px; text-align: center; max-width: 340px; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">Sedang menyimpan laporan coaching dan peserta. Mohon jangan menutup halaman ini...</p>
+
+    <!-- Progress Bar Container -->
+    <div style="width: 280px; background: rgba(255,255,255,0.1); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05);">
+        <div id="loadingProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #7c3aed, #c084fc); transition: width 0.1s ease; border-radius: 4px;"></div>
+    </div>
+    <div id="loadingProgressPercent" style="font-size: 14px; font-weight: 700; color: #c084fc; text-shadow: 0 1px 2px rgba(0,0,0,0.4);">0%</div>
+</div>
+
 
 
 @section Scripts {
@@ -346,6 +419,8 @@
                     document.getElementById('fotoPreview').src = e.target.result;
                     document.getElementById('fotoPlaceholder').classList.add('d-none');
                     document.getElementById('fotoPreviewContainer').classList.remove('d-none');
+                    $(input).removeClass('is-invalid');
+                    $(input).closest('.form-group-sap').find('.sap-err-msg').remove();
                 }
                 reader.readAsDataURL(file);
             }
@@ -360,40 +435,209 @@
             return String(str ?? '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
+        let isCoachingSubmitting = false;
+
+        function resetButtonState() {
+            isCoachingSubmitting = false;
+            $('#loadingOverlay').css('display', 'none');
+            var coachingId = $('#coachingId').val();
+            var btnText = '<i class="bi bi-check-circle-fill me-2"></i> ' + (coachingId ? 'PERBARUI COACHING' : 'SIMPAN COACHING');
+            var $btn = $('#btnSubmitCoaching, #coachingForm button[type="submit"]');
+            $btn.prop('disabled', false).css('pointer-events', 'auto').html(btnText);
+        }
+
         function showSapErrorPopup(title, errors, fallbackMessage) {
-            const cleanErrors = Array.isArray(errors) && errors.length > 0 ? errors : [fallbackMessage || 'Data belum lengkap.'];
+            resetButtonState();
+            const cleanErrors = Array.isArray(errors) && errors.length > 0 
+                ? errors 
+                : (typeof errors === 'string' && errors.trim().length > 0 ? [errors] : [fallbackMessage || 'Data belum lengkap.']);
+            
             $('#sapErrorModal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
 
             const listHtml = cleanErrors.map(item => `<li style="margin-bottom: 8px;">${escapeHtml(item)}</li>`).join('');
             const modalHtml = `
-                <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true">
+                <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
                     <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content" style="background: var(--bg-card); color: var(--text-main); border: 1px solid rgba(239,68,68,0.45); border-radius: 12px;">
-                            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
-                                <h5 class="modal-title" style="font-size: 16px; font-weight: 800;"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>${escapeHtml(title || 'Data belum lengkap')}</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <div class="modal-content" style="background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); border: 1px solid rgba(239,68,68,0.5); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                            <div class="modal-header" style="border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 16px 20px;">
+                                <h5 class="modal-title d-flex align-items-center" style="font-size: 16px; font-weight: 800; color: #ef4444;">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger me-2" style="font-size: 20px;"></i>
+                                    ${escapeHtml(title || 'Data Belum Lengkap')}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
-                            <div class="modal-body" style="font-size: 13px; line-height: 1.6;">
-                                <div class="mb-2">Periksa bagian berikut sebelum menyimpan:</div>
-                                <ul class="mb-0 ps-3">${listHtml}</ul>
+                            <div class="modal-body" style="font-size: 13px; line-height: 1.6; padding: 20px;">
+                                <div class="mb-2 fw-semibold text-danger">Periksa dan lengkapi bagian berikut:</div>
+                                <ul class="mb-0 ps-3" style="color: var(--text-main, #f8fafc);">
+                                    ${listHtml}
+                                </ul>
                             </div>
-                            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
-                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Mengerti</button>
+                            <div class="modal-footer" style="border-top: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 12px 20px;">
+                                <button type="button" class="btn btn-danger px-4 py-2" data-bs-dismiss="modal" style="border-radius: 8px; font-weight: 600; font-size: 13px;">
+                                    <i class="bi bi-check2 me-1"></i> Mengerti & Perbaiki
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>`;
             $('body').append(modalHtml);
 
-            if (window.bootstrap && bootstrap.Modal) {
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('sapErrorModal')).show();
-            } else {
+            try {
+                const modalEl = document.getElementById('sapErrorModal');
+                if (window.bootstrap && bootstrap.Modal) {
+                    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true, keyboard: true });
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        resetButtonState();
+                        $('#sapErrorModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    });
+                    myModal.show();
+                } else if ($.fn.modal) {
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        resetButtonState();
+                        $('#sapErrorModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    }).modal('show');
+                } else {
+                    alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
+                }
+            } catch(e) {
                 alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
             }
         }
+        function showSapSuccessPopup(title, message) {
+            $('#sapSuccessModal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+
+            const safeTitle = escapeHtml(title || 'Berhasil Disimpan!');
+            const safeMsg = escapeHtml(message || 'Data coaching berhasil disimpan ke sistem.');
+
+            const modalHtml = `
+                <div class="modal fade" id="sapSuccessModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); border: 1.5px solid rgba(16, 185, 129, 0.5); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden;">
+                            <div class="modal-body text-center p-4">
+                                <div style="width: 72px; height: 72px; background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                    <i class="bi bi-check2-circle" style="font-size: 40px; color: #10b981;"></i>
+                                </div>
+                                <h4 style="font-weight: 800; color: #10b981; margin-bottom: 8px;">${safeTitle}</h4>
+                                <p style="font-size: 14px; color: var(--text-muted, #94a3b8); margin-bottom: 24px; line-height: 1.5;">${safeMsg}</p>
+                                <button type="button" class="btn btn-success px-5 py-2.5 w-100" data-bs-dismiss="modal" style="background-color: #10b981; border-color: #059669; border-radius: 12px; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                    <i class="bi bi-check-lg me-1"></i> OK, Mengerti
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            $('body').append(modalHtml);
+
+            try {
+                const modalEl = document.getElementById('sapSuccessModal');
+                if (window.bootstrap && bootstrap.Modal) {
+                    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true, keyboard: true });
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    });
+                    myModal.show();
+                } else if ($.fn.modal) {
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    }).modal('show');
+                } else {
+                    alert(safeTitle + '\n\n' + safeMsg);
+                }
+            } catch(e) {
+                alert(safeTitle + '\n\n' + safeMsg);
+            }
+        }
+
         const serverErrorMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ErrorMessage"]));
         if (serverErrorMessage) {
             setTimeout(() => showSapErrorPopup("Terjadi kesalahan", [serverErrorMessage]), 250);
+        }
+
+        const serverSuccessMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["SuccessMessage"]));
+        if (serverSuccessMessage) {
+            setTimeout(() => showSapSuccessPopup("Berhasil Disimpan!", serverSuccessMessage), 250);
+        }
+
+        let globalCompanyList = [
+            { id: '', name: '— Semua Perusahaan —' },
+            @if (ViewBag.CompanyList != null)
+            {
+                foreach (var comp in ViewBag.CompanyList)
+                {
+                    <text>{ id: '@comp.PerusahaanId', name: @Html.Raw(System.Text.Json.JsonSerializer.Serialize((string)comp.NamaPerusahaan)) },</text>
+                }
+            }
+        ];
+
+        function renderTraineeCompanyDropdown(filterText) {
+            const menu = $('#traineeCompanyDropdownMenu');
+            menu.empty();
+            const clean = (filterText || '').trim().toLowerCase();
+            const currentVal = $('#traineeCompanyFilter').val();
+
+            const filtered = globalCompanyList.filter(c => {
+                if (!c.id) return true;
+                return !clean || c.name.toLowerCase().includes(clean);
+            });
+
+            if (filtered.length > 0) {
+                filtered.forEach(comp => {
+                    const isSelected = String(comp.id) === String(currentVal) || (!comp.id && !currentVal);
+                    const icon = comp.id ? 'bi-building' : 'bi-globe2';
+                    const btn = $('<button type="button"></button>')
+                        .addClass('d-flex align-items-center justify-content-between w-100 text-start py-2 px-3 border-0 company-option-btn')
+                        .toggleClass('active', isSelected)
+                        .css({
+                            background: isSelected ? 'rgba(124, 58, 237, 0.2)' : 'none',
+                            color: isSelected ? '#a855f7' : 'var(--text-main)',
+                            fontSize: '13px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            marginBottom: '2px',
+                            borderBottom: '1px solid var(--border-color)'
+                        })
+                        .html(`<span><i class="bi ${icon} me-2 ${isSelected ? 'text-purple' : 'text-muted'}"></i>${escapeHtml(comp.name)}</span>` +
+                              (isSelected ? '<i class="bi bi-check2 text-purple fw-bold"></i>' : ''))
+                        .on('click', function(e) {
+                            e.preventDefault();
+                            selectTraineeCompany(comp.id, comp.id ? comp.name : '');
+                        });
+                    menu.append(btn);
+                });
+            } else {
+                menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Perusahaan "' + escapeHtml(filterText) + '" tidak ditemukan</div>');
+            }
+
+            menu.show();
+        }
+
+        function selectTraineeCompany(id, name) {
+            $('#traineeCompanyFilter').val(id);
+            $('#traineeCompanySearch').val(name);
+            $('#traineeCompanyDropdownMenu').hide();
+
+            if (id) {
+                $('#clearTraineeCompany').show();
+            } else {
+                $('#clearTraineeCompany').hide();
+            }
+
+            const input = document.getElementById('traineeSearchInput');
+            if (input && input.value.trim().length >= 2) {
+                filterTraineeSuggestions();
+            }
         }
 
         function getSelectedCompanyId() {
@@ -437,12 +681,15 @@
                 suggestions.innerHTML = '<div class="text-muted p-2" style="font-size: 13px;">Karyawan tidak ditemukan</div>';
             } else {
                 suggestions.innerHTML = matches.map(emp => `
-                    <div class="suggestion-item p-2" style="cursor: pointer; border-radius: 6px; font-size: 13px; color: var(--text-main);" 
+                    <div class="suggestion-item p-2.5 d-flex justify-content-between align-items-center" style="cursor: pointer; border-radius: 8px; font-size: 13px; color: var(--text-main); margin-bottom: 2px; border-bottom: 1px solid var(--border-color);" 
                          data-nik="${escapeHtml(emp.nik)}" data-nama="${escapeHtml(emp.nama)}"
                          onclick="addTraineeFromElement(this)">
-                        <strong>${escapeHtml(emp.nama)}</strong>
-                        <span style="color: var(--text-muted);">(${escapeHtml(emp.nik)})</span>
-                        <span class="badge ms-1" style="background:rgba(168,85,247,0.15);color:#c084fc;font-size:9px;border-radius:6px;">${escapeHtml(emp.companyName)}</span>
+                        <div>
+                            <i class="bi bi-person-circle me-1" style="color: #a855f7;"></i>
+                            <strong style="color: var(--text-main); font-weight: 700;">${escapeHtml(emp.nama)}</strong>
+                            <span style="color: var(--text-muted); font-size: 11px; margin-left: 4px;">(${escapeHtml(emp.nik)})</span>
+                        </div>
+                        <span class="badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 10px; font-weight: 600; border-radius: 6px; border: 1px solid rgba(168, 85, 247, 0.4); padding: 4px 8px;">${escapeHtml(emp.companyName)}</span>
                     </div>
                 `).join('');
             }
@@ -481,9 +728,13 @@
                 container.innerHTML = `<span class="text-muted" id="noTraineesLabel" style="font-size: 13px;">Belum ada peserta yang dipilih. Ketik &amp; pilih dari hasil pencarian di atas.</span>`;
             } else {
                 container.innerHTML = selectedTrainees.map(t => `
-                    <div class="badge d-flex align-items-center gap-2 py-2 px-3" style="background-color: rgba(124, 58, 237, 0.12); border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 20px; font-size: 12px; color: var(--text-main);">
-                        <span><strong style="color: #7c3aed;">${escapeHtml(t.name)}</strong> <span style="color: var(--text-muted); font-weight: normal;">(${escapeHtml(t.nik)})</span></span>
-                        <i class="bi bi-x-circle-fill text-danger" style="cursor: pointer; font-size: 14px;" data-nik="${escapeHtml(t.nik)}" onclick="removeTrainee(this.getAttribute('data-nik'))" title="Hapus"></i>
+                    <div class="trainee-chip m-1">
+                        <span class="d-flex align-items-center gap-1.5">
+                            <i class="bi bi-person-fill" style="color: #c084fc; font-size: 13px;"></i>
+                            <strong style="color: #ffffff; font-weight: 700; font-size: 12px; letter-spacing: 0.2px;">${escapeHtml(t.name)}</strong>
+                            <span style="color: #e9d5ff; font-weight: 500; font-size: 11px;">(${escapeHtml(t.nik)})</span>
+                        </span>
+                        <i class="bi bi-x-circle-fill text-danger" style="cursor: pointer; font-size: 15px; margin-left: 2px; transition: transform 0.15s;" onmouseenter="$(this).css('transform','scale(1.2)')" onmouseleave="$(this).css('transform','scale(1)')" data-nik="${escapeHtml(t.nik)}" onclick="removeTrainee(this.getAttribute('data-nik'))" title="Hapus peserta"></i>
                         <input type="hidden" name="selectedParticipants" value="${escapeHtml(t.nik)}" />
                     </div>
                 `).join('');
@@ -599,6 +850,9 @@
             $('#coachingId').val('');
             $('#formTitle').html('<i class="bi bi-people-fill me-2" style="color: #a855f7;"></i>Catat Sesi Coaching Baru');
             $('#btnCancelEdit').addClass('d-none');
+            $('#coachingForm').find('button[type="submit"]').prop('disabled', false).html('<i class="bi bi-check-circle-fill me-2"></i> SIMPAN COACHING');
+            $('#coachingForm').find('.is-invalid').removeClass('is-invalid');
+            $('#coachingForm').find('.sap-err-msg').remove();
             
             // Reset image preview
             $('#fotoPreview').attr('src', '');
@@ -608,6 +862,11 @@
             // Reset trainees
             selectedTrainees = [];
             renderTraineeChips();
+
+            // Reset trainee company search to default
+            const defaultCompanyId = '@selectedCompanyIdVal';
+            const defaultCompanyName = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(selectedCompanyName));
+            selectTraineeCompany(defaultCompanyId, defaultCompanyName);
 
             // Reset areas and benchmarks
             $('#areaSearch').val('');
@@ -641,6 +900,13 @@
                     $('#feedback').val(data.feedback);
                     $('#komitmen').val(data.komitmen);
 
+                    if (data.foto) {
+                        var proxyFoto = data.foto.startsWith("http") ? "/ImageProxy/Get?url=" + encodeURIComponent(data.foto) : data.foto;
+                        $('#fotoPreview').attr('src', proxyFoto);
+                        $('#fotoPlaceholder').addClass('d-none');
+                        $('#fotoPreviewContainer').removeClass('d-none');
+                    }
+
                     // Check selected participants
                     selectedTrainees = [];
                     if (data.participants && data.participants.length > 0) {
@@ -663,6 +929,7 @@
 
                     $('#formTitle').html('<i class="bi bi-pencil-square me-2" style="color: #a855f7;"></i>Edit Laporan Coaching');
                     $('#btnCancelEdit').removeClass('d-none');
+                    $('#coachingForm').find('button[type="submit"]').prop('disabled', false).html('<i class="bi bi-check-circle-fill me-2"></i> PERBARUI COACHING');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             }).fail(function() {
@@ -729,6 +996,35 @@
                 renderBenchmarkDropdown($(this).val());
             });
 
+            // Trainee Company search event listeners
+            $('#traineeCompanySearch').on('focus input keyup', function() {
+                renderTraineeCompanyDropdown($(this).val());
+                if ($(this).val().trim() === '') {
+                    $('#traineeCompanyFilter').val('');
+                    $('#clearTraineeCompany').hide();
+                    const input = document.getElementById('traineeSearchInput');
+                    if (input && input.value.trim().length >= 2) {
+                        filterTraineeSuggestions();
+                    }
+                }
+            });
+
+            $('#toggleTraineeCompanyDropdown').on('click', function(e) {
+                e.stopPropagation();
+                var menu = $('#traineeCompanyDropdownMenu');
+                if (menu.is(':visible')) {
+                    menu.hide();
+                } else {
+                    renderTraineeCompanyDropdown($('#traineeCompanySearch').val());
+                }
+            });
+
+            $('#clearTraineeCompany').on('click', function(e) {
+                e.stopPropagation();
+                selectTraineeCompany('', '');
+                $('#traineeCompanySearch').focus();
+            });
+
             // Close dropdown when clicking outside
             $(document).on('click', function(e) {
                 if (!$(e.target).closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown').length) {
@@ -736,6 +1032,9 @@
                 }
                 if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
                     $('#areaDropdownMenu').hide();
+                }
+                if (!$(e.target).closest('#traineeCompanySearch, #traineeCompanyDropdownMenu, #toggleTraineeCompanyDropdown, #clearTraineeCompany').length) {
+                    $('#traineeCompanyDropdownMenu').hide();
                 }
             });
 
@@ -764,11 +1063,22 @@
             // Auto fetch GPS location on page load
             getLocation();
 
+            // Real-time error clearing on user input
+            $('#coachingForm').on('input change', 'input, select, textarea', function() {
+                $(this).removeClass('is-invalid');
+                $(this).closest('.form-group-sap').find('.sap-err-msg').remove();
+                $(this).closest('.input-sap-wrapper').next('.sap-err-msg').remove();
+            });
+
             // Prevent double submission & enforce validations
             $('#coachingForm').on('submit', function(e) {
+                e.preventDefault();
+                if (isCoachingSubmitting) return false;
+
                 var coachingId = $('#coachingId').val();
                 var fotoInput = document.getElementById('fotoInput');
-                
+                var btn = $('#btnSubmitCoaching, #coachingForm button[type="submit"]');
+
                 // Custom validation
                 let isValid = true;
                 let firstInvalid = null;
@@ -778,16 +1088,13 @@
                 $('#coachingForm').find('.sap-err-msg').remove();
 
                 const fieldsToValidate = {
-                    'tanggal': 'Tanggal',
-                    'waktuStr': 'Waktu',
-                    'area': 'Area Utama',
+                    'tanggal': 'Tanggal Kegiatan',
+                    'waktuStr': 'Waktu Mulai',
                     'lokasi': 'Lokasi Spesifik',
-                    'tema': 'Tema Coaching',
-                    'feedback': 'Feedback / Catatan Pembahasan',
-                    'komitmen': 'Komitmen Bersama'
+                    'tema': 'Tema Coaching'
                 };
 
-                // Validate visible input/select/textarea
+                // Validate visible input/select
                 $('#coachingForm').find('input[required]:visible, select[required]:visible, textarea[required]:visible').each(function() {
                     const $el = $(this);
                     const id = $el.attr('id') || $el.attr('name');
@@ -801,7 +1108,7 @@
                         const labelName = fieldsToValidate[id] || $el.closest('.form-group-sap').find('label').text() || 'Field';
                         const cleanLabel = labelName.replace(':', '').replace('*', '').trim();
                         errorMessages.push(cleanLabel + " wajib diisi.");
-                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${cleanLabel} wajib diisi.</span>`;
+                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>${cleanLabel} wajib diisi.</span>`;
                         
                         const $wrapper = $el.closest('.input-sap-wrapper');
                         if ($wrapper.length) {
@@ -812,35 +1119,60 @@
                     }
                 });
 
-                // Verify at least one participant is selected
+                // Validate date range (+/- 7 days)
+                const tanggalVal = $('#tanggal').val();
+                if (tanggalVal) {
+                    const selectedDate = new Date(tanggalVal);
+                    const today = new Date();
+                    today.setHours(0,0,0,0);
+                    selectedDate.setHours(0,0,0,0);
+                    const diffDays = Math.round((selectedDate - today) / (1000 * 60 * 60 * 24));
+                    if (diffDays < -7 || diffDays > 7) {
+                        isValid = false;
+                        $('#tanggal').addClass('is-invalid');
+                        if (!firstInvalid) firstInvalid = $('#tanggal');
+                        errorMessages.push("Tanggal kegiatan harus berada dalam rentang 7 hari sebelum dan sesudah hari ini.");
+                        $('#tanggal').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Tanggal harus berada dalam rentang +/- 7 hari dari hari ini.</span>');
+                    }
+                }
+
+                // Verify Area Utama
                 const areaVal = $('#area').val();
                 if (!areaVal || areaVal.trim() === '') {
                     isValid = false;
                     $('#areaSearch').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#areaSearch');
                     errorMessages.push("Area Utama wajib dipilih dari daftar.");
-                    $('#areaSearch').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Area Utama wajib dipilih dari daftar.</span>');
+                    $('#areaSearch').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Area Utama wajib dipilih dari daftar.</span>');
                 }
 
+                // Verify at least one trainee selected
                 if (selectedTrainees.length === 0) {
                     isValid = false;
                     $('#traineeSearchInput').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('#traineeSearchInput');
-                    errorMessages.push("Minimal satu peserta coaching wajib dipilih.");
-                    $('#traineeSearchInput').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Peserta coaching wajib dipilih.</span>');
+                    errorMessages.push("Minimal satu peserta coaching (trainee) wajib dipilih.");
+                    $('#traineeSearchInput').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Minimal satu peserta coaching wajib dipilih.</span>');
                 }
 
                 // If it is a new coaching session, photo is mandatory
+                const hasExistingPhoto = !$('#fotoPreviewContainer').hasClass('d-none') && $('#fotoPreview').attr('src');
                 if (!coachingId && (!fotoInput.files || fotoInput.files.length === 0)) {
                     isValid = false;
                     $(fotoInput).addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('.upload-card').last();
                     errorMessages.push("Foto bukti kegiatan coaching wajib diunggah.");
-                    $(fotoInput).closest('.form-group-sap').find('.upload-card').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti kegiatan coaching wajib diunggah.</span>');
+                    $(fotoInput).closest('.form-group-sap').find('.upload-card').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti kegiatan coaching wajib diunggah.</span>');
+                } else if (coachingId && (!fotoInput.files || fotoInput.files.length === 0) && !hasExistingPhoto) {
+                    isValid = false;
+                    $(fotoInput).addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('.upload-card').last();
+                    errorMessages.push("Foto bukti kegiatan coaching wajib diunggah.");
+                    $(fotoInput).closest('.form-group-sap').find('.upload-card').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size:11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti kegiatan coaching wajib diunggah.</span>');
                 }
 
                 if (!isValid) {
-                    e.preventDefault();
+                    resetButtonState();
                     showSapErrorPopup("Laporan coaching belum lengkap", errorMessages);
                     if (firstInvalid) {
                         $('html, body').animate({
@@ -850,13 +1182,97 @@
                     return false;
                 }
 
-                var btn = $(this).find('button[type="submit"]');
-                if (btn.prop('disabled')) {
-                    return false;
-                }
-                btn.prop('disabled', true);
+                isCoachingSubmitting = true;
+                btn.prop('disabled', true).css('pointer-events', 'none');
                 btn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>MENYIMPAN...');
-                return true;
+
+                const $overlay = $('#loadingOverlay');
+                const $progressBar = $('#loadingProgressBar');
+                const $progressPercent = $('#loadingProgressPercent');
+                const $title = $('#loadingTitle');
+                const $subtitle = $('#loadingSubtitle');
+
+                $overlay.css('display', 'flex');
+                $title.text('Menyiapkan Data...');
+                $subtitle.text('Sedang memproses laporan coaching dan peserta...');
+                $progressBar.css('width', '15%');
+                $progressPercent.text('15%');
+
+                const formData = new FormData(this);
+
+                $.ajax({
+                    url: '/Coaching/Submit',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    xhr: function() {
+                        const xhr = new window.XMLHttpRequest();
+                        xhr.upload.addEventListener('progress', function(evt) {
+                            if (evt.lengthComputable) {
+                                const percent = Math.round((evt.loaded / evt.total) * 100);
+                                const scaledPercent = Math.max(15, Math.min(95, percent));
+                                $progressBar.css('width', scaledPercent + '%');
+                                $progressPercent.text(scaledPercent + '%');
+                                if (percent >= 100) {
+                                    $title.text('Memproses di Server...');
+                                    $subtitle.text('Mohon tunggu, server sedang menyimpan data...');
+                                }
+                            }
+                        }, false);
+                        return xhr;
+                    },
+                    success: function(response) {
+                        $title.text('Selesai!');
+                        $subtitle.text(response && response.message ? response.message : 'Laporan coaching berhasil disimpan.');
+                        $progressBar.css('width', '100%');
+                        $progressPercent.text('100%');
+                        setTimeout(function() {
+                            window.location.href = '/Coaching/Index';
+                        }, 500);
+                    },
+                    error: function(xhr, status, error) {
+                        resetButtonState();
+
+                        let errMessage = "Terjadi kesalahan saat menyimpan data coaching.";
+                        let errList = [];
+
+                        if (xhr.responseJSON) {
+                            if (xhr.responseJSON.message) errMessage = xhr.responseJSON.message;
+                            if (Array.isArray(xhr.responseJSON.errors)) errList = xhr.responseJSON.errors;
+                        } else if (xhr.responseText) {
+                            try {
+                                const parsed = JSON.parse(xhr.responseText);
+                                if (parsed.message) errMessage = parsed.message;
+                                if (Array.isArray(parsed.errors)) errList = parsed.errors;
+                            } catch(e) {}
+                        }
+
+                        if (errList.length === 0) {
+                            errList = [errMessage];
+                        }
+
+                        showSapErrorPopup(errMessage, errList);
+                    },
+                    complete: function() {
+                        setTimeout(function() {
+                            if ($('#sapErrorModal').is(':visible') || !isCoachingSubmitting) {
+                                resetButtonState();
+                            }
+                        }, 100);
+                    }
+                });
+
+                return false;
+            });
+
+            // Ensure button state is clean on page load
+            resetButtonState();
+            window.addEventListener('pageshow', function() {
+                resetButtonState();
             });
         });
 

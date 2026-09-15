@@ -179,7 +179,7 @@ namespace MBS_SAP.Controllers
                     return ValidationErrorResponse(isAjax, validationErrors, "Laporan hazard belum lengkap.");
                 }
 
-                report.Tanggal = DateTime.Today;
+                report.Tanggal = tanggal;
                 report.Waktu = waktu;
                 report.Area = SafeTruncate(area, 150);
                 report.Lokasi = SafeTruncate(lokasi, 150);
@@ -316,6 +316,7 @@ namespace MBS_SAP.Controllers
                         actionPlan.Status = report.StatusTemuan;
                         _context.ActionPlans.Update(actionPlan);
                     }
+
                     await _context.SaveChangesAsync();
                 }
                 else
@@ -372,10 +373,10 @@ namespace MBS_SAP.Controllers
                 }
 
                 var successMsg = isNew ? "Laporan Hazard berhasil disimpan!" : "Laporan Hazard berhasil diperbarui!";
+                TempData["SuccessMessage"] = successMsg;
                 if (isAjax) return Json(new { success = true, message = successMsg });
 
-                TempData["SuccessMessage"] = successMsg;
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {

@@ -415,10 +415,10 @@ namespace MBS_SAP.Controllers
                 }
 
                 var successMsg = isNew ? "Formulir Safety Inspeksi berhasil dikirim." : "Formulir Safety Inspeksi berhasil diperbarui.";
+                TempData["SuccessMessage"] = successMsg;
                 if (isAjax) return Json(new { success = true, message = successMsg });
 
-                TempData["SuccessMessage"] = successMsg;
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {

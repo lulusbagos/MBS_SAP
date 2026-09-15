@@ -456,6 +456,54 @@
     </div>
 </div>
 
+<!-- Modal Peringatan / Form Belum Lengkap -->
+<div class="modal fade" id="sapErrorModal" tabindex="-1" aria-labelledby="sapErrorModalLabel" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-card, #1e293b); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title text-white fw-bold mb-0" id="sapErrorModalLabel" style="font-size: 16px;">Form Belum Lengkap</h5>
+                        <small class="text-muted" style="font-size: 11px;">Silakan periksa kembali isian form Anda</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="text-muted mb-2" style="font-size: 12.5px;">Beberapa kolom wajib belum terisi atau belum sesuai:</p>
+                <ul id="sapErrorList" class="list-group list-group-flush mb-0" style="background: transparent; border-radius: 8px;">
+                </ul>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-danger w-100 fw-bold py-2" data-bs-dismiss="modal" style="border-radius: 10px;">
+                    <i class="bi bi-pencil-square me-2"></i>Lengkapi Sekarang
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Berhasil Disimpan -->
+<div class="modal fade" id="sapSuccessModal" tabindex="-1" aria-labelledby="sapSuccessModalLabel" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center p-3" style="background: var(--bg-card, #1e293b); border: 1px solid rgba(34, 197, 94, 0.4); border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div class="modal-body">
+                <div class="mb-3 d-inline-flex align-items-center justify-content-center" style="width: 70px; height: 70px; border-radius: 50%; background: rgba(34, 197, 94, 0.15);">
+                    <i class="bi bi-check-circle-fill" style="color: #22c55e; font-size: 38px;"></i>
+                </div>
+                <h4 class="text-white fw-bold mb-2" id="sapSuccessTitle">Berhasil Disimpan!</h4>
+                <p class="text-muted mb-4" id="sapSuccessMessage" style="font-size: 13px;">Data Penilaian Driver berhasil disimpan ke sistem.</p>
+                <button type="button" class="btn btn-success px-4 py-2 fw-bold" data-bs-dismiss="modal" style="border-radius: 10px; min-width: 130px;">
+                    <i class="bi bi-check2 me-1"></i>OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         // ========= DRIVER SEARCH (with manual add + duplicate check) =========
@@ -595,21 +643,90 @@
             if (!$(e.target).closest('#driverSearchInput, #driverDropdownMenu, #toggleDriverDropdown').length) $driverMenu.hide();
         });
 
+        // ========= SAP POPUP HELPERS =========
+        function showSapErrorPopup(title, errors, fallbackMessage) {
+            const listEl = document.getElementById('sapErrorList');
+            const titleEl = document.getElementById('sapErrorModalLabel');
+            if (titleEl && title) titleEl.innerText = title;
+            if (listEl) {
+                listEl.innerHTML = '';
+                if (errors && errors.length > 0) {
+                    errors.forEach(err => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item d-flex align-items-center text-danger px-0 py-2 border-0';
+                        li.style.background = 'transparent';
+                        li.style.fontSize = '12.5px';
+                        li.innerHTML = `<i class="bi bi-x-circle-fill me-2 text-danger"></i> <span>${err}</span>`;
+                        listEl.appendChild(li);
+                    });
+                } else if (fallbackMessage) {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item d-flex align-items-center text-danger px-0 py-2 border-0';
+                    li.style.background = 'transparent';
+                    li.style.fontSize = '12.5px';
+                    li.innerHTML = `<i class="bi bi-x-circle-fill me-2 text-danger"></i> <span>${fallbackMessage}</span>`;
+                    listEl.appendChild(li);
+                }
+            }
+            const modalEl = document.getElementById('sapErrorModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        }
+
+        function showSapSuccessPopup(title, message) {
+            const titleEl = document.getElementById('sapSuccessTitle');
+            const msgEl = document.getElementById('sapSuccessMessage');
+            if (titleEl && title) titleEl.innerText = title;
+            if (msgEl && message) msgEl.innerText = message;
+            const modalEl = document.getElementById('sapSuccessModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        }
+
+        // Check sessionStorage on page load for success message
+        $(document).ready(function() {
+            const sessionSuccess = sessionStorage.getItem('sap_success_message');
+            if (sessionSuccess) {
+                sessionStorage.removeItem('sap_success_message');
+                setTimeout(function() {
+                    showSapSuccessPopup("Berhasil Disimpan!", sessionSuccess);
+                }, 250);
+            }
+        });
+
         // ========= FORM VALIDATION =========
         $('#dpaForm').on('submit', function(e) {
+            const errors = [];
             const typedName = $driverInput.val().trim();
+            const driverNik = $('#driverNik').val().trim();
+            const tgl = $('#tanggalPenilaian').val().trim();
+            const jenis = $('#jenisPerjalanan').val();
+
             if (!typedName) {
-                alert('Nama driver wajib diisi.');
+                errors.push('Nama Driver belum diisi');
+            } else if (!driverNik) {
+                errors.push('Pilih Driver dari daftar pencarian atau klik "+ Add Driver" terlebih dahulu');
+            }
+
+            if (!tgl) {
+                errors.push('Tanggal Penilaian belum ditentukan');
+            }
+
+            if (!jenis) {
+                errors.push('Jenis Perjalanan belum dipilih');
+            }
+
+            if (errors.length > 0) {
                 e.preventDefault();
+                showSapErrorPopup('Penilaian Driver Belum Lengkap', errors);
                 return false;
             }
 
-            // Prevent implicit manual input to keep master data clean and deduplicated.
-            if (!$('#driverNik').val()) {
-                alert('Pilih driver dari dropdown atau klik tombol Add Driver terlebih dahulu.');
-                e.preventDefault();
-                return false;
-            }
+            sessionStorage.setItem('sap_success_message', 'Penilaian Driver berhasil disimpan!');
         });
 
         // ========= SCORE SELECTOR LOGIC =========

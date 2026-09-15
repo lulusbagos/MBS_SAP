@@ -628,37 +628,132 @@
             const cleanErrors = Array.isArray(errors) && errors.length > 0 ? errors : [fallbackMessage || 'Data belum lengkap.'];
             const escapePopupHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
             $('#sapErrorModal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
 
-            const listHtml = cleanErrors.map(item => `<li style="margin-bottom: 8px;">${escapePopupHtml(item)}</li>`).join('');
+            const listHtml = cleanErrors.map(item => `
+                <li class="d-flex align-items-start gap-2 mb-2" style="font-size: 13px;">
+                    <i class="bi bi-exclamation-circle-fill text-danger mt-1 flex-shrink-0"></i>
+                    <span>${escapePopupHtml(item)}</span>
+                </li>
+            `).join('');
             const modalHtml = `
-                <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true">
+                <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
                     <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content" style="background: var(--bg-card); color: var(--text-main); border: 1px solid rgba(239,68,68,0.45); border-radius: 12px;">
-                            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
-                                <h5 class="modal-title" style="font-size: 16px; font-weight: 800;"><i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>${escapePopupHtml(title || 'Data belum lengkap')}</h5>
-                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <div class="modal-content" style="background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); border: 1.5px solid rgba(239,68,68,0.5); border-radius: 18px; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+                            <div class="modal-header" style="border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 16px 20px;">
+                                <h5 class="modal-title d-flex align-items-center mb-0" style="font-size: 16px; font-weight: 800; color: #ef4444;">
+                                    <i class="bi bi-exclamation-triangle-fill text-danger me-2" style="font-size: 20px;"></i>
+                                    ${escapePopupHtml(title || 'Data Belum Lengkap')}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
-                            <div class="modal-body" style="font-size: 13px; line-height: 1.6;">
-                                <div class="mb-2">Periksa bagian berikut sebelum menyimpan:</div>
-                                <ul class="mb-0 ps-3">${listHtml}</ul>
+                            <div class="modal-body" style="font-size: 13px; line-height: 1.6; padding: 20px;">
+                                <div class="mb-3 fw-semibold text-danger" style="font-size: 13.5px;">
+                                    <i class="bi bi-info-circle me-1"></i> Mohon periksa dan lengkapi field berikut:
+                                </div>
+                                <ul class="list-unstyled mb-0" style="color: var(--text-main, #f8fafc); background: rgba(239, 68, 68, 0.06); padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.2);">
+                                    ${listHtml}
+                                </ul>
                             </div>
-                            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
-                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Mengerti</button>
+                            <div class="modal-footer" style="border-top: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 12px 20px;">
+                                <button type="button" class="btn btn-danger px-4 py-2 w-100" data-bs-dismiss="modal" style="border-radius: 10px; font-weight: 700; font-size: 13.5px;">
+                                    <i class="bi bi-pencil-square me-1"></i> Lengkapi Sekarang
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>`;
             $('body').append(modalHtml);
 
-            if (window.bootstrap && bootstrap.Modal) {
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('sapErrorModal')).show();
-            } else {
+            try {
+                const modalEl = document.getElementById('sapErrorModal');
+                if (window.bootstrap && bootstrap.Modal) {
+                    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true, keyboard: true });
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapErrorModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    });
+                    myModal.show();
+                } else if ($.fn.modal) {
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapErrorModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    }).modal('show');
+                } else {
+                    alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
+                }
+            } catch(e) {
                 alert((title || 'Data belum lengkap') + '\n\n- ' + cleanErrors.join('\n- '));
             }
         }
+
+        function showSapSuccessPopup(title, message) {
+            $('#sapSuccessModal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+
+            const escapePopupHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            const safeTitle = escapePopupHtml(title || 'Berhasil Disimpan!');
+            const safeMsg = escapePopupHtml(message || 'Laporan temuan hazard berhasil disimpan ke sistem.');
+
+            const modalHtml = `
+                <div class="modal fade" id="sapSuccessModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content" style="background: var(--bg-card, #1e293b); color: var(--text-main, #f8fafc); border: 1.5px solid rgba(16, 185, 129, 0.5); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); overflow: hidden;">
+                            <div class="modal-body text-center p-4">
+                                <div style="width: 72px; height: 72px; background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                    <i class="bi bi-check2-circle" style="font-size: 40px; color: #10b981;"></i>
+                                </div>
+                                <h4 style="font-weight: 800; color: #10b981; margin-bottom: 8px;">${safeTitle}</h4>
+                                <p style="font-size: 14px; color: var(--text-muted, #94a3b8); margin-bottom: 24px; line-height: 1.5;">${safeMsg}</p>
+                                <button type="button" class="btn btn-success px-5 py-2.5 w-100" data-bs-dismiss="modal" style="background-color: #10b981; border-color: #059669; border-radius: 12px; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                    <i class="bi bi-check-lg me-1"></i> OK, Mengerti
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            $('body').append(modalHtml);
+
+            try {
+                const modalEl = document.getElementById('sapSuccessModal');
+                if (window.bootstrap && bootstrap.Modal) {
+                    const myModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true, keyboard: true });
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    });
+                    myModal.show();
+                } else if ($.fn.modal) {
+                    $(modalEl).on('hidden.bs.modal', function() {
+                        $('#sapSuccessModal').remove();
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
+                    }).modal('show');
+                } else {
+                    alert(safeTitle + '\n\n' + safeMsg);
+                }
+            } catch(e) {
+                alert(safeTitle + '\n\n' + safeMsg);
+            }
+        }
+
         const serverErrorMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["ErrorMessage"]));
         if (serverErrorMessage) {
             setTimeout(() => showSapErrorPopup("Terjadi kesalahan", [serverErrorMessage]), 250);
+        }
+
+        const serverSuccessMessage = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(TempData["SuccessMessage"]));
+        const sessionSuccess = sessionStorage.getItem('sap_success_message');
+        if (sessionSuccess) {
+            sessionStorage.removeItem('sap_success_message');
+            setTimeout(() => showSapSuccessPopup("Berhasil Disimpan!", sessionSuccess), 250);
+        } else if (serverSuccessMessage) {
+            setTimeout(() => showSapSuccessPopup("Berhasil Disimpan!", serverSuccessMessage), 250);
         }
         function openCloseHazard(id, nikPja, pjaName) {
             $('#closeHazardId').val(id);
@@ -1508,42 +1603,79 @@
                 $('#hazardForm').find('.is-invalid').removeClass('is-invalid');
                 $('#hazardForm').find('.sap-err-msg').remove();
 
-                const fieldsToValidate = {
-                    'tanggal': 'Tanggal Temuan',
-                    'waktuStr': 'Waktu Temuan',
-                    'area': 'Area Utama',
-                    'lokasi': 'Lokasi Spesifik',
-                    'kategoriBahaya': 'Kategori Bahaya',
-                    'jenisBahaya': 'Jenis Bahaya',
-                    'temuan': 'Detil Temuan Hazard'
-                };
+                // 1. Tanggal Temuan
+                const tanggalVal = $('#tanggal').val();
+                if (!tanggalVal || tanggalVal.trim() === '') {
+                    isValid = false;
+                    $('#tanggal').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#tanggal');
+                    errorMessages.push("Tanggal Temuan wajib diisi.");
+                    $('#tanggal').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Tanggal Temuan wajib diisi.</span>');
+                }
 
-                // Validate visible input/select/textarea
-                $('#hazardForm').find('input[required]:visible, select[required]:visible, textarea[required]:visible').each(function() {
-                    const $el = $(this);
-                    const id = $el.attr('id') || $el.attr('name');
-                    const val = $el.val();
-                    
-                    if (!val || val.toString().trim() === '') {
-                        isValid = false;
-                        $el.addClass('is-invalid');
-                        if (!firstInvalid) firstInvalid = $el;
-                        
-                        const labelName = fieldsToValidate[id] || $el.closest('.form-group-sap').find('label').text() || 'Field';
-                        const cleanLabel = labelName.replace(':', '').replace('*', '').trim();
-                        errorMessages.push(cleanLabel);
-                        const errHtml = `<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${cleanLabel} wajib diisi.</span>`;
-                        
-                        const $wrapper = $el.closest('.input-sap-wrapper');
-                        if ($wrapper.length) {
-                            $wrapper.after(errHtml);
-                        } else {
-                            $el.after(errHtml);
-                        }
+                // 2. Waktu Temuan
+                const waktuVal = $('#waktuStr').val();
+                if (!waktuVal || waktuVal.trim() === '') {
+                    isValid = false;
+                    $('#waktuStr').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#waktuStr');
+                    errorMessages.push("Waktu Temuan wajib diisi.");
+                    $('#waktuStr').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Waktu Temuan wajib diisi.</span>');
+                }
+
+                // 3. Area Utama
+                const areaVal = $('#area').val();
+                if (!areaVal || areaVal.trim() === '') {
+                    isValid = false;
+                    $('#areaSearch').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#areaSearch');
+                    errorMessages.push("Area Utama wajib dipilih dari dropdown.");
+                    if ($('#areaSearch').closest('.form-group-sap').find('.sap-err-msg').length === 0) {
+                        $('#areaSearch').closest('.position-relative').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Area Utama wajib dipilih dari dropdown.</span>');
                     }
-                });
+                }
 
-                // Validate PJA selection
+                // 4. Lokasi Spesifik
+                const lokasiVal = $('#lokasi').val();
+                if (!lokasiVal || lokasiVal.trim() === '') {
+                    isValid = false;
+                    $('#lokasi').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#lokasi');
+                    errorMessages.push("Lokasi Spesifik wajib diisi.");
+                    $('#lokasi').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Lokasi Spesifik wajib diisi.</span>');
+                }
+
+                // 5. Kategori Bahaya
+                const kategoriVal = $('#kategoriBahaya').val();
+                if (!kategoriVal || kategoriVal.trim() === '') {
+                    isValid = false;
+                    $('#kategoriBahaya').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#kategoriBahaya');
+                    errorMessages.push("Kategori Bahaya wajib dipilih.");
+                    $('#kategoriBahaya').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Kategori Bahaya wajib dipilih.</span>');
+                }
+
+                // 6. Jenis Bahaya
+                const jenisVal = $('#jenisBahaya').val();
+                if (!jenisVal || jenisVal.trim() === '') {
+                    isValid = false;
+                    $('#jenisBahaya').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#jenisBahaya');
+                    errorMessages.push("Jenis Bahaya wajib dipilih.");
+                    $('#jenisBahaya').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Jenis Bahaya wajib dipilih.</span>');
+                }
+
+                // 7. Detil Temuan Hazard
+                const temuanVal = $('#temuan').val();
+                if (!temuanVal || temuanVal.trim() === '') {
+                    isValid = false;
+                    $('#temuan').addClass('is-invalid');
+                    if (!firstInvalid) firstInvalid = $('#temuan');
+                    errorMessages.push("Detil Temuan Hazard wajib diisi.");
+                    $('#temuan').closest('.input-sap-wrapper').after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Detil Temuan Hazard wajib diisi.</span>');
+                }
+
+                // 8. Penanggung Jawab Area (PJA)
                 const pjaVal = $('#pja').val();
                 if (!pjaVal || pjaVal.trim() === '') {
                     isValid = false;
@@ -1555,40 +1687,26 @@
                     if (searchVal !== '') {
                         errMsg = 'Nama PJA sudah diketik, tapi belum dipilih dari daftar. Silakan klik salah satu nama hasil pencarian yang muncul di bawahnya.';
                     }
-                    errorMessages.push("Penanggung Jawab Area (PJA)");
+                    errorMessages.push("Penanggung Jawab Area (PJA) wajib dipilih dari pencarian.");
                     
                     if ($('#pjaSearchInput').closest('.form-group-sap').find('.sap-err-msg').length === 0) {
-                        $('#pjaSearchInput').after(`<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>${errMsg}</span>`);
+                        $('#pjaSearchInput').closest('.input-sap-wrapper').after(`<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>${errMsg}</span>`);
                     }
                 }
 
+                // 9. Foto Bukti Temuan
+                const isEdit = !!$('#hazardId').val();
                 const photoInput = document.getElementById('photoInput');
-                if ((!photoInput.files || photoInput.files.length === 0) && $('#imagePreviewContainer').hasClass('d-none')) {
+                if ((!photoInput.files || photoInput.files.length === 0) && $('#imagePreviewContainer').hasClass('d-none') && !isEdit) {
                     isValid = false;
                     $('#photoInput').addClass('is-invalid');
                     if (!firstInvalid) firstInvalid = $('.upload-card').first();
-                    errorMessages.push("Foto bukti temuan");
-                    $('.upload-card').first().after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti temuan wajib diunggah.</span>');
-                }
-
-                // Validate Area Utama (searchable input)
-                const areaVal = $('#area').val();
-                if (!areaVal || areaVal.trim() === '') {
-                    isValid = false;
-                    $('#areaSearch').addClass('is-invalid');
-                    if (!firstInvalid) firstInvalid = $('#areaSearch');
-                    
-                    errorMessages.push("Area Utama");
-                    if ($('#areaSearch').closest('.form-group-sap').find('.sap-err-msg').length === 0) {
-                        $('#areaSearch').after('<span class="text-danger sap-err-msg d-block mt-1"><i class="bi bi-exclamation-circle-fill me-1"></i>Area Utama wajib dipilih dari daftar.</span>');
-                    }
+                    errorMessages.push("Foto bukti temuan wajib diunggah.");
+                    $('.upload-card').first().after('<span class="text-danger sap-err-msg d-block mt-1" style="font-size: 11px;"><i class="bi bi-exclamation-circle-fill me-1"></i>Foto bukti temuan wajib diunggah.</span>');
                 }
 
                 if (!isValid) {
-                    const issues = errorMessages.length > 0
-                        ? errorMessages.map(item => item + " belum diisi dengan benar.")
-                        : ["Silakan lengkapi kolom yang wajib diisi."];
-                    showSapErrorPopup("Laporan hazard belum lengkap", issues);
+                    showSapErrorPopup("Laporan hazard belum lengkap", errorMessages);
                     if (firstInvalid) {
                         $('html, body').animate({
                             scrollTop: firstInvalid.offset().top - 120
@@ -1702,8 +1820,11 @@
                             return xhr;
                         },
                         success: function(response) {
+                            const successMsg = (response && response.message) ? response.message : 'Laporan temuan hazard berhasil disimpan.';
+                            sessionStorage.setItem('sap_success_message', successMsg);
+
                             $title.text('Selesai!');
-                            $subtitle.text('Laporan hazard berhasil disimpan.');
+                            $subtitle.text(successMsg);
                             $progressBar.css('width', '100%');
                             $progressPercent.text('100%');
                             
@@ -1729,7 +1850,8 @@
                                     errList = parsed.errors || [];
                                 } catch(e) {}
                             }
-                            showSapErrorPopup(errMessage, errList, errMessage);
+
+                            showSapErrorPopup(errMessage, errList);
                         }
                     });
                 }

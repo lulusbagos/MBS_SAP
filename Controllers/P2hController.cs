@@ -359,13 +359,26 @@ namespace MBS_SAP.Controllers
 
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = isNew ? "Laporan P2H berhasil disimpan!" : "Laporan P2H berhasil diperbarui!";
+                var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+                var successMsg = isNew ? "Laporan P2H berhasil disimpan!" : "Laporan P2H berhasil diperbarui!";
+                TempData["SuccessMessage"] = successMsg;
+
+                if (isAjax)
+                {
+                    return Ok(new { success = true, message = successMsg });
+                }
+
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error saving P2H report");
-                TempData["ErrorMessage"] = "Terjadi kesalahan saat menyimpan data P2H.";
+                var errMsg = "Terjadi kesalahan saat menyimpan data P2H.";
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return StatusCode(500, new { success = false, message = errMsg, errors = new[] { errMsg } });
+                }
+                TempData["ErrorMessage"] = errMsg;
             }
 
             return RedirectToAction(nameof(Index));

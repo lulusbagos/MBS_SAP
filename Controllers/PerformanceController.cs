@@ -7043,8 +7043,14 @@ namespace MBS_SAP.Controllers
             }
 
             // 7. Top 10 Best Performance Companies
-            var hazardCounts = groupHazards.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
-            var closedHazardCounts = groupHazards.Where(h => h.PerusahaanId.HasValue && isClosedStatusRank(h.StatusTemuan)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            // Close rate menjadi beban pembuat SAP (berdasarkan PerusahaanId pembuat Hazard & Action Plan)
+            var allHazardsMonth = await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM)
+                .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
+                .ToListAsync();
+
+            var hazardCounts = allHazardsMonth.GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+            var closedHazardCounts = allHazardsMonth.Where(h => isClosedStatusRank(h.StatusTemuan)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
             var inspCounts = groupInspections.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
             var stCounts = groupSafetyTalks.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
             var obsCounts = groupObservations.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
@@ -7052,7 +7058,10 @@ namespace MBS_SAP.Controllers
             var coaCounts = groupCoachings.Where(h => h.PerusahaanId.HasValue).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
 
             var actionPlansMonth = await _context.ActionPlans
-                .Where(a => !a.IsDeleted && a.PerusahaanId != null && a.CreatedAt >= startOfMonthM && a.CreatedAt <= endOfMonthM)
+                .Where(a => !a.IsDeleted && a.PerusahaanId != null && (
+                    (a.Tanggal >= startOfMonthM && a.Tanggal <= endOfMonthM) ||
+                    (a.CreatedAt >= startOfMonthM && a.CreatedAt <= endOfMonthM)
+                ))
                 .Select(a => new { a.PerusahaanId, a.Status, a.Tanggal, a.TanggalPerbaikan })
                 .ToListAsync();
             
@@ -7176,9 +7185,6 @@ namespace MBS_SAP.Controllers
                 int totalTemuan = hC + iC + sC + oC + pC + coaC;
                 int totalTarget = targetDict.TryGetValue(cId, out int tgt) ? tgt : 0;
                 
-                // Jangan membatasi totalTemuan di sini, biarkan UI dan Score perhitungan yang melimitnya 
-                // agar data submisi aktual tetap terlihat utuh.
-                
                 if (totalTemuan > maxKuantitas) maxKuantitas = totalTemuan;
 
                 int totalAp = 0;
@@ -7204,6 +7210,7 @@ namespace MBS_SAP.Controllers
                     }
                 }
 
+                // Close rate adalah beban pembuat SAP (berdasarkan Hazard & Action Plan yang dibuat perusahaan cId)
                 int effectiveTotalAp = totalAp >= hC && totalAp > 0 ? totalAp : hC;
                 int effectiveClosedAp = totalAp >= hC && totalAp > 0 ? closedAp : hCClosed;
 
@@ -7224,7 +7231,7 @@ namespace MBS_SAP.Controllers
                         TotalClosedActionPlan = effectiveClosedAp,
                         CloseRate = closeRate,
                         AvgSpeedDays = avgSpeed,
-                        AvgQuality = 5.0 // Default quality since SapQualityAssessment doesn't link to PerusahaanId easily
+                        AvgQuality = 5.0 // Default quality standar
                     });
                 }
             }
@@ -7237,18 +7244,18 @@ namespace MBS_SAP.Controllers
                 p.ScoreCloseRate = p.CloseRate;
                 p.ScoreKualitas = (p.AvgQuality / 5.0) * 100.0;
                 
-                // Speed Score: 0 days = 100%, >= 14 days = 0%
+                // Speed Score (Kecepatan dihapus dari bobot penilaian skor total)
                 p.ScoreKecepatan = Math.Max(0.0, 100.0 - (p.AvgSpeedDays / 14.0 * 100.0));
 
                 if (isCurrentNewPolicy)
                 {
-                    // Kebijakan Baru (Mulai September 2026): Close Rate 50% + Capaian 15% + Kualitas 15% + Skala Beban 10% + Kecepatan 10%
-                    p.TotalScore = (p.ScorePencapaian * 0.15) + (p.ScoreSkalaBeban * 0.10) + (p.ScoreCloseRate * 0.50) + (p.ScoreKualitas * 0.15) + (p.ScoreKecepatan * 0.10);
+                    // Kebijakan Baru (Mulai September 2026): Close Rate 50% (Beban Pembuat SAP) + Kualitas SAP 25% + Capaian 15% + Skala Beban 10% (Kecepatan 0%)
+                    p.TotalScore = (p.ScoreCloseRate * 0.50) + (p.ScoreKualitas * 0.25) + (p.ScorePencapaian * 0.15) + (p.ScoreSkalaBeban * 0.10);
                 }
                 else
                 {
-                    // Kebijakan Historis (Sebelum September 2026 / Termasuk Agustus 2026): Multi-faktor 20-15-25-20-20
-                    p.TotalScore = (p.ScorePencapaian * 0.20) + (p.ScoreSkalaBeban * 0.15) + (p.ScoreCloseRate * 0.25) + (p.ScoreKualitas * 0.20) + (p.ScoreKecepatan * 0.20);
+                    // Kebijakan Historis (Sebelum September 2026): Multi-faktor 40-25-20-15 (Kecepatan 0%, Kualitas 25%)
+                    p.TotalScore = (p.ScoreCloseRate * 0.40) + (p.ScoreKualitas * 0.25) + (p.ScorePencapaian * 0.20) + (p.ScoreSkalaBeban * 0.15);
                 }
             }
 
