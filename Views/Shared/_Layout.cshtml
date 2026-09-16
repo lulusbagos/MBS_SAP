@@ -152,11 +152,20 @@
                         var department = User.FindFirst("Department")?.Value ?? "";
                         var isSafetyAdmin = isAdminUser || 
                                             jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase) || 
+                                            jobTitle.Contains("HSE", StringComparison.OrdinalIgnoreCase) || 
+                                            jobTitle.Contains("OHS", StringComparison.OrdinalIgnoreCase) || 
+                                            jobTitle.Contains("SHE", StringComparison.OrdinalIgnoreCase) || 
                                             department.Contains("Safety", StringComparison.OrdinalIgnoreCase) ||
-                                            department.Contains("HSE", StringComparison.OrdinalIgnoreCase);
+                                            department.Contains("HSE", StringComparison.OrdinalIgnoreCase) ||
+                                            department.Contains("OHS", StringComparison.OrdinalIgnoreCase) ||
+                                            department.Contains("SHE", StringComparison.OrdinalIgnoreCase);
                     }
                     @if (isSafetyAdmin)
                     {
+                        <a asp-controller="Roster" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "RosterSap" ? "active" : "")">
+                            <i class="bi bi-calendar2-week-fill" style="color: #38bdf8;"></i>
+                            <span>Roster SAP</span>
+                        </a>
                         <a asp-controller="UserSupport" asp-action="ResetPassword" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "ResetPassword" ? "active" : "")">
                             <i class="bi bi-key" style="color: #ef4444;"></i>
                             <span>Reset Password</span>

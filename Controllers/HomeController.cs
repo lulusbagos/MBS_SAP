@@ -82,6 +82,7 @@ namespace MBS_SAP.Controllers
                     if (latestRoster.AkhirCuti >= DateTime.Today)
                     {
                         // Currently running: edit mode (can edit running roster)
+                        stats.RosterId = latestRoster.Id;
                         stats.RosterAwalDinas = latestRoster.AwalDinas.ToString("yyyy-MM-dd");
                         stats.RosterAkhirDinas = latestRoster.AkhirDinas.ToString("yyyy-MM-dd");
                         stats.RosterAwalCuti = latestRoster.AwalCuti.ToString("yyyy-MM-dd");
@@ -568,6 +569,7 @@ namespace MBS_SAP.Controllers
 
             ViewData["ShowRosterPopup"] = stats.ShowRosterPopup;
             ViewData["RosterHistory"] = stats.RosterHistory;
+            ViewData["RosterId"] = stats.RosterId;
             ViewData["MitraHariOnsite"] = stats.MitraHariOnsite;
             ViewData["MitraHariOffsite"] = stats.MitraHariOffsite;
             ViewData["RosterAwalDinas"] = stats.RosterAwalDinas;
@@ -643,6 +645,7 @@ namespace MBS_SAP.Controllers
         {
             public bool ShowRosterPopup { get; set; }
             public List<Roster> RosterHistory { get; set; } = new();
+            public int? RosterId { get; set; }
             public int? MitraHariOnsite { get; set; }
             public int? MitraHariOffsite { get; set; }
             public string RosterAwalDinas { get; set; } = string.Empty;

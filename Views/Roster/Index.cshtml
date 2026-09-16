@@ -1,0 +1,1080 @@
+@{
+    ViewData["Title"] = "Manajemen Roster & Penugasan SAP";
+    var companies = ViewData["Companies"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>;
+    var departments = ViewData["Departments"] as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>;
+}
+
+<style>
+    .stat-card-roster {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .stat-card-roster:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    .stat-icon-wrapper {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+    .roster-tab-btn {
+        color: var(--text-muted);
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: 8px 16px;
+        font-size: 12px;
+        font-weight: 700;
+        border-radius: 10px;
+        transition: all 0.2s ease;
+    }
+    .roster-tab-btn.active {
+        background: linear-gradient(135deg, #0284c7, #38bdf8) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;
+    }
+    .roster-date-input {
+        background: var(--bg-body) !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-main) !important;
+        border-radius: 10px !important;
+        padding: 8px 12px !important;
+        font-size: 13px !important;
+        width: 100%;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .roster-date-input:focus {
+        border-color: #0284c7 !important;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+        outline: none;
+    }
+    .btn-action-roster {
+        padding: 5px 12px;
+        font-size: 11.5px;
+        font-weight: 700;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        transition: all 0.15s ease;
+    }
+    .avatar-circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #38bdf8, #0284c7);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+</style>
+
+<div class="animate-fade-in pb-4" style="color: var(--text-main);">
+    <!-- Page Header Title & Subtitle -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2.5">
+                <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-calendar2-week-fill text-info" style="font-size: 20px;"></i>
+                </div>
+                <div>
+                    <h4 style="font-weight: 850; font-size: 22px; margin: 0; color: var(--text-main); letter-spacing: -0.3px;">
+                        Manajemen Roster &amp; Penugasan SAP
+                    </h4>
+                    <p class="mb-0 text-muted" style="font-size: 12.5px;">Kelola jadwal dinas/cuti dan periode tugas karyawan di perusahaan Anda dan mitra kerja di bawahnya.</p>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button id="btnExportExcel" class="btn btn-success fw-bold d-inline-flex align-items-center gap-2 shadow-sm" style="border-radius: 12px; font-size: 12.5px; padding: 9px 16px;">
+                <i class="bi bi-file-earmark-excel-fill"></i>
+                <span>Download Rekap Excel</span>
+            </button>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary fw-bold d-inline-flex align-items-center gap-2" style="border-radius: 12px; font-size: 12.5px; padding: 9px 16px;">
+                <i class="bi bi-arrow-left"></i>
+                <span>Dashboard</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 4 Summary Metric Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card-roster">
+                <div class="stat-icon-wrapper" style="background: rgba(100, 116, 139, 0.12); color: #64748b;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div>
+                    <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Total Karyawan</div>
+                    <h4 class="mb-0" id="statTotal" style="font-weight: 850; color: var(--text-main);">-</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card-roster">
+                <div class="stat-icon-wrapper" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div>
+                    <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Roster Aktif</div>
+                    <h4 class="mb-0 text-success" id="statAktif" style="font-weight: 850;">-</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card-roster">
+                <div class="stat-icon-wrapper" style="background: rgba(2, 132, 199, 0.12); color: #0284c7;">
+                    <i class="bi bi-airplane-fill"></i>
+                </div>
+                <div>
+                    <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Periode Tugas</div>
+                    <h4 class="mb-0" id="statTugas" style="font-weight: 850; color: #0284c7;">-</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card-roster">
+                <div class="stat-icon-wrapper" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div>
+                    <div style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Expired / Belum Set</div>
+                    <h4 class="mb-0 text-warning" id="statExpired" style="font-weight: 850;">-</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Control Card -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 18px; background: var(--bg-card);">
+        <div class="card-body p-3.5">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold mb-1" style="font-size: 11.5px; color: var(--text-muted);">
+                        <i class="bi bi-building me-1 text-info"></i> Perusahaan:
+                    </label>
+                    <select id="filterPerusahaan" class="form-select form-select-sm shadow-none" style="border-radius: 10px; font-size: 12.5px; background: var(--bg-body); color: var(--text-main); border-color: var(--border-color);">
+                        <option value="">-- Semua Perusahaan (Akses Anda) --</option>
+                        @if (companies != null)
+                        {
+                            foreach (var comp in companies)
+                            {
+                                var isSelected = comp.Value == ViewData["UserCompanyId"]?.ToString() ? "selected" : "";
+                                if (isSelected == "selected")
+                                {
+                                    <option value="@comp.Value" selected>@comp.Text</option>
+                                }
+                                else
+                                {
+                                    <option value="@comp.Value">@comp.Text</option>
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold mb-1" style="font-size: 11.5px; color: var(--text-muted);">
+                        <i class="bi bi-diagram-3 me-1 text-primary"></i> Departemen:
+                    </label>
+                    <select id="filterDepartemen" class="form-select form-select-sm shadow-none" style="border-radius: 10px; font-size: 12.5px; background: var(--bg-body); color: var(--text-main); border-color: var(--border-color);">
+                        <option value="">-- Semua Departemen --</option>
+                        @if (departments != null)
+                        {
+                            foreach (var dept in departments)
+                            {
+                                <option value="@dept.Value">@dept.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold mb-1" style="font-size: 11.5px; color: var(--text-muted);">
+                        <i class="bi bi-funnel me-1 text-warning"></i> Status Roster:
+                    </label>
+                    <select id="filterStatus" class="form-select form-select-sm shadow-none" style="border-radius: 10px; font-size: 12.5px; background: var(--bg-body); color: var(--text-main); border-color: var(--border-color);">
+                        <option value="">Semua Status</option>
+                        <option value="aktif">Roster Aktif</option>
+                        <option value="tugas">Periode Tugas (Bebas SAP)</option>
+                        <option value="expired">Expired (Perlu Update)</option>
+                        <option value="belum_set">Belum Diatur</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold mb-1" style="font-size: 11.5px; color: var(--text-muted);">
+                        <i class="bi bi-search me-1 text-secondary"></i> Cari Karyawan:
+                    </label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="filterSearch" class="form-control shadow-none" placeholder="Ketik Nama / NIK..." style="border-radius: 10px 0 0 10px; font-size: 12.5px; background: var(--bg-body); color: var(--text-main); border-color: var(--border-color);" />
+                        <button class="btn btn-primary" type="button" id="btnApplySearch" style="border-radius: 0 10px 10px 0;">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="card border-0 shadow-sm" style="border-radius: 18px; background: var(--bg-card);">
+        <div class="card-body p-3.5">
+            <div class="table-responsive">
+                <table id="rosterAdminTable" class="table table-hover align-middle w-100" style="font-size: 12.5px; color: var(--text-main);">
+                    <thead style="background: rgba(0,0,0,0.03); color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border-color);">
+                        <tr>
+                            <th style="padding: 12px 14px;">Karyawan</th>
+                            <th style="padding: 12px 14px;">Perusahaan &amp; Dept</th>
+                            <th style="padding: 12px 14px;" class="text-center">Status Roster</th>
+                            <th style="padding: 12px 14px;">Jadwal Dinas / Tugas</th>
+                            <th style="padding: 12px 14px;">Jadwal Cuti</th>
+                            <th style="padding: 12px 14px;" class="text-center">Pola Default</th>
+                            <th style="padding: 12px 14px; min-width: 140px;" class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Atur / Edit Roster & Tugas Karyawan -->
+<div class="modal fade" id="modalSetRoster" tabindex="-1" aria-labelledby="modalSetRosterLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); overflow: hidden;">
+            <!-- Header Modal -->
+            <div style="background: linear-gradient(135deg, #0284c7, #0369a1); padding: 20px 24px; color: white; position: relative;">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                        <i class="bi bi-calendar-check-fill"></i>
+                    </div>
+                    <div>
+                        <h5 style="font-weight: 800; margin: 0; font-size: 16px;" id="modalEmployeeName">Atur Roster Karyawan</h5>
+                        <div style="font-size: 11.5px; opacity: 0.85;" id="modalEmployeeSub">NIK: - | Perusahaan: -</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 20px; right: 20px;"></button>
+            </div>
+
+            <!-- Body Modal -->
+            <div class="modal-body" style="padding: 24px;">
+                <form id="formAdminRoster">
+                    <input type="hidden" id="formEmployeeNik" name="nik" value="" />
+                    <input type="hidden" id="formRosterId" name="rosterId" value="" />
+                    <input type="hidden" id="formTipeRoster" name="tipeRoster" value="REGULER" />
+
+                    <div id="modalAlert" class="alert alert-danger d-none" style="font-size: 12px; border-radius: 12px; padding: 10px 14px;"></div>
+
+                    <!-- Type Switcher -->
+                    <div class="mb-3" style="display: flex; background: rgba(0,0,0,0.06); padding: 4px; border-radius: 12px; border: 1px solid var(--border-color); gap: 4px;">
+                        <button type="button" class="flex-fill roster-tab-btn active" id="btnTabReguler">
+                            <i class="bi bi-briefcase-fill me-1"></i> Roster Reguler
+                        </button>
+                        <button type="button" class="flex-fill roster-tab-btn" id="btnTabTugas">
+                            <i class="bi bi-airplane-fill me-1"></i> Periode Tugas (Bebas SAP)
+                        </button>
+                    </div>
+
+                    <!-- Section 1: Reguler Roster -->
+                    <div id="secReguler">
+                        <div class="p-3 mb-3 rounded-3" style="background: rgba(2, 132, 199, 0.05); border: 1px solid rgba(2, 132, 199, 0.2);">
+                            <div class="fw-bold mb-2 text-info" style="font-size: 12px;">
+                                <i class="bi bi-geo-alt-fill me-1"></i> Periode Dinas (Onsite)
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Mulai Dinas</label>
+                                    <input type="date" class="roster-date-input" id="inputAwalDinas" required />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Akhir Dinas</label>
+                                    <input type="date" class="roster-date-input" id="inputAkhirDinas" required />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 mb-3 rounded-3" style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2);">
+                            <div class="fw-bold mb-2 text-warning" style="font-size: 12px;">
+                                <i class="bi bi-airplane-fill me-1"></i> Periode Roster (Cuti)
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Mulai Cuti</label>
+                                    <input type="date" class="roster-date-input" id="inputAwalCuti" required />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Akhir Cuti</label>
+                                    <input type="date" class="roster-date-input" id="inputAkhirCuti" required />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="rosterDurationBadge" class="p-2 text-center rounded-3 mb-2" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #059669; font-size: 11.5px; font-weight: 700;">
+                            Durasi: - Hari Dinas (Onsite) &amp; - Hari Cuti (Offsite)
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Periode Tugas -->
+                    <div id="secTugas" style="display: none;">
+                        <div class="p-3 mb-3 rounded-3" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25);">
+                            <div class="d-flex align-items-center gap-2 mb-2 text-success">
+                                <i class="bi bi-shield-check" style="font-size: 16px;"></i>
+                                <span style="font-size: 12px; font-weight: 800; text-transform: uppercase;">BEBAS TARGET SAP</span>
+                            </div>
+                            <p class="mb-0 text-muted" style="font-size: 11.5px;">Karyawan dalam periode tugas dibebaskan dari seluruh target SAP bulanan (Target SAP = 0).</p>
+                        </div>
+
+                        <div class="p-3 mb-3 rounded-3" style="background: rgba(2, 132, 199, 0.05); border: 1px solid rgba(2, 132, 199, 0.2);">
+                            <div class="fw-bold mb-2 text-info" style="font-size: 12px;">
+                                <i class="bi bi-calendar-range-fill me-1"></i> Jadwal &amp; Keterangan Penugasan
+                            </div>
+                            <div class="row g-2 mb-2.5">
+                                <div class="col-6">
+                                    <label class="form-label" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Mulai Tugas</label>
+                                    <input type="date" class="roster-date-input" id="inputAwalTugas" />
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Akhir Tugas</label>
+                                    <input type="date" class="roster-date-input" id="inputAkhirTugas" />
+                                </div>
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size: 11px; font-weight: 700; color: var(--text-muted);">Keterangan / Keperluan Tugas</label>
+                                <input type="text" class="roster-date-input" id="inputKeteranganTugas" placeholder="Contoh: HO Assignment / Diklat Eksternal / Audit" maxlength="255" />
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Footer Modal -->
+            <div class="modal-footer" style="background: rgba(0,0,0,0.03); border-top: 1px solid var(--border-color); padding: 14px 24px; display: flex; justify-content: space-between;">
+                <button type="button" class="btn btn-secondary btn-sm fw-bold px-3 py-2" data-bs-dismiss="modal" style="border-radius: 10px;">Batal</button>
+                <button type="button" id="btnSaveAdminRoster" class="btn btn-primary btn-sm fw-bold px-4 py-2" style="border-radius: 10px; background: linear-gradient(135deg, #0284c7, #0369a1); border: none;">
+                    <i class="bi bi-save2 me-1"></i> Simpan Roster
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Riwayat Roster Karyawan -->
+<div class="modal fade" id="modalHistoryRoster" tabindex="-1" aria-labelledby="modalHistoryRosterLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #334155, #0f172a); padding: 20px 24px; color: white; position: relative;">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                        <i class="bi bi-clock-history text-info"></i>
+                    </div>
+                    <div>
+                        <h5 style="font-weight: 800; margin: 0; font-size: 16px;" id="historyEmployeeName">Riwayat Roster &amp; Tugas</h5>
+                        <div style="font-size: 11.5px; opacity: 0.75;" id="historyEmployeeSub">NIK: - | Perusahaan: -</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 20px; right: 20px;"></button>
+            </div>
+
+            <div class="modal-body" style="padding: 20px; max-height: 480px; overflow-y: auto;">
+                <div id="historyLoading" class="text-center py-4">
+                    <div class="spinner-border text-info" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+
+                <div id="historyEmpty" class="text-center py-4 text-muted d-none" style="font-size: 13px;">
+                    <i class="bi bi-calendar-x" style="font-size: 32px; opacity: 0.5;"></i>
+                    <p class="mt-2 mb-0">Belum ada riwayat pengaturan roster atau penugasan untuk karyawan ini.</p>
+                </div>
+
+                <div id="historyContent" class="d-none">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle w-100" style="font-size: 12px; color: var(--text-main);">
+                            <thead style="background: rgba(0,0,0,0.03); color: var(--text-muted); font-weight: 700; border-bottom: 1px solid var(--border-color);">
+                                <tr>
+                                    <th>Tipe &amp; Periode</th>
+                                    <th>Detail / Cuti</th>
+                                    <th>Keterangan</th>
+                                    <th>Diatur Pada</th>
+                                    <th class="text-end" style="min-width: 90px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="background: rgba(0,0,0,0.03); border-top: 1px solid var(--border-color); padding: 12px 20px;">
+                <button type="button" class="btn btn-secondary btn-sm fw-bold px-3 py-1.5" data-bs-dismiss="modal" style="border-radius: 10px;">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            let currentFilterPerusahaan = $('#filterPerusahaan').val();
+            let currentFilterDepartemen = $('#filterDepartemen').val();
+            let currentFilterStatus = $('#filterStatus').val();
+            let currentSearch = '';
+
+            const table = $('#rosterAdminTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ordering: false,
+                pageLength: 10,
+                lengthMenu: [10, 25, 50, 100],
+                ajax: {
+                    url: '/Roster/GetRosterData',
+                    type: 'POST',
+                    data: function(d) {
+                        d.perusahaanId = currentFilterPerusahaan;
+                        d.departemen = currentFilterDepartemen;
+                        d.status = currentFilterStatus;
+                        d.customSearch = currentSearch;
+                    },
+                    dataSrc: function(json) {
+                        if (json.stats) {
+                            $('#statTotal').text(json.stats.total.toLocaleString());
+                            $('#statAktif').text(json.stats.aktif.toLocaleString());
+                            $('#statTugas').text(json.stats.tugas.toLocaleString());
+                            $('#statExpired').text((json.stats.expired + json.stats.belumSet).toLocaleString());
+                        }
+                        return json.data;
+                    }
+                },
+                columns: [
+                    {
+                        data: 'nama',
+                        render: function(data, type, row) {
+                            const initial = data ? data.charAt(0).toUpperCase() : '?';
+                            return `
+                                <div class="d-flex align-items-center gap-2.5">
+                                    <div class="avatar-circle">${initial}</div>
+                                    <div>
+                                        <div class="fw-bold" style="color: var(--text-main); font-size: 13px;">${escapeHtml(data)}</div>
+                                        <div class="text-muted" style="font-size: 11px; font-family: monospace;">NIK: ${escapeHtml(row.nik)} &bull; ${escapeHtml(row.jabatan)}</div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    },
+                    {
+                        data: 'perusahaan',
+                        render: function(data, type, row) {
+                            return `
+                                <div>
+                                    <div class="fw-semibold" style="font-size: 12px;">${escapeHtml(data)}</div>
+                                    <div class="text-muted" style="font-size: 11px;">Dept: ${escapeHtml(row.departemen)}</div>
+                                </div>
+                            `;
+                        }
+                    },
+                    {
+                        data: 'status',
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            if (data === 'aktif') {
+                                return `<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10.5px; padding: 4px 8px; border-radius: 8px; font-weight: 700;"><i class="bi bi-check-circle-fill me-1"></i>Aktif</span>`;
+                            } else if (data === 'tugas') {
+                                return `<span class="badge" style="background: rgba(2, 132, 199, 0.15); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3); font-size: 10.5px; padding: 4px 8px; border-radius: 8px; font-weight: 700;"><i class="bi bi-airplane-fill me-1"></i>Tugas (Bebas SAP)</span>`;
+                            } else if (data === 'expired') {
+                                return `<span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-size: 10.5px; padding: 4px 8px; border-radius: 8px; font-weight: 700;"><i class="bi bi-clock me-1"></i>Expired</span>`;
+                            } else {
+                                return `<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10.5px; padding: 4px 8px; border-radius: 8px; font-weight: 700;"><i class="bi bi-dash-circle me-1"></i>Belum Diatur</span>`;
+                            }
+                        }
+                    },
+                    {
+                        data: 'awalDinasFormatted',
+                        render: function(data, type, row) {
+                            if (!row.awalDinas || !row.akhirDinas) return `<span class="text-muted">-</span>`;
+                            const label = row.tipeRoster === 'TUGAS' ? 'Tugas' : 'Dinas';
+                            const color = row.tipeRoster === 'TUGAS' ? '#0284c7' : 'var(--text-main)';
+                            return `
+                                <div>
+                                    <div class="fw-bold" style="color: ${color};">${row.awalDinasFormatted} - ${row.akhirDinasFormatted}</div>
+                                    <div class="text-muted" style="font-size: 10.5px;">Periode ${label}</div>
+                                </div>
+                            `;
+                        }
+                    },
+                    {
+                        data: 'awalCutiFormatted',
+                        render: function(data, type, row) {
+                            if (row.tipeRoster === 'TUGAS') {
+                                return `<span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #059669; font-size: 10.5px;"><i class="bi bi-check-circle-fill me-1"></i>Bebas SAP</span>`;
+                            }
+                            if (!row.awalCuti || !row.akhirCuti) return `<span class="text-muted">-</span>`;
+                            return `
+                                <div>
+                                    <div class="fw-bold text-warning">${row.awalCutiFormatted} - ${row.akhirCutiFormatted}</div>
+                                    <div class="text-muted" style="font-size: 10.5px;">Periode Cuti</div>
+                                </div>
+                            `;
+                        }
+                    },
+                    {
+                        data: 'defaultPattern',
+                        className: 'text-center',
+                        render: function(data) {
+                            return `<span class="badge" style="background: rgba(100, 116, 139, 0.1); color: var(--text-muted); font-size: 11px;">${data}</span>`;
+                        }
+                    },
+                    {
+                        data: null,
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            const btnEditLabel = row.rosterId ? 'Edit Roster' : 'Atur Roster';
+                            const btnEditClass = row.rosterId ? 'btn-outline-info' : 'btn-primary text-white';
+                            return `
+                                <div class="d-flex justify-content-center gap-1.5">
+                                    <button type="button" class="btn btn-sm ${btnEditClass} btn-action-roster btn-open-set-modal" 
+                                            data-nik="${escapeHtml(row.nik)}" 
+                                            data-nama="${escapeHtml(row.nama)}" 
+                                            data-perusahaan="${escapeHtml(row.perusahaan)}" 
+                                            data-dept="${escapeHtml(row.departemen)}" 
+                                            data-roster-id="${row.rosterId || ''}" 
+                                            data-tipe="${row.tipeRoster || 'REGULER'}" 
+                                            data-awal-dinas="${row.awalDinas || ''}" 
+                                            data-akhir-dinas="${row.akhirDinas || ''}" 
+                                            data-awal-cuti="${row.awalCuti || ''}" 
+                                            data-akhir-cuti="${row.akhirCuti || ''}" 
+                                            data-keterangan="${escapeHtml(row.keterangan || '')}" 
+                                            data-onsite="${row.defaultOnsite}" 
+                                            data-offsite="${row.defaultOffsite}">
+                                        <i class="bi bi-pencil-square"></i> ${btnEditLabel}
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary btn-action-roster btn-open-history-modal" 
+                                            data-nik="${escapeHtml(row.nik)}" 
+                                            data-nama="${escapeHtml(row.nama)}" 
+                                            data-perusahaan="${escapeHtml(row.perusahaan)}" 
+                                            data-dept="${escapeHtml(row.departemen)}" 
+                                            title="Lihat Riwayat Roster">
+                                        <i class="bi bi-clock-history"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }
+                ],
+                language: {
+                    search: "Filter:",
+                    lengthMenu: "Tampil _MENU_ data",
+                    info: "Menampilkan _START_ - _END_ dari _TOTAL_ karyawan",
+                    infoEmpty: "Data tidak tersedia",
+                    infoFiltered: "(difilter dari _MAX_ total data)",
+                    zeroRecords: "Tidak ada data karyawan yang cocok",
+                    paginate: {
+                        first: "«",
+                        last: "»",
+                        next: "›",
+                        previous: "‹"
+                    }
+                }
+            });
+
+            function escapeHtml(text) {
+                if (!text) return '';
+                return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+            }
+
+            // Filter Change Handlers
+            $('#filterPerusahaan').on('change', function() {
+                currentFilterPerusahaan = $(this).val();
+                
+                // Dynamic Department reload
+                $.ajax({
+                    url: `/Roster/GetDepartmentsByCompany?perusahaanId=${encodeURIComponent(currentFilterPerusahaan || '')}`,
+                    type: 'GET',
+                    success: function(depts) {
+                        const deptSelect = $('#filterDepartemen');
+                        deptSelect.empty();
+                        deptSelect.append('<option value="">Semua Departemen</option>');
+                        if (depts && depts.length > 0) {
+                            depts.forEach(function(d) {
+                                deptSelect.append(`<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`);
+                            });
+                        }
+                        currentFilterDepartemen = '';
+                        table.ajax.reload();
+                    }
+                });
+            });
+
+            $('#filterDepartemen, #filterStatus').on('change', function() {
+                currentFilterDepartemen = $('#filterDepartemen').val();
+                currentFilterStatus = $('#filterStatus').val();
+                table.ajax.reload();
+            });
+
+            $('#btnApplySearch').on('click', function() {
+                currentSearch = $('#filterSearch').val();
+                table.ajax.reload();
+            });
+
+            // Debounced realtime search for Karyawan (Name & NIK)
+            let searchTimeout = null;
+            $('#filterSearch').on('input', function() {
+                clearTimeout(searchTimeout);
+                const val = $(this).val();
+                searchTimeout = setTimeout(function() {
+                    currentSearch = val;
+                    table.ajax.reload();
+                }, 350);
+            });
+
+            $('#filterSearch').on('keypress', function(e) {
+                if (e.which === 13) {
+                    clearTimeout(searchTimeout);
+                    currentSearch = $(this).val();
+                    table.ajax.reload();
+                }
+            });
+
+            // Export Excel
+            $('#btnExportExcel').on('click', function() {
+                const params = new URLSearchParams({
+                    perusahaanId: currentFilterPerusahaan || '',
+                    departemen: currentFilterDepartemen || '',
+                    status: currentFilterStatus || '',
+                    search: currentSearch || ''
+                });
+                window.location.href = `/Roster/ExportExcel?${params.toString()}`;
+            });
+
+            // Helper calculation for duration
+            function updateDurationPreview() {
+                const awalDinas = $('#inputAwalDinas').val();
+                const akhirDinas = $('#inputAkhirDinas').val();
+                const awalCuti = $('#inputAwalCuti').val();
+                const akhirCuti = $('#inputAkhirCuti').val();
+
+                if (awalDinas && akhirDinas && awalCuti && akhirCuti) {
+                    const d1 = new Date(awalDinas);
+                    const d2 = new Date(akhirDinas);
+                    const c1 = new Date(awalCuti);
+                    const c2 = new Date(akhirCuti);
+
+                    const daysDinas = Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+                    const daysCuti = Math.round((c2 - c1) / (1000 * 60 * 60 * 24)) + 1;
+
+                    if (daysDinas > 0 && daysCuti > 0) {
+                        $('#rosterDurationBadge').html(`<i class="bi bi-calculator me-1"></i> Durasi: <strong>${daysDinas} Hari Dinas (Onsite)</strong> &amp; <strong>${daysCuti} Hari Cuti (Offsite)</strong>`);
+                        return;
+                    }
+                }
+                $('#rosterDurationBadge').text('Durasi: - Hari Dinas (Onsite) & - Hari Cuti (Offsite)');
+            }
+
+            $('#inputAwalDinas, #inputAkhirDinas, #inputAwalCuti, #inputAkhirCuti').on('change', updateDurationPreview);
+
+            // Open Set/Edit Roster Modal
+            $(document).on('click', '.btn-open-set-modal', function() {
+                const nik = $(this).data('nik');
+                const nama = $(this).data('nama');
+                const perusahaan = $(this).data('perusahaan');
+                const dept = $(this).data('dept');
+                const rosterId = $(this).data('roster-id') || '';
+                const tipe = $(this).data('tipe') || 'REGULER';
+                const awalDinas = $(this).data('awal-dinas') || '';
+                const akhirDinas = $(this).data('akhir-dinas') || '';
+                const awalCuti = $(this).data('awal-cuti') || '';
+                const akhirCuti = $(this).data('akhir-cuti') || '';
+                const keterangan = $(this).data('keterangan') || '';
+                const defaultOnsite = parseInt($(this).data('onsite')) || 42;
+                const defaultOffsite = parseInt($(this).data('offsite')) || 14;
+
+                $('#modalEmployeeName').text(nama);
+                $('#modalEmployeeSub').text(`NIK: ${nik} | Perusahaan: ${perusahaan} | Dept: ${dept}`);
+                $('#formEmployeeNik').val(nik);
+                $('#formRosterId').val(rosterId);
+                $('#modalAlert').addClass('d-none').text('');
+
+                if (tipe === 'TUGAS') {
+                    $('#btnTabTugas').trigger('click');
+                    $('#inputAwalTugas').val(awalDinas || formatDate(new Date()));
+                    $('#inputAkhirTugas').val(akhirDinas || formatDate(addDays(new Date(), 30)));
+                    $('#inputKeteranganTugas').val(keterangan);
+                } else {
+                    $('#btnTabReguler').trigger('click');
+                    
+                    if (awalDinas && akhirDinas && awalCuti && akhirCuti) {
+                        $('#inputAwalDinas').val(awalDinas);
+                        $('#inputAkhirDinas').val(akhirDinas);
+                        $('#inputAwalCuti').val(awalCuti);
+                        $('#inputAkhirCuti').val(akhirCuti);
+                    } else {
+                        // Prefill default cycle
+                        const today = new Date();
+                        const endDinas = addDays(today, defaultOnsite - 1);
+                        const startCuti = addDays(endDinas, 1);
+                        const endCuti = addDays(startCuti, defaultOffsite - 1);
+
+                        $('#inputAwalDinas').val(formatDate(today));
+                        $('#inputAkhirDinas').val(formatDate(endDinas));
+                        $('#inputAwalCuti').val(formatDate(startCuti));
+                        $('#inputAkhirCuti').val(formatDate(endCuti));
+                    }
+                    updateDurationPreview();
+                }
+
+                const modal = new bootstrap.Modal(document.getElementById('modalSetRoster'));
+                modal.show();
+            });
+
+            function formatDate(d) {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            function addDays(date, days) {
+                const result = new Date(date);
+                result.setDate(result.getDate() + days);
+                return result;
+            }
+
+            // Tab Switchers in Modal
+            $('#btnTabReguler').on('click', function() {
+                $(this).addClass('active');
+                $('#btnTabTugas').removeClass('active');
+                $('#secReguler').show();
+                $('#secTugas').hide();
+                $('#formTipeRoster').val('REGULER');
+            });
+
+            $('#btnTabTugas').on('click', function() {
+                $(this).addClass('active');
+                $('#btnTabReguler').removeClass('active');
+                $('#secTugas').show();
+                $('#secReguler').hide();
+                $('#formTipeRoster').val('TUGAS');
+            });
+
+            // Save Admin Roster
+            $('#btnSaveAdminRoster').on('click', function() {
+                const alertContainer = $('#modalAlert');
+                alertContainer.addClass('d-none').text('');
+
+                const nik = $('#formEmployeeNik').val();
+                const rosterIdVal = $('#formRosterId').val();
+                const rosterId = rosterIdVal ? parseInt(rosterIdVal) : null;
+                const tipe = $('#formTipeRoster').val() || 'REGULER';
+
+                let reqData = {
+                    id: rosterId,
+                    nik: nik,
+                    tipeRoster: tipe
+                };
+
+                if (tipe === 'TUGAS') {
+                    const awalTugas = $('#inputAwalTugas').val();
+                    const akhirTugas = $('#inputAkhirTugas').val();
+                    const keterangan = $('#inputKeteranganTugas').val();
+
+                    if (!awalTugas || !akhirTugas) {
+                        alertContainer.removeClass('d-none').text('Tanggal mulai dan selesai tugas wajib diisi!');
+                        return;
+                    }
+
+                    if (new Date(awalTugas) > new Date(akhirTugas)) {
+                        alertContainer.removeClass('d-none').text('Tanggal mulai tugas tidak boleh melebihi selesai tugas.');
+                        return;
+                    }
+
+                    reqData.awalDinas = awalTugas;
+                    reqData.akhirDinas = akhirTugas;
+                    reqData.keterangan = keterangan;
+                } else {
+                    const awalDinas = $('#inputAwalDinas').val();
+                    const akhirDinas = $('#inputAkhirDinas').val();
+                    const awalCuti = $('#inputAwalCuti').val();
+                    const akhirCuti = $('#inputAkhirCuti').val();
+
+                    if (!awalDinas || !akhirDinas || !awalCuti || !akhirCuti) {
+                        alertContainer.removeClass('d-none').text('Semua tanggal dinas dan cuti wajib diisi!');
+                        return;
+                    }
+
+                    if (new Date(awalDinas) > new Date(akhirDinas)) {
+                        alertContainer.removeClass('d-none').text('Tanggal mulai dinas tidak boleh melebihi akhir dinas.');
+                        return;
+                    }
+
+                    if (new Date(akhirDinas) >= new Date(awalCuti)) {
+                        alertContainer.removeClass('d-none').text('Tanggal akhir dinas harus sebelum mulai cuti.');
+                        return;
+                    }
+
+                    if (new Date(awalCuti) > new Date(akhirCuti)) {
+                        alertContainer.removeClass('d-none').text('Tanggal mulai cuti tidak boleh melebihi akhir cuti.');
+                        return;
+                    }
+
+                    reqData.awalDinas = awalDinas;
+                    reqData.akhirDinas = akhirDinas;
+                    reqData.awalCuti = awalCuti;
+                    reqData.akhirCuti = akhirCuti;
+                }
+
+                const btn = $(this);
+                const originalText = btn.html();
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...');
+
+                $.ajax({
+                    url: '/Roster/SaveEmployeeRoster',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(reqData),
+                    success: function(res) {
+                        btn.prop('disabled', false).html(originalText);
+                        const modalEl = document.getElementById('modalSetRoster');
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                        table.ajax.reload(null, false);
+                    },
+                    error: function(xhr) {
+                        btn.prop('disabled', false).html(originalText);
+                        const msg = xhr.responseJSON?.message || xhr.responseText || 'Gagal menyimpan roster karyawan.';
+                        alertContainer.removeClass('d-none').text(msg);
+                    }
+                });
+            });
+
+            // Open History Modal
+            $(document).on('click', '.btn-open-history-modal', function() {
+                const nik = $(this).data('nik');
+                const nama = $(this).data('nama');
+                const perusahaan = $(this).data('perusahaan');
+                const dept = $(this).data('dept');
+
+                $('#historyEmployeeName').text(`Riwayat Roster: ${nama}`);
+                $('#historyEmployeeSub').text(`NIK: ${nik} | Perusahaan: ${perusahaan} | Dept: ${dept}`);
+
+                $('#historyLoading').removeClass('d-none');
+                $('#historyEmpty').addClass('d-none');
+                $('#historyContent').addClass('d-none');
+                $('#historyTableBody').empty();
+
+                const modal = new bootstrap.Modal(document.getElementById('modalHistoryRoster'));
+                modal.show();
+
+                $.ajax({
+                    url: `/Roster/GetEmployeeRosterDetail?nik=${encodeURIComponent(nik)}`,
+                    type: 'GET',
+                    success: function(res) {
+                        $('#historyLoading').addClass('d-none');
+
+                        if (!res.history || res.history.length === 0) {
+                            $('#historyEmpty').removeClass('d-none');
+                            return;
+                        }
+
+                        $('#historyContent').removeClass('d-none');
+                        const tbody = $('#historyTableBody');
+                        tbody.empty();
+
+                        res.history.forEach(function(h) {
+                            let tr = '';
+                            const k = res.karyawan || {};
+                            const kName = k.namaLengkap || nama;
+                            const kPerusahaan = k.namaPerusahaan || perusahaan;
+                            const kDept = k.departemen || dept;
+                            const defaultOnsite = res.defaultOnsite || 42;
+                            const defaultOffsite = res.defaultOffsite || 14;
+
+                            if (h.tipeRoster === 'TUGAS') {
+                                tr = `
+                                    <tr>
+                                        <td>
+                                            <div class="badge mb-1" style="background: rgba(2, 132, 199, 0.15); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3); font-size: 9.5px; padding: 2px 6px; border-radius: 6px; font-weight: 700;">
+                                                <i class="bi bi-airplane-fill me-1"></i> Periode Tugas
+                                            </div>
+                                            <div class="fw-bold text-info">${h.awalDinasFormatted} - ${h.akhirDinasFormatted}</div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-success"><i class="bi bi-check-circle-fill me-1"></i> Bebas SAP</div>
+                                        </td>
+                                        <td>
+                                            <div class="text-muted" style="max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                ${escapeHtml(h.keterangan || '-')}
+                                            </div>
+                                        </td>
+                                        <td class="text-muted" style="font-size: 11px;">${h.createdAt}</td>
+                                        <td class="text-end">
+                                            <div class="d-flex justify-content-end gap-1">
+                                                <button type="button" class="btn btn-sm btn-outline-info btn-edit-history-item" 
+                                                        data-id="${h.id}" 
+                                                        data-nik="${escapeHtml(h.nik)}" 
+                                                        data-nama="${escapeHtml(kName)}" 
+                                                        data-perusahaan="${escapeHtml(kPerusahaan)}" 
+                                                        data-dept="${escapeHtml(kDept)}" 
+                                                        data-tipe="TUGAS" 
+                                                        data-awal-dinas="${h.awalDinasStr || ''}" 
+                                                        data-akhir-dinas="${h.akhirDinasStr || ''}" 
+                                                        data-keterangan="${escapeHtml(h.keterangan || '')}" 
+                                                        data-onsite="${defaultOnsite}" 
+                                                        data-offsite="${defaultOffsite}" 
+                                                        title="Edit Tugas" style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-history-item" data-id="${h.id}" data-nik="${h.nik}" data-tipe="TUGAS" title="Hapus Tugas" style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
+                                                    <i class="bi bi-trash3"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            } else {
+                                tr = `
+                                    <tr>
+                                        <td>
+                                            <div class="badge mb-1" style="background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 9.5px; padding: 2px 6px; border-radius: 6px; font-weight: 700;">
+                                                <i class="bi bi-briefcase-fill me-1"></i> Roster Reguler
+                                            </div>
+                                            <div class="fw-bold">${h.awalDinasFormatted} - ${h.akhirDinasFormatted}</div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-warning">${h.awalCutiFormatted} - ${h.akhirCutiFormatted}</div>
+                                        </td>
+                                        <td>
+                                            <div class="text-muted">-</div>
+                                        </td>
+                                        <td class="text-muted" style="font-size: 11px;">${h.createdAt}</td>
+                                        <td class="text-end">
+                                            <div class="d-flex justify-content-end gap-1">
+                                                <button type="button" class="btn btn-sm btn-outline-info btn-edit-history-item" 
+                                                        data-id="${h.id}" 
+                                                        data-nik="${escapeHtml(h.nik)}" 
+                                                        data-nama="${escapeHtml(kName)}" 
+                                                        data-perusahaan="${escapeHtml(kPerusahaan)}" 
+                                                        data-dept="${escapeHtml(kDept)}" 
+                                                        data-tipe="REGULER" 
+                                                        data-awal-dinas="${h.awalDinasStr || ''}" 
+                                                        data-akhir-dinas="${h.akhirDinasStr || ''}" 
+                                                        data-awal-cuti="${h.awalCutiStr || ''}" 
+                                                        data-akhir-cuti="${h.akhirCutiStr || ''}" 
+                                                        data-keterangan="" 
+                                                        data-onsite="${defaultOnsite}" 
+                                                        data-offsite="${defaultOffsite}" 
+                                                        title="Edit Roster" style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-history-item" data-id="${h.id}" data-nik="${h.nik}" data-tipe="REGULER" title="Hapus Roster" style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
+                                                    <i class="bi bi-trash3"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }
+                            tbody.append(tr);
+                        });
+                    },
+                    error: function(xhr) {
+                        $('#historyLoading').addClass('d-none');
+                        alert('Gagal memuat riwayat roster: ' + (xhr.responseJSON?.message || xhr.responseText || 'Unknown error'));
+                    }
+                });
+            });
+
+            // Edit item directly from history modal
+            $(document).on('click', '.btn-edit-history-item', function() {
+                const historyModalEl = document.getElementById('modalHistoryRoster');
+                const historyModalInstance = bootstrap.Modal.getInstance(historyModalEl);
+                if (historyModalInstance) historyModalInstance.hide();
+
+                const nik = $(this).data('nik');
+                const nama = $(this).data('nama');
+                const perusahaan = $(this).data('perusahaan');
+                const dept = $(this).data('dept');
+                const rosterId = $(this).data('id');
+                const tipe = $(this).data('tipe') || 'REGULER';
+                const awalDinas = $(this).data('awal-dinas') || '';
+                const akhirDinas = $(this).data('akhir-dinas') || '';
+                const awalCuti = $(this).data('awal-cuti') || '';
+                const akhirCuti = $(this).data('akhir-cuti') || '';
+                const keterangan = $(this).data('keterangan') || '';
+
+                $('#modalEmployeeName').text(nama);
+                $('#modalEmployeeSub').text(`NIK: ${nik} | Perusahaan: ${perusahaan} | Dept: ${dept}`);
+                $('#formEmployeeNik').val(nik);
+                $('#formRosterId').val(rosterId);
+                $('#modalAlert').addClass('d-none').text('');
+
+                if (tipe === 'TUGAS') {
+                    $('#btnTabTugas').trigger('click');
+                    $('#inputAwalTugas').val(awalDinas);
+                    $('#inputAkhirTugas').val(akhirDinas);
+                    $('#inputKeteranganTugas').val(keterangan);
+                } else {
+                    $('#btnTabReguler').trigger('click');
+                    $('#inputAwalDinas').val(awalDinas);
+                    $('#inputAkhirDinas').val(akhirDinas);
+                    $('#inputAwalCuti').val(awalCuti);
+                    $('#inputAkhirCuti').val(akhirCuti);
+                    updateDurationPreview();
+                }
+
+                setTimeout(function() {
+                    const setModal = new bootstrap.Modal(document.getElementById('modalSetRoster'));
+                    setModal.show();
+                }, 300);
+            });
+
+            // Delete item from history modal
+            $(document).on('click', '.btn-delete-history-item', function() {
+                const id = $(this).data('id');
+                const nik = $(this).data('nik');
+                const tipe = $(this).data('tipe');
+                const label = tipe === 'TUGAS' ? 'Periode Tugas' : 'Roster';
+
+                if (confirm(`Apakah Anda yakin ingin menghapus ${label} ini?`)) {
+                    const btn = $(this);
+                    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+
+                    $.ajax({
+                        url: `/Roster/DeleteEmployeeRoster?id=${id}&nik=${encodeURIComponent(nik)}`,
+                        type: 'POST',
+                        success: function(res) {
+                            btn.closest('tr').fadeOut(300, function() {
+                                $(this).remove();
+                                if ($('#historyTableBody tr').length === 0) {
+                                    $('#historyContent').addClass('d-none');
+                                    $('#historyEmpty').removeClass('d-none');
+                                }
+                            });
+                            table.ajax.reload(null, false);
+                        },
+                        error: function(xhr) {
+                            btn.prop('disabled', false).html('<i class="bi bi-trash3"></i>');
+                            alert('Gagal menghapus: ' + (xhr.responseJSON?.message || xhr.responseText || 'Unknown error'));
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

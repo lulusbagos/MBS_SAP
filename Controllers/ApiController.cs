@@ -843,21 +843,31 @@ ORDER BY nama_perusahaan";
                     return BadRequest("Tanggal mulai tugas tidak boleh lebih besar dari akhir tugas.");
                 }
 
-                var latestRosterTugas = await _context.Rosters
-                    .Where(r => r.Nik == userNik)
-                    .OrderByDescending(r => r.AkhirCuti)
-                    .FirstOrDefaultAsync();
-
-                if (latestRosterTugas != null && latestRosterTugas.AkhirCuti >= DateTime.Today)
+                Roster? rosterTugasToUpdate = null;
+                if (req.Id.HasValue && req.Id.Value > 0)
                 {
-                    latestRosterTugas.AwalDinas = awalTugas;
-                    latestRosterTugas.AkhirDinas = akhirTugas;
-                    latestRosterTugas.AwalCuti = akhirTugas;
-                    latestRosterTugas.AkhirCuti = akhirTugas;
-                    latestRosterTugas.TipeRoster = "TUGAS";
-                    latestRosterTugas.Keterangan = req.Keterangan;
-                    latestRosterTugas.UpdatedAt = DateTime.Now;
-                    _context.Rosters.Update(latestRosterTugas);
+                    rosterTugasToUpdate = await _context.Rosters
+                        .FirstOrDefaultAsync(r => r.Id == req.Id.Value && r.Nik == userNik);
+                }
+
+                if (rosterTugasToUpdate == null)
+                {
+                    rosterTugasToUpdate = await _context.Rosters
+                        .Where(r => r.Nik == userNik && r.AkhirCuti >= DateTime.Today)
+                        .OrderByDescending(r => r.AkhirCuti)
+                        .FirstOrDefaultAsync();
+                }
+
+                if (rosterTugasToUpdate != null)
+                {
+                    rosterTugasToUpdate.AwalDinas = awalTugas;
+                    rosterTugasToUpdate.AkhirDinas = akhirTugas;
+                    rosterTugasToUpdate.AwalCuti = akhirTugas;
+                    rosterTugasToUpdate.AkhirCuti = akhirTugas;
+                    rosterTugasToUpdate.TipeRoster = "TUGAS";
+                    rosterTugasToUpdate.Keterangan = req.Keterangan;
+                    rosterTugasToUpdate.UpdatedAt = DateTime.Now;
+                    _context.Rosters.Update(rosterTugasToUpdate);
                 }
                 else
                 {
@@ -916,24 +926,31 @@ ORDER BY nama_perusahaan";
                 return BadRequest("Durasi cuti (offsite) harus antara 1 sampai 180 hari.");
             }
 
-            // Cari roster terbaru dari user
-            var latestRoster = await _context.Rosters
-                .Where(r => r.Nik == userNik)
-                .OrderByDescending(r => r.AkhirCuti)
-                .FirstOrDefaultAsync();
-
-            // Jika roster terakhir ada dan belum expired (atau kita mau update roster yang sedang berjalan),
-            // kita update roster tersebut. Jika tidak, buat baru.
-            if (latestRoster != null && latestRoster.AkhirCuti >= DateTime.Today)
+            Roster? rosterRegulerToUpdate = null;
+            if (req.Id.HasValue && req.Id.Value > 0)
             {
-                latestRoster.AwalDinas = awalDinas;
-                latestRoster.AkhirDinas = akhirDinas;
-                latestRoster.AwalCuti = awalCuti;
-                latestRoster.AkhirCuti = akhirCuti;
-                latestRoster.TipeRoster = "REGULER";
-                latestRoster.Keterangan = null;
-                latestRoster.UpdatedAt = DateTime.Now;
-                _context.Rosters.Update(latestRoster);
+                rosterRegulerToUpdate = await _context.Rosters
+                    .FirstOrDefaultAsync(r => r.Id == req.Id.Value && r.Nik == userNik);
+            }
+
+            if (rosterRegulerToUpdate == null)
+            {
+                rosterRegulerToUpdate = await _context.Rosters
+                    .Where(r => r.Nik == userNik && r.AkhirCuti >= DateTime.Today)
+                    .OrderByDescending(r => r.AkhirCuti)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (rosterRegulerToUpdate != null)
+            {
+                rosterRegulerToUpdate.AwalDinas = awalDinas;
+                rosterRegulerToUpdate.AkhirDinas = akhirDinas;
+                rosterRegulerToUpdate.AwalCuti = awalCuti;
+                rosterRegulerToUpdate.AkhirCuti = akhirCuti;
+                rosterRegulerToUpdate.TipeRoster = "REGULER";
+                rosterRegulerToUpdate.Keterangan = null;
+                rosterRegulerToUpdate.UpdatedAt = DateTime.Now;
+                _context.Rosters.Update(rosterRegulerToUpdate);
             }
             else
             {
@@ -958,7 +975,7 @@ ORDER BY nama_perusahaan";
         }
 
         [HttpPost]
-        public async Task<IActionResult> DeleteRoster()
+        public async Task<IActionResult> DeleteRoster([FromQuery] int? id = null)
         {
             var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrWhiteSpace(userNik))
@@ -966,28 +983,38 @@ ORDER BY nama_perusahaan";
                 return Unauthorized("NIK tidak ditemukan.");
             }
 
-            var latestRoster = await _context.Rosters
-                .Where(r => r.Nik == userNik)
-                .OrderByDescending(r => r.AkhirCuti)
-                .FirstOrDefaultAsync();
-
-            if (latestRoster == null)
+            Roster? rosterToDelete = null;
+            if (id.HasValue && id.Value > 0)
             {
-                return NotFound("Roster tidak ditemukan.");
+                rosterToDelete = await _context.Rosters
+                    .FirstOrDefaultAsync(r => r.Id == id.Value && r.Nik == userNik);
+            }
+            else
+            {
+                rosterToDelete = await _context.Rosters
+                    .Where(r => r.Nik == userNik)
+                    .OrderByDescending(r => r.AkhirCuti)
+                    .FirstOrDefaultAsync();
             }
 
-            _context.Rosters.Remove(latestRoster);
+            if (rosterToDelete == null)
+            {
+                return NotFound("Data Roster atau Periode Tugas tidak ditemukan.");
+            }
+
+            string tipeLabel = rosterToDelete.TipeRoster == "TUGAS" ? "Periode Tugas" : "Roster";
+            _context.Rosters.Remove(rosterToDelete);
             await _context.SaveChangesAsync();
             _cache.Remove($"UserDashboardStats_{userNik}");
 
-            return Ok(new { message = "Roster berhasil dihapus." });
+            return Ok(new { message = $"{tipeLabel} berhasil dihapus." });
         }
     }
 
     public class RosterSaveRequest
     {
+        public int? Id { get; set; }
         public string? TipeRoster { get; set; } = "REGULER"; // "REGULER" or "TUGAS"
-
         public string? Keterangan { get; set; }
         public string AwalDinas { get; set; } = string.Empty;
         public string AkhirDinas { get; set; } = string.Empty;

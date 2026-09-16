@@ -211,6 +211,47 @@
 
     </div>
 
+    @{
+        var isAdminUser = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase);
+        var jobTitle = User.FindFirst("JobTitle")?.Value ?? "";
+        var department = User.FindFirst("Department")?.Value ?? "";
+        var isSafetyAdmin = isAdminUser || 
+                            jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase) || 
+                            jobTitle.Contains("HSE", StringComparison.OrdinalIgnoreCase) || 
+                            jobTitle.Contains("OHS", StringComparison.OrdinalIgnoreCase) || 
+                            jobTitle.Contains("SHE", StringComparison.OrdinalIgnoreCase) || 
+                            department.Contains("Safety", StringComparison.OrdinalIgnoreCase) ||
+                            department.Contains("HSE", StringComparison.OrdinalIgnoreCase) ||
+                            department.Contains("OHS", StringComparison.OrdinalIgnoreCase) ||
+                            department.Contains("SHE", StringComparison.OrdinalIgnoreCase);
+    }
+    @if (isSafetyAdmin)
+    {
+        <h6 style="font-weight: 800; color: var(--text-muted); font-size: 12px; text-transform: uppercase; margin-bottom: 12px; padding-left: 8px;">Menu Khusus Safety / Administrator</h6>
+        <div class="card-sap p-0 mb-5 overflow-hidden border-0 shadow-sm" style="border-radius: 20px;">
+            <a asp-controller="Roster" asp-action="Index" class="d-flex align-items-center p-3 text-decoration-none" style="border-bottom: 1px solid var(--border-color); color: inherit;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: rgba(56, 189, 248, 0.15); color: #0284c7;">
+                    <i class="bi bi-calendar2-week-fill"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">Manajemen Roster SAP</div>
+                    <div class="text-muted" style="font-size: 11px;">Kelola roster kerja dan penugasan karyawan</div>
+                </div>
+                <i class="bi bi-chevron-right text-muted"></i>
+            </a>
+            <a asp-controller="SapTarget" asp-action="Index" class="d-flex align-items-center p-3 text-decoration-none" style="color: inherit;">
+                <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 36px; height: 36px; background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                    <i class="bi bi-sliders"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div style="font-weight: 600; font-size: 14px; color: var(--text-main);">Override Target SAP</div>
+                    <div class="text-muted" style="font-size: 11px;">Atur level jabatan dan target manual per karyawan</div>
+                </div>
+                <i class="bi bi-chevron-right text-muted"></i>
+            </a>
+        </div>
+    }
+
 </div>
 
 <!-- ── Reset Password Confirmation Overlay (di luar main div agar tidak tertutup) ── -->

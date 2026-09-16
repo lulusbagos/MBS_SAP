@@ -728,6 +728,17 @@
                             </button>
                         </div>
                         <input type="hidden" id="tipeRosterSelected" name="tipeRosterSelected" value="@currentTipe" />
+                        <input type="hidden" id="rosterEditId" name="rosterEditId" value="@(ViewData["RosterId"] ?? "")" />
+
+                        <!-- Edit Mode Notice -->
+                        <div id="rosterEditModeNotice" class="d-none alert alert-warning d-flex justify-content-between align-items-center py-2 px-3 mb-3" style="border-radius: 12px; font-size: 11.5px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b;">
+                            <div class="d-flex align-items-center gap-1.5">
+                                <i class="bi bi-pencil-square"></i> <span id="rosterEditNoticeText">Sedang Mengedit Tugas</span>
+                            </div>
+                            <button type="button" class="btn btn-sm p-0 text-decoration-none fw-bold" id="btnCancelEditMode" style="font-size: 11px; color: #f59e0b;">
+                                <i class="bi bi-x-circle me-1"></i> Batal Edit
+                            </button>
+                        </div>
 
                         <!-- SECTION 1: ROSTER REGULER -->
                         <div id="sectionRosterReguler" style="@(isTugasActive ? "display: none;" : "")">
@@ -743,40 +754,10 @@
                             <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 16px; padding: 14px 16px; margin-bottom: 20px; display: flex; gap: 12px; align-items: start;">
                                 <i class="bi bi-calendar-check-fill" style="color: #059669; font-size: 18px; line-height: 1;"></i>
                                 <div>
-                                    <h6 style="color: #059669; font-weight: 800; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">PENGATURAN ROSTER FLEKSIBEL</h6>
+                                    <h6 style="color: #059669; font-weight: 800; font-size: 12px; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">PENGATURAN ROSTER</h6>
                                     <p style="color: var(--text-main); font-size: 11px; margin: 0; line-height: 1.5; opacity: 0.9;">
-                                        Sistem roster sekarang <strong>sepenuhnya fleksibel</strong> (mulai dari <strong>2 Minggu Dinas / 2 Minggu Cuti (2:2)</strong>, 2:1, 4:2, 6:2, 8:2, hingga 10:2).
+                                        Isi tanggal Mulai &amp; Akhir Dinas serta Cuti secara manual sesuai jadwal aktual dinas Anda di site.
                                     </p>
-                                    <p style="color: var(--text-muted); font-size: 10.5px; margin: 4px 0 0 0; line-height: 1.5; opacity: 0.85;">
-                                        Gunakan tombol template cepat di bawah atau isi tanggal Mulai &amp; Akhir secara manual sesuai jadwal aktual dinas Anda di site.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Template Pola Roster Cepat -->
-                            <div class="mb-3">
-                                <label class="roster-label mb-1.5" style="color: var(--text-main); font-weight: 700; font-size: 11px;">
-                                    <i class="bi bi-sliders me-1 text-primary"></i> Template Pola Roster (Pilih Cepat):
-                                </label>
-                                <div class="d-flex flex-wrap gap-1.5" id="rosterPresetContainer">
-                                    <button type="button" class="btn btn-sm btn-roster-preset" data-onsite="14" data-offsite="14" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); color: #047857; font-size: 10.5px; font-weight: 700; border-radius: 8px; padding: 4px 8px;">
-                                        ⚡ 2:2 (14 Hari : 14 Hari)
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-roster-preset" data-onsite="14" data-offsite="7" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.3); color: #0284c7; font-size: 10.5px; font-weight: 700; border-radius: 8px; padding: 4px 8px;">
-                                        2:1 (14 Hari : 7 Hari)
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-roster-preset" data-onsite="28" data-offsite="14" style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); color: #7c3aed; font-size: 10.5px; font-weight: 700; border-radius: 8px; padding: 4px 8px;">
-                                        4:2 (28 Hari : 14 Hari)
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-roster-preset" data-onsite="42" data-offsite="14" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #d97706; font-size: 10.5px; font-weight: 700; border-radius: 8px; padding: 4px 8px;">
-                                        6:2 (42 Hari : 14 Hari)
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-roster-preset" data-onsite="56" data-offsite="14" style="background: rgba(100, 116, 139, 0.1); border: 1px solid rgba(100, 116, 139, 0.3); color: #475569; font-size: 10.5px; font-weight: 700; border-radius: 8px; padding: 4px 8px;">
-                                        8:2 (56 Hari : 14 Hari)
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-roster-preset" data-onsite="70" data-offsite="14" style="background: rgba(100, 116, 139, 0.1); border: 1px solid rgba(100, 116, 139, 0.3); color: #475569; font-size: 10.5px; font-weight: 700; border-radius: 8px; padding: 4px 8px;">
-                                        10:2 (70 Hari : 14 Hari)
-                                    </button>
                                 </div>
                             </div>
 
@@ -884,14 +865,15 @@
                             }
                             else
                             {
-                                <div style="max-height: 160px; overflow-y: auto; padding-right: 4px;">
+                                <div style="max-height: 180px; overflow-y: auto; padding-right: 4px;">
                                     <div class="table-responsive" style="overflow-x: hidden;">
                                         <table class="table table-borderless" style="font-size: 11px; margin-bottom: 0; color: var(--text-main);">
                                             <thead>
                                                 <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-weight: 700;">
                                                     <th class="ps-0" style="padding-bottom: 6px;">Tipe & Periode</th>
                                                     <th style="padding-bottom: 6px;">Detail / Cuti</th>
-                                                    <th class="text-end pe-0" style="padding-bottom: 6px;">Diatur Pada</th>
+                                                    <th style="padding-bottom: 6px;">Diatur Pada</th>
+                                                    <th class="text-end pe-0" style="padding-bottom: 6px; min-width: 68px;">Aksi</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -915,8 +897,31 @@
                                                                     @(string.IsNullOrEmpty(h.Keterangan) ? "Target SAP = 0" : h.Keterangan)
                                                                 </div>
                                                             </td>
-                                                            <td class="text-end pe-0 py-2 text-muted" style="font-size: 10px; vertical-align: middle;">
+                                                            <td class="py-2 text-muted" style="font-size: 10px; vertical-align: middle;">
                                                                 @h.CreatedAt.ToString("dd/MM/yy HH:mm")
+                                                            </td>
+                                                            <td class="text-end pe-0 py-2" style="vertical-align: middle;">
+                                                                <div class="d-flex justify-content-end gap-1">
+                                                                    <button type="button" class="btn btn-sm btn-outline-info btn-edit-roster" 
+                                                                            data-id="@h.Id" 
+                                                                            data-tipe="@h.TipeRoster" 
+                                                                            data-awal-dinas="@h.AwalDinas.ToString("yyyy-MM-dd")" 
+                                                                            data-akhir-dinas="@h.AkhirDinas.ToString("yyyy-MM-dd")" 
+                                                                            data-awal-cuti="@h.AwalCuti.ToString("yyyy-MM-dd")" 
+                                                                            data-akhir-cuti="@h.AkhirCuti.ToString("yyyy-MM-dd")" 
+                                                                            data-keterangan="@(h.Keterangan ?? "")" 
+                                                                            title="Edit Tugas" 
+                                                                            style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
+                                                                        <i class="bi bi-pencil-square"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-outline-danger btn-delete-roster-item" 
+                                                                            data-id="@h.Id" 
+                                                                            data-tipe="@h.TipeRoster" 
+                                                                            title="Hapus Tugas" 
+                                                                            style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
+                                                                        <i class="bi bi-trash3"></i>
+                                                                    </button>
+                                                                </div>
                                                             </td>
                                                         }
                                                         else
@@ -934,8 +939,31 @@
                                                                 <div class="fw-bold" style="color: var(--color-orange);">@h.AwalCuti.ToString("dd MMM") - @h.AkhirCuti.ToString("dd MMM yy")</div>
                                                                 <div class="text-muted" style="font-size: 10px;">@((h.AkhirCuti - h.AwalCuti).Days + 1) hari cuti</div>
                                                             </td>
-                                                            <td class="text-end pe-0 py-2 text-muted" style="font-size: 10px; vertical-align: middle;">
+                                                            <td class="py-2 text-muted" style="font-size: 10px; vertical-align: middle;">
                                                                 @h.CreatedAt.ToString("dd/MM/yy HH:mm")
+                                                            </td>
+                                                            <td class="text-end pe-0 py-2" style="vertical-align: middle;">
+                                                                <div class="d-flex justify-content-end gap-1">
+                                                                    <button type="button" class="btn btn-sm btn-outline-info btn-edit-roster" 
+                                                                            data-id="@h.Id" 
+                                                                            data-tipe="@h.TipeRoster" 
+                                                                            data-awal-dinas="@h.AwalDinas.ToString("yyyy-MM-dd")" 
+                                                                            data-akhir-dinas="@h.AkhirDinas.ToString("yyyy-MM-dd")" 
+                                                                            data-awal-cuti="@h.AwalCuti.ToString("yyyy-MM-dd")" 
+                                                                            data-akhir-cuti="@h.AkhirCuti.ToString("yyyy-MM-dd")" 
+                                                                            data-keterangan="@(h.Keterangan ?? "")" 
+                                                                            title="Edit Roster" 
+                                                                            style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
+                                                                        <i class="bi bi-pencil-square"></i>
+                                                                    </button>
+                                                                    <button type="button" class="btn btn-sm btn-outline-danger btn-delete-roster-item" 
+                                                                            data-id="@h.Id" 
+                                                                            data-tipe="@h.TipeRoster" 
+                                                                            title="Hapus Roster" 
+                                                                            style="padding: 2px 7px; font-size: 11px; border-radius: 6px;">
+                                                                        <i class="bi bi-trash3"></i>
+                                                                    </button>
+                                                                </div>
                                                             </td>
                                                         }
                                                     </tr>
@@ -988,25 +1016,19 @@
                     <text>
                     setTimeout(function() {
                         // Roster wajib diset jika belum pernah diset sama sekali atau sudah kedaluwarsa.
-                        // Selalu tampilkan popup pada setiap load halaman untuk memaksa pengisian roster sampai berhasil diset.
-                        // Pengecekan dismiss date diabaikan agar popup terus keluar setiap kali user memuat ulang halaman.
-
                         var $incidentModal = $('#incidentPopupModal');
                         if ($incidentModal.length) {
                             var incidentId = $incidentModal.attr('data-incident-id');
                             var incidentShown = sessionStorage.getItem('incident_popup_shown');
                             
-                            // Jika pop up insiden akan muncul (belum pernah ditampilkan di session ini),
-                            // jangan tampilkan roster popup dulu. Tunggu sampai insiden modal di-hide.
                             if (incidentId && incidentShown !== incidentId) {
                                 $incidentModal.on('hidden.bs.modal', function() {
                                     showRosterModal();
                                 });
-                                return; // Keluar, jangan show roster modal sekarang
+                                return;
                             }
                         }
                         
-                        // Jika tidak ada pop up insiden, langsung tampilkan roster modal
                         showRosterModal();
                     }, 500);
 
@@ -1053,40 +1075,74 @@
                 
                 updateRosterStatusLabel();
 
-                // Quick preset button click handler (2:2, 2:1, 4:2, 6:2, 8:2, 10:2)
-                $('.btn-roster-preset').on('click', function() {
-                    const onsite = parseInt($(this).data('onsite')) || 14;
-                    const offsite = parseInt($(this).data('offsite')) || 14;
+                // Handler edit roster / tugas dari tabel riwayat
+                $(document).on('click', '.btn-edit-roster', function() {
+                    const id = $(this).data('id');
+                    const tipe = $(this).data('tipe') || 'REGULER';
+                    const awalDinas = $(this).data('awal-dinas');
+                    const akhirDinas = $(this).data('akhir-dinas');
+                    const awalCuti = $(this).data('awal-cuti');
+                    const akhirCuti = $(this).data('akhir-cuti');
+                    const keterangan = $(this).data('keterangan') || '';
 
-                    let startDateStr = $('#awalDinas').val();
-                    let startDate = startDateStr ? new Date(startDateStr) : new Date();
-                    if (isNaN(startDate.getTime())) {
-                        startDate = new Date();
+                    $('#rosterEditId').val(id);
+
+                    if (tipe === 'TUGAS') {
+                        $('#tabPeriodeTugas').trigger('click');
+                        $('#awalTugas').val(awalDinas);
+                        $('#akhirTugas').val(akhirDinas);
+                        $('#keteranganTugas').val(keterangan);
+                        $('#rosterEditNoticeText').html('<strong>Mode Edit Tugas:</strong> Mengedit Periode Penugasan (' + awalDinas + ' s/d ' + akhirDinas + ')');
+                    } else {
+                        $('#tabRosterReguler').trigger('click');
+                        $('#awalDinas').val(awalDinas);
+                        $('#akhirDinas').val(akhirDinas);
+                        $('#awalCuti').val(awalCuti);
+                        $('#akhirCuti').val(akhirCuti);
+                        updateRosterStatusLabel();
+                        $('#rosterEditNoticeText').html('<strong>Mode Edit Roster:</strong> Mengedit Roster Reguler (' + awalDinas + ' s/d ' + akhirCuti + ')');
                     }
 
-                    function formatDate(d) {
-                        const year = d.getFullYear();
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        return `${year}-${month}-${day}`;
+                    $('#rosterEditModeNotice').removeClass('d-none');
+                    $('#btnSaveRoster').text('Simpan Perubahan');
+                    $('.modal-body').animate({ scrollTop: 0 }, 200);
+                });
+
+                // Batal edit mode
+                $('#btnCancelEditMode').on('click', function() {
+                    $('#rosterEditId').val('');
+                    $('#rosterEditModeNotice').addClass('d-none');
+                    $('#btnSaveRoster').text('Simpan');
+                    $('#rosterFormAlert').addClass('d-none').text('');
+                });
+
+                // Handler hapus spesifik item roster / tugas dari tabel riwayat
+                $(document).on('click', '.btn-delete-roster-item', function() {
+                    const id = $(this).data('id');
+                    const tipe = $(this).data('tipe') || 'REGULER';
+                    const labelTipe = tipe === 'TUGAS' ? 'Periode Tugas' : 'Roster';
+
+                    if (confirm('Apakah Anda yakin ingin menghapus ' + labelTipe + ' ini?')) {
+                        const btn = $(this);
+                        const originalHtml = btn.html();
+                        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+
+                        $.ajax({
+                            url: '/Api/DeleteRoster?id=' + id,
+                            type: 'POST',
+                            success: function(response) {
+                                window.rosterSavedSuccess = true;
+                                localStorage.removeItem('roster_popup_dismissed_date');
+                                alert(response.message || (labelTipe + ' berhasil dihapus.'));
+                                window.location.href = '/Home/Index?openRoster=true';
+                            },
+                            error: function(xhr) {
+                                btn.prop('disabled', false).html(originalHtml);
+                                const errorMsg = xhr.responseJSON?.message || xhr.responseText || ('Gagal menghapus ' + labelTipe + '. Coba lagi.');
+                                alert(errorMsg);
+                            }
+                        });
                     }
-
-                    const awalDinasDate = new Date(startDate);
-                    const akhirDinasDate = new Date(startDate);
-                    akhirDinasDate.setDate(akhirDinasDate.getDate() + (onsite - 1));
-
-                    const awalCutiDate = new Date(akhirDinasDate);
-                    awalCutiDate.setDate(awalCutiDate.getDate() + 1);
-
-                    const akhirCutiDate = new Date(awalCutiDate);
-                    akhirCutiDate.setDate(akhirCutiDate.getDate() + (offsite - 1));
-
-                    $('#awalDinas').val(formatDate(awalDinasDate));
-                    $('#akhirDinas').val(formatDate(akhirDinasDate));
-                    $('#awalCuti').val(formatDate(awalCutiDate));
-                    $('#akhirCuti').val(formatDate(akhirCutiDate));
-
-                    updateRosterStatusLabel();
                 });
 
                 $('#btnDeleteRoster').on('click', function() {
@@ -1095,8 +1151,11 @@
                         const originalText = btn.html();
                         btn.prop('disabled', true).text('Menghapus...');
 
+                        const editId = $('#rosterEditId').val();
+                        const url = editId ? ('/Api/DeleteRoster?id=' + editId) : '/Api/DeleteRoster';
+
                         $.ajax({
-                            url: '/Api/DeleteRoster',
+                            url: url,
                             type: 'POST',
                             success: function(response) {
                                 window.rosterSavedSuccess = true;
@@ -1135,6 +1194,8 @@
                     alertContainer.addClass('d-none').text('');
 
                     const currentTipe = $('#tipeRosterSelected').val() || 'REGULER';
+                    const editIdVal = $('#rosterEditId').val();
+                    const editId = editIdVal ? parseInt(editIdVal) : null;
 
                     if (currentTipe === 'TUGAS') {
                         const awalTugasVal = $('#awalTugas').val();
@@ -1175,6 +1236,7 @@
                         btn.prop('disabled', true).text('Menyimpan...');
 
                         const requestData = {
+                            id: editId,
                             tipeRoster: 'TUGAS',
                             awalDinas: awalTugasVal,
                             akhirDinas: akhirTugasVal,
@@ -1291,6 +1353,7 @@
                     btn.prop('disabled', true).text('Menyimpan...');
 
                     const requestData = {
+                        id: editId,
                         tipeRoster: 'REGULER',
                         awalDinas: awalDinasVal,
                         akhirDinas: akhirDinasVal,
