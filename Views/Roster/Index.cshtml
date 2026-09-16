@@ -103,6 +103,14 @@
             </div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <button id="btnDownloadTemplate" class="btn btn-outline-primary fw-bold d-inline-flex align-items-center gap-2 shadow-sm" style="border-radius: 12px; font-size: 12.5px; padding: 9px 16px;">
+                <i class="bi bi-file-earmark-arrow-down-fill"></i>
+                <span>Unduh Template Excel</span>
+            </button>
+            <button id="btnOpenUploadModal" class="btn btn-primary fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white" style="border-radius: 12px; font-size: 12.5px; padding: 9px 16px;">
+                <i class="bi bi-file-earmark-arrow-up-fill"></i>
+                <span>Upload Excel Massal</span>
+            </button>
             <button id="btnExportExcel" class="btn btn-success fw-bold d-inline-flex align-items-center gap-2 shadow-sm" style="border-radius: 12px; font-size: 12.5px; padding: 9px 16px;">
                 <i class="bi bi-file-earmark-excel-fill"></i>
                 <span>Download Rekap Excel</span>
@@ -430,6 +438,89 @@
     </div>
 </div>
 
+<!-- Modal Upload Excel Roster -->
+<div class="modal fade" id="modalUploadExcel" tabindex="-1" aria-labelledby="modalUploadExcelLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #0284c7, #0369a1); padding: 20px 24px; color: white; position: relative;">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                        <i class="bi bi-file-earmark-excel-fill text-white"></i>
+                    </div>
+                    <div>
+                        <h5 style="font-weight: 800; margin: 0; font-size: 17px;" id="modalUploadExcelLabel">Upload &amp; Update Roster Massal via Excel</h5>
+                        <div style="font-size: 11.5px; opacity: 0.9;">Perbarui jadwal roster dan penugasan seluruh karyawan sekaligus menggunakan file Excel template.</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 20px; right: 20px;"></button>
+            </div>
+
+            <div class="modal-body" style="padding: 24px;">
+                <!-- Instructions Guide -->
+                <div class="p-3 mb-3" style="background: rgba(2, 132, 199, 0.06); border: 1px dashed rgba(2, 132, 199, 0.4); border-radius: 14px;">
+                    <h6 class="fw-bold text-primary mb-2" style="font-size: 13px;">
+                        <i class="bi bi-info-circle-fill me-1"></i> Langkah Mudah Update Roster Massal:
+                    </h6>
+                    <ol class="mb-0 text-muted ps-3" style="font-size: 12px; line-height: 1.6;">
+                        <li>Unduh template Excel dengan mengklik tombol <strong>"Unduh Template Excel"</strong> di atas (data karyawan sudah terisi otomatis).</li>
+                        <li>Buka file Excel, isi kolom <strong>Tipe Roster</strong> (<code>REGULER</code> atau <code>TUGAS</code>) dan tanggal-tanggal jadwal.</li>
+                        <li>Format tanggal wajib <strong><code>YYYY-MM-DD</code></strong> (contoh: <code>2026-09-01</code>) atau tanggal standar Excel.</li>
+                        <li>Simpan file <code>.xlsx</code> lalu unggah melalui form di bawah ini.</li>
+                    </ol>
+                </div>
+
+                <!-- Form Upload Input -->
+                <form id="formUploadRosterExcel" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold mb-1" style="font-size: 12px; color: var(--text-main);">
+                            Pilih File Excel Hasil Pengisian (.xlsx):
+                        </label>
+                        <input type="file" id="excelRosterFileInput" name="file" accept=".xlsx" class="form-control" style="border-radius: 12px; padding: 10px 14px; font-size: 13px; background: var(--bg-body); color: var(--text-main); border-color: var(--border-color);" />
+                        <div class="form-text" style="font-size: 11px;">Maksimal ukuran file: 15 MB. Hanya menerima ekstensi .xlsx</div>
+                    </div>
+                </form>
+
+                <!-- Progress / Status Indicator -->
+                <div id="uploadRosterProgress" class="d-none text-center py-3">
+                    <div class="spinner-border text-primary mb-2" role="status">
+                        <span class="visually-hidden">Memproses...</span>
+                    </div>
+                    <div class="fw-bold" style="font-size: 13px; color: var(--text-main);">Sedang memproses dan memperbarui data roster karyawan...</div>
+                    <div class="text-muted" style="font-size: 11.5px;">Mohon jangan menutup jendela ini.</div>
+                </div>
+
+                <!-- Upload Results Summary -->
+                <div id="uploadRosterResult" class="d-none">
+                    <div id="uploadAlertBox" class="alert d-flex align-items-start gap-2 mb-3" style="border-radius: 12px; font-size: 12.5px;">
+                        <i id="uploadAlertIcon" class="bi fs-5 mt-n0.5"></i>
+                        <div>
+                            <div id="uploadAlertTitle" class="fw-bold"></div>
+                            <div id="uploadAlertBody"></div>
+                        </div>
+                    </div>
+
+                    <div id="uploadErrorDetailsContainer" class="d-none">
+                        <div class="fw-bold mb-1.5 text-danger" style="font-size: 12px;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Rincian Baris yang Memerlukan Perbaikan:
+                        </div>
+                        <div style="max-height: 160px; overflow-y: auto; background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.2); border-radius: 10px; padding: 10px 14px;">
+                            <ul id="uploadErrorList" class="mb-0 text-danger ps-3" style="font-size: 11.5px;">
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="background: rgba(0,0,0,0.03); border-top: 1px solid var(--border-color); padding: 14px 24px;">
+                <button type="button" class="btn btn-secondary btn-sm fw-bold px-3 py-1.5" data-bs-dismiss="modal" style="border-radius: 10px;">Batal</button>
+                <button type="button" id="btnSubmitUploadExcel" class="btn btn-primary btn-sm fw-bold px-4 py-1.5 text-white" style="border-radius: 10px;">
+                    <i class="bi bi-cloud-arrow-up-fill me-1"></i> Mulai Upload &amp; Proses
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         $(document).ready(function() {
@@ -653,6 +744,112 @@
                     currentSearch = $(this).val();
                     table.ajax.reload();
                 }
+            });
+
+            // Download Template Excel
+            $('#btnDownloadTemplate').on('click', function() {
+                const params = new URLSearchParams({
+                    perusahaanId: currentFilterPerusahaan || '',
+                    departemen: currentFilterDepartemen || ''
+                });
+                window.location.href = `/Roster/DownloadTemplateExcel?${params.toString()}`;
+            });
+
+            // Open Upload Modal
+            $('#btnOpenUploadModal').on('click', function() {
+                $('#excelRosterFileInput').val('');
+                $('#uploadRosterProgress').addClass('d-none');
+                $('#uploadRosterResult').addClass('d-none');
+                $('#uploadErrorDetailsContainer').addClass('d-none');
+                $('#btnSubmitUploadExcel').prop('disabled', false);
+
+                const modal = new bootstrap.Modal(document.getElementById('modalUploadExcel'));
+                modal.show();
+            });
+
+            // Submit Excel Upload
+            $('#btnSubmitUploadExcel').on('click', function() {
+                const fileInput = document.getElementById('excelRosterFileInput');
+                if (!fileInput.files || fileInput.files.length === 0) {
+                    alert('Silakan pilih file Excel (.xlsx) yang akan diupload terlebih dahulu.');
+                    return;
+                }
+
+                const file = fileInput.files[0];
+                if (!file.name.endsWith('.xlsx')) {
+                    alert('Format file harus berupa Excel (.xlsx).');
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const btn = $(this);
+                btn.prop('disabled', true);
+                $('#uploadRosterProgress').removeClass('d-none');
+                $('#uploadRosterResult').addClass('d-none');
+                $('#uploadErrorDetailsContainer').addClass('d-none');
+
+                $.ajax({
+                    url: '/Roster/UploadRosterExcel',
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(res) {
+                        btn.prop('disabled', false);
+                        $('#uploadRosterProgress').addClass('d-none');
+                        $('#uploadRosterResult').removeClass('d-none');
+
+                        const alertBox = $('#uploadAlertBox');
+                        const alertIcon = $('#uploadAlertIcon');
+                        const alertTitle = $('#uploadAlertTitle');
+                        const alertBody = $('#uploadAlertBody');
+
+                        if (res.errorCount === 0) {
+                            alertBox.removeClass('alert-danger alert-warning').addClass('alert-success');
+                            alertIcon.attr('class', 'bi bi-check-circle-fill fs-5 text-success');
+                            alertTitle.text('Upload & Update Berhasil Sempurna!');
+                            alertBody.html(`Total <strong>${res.successCount}</strong> data jadwal roster karyawan berhasil diperbarui ke sistem.`);
+                        } else if (res.successCount > 0) {
+                            alertBox.removeClass('alert-success alert-danger').addClass('alert-warning');
+                            alertIcon.attr('class', 'bi bi-exclamation-circle-fill fs-5 text-warning');
+                            alertTitle.text('Upload Selesai dengan Beberapa Catatan');
+                            alertBody.html(`Berhasil memperbarui <strong>${res.successCount}</strong> karyawan. Namun terdapat <strong>${res.errorCount}</strong> baris yang perlu diperbaiki.`);
+                        } else {
+                            alertBox.removeClass('alert-success alert-warning').addClass('alert-danger');
+                            alertIcon.attr('class', 'bi bi-x-circle-fill fs-5 text-danger');
+                            alertTitle.text('Gagal Memproses File');
+                            alertBody.html(`Tidak ada data yang berhasil diperbarui. Terdapat <strong>${res.errorCount}</strong> kesalahan format.`);
+                        }
+
+                        if (res.errors && res.errors.length > 0) {
+                            $('#uploadErrorDetailsContainer').removeClass('d-none');
+                            const errList = $('#uploadErrorList');
+                            errList.empty();
+                            res.errors.forEach(function(e) {
+                                errList.append(`<li>${escapeHtml(e)}</li>`);
+                            });
+                        }
+
+                        table.ajax.reload(null, false);
+                    },
+                    error: function(xhr) {
+                        btn.prop('disabled', false);
+                        $('#uploadRosterProgress').addClass('d-none');
+                        $('#uploadRosterResult').removeClass('d-none');
+
+                        const alertBox = $('#uploadAlertBox');
+                        const alertIcon = $('#uploadAlertIcon');
+                        const alertTitle = $('#uploadAlertTitle');
+                        const alertBody = $('#uploadAlertBody');
+
+                        alertBox.removeClass('alert-success alert-warning').addClass('alert-danger');
+                        alertIcon.attr('class', 'bi bi-x-circle-fill fs-5 text-danger');
+                        alertTitle.text('Terjadi Kesalahan Saat Upload');
+                        alertBody.text(xhr.responseJSON?.message || xhr.responseText || 'Gagal menghubungi server.');
+                    }
+                });
             });
 
             // Export Excel

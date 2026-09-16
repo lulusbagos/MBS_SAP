@@ -918,6 +918,451 @@ namespace MBS_SAP.Controllers
                 $"Rekapitulasi_Roster_SAP_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
             );
         }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadTemplateExcel(int? perusahaanId, string? departemen)
+        {
+            if (!HasAccess()) return Unauthorized();
+
+            var accessibleCompanyIds = await GetUserAccessibleCompanyIdsAsync();
+
+            var usersQuery = from k in _context.Karyawans.AsNoTracking()
+                             join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal into persGroup
+                             from p in persGroup.DefaultIfEmpty()
+                             join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into compGroup
+                             from c in compGroup.DefaultIfEmpty()
+                             join d in _context.Departemens.AsNoTracking() on k.IdDepartemen equals d.DepartemenId into deptGroup
+                             from d in deptGroup.DefaultIfEmpty()
+                             join j in _context.Jabatans.AsNoTracking() on k.IdJabatan equals j.JabatanId into jabGroup
+                             from j in jabGroup.DefaultIfEmpty()
+                             where k.StatusAktif && (accessibleCompanyIds.Count == 0 || accessibleCompanyIds.Contains(k.IdPerusahaan))
+                             select new {
+                                 KaryawanId = (int?)k.IdKaryawan,
+                                 Nik = k.NoNik,
+                                 Nama = p != null ? p.NamaLengkap : k.NoNik,
+                                 IdPerusahaan = k.IdPerusahaan,
+                                 Perusahaan = c != null ? c.NamaPerusahaan : "Unknown",
+                                 Departemen = d != null ? d.NamaDepartemen : "-",
+                                 Jabatan = j != null ? j.NamaJabatan : "-"
+                             };
+
+            if (perusahaanId.HasValue && perusahaanId.Value > 0)
+            {
+                usersQuery = usersQuery.Where(u => u.IdPerusahaan == perusahaanId.Value);
+            }
+
+            if (!string.IsNullOrEmpty(departemen))
+            {
+                usersQuery = usersQuery.Where(u => u.Departemen == departemen);
+            }
+
+            var allFilteredUsers = await usersQuery.OrderBy(u => u.Perusahaan).ThenBy(u => u.Nama).ToListAsync();
+            var userNiks = allFilteredUsers.Select(u => u.Nik).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
+
+            // Fetch active rosters
+            var allRosters = new List<Roster>();
+            const int batchSize = 1000;
+            for (int i = 0; i < userNiks.Count; i += batchSize)
+            {
+                var batch = userNiks.Skip(i).Take(batchSize).ToList();
+                var batchRosters = await _context.Rosters.AsNoTracking()
+                    .Where(r => batch.Contains(r.Nik))
+                    .OrderByDescending(r => r.AkhirCuti)
+                    .ThenByDescending(r => r.CreatedAt)
+                    .ToListAsync();
+                allRosters.AddRange(batchRosters);
+            }
+
+            var latestRostersMap = allRosters
+                .GroupBy(r => r.Nik)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Template_Roster");
+            worksheet.ShowGridLines = true;
+
+            // Title Banner
+            worksheet.Cell(1, 1).Value = "TEMPLATE PENGATURAN ROSTER & PENUGASAN KARYAWAN SAP";
+            worksheet.Cell(1, 1).Style.Font.Bold = true;
+            worksheet.Cell(1, 1).Style.Font.FontSize = 14;
+            worksheet.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
+
+            worksheet.Cell(2, 1).Value = "Petunjuk: 1. Format tanggal wajib YYYY-MM-DD (contoh: 2026-09-01). 2. Kolom Tipe Roster diisi 'REGULER' atau 'TUGAS'. 3. Kolom NIK tidak boleh diubah.";
+            worksheet.Cell(2, 1).Style.Font.Italic = true;
+            worksheet.Cell(2, 1).Style.Font.FontSize = 10;
+            worksheet.Cell(2, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
+
+            string[] headers = new string[] {
+                "No",
+                "NIK (Wajib)",
+                "Nama Karyawan",
+                "Perusahaan",
+                "Departemen",
+                "Jabatan",
+                "Tipe Roster (REGULER / TUGAS)",
+                "Awal Dinas / Tugas (YYYY-MM-DD)",
+                "Akhir Dinas / Tugas (YYYY-MM-DD)",
+                "Awal Cuti (YYYY-MM-DD)",
+                "Akhir Cuti (YYYY-MM-DD)",
+                "Keterangan (Khusus Tugas / Opsional)"
+            };
+
+            const int headerRow = 4;
+            for (int i = 0; i < headers.Length; i++)
+            {
+                var cell = worksheet.Cell(headerRow, i + 1);
+                cell.Value = headers[i];
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontSize = 11;
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                cell.Style.Alignment.WrapText = true;
+
+                if (i >= 7 && i <= 8) // Dinas
+                {
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0284c7");
+                    cell.Style.Font.FontColor = XLColor.White;
+                }
+                else if (i >= 9 && i <= 10) // Cuti
+                {
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#d97706");
+                    cell.Style.Font.FontColor = XLColor.White;
+                }
+                else if (i == 6) // Tipe
+                {
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#7c3aed");
+                    cell.Style.Font.FontColor = XLColor.White;
+                }
+                else
+                {
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e293b");
+                    cell.Style.Font.FontColor = XLColor.White;
+                }
+            }
+            worksheet.Row(headerRow).Height = 28;
+
+            int rowIdx = 5;
+            int num = 1;
+            foreach (var user in allFilteredUsers)
+            {
+                var hasRoster = latestRostersMap.TryGetValue(user.Nik, out var r);
+
+                worksheet.Cell(rowIdx, 1).Value = num++;
+                worksheet.Cell(rowIdx, 2).Value = "'" + user.Nik; // text format
+                worksheet.Cell(rowIdx, 3).Value = user.Nama;
+                worksheet.Cell(rowIdx, 4).Value = user.Perusahaan;
+                worksheet.Cell(rowIdx, 5).Value = user.Departemen;
+                worksheet.Cell(rowIdx, 6).Value = user.Jabatan;
+
+                worksheet.Cell(rowIdx, 7).Value = hasRoster ? (r!.TipeRoster ?? "REGULER") : "REGULER";
+                worksheet.Cell(rowIdx, 8).Value = hasRoster ? r!.AwalDinas.ToString("yyyy-MM-dd") : "";
+                worksheet.Cell(rowIdx, 9).Value = hasRoster ? r!.AkhirDinas.ToString("yyyy-MM-dd") : "";
+                worksheet.Cell(rowIdx, 10).Value = hasRoster && r!.TipeRoster != "TUGAS" ? r!.AwalCuti.ToString("yyyy-MM-dd") : "";
+                worksheet.Cell(rowIdx, 11).Value = hasRoster && r!.TipeRoster != "TUGAS" ? r!.AkhirCuti.ToString("yyyy-MM-dd") : "";
+                worksheet.Cell(rowIdx, 12).Value = hasRoster ? (r!.Keterangan ?? "") : "";
+
+                // Center align NIK, Tipe, and Dates
+                worksheet.Cell(rowIdx, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(rowIdx, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(rowIdx, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(rowIdx, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(rowIdx, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(rowIdx, 10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(rowIdx, 11).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                // Format date cells as Text so Excel preserves YYYY-MM-DD
+                for (int col = 8; col <= 11; col++)
+                {
+                    worksheet.Cell(rowIdx, col).Style.NumberFormat.Format = "@";
+                }
+
+                if (num % 2 == 0)
+                {
+                    worksheet.Row(rowIdx).Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+                }
+
+                rowIdx++;
+            }
+
+            var tableRange = worksheet.Range(headerRow, 1, Math.Max(rowIdx - 1, headerRow), headers.Length);
+            tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            tableRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+            tableRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+
+            worksheet.Columns().AdjustToContents();
+
+            using var memStream = new MemoryStream();
+            workbook.SaveAs(memStream);
+            var fileBytes = memStream.ToArray();
+
+            return File(
+                fileBytes, 
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                $"Template_Roster_SAP_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx"
+            );
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UploadRosterExcel(IFormFile? file)
+        {
+            if (!HasAccess()) return Unauthorized();
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { success = false, message = "Silakan pilih file Excel (.xlsx) terlebih dahulu." });
+            }
+
+            if (!file.FileName.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { success = false, message = "Format file harus berupa Excel (.xlsx)." });
+            }
+
+            if (file.Length > 15 * 1024 * 1024)
+            {
+                return BadRequest(new { success = false, message = "Ukuran file maksimal adalah 15 MB." });
+            }
+
+            var accessibleCompanyIds = await GetUserAccessibleCompanyIdsAsync();
+
+            // Load valid active employees
+            var validEmployees = await _context.Karyawans.AsNoTracking()
+                .Where(k => k.StatusAktif && (accessibleCompanyIds.Count == 0 || accessibleCompanyIds.Contains(k.IdPerusahaan)))
+                .Select(k => k.NoNik)
+                .ToListAsync();
+
+            var validNikSet = new HashSet<string>(validEmployees.Where(n => !string.IsNullOrEmpty(n)), StringComparer.OrdinalIgnoreCase);
+
+            var errors = new List<string>();
+            int successCount = 0;
+            int totalProcessed = 0;
+            var modifiedNiks = new List<string>();
+
+            try
+            {
+                using var stream = file.OpenReadStream();
+                using var workbook = new XLWorkbook(stream);
+                var worksheet = workbook.Worksheet(1);
+
+                if (worksheet == null)
+                {
+                    return BadRequest(new { success = false, message = "Lembar kerja (worksheet) Excel tidak ditemukan." });
+                }
+
+                // Find header row (default row 4 or search for NIK)
+                int headerRow = 4;
+                for (int r = 1; r <= 10; r++)
+                {
+                    for (int c = 1; c <= 5; c++)
+                    {
+                        var val = worksheet.Cell(r, c).GetString();
+                        if (!string.IsNullOrEmpty(val) && val.Contains("NIK", StringComparison.OrdinalIgnoreCase))
+                        {
+                            headerRow = r;
+                            break;
+                        }
+                    }
+                }
+
+                int colNik = 2;
+                int colTipe = 7;
+                int colAwalDinas = 8;
+                int colAkhirDinas = 9;
+                int colAwalCuti = 10;
+                int colAkhirCuti = 11;
+                int colKeterangan = 12;
+
+                // Identify columns by header text
+                for (int c = 1; c <= 15; c++)
+                {
+                    var h = worksheet.Cell(headerRow, c).GetString().ToUpperInvariant();
+                    if (h.Contains("NIK")) colNik = c;
+                    else if (h.Contains("TIPE")) colTipe = c;
+                    else if (h.Contains("AWAL DINAS") || h.Contains("AWAL TUGAS") || h.Contains("MULAI DINAS")) colAwalDinas = c;
+                    else if (h.Contains("AKHIR DINAS") || h.Contains("AKHIR TUGAS") || h.Contains("SELESAI DINAS")) colAkhirDinas = c;
+                    else if (h.Contains("AWAL CUTI") || h.Contains("MULAI CUTI")) colAwalCuti = c;
+                    else if (h.Contains("AKHIR CUTI") || h.Contains("SELESAI CUTI")) colAkhirCuti = c;
+                    else if (h.Contains("KETERANGAN") || h.Contains("CATATAN")) colKeterangan = c;
+                }
+
+                int lastRow = worksheet.LastRowUsed()?.RowNumber() ?? headerRow;
+                var now = DateTime.Now;
+
+                for (int r = headerRow + 1; r <= lastRow; r++)
+                {
+                    var nikCell = worksheet.Cell(r, colNik);
+                    string nik = nikCell.GetString().Trim().Trim('\'');
+                    if (string.IsNullOrEmpty(nik)) continue; // skip blank rows
+
+                    totalProcessed++;
+
+                    if (!validNikSet.Contains(nik))
+                    {
+                        errors.Add($"Baris {r} (NIK {nik}): Karyawan tidak ditemukan atau di luar wewenang perusahaan Anda.");
+                        continue;
+                    }
+
+                    string tipeRoster = worksheet.Cell(r, colTipe).GetString().Trim().ToUpperInvariant();
+                    bool isTugas = tipeRoster.Contains("TUGAS");
+                    string keterangan = worksheet.Cell(r, colKeterangan).GetString().Trim();
+
+                    DateTime? awalDinas = ParseCellDate(worksheet.Cell(r, colAwalDinas));
+                    DateTime? akhirDinas = ParseCellDate(worksheet.Cell(r, colAkhirDinas));
+
+                    if (!awalDinas.HasValue || !akhirDinas.HasValue)
+                    {
+                        // If no dates are filled at all, skip silently or flag error
+                        if (worksheet.Cell(r, colAwalDinas).IsEmpty() && worksheet.Cell(r, colAkhirDinas).IsEmpty())
+                        {
+                            continue;
+                        }
+                        errors.Add($"Baris {r} (NIK {nik}): Tanggal mulai/akhir dinas/tugas wajib diisi dengan format valid (YYYY-MM-DD).");
+                        continue;
+                    }
+
+                    if (awalDinas.Value > akhirDinas.Value)
+                    {
+                        errors.Add($"Baris {r} (NIK {nik}): Tanggal awal dinas/tugas ({awalDinas.Value:yyyy-MM-dd}) tidak boleh melebihi akhir dinas/tugas ({akhirDinas.Value:yyyy-MM-dd}).");
+                        continue;
+                    }
+
+                    DateTime awalCuti = akhirDinas.Value;
+                    DateTime akhirCuti = akhirDinas.Value;
+
+                    if (!isTugas)
+                    {
+                        DateTime? dtAwalCuti = ParseCellDate(worksheet.Cell(r, colAwalCuti));
+                        DateTime? dtAkhirCuti = ParseCellDate(worksheet.Cell(r, colAkhirCuti));
+
+                        if (!dtAwalCuti.HasValue || !dtAkhirCuti.HasValue)
+                        {
+                            errors.Add($"Baris {r} (NIK {nik}): Tanggal cuti wajib diisi untuk tipe Roster REGULER.");
+                            continue;
+                        }
+
+                        if (akhirDinas.Value >= dtAwalCuti.Value)
+                        {
+                            errors.Add($"Baris {r} (NIK {nik}): Tanggal akhir dinas harus sebelum awal cuti.");
+                            continue;
+                        }
+
+                        if (dtAwalCuti.Value > dtAkhirCuti.Value)
+                        {
+                            errors.Add($"Baris {r} (NIK {nik}): Tanggal awal cuti tidak boleh melebihi akhir cuti.");
+                            continue;
+                        }
+
+                        awalCuti = dtAwalCuti.Value;
+                        akhirCuti = dtAkhirCuti.Value;
+                    }
+
+                    // Upsert active roster in DB
+                    var activeRoster = await _context.Rosters
+                        .Where(ro => ro.Nik == nik && ro.AkhirCuti >= DateTime.Today)
+                        .OrderByDescending(ro => ro.AkhirCuti)
+                        .FirstOrDefaultAsync();
+
+                    if (activeRoster != null)
+                    {
+                        activeRoster.AwalDinas = awalDinas.Value;
+                        activeRoster.AkhirDinas = akhirDinas.Value;
+                        activeRoster.AwalCuti = awalCuti;
+                        activeRoster.AkhirCuti = akhirCuti;
+                        activeRoster.TipeRoster = isTugas ? "TUGAS" : "REGULER";
+                        activeRoster.Keterangan = isTugas ? keterangan : null;
+                        activeRoster.UpdatedAt = now;
+                        _context.Rosters.Update(activeRoster);
+                    }
+                    else
+                    {
+                        var newRoster = new Roster
+                        {
+                            Nik = nik,
+                            AwalDinas = awalDinas.Value,
+                            AkhirDinas = akhirDinas.Value,
+                            AwalCuti = awalCuti,
+                            AkhirCuti = akhirCuti,
+                            TipeRoster = isTugas ? "TUGAS" : "REGULER",
+                            Keterangan = isTugas ? keterangan : null,
+                            CreatedAt = now,
+                            UpdatedAt = now
+                        };
+                        _context.Rosters.Add(newRoster);
+                    }
+
+                    modifiedNiks.Add(nik);
+                    successCount++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                foreach (var nik in modifiedNiks)
+                {
+                    _cache.Remove($"UserDashboardStats_{nik}");
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    totalProcessed = totalProcessed,
+                    successCount = successCount,
+                    errorCount = errors.Count,
+                    errors = errors
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Terjadi kesalahan saat memproses file Excel: " + ex.Message
+                });
+            }
+        }
+
+        private static DateTime? ParseCellDate(IXLCell cell)
+        {
+            if (cell == null || cell.IsEmpty()) return null;
+
+            if (cell.DataType == XLDataType.DateTime)
+            {
+                return cell.GetDateTime();
+            }
+
+            if (cell.DataType == XLDataType.Number)
+            {
+                try
+                {
+                    double numVal = cell.GetDouble();
+                    if (numVal > 1000)
+                    {
+                        return DateTime.FromOADate(numVal);
+                    }
+                }
+                catch { }
+            }
+
+            string str = cell.GetString()?.Trim() ?? string.Empty;
+            if (string.IsNullOrEmpty(str)) return null;
+
+            string[] formats = {
+                "yyyy-MM-dd", "dd/MM/yyyy", "d/M/yyyy", "yyyy/MM/dd", 
+                "dd-MM-yyyy", "d-M-yyyy", "yyyy.MM.dd", "M/d/yyyy", "MM/dd/yyyy",
+                "yyyy-MM-dd HH:mm:ss", "dd/MM/yyyy HH:mm:ss"
+            };
+
+            if (DateTime.TryParseExact(str, formats, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dtExact))
+            {
+                return dtExact;
+            }
+
+            if (DateTime.TryParse(str, out var dt))
+            {
+                return dt;
+            }
+
+            return null;
+        }
     }
 
     public class AdminRosterSaveRequest
