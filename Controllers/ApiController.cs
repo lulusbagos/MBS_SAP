@@ -162,6 +162,15 @@ namespace MBS_SAP.Controllers
                 {
                     userCompanyId = cid;
                 }
+                else
+                {
+                    var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                    if (!string.IsNullOrEmpty(userNik))
+                    {
+                        var k = await _context.Karyawans.FirstOrDefaultAsync(x => x.NoNik == userNik && x.StatusAktif);
+                        if (k != null) userCompanyId = k.IdPerusahaan;
+                    }
+                }
             }
 
             var refs = new List<PjaCompanyRef>();

@@ -178,7 +178,7 @@
                 </div>
 
                 <!-- PJA info -->
-                <div class="card-sap bg-dark-card border-0 mb-3 px-3 py-3 position-relative" style="overflow: visible;">
+                <div class="card-sap bg-dark-card border-0 mb-3 px-3 py-3 position-relative" style="z-index: 1050; overflow: visible;">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="text-white mb-0" style="font-size: 13px; font-weight: 700;"><i class="bi bi-person-fill-lock me-1"></i>Penanggung Jawab Area (PJA)</h6>
                         <div class="form-check form-switch m-0" style="font-size: 11px;">
@@ -192,11 +192,17 @@
                             <i class="bi bi-search input-sap-icon" style="top: 14px;"></i>
                             <input type="text" id="pjaSearchInput" class="input-sap" style="padding-left: 42px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white;" placeholder="Ketik NIK atau Nama PJA..." autocomplete="off" />
                         </div>
-                        <div id="pjaSearchResults" class="dropdown-menu w-100" style="background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 300px; overflow-y: auto; z-index: 1050; position: absolute; top: 100%; left: 0;">
+                        <div id="pjaSearchResults" class="dropdown-menu w-100" style="background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-height: 300px; overflow-y: auto; z-index: 1060; position: absolute; top: 100%; left: 0; right: 0;">
                         </div>
                         <input type="hidden" id="pja" name="pja" />
                         <input type="hidden" id="nikPja" name="nikPja" />
                         <input type="hidden" id="departemenPja" name="departemenPja" />
+                    </div>
+
+                    <!-- Recent PJAs Quick Selection -->
+                    <div id="recentPjasContainer" class="mt-2 d-none">
+                        <div class="text-white-50 mb-1" style="font-size: 10px; font-weight: 600;"><i class="bi bi-clock-history me-1"></i>PJA TERAKHIR DIGUNAKAN:</div>
+                        <div id="recentPjasList" class="d-flex flex-wrap gap-1"></div>
                     </div>
 
                     <!-- Selected PJA Card -->
@@ -663,6 +669,14 @@
                                 </p>
                             }
 
+                            @if (!string.IsNullOrEmpty(item.Pja))
+                            {
+                                <div class="mb-2 d-flex align-items-center gap-1.5" style="font-size: 11px; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                                    <i class="bi bi-person-fill-lock text-warning"></i>
+                                    <span><strong>PJA:</strong> @item.Pja @(!string.IsNullOrEmpty(item.DepartemenPja) ? $"({item.DepartemenPja})" : "")</span>
+                                </div>
+                            }
+
                             <div class="d-flex justify-content-between align-items-center pt-2 mt-2" style="border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="status-badge check"><i class="bi bi-check-circle-fill me-1"></i>Selesai</span>
@@ -1029,52 +1043,88 @@
             }
         }
 
-        let pjaSearchTimeout = null;
+        const RECENT_PJAS_KEY = 'mbs_recent_pjas_v1';
 
-        function toggleLintasPerusahaanSearch() {
-            var term = $('#pjaSearchInput').val().trim();
-            if (term.length >= 1) {
-                searchPja();
+        function saveRecentPja(pja) {
+            try {
+                let list = JSON.parse(localStorage.getItem(RECENT_PJAS_KEY) || '[]');
+                list = list.filter(item => item.nik !== pja.nik);
+                list.unshift(pja);
+                list = list.slice(0, 3);
+                localStorage.setItem(RECENT_PJAS_KEY, JSON.stringify(list));
+                renderRecentPjas();
+            } catch (e) {
+                console.error('Error saving recent PJA', e);
             }
         }
 
-        $('#pjaSearchInput').on('input focus', function() {
-            var term = $(this).val().trim();
-            clearTimeout(pjaSearchTimeout);
-            
-            if (term.length < 1) {
-                $('#pjaSearchResults').hide().empty();
-                return;
+        function renderRecentPjas() {
+            try {
+                const list = JSON.parse(localStorage.getItem(RECENT_PJAS_KEY) || '[]');
+                const container = $('#recentPjasContainer');
+                const listContainer = $('#recentPjasList');
+                
+                if (list.length === 0) {
+                    container.addClass('d-none');
+                    return;
+                }
+                
+                listContainer.empty();
+                list.forEach(function(item) {
+                    const badgeClass = item.companyOnly ? 'btn-outline-warning' : 'btn-outline-success';
+                    const btn = $(`
+                        <button type="button" class="btn btn-sm ${badgeClass} py-0 px-2 text-truncate" style="max-width: 130px; font-size: 9px; border-radius: 6px; color: white;" title="${escapeHtml(item.nama)}">
+                            ${escapeHtml(item.nama)}
+                        </button>
+                    `);
+                    btn.on('click', function(e) {
+                        e.preventDefault();
+                        selectPja(item.nik, item.nama, item.jabatan, item.dept, item.perusahaan, item.companyOnly);
+                    });
+                    listContainer.append(btn);
+                });
+                container.removeClass('d-none');
+            } catch (e) {
+                console.error('Error rendering recent PJAs', e);
             }
+        }
 
+        let pjaSearchTimeout = null;
+
+        function toggleLintasPerusahaanSearch() {
+            searchPja();
+        }
+
+        $('#pjaSearchInput').on('focus input', function() {
+            clearTimeout(pjaSearchTimeout);
             pjaSearchTimeout = setTimeout(function() {
                 searchPja();
-            }, 300);
+            }, 150);
         });
 
         function searchPja() {
             const query = $('#pjaSearchInput').val().trim();
-            if (query.length < 1) return;
-
             const resultsContainer = $('#pjaSearchResults');
             resultsContainer.html('<div class="p-3 text-center text-muted" style="font-size: 12px;"><span class="spinner-border spinner-border-sm me-2"></span>Mencari PJA...</div>').show();
 
             const lintas = $('#lintasPerusahaanToggle').is(':checked');
 
-            $.when(
-                $.get('/Api/GetPjaReference', { lintasPerusahaan: lintas }),
-                $.get('/Api/SearchEmployee', { query: query, lintasPerusahaan: lintas })
-            ).done(function(pjaRefResp, employeeResp) {
+            const pjaReq = $.get('/Api/GetPjaReference', { lintasPerusahaan: lintas });
+            const empReq = query.length >= 1 ? $.get('/Api/SearchEmployee', { query: query, lintasPerusahaan: lintas }) : $.Deferred().resolve([[]]);
+
+            $.when(pjaReq, empReq).done(function(pjaRefResp, employeeResp) {
                 const pjaRefs = pjaRefResp[0] || [];
-                const employees = employeeResp[0] || [];
+                const employees = (employeeResp && employeeResp[0]) ? employeeResp[0] : [];
                 const lowerQuery = query.toLowerCase();
 
-                const filteredPjaRefs = pjaRefs.filter(function(x) {
-                    return (x.nama || '').toLowerCase().includes(lowerQuery)
-                        || (x.perusahaan || '').toLowerCase().includes(lowerQuery)
-                        || (x.nik || '').toLowerCase().includes(lowerQuery)
-                        || (x.jabatan || '').toLowerCase().includes(lowerQuery);
-                });
+                const filteredPjaRefs = query.length === 0
+                    ? pjaRefs
+                    : pjaRefs.filter(function(x) {
+                        return (x.nama || '').toLowerCase().includes(lowerQuery)
+                            || (x.perusahaan || '').toLowerCase().includes(lowerQuery)
+                            || (x.nik || '').toLowerCase().includes(lowerQuery)
+                            || (x.jabatan || '').toLowerCase().includes(lowerQuery);
+                    });
 
                 const merged = [];
                 const seen = new Set();
@@ -1088,12 +1138,19 @@
                 });
 
                 employees.forEach(function(item) {
-                    const key = (item.nik || '') + '|' + (item.perusahaan || '');
+                    const key = (item.nik || item.Nik || '') + '|' + (item.perusahaan || item.Perusahaan || '');
                     if (!seen.has(key)) {
                         seen.add(key);
-                        item.companyOnly = false;
-                        item.source = item.source || 'employee';
-                        merged.push(item);
+                        merged.push({
+                            nik: item.nik || item.Nik || '',
+                            nama: item.nama || item.Nama || '',
+                            departemen: item.departemen || item.Departemen || 'GENERAL',
+                            jabatan: item.jabatan || item.Jabatan || '-',
+                            perusahaan: item.perusahaan || item.Perusahaan || '-',
+                            companyId: item.companyId || item.IdPerusahaan,
+                            companyOnly: false,
+                            source: 'employee'
+                        });
                     }
                 });
 
@@ -1128,11 +1185,6 @@
 
                     function appendItem(k) {
                         const init = (k.nama || '-').charAt(0).toUpperCase();
-                        const safeNik = (k.nik || '').replace(/'/g, "\\'");
-                        const safeNama = (k.nama || '').replace(/'/g, "\\'");
-                        const safeJabatan = (k.jabatan || '').replace(/'/g, "\\'");
-                        const safeDept = (k.departemen || '').replace(/'/g, "\\'");
-                        const safePerusahaan = (k.perusahaan || '').replace(/'/g, "\\'");
                         const safeCompanyOnly = !!k.companyOnly;
 
                         const badge = safeCompanyOnly
@@ -1140,21 +1192,24 @@
                             : '<span class="badge bg-success" style="font-size:10px;">PJA/EMPLOYEE</span>';
 
                         const item = $(`
-                            <div class="dropdown-item p-3" style="cursor: pointer; border-bottom: 1px solid var(--border-color);" onclick="selectPja('${safeNik}', '${safeNama}', '${safeJabatan}', '${safeDept}', '${safePerusahaan}', ${safeCompanyOnly})">
+                            <div class="dropdown-item p-3" style="cursor: pointer; border-bottom: 1px solid var(--border-color); white-space: normal;">
                                 <div class="d-flex align-items-center gap-3">
-                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-layout); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; color: var(--color-primary);">
-                                        ${init}
+                                    <div style="width: 40px; height: 40px; min-width: 40px; border-radius: 50%; background: var(--bg-layout); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; color: var(--color-primary);">
+                                        ${escapeHtml(init)}
                                     </div>
                                     <div>
-                                        <div class="d-flex align-items-center gap-2" style="font-weight: 700; font-size: 13px; color: var(--text-main);">
-                                            <span>${k.nama || '-'}</span>${badge}
+                                        <div class="d-flex align-items-center gap-2 flex-wrap" style="font-weight: 700; font-size: 13px; color: var(--text-main);">
+                                            <span>${escapeHtml(k.nama || '-')}</span>${badge}
                                         </div>
-                                        <div style="font-size: 11px; color: var(--text-muted);"><i class="bi bi-person-badge me-1"></i>${k.nik || '-'} &bull; ${k.jabatan || '-'}</div>
-                                        <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;"><i class="bi bi-building me-1"></i>${k.departemen || '-'} | ${k.perusahaan || '-'}</div>
+                                        <div style="font-size: 11px; color: var(--text-muted);"><i class="bi bi-person-badge me-1"></i>${escapeHtml(k.nik || '-')} &bull; ${escapeHtml(k.jabatan || '-')}</div>
+                                        <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;"><i class="bi bi-building me-1"></i>${escapeHtml(k.departemen || '-')} | ${escapeHtml(k.perusahaan || '-')}</div>
                                     </div>
                                 </div>
                             </div>
                         `);
+                        item.on('click', function() {
+                            selectPja(k.nik || '', k.nama || '', k.jabatan || '', k.departemen || '', k.perusahaan || '', safeCompanyOnly);
+                        });
                         resultsContainer.append(item);
                     }
                 }
@@ -1175,7 +1230,7 @@
                                     <i class="bi bi-buildings me-1"></i> PILIH BADAN PERUSAHAAN (PJO / DEPT HEAD MITRA)
                                 </div>
                             `);
-                            companies.forEach(function(k) { appendItem(k); });
+                            companies.forEach(function(k) { appendFallbackItem(k); });
                         }
 
                         if (employeesList.length > 0) {
@@ -1184,13 +1239,42 @@
                                     <i class="bi bi-person-badge me-1"></i> PILIH KARYAWAN / PJO (INDIVIDU)
                                 </div>
                             `);
-                            employeesList.forEach(function(k) { appendItem(k); });
+                            employeesList.forEach(function(k) { appendFallbackItem(k); });
                         }
                     }
                     resultsContainer.show();
                 }).fail(function() {
                     resultsContainer.html('<div class="p-3 text-center text-danger" style="font-size: 12px;">Gagal memuat daftar PJA. Silakan periksa koneksi.</div>').show();
                 });
+
+                function appendFallbackItem(k) {
+                    const init = (k.nama || '-').charAt(0).toUpperCase();
+                    const safeCompanyOnly = !!k.companyOnly;
+                    const badge = safeCompanyOnly
+                        ? '<span class="badge bg-warning text-dark" style="font-size:10px;">COMPANY ONLY</span>'
+                        : '<span class="badge bg-success" style="font-size:10px;">PJA/EMPLOYEE</span>';
+
+                    const item = $(`
+                        <div class="dropdown-item p-3" style="cursor: pointer; border-bottom: 1px solid var(--border-color); white-space: normal;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div style="width: 40px; height: 40px; min-width: 40px; border-radius: 50%; background: var(--bg-layout); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; color: var(--color-primary);">
+                                    ${escapeHtml(init)}
+                                </div>
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap" style="font-weight: 700; font-size: 13px; color: var(--text-main);">
+                                        <span>${escapeHtml(k.nama || '-')}</span>${badge}
+                                    </div>
+                                    <div style="font-size: 11px; color: var(--text-muted);"><i class="bi bi-person-badge me-1"></i>${escapeHtml(k.nik || '-')} &bull; ${escapeHtml(k.jabatan || '-')}</div>
+                                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;"><i class="bi bi-building me-1"></i>${escapeHtml(k.departemen || '-')} | ${escapeHtml(k.perusahaan || '-')}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                    item.on('click', function() {
+                        selectPja(k.nik || '', k.nama || '', k.jabatan || '', k.departemen || '', k.perusahaan || '', safeCompanyOnly);
+                    });
+                    resultsContainer.append(item);
+                }
             });
         }
 
@@ -1200,7 +1284,7 @@
             $('#departemenPja').val(dept);
             
             // Display Logic
-            let initial = nama.charAt(0).toUpperCase();
+            let initial = (nama || '-').charAt(0).toUpperCase();
             $('#pjaInitial').text(initial);
             $('#pjaDisplayNama').text(nama);
             $('#pjaDisplayJabatan').text(companyOnly ? (jabatan || 'PENANGGUNG JAWAB PERUSAHAAN') : (jabatan || '-'));
@@ -1212,10 +1296,21 @@
             $('#pjaSearchInput').val('');
             $('#pjaSearchInput').parent().hide();
             $('#lintasPerusahaanToggle').closest('.d-flex').hide();
+            $('#recentPjasContainer').addClass('d-none');
 
             // Clear validation error on select
             $('#pjaSearchInput').removeClass('is-invalid');
             $('#pjaSearchInput').closest('.form-group-sap').find('.sap-err-msg').remove();
+
+            // Save to localStorage
+            saveRecentPja({
+                nik: nik,
+                nama: nama,
+                jabatan: jabatan,
+                dept: dept,
+                perusahaan: perusahaan,
+                companyOnly: companyOnly
+            });
         }
 
         function cancelEditInspection() {
@@ -1331,6 +1426,7 @@
             $('#selectedPjaCard').addClass('d-none');
             $('#pjaSearchInput').parent().show();
             $('#lintasPerusahaanToggle').closest('.d-flex').show();
+            renderRecentPjas();
             $('#pjaSearchInput').focus();
         }
 
@@ -1860,6 +1956,7 @@
 
         $(document).ready(function() {
             loadAreas();
+            renderRecentPjas();
             
             // Initialize custom questions empty display
             renderCustomQuestions();
