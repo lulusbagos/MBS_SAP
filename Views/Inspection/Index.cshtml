@@ -1033,38 +1033,76 @@
 
         function toggleLintasPerusahaanSearch() {
             var term = $('#pjaSearchInput').val().trim();
-            if (term.length >= 2) {
-                searchPja(term);
+            if (term.length >= 1) {
+                searchPja();
             }
         }
 
-        $('#pjaSearchInput').on('input', function() {
+        $('#pjaSearchInput').on('input focus', function() {
             var term = $(this).val().trim();
             clearTimeout(pjaSearchTimeout);
             
-            if (term.length < 2) {
+            if (term.length < 1) {
                 $('#pjaSearchResults').hide().empty();
                 return;
             }
 
             pjaSearchTimeout = setTimeout(function() {
-                searchPja(term);
+                searchPja();
             }, 300);
         });
 
-        function searchPja(term) {
-            var resultsContainer = $('#pjaSearchResults');
+        function searchPja() {
+            const query = $('#pjaSearchInput').val().trim();
+            if (query.length < 1) return;
+
+            const resultsContainer = $('#pjaSearchResults');
             resultsContainer.html('<div class="p-3 text-center text-muted" style="font-size: 12px;"><span class="spinner-border spinner-border-sm me-2"></span>Mencari PJA...</div>').show();
 
-            var lintasPerusahaan = $('#lintasPerusahaanToggle').is(':checked');
+            const lintas = $('#lintasPerusahaanToggle').is(':checked');
 
-            $.get('/Api/SearchPja', { term: term, lintasPerusahaan: lintasPerusahaan }, function(data) {
+            $.when(
+                $.get('/Api/GetPjaReference', { lintasPerusahaan: lintas }),
+                $.get('/Api/SearchEmployee', { query: query, lintasPerusahaan: lintas })
+            ).done(function(pjaRefResp, employeeResp) {
+                const pjaRefs = pjaRefResp[0] || [];
+                const employees = employeeResp[0] || [];
+                const lowerQuery = query.toLowerCase();
+
+                const filteredPjaRefs = pjaRefs.filter(function(x) {
+                    return (x.nama || '').toLowerCase().includes(lowerQuery)
+                        || (x.perusahaan || '').toLowerCase().includes(lowerQuery)
+                        || (x.nik || '').toLowerCase().includes(lowerQuery)
+                        || (x.jabatan || '').toLowerCase().includes(lowerQuery);
+                });
+
+                const merged = [];
+                const seen = new Set();
+
+                filteredPjaRefs.forEach(function(item) {
+                    const key = (item.nik || '') + '|' + (item.perusahaan || '');
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        merged.push(item);
+                    }
+                });
+
+                employees.forEach(function(item) {
+                    const key = (item.nik || '') + '|' + (item.perusahaan || '');
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        item.companyOnly = false;
+                        item.source = item.source || 'employee';
+                        merged.push(item);
+                    }
+                });
+
                 resultsContainer.empty();
-                if (!data || data.length === 0) {
+                if (merged.length === 0) {
                     resultsContainer.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">PJA tidak ditemukan. Pastikan kata kunci benar atau aktifkan "Lintas Perusahaan".</div>');
                 } else {
-                    const companies = data.filter(x => x.companyOnly);
-                    const employees = data.filter(x => !x.companyOnly);
+                    const companies = merged.filter(x => !!x.companyOnly);
+                    const employeesList = merged.filter(x => !x.companyOnly);
 
                     if (companies.length > 0) {
                         resultsContainer.append(`
@@ -1077,19 +1115,19 @@
                         });
                     }
 
-                    if (employees.length > 0) {
+                    if (employeesList.length > 0) {
                         resultsContainer.append(`
                             <div class="dropdown-header text-success fw-bold px-3 py-2 bg-dark-card border-bottom border-top" style="font-size: 11px; letter-spacing: 0.5px; opacity: 0.9; cursor: default; margin-top: 5px;">
                                 <i class="bi bi-person-badge me-1"></i> PILIH KARYAWAN / PJO (INDIVIDU)
                             </div>
                         `);
-                        employees.forEach(function(k) {
+                        employeesList.forEach(function(k) {
                             appendItem(k);
                         });
                     }
 
                     function appendItem(k) {
-                        const init = (k.nama || '-').charAt(0);
+                        const init = (k.nama || '-').charAt(0).toUpperCase();
                         const safeNik = (k.nik || '').replace(/'/g, "\\'");
                         const safeNama = (k.nama || '').replace(/'/g, "\\'");
                         const safeJabatan = (k.jabatan || '').replace(/'/g, "\\'");
@@ -1121,6 +1159,38 @@
                     }
                 }
                 resultsContainer.show();
+            }).fail(function() {
+                // Fallback to /Api/SearchPja if needed
+                $.get('/Api/SearchPja', { term: query, lintasPerusahaan: lintas }, function(data) {
+                    resultsContainer.empty();
+                    if (!data || data.length === 0) {
+                        resultsContainer.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">PJA tidak ditemukan. Pastikan kata kunci benar atau aktifkan "Lintas Perusahaan".</div>');
+                    } else {
+                        const companies = data.filter(x => x.companyOnly);
+                        const employeesList = data.filter(x => !x.companyOnly);
+
+                        if (companies.length > 0) {
+                            resultsContainer.append(`
+                                <div class="dropdown-header text-primary fw-bold px-3 py-2 bg-dark-card border-bottom" style="font-size: 11px; letter-spacing: 0.5px; opacity: 0.9; cursor: default;">
+                                    <i class="bi bi-buildings me-1"></i> PILIH BADAN PERUSAHAAN (PJO / DEPT HEAD MITRA)
+                                </div>
+                            `);
+                            companies.forEach(function(k) { appendItem(k); });
+                        }
+
+                        if (employeesList.length > 0) {
+                            resultsContainer.append(`
+                                <div class="dropdown-header text-success fw-bold px-3 py-2 bg-dark-card border-bottom border-top" style="font-size: 11px; letter-spacing: 0.5px; opacity: 0.9; cursor: default; margin-top: 5px;">
+                                    <i class="bi bi-person-badge me-1"></i> PILIH KARYAWAN / PJO (INDIVIDU)
+                                </div>
+                            `);
+                            employeesList.forEach(function(k) { appendItem(k); });
+                        }
+                    }
+                    resultsContainer.show();
+                }).fail(function() {
+                    resultsContainer.html('<div class="p-3 text-center text-danger" style="font-size: 12px;">Gagal memuat daftar PJA. Silakan periksa koneksi.</div>').show();
+                });
             });
         }
 

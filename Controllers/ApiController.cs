@@ -26,7 +26,7 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> SearchEmployee(string query, bool lintasPerusahaan = false)
         {
-            if (string.IsNullOrWhiteSpace(query) || query.Length < 3)
+            if (string.IsNullOrWhiteSpace(query) || query.Length < 1)
             {
                 return Json(new object[] { });
             }
@@ -72,9 +72,83 @@ namespace MBS_SAP.Controllers
                 employeesQuery = employeesQuery.Where(e => e.IdPerusahaan == userCompanyId.Value);
             }
 
-            var employees = await employeesQuery.Take(15).ToListAsync();
+            var employees = await employeesQuery.Take(25).ToListAsync();
 
             return Json(employees);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchPja(string term, bool lintasPerusahaan = true)
+        {
+            if (string.IsNullOrWhiteSpace(term))
+            {
+                return Json(new object[] { });
+            }
+
+            var cleanTerm = term.Trim().ToLower();
+            var pjaRefsTask = GetPjaReference(lintasPerusahaan);
+            var empTask = SearchEmployee(term, lintasPerusahaan);
+
+            await Task.WhenAll(pjaRefsTask, empTask);
+
+            var pjaRefJson = pjaRefsTask.Result as JsonResult;
+            var empJson = empTask.Result as JsonResult;
+
+            var pjaList = (pjaRefJson?.Value as IEnumerable<object>)?.ToList() ?? new List<object>();
+            var empList = (empJson?.Value as IEnumerable<object>)?.ToList() ?? new List<object>();
+
+            var merged = new List<object>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in pjaList)
+            {
+                var type = item.GetType();
+                var nama = type.GetProperty("nama")?.GetValue(item, null)?.ToString() ?? "";
+                var perusahaan = type.GetProperty("perusahaan")?.GetValue(item, null)?.ToString() ?? "";
+                var nik = type.GetProperty("nik")?.GetValue(item, null)?.ToString() ?? "";
+                var jabatan = type.GetProperty("jabatan")?.GetValue(item, null)?.ToString() ?? "";
+
+                if (nama.ToLower().Contains(cleanTerm) ||
+                    perusahaan.ToLower().Contains(cleanTerm) ||
+                    nik.ToLower().Contains(cleanTerm) ||
+                    jabatan.ToLower().Contains(cleanTerm))
+                {
+                    var key = $"{nik}|{perusahaan}";
+                    if (seen.Add(key))
+                    {
+                        merged.Add(item);
+                    }
+                }
+            }
+
+            foreach (var item in empList)
+            {
+                var type = item.GetType();
+                var nama = type.GetProperty("Nama")?.GetValue(item, null)?.ToString() ?? "";
+                var perusahaan = type.GetProperty("Perusahaan")?.GetValue(item, null)?.ToString() ?? "";
+                var nik = type.GetProperty("Nik")?.GetValue(item, null)?.ToString() ?? "";
+                var dept = type.GetProperty("Departemen")?.GetValue(item, null)?.ToString() ?? "";
+                var jabatan = type.GetProperty("Jabatan")?.GetValue(item, null)?.ToString() ?? "";
+                var idPerusahaan = type.GetProperty("IdPerusahaan")?.GetValue(item, null);
+
+                var key = $"{nik}|{perusahaan}";
+                if (seen.Add(key))
+                {
+                    merged.Add(new
+                    {
+                        nik = nik,
+                        nama = nama,
+                        departemen = !string.IsNullOrEmpty(dept) ? dept : "GENERAL",
+                        jabatan = !string.IsNullOrEmpty(jabatan) ? jabatan : "-",
+                        perusahaan = !string.IsNullOrEmpty(perusahaan) ? perusahaan : "-",
+                        companyId = idPerusahaan,
+                        companyOnly = false,
+                        source = "SearchEmployee"
+                    });
+                }
+            }
+
+            return Json(merged);
         }
 
         [HttpGet]
