@@ -59,9 +59,7 @@ namespace MBS_SAP.Controllers
                           string.Equals(User.FindFirst(ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase) ||
                           string.Equals(User.FindFirst(ClaimTypes.Role)?.Value?.Trim(), "Administrator", StringComparison.OrdinalIgnoreCase);
 
-            var userCompanyStr = User.FindFirst("CompanyId")?.Value;
-
-            if (isAdmin && (string.IsNullOrEmpty(userCompanyStr) || userCompanyStr == "0"))
+            if (isAdmin)
             {
                 return await _context.Perusahaans
                     .Where(p => p.StatusAktif)
@@ -69,12 +67,44 @@ namespace MBS_SAP.Controllers
                     .ToListAsync();
             }
 
-            if (int.TryParse(userCompanyStr, out int userCompanyId))
+            var userCompanyStr = User.FindFirst("CompanyId")?.Value;
+
+            if (int.TryParse(userCompanyStr, out int userCompanyId) && userCompanyId > 0)
             {
-                return await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId);
+                var accessible = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId);
+                if (accessible != null && accessible.Count > 0)
+                {
+                    return accessible;
+                }
+                return new List<int> { userCompanyId };
             }
 
-            return new List<int>();
+            // If CompanyId claim is missing, fallback to lookup by user NIK
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? 
+                          User.FindFirst("NIK")?.Value ?? 
+                          User.FindFirst("NoNik")?.Value;
+
+            if (!string.IsNullOrEmpty(userNik))
+            {
+                var myKaryawan = await _context.Karyawans.AsNoTracking()
+                    .FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+
+                if (myKaryawan != null && myKaryawan.IdPerusahaan > 0)
+                {
+                    var accessible = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(myKaryawan.IdPerusahaan);
+                    if (accessible != null && accessible.Count > 0)
+                    {
+                        return accessible;
+                    }
+                    return new List<int> { myKaryawan.IdPerusahaan };
+                }
+            }
+
+            // Fallback: all active companies
+            return await _context.Perusahaans
+                .Where(p => p.StatusAktif)
+                .Select(p => p.PerusahaanId)
+                .ToListAsync();
         }
 
         [HttpGet]
@@ -88,7 +118,7 @@ namespace MBS_SAP.Controllers
             var accessibleCompanyIds = await GetUserAccessibleCompanyIdsAsync();
 
             var companies = await _context.Perusahaans
-                .Where(p => accessibleCompanyIds.Contains(p.PerusahaanId))
+                .Where(p => accessibleCompanyIds.Count == 0 || accessibleCompanyIds.Contains(p.PerusahaanId))
                 .OrderBy(p => p.NamaPerusahaan)
                 .Select(p => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
                 {
@@ -97,17 +127,8 @@ namespace MBS_SAP.Controllers
                 })
                 .ToListAsync();
 
-            var userCompanyStr = User.FindFirst("CompanyId")?.Value;
-            var deptsQuery = _context.Departemens.Where(d => d.NamaDepartemen != null);
-
-            if (int.TryParse(userCompanyStr, out int parsedCompanyId))
-            {
-                deptsQuery = deptsQuery.Where(d => d.IdPerusahaan == parsedCompanyId);
-            }
-            else
-            {
-                deptsQuery = deptsQuery.Where(d => d.IdPerusahaan != null && accessibleCompanyIds.Contains(d.IdPerusahaan.Value));
-            }
+            var deptsQuery = _context.Departemens
+                .Where(d => d.NamaDepartemen != null && d.IdPerusahaan != null && (accessibleCompanyIds.Count == 0 || accessibleCompanyIds.Contains(d.IdPerusahaan.Value)));
 
             var depts = await deptsQuery
                 .Select(d => d.NamaDepartemen)
@@ -123,7 +144,6 @@ namespace MBS_SAP.Controllers
 
             ViewData["Companies"] = companies;
             ViewData["Departments"] = departments;
-            ViewData["UserCompanyId"] = userCompanyStr;
             ViewData["ActiveTab"] = "RosterSap";
             ViewData["HeaderTitle"] = "Manajemen Roster & Penugasan SAP";
 
@@ -155,24 +175,26 @@ namespace MBS_SAP.Controllers
             var accessibleCompanyIds = await GetUserAccessibleCompanyIdsAsync();
 
             var usersQuery = from k in _context.Karyawans.AsNoTracking()
-                             join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal
-                             join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId
+                             join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal into persGroup
+                             from p in persGroup.DefaultIfEmpty()
+                             join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into compGroup
+                             from c in compGroup.DefaultIfEmpty()
                              join d in _context.Departemens.AsNoTracking() on k.IdDepartemen equals d.DepartemenId into deptGroup
                              from d in deptGroup.DefaultIfEmpty()
                              join j in _context.Jabatans.AsNoTracking() on k.IdJabatan equals j.JabatanId into jabGroup
                              from j in jabGroup.DefaultIfEmpty()
-                             where k.StatusAktif && accessibleCompanyIds.Contains(k.IdPerusahaan)
+                             where k.StatusAktif && (accessibleCompanyIds.Count == 0 || accessibleCompanyIds.Contains(k.IdPerusahaan))
                              select new {
                                  KaryawanId = (int?)k.IdKaryawan,
                                  Nik = k.NoNik,
-                                 Nama = p.NamaLengkap,
+                                 Nama = p != null ? p.NamaLengkap : k.NoNik,
                                  IdPerusahaan = k.IdPerusahaan,
-                                 Perusahaan = c.NamaPerusahaan,
+                                 Perusahaan = c != null ? c.NamaPerusahaan : "Unknown",
                                  Departemen = d != null ? d.NamaDepartemen : "-",
                                  Jabatan = j != null ? j.NamaJabatan : "-"
                              };
 
-            if (!string.IsNullOrEmpty(perusahaanIdFilter) && int.TryParse(perusahaanIdFilter, out int filterCompanyId))
+            if (!string.IsNullOrEmpty(perusahaanIdFilter) && int.TryParse(perusahaanIdFilter, out int filterCompanyId) && filterCompanyId > 0)
             {
                 usersQuery = usersQuery.Where(u => u.IdPerusahaan == filterCompanyId);
             }
@@ -191,23 +213,38 @@ namespace MBS_SAP.Controllers
             }
 
             var allFilteredUsers = await usersQuery.ToListAsync();
-            var userNiks = allFilteredUsers.Select(u => u.Nik).Distinct().ToList();
+            var userNiks = allFilteredUsers.Select(u => u.Nik).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
 
-            // Fetch latest roster per NIK
-            var allRosters = await _context.Rosters.AsNoTracking()
-                .Where(r => userNiks.Contains(r.Nik))
-                .OrderByDescending(r => r.AkhirCuti)
-                .ThenByDescending(r => r.CreatedAt)
-                .ToListAsync();
+            // Fetch latest roster per NIK in batches to prevent SQL parameter limits
+            var allRosters = new List<Roster>();
+            var mitraRosters = new Dictionary<string, MitraRosterView>();
+            const int batchSize = 1000;
+
+            for (int i = 0; i < userNiks.Count; i += batchSize)
+            {
+                var batch = userNiks.Skip(i).Take(batchSize).ToList();
+                var batchRosters = await _context.Rosters.AsNoTracking()
+                    .Where(r => batch.Contains(r.Nik))
+                    .OrderByDescending(r => r.AkhirCuti)
+                    .ThenByDescending(r => r.CreatedAt)
+                    .ToListAsync();
+                allRosters.AddRange(batchRosters);
+
+                var batchMitra = await _context.MitraRosters.AsNoTracking()
+                    .Where(m => batch.Contains(m.NoNik))
+                    .ToListAsync();
+                foreach (var m in batchMitra)
+                {
+                    if (!mitraRosters.ContainsKey(m.NoNik))
+                    {
+                        mitraRosters[m.NoNik] = m;
+                    }
+                }
+            }
 
             var latestRostersMap = allRosters
                 .GroupBy(r => r.Nik)
                 .ToDictionary(g => g.Key, g => g.First());
-
-            // Fetch mitra roster configs
-            var mitraRosters = await _context.MitraRosters.AsNoTracking()
-                .Where(m => userNiks.Contains(m.NoNik))
-                .ToDictionaryAsync(m => m.NoNik);
 
             var today = DateTime.Today;
 
@@ -354,18 +391,20 @@ namespace MBS_SAP.Controllers
             var accessibleCompanyIds = await GetUserAccessibleCompanyIdsAsync();
 
             var karyawan = await (from k in _context.Karyawans.AsNoTracking()
-                                  join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal
-                                  join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId
+                                  join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal into persGroup
+                                  from p in persGroup.DefaultIfEmpty()
+                                  join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into compGroup
+                                  from c in compGroup.DefaultIfEmpty()
                                   join d in _context.Departemens.AsNoTracking() on k.IdDepartemen equals d.DepartemenId into deptGroup
                                   from d in deptGroup.DefaultIfEmpty()
                                   join j in _context.Jabatans.AsNoTracking() on k.IdJabatan equals j.JabatanId into jabGroup
                                   from j in jabGroup.DefaultIfEmpty()
-                                  where k.NoNik == nik && accessibleCompanyIds.Contains(k.IdPerusahaan)
+                                  where k.NoNik == nik && (accessibleCompanyIds.Count == 0 || accessibleCompanyIds.Contains(k.IdPerusahaan))
                                   select new {
                                       k.IdKaryawan,
                                       k.NoNik,
-                                      p.NamaLengkap,
-                                      c.NamaPerusahaan,
+                                      NamaLengkap = p != null ? p.NamaLengkap : k.NoNik,
+                                      NamaPerusahaan = c != null ? c.NamaPerusahaan : "Unknown",
                                       Departemen = d != null ? d.NamaDepartemen : "-",
                                       Jabatan = j != null ? j.NamaJabatan : "-"
                                   }).FirstOrDefaultAsync();
@@ -426,7 +465,7 @@ namespace MBS_SAP.Controllers
             var accessibleCompanyIds = await GetUserAccessibleCompanyIdsAsync();
 
             var karyawan = await _context.Karyawans.AsNoTracking()
-                .FirstOrDefaultAsync(k => k.NoNik == req.Nik && k.StatusAktif && accessibleCompanyIds.Contains(k.IdPerusahaan));
+                .FirstOrDefaultAsync(k => k.NoNik == req.Nik && k.StatusAktif && (accessibleCompanyIds.Count == 0 || accessibleCompanyIds.Contains(k.IdPerusahaan)));
 
             if (karyawan == null)
             {
@@ -579,7 +618,7 @@ namespace MBS_SAP.Controllers
             var accessibleCompanyIds = await GetUserAccessibleCompanyIdsAsync();
 
             var karyawan = await _context.Karyawans.AsNoTracking()
-                .FirstOrDefaultAsync(k => k.NoNik == nik && accessibleCompanyIds.Contains(k.IdPerusahaan));
+                .FirstOrDefaultAsync(k => k.NoNik == nik && (accessibleCompanyIds.Count == 0 || accessibleCompanyIds.Contains(k.IdPerusahaan)));
 
             if (karyawan == null)
             {
@@ -618,7 +657,10 @@ namespace MBS_SAP.Controllers
             }
             else
             {
-                query = query.Where(d => d.IdPerusahaan.HasValue && accessibleCompanyIds.Contains(d.IdPerusahaan.Value));
+                if (accessibleCompanyIds.Count > 0)
+                {
+                    query = query.Where(d => d.IdPerusahaan.HasValue && accessibleCompanyIds.Contains(d.IdPerusahaan.Value));
+                }
             }
 
             var depts = await query
@@ -638,19 +680,21 @@ namespace MBS_SAP.Controllers
             var accessibleCompanyIds = await GetUserAccessibleCompanyIdsAsync();
 
             var usersQuery = from k in _context.Karyawans.AsNoTracking()
-                             join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal
-                             join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId
+                             join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal into persGroup
+                             from p in persGroup.DefaultIfEmpty()
+                             join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into compGroup
+                             from c in compGroup.DefaultIfEmpty()
                              join d in _context.Departemens.AsNoTracking() on k.IdDepartemen equals d.DepartemenId into deptGroup
                              from d in deptGroup.DefaultIfEmpty()
                              join j in _context.Jabatans.AsNoTracking() on k.IdJabatan equals j.JabatanId into jabGroup
                              from j in jabGroup.DefaultIfEmpty()
-                             where k.StatusAktif && accessibleCompanyIds.Contains(k.IdPerusahaan)
+                             where k.StatusAktif && (accessibleCompanyIds.Count == 0 || accessibleCompanyIds.Contains(k.IdPerusahaan))
                              select new {
                                  KaryawanId = (int?)k.IdKaryawan,
                                  Nik = k.NoNik,
-                                 Nama = p.NamaLengkap,
+                                 Nama = p != null ? p.NamaLengkap : k.NoNik,
                                  IdPerusahaan = k.IdPerusahaan,
-                                 Perusahaan = c.NamaPerusahaan,
+                                 Perusahaan = c != null ? c.NamaPerusahaan : "Unknown",
                                  Departemen = d != null ? d.NamaDepartemen : "-",
                                  Jabatan = j != null ? j.NamaJabatan : "-"
                              };
@@ -667,28 +711,44 @@ namespace MBS_SAP.Controllers
 
             if (!string.IsNullOrEmpty(search))
             {
-                search = search.ToLower().Trim();
+                search = search.Trim();
                 usersQuery = usersQuery.Where(u => 
-                    u.Nama.ToLower().Contains(search) || 
-                    u.Nik.ToLower().Contains(search));
+                    (u.Nama != null && (u.Nama.Contains(search) || EF.Functions.Like(u.Nama, $"%{search}%"))) || 
+                    (u.Nik != null && (u.Nik.Contains(search) || EF.Functions.Like(u.Nik, $"%{search}%"))));
             }
 
             var allFilteredUsers = await usersQuery.OrderBy(u => u.Nama).ToListAsync();
-            var userNiks = allFilteredUsers.Select(u => u.Nik).Distinct().ToList();
+            var userNiks = allFilteredUsers.Select(u => u.Nik).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
 
-            var allRosters = await _context.Rosters.AsNoTracking()
-                .Where(r => userNiks.Contains(r.Nik))
-                .OrderByDescending(r => r.AkhirCuti)
-                .ThenByDescending(r => r.CreatedAt)
-                .ToListAsync();
+            var allRosters = new List<Roster>();
+            var mitraRosters = new Dictionary<string, MitraRosterView>();
+            const int batchSize = 1000;
+
+            for (int i = 0; i < userNiks.Count; i += batchSize)
+            {
+                var batch = userNiks.Skip(i).Take(batchSize).ToList();
+                var batchRosters = await _context.Rosters.AsNoTracking()
+                    .Where(r => batch.Contains(r.Nik))
+                    .OrderByDescending(r => r.AkhirCuti)
+                    .ThenByDescending(r => r.CreatedAt)
+                    .ToListAsync();
+                allRosters.AddRange(batchRosters);
+
+                var batchMitra = await _context.MitraRosters.AsNoTracking()
+                    .Where(m => batch.Contains(m.NoNik))
+                    .ToListAsync();
+                foreach (var m in batchMitra)
+                {
+                    if (!mitraRosters.ContainsKey(m.NoNik))
+                    {
+                        mitraRosters[m.NoNik] = m;
+                    }
+                }
+            }
 
             var latestRostersMap = allRosters
                 .GroupBy(r => r.Nik)
                 .ToDictionary(g => g.Key, g => g.First());
-
-            var mitraRosters = await _context.MitraRosters.AsNoTracking()
-                .Where(m => userNiks.Contains(m.NoNik))
-                .ToDictionaryAsync(m => m.NoNik);
 
             var today = DateTime.Today;
 

@@ -454,13 +454,16 @@
                         d.customSearch = currentSearch;
                     },
                     dataSrc: function(json) {
-                        if (json.stats) {
-                            $('#statTotal').text(json.stats.total.toLocaleString());
-                            $('#statAktif').text(json.stats.aktif.toLocaleString());
-                            $('#statTugas').text(json.stats.tugas.toLocaleString());
-                            $('#statExpired').text((json.stats.expired + json.stats.belumSet).toLocaleString());
+                        if (json && json.stats) {
+                            $('#statTotal').text((json.stats.total || 0).toLocaleString());
+                            $('#statAktif').text((json.stats.aktif || 0).toLocaleString());
+                            $('#statTugas').text((json.stats.tugas || 0).toLocaleString());
+                            $('#statExpired').text(((json.stats.expired || 0) + (json.stats.belumSet || 0)).toLocaleString());
                         }
-                        return json.data;
+                        return (json && json.data) ? json.data : [];
+                    },
+                    error: function(xhr, err, thrown) {
+                        console.error("Gagal memuat data roster:", err, thrown, xhr.responseText);
                     }
                 },
                 columns: [
