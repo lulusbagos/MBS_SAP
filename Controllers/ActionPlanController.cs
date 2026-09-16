@@ -33,7 +33,7 @@ namespace MBS_SAP.Controllers
         }
 
         // GET: ActionPlan
-        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, string? filter, string? dept)
+        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, string? filter, string? dept, string? status, string? type)
         {
             ViewData["HeaderTitle"] = "Action Plan Temuan";
             ViewData["ActiveTab"] = "ActionPlan";
@@ -50,6 +50,10 @@ namespace MBS_SAP.Controllers
 
             ViewBag.StartDate = start.ToString("yyyy-MM-dd");
             ViewBag.EndDate = end.ToString("yyyy-MM-dd");
+            ViewBag.SelectedFilter = filter;
+            ViewBag.SelectedDept = dept;
+            ViewBag.SelectedStatus = status;
+            ViewBag.SelectedType = type;
 
             var query = _context.ActionPlans.AsNoTracking().Where(r => !r.IsDeleted && r.Tanggal >= start && r.Tanggal <= endOfDay);
 
@@ -323,7 +327,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> DownloadExcel(DateTime? startDate, DateTime? endDate)
+        public async Task<IActionResult> DownloadExcel(DateTime? startDate, DateTime? endDate, string? filter, string? dept, string? status, string? type)
         {
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var compIdStr = User.FindFirst("CompanyId")?.Value;
@@ -338,6 +342,28 @@ namespace MBS_SAP.Controllers
 
             var userDept = User.FindFirst("Department")?.Value;
 
+            if (!string.IsNullOrEmpty(filter))
+            {
+                if (filter == "mine")
+                {
+                    query = query.Where(r => 
+                        r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik);
+                }
+                else if (filter == "created")
+                {
+                    query = query.Where(r => r.Nik == userNik);
+                }
+                else if (filter == "assigned")
+                {
+                    query = query.Where(r => r.NikPja == userNik || r.NikPic == userNik);
+                }
+                else if (filter == "dept" && !string.IsNullOrEmpty(dept))
+                {
+                    query = query.Where(r => 
+                        r.Departemen == dept || r.DepartemenPja == dept || r.DepartemenPic == dept);
+                }
+            }
+
             // Filter berdasarkan hierarki perusahaan (sama seperti Index)
             if (companyId.HasValue)
             {
@@ -351,16 +377,41 @@ namespace MBS_SAP.Controllers
                 );
             }
 
-            if (!isAdmin && !string.IsNullOrEmpty(userNik))
+            if (!string.IsNullOrEmpty(status) && status != "all")
             {
-                query = query.Where(r =>
-                    r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik
-                );
+                if (status.Equals("open", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(r => r.Status == "Open");
+                }
+                else if (status.Equals("closed", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(r => r.Status == "Closed" || r.Status == "Close" || r.Status == "Selesai" || r.Status == "Complete");
+                }
+                else if (status.Equals("outstanding", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(r => r.Status == "Open" && (r.RencanaPerbaikan == null || r.RencanaPerbaikan == ""));
+                }
+                else if (status.Equals("progress", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(r => r.Status == "Open" && r.RencanaPerbaikan != null && r.RencanaPerbaikan != "");
+                }
+            }
+
+            if (!string.IsNullOrEmpty(type) && type != "all")
+            {
+                if (type.Equals("hazard", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(r => r.ItemSap != null && r.ItemSap.StartsWith("hazard"));
+                }
+                else if (type.Equals("inspection", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(r => r.ItemSap != null && r.ItemSap.StartsWith("inspection"));
+                }
             }
 
             // Urutkan status "Open" terlebih dahulu, kemudian CreatedAt terbaru
             var reports = await query
-                .OrderBy(r => r.Status == "Closed" ? 1 : 0) // Open (status != Closed) first
+                .OrderBy(r => r.Status == "Closed" || r.Status == "Close" || r.Status == "Selesai" || r.Status == "Complete" ? 1 : 0)
                 .ThenByDescending(r => r.CreatedAt)
                 .ToListAsync();
 

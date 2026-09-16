@@ -283,7 +283,7 @@
                 <span id="visibleCount" class="badge" style="background: rgba(56,189,248,0.15); color: var(--color-primary); font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 99px; border: 1px solid rgba(56,189,248,0.25);">
                     @(Model?.Count() ?? 0) item
                 </span>
-                <a asp-controller="ActionPlan" asp-action="DownloadExcel" asp-route-startDate="@ViewBag.StartDate" asp-route-endDate="@ViewBag.EndDate" class="btn btn-sm btn-outline-success" style="border-radius: 999px; font-weight: 700; font-size: 11px; padding: 4px 12px; display: flex; align-items: center; gap: 4px;">
+                <a id="btnExportExcel" asp-controller="ActionPlan" asp-action="DownloadExcel" asp-route-startDate="@ViewBag.StartDate" asp-route-endDate="@ViewBag.EndDate" asp-route-filter="@ViewBag.SelectedFilter" asp-route-dept="@ViewBag.SelectedDept" asp-route-status="@ViewBag.SelectedStatus" asp-route-type="@ViewBag.SelectedType" class="btn btn-sm btn-outline-success" style="border-radius: 999px; font-weight: 700; font-size: 11px; padding: 4px 12px; display: flex; align-items: center; gap: 4px;">
                     <i class="bi bi-file-earmark-excel-fill"></i> Export Excel
                 </a>
             </div>
@@ -343,8 +343,9 @@
             <!-- Status -->
             <div class="ap-filter-group">
                 <span class="ap-filter-label">Status</span>
-                <button class="ap-pill filter-status" data-status="all">Semua</button>
-                <button class="ap-pill filter-status active-red" data-status="outstanding" data-active-class="active-red">Outstanding</button>
+                <button class="ap-pill filter-status active" data-status="all">Semua</button>
+                <button class="ap-pill filter-status" data-status="open" data-active-class="active" style="--color-primary: #38bdf8;">Open</button>
+                <button class="ap-pill filter-status" data-status="outstanding" data-active-class="active-red">Outstanding</button>
                 <button class="ap-pill filter-status" data-status="progress" data-active-class="active" style="--color-primary: #f59e0b;">Progress</button>
                 <button class="ap-pill filter-status" data-status="closed" data-active-class="active-green">Closed</button>
             </div>
@@ -1027,8 +1028,8 @@
         $(document).ready(function () {
             const urlParams = new URLSearchParams(window.location.search);
             let selectedType   = (urlParams.get('type') || 'all').toLowerCase();
-            let selectedStatus = (urlParams.get('status') || 'outstanding').toLowerCase();
-            let specialFilter  = urlParams.get('filter'); // 'mine' or 'dept'
+            let selectedStatus = (urlParams.get('status') || 'all').toLowerCase();
+            let specialFilter  = urlParams.get('filter'); // 'mine', 'created', 'assigned', or 'dept'
             let specialDept    = urlParams.get('dept');
             const currentUserNik = '@userNik';
             const currentUserDept = '@(User.FindFirst("Department")?.Value ?? "")'.toLowerCase();
@@ -1044,13 +1045,13 @@
             const debouncedApplyFilters = debounce(applyFilters, 150);
 
             // Set initial active pill for status
-            if (selectedStatus !== 'outstanding') {
-                $('.filter-status').removeClass('active active-green active-red');
-                const $statusPill = $('.filter-status[data-status="' + selectedStatus + '"]');
-                if ($statusPill.length) {
-                    const cls = $statusPill.data('active-class') || 'active';
-                    $statusPill.addClass(cls);
-                }
+            $('.filter-status').removeClass('active active-green active-red');
+            const $statusPill = $('.filter-status[data-status="' + selectedStatus + '"]');
+            if ($statusPill.length) {
+                const cls = $statusPill.data('active-class') || 'active';
+                $statusPill.addClass(cls);
+            } else {
+                $('.filter-status[data-status="all"]').addClass('active');
             }
 
             // Set initial active pill for type if passed in URL
@@ -1065,6 +1066,19 @@
             let selectedPerusahaan = 'all';
             let selectedDepartemen = 'all';
             let selectedResiko = 'all';
+
+            function updateExportUrl() {
+                const params = new URLSearchParams();
+                const startDate = $('input[name="startDate"]').val() || '@ViewBag.StartDate';
+                const endDate = $('input[name="endDate"]').val() || '@ViewBag.EndDate';
+                if (startDate) params.set('startDate', startDate);
+                if (endDate) params.set('endDate', endDate);
+                if (specialFilter) params.set('filter', specialFilter);
+                if (specialDept) params.set('dept', specialDept);
+                if (selectedStatus && selectedStatus !== 'all') params.set('status', selectedStatus);
+                if (selectedType && selectedType !== 'all') params.set('type', selectedType);
+                $('#btnExportExcel').attr('href', '/ActionPlan/DownloadExcel?' + params.toString());
+            }
 
             applyFilters();
 
@@ -1105,6 +1119,10 @@
                     let matchSpecial = true;
                     if (specialFilter === 'mine') {
                         matchSpecial = (nik === currentUserNik || nikpja === currentUserNik || nikpic === currentUserNik);
+                    } else if (specialFilter === 'created') {
+                        matchSpecial = (nik === currentUserNik);
+                    } else if (specialFilter === 'assigned') {
+                        matchSpecial = (nikpja === currentUserNik || nikpic === currentUserNik);
                     } else if (specialFilter === 'dept' && specialDept) {
                         const sd = specialDept.toLowerCase();
                         matchSpecial = (d.toLowerCase() === sd || dpja.toLowerCase() === sd || dpic.toLowerCase() === sd);
@@ -1128,6 +1146,7 @@
                 });
 
                 $('#visibleCount').text(visible + ' item');
+                updateExportUrl();
 
                 if (visible === 0) {
                     if ($('#empty-filter-state').length === 0) {
