@@ -247,34 +247,64 @@ namespace MBS_SAP.Controllers
                 .ToList();
 
             var hazards = new List<string>();
+            var hazardsClosed = new List<string>();
+            var actionPlansAll = new List<string>();
+            var actionPlansClosed = new List<string>();
             var inspections = new List<string>();
             var safetyTalks = new List<string>();
             var p5ms = new List<string>();
             var coachings = new List<string>();
             var observations = new List<string>();
 
+            bool isClosedStatusHelper(string? s)
+            {
+                if (string.IsNullOrWhiteSpace(s)) return false;
+                var trimmed = s.Trim();
+                return trimmed.Equals("Closed", StringComparison.OrdinalIgnoreCase)
+                    || trimmed.Equals("Close", StringComparison.OrdinalIgnoreCase)
+                    || trimmed.Equals("Selesai", StringComparison.OrdinalIgnoreCase)
+                    || trimmed.Equals("Complete", StringComparison.OrdinalIgnoreCase);
+            }
+
             if (employeeNiks.Count > 0)
             {
                 var employeeNiksSet = new HashSet<string>(employeeNiks, StringComparer.OrdinalIgnoreCase);
-                var reqCacheKey = $"MonthlyData_{selectedYear}_{selectedMonth}";
+                var reqCacheKey = $"MonthlyData_WithCloseRate_{selectedYear}_{selectedMonth}";
 
-                List<string> dbHazards, dbInspections, dbSafetyTalks, dbP5ms, allCoachings, dbObservations;
+                List<string> dbHazards, dbHazardsClosed, dbActionPlansAll, dbActionPlansClosed, dbInspections, dbSafetyTalks, dbP5ms, allCoachings, dbObservations;
 
-                if (HttpContext.Items[reqCacheKey] is Tuple<List<string>, List<string>, List<string>, List<string>, List<string>, List<string>> cachedData)
+                if (HttpContext.Items[reqCacheKey] is MonthlyComplianceCacheData cachedData)
                 {
-                    dbHazards = cachedData.Item1;
-                    dbInspections = cachedData.Item2;
-                    dbSafetyTalks = cachedData.Item3;
-                    dbP5ms = cachedData.Item4;
-                    allCoachings = cachedData.Item5;
-                    dbObservations = cachedData.Item6;
+                    dbHazards = cachedData.Hazards;
+                    dbHazardsClosed = cachedData.HazardsClosed;
+                    dbActionPlansAll = cachedData.ActionPlansAll;
+                    dbActionPlansClosed = cachedData.ActionPlansClosed;
+                    dbInspections = cachedData.Inspections;
+                    dbSafetyTalks = cachedData.SafetyTalks;
+                    dbP5ms = cachedData.P5ms;
+                    allCoachings = cachedData.Coachings;
+                    dbObservations = cachedData.Observations;
                 }
                 else
                 {
-                    dbHazards = await _context.HazardReports
+                    var rawHazards = await _context.HazardReports
                         .Where(h => !h.IsDeleted && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth)
-                        .Select(h => h.Nik)
+                        .Select(h => new { h.Nik, h.StatusTemuan })
                         .ToListAsync();
+
+                    dbHazards = rawHazards.Where(h => h.Nik != null).Select(h => h.Nik!).ToList();
+                    dbHazardsClosed = rawHazards.Where(h => h.Nik != null && isClosedStatusHelper(h.StatusTemuan)).Select(h => h.Nik!).ToList();
+
+                    var rawActionPlans = await _context.ActionPlans
+                        .Where(a => !a.IsDeleted && (
+                            (a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth) ||
+                            (a.CreatedAt >= startOfMonth && a.CreatedAt <= endOfMonth)
+                        ))
+                        .Select(a => new { a.Nik, a.Status })
+                        .ToListAsync();
+
+                    dbActionPlansAll = rawActionPlans.Where(a => a.Nik != null).Select(a => a.Nik!).ToList();
+                    dbActionPlansClosed = rawActionPlans.Where(a => a.Nik != null && isClosedStatusHelper(a.Status)).Select(a => a.Nik!).ToList();
 
                     dbInspections = await _context.Inspections
                         .Where(i => !i.IsDeleted && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth)
@@ -308,10 +338,24 @@ namespace MBS_SAP.Controllers
                         .Select(o => o.Nik)
                         .ToListAsync();
 
-                    HttpContext.Items[reqCacheKey] = Tuple.Create(dbHazards, dbInspections, dbSafetyTalks, dbP5ms, allCoachings, dbObservations);
+                    HttpContext.Items[reqCacheKey] = new MonthlyComplianceCacheData
+                    {
+                        Hazards = dbHazards,
+                        HazardsClosed = dbHazardsClosed,
+                        ActionPlansAll = dbActionPlansAll,
+                        ActionPlansClosed = dbActionPlansClosed,
+                        Inspections = dbInspections,
+                        SafetyTalks = dbSafetyTalks,
+                        P5ms = dbP5ms,
+                        Coachings = allCoachings,
+                        Observations = dbObservations
+                    };
                 }
 
                 hazards = dbHazards.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
+                hazardsClosed = dbHazardsClosed.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
+                actionPlansAll = dbActionPlansAll.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
+                actionPlansClosed = dbActionPlansClosed.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
                 inspections = dbInspections.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
                 safetyTalks = dbSafetyTalks.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
                 p5ms = dbP5ms.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
@@ -409,6 +453,14 @@ namespace MBS_SAP.Controllers
                 int mtdTgtP5 = isTargetSap ? p5mTar : 0;
 
                 int mtdActH = hazards.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int mtdActHClosed = hazardsClosed.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int mtdActAp = actionPlansAll.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+                int mtdActApClosed = actionPlansClosed.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
+
+                int empEffectiveTotalAp = mtdActAp >= mtdActH && mtdActAp > 0 ? mtdActAp : mtdActH;
+                int empEffectiveClosedAp = mtdActAp >= mtdActH && mtdActAp > 0 ? mtdActApClosed : mtdActHClosed;
+                double empCloseRate = empEffectiveTotalAp > 0 ? Math.Round((double)empEffectiveClosedAp / empEffectiveTotalAp * 100.0, 1) : 100.0;
+
                 int mtdActI = inspections.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int mtdActST = safetyTalks.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int mtdActO = observations.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
@@ -447,6 +499,9 @@ namespace MBS_SAP.Controllers
                     mtdTotalActual = totalAct,
                     totalActualAll = totalActualAll,
                     complianceRate = compliance,
+                    closeRate = empCloseRate,
+                    closeRateEffectiveTotal = empEffectiveTotalAp,
+                    closeRateEffectiveClosed = empEffectiveClosedAp,
                     onsiteDays = onsiteDays,
                     hasRoster = hasRoster,
                     isNewHire = isNewHire,
@@ -3076,6 +3131,10 @@ namespace MBS_SAP.Controllers
                     int p5mAct = targetEmps.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                     int p5mTgt = targetEmps.Sum(e => (int)e.p5m.target);
 
+                    int compEffectiveTotalAp = targetEmps.Sum(e => (int)e.closeRateEffectiveTotal);
+                    int compEffectiveClosedAp = targetEmps.Sum(e => (int)e.closeRateEffectiveClosed);
+                    double compCloseRate = compEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)compEffectiveClosedAp / compEffectiveTotalAp * 100.0), 1) : 100.0;
+
                     double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
                     double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : -1;
                     double iRate = iTgt > 0 ? Math.Min(100.0, Math.Round((double)iAct / iTgt * 100.0, 1)) : -1;
@@ -3096,7 +3155,8 @@ namespace MBS_SAP.Controllers
                         MtdSafetyTalkRate = stRate,
                         MtdObservasiRate = oRate,
                         MtdCoachingRate = cRate,
-                        MtdP5mRate = p5mRate
+                        MtdP5mRate = p5mRate,
+                        MtdCloseRate = compCloseRate
                     });
                 }
 
@@ -3137,6 +3197,7 @@ namespace MBS_SAP.Controllers
                         isActivelyReporting = (bool)e.isActivelyReporting,
                         totalActualAll = (int)e.totalActualAll,
                         complianceRate = (double)e.complianceRate,
+                        closeRate = (double)e.closeRate,
                         mtdTotalTarget = (int)e.mtdTotalTarget,
                         onsiteDays = (int)e.onsiteDays,
                         hasRoster = (bool)e.hasRoster,
@@ -3188,6 +3249,10 @@ namespace MBS_SAP.Controllers
                         
                         int p5mAct = g.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                         int p5mTgt = g.Sum(e => (int)e.p5m.target);
+
+                        int deptEffectiveTotalAp = g.Sum(e => (int)e.closeRateEffectiveTotal);
+                        int deptEffectiveClosedAp = g.Sum(e => (int)e.closeRateEffectiveClosed);
+                        double deptCloseRate = deptEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)deptEffectiveClosedAp / deptEffectiveTotalAp * 100.0), 1) : 100.0;
                         
                         double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
                         double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : -1;
@@ -3208,7 +3273,8 @@ namespace MBS_SAP.Controllers
                             MtdSafetyTalkRate = stRate,
                             MtdObservasiRate = oRate,
                             MtdCoachingRate = cRate,
-                            MtdP5mRate = p5mRate
+                            MtdP5mRate = p5mRate,
+                            MtdCloseRate = deptCloseRate
                         };
                     })
                     .OrderByDescending(d => d.MtdAchievementRate)
@@ -3246,6 +3312,7 @@ namespace MBS_SAP.Controllers
                     isActivelyReporting = (bool)e.isActivelyReporting,
                     totalActualAll = (int)e.totalActualAll,
                     complianceRate = (double)e.complianceRate,
+                    closeRate = (double)e.closeRate,
                     mtdTotalTarget = (int)e.mtdTotalTarget,
                     onsiteDays = (int)e.onsiteDays,
                     hasRoster = (bool)e.hasRoster,
@@ -3409,6 +3476,10 @@ namespace MBS_SAP.Controllers
                     int p5mAct = targetEmps.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                     int p5mTgt = targetEmps.Sum(e => (int)e.p5m.target);
 
+                    int compEffectiveTotalAp = targetEmps.Sum(e => (int)e.closeRateEffectiveTotal);
+                    int compEffectiveClosedAp = targetEmps.Sum(e => (int)e.closeRateEffectiveClosed);
+                    double compCloseRate = compEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)compEffectiveClosedAp / compEffectiveTotalAp * 100.0), 1) : 100.0;
+
                     double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
                     double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : -1;
                     double iRate = iTgt > 0 ? Math.Min(100.0, Math.Round((double)iAct / iTgt * 100.0, 1)) : -1;
@@ -3429,7 +3500,8 @@ namespace MBS_SAP.Controllers
                         MtdSafetyTalkRate = stRate,
                         MtdObservasiRate = oRate,
                         MtdCoachingRate = cRate,
-                        MtdP5mRate = p5mRate
+                        MtdP5mRate = p5mRate,
+                        MtdCloseRate = compCloseRate
                     });
                 }
 
@@ -3470,6 +3542,10 @@ namespace MBS_SAP.Controllers
                         
                         int p5mAct = g.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                         int p5mTgt = g.Sum(e => (int)e.p5m.target);
+
+                        int deptEffectiveTotalAp = g.Sum(e => (int)e.closeRateEffectiveTotal);
+                        int deptEffectiveClosedAp = g.Sum(e => (int)e.closeRateEffectiveClosed);
+                        double deptCloseRate = deptEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)deptEffectiveClosedAp / deptEffectiveTotalAp * 100.0), 1) : 100.0;
                         
                         double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
                         double hRate = hTgt > 0 ? Math.Min(100.0, Math.Round((double)hAct / hTgt * 100.0, 1)) : -1;
@@ -3490,7 +3566,8 @@ namespace MBS_SAP.Controllers
                             MtdSafetyTalkRate = stRate,
                             MtdObservasiRate = oRate,
                             MtdCoachingRate = cRate,
-                            MtdP5mRate = p5mRate
+                            MtdP5mRate = p5mRate,
+                            MtdCloseRate = deptCloseRate
                         };
                     })
                     .OrderByDescending(d => d.MtdAchievementRate)
@@ -3531,6 +3608,7 @@ namespace MBS_SAP.Controllers
                     isNonTarget = (bool)e.isNonTarget,
                     isActivelyReporting = (bool)e.isActivelyReporting,
                     complianceRate = (double)e.complianceRate,
+                    closeRate = (double)e.closeRate,
                     mtdTotalTarget = (int)e.mtdTotalTarget,
                     onsiteDays = (int)e.onsiteDays,
                     hasRoster = (bool)e.hasRoster,
@@ -3578,7 +3656,7 @@ namespace MBS_SAP.Controllers
                 string clubHeader = (mode == "company" || mode == "core") ? "Klub (Perusahaan)" : "Klub (Departemen)";
                 string[] stdHeaders = new[] {
                     "Pos", clubHeader, "Skuad (Orang)", "Total Target", "Kepatuhan SAP (%)",
-                    "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *"
+                    "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *", "Close Rate (%)"
                 };
 
                 for (int i = 0; i < stdHeaders.Length; i++)
@@ -3591,6 +3669,8 @@ namespace MBS_SAP.Controllers
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                     if (i == 10)
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber P5M
+                    else if (i == 11)
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald Close Rate
                     else
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
                     cell.Style.Font.FontColor = XLColor.White;
@@ -3641,6 +3721,7 @@ namespace MBS_SAP.Controllers
                         SetRateCell(wsStandings.Cell(sRow, 9), (double)comp.MtdObservasiRate);
                         SetRateCell(wsStandings.Cell(sRow, 10), (double)comp.MtdCoachingRate);
                         SetRateCell(wsStandings.Cell(sRow, 11), (double)comp.MtdP5mRate);
+                        SetRateCell(wsStandings.Cell(sRow, 12), (double)comp.MtdCloseRate);
 
                         // Alignments
                         wsStandings.Cell(sRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -3648,12 +3729,12 @@ namespace MBS_SAP.Controllers
                         wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                        for (int c = 6; c <= 11; c++)
+                        for (int c = 6; c <= 12; c++)
                         {
                             wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         }
 
-                        var sRowRange = wsStandings.Range(sRow, 1, sRow, 11);
+                        var sRowRange = wsStandings.Range(sRow, 1, sRow, 12);
                         sRowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                         sRowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                         sRowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -3695,6 +3776,7 @@ namespace MBS_SAP.Controllers
                         SetRateCell(wsStandings.Cell(sRow, 9), dept.MtdObservasiRate);
                         SetRateCell(wsStandings.Cell(sRow, 10), dept.MtdCoachingRate);
                         SetRateCell(wsStandings.Cell(sRow, 11), dept.MtdP5mRate);
+                        SetRateCell(wsStandings.Cell(sRow, 12), dept.MtdCloseRate);
 
                         // Alignments
                         wsStandings.Cell(sRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -3702,12 +3784,12 @@ namespace MBS_SAP.Controllers
                         wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                        for (int c = 6; c <= 11; c++)
+                        for (int c = 6; c <= 12; c++)
                         {
                             wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         }
 
-                        var sRowRange = wsStandings.Range(sRow, 1, sRow, 11);
+                        var sRowRange = wsStandings.Range(sRow, 1, sRow, 12);
                         sRowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                         sRowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                         sRowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -3727,8 +3809,8 @@ namespace MBS_SAP.Controllers
                 wsStandings.SheetView.FreezeRows(6);
                 if (sRow > 7)
                 {
-                    wsStandings.Range(6, 1, sRow - 1, 11).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    wsStandings.Range(6, 1, sRow - 1, 11).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
+                    wsStandings.Range(6, 1, sRow - 1, 12).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    wsStandings.Range(6, 1, sRow - 1, 12).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
                 }
                 wsStandings.Columns().AdjustToContents();
                 foreach (var col in wsStandings.ColumnsUsed())
@@ -3769,7 +3851,7 @@ namespace MBS_SAP.Controllers
                     "Peringkat", "Nama Karyawan", "NIK", "Departemen", "Jabatan", "Kategori SAP", "Status Roster", "Kepatuhan (%)",
                     "Hazard Actual", "Hazard Target", "Inspeksi Actual", "Inspeksi Target",
                     "Safety Talk Actual", "Safety Talk Target", "Observasi Actual", "Observasi Target",
-                    "Coaching Actual", "Coaching Target", "P5M Actual *", "P5M Target"
+                    "Coaching Actual", "Coaching Target", "P5M Actual *", "P5M Target", "Close Rate (%)"
                 };
 
                 for (int i = 0; i < squadHeaders.Length; i++)
@@ -3782,6 +3864,8 @@ namespace MBS_SAP.Controllers
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                     if (i == 18 || i == 19) // P5M
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber
+                    else if (i == 20) // Close Rate
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald
                     else
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
                     cell.Style.Font.FontColor = XLColor.White;
@@ -3822,6 +3906,9 @@ namespace MBS_SAP.Controllers
                     wsSquad.Cell(row, 19).Value = emp.p5m.actual;
                     wsSquad.Cell(row, 20).Value = emp.p5m.target;
 
+                    var crCell = wsSquad.Cell(row, 21);
+                    SetRateCell(crCell, emp.closeRate);
+
                     // Alignments
                     wsSquad.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     wsSquad.Cell(row, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
@@ -3831,7 +3918,7 @@ namespace MBS_SAP.Controllers
                     wsSquad.Cell(row, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     wsSquad.Cell(row, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     wsSquad.Cell(row, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                    for (int c = 9; c <= 20; c++)
+                    for (int c = 9; c <= 21; c++)
                     {
                         wsSquad.Cell(row, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     }
@@ -3857,7 +3944,7 @@ namespace MBS_SAP.Controllers
                     compCell.Style.Font.Bold = true;
 
                     // Border styling
-                    var rowRange = wsSquad.Range(row, 1, row, 20);
+                    var rowRange = wsSquad.Range(row, 1, row, 21);
                     rowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     rowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                     rowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -3895,8 +3982,8 @@ namespace MBS_SAP.Controllers
                 // Add thick outer border to the entire table
                 if (row > 7)
                 {
-                    wsSquad.Range(6, 1, row - 1, 20).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    wsSquad.Range(6, 1, row - 1, 20).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
+                    wsSquad.Range(6, 1, row - 1, 21).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    wsSquad.Range(6, 1, row - 1, 21).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
                 }
 
                 // Auto fit columns
@@ -7937,8 +8024,10 @@ namespace MBS_SAP.Controllers
         public double MtdInspeksiRate { get; set; }
         public double MtdSafetyTalkRate { get; set; }
         public double MtdP5mRate { get; set; }
+        public double MtdCloseRate { get; set; } = 100.0;
         public double MtdObservasiRate { get; set; }
         public double MtdCoachingRate { get; set; }
+        public double YtdCloseRate { get; set; } = 100.0;
     }
 
     public class ComplianceEmployeeViewModel
@@ -8061,5 +8150,18 @@ namespace MBS_SAP.Controllers
         public int TargetObservasi { get; set; }
         public int ActualCoaching { get; set; }
         public int TargetCoaching { get; set; }
+    }
+
+    public class MonthlyComplianceCacheData
+    {
+        public List<string> Hazards { get; set; } = new();
+        public List<string> HazardsClosed { get; set; } = new();
+        public List<string> ActionPlansAll { get; set; } = new();
+        public List<string> ActionPlansClosed { get; set; } = new();
+        public List<string> Inspections { get; set; } = new();
+        public List<string> SafetyTalks { get; set; } = new();
+        public List<string> P5ms { get; set; } = new();
+        public List<string> Coachings { get; set; } = new();
+        public List<string> Observations { get; set; } = new();
     }
 }

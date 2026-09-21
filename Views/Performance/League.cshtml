@@ -774,13 +774,14 @@
                                     <th style="width: 60px;">OB</th>
                                     <th style="width: 60px;">CC</th>
                                     <th style="width: 65px; background-color: #78350f;">P5M *</th>
+                                    <th style="width: 75px; background-color: #065f46;">Close Rate</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @if (!companyStandings.Any())
                                 {
                                     <tr>
-                                        <td colspan="11" class="text-center text-muted py-4">Belum ada data perusahaan terdaftar.</td>
+                                        <td colspan="12" class="text-center text-muted py-4">Belum ada data perusahaan terdaftar.</td>
                                     </tr>
                                 }
                                 else
@@ -842,6 +843,7 @@
                                             <td class="text-center">@FormatRate(comp.MtdObservasiRate)</td>
                                             <td class="text-center">@FormatRate(comp.MtdCoachingRate)</td>
                                             <td class="text-center" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: @GetRateColor(comp.MtdP5mRate);">@FormatRate(comp.MtdP5mRate)</td>
+                                            <td class="text-center" style="background-color: #ecfdf5; border-left: 2px solid #10b981; color: @GetRateColor(comp.MtdCloseRate);">@FormatRate(comp.MtdCloseRate)</td>
                                         </tr>
                                     }
                                 }
@@ -951,13 +953,14 @@
                                     <th style="width: 60px;">OB</th>
                                     <th style="width: 60px;">CC</th>
                                     <th style="width: 65px; background-color: #78350f;">P5M *</th>
+                                    <th style="width: 75px; background-color: #065f46;">Close Rate</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @if (!deptAchievements.Any())
                                 {
                                     <tr>
-                                        <td colspan="11" class="text-center text-muted py-4">Belum ada data klub terdaftar.</td>
+                                        <td colspan="12" class="text-center text-muted py-4">Belum ada data klub terdaftar.</td>
                                     </tr>
                                 }
                                 else
@@ -1011,6 +1014,7 @@
                                             <td class="text-center">@FormatRate(dept.MtdObservasiRate)</td>
                                             <td class="text-center">@FormatRate(dept.MtdCoachingRate)</td>
                                             <td class="text-center" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: @GetRateColor(dept.MtdP5mRate);">@FormatRate(dept.MtdP5mRate)</td>
+                                            <td class="text-center" style="background-color: #ecfdf5; border-left: 2px solid #10b981; color: @GetRateColor(dept.MtdCloseRate);">@FormatRate(dept.MtdCloseRate)</td>
                                         </tr>
                                     }
                                 }
@@ -1266,29 +1270,33 @@
                                                         Aktivitas K3 Bulan Ini (Realisasi / Target)
                                                     </div>
                                                     <div class="row text-center g-2" style="font-size: 11px;">
-                                                        <div class="col-4 col-sm-2">
+                                                        <div class="col-4 col-sm-auto flex-fill">
                                                             <div class="text-muted">Hazard</div>
                                                             <div class="fw-bold">@emp.hazard.actual / @emp.hazard.target</div>
                                                         </div>
-                                                        <div class="col-4 col-sm-2">
+                                                        <div class="col-4 col-sm-auto flex-fill">
                                                             <div class="text-muted">Inspeksi</div>
                                                             <div class="fw-bold">@emp.inspeksi.actual / @emp.inspeksi.target</div>
                                                         </div>
-                                                        <div class="col-4 col-sm-2">
+                                                        <div class="col-4 col-sm-auto flex-fill">
                                                             <div class="text-muted">S. Talk</div>
                                                             <div class="fw-bold">@emp.safetyTalk.actual / @emp.safetyTalk.target</div>
                                                         </div>
-                                                        <div class="col-4 col-sm-2">
+                                                        <div class="col-4 col-sm-auto flex-fill">
                                                             <div class="text-muted">Observasi</div>
                                                             <div class="fw-bold">@emp.observasi.actual / @emp.observasi.target</div>
                                                         </div>
-                                                        <div class="col-4 col-sm-2">
+                                                        <div class="col-4 col-sm-auto flex-fill">
                                                             <div class="text-muted">Coaching</div>
                                                             <div class="fw-bold">@emp.coaching.actual / @emp.coaching.target</div>
                                                         </div>
-                                                        <div class="col-4 col-sm-2 bg-light rounded" style="border-left: 2px solid #f59e0b;">
+                                                        <div class="col-4 col-sm-auto flex-fill bg-light rounded" style="border-left: 2px solid #f59e0b;">
                                                             <div class="text-muted">P5M *</div>
                                                             <div class="fw-bold text-warning-emphasis">@emp.p5m.actual / @emp.p5m.target</div>
+                                                        </div>
+                                                        <div class="col-4 col-sm-auto flex-fill bg-light rounded" style="border-left: 2px solid #10b981;">
+                                                            <div class="text-muted">Close Rate</div>
+                                                            <div class="fw-bold" style="color: @GetRateColor((double)emp.closeRate);">@FormatRate((double)emp.closeRate)</div>
                                                         </div>
                                                     </div>
                                                 </div>
