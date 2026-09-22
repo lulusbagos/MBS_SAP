@@ -1771,6 +1771,285 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> GetHazardTtaKtaEntities(int? year = null, int? month = null, string mode = "mtd")
+        {
+            var today = DateTime.Today;
+            int selectedYear = year ?? today.Year;
+            int selectedMonth = month ?? today.Month;
+            bool isMtd = !string.Equals(mode, "ytd", StringComparison.OrdinalIgnoreCase);
+
+            var (scopeCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
+            var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
+            var cacheKey = $"HazardTtaKtaEntities_v1_{scopeCompanyId}_{selectedYear}_{selectedMonth}_{mode}";
+
+            bool forceRefresh = HttpContext.Request.Query.ContainsKey("refresh") &&
+                                string.Equals(HttpContext.Request.Query["refresh"], "true", StringComparison.OrdinalIgnoreCase);
+
+            if (!forceRefresh && cache.TryGetValue(cacheKey, out object? cachedResult) && cachedResult != null)
+            {
+                return Json(cachedResult);
+            }
+
+            await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
+
+            var startOfMonth = new DateTime(selectedYear, selectedMonth, 1);
+            var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
+            var startOfYear = new DateTime(selectedYear, 1, 1);
+            var endOfYear = new DateTime(selectedYear, 12, 31, 23, 59, 59);
+
+            var startDate = isMtd ? startOfMonth : startOfYear;
+            var endDate = isMtd ? endOfMonth : (today < endOfYear ? today : endOfYear);
+
+            // Fetch Companies
+            var allCompanies = await _context.Perusahaans.AsNoTracking()
+                .Where(p => p.StatusAktif && !ExcludedCompanies.Ids.Contains(p.PerusahaanId))
+                .ToListAsync();
+
+            var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+
+            var mainconIds = new HashSet<int> { 1, 3, 4, 5 };
+
+            List<int> GetSubconIds(int parentId)
+            {
+                var relIds = relations.Where(r => r.ParentCompanyId == parentId && r.ChildCompanyId.HasValue && r.ChildIsActive == true)
+                    .Select(r => r.ChildCompanyId!.Value);
+                var dirIds = allCompanies.Where(p => p.PerusahaanIndukId == parentId)
+                    .Select(p => p.PerusahaanId);
+                return relIds.Concat(dirIds).Distinct().Where(id => id != parentId && !mainconIds.Contains(id)).ToList();
+            }
+
+            var indeximSubconIds = GetSubconIds(1);
+            var uduSubconIds = GetSubconIds(3);
+            var kppSubconIds = GetSubconIds(4);
+            var mgeSubconIds = GetSubconIds(5);
+
+            // Active Karyawan up to end of selected month
+            var allKaryawans = await _context.Karyawans.AsNoTracking()
+                .Where(k => k.StatusAktif && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan) && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth))
+                .Select(k => new {
+                    k.IdKaryawan,
+                    k.IdPerusahaan,
+                    k.NoNik,
+                    k.TanggalMasuk,
+                    k.PerusahaanNodeId
+                })
+                .ToListAsync();
+
+            var activeKaryawanIds = allKaryawans.Select(k => k.IdKaryawan).ToList();
+            var targetMappings = await _context.KaryawanJabatanMappings.AsNoTracking()
+                .Where(m => activeKaryawanIds.Contains(m.KaryawanId))
+                .ToListAsync();
+            var mappingsDict = targetMappings.ToDictionary(m => m.KaryawanId);
+
+            var activeNiks = allKaryawans.Select(k => (k.NoNik ?? string.Empty).Trim())
+                .Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
+
+            var activeRosters = await _context.Rosters.AsNoTracking()
+                .Where(r => activeNiks.Contains(r.Nik))
+                .ToListAsync();
+            var rostersByNik = activeRosters
+                .GroupBy(r => r.Nik.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+
+            int totalDaysInMonth = DateTime.DaysInMonth(selectedYear, selectedMonth);
+
+            int ScaleTarget(int baseTarget, double rat, int daysOnsite)
+            {
+                if (baseTarget == 0 || daysOnsite == 0) return 0;
+                int scaled = (int)Math.Round(baseTarget * rat, MidpointRounding.AwayFromZero);
+                return Math.Max(scaled, 1);
+            }
+
+            // Map each employee to their target
+            var empTargetDict = new Dictionary<string, (int targetMtd, int targetYtd, int companyId)>(StringComparer.OrdinalIgnoreCase);
+            foreach (var emp in allKaryawans)
+            {
+                var nik = (emp.NoNik ?? string.Empty).Trim();
+                if (string.IsNullOrEmpty(nik)) continue;
+
+                int hTar = 2;
+                if (mappingsDict.TryGetValue(emp.IdKaryawan, out var m))
+                {
+                    hTar = m.TargetHazardReport ?? 2;
+                }
+
+                DateTime effectiveEmpStart = (emp.TanggalMasuk.HasValue && emp.TanggalMasuk.Value > startOfMonth)
+                    ? emp.TanggalMasuk.Value
+                    : startOfMonth;
+                int possibleDays = Math.Max(1, (endOfMonth - effectiveEmpStart).Days + 1);
+
+                int onsiteDays = totalDaysInMonth;
+                bool hasRoster = false;
+                if (rostersByNik.TryGetValue(nik, out var empRosters))
+                {
+                    int computedOnsite = 0;
+                    bool hasAnyRoster = false;
+                    foreach (var r in empRosters)
+                    {
+                        hasAnyRoster = true;
+                        if (r.TipeRoster == "TUGAS")
+                        {
+                            continue;
+                        }
+
+                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
+                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                        if (overlapStart <= overlapEnd)
+                        {
+                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                        }
+                    }
+                    if (hasAnyRoster)
+                    {
+                        hasRoster = true;
+                        onsiteDays = computedOnsite;
+                    }
+                }
+                else if (effectiveEmpStart > startOfMonth)
+                {
+                    onsiteDays = possibleDays;
+                }
+
+                double ratio = (double)onsiteDays / possibleDays;
+                int finalMtdTarget = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
+
+                int monthsElapsed = Math.Max(1, selectedMonth);
+                int finalYtdTarget = finalMtdTarget * monthsElapsed;
+
+                empTargetDict[nik] = (finalMtdTarget, finalYtdTarget, emp.IdPerusahaan);
+            }
+
+            // Fetch Hazard Reports in period
+            var allHazards = await _context.HazardReports.AsNoTracking()
+                .Where(h => !h.IsDeleted && h.Tanggal >= startDate && h.Tanggal <= endDate)
+                .Select(h => new {
+                    h.Nik,
+                    h.KategoriBahaya
+                })
+                .ToListAsync();
+
+            // Group Hazard by NIK
+            var hazardsByNik = allHazards
+                .Where(h => !string.IsNullOrWhiteSpace(h.Nik))
+                .GroupBy(h => h.Nik!.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.ToList(),
+                    StringComparer.OrdinalIgnoreCase
+                );
+
+            var allCompanyIds = allCompanies.Select(p => p.PerusahaanId).ToHashSet();
+
+            object ComputeEntityStats(string id, string groupType, string entityName, string title, List<int> companyIds, string accentColor)
+            {
+                var validCompIds = companyIds.Where(c => allCompanyIds.Contains(c)).ToHashSet();
+                
+                var entityEmployees = allKaryawans.Where(k => validCompIds.Contains(k.IdPerusahaan)).ToList();
+                var entityNiks = entityEmployees
+                    .Select(k => (k.NoNik ?? string.Empty).Trim())
+                    .Where(n => !string.IsNullOrEmpty(n))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                int totalTarget = 0;
+                foreach (var nik in entityNiks)
+                {
+                    if (empTargetDict.TryGetValue(nik, out var tInfo))
+                    {
+                        totalTarget += isMtd ? tInfo.targetMtd : tInfo.targetYtd;
+                    }
+                }
+
+                int totalTta = 0;
+                int totalKta = 0;
+                int totalRealization = 0;
+
+                foreach (var nik in entityNiks)
+                {
+                    if (hazardsByNik.TryGetValue(nik, out var hList))
+                    {
+                        foreach (var h in hList)
+                        {
+                            totalRealization++;
+                            var kat = (h.KategoriBahaya ?? string.Empty).Trim();
+                            if (kat.Contains("Tindakan", StringComparison.OrdinalIgnoreCase) || kat.Contains("TTA", StringComparison.OrdinalIgnoreCase))
+                            {
+                                totalTta++;
+                            }
+                            else
+                            {
+                                totalKta++;
+                            }
+                        }
+                    }
+                }
+
+                double achievementPct = totalTarget > 0 ? Math.Round(((double)totalRealization / totalTarget) * 100.0, 1) : 0.0;
+                double ttaPct = totalRealization > 0 ? Math.Round(((double)totalTta / totalRealization) * 100.0, 1) : 0.0;
+                double ktaPct = totalRealization > 0 ? Math.Round(((double)totalKta / totalRealization) * 100.0, 1) : 0.0;
+
+                return new {
+                    id = id,
+                    groupType = groupType, // "main", "mitra", "total"
+                    entityName = entityName, // "INDEXIM", "UDU", "KPP", "MGE"
+                    title = title,
+                    companyCount = validCompIds.Count,
+                    employeeCount = entityNiks.Count,
+                    target = totalTarget,
+                    realization = totalRealization,
+                    achievementPct = achievementPct,
+                    ttaCount = totalTta,
+                    ttaPct = ttaPct,
+                    ktaCount = totalKta,
+                    ktaPct = ktaPct,
+                    accentColor = accentColor
+                };
+            }
+
+            var list = new List<object>();
+
+            // Group 1: Perusahaan Utama (Internal)
+            list.Add(ComputeEntityStats("indexim_main", "main", "INDEXIM", "INDEXIM (Internal)", new List<int> { 1 }, "#0284c7"));
+            list.Add(ComputeEntityStats("udu_main", "main", "UDU", "UDU (Internal)", new List<int> { 3 }, "#10b981"));
+            list.Add(ComputeEntityStats("kpp_main", "main", "KPP", "KPP (Internal)", new List<int> { 4 }, "#f59e0b"));
+            list.Add(ComputeEntityStats("mge_main", "main", "MGE", "MGE (Internal)", new List<int> { 5 }, "#8b5cf6"));
+
+            // Group 2: Mitra Kerja
+            list.Add(ComputeEntityStats("indexim_mitra", "mitra", "INDEXIM", "Mitra INDEXIM", indeximSubconIds, "#06b6d4"));
+            list.Add(ComputeEntityStats("udu_mitra", "mitra", "UDU", "Mitra UDU", uduSubconIds, "#14b8a6"));
+            list.Add(ComputeEntityStats("kpp_mitra", "mitra", "KPP", "Mitra KPP", kppSubconIds, "#d97706"));
+            list.Add(ComputeEntityStats("mge_mitra", "mitra", "MGE", "Mitra MGE", mgeSubconIds, "#a855f7"));
+
+            // Group 3: Total Gabungan
+            list.Add(ComputeEntityStats("indexim_total", "total", "INDEXIM", "Total INDEXIM & Mitra", new List<int> { 1 }.Concat(indeximSubconIds).ToList(), "#0369a1"));
+            list.Add(ComputeEntityStats("udu_total", "total", "UDU", "Total UDU & Mitra", new List<int> { 3 }.Concat(uduSubconIds).ToList(), "#047857"));
+            list.Add(ComputeEntityStats("kpp_total", "total", "KPP", "Total KPP & Mitra", new List<int> { 4 }.Concat(kppSubconIds).ToList(), "#b45309"));
+            list.Add(ComputeEntityStats("mge_total", "total", "MGE", "Total MGE & Mitra", new List<int> { 5 }.Concat(mgeSubconIds).ToList(), "#6d28d9"));
+
+            int totalAllHazards = allHazards.Count;
+            int totalAllTta = allHazards.Count(h => (h.KategoriBahaya ?? "").Contains("Tindakan", StringComparison.OrdinalIgnoreCase) || (h.KategoriBahaya ?? "").Contains("TTA", StringComparison.OrdinalIgnoreCase));
+            int totalAllKta = allHazards.Count(h => !(h.KategoriBahaya ?? "").Contains("Tindakan", StringComparison.OrdinalIgnoreCase) && !(h.KategoriBahaya ?? "").Contains("TTA", StringComparison.OrdinalIgnoreCase));
+
+            var responseData = new {
+                selectedYear = selectedYear,
+                selectedMonth = selectedMonth,
+                mode = mode,
+                timeframe = isMtd ? "MTD" : "YTD",
+                entities = list,
+                summary = new {
+                    totalRealization = totalAllHazards,
+                    totalTta = totalAllTta,
+                    totalKta = totalAllKta,
+                    ttaPct = totalAllHazards > 0 ? Math.Round(((double)totalAllTta / totalAllHazards) * 100.0, 1) : 0.0,
+                    ktaPct = totalAllHazards > 0 ? Math.Round(((double)totalAllKta / totalAllHazards) * 100.0, 1) : 0.0
+                }
+            };
+
+            cache.Set(cacheKey, responseData, TimeSpan.FromMinutes(5));
+            return Json(responseData);
+        }
+
+        [HttpGet]
         [Route("/Performance")]
         [Route("/Performance/Index")]
         public async Task<IActionResult> Index(int? year = null, int? month = null)

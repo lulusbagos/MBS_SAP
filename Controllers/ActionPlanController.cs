@@ -55,27 +55,49 @@ namespace MBS_SAP.Controllers
             ViewBag.SelectedStatus = status;
             ViewBag.SelectedType = type;
 
+            ViewBag.UserDept = userDept;
+            ViewBag.UserNik = userNik;
+
             var query = _context.ActionPlans.AsNoTracking().Where(r => !r.IsDeleted && r.Tanggal >= start && r.Tanggal <= endOfDay);
 
-            if (!string.IsNullOrEmpty(filter))
+            if (!string.IsNullOrEmpty(filter) && filter != "all")
             {
+                var targetDept = !string.IsNullOrEmpty(dept) ? dept : userDept;
+
                 if (filter == "mine")
                 {
                     query = query.Where(r => 
                         r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik);
                 }
-                else if (filter == "created")
+                else if (filter == "created" || filter == "created_by_me")
                 {
                     query = query.Where(r => r.Nik == userNik);
                 }
-                else if (filter == "assigned")
+                else if (filter == "assigned" || filter == "assigned_to_me")
                 {
                     query = query.Where(r => r.NikPja == userNik || r.NikPic == userNik);
                 }
-                else if (filter == "dept" && !string.IsNullOrEmpty(dept))
+                else if (filter == "dept_assigned")
                 {
-                    query = query.Where(r => 
-                        r.Departemen == dept || r.DepartemenPja == dept || r.DepartemenPic == dept);
+                    if (!string.IsNullOrEmpty(targetDept))
+                    {
+                        query = query.Where(r => r.DepartemenPja == targetDept || r.DepartemenPic == targetDept);
+                    }
+                }
+                else if (filter == "dept_created" || filter == "dept_made")
+                {
+                    if (!string.IsNullOrEmpty(targetDept))
+                    {
+                        query = query.Where(r => r.Departemen == targetDept);
+                    }
+                }
+                else if (filter == "dept")
+                {
+                    if (!string.IsNullOrEmpty(targetDept))
+                    {
+                        query = query.Where(r => 
+                            r.Departemen == targetDept || r.DepartemenPja == targetDept || r.DepartemenPic == targetDept);
+                    }
                 }
             }
 
@@ -342,25 +364,44 @@ namespace MBS_SAP.Controllers
 
             var userDept = User.FindFirst("Department")?.Value;
 
-            if (!string.IsNullOrEmpty(filter))
+            if (!string.IsNullOrEmpty(filter) && filter != "all")
             {
+                var targetDept = !string.IsNullOrEmpty(dept) ? dept : userDept;
+
                 if (filter == "mine")
                 {
                     query = query.Where(r => 
                         r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik);
                 }
-                else if (filter == "created")
+                else if (filter == "created" || filter == "created_by_me")
                 {
                     query = query.Where(r => r.Nik == userNik);
                 }
-                else if (filter == "assigned")
+                else if (filter == "assigned" || filter == "assigned_to_me")
                 {
                     query = query.Where(r => r.NikPja == userNik || r.NikPic == userNik);
                 }
-                else if (filter == "dept" && !string.IsNullOrEmpty(dept))
+                else if (filter == "dept_assigned")
                 {
-                    query = query.Where(r => 
-                        r.Departemen == dept || r.DepartemenPja == dept || r.DepartemenPic == dept);
+                    if (!string.IsNullOrEmpty(targetDept))
+                    {
+                        query = query.Where(r => r.DepartemenPja == targetDept || r.DepartemenPic == targetDept);
+                    }
+                }
+                else if (filter == "dept_created" || filter == "dept_made")
+                {
+                    if (!string.IsNullOrEmpty(targetDept))
+                    {
+                        query = query.Where(r => r.Departemen == targetDept);
+                    }
+                }
+                else if (filter == "dept")
+                {
+                    if (!string.IsNullOrEmpty(targetDept))
+                    {
+                        query = query.Where(r => 
+                            r.Departemen == targetDept || r.DepartemenPja == targetDept || r.DepartemenPic == targetDept);
+                    }
                 }
             }
 

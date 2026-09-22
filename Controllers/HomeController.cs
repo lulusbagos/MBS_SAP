@@ -371,7 +371,16 @@ namespace MBS_SAP.Controllers
                 stats.DeptClosedCount = 0;
                 stats.DeptTotalCount = 0;
                 stats.DeptCloseRate = 100.0;
+                stats.DeptAssignedOpenCount = 0;
+                stats.DeptAssignedTotalCount = 0;
+                stats.DeptAssignedClosedCount = 0;
+                stats.DeptAssignedCloseRate = 100.0;
+                stats.DeptCreatedOpenCount = 0;
+                stats.DeptCreatedTotalCount = 0;
+                stats.DeptCreatedClosedCount = 0;
+                stats.DeptCreatedCloseRate = 100.0;
                 stats.DeptTasks = new List<AssignedTaskToCloseItem>();
+
                 if (!string.IsNullOrEmpty(userDept))
                 {
                     var baseDeptActionPlansQuery = _context.ActionPlans
@@ -386,6 +395,30 @@ namespace MBS_SAP.Controllers
                     stats.DeptClosedCount = deptActionPlansClosedCount;
                     stats.DeptCloseRate = deptTotal > 0 ? Math.Round((double)deptActionPlansClosedCount / deptTotal * 100.0, 1) : 100.0;
                     stats.DeptOpenActionPlans = stats.DeptOpenCount;
+
+                    // 3a. Diarahkan ke Departemen Saya (PJA/PIC)
+                    var baseDeptAssignedQuery = _context.ActionPlans
+                        .AsNoTracking()
+                        .Where(a => !a.IsDeleted && (a.DepartemenPja == userDept || a.DepartemenPic == userDept));
+                    int deptAssignedOpen = await baseDeptAssignedQuery.CountAsync(a => a.Status == "Open");
+                    int deptAssignedClosed = await baseDeptAssignedQuery.CountAsync(a => a.Status == "Closed" || a.Status == "Close" || a.Status == "Selesai" || a.Status == "Complete");
+                    stats.DeptAssignedOpenCount = deptAssignedOpen;
+                    stats.DeptAssignedClosedCount = deptAssignedClosed;
+                    int deptAssignedTotal = deptAssignedOpen + deptAssignedClosed;
+                    stats.DeptAssignedTotalCount = deptAssignedTotal;
+                    stats.DeptAssignedCloseRate = deptAssignedTotal > 0 ? Math.Round((double)deptAssignedClosed / deptAssignedTotal * 100.0, 1) : 100.0;
+
+                    // 3b. Dibuat ke/oleh Departemen Saya (Pelapor)
+                    var baseDeptCreatedQuery = _context.ActionPlans
+                        .AsNoTracking()
+                        .Where(a => !a.IsDeleted && a.Departemen == userDept);
+                    int deptCreatedOpen = await baseDeptCreatedQuery.CountAsync(a => a.Status == "Open");
+                    int deptCreatedClosed = await baseDeptCreatedQuery.CountAsync(a => a.Status == "Closed" || a.Status == "Close" || a.Status == "Selesai" || a.Status == "Complete");
+                    stats.DeptCreatedOpenCount = deptCreatedOpen;
+                    stats.DeptCreatedClosedCount = deptCreatedClosed;
+                    int deptCreatedTotal = deptCreatedOpen + deptCreatedClosed;
+                    stats.DeptCreatedTotalCount = deptCreatedTotal;
+                    stats.DeptCreatedCloseRate = deptCreatedTotal > 0 ? Math.Round((double)deptCreatedClosed / deptCreatedTotal * 100.0, 1) : 100.0;
 
                     var deptActionPlanItems = await baseDeptActionPlansQuery
                         .Where(a => a.Status == "Open")
@@ -636,6 +669,16 @@ namespace MBS_SAP.Controllers
             ViewData["DeptCloseRate"] = stats.DeptCloseRate;
             ViewData["DeptTasks"] = stats.DeptTasks;
 
+            ViewData["DeptAssignedOpenCount"] = stats.DeptAssignedOpenCount;
+            ViewData["DeptAssignedTotalCount"] = stats.DeptAssignedTotalCount;
+            ViewData["DeptAssignedClosedCount"] = stats.DeptAssignedClosedCount;
+            ViewData["DeptAssignedCloseRate"] = stats.DeptAssignedCloseRate;
+
+            ViewData["DeptCreatedOpenCount"] = stats.DeptCreatedOpenCount;
+            ViewData["DeptCreatedTotalCount"] = stats.DeptCreatedTotalCount;
+            ViewData["DeptCreatedClosedCount"] = stats.DeptCreatedClosedCount;
+            ViewData["DeptCreatedCloseRate"] = stats.DeptCreatedCloseRate;
+
             ViewData["UserDept"] = userDept;
 
             return View(stats.RecentActivities);
@@ -704,6 +747,16 @@ namespace MBS_SAP.Controllers
             public int DeptClosedCount { get; set; }
             public double DeptCloseRate { get; set; } = 100.0;
             public List<AssignedTaskToCloseItem> DeptTasks { get; set; } = new();
+
+            public int DeptAssignedOpenCount { get; set; }
+            public int DeptAssignedTotalCount { get; set; }
+            public int DeptAssignedClosedCount { get; set; }
+            public double DeptAssignedCloseRate { get; set; } = 100.0;
+
+            public int DeptCreatedOpenCount { get; set; }
+            public int DeptCreatedTotalCount { get; set; }
+            public int DeptCreatedClosedCount { get; set; }
+            public double DeptCreatedCloseRate { get; set; } = 100.0;
             
             public int ThisMonthHazards { get; set; }
             public int ThisMonthInspections { get; set; }

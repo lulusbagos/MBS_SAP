@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Pencapaian SAP";
     var leaderboard = ViewBag.Leaderboard as List<MBS_SAP.Controllers.CompanyLeaderboardViewModel> ?? new List<MBS_SAP.Controllers.CompanyLeaderboardViewModel>();
     var trend = ViewBag.MonthlyTrend as List<MBS_SAP.Controllers.MonthlyTrendViewModel> ?? new List<MBS_SAP.Controllers.MonthlyTrendViewModel>();
@@ -928,6 +928,9 @@
             </button>
             <button class="tab-btn px-3 py-2 tab-inactive" id="tabCompany" onclick="switchTab('company')">
                 <i class="bi bi-building-fill me-1"></i> Kinerja Perusahaan
+            </button>
+            <button class="tab-btn px-3 py-2 tab-inactive" id="tabHazardReq" onclick="switchTab('hazardreq')">
+                <i class="bi bi-pie-chart-fill me-1"></i> Hazard Report (TTA &amp; KTA)
             </button>
             <button class="tab-btn px-3 py-2 tab-inactive" id="tabHitSafe" onclick="switchTab('hitsafe')">
                 <i class="bi bi-geo-alt-fill me-1"></i> Safe Map
@@ -3027,6 +3030,152 @@
         </div>
     </div>
 
+    <!-- ==================== SECTION: HAZARD REPORT (TTA & KTA) 12 ENTITIES ==================== -->
+    <div id="sectionHazardReq" style="display: none;">
+        <!-- Header & Filter Toolbar -->
+        <div class="analytics-toolbar mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #f43f5e, #e11d48); color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 12px rgba(244,63,94,0.3); flex-shrink: 0;">
+                        <i class="bi bi-pie-chart-fill"></i>
+                    </div>
+                    <div>
+                        <h5 style="font-weight: 800; margin-bottom: 2px; color: var(--text-main); letter-spacing: -0.2px;">Realisasi Hazard Report (TTA vs KTA)</h5>
+                        <p style="font-size: 12px; color: var(--text-muted); margin: 0;">12 Grafik Pembagian Entitas: INDEXIM, UDU, KPP, MGE (Utama, Mitra, &amp; Total)</p>
+                    </div>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <div class="btn-group p-1" style="background: var(--bg-body); border-radius: 10px; border: 1px solid var(--border-color);">
+                        <button type="button" class="btn btn-sm btn-primary active px-3" id="btnHazReqMtd" onclick="setHazardReqMode('mtd')">MTD</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary px-3" id="btnHazReqYtd" onclick="setHazardReqMode('ytd')">YTD</button>
+                    </div>
+
+                    <div class="analytics-filter-group">
+                        <span class="analytics-filter-label"><i class="bi bi-calendar3 me-1"></i>Bulan:</span>
+                        <select class="form-select form-select-sm analytics-select" id="selHazReqMonth" onchange="applyHazardReqFilters()" style="min-width: 120px;">
+                            <option value="1">Januari</option>
+                            <option value="2">Februari</option>
+                            <option value="3">Maret</option>
+                            <option value="4">April</option>
+                            <option value="5">Mei</option>
+                            <option value="6">Juni</option>
+                            <option value="7">Juli</option>
+                            <option value="8">Agustus</option>
+                            <option value="9">September</option>
+                            <option value="10">Oktober</option>
+                            <option value="11">November</option>
+                            <option value="12">Desember</option>
+                        </select>
+                    </div>
+
+                    <div class="analytics-filter-group">
+                        <span class="analytics-filter-label"><i class="bi bi-calendar-event me-1"></i>Tahun:</span>
+                        <select class="form-select form-select-sm analytics-select" id="selHazReqYear" onchange="applyHazardReqFilters()" style="min-width: 90px;">
+                            <option value="2024">2024</option>
+                            <option value="2025">2025</option>
+                            <option value="2026">2026</option>
+                            <option value="2027">2027</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-sm btn-outline-secondary px-3" id="btnHazReqRefresh" onclick="loadHazardReqTab(true)" title="Muat ulang data">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Banner / KPI Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-4">
+                <div class="kpi-card-v2" style="background: var(--bg-card); border-left: 4px solid #0284c7;">
+                    <div class="kpi-icon-wrap" style="background: rgba(2, 132, 199, 0.12); color: #0284c7;">
+                        <i class="bi bi-clipboard-data-fill"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Realisasi Hazard (<span id="lblHazReqModeSummary">MTD</span>)</div>
+                        <h4 style="font-weight: 800; color: var(--text-main); margin: 0;" id="kpiHazReqTotal">-</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="kpi-card-v2" style="background: var(--bg-card); border-left: 4px solid #f43f5e;">
+                    <div class="kpi-icon-wrap" style="background: rgba(244, 63, 94, 0.12); color: #f43f5e;">
+                        <i class="bi bi-person-fill-exclamation"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">TTA (Tindakan Tidak Aman)</div>
+                        <h4 style="font-weight: 800; color: #f43f5e; margin: 0;" id="kpiHazReqTta">-</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="kpi-card-v2" style="background: var(--bg-card); border-left: 4px solid #0ea5e9;">
+                    <div class="kpi-icon-wrap" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">KTA (Kondisi Tidak Aman)</div>
+                        <h4 style="font-weight: 800; color: #0ea5e9; margin: 0;" id="kpiHazReqKta">-</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="hazReqLoadingSpinner" class="text-center py-5" style="display: none;">
+            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+            <p class="text-muted fw-bold mb-0">Memuat data 12 grafik pembagian entitas...</p>
+        </div>
+
+        <!-- 12 Cards Container -->
+        <div id="hazReqCardsContainer">
+            <!-- Group 1: 4 Perusahaan Utama -->
+            <div class="mb-4">
+                <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                    <span class="badge" style="background: #0284c7; font-size: 12px; padding: 6px 12px; border-radius: 8px;">
+                        <i class="bi bi-building-fill me-1"></i> GROUP 1
+                    </span>
+                    <h5 style="font-weight: 800; margin: 0; color: var(--text-main);">PERUSAHAAN UTAMA (INTERNAL)</h5>
+                    <span class="text-muted" style="font-size: 12px;">(INDEXIM, UDU, KPP, MGE - Karyawan Internal)</span>
+                </div>
+                <div class="row g-3" id="hazReqGroupMain">
+                    <!-- 4 Cards dynamically rendered -->
+                </div>
+            </div>
+
+            <!-- Group 2: 4 Mitra Kerja -->
+            <div class="mb-4">
+                <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                    <span class="badge" style="background: #0d9488; font-size: 12px; padding: 6px 12px; border-radius: 8px;">
+                        <i class="bi bi-people-fill me-1"></i> GROUP 2
+                    </span>
+                    <h5 style="font-weight: 800; margin: 0; color: var(--text-main);">MITRA KERJA (SUBCONTRACTORS)</h5>
+                    <span class="text-muted" style="font-size: 12px;">(Mitra INDEXIM, Mitra UDU, Mitra KPP, Mitra MGE)</span>
+                </div>
+                <div class="row g-3" id="hazReqGroupMitra">
+                    <!-- 4 Cards dynamically rendered -->
+                </div>
+            </div>
+
+            <!-- Group 3: 4 Total Gabungan -->
+            <div class="mb-4">
+                <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                    <span class="badge" style="background: #7c3aed; font-size: 12px; padding: 6px 12px; border-radius: 8px;">
+                        <i class="bi bi-layers-fill me-1"></i> GROUP 3
+                    </span>
+                    <h5 style="font-weight: 800; margin: 0; color: var(--text-main);">TOTAL GABUNGAN (UTAMA &amp; MITRA)</h5>
+                    <span class="text-muted" style="font-size: 12px;">(Total INDEXIM, Total UDU, Total KPP, Total MGE)</span>
+                </div>
+                <div class="row g-3" id="hazReqGroupTotal">
+                    <!-- 4 Cards dynamically rendered -->
+                </div>
+            </div>
+        </div>
+    </div>
+
 <!-- Charts & Tabs Handling Script -->
 @section Scripts {
 
@@ -3295,27 +3444,34 @@
         const sMy = document.getElementById('sectionMy');
         const sAnalytics = document.getElementById('sectionAnalytics');
         const sCompany = document.getElementById('sectionCompany');
+        const sHazardReq = document.getElementById('sectionHazardReq');
         const sHitSafe = document.getElementById('sectionHitSafe');
         const sReports = document.getElementById('sectionReports');
 
         if (sMy) sMy.style.display = tab === 'my' ? 'block' : 'none';
         if (sAnalytics) sAnalytics.style.display = tab === 'analytics' ? 'block' : 'none';
         if (sCompany) sCompany.style.display = tab === 'company' ? 'block' : 'none';
+        if (sHazardReq) sHazardReq.style.display = tab === 'hazardreq' ? 'block' : 'none';
         if (sHitSafe) sHitSafe.style.display = tab === 'hitsafe' ? 'block' : 'none';
         if (sReports) sReports.style.display = tab === 'reports' ? 'block' : 'none';
 
         const tMy = document.getElementById('tabMy');
         const tAnalytics = document.getElementById('tabAnalytics');
         const tCompany = document.getElementById('tabCompany');
+        const tHazardReq = document.getElementById('tabHazardReq');
         const tHitSafe = document.getElementById('tabHitSafe');
         const tReports = document.getElementById('tabReports');
 
         if (tMy) tMy.className = 'tab-btn px-3 py-2 ' + (tab === 'my' ? 'tab-active' : 'tab-inactive');
         if (tAnalytics) tAnalytics.className = 'tab-btn px-3 py-2 ' + (tab === 'analytics' ? 'tab-active' : 'tab-inactive');
         if (tCompany) tCompany.className = 'tab-btn px-3 py-2 ' + (tab === 'company' ? 'tab-active' : 'tab-inactive');
+        if (tHazardReq) tHazardReq.className = 'tab-btn px-3 py-2 ' + (tab === 'hazardreq' ? 'tab-active' : 'tab-inactive');
         if (tHitSafe) tHitSafe.className = 'tab-btn px-3 py-2 ' + (tab === 'hitsafe' ? 'tab-active' : 'tab-inactive');
         if (tReports) tReports.className = 'tab-btn px-3 py-2 ' + (tab === 'reports' ? 'tab-active' : 'tab-inactive');
 
+        if (tab === 'hazardreq') {
+            loadHazardReqTab();
+        }
         if (tab === 'analytics') {
             loadAnalyticsTab();
         }
@@ -3334,6 +3490,13 @@
     document.addEventListener("DOMContentLoaded", function () {
         const urlParams = new URLSearchParams(window.location.search);
         const activeTabParam = urlParams.get('tab');
+        
+        // Inisialisasi dropdown filter Hazard Report default
+        const selHazMonth = document.getElementById('selHazReqMonth');
+        const selHazYear = document.getElementById('selHazReqYear');
+        if (selHazMonth) selHazMonth.value = '@ViewBag.SelectedMonth' || (new Date().getMonth() + 1);
+        if (selHazYear) selHazYear.value = '@ViewBag.SelectedYear' || new Date().getFullYear();
+
         if (activeTabParam) {
             switchTab(activeTabParam);
         }
@@ -6645,6 +6808,246 @@
                 `;
             }).join('');
         }
+    }
+
+    // ==========================================
+    // HAZARD REPORT (TTA & KTA) 12 ENTITIES LOGIC
+    // ==========================================
+    let _hazReqData = null;
+    let _hazReqMode = 'mtd';
+    let _hazReqChartInstances = {};
+
+    function setHazardReqMode(mode) {
+        _hazReqMode = mode;
+        const btnMtd = document.getElementById('btnHazReqMtd');
+        const btnYtd = document.getElementById('btnHazReqYtd');
+        if (btnMtd && btnYtd) {
+            if (mode === 'mtd') {
+                btnMtd.classList.add('btn-primary', 'active');
+                btnMtd.classList.remove('btn-outline-primary');
+                btnYtd.classList.add('btn-outline-primary');
+                btnYtd.classList.remove('btn-primary', 'active');
+            } else {
+                btnYtd.classList.add('btn-primary', 'active');
+                btnYtd.classList.remove('btn-outline-primary');
+                btnMtd.classList.add('btn-outline-primary');
+                btnMtd.classList.remove('btn-primary', 'active');
+            }
+        }
+        const lblSummary = document.getElementById('lblHazReqModeSummary');
+        if (lblSummary) lblSummary.textContent = mode.toUpperCase();
+        loadHazardReqTab(true);
+    }
+
+    function applyHazardReqFilters() {
+        loadHazardReqTab(true);
+    }
+
+    async function loadHazardReqTab(forceRefresh = false) {
+        if (_hazReqData && !forceRefresh) {
+            renderHazardReqUI();
+            return;
+        }
+
+        const selMonthEl = document.getElementById('selHazReqMonth');
+        const selYearEl = document.getElementById('selHazReqYear');
+        const monthVal = selMonthEl ? selMonthEl.value : ('@ViewBag.SelectedMonth' || (new Date().getMonth() + 1));
+        const yearVal = selYearEl ? selYearEl.value : ('@ViewBag.SelectedYear' || new Date().getFullYear());
+
+        const spinner = document.getElementById('hazReqLoadingSpinner');
+        const container = document.getElementById('hazReqCardsContainer');
+
+        if (spinner && (!container || container.children.length === 0 || forceRefresh)) {
+            spinner.style.display = 'block';
+        }
+
+        try {
+            const refreshParam = forceRefresh ? '&refresh=true' : '';
+            const res = await fetch(`/Performance/GetHazardTtaKtaEntities?year=${yearVal}&month=${monthVal}&mode=${_hazReqMode}${refreshParam}`);
+            if (res.ok) {
+                _hazReqData = await res.json();
+                renderHazardReqUI();
+            } else {
+                console.error('Failed to load hazard entity division data', res.status);
+            }
+        } catch (err) {
+            console.error('Error fetching hazard entity division data:', err);
+        } finally {
+            if (spinner) spinner.style.display = 'none';
+        }
+    }
+
+    function renderHazardEntityCardHtml(entity) {
+        let badgeBg = 'background: #0284c7;';
+        let groupLabel = 'UTAMA';
+        if (entity.groupType === 'mitra') {
+            badgeBg = 'background: #0d9488;';
+            groupLabel = 'MITRA';
+        } else if (entity.groupType === 'total') {
+            badgeBg = 'background: #7c3aed;';
+            groupLabel = 'TOTAL';
+        }
+
+        let achieveBadgeClass = 'bg-danger text-white';
+        let progressBarClass = 'bg-danger';
+        if (entity.achievementPct >= 100) {
+            achieveBadgeClass = 'bg-success text-white';
+            progressBarClass = 'bg-success';
+        } else if (entity.achievementPct >= 80) {
+            achieveBadgeClass = 'bg-warning text-dark';
+            progressBarClass = 'bg-warning';
+        }
+
+        return `
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="card h-100 border shadow-sm" style="border-radius: 14px; background: var(--bg-card); transition: transform 0.2s, box-shadow 0.2s;">
+                    <div class="card-header bg-transparent border-0 pt-3 px-3 pb-0 d-flex justify-content-between align-items-start">
+                        <div style="min-width: 0; flex: 1; margin-right: 8px;">
+                            <span class="badge text-white" style="${badgeBg} font-size: 9.5px; font-weight: 700; margin-bottom: 4px; padding: 3px 8px; border-radius: 6px;">${groupLabel}</span>
+                            <h6 class="fw-bold mb-0 text-truncate" style="color: var(--text-main); font-size: 13px;" title="${entity.title}">
+                                ${entity.title}
+                            </h6>
+                        </div>
+                        <span class="badge ${achieveBadgeClass}" style="font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px; flex-shrink: 0;" title="Kepatuhan Realisasi vs Target">
+                            ${entity.achievementPct}%
+                        </span>
+                    </div>
+                    <div class="card-body p-3">
+                        <!-- Realisasi vs Target -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1" style="font-size: 11px;">
+                                <span class="text-muted fw-semibold">Realisasi / Target</span>
+                                <span class="fw-bold" style="color: var(--text-main);">
+                                    ${entity.realization.toLocaleString('id-ID')} / ${entity.target.toLocaleString('id-ID')}
+                                </span>
+                            </div>
+                            <div class="progress" style="height: 6px; border-radius: 4px; background: var(--bg-body);">
+                                <div class="progress-bar ${progressBarClass}" role="progressbar" style="width: ${Math.min(100, entity.achievementPct)}%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Doughnut Canvas -->
+                        <div style="position: relative; height: 130px;" class="mb-3">
+                            <canvas id="chartHazEntity_${entity.id}"></canvas>
+                        </div>
+
+                        <!-- Breakdown TTA vs KTA -->
+                        <div class="p-2 rounded" style="background: var(--bg-body); border: 1px solid var(--border-color);">
+                            <div class="row g-1 text-center">
+                                <div class="col-6 border-end">
+                                    <span class="d-block text-muted" style="font-size: 10px; font-weight: 700;">TTA (Tindakan)</span>
+                                    <span class="fw-bold" style="font-size: 12px; color: #f43f5e;">
+                                        ${entity.ttaCount.toLocaleString('id-ID')}
+                                        <small style="font-size: 9.5px; opacity: 0.9;">(${entity.ttaPct}%)</small>
+                                    </span>
+                                </div>
+                                <div class="col-6">
+                                    <span class="d-block text-muted" style="font-size: 10px; font-weight: 700;">KTA (Kondisi)</span>
+                                    <span class="fw-bold" style="font-size: 12px; color: #0284c7;">
+                                        ${entity.ktaCount.toLocaleString('id-ID')}
+                                        <small style="font-size: 9.5px; opacity: 0.9;">(${entity.ktaPct}%)</small>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-top py-2 px-3 d-flex justify-content-between align-items-center" style="font-size: 10.5px; color: var(--text-muted);">
+                        <span><i class="bi bi-people me-1"></i>${entity.employeeCount} Karyawan</span>
+                        <span><i class="bi bi-building me-1"></i>${entity.companyCount} Entitas</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function initHazardEntityChart(entity) {
+        const canvas = document.getElementById('chartHazEntity_' + entity.id);
+        if (!canvas) return;
+
+        if (_hazReqChartInstances[entity.id]) {
+            _hazReqChartInstances[entity.id].destroy();
+        }
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || 
+                       document.body.classList.contains('dark') || 
+                       document.body.classList.contains('dark-theme');
+        const textColor = isDark ? '#f8fafc' : '#0f172a';
+
+        const totalTemuan = entity.ttaCount + entity.ktaCount;
+        const hasData = totalTemuan > 0;
+        const chartData = hasData ? [entity.ttaCount, entity.ktaCount] : [0, 0, 1];
+        const chartLabels = hasData ? ['TTA (Tindakan)', 'KTA (Kondisi)'] : ['Belum Ada Data'];
+        const chartColors = hasData ? ['#f43f5e', '#0284c7'] : ['#e2e8f0'];
+
+        _hazReqChartInstances[entity.id] = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: chartData,
+                    backgroundColor: chartColors,
+                    borderWidth: 2,
+                    borderColor: isDark ? '#1e293b' : '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: textColor,
+                            boxWidth: 8,
+                            padding: 6,
+                            font: { size: 9.5, weight: '600' }
+                        }
+                    },
+                    tooltip: {
+                        enabled: hasData,
+                        callbacks: {
+                            label: function(ctx) {
+                                const val = ctx.raw || 0;
+                                const pct = totalTemuan > 0 ? ((val / totalTemuan) * 100).toFixed(1) : 0;
+                                return ` ${ctx.label}: ${val.toLocaleString('id-ID')} (${pct}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '62%'
+            }
+        });
+    }
+
+    function renderHazardReqUI() {
+        if (!_hazReqData || !_hazReqData.entities) return;
+
+        // KPI Summary
+        const sum = _hazReqData.summary || {};
+        const kpiTotal = document.getElementById('kpiHazReqTotal');
+        const kpiTta = document.getElementById('kpiHazReqTta');
+        const kpiKta = document.getElementById('kpiHazReqKta');
+
+        if (kpiTotal) kpiTotal.textContent = (sum.totalRealization || 0).toLocaleString('id-ID') + ' Temuan';
+        if (kpiTta) kpiTta.innerHTML = (sum.totalTta || 0).toLocaleString('id-ID') + ' <span style="font-size: 13px; font-weight: 600; opacity: 0.85;">(' + (sum.ttaPct || 0) + '%)</span>';
+        if (kpiKta) kpiKta.innerHTML = (sum.totalKta || 0).toLocaleString('id-ID') + ' <span style="font-size: 13px; font-weight: 600; opacity: 0.85;">(' + (sum.ktaPct || 0) + '%)</span>';
+
+        const mainList = _hazReqData.entities.filter(e => e.groupType === 'main');
+        const mitraList = _hazReqData.entities.filter(e => e.groupType === 'mitra');
+        const totalList = _hazReqData.entities.filter(e => e.groupType === 'total');
+
+        const gMain = document.getElementById('hazReqGroupMain');
+        const gMitra = document.getElementById('hazReqGroupMitra');
+        const gTotal = document.getElementById('hazReqGroupTotal');
+
+        if (gMain) gMain.innerHTML = mainList.map(renderHazardEntityCardHtml).join('');
+        if (gMitra) gMitra.innerHTML = mitraList.map(renderHazardEntityCardHtml).join('');
+        if (gTotal) gTotal.innerHTML = totalList.map(renderHazardEntityCardHtml).join('');
+
+        // Initialize Chart instances for each of the 12 entity cards
+        _hazReqData.entities.forEach(entity => {
+            initHazardEntityChart(entity);
+        });
     }
 
 </script>

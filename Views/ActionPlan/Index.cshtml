@@ -77,6 +77,34 @@
         box-shadow: 0 2px 8px rgba(244, 63, 94, 0.35);
     }
 
+    .ap-pill.active-blue {
+        background: #0284c7;
+        border-color: #0284c7;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+    }
+
+    .ap-pill.active-amber {
+        background: #d97706;
+        border-color: #d97706;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(217, 119, 6, 0.35);
+    }
+
+    .ap-pill.active-indigo {
+        background: #4f46e5;
+        border-color: #4f46e5;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.35);
+    }
+
+    .ap-pill.active-purple {
+        background: #7c3aed;
+        border-color: #7c3aed;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
+    }
+
     .ap-divider {
         width: 1px;
         height: 28px;
@@ -272,7 +300,11 @@
     <!-- ── Modern Pill Filter Bar ─────────────────────────────────── -->
     <div class="ap-filter-bar flex-column align-items-stretch">
         <div class="d-flex flex-wrap align-items-center gap-3 justify-content-between w-100 mb-3 pb-3 border-bottom">
-            <form method="get" asp-action="Index" class="d-flex flex-wrap align-items-center gap-2">
+            <form method="get" asp-action="Index" id="apDateForm" class="d-flex flex-wrap align-items-center gap-2">
+                <input type="hidden" name="filter" id="hiddenFilterInput" value="@ViewBag.SelectedFilter" />
+                <input type="hidden" name="status" id="hiddenStatusInput" value="@ViewBag.SelectedStatus" />
+                <input type="hidden" name="type" id="hiddenTypeInput" value="@ViewBag.SelectedType" />
+                <input type="hidden" name="dept" id="hiddenDeptInput" value="@ViewBag.SelectedDept" />
                 <span class="ap-filter-label"><i class="bi bi-calendar3 me-1"></i>Periode Tanggal</span>
                 <input type="date" name="startDate" class="form-control form-control-sm" style="width: auto; border-radius: 99px; font-size: 12px;" value="@ViewBag.StartDate" />
                 <span class="text-muted" style="font-size: 12px;">s/d</span>
@@ -287,6 +319,26 @@
                     <i class="bi bi-file-earmark-excel-fill"></i> Export Excel
                 </a>
             </div>
+        </div>
+
+        <!-- ── FILTER PENUGASAN / KEPEMILIKAN ── -->
+        <div class="d-flex flex-wrap align-items-center gap-2 w-100 mb-3 pb-3 border-bottom">
+            <span class="ap-filter-label"><i class="bi bi-person-lines-fill me-1 text-primary"></i>Penugasan:</span>
+            <button type="button" class="ap-pill filter-assigned active" data-filter="all">
+                Semua
+            </button>
+            <button type="button" class="ap-pill filter-assigned" data-filter="assigned" data-active-class="active-blue">
+                <i class="bi bi-person-check-fill me-1 text-info"></i>Diarahkan ke Saya
+            </button>
+            <button type="button" class="ap-pill filter-assigned" data-filter="created" data-active-class="active-amber">
+                <i class="bi bi-pencil-square me-1 text-warning"></i>Dibuat oleh Saya
+            </button>
+            <button type="button" class="ap-pill filter-assigned" data-filter="dept_assigned" data-active-class="active-indigo">
+                <i class="bi bi-box-arrow-in-right me-1 text-primary"></i>Diarahkan ke Dept Saya
+            </button>
+            <button type="button" class="ap-pill filter-assigned" data-filter="dept_created" data-active-class="active-purple">
+                <i class="bi bi-box-arrow-up-right me-1" style="color: #c084fc;"></i>Dibuat ke/oleh Dept Saya
+            </button>
         </div>
 
         <!-- ── DASHBOARD SUMMARY ── -->
@@ -1027,12 +1079,12 @@
 
         $(document).ready(function () {
             const urlParams = new URLSearchParams(window.location.search);
-            let selectedType   = (urlParams.get('type') || 'all').toLowerCase();
-            let selectedStatus = (urlParams.get('status') || 'all').toLowerCase();
-            let specialFilter  = urlParams.get('filter'); // 'mine', 'created', 'assigned', or 'dept'
-            let specialDept    = urlParams.get('dept');
-            const currentUserNik = '@userNik';
-            const currentUserDept = '@(User.FindFirst("Department")?.Value ?? "")'.toLowerCase();
+            let selectedType   = (urlParams.get('type') || '@(ViewBag.SelectedType ?? "all")').toLowerCase();
+            let selectedStatus = (urlParams.get('status') || '@(ViewBag.SelectedStatus ?? "all")').toLowerCase();
+            let specialFilter  = (urlParams.get('filter') || '@(ViewBag.SelectedFilter ?? "all")').toLowerCase();
+            let specialDept    = urlParams.get('dept') || '@(ViewBag.SelectedDept ?? "")';
+            const currentUserNik = '@(userNik ?? "")'.trim();
+            const currentUserDept = '@(userDept ?? "")'.trim().toLowerCase();
 
             // Debounce utility — prevents rapid-fire filter calls
             function debounce(fn, delay) {
@@ -1043,6 +1095,16 @@
                 };
             }
             const debouncedApplyFilters = debounce(applyFilters, 150);
+
+            // Set initial active pill for Penugasan / Filter
+            $('.filter-assigned').removeClass('active active-green active-red active-blue active-amber active-indigo active-purple');
+            const $assignedPill = $('.filter-assigned[data-filter="' + specialFilter + '"]');
+            if ($assignedPill.length) {
+                const cls = $assignedPill.data('active-class') || 'active';
+                $assignedPill.addClass(cls);
+            } else {
+                $('.filter-assigned[data-filter="all"]').addClass('active');
+            }
 
             // Set initial active pill for status
             $('.filter-status').removeClass('active active-green active-red');
@@ -1073,7 +1135,7 @@
                 const endDate = $('input[name="endDate"]').val() || '@ViewBag.EndDate';
                 if (startDate) params.set('startDate', startDate);
                 if (endDate) params.set('endDate', endDate);
-                if (specialFilter) params.set('filter', specialFilter);
+                if (specialFilter && specialFilter !== 'all') params.set('filter', specialFilter);
                 if (specialDept) params.set('dept', specialDept);
                 if (selectedStatus && selectedStatus !== 'all') params.set('status', selectedStatus);
                 if (selectedType && selectedType !== 'all') params.set('type', selectedType);
@@ -1117,15 +1179,19 @@
                     let matchD = (selectedDepartemen === 'all' || d === selectedDepartemen);
                     
                     let matchSpecial = true;
-                    if (specialFilter === 'mine') {
-                        matchSpecial = (nik === currentUserNik || nikpja === currentUserNik || nikpic === currentUserNik);
-                    } else if (specialFilter === 'created') {
-                        matchSpecial = (nik === currentUserNik);
-                    } else if (specialFilter === 'assigned') {
-                        matchSpecial = (nikpja === currentUserNik || nikpic === currentUserNik);
-                    } else if (specialFilter === 'dept' && specialDept) {
-                        const sd = specialDept.toLowerCase();
-                        matchSpecial = (d.toLowerCase() === sd || dpja.toLowerCase() === sd || dpic.toLowerCase() === sd);
+                    if (specialFilter === 'assigned' || specialFilter === 'assigned_to_me') {
+                        matchSpecial = (currentUserNik !== '' && (nikpja === currentUserNik || nikpic === currentUserNik));
+                    } else if (specialFilter === 'created' || specialFilter === 'created_by_me') {
+                        matchSpecial = (currentUserNik !== '' && nik === currentUserNik);
+                    } else if (specialFilter === 'dept_assigned') {
+                        matchSpecial = (currentUserDept !== '' && (dpja.toLowerCase() === currentUserDept || dpic.toLowerCase() === currentUserDept));
+                    } else if (specialFilter === 'dept_created' || specialFilter === 'dept_made') {
+                        matchSpecial = (currentUserDept !== '' && d.toLowerCase() === currentUserDept);
+                    } else if (specialFilter === 'mine') {
+                        matchSpecial = (currentUserNik !== '' && (nik === currentUserNik || nikpja === currentUserNik || nikpic === currentUserNik));
+                    } else if (specialFilter === 'dept') {
+                        const sd = specialDept ? specialDept.toLowerCase() : currentUserDept;
+                        matchSpecial = (sd !== '' && (d.toLowerCase() === sd || dpja.toLowerCase() === sd || dpic.toLowerCase() === sd));
                     }
 
                     let matchR = (selectedResiko === 'all');
@@ -1163,11 +1229,22 @@
                 }
             }
 
+            // Penugasan filter
+            $('.filter-assigned').on('click', function () {
+                $('.filter-assigned').removeClass('active active-green active-red active-blue active-amber active-indigo active-purple');
+                const cls = $(this).data('active-class') || 'active';
+                $(this).addClass(cls);
+                specialFilter = ($(this).attr('data-filter') || 'all').toLowerCase();
+                $('#hiddenFilterInput').val(specialFilter);
+                applyFilters();
+            });
+
             // Tipe filter
             $('.filter-type').on('click', function () {
                 $('.filter-type').removeClass('active active-green active-red');
                 $(this).addClass('active');
                 selectedType = $(this).data('type');
+                $('#hiddenTypeInput').val(selectedType);
                 applyFilters();
             });
 
@@ -1177,6 +1254,7 @@
                 const cls = $(this).data('active-class') || 'active';
                 $(this).addClass(cls);
                 selectedStatus = $(this).attr('data-status') || 'all';
+                $('#hiddenStatusInput').val(selectedStatus);
                 applyFilters();
             });
         });
