@@ -3142,7 +3142,24 @@
                     <span class="text-muted" style="font-size: 12px;">(INDEXIM, UDU, KPP, MGE - Karyawan Internal)</span>
                 </div>
                 <div class="row g-3" id="hazReqGroupMain">
-                    <!-- 4 Cards dynamically rendered -->
+                    @foreach (var name in new[] { "INDEXIM (Internal)", "UDU (Internal)", "KPP (Internal)", "MGE (Internal)" })
+                    {
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <div class="card h-100 border shadow-sm" style="border-radius: 14px; background: var(--bg-card);">
+                                <div class="card-header bg-transparent border-0 pt-3 px-3 pb-0 d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <span class="badge text-white" style="background: #0284c7; font-size: 9.5px; font-weight: 700; margin-bottom: 4px; padding: 3px 8px; border-radius: 6px;">UTAMA</span>
+                                        <h6 class="fw-bold mb-0 text-truncate" style="color: var(--text-main); font-size: 13px;">@name</h6>
+                                    </div>
+                                    <span class="badge bg-secondary text-white" style="font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px;">0%</span>
+                                </div>
+                                <div class="card-body p-3 text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                                    <div class="text-muted" style="font-size: 11px;">Memuat data...</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -3156,7 +3173,24 @@
                     <span class="text-muted" style="font-size: 12px;">(Mitra INDEXIM, Mitra UDU, Mitra KPP, Mitra MGE)</span>
                 </div>
                 <div class="row g-3" id="hazReqGroupMitra">
-                    <!-- 4 Cards dynamically rendered -->
+                    @foreach (var name in new[] { "Mitra INDEXIM", "Mitra UDU", "Mitra KPP", "Mitra MGE" })
+                    {
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <div class="card h-100 border shadow-sm" style="border-radius: 14px; background: var(--bg-card);">
+                                <div class="card-header bg-transparent border-0 pt-3 px-3 pb-0 d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <span class="badge text-white" style="background: #0d9488; font-size: 9.5px; font-weight: 700; margin-bottom: 4px; padding: 3px 8px; border-radius: 6px;">MITRA</span>
+                                        <h6 class="fw-bold mb-0 text-truncate" style="color: var(--text-main); font-size: 13px;">@name</h6>
+                                    </div>
+                                    <span class="badge bg-secondary text-white" style="font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px;">0%</span>
+                                </div>
+                                <div class="card-body p-3 text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-info mb-2" role="status"></div>
+                                    <div class="text-muted" style="font-size: 11px;">Memuat data...</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
 
@@ -3170,7 +3204,24 @@
                     <span class="text-muted" style="font-size: 12px;">(Total INDEXIM, Total UDU, Total KPP, Total MGE)</span>
                 </div>
                 <div class="row g-3" id="hazReqGroupTotal">
-                    <!-- 4 Cards dynamically rendered -->
+                    @foreach (var name in new[] { "Total INDEXIM & Mitra", "Total UDU & Mitra", "Total KPP & Mitra", "Total MGE & Mitra" })
+                    {
+                        <div class="col-12 col-md-6 col-xl-3">
+                            <div class="card h-100 border shadow-sm" style="border-radius: 14px; background: var(--bg-card);">
+                                <div class="card-header bg-transparent border-0 pt-3 px-3 pb-0 d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <span class="badge text-white" style="background: #7c3aed; font-size: 9.5px; font-weight: 700; margin-bottom: 4px; padding: 3px 8px; border-radius: 6px;">TOTAL</span>
+                                        <h6 class="fw-bold mb-0 text-truncate" style="color: var(--text-main); font-size: 13px;">@name</h6>
+                                    </div>
+                                    <span class="badge bg-secondary text-white" style="font-size: 11px; font-weight: 800; padding: 4px 8px; border-radius: 6px;">0%</span>
+                                </div>
+                                <div class="card-body p-3 text-center py-4">
+                                    <div class="spinner-border spinner-border-sm text-primary mb-2" role="status" style="color: #7c3aed !important;"></div>
+                                    <div class="text-muted" style="font-size: 11px;">Memuat data...</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
