@@ -184,11 +184,216 @@
             string GetRateBorder(double r) => r >= 80 ? "rgba(16, 185, 129, 0.25)" : (r >= 50 ? "rgba(245, 158, 11, 0.25)" : "rgba(239, 68, 68, 0.25)");
         }
 
-        <!-- ── Premium Executive Action Plan & Findings Monitoring Section ── -->
+        <!-- ── Premium Android-Style Action Plan & Findings Monitoring Section ── -->
+        <style>
+            /* Android Native App Card Design System */
+            .android-ap-card {
+                position: relative;
+                border-radius: 18px;
+                padding: 12px 11px;
+                background: var(--bg-card);
+                border: 1px solid var(--border-color);
+                box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+                transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, border-color 0.22s ease;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                height: 100%;
+                overflow: hidden;
+                cursor: pointer;
+                user-select: none;
+                -webkit-tap-highlight-color: transparent;
+            }
+            @@media (min-width: 768px) {
+                .android-ap-card {
+                    padding: 14px 14px;
+                    border-radius: 20px;
+                }
+            }
+            /* Ambient Glow Corner Effect */
+            .android-ap-card::before {
+                content: '';
+                position: absolute;
+                top: -24px;
+                right: -24px;
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                opacity: 0.15;
+                filter: blur(18px);
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+            .android-ap-card.theme-blue::before { background: #0284c7; }
+            .android-ap-card.theme-amber::before { background: #f59e0b; }
+            .android-ap-card.theme-indigo::before { background: #6366f1; }
+            .android-ap-card.theme-purple::before { background: #a855f7; }
+
+            /* Android Native Touch Reaction */
+            .android-ap-card:active {
+                transform: scale(0.95) !important;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+            }
+            .android-ap-card:hover {
+                transform: translateY(-3px);
+            }
+            .android-ap-card.theme-blue:hover {
+                border-color: rgba(2, 132, 199, 0.45) !important;
+                box-shadow: 0 10px 24px rgba(2, 132, 199, 0.2);
+            }
+            .android-ap-card.theme-amber:hover {
+                border-color: rgba(245, 158, 11, 0.45) !important;
+                box-shadow: 0 10px 24px rgba(245, 158, 11, 0.2);
+            }
+            .android-ap-card.theme-indigo:hover {
+                border-color: rgba(99, 102, 241, 0.45) !important;
+                box-shadow: 0 10px 24px rgba(99, 102, 241, 0.2);
+            }
+            .android-ap-card.theme-purple:hover {
+                border-color: rgba(168, 85, 247, 0.45) !important;
+                box-shadow: 0 10px 24px rgba(168, 85, 247, 0.2);
+            }
+
+            /* Android 3D Squircle Icon Badge */
+            .android-icon-squircle {
+                width: 32px;
+                height: 32px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                color: #ffffff;
+                transition: transform 0.3s ease;
+            }
+            @@media (min-width: 768px) {
+                .android-icon-squircle {
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 12px;
+                }
+            }
+            .android-ap-card:hover .android-icon-squircle {
+                transform: scale(1.08) rotate(3deg);
+            }
+            .android-icon-squircle.theme-blue {
+                background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+                box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+            }
+            .android-icon-squircle.theme-amber {
+                background: linear-gradient(135deg, #d97706 0%, #fbbf24 100%);
+                box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);
+            }
+            .android-icon-squircle.theme-indigo {
+                background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+            }
+            .android-icon-squircle.theme-purple {
+                background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+                box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+            }
+
+            /* Android Status Chip / Pill */
+            .android-status-pill {
+                font-size: 8.5px;
+                font-weight: 800;
+                letter-spacing: 0.2px;
+                border-radius: 99px;
+                padding: 2.5px 7px;
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                white-space: nowrap;
+                line-height: 1;
+            }
+            .android-status-pill.pill-danger {
+                background: rgba(239, 68, 68, 0.15);
+                color: #ef4444;
+                border: 1px solid rgba(239, 68, 68, 0.35);
+            }
+            .android-status-pill.pill-warning {
+                background: rgba(245, 158, 11, 0.15);
+                color: #f59e0b;
+                border: 1px solid rgba(245, 158, 11, 0.35);
+            }
+            .android-status-pill.pill-primary {
+                background: rgba(99, 102, 241, 0.15);
+                color: #818cf8;
+                border: 1px solid rgba(99, 102, 241, 0.35);
+            }
+            .android-status-pill.pill-purple {
+                background: rgba(168, 85, 247, 0.15);
+                color: #c084fc;
+                border: 1px solid rgba(168, 85, 247, 0.35);
+            }
+            .android-status-pill.pill-success {
+                background: rgba(16, 185, 129, 0.12);
+                color: #10b981;
+                border: 1px solid rgba(16, 185, 129, 0.3);
+            }
+
+            /* Glowing pulsing indicator dot */
+            .android-dot {
+                width: 5px;
+                height: 5px;
+                border-radius: 50%;
+                display: inline-block;
+            }
+            .android-dot.dot-pulse {
+                animation: androidPulse 1.8s infinite ease-in-out;
+            }
+            @@keyframes androidPulse {
+                0%, 100% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.4); opacity: 0.5; }
+            }
+
+            /* Android Widget Inner Glance Box */
+            .android-widget-box {
+                background: rgba(255, 255, 255, 0.035);
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                padding: 6px 8px;
+                margin: 7px 0;
+            }
+            body.light-theme .android-widget-box {
+                background: #f8fafc;
+                border-color: #e2e8f0;
+            }
+
+            /* Android Action Link Bottom Row */
+            .android-card-action {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-top: 3px;
+                padding-top: 5px;
+                border-top: 1px dashed var(--border-color);
+                font-size: 9.5px;
+            }
+            .android-action-btn-circle {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.06);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s ease;
+                font-size: 8.5px;
+            }
+            .android-ap-card:hover .android-action-btn-circle {
+                transform: translateX(2px);
+                background: currentColor;
+            }
+            .android-ap-card:hover .android-action-btn-circle i {
+                color: #ffffff !important;
+            }
+        </style>
+
         <div class="mb-4 animate-fade-in delay-2">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div class="d-flex align-items-center gap-2">
-                    <div style="width: 34px; height: 34px; border-radius: 9px; background: rgba(56, 189, 248, 0.12); display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(2, 132, 199, 0.2)); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.3);">
                         <i class="bi bi-shield-exclamation text-info fs-6"></i>
                     </div>
                     <div>
@@ -205,40 +410,46 @@
                 </a>
             </div>
 
-            <!-- 4 Modern Executive Interactive Cards Grid (2x2 on Mobile, 4x1 on Desktop) -->
+            <!-- 4 Android Native Widget Cards Grid (2x2 on Mobile, 4x1 on Desktop) -->
             <div class="row g-2 g-md-3">
                 <!-- Card 1: Diarahkan ke Saya -->
                 <div class="col-6 col-md-6 col-xl-3">
                     <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="assigned" asp-route-startDate="2000-01-01" class="text-decoration-none h-100 d-block">
-                        <div class="card-sap h-100 p-2.5 p-md-3 d-flex flex-column justify-content-between position-relative overflow-hidden ap-interactive-card" 
-                             style="border-left: 3.5px solid #0284c7 !important; background: var(--bg-card); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border-radius: 14px;"
-                             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 24px rgba(2, 132, 199, 0.15)';"
-                             onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.04)';">
+                        <div class="android-ap-card theme-blue" style="border-left: 3.5px solid #0284c7 !important;">
                             <div>
-                                <div class="d-flex justify-content-between align-items-start mb-1.5 mb-md-2 gap-1">
+                                <div class="d-flex justify-content-between align-items-start mb-1.5 gap-1">
                                     <div class="d-flex align-items-center gap-1.5 gap-md-2" style="min-width: 0;">
-                                        <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(2, 132, 199, 0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;" class="ap-icon-box">
-                                            <i class="bi bi-person-check-fill text-info" style="font-size: 14px;"></i>
+                                        <div class="android-icon-squircle theme-blue">
+                                            <i class="bi bi-person-check-fill" style="font-size: 15px;"></i>
                                         </div>
                                         <div style="min-width: 0;">
                                             <div class="fw-bold text-truncate" style="font-size: 11px; color: var(--text-main); line-height: 1.2;">Diarahkan ke Saya</div>
-                                            <div class="text-muted d-none d-sm-block" style="font-size: 9.5px;">Peran: PIC / PJA</div>
+                                            <div class="text-muted d-none d-sm-block" style="font-size: 9.5px;">Peran PIC / PJA</div>
                                         </div>
                                     </div>
-                                    <span class="badge @(assignedToMeCount > 0 ? "bg-danger" : "bg-success") text-white px-1.5 py-0.5 px-md-2 py-md-1" style="font-size: 8.5px; font-weight: 800; border-radius: 5px; flex-shrink: 0;">
-                                        @(assignedToMeCount > 0 ? $"{assignedToMeCount} Close" : "Clear")
-                                    </span>
+                                    @if (assignedToMeCount > 0)
+                                    {
+                                        <span class="android-status-pill pill-danger">
+                                            <span class="android-dot dot-pulse bg-danger"></span> @assignedToMeCount Close
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="android-status-pill pill-success">
+                                            <i class="bi bi-check-circle-fill"></i> Clear
+                                        </span>
+                                    }
                                 </div>
 
-                                <!-- Closing Rate Metric -->
-                                <div class="my-1.5 my-md-2 p-1.5 p-md-2 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                                <!-- Closing Rate Metric Widget -->
+                                <div class="android-widget-box">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span style="font-size: 9.5px; font-weight: 600; color: var(--text-muted);">Closing Rate</span>
-                                        <span class="badge" style="background: @GetRateBg(assignedCloseRate); color: @GetRateColor(assignedCloseRate); border: 1px solid @GetRateBorder(assignedCloseRate); font-size: 9px; font-weight: 800; padding: 1px 5px;">
+                                        <span style="font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px;">Closing Rate</span>
+                                        <span class="badge" style="background: @GetRateBg(assignedCloseRate); color: @GetRateColor(assignedCloseRate); border: 1px solid @GetRateBorder(assignedCloseRate); font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 6px;">
                                             @assignedCloseRate.ToString("0")%
                                         </span>
                                     </div>
-                                    <div class="progress" style="height: 3.5px; background: rgba(148, 163, 184, 0.15); border-radius: 99px; overflow: hidden; margin-bottom: 3px;">
+                                    <div class="progress" style="height: 4px; background: rgba(148, 163, 184, 0.15); border-radius: 99px; overflow: hidden; margin-bottom: 4px;">
                                         <div class="progress-bar" role="progressbar" style="width: @(Math.Min(100, Math.Max(0, assignedCloseRate)))%; background: @GetRateColor(assignedCloseRate); border-radius: 99px;" aria-valuenow="@assignedCloseRate" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center" style="font-size: 8.5px; color: var(--text-muted);">
@@ -248,10 +459,10 @@
                                 </div>
                             </div>
 
-                            <div class="mt-1 pt-1 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
-                                <span class="text-muted d-none d-sm-inline">Tugas aktif di-close</span>
-                                <span class="text-info fw-bold ms-auto d-inline-flex align-items-center">
-                                    Lihat <i class="bi bi-chevron-right ms-0.5" style="font-size: 8px;"></i>
+                            <div class="android-card-action">
+                                <span class="text-muted d-none d-sm-inline">Tugas Anda</span>
+                                <span class="text-info fw-bold ms-auto d-inline-flex align-items-center gap-1">
+                                    Buka <i class="bi bi-chevron-right" style="font-size: 8px;"></i>
                                 </span>
                             </div>
                         </div>
@@ -261,35 +472,41 @@
                 <!-- Card 2: Dibuat Oleh Saya -->
                 <div class="col-6 col-md-6 col-xl-3">
                     <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="created" asp-route-startDate="2000-01-01" class="text-decoration-none h-100 d-block">
-                        <div class="card-sap h-100 p-2.5 p-md-3 d-flex flex-column justify-content-between position-relative overflow-hidden ap-interactive-card" 
-                             style="border-left: 3.5px solid #f59e0b !important; background: var(--bg-card); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border-radius: 14px;"
-                             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 24px rgba(245, 158, 11, 0.15)';"
-                             onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.04)';">
+                        <div class="android-ap-card theme-amber" style="border-left: 3.5px solid #f59e0b !important;">
                             <div>
-                                <div class="d-flex justify-content-between align-items-start mb-1.5 mb-md-2 gap-1">
+                                <div class="d-flex justify-content-between align-items-start mb-1.5 gap-1">
                                     <div class="d-flex align-items-center gap-1.5 gap-md-2" style="min-width: 0;">
-                                        <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;" class="ap-icon-box">
-                                            <i class="bi bi-pencil-square text-warning" style="font-size: 14px;"></i>
+                                        <div class="android-icon-squircle theme-amber">
+                                            <i class="bi bi-pencil-square" style="font-size: 15px;"></i>
                                         </div>
                                         <div style="min-width: 0;">
                                             <div class="fw-bold text-truncate" style="font-size: 11px; color: var(--text-main); line-height: 1.2;">Dibuat Oleh Saya</div>
                                             <div class="text-muted d-none d-sm-block" style="font-size: 9.5px;">Laporan Saya</div>
                                         </div>
                                     </div>
-                                    <span class="badge @(createdByMeOpenCount > 0 ? "bg-warning text-dark" : "bg-success") px-1.5 py-0.5 px-md-2 py-md-1" style="font-size: 8.5px; font-weight: 800; border-radius: 5px; flex-shrink: 0;">
-                                        @(createdByMeOpenCount > 0 ? $"{createdByMeOpenCount} Tunggu" : "Tuntas")
-                                    </span>
+                                    @if (createdByMeOpenCount > 0)
+                                    {
+                                        <span class="android-status-pill pill-warning">
+                                            <span class="android-dot dot-pulse bg-warning"></span> @createdByMeOpenCount Tunggu
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="android-status-pill pill-success">
+                                            <i class="bi bi-check-circle-fill"></i> Tuntas
+                                        </span>
+                                    }
                                 </div>
 
-                                <!-- Closing Rate Metric -->
-                                <div class="my-1.5 my-md-2 p-1.5 p-md-2 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                                <!-- Closing Rate Metric Widget -->
+                                <div class="android-widget-box">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span style="font-size: 9.5px; font-weight: 600; color: var(--text-muted);">Closing Rate</span>
-                                        <span class="badge" style="background: @GetRateBg(createdByMeCloseRate); color: @GetRateColor(createdByMeCloseRate); border: 1px solid @GetRateBorder(createdByMeCloseRate); font-size: 9px; font-weight: 800; padding: 1px 5px;">
+                                        <span style="font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px;">Closing Rate</span>
+                                        <span class="badge" style="background: @GetRateBg(createdByMeCloseRate); color: @GetRateColor(createdByMeCloseRate); border: 1px solid @GetRateBorder(createdByMeCloseRate); font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 6px;">
                                             @createdByMeCloseRate.ToString("0")%
                                         </span>
                                     </div>
-                                    <div class="progress" style="height: 3.5px; background: rgba(148, 163, 184, 0.15); border-radius: 99px; overflow: hidden; margin-bottom: 3px;">
+                                    <div class="progress" style="height: 4px; background: rgba(148, 163, 184, 0.15); border-radius: 99px; overflow: hidden; margin-bottom: 4px;">
                                         <div class="progress-bar" role="progressbar" style="width: @(Math.Min(100, Math.Max(0, createdByMeCloseRate)))%; background: @GetRateColor(createdByMeCloseRate); border-radius: 99px;" aria-valuenow="@createdByMeCloseRate" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center" style="font-size: 8.5px; color: var(--text-muted);">
@@ -299,10 +516,10 @@
                                 </div>
                             </div>
 
-                            <div class="mt-1 pt-1 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                            <div class="android-card-action">
                                 <span class="text-muted d-none d-sm-inline">Pantau perbaikan</span>
-                                <span class="text-warning fw-bold ms-auto d-inline-flex align-items-center">
-                                    Pantau <i class="bi bi-chevron-right ms-0.5" style="font-size: 8px;"></i>
+                                <span class="text-warning fw-bold ms-auto d-inline-flex align-items-center gap-1">
+                                    Pantau <i class="bi bi-chevron-right" style="font-size: 8px;"></i>
                                 </span>
                             </div>
                         </div>
@@ -312,37 +529,43 @@
                 <!-- Card 3: Diarahkan ke Dept Saya -->
                 <div class="col-6 col-md-6 col-xl-3">
                     <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="dept_assigned" asp-route-dept="@userDeptName" asp-route-startDate="2000-01-01" class="text-decoration-none h-100 d-block">
-                        <div class="card-sap h-100 p-2.5 p-md-3 d-flex flex-column justify-content-between position-relative overflow-hidden ap-interactive-card" 
-                             style="border-left: 3.5px solid #6366f1 !important; background: var(--bg-card); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border-radius: 14px;"
-                             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 24px rgba(99, 102, 241, 0.15)';"
-                             onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.04)';">
+                        <div class="android-ap-card theme-indigo" style="border-left: 3.5px solid #6366f1 !important;">
                             <div>
-                                <div class="d-flex justify-content-between align-items-start mb-1.5 mb-md-2 gap-1">
+                                <div class="d-flex justify-content-between align-items-start mb-1.5 gap-1">
                                     <div class="d-flex align-items-center gap-1.5 gap-md-2" style="min-width: 0;">
-                                        <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;" class="ap-icon-box">
-                                            <i class="bi bi-box-arrow-in-right text-primary" style="font-size: 14px; color: #818cf8 !important;"></i>
+                                        <div class="android-icon-squircle theme-indigo">
+                                            <i class="bi bi-box-arrow-in-right" style="font-size: 15px;"></i>
                                         </div>
                                         <div style="min-width: 0;">
                                             <div class="fw-bold text-truncate" style="font-size: 11px; color: var(--text-main); line-height: 1.2;">Diarahkan ke Dept</div>
                                             <div class="text-muted text-truncate d-none d-sm-block" style="font-size: 9.5px;" title="@userDeptName">
-                                                @(!string.IsNullOrEmpty(userDeptName) ? userDeptName : "PJA/PIC Dept")
+                                                @(!string.IsNullOrEmpty(userDeptName) ? userDeptName : "PIC Dept")
                                             </div>
                                         </div>
                                     </div>
-                                    <span class="badge @(deptAssignedOpenCount > 0 ? "bg-primary" : "bg-success") text-white px-1.5 py-0.5 px-md-2 py-md-1" style="font-size: 8.5px; font-weight: 800; border-radius: 5px; flex-shrink: 0;">
-                                        @(deptAssignedOpenCount > 0 ? $"{deptAssignedOpenCount} Open" : "Clear")
-                                    </span>
+                                    @if (deptAssignedOpenCount > 0)
+                                    {
+                                        <span class="android-status-pill pill-primary">
+                                            <span class="android-dot dot-pulse bg-primary"></span> @deptAssignedOpenCount Open
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="android-status-pill pill-success">
+                                            <i class="bi bi-check-circle-fill"></i> Clear
+                                        </span>
+                                    }
                                 </div>
 
-                                <!-- Closing Rate Metric -->
-                                <div class="my-1.5 my-md-2 p-1.5 p-md-2 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                                <!-- Closing Rate Metric Widget -->
+                                <div class="android-widget-box">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span style="font-size: 9.5px; font-weight: 600; color: var(--text-muted);">Closing Rate</span>
-                                        <span class="badge" style="background: @GetRateBg(deptAssignedCloseRate); color: @GetRateColor(deptAssignedCloseRate); border: 1px solid @GetRateBorder(deptAssignedCloseRate); font-size: 9px; font-weight: 800; padding: 1px 5px;">
+                                        <span style="font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px;">Closing Rate</span>
+                                        <span class="badge" style="background: @GetRateBg(deptAssignedCloseRate); color: @GetRateColor(deptAssignedCloseRate); border: 1px solid @GetRateBorder(deptAssignedCloseRate); font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 6px;">
                                             @deptAssignedCloseRate.ToString("0")%
                                         </span>
                                     </div>
-                                    <div class="progress" style="height: 3.5px; background: rgba(148, 163, 184, 0.15); border-radius: 99px; overflow: hidden; margin-bottom: 3px;">
+                                    <div class="progress" style="height: 4px; background: rgba(148, 163, 184, 0.15); border-radius: 99px; overflow: hidden; margin-bottom: 4px;">
                                         <div class="progress-bar" role="progressbar" style="width: @(Math.Min(100, Math.Max(0, deptAssignedCloseRate)))%; background: @GetRateColor(deptAssignedCloseRate); border-radius: 99px;" aria-valuenow="@deptAssignedCloseRate" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center" style="font-size: 8.5px; color: var(--text-muted);">
@@ -352,10 +575,10 @@
                                 </div>
                             </div>
 
-                            <div class="mt-1 pt-1 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
-                                <span class="text-muted d-none d-sm-inline">Tugas PJA/PIC Dept</span>
-                                <span class="fw-bold ms-auto d-inline-flex align-items-center" style="color: #818cf8;">
-                                    Lihat <i class="bi bi-chevron-right ms-0.5" style="font-size: 8px;"></i>
+                            <div class="android-card-action">
+                                <span class="text-muted d-none d-sm-inline">Tugas PIC Dept</span>
+                                <span class="fw-bold ms-auto d-inline-flex align-items-center gap-1" style="color: #818cf8;">
+                                    Lihat <i class="bi bi-chevron-right" style="font-size: 8px;"></i>
                                 </span>
                             </div>
                         </div>
@@ -365,15 +588,12 @@
                 <!-- Card 4: Dibuat ke/oleh Dept Saya -->
                 <div class="col-6 col-md-6 col-xl-3">
                     <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="dept_created" asp-route-dept="@userDeptName" asp-route-startDate="2000-01-01" class="text-decoration-none h-100 d-block">
-                        <div class="card-sap h-100 p-2.5 p-md-3 d-flex flex-column justify-content-between position-relative overflow-hidden ap-interactive-card" 
-                             style="border-left: 3.5px solid #8b5cf6 !important; background: var(--bg-card); transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 16px rgba(0,0,0,0.04); border-radius: 14px;"
-                             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 10px 24px rgba(139, 92, 246, 0.15)';"
-                             onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.04)';">
+                        <div class="android-ap-card theme-purple" style="border-left: 3.5px solid #8b5cf6 !important;">
                             <div>
-                                <div class="d-flex justify-content-between align-items-start mb-1.5 mb-md-2 gap-1">
+                                <div class="d-flex justify-content-between align-items-start mb-1.5 gap-1">
                                     <div class="d-flex align-items-center gap-1.5 gap-md-2" style="min-width: 0;">
-                                        <div style="width: 28px; height: 28px; border-radius: 8px; background: rgba(139, 92, 246, 0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;" class="ap-icon-box">
-                                            <i class="bi bi-box-arrow-up-right" style="font-size: 14px; color: #a855f7 !important;"></i>
+                                        <div class="android-icon-squircle theme-purple">
+                                            <i class="bi bi-box-arrow-up-right" style="font-size: 15px;"></i>
                                         </div>
                                         <div style="min-width: 0;">
                                             <div class="fw-bold text-truncate" style="font-size: 11px; color: var(--text-main); line-height: 1.2;">Dibuat oleh Dept</div>
@@ -382,20 +602,29 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <span class="badge @(deptCreatedOpenCount > 0 ? "text-white" : "bg-success") px-1.5 py-0.5 px-md-2 py-md-1" style="@(deptCreatedOpenCount > 0 ? "background: #8b5cf6;" : "") font-size: 8.5px; font-weight: 800; border-radius: 5px; flex-shrink: 0;">
-                                        @(deptCreatedOpenCount > 0 ? $"{deptCreatedOpenCount} Open" : "Clear")
-                                    </span>
+                                    @if (deptCreatedOpenCount > 0)
+                                    {
+                                        <span class="android-status-pill pill-purple">
+                                            <span class="android-dot dot-pulse" style="background:#c084fc;"></span> @deptCreatedOpenCount Open
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="android-status-pill pill-success">
+                                            <i class="bi bi-check-circle-fill"></i> Clear
+                                        </span>
+                                    }
                                 </div>
 
-                                <!-- Closing Rate Metric -->
-                                <div class="my-1.5 my-md-2 p-1.5 p-md-2 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                                <!-- Closing Rate Metric Widget -->
+                                <div class="android-widget-box">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span style="font-size: 9.5px; font-weight: 600; color: var(--text-muted);">Closing Rate</span>
-                                        <span class="badge" style="background: @GetRateBg(deptCreatedCloseRate); color: @GetRateColor(deptCreatedCloseRate); border: 1px solid @GetRateBorder(deptCreatedCloseRate); font-size: 9px; font-weight: 800; padding: 1px 5px;">
+                                        <span style="font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.3px;">Closing Rate</span>
+                                        <span class="badge" style="background: @GetRateBg(deptCreatedCloseRate); color: @GetRateColor(deptCreatedCloseRate); border: 1px solid @GetRateBorder(deptCreatedCloseRate); font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 6px;">
                                             @deptCreatedCloseRate.ToString("0")%
                                         </span>
                                     </div>
-                                    <div class="progress" style="height: 3.5px; background: rgba(148, 163, 184, 0.15); border-radius: 99px; overflow: hidden; margin-bottom: 3px;">
+                                    <div class="progress" style="height: 4px; background: rgba(148, 163, 184, 0.15); border-radius: 99px; overflow: hidden; margin-bottom: 4px;">
                                         <div class="progress-bar" role="progressbar" style="width: @(Math.Min(100, Math.Max(0, deptCreatedCloseRate)))%; background: @GetRateColor(deptCreatedCloseRate); border-radius: 99px;" aria-valuenow="@deptCreatedCloseRate" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center" style="font-size: 8.5px; color: var(--text-muted);">
@@ -405,10 +634,10 @@
                                 </div>
                             </div>
 
-                            <div class="mt-1 pt-1 border-top border-secondary d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
-                                <span class="text-muted d-none d-sm-inline">Laporan dari tim</span>
-                                <span class="fw-bold ms-auto d-inline-flex align-items-center" style="color: #a855f7;">
-                                    Lihat <i class="bi bi-chevron-right ms-0.5" style="font-size: 8px;"></i>
+                            <div class="android-card-action">
+                                <span class="text-muted d-none d-sm-inline">Laporan Tim</span>
+                                <span class="fw-bold ms-auto d-inline-flex align-items-center gap-1" style="color: #a855f7;">
+                                    Lihat <i class="bi bi-chevron-right" style="font-size: 8px;"></i>
                                 </span>
                             </div>
                         </div>
