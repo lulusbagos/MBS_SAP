@@ -42,34 +42,27 @@ namespace dbtest
                 return t.Equals("Closed", StringComparison.OrdinalIgnoreCase) || t.Equals("Close", StringComparison.OrdinalIgnoreCase) || t.Equals("Selesai", StringComparison.OrdinalIgnoreCase) || t.Equals("Complete", StringComparison.OrdinalIgnoreCase);
             }
 
-            // 1. Action plans assigned specifically to SHE HAULING (PJA/PIC) in September 2026
-            var assignedMtd = await context.ActionPlans
-                .Where(a => !a.IsDeleted && (
-                    (a.DepartemenPja != null && a.DepartemenPja.Trim().ToLower() == "she hauling") ||
-                    (a.DepartemenPic != null && a.DepartemenPic.Trim().ToLower() == "she hauling")
-                ) && ((a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth) || (a.CreatedAt >= startOfMonth && a.CreatedAt <= endOfMonth)))
-                .Select(a => new { a.Id, a.Tanggal, a.CreatedAt, a.Status, a.Departemen, a.DepartemenPja, a.DepartemenPic, a.Pic, a.Pja, a.DetilTemuan })
+            var allMtdAp = await context.ActionPlans
+                .AsNoTracking()
+                .Where(a => !a.IsDeleted && ((a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth) || (a.CreatedAt >= startOfMonth && a.CreatedAt <= endOfMonth)))
+                .Select(a => new { a.Id, a.Tanggal, a.Status, a.Departemen, a.DepartemenPja, a.DepartemenPic, a.PerusahaanId })
                 .ToListAsync();
 
-            Console.WriteLine($"--- ACTION PLANS DIARAHKAN KE 'SHE HAULING' (PJA/PIC) - MTD Sept 2026 ---");
-            Console.WriteLine($"Total: {assignedMtd.Count}, Closed: {assignedMtd.Count(a => isClosed(a.Status))}, Open: {assignedMtd.Count(a => !isClosed(a.Status))}");
-            foreach (var a in assignedMtd)
-            {
-                Console.WriteLine($"ID: {a.Id} | Tanggal: {a.Tanggal:yyyy-MM-dd} | Status: {a.Status} | Pelapor Dept: {a.Departemen} | PJA Dept: {a.DepartemenPja} | PIC Dept: {a.DepartemenPic} | PIC: {a.Pic}");
-            }
+            var depts = allMtdAp
+                .Select(a => !string.IsNullOrEmpty(a.DepartemenPja) ? a.DepartemenPja.Trim() : (!string.IsNullOrEmpty(a.DepartemenPic) ? a.DepartemenPic.Trim() : (!string.IsNullOrEmpty(a.Departemen) ? a.Departemen.Trim() : "General")))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(d => d)
+                .ToList();
 
-            // 2. Action plans created by SHE HAULING directed to OTHER departments
-            var createdBySheMtd = await context.ActionPlans
-                .Where(a => !a.IsDeleted && a.Departemen != null && a.Departemen.Contains("HAULING") &&
-                    ((a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth) || (a.CreatedAt >= startOfMonth && a.CreatedAt <= endOfMonth)))
-                .Select(a => new { a.Id, a.Tanggal, a.Status, a.Departemen, a.DepartemenPja, a.DepartemenPic, a.Pic })
-                .ToListAsync();
+            var sheHaulingAp = allMtdAp.Where(a => 
+                (!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), "SHE HAULING", StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), "SHE HAULING", StringComparison.OrdinalIgnoreCase))
+            ).ToList();
 
-            Console.WriteLine($"\n--- ACTION PLANS DIBUAT OLEH SHE HAULING (Pelapor) - MTD Sept 2026 ---");
-            Console.WriteLine($"Total: {createdBySheMtd.Count}, Closed: {createdBySheMtd.Count(a => isClosed(a.Status))}, Open: {createdBySheMtd.Count(a => !isClosed(a.Status))}");
-            foreach (var a in createdBySheMtd.Where(x => !isClosed(x.Status)))
+            Console.WriteLine($"=== SHE HAULING ASSIGNED ITEMS ===");
+            foreach (var a in sheHaulingAp)
             {
-                Console.WriteLine($"OPEN temuan dibuat SHE: ID={a.Id} | Tanggal={a.Tanggal:yyyy-MM-dd} | Status={a.Status} | Diarahkan ke PJA Dept: {a.DepartemenPja} | PIC Dept: {a.DepartemenPic} | PIC: {a.Pic}");
+                Console.WriteLine($"ID: {a.Id} | Status: {a.Status} | Dept: {a.Departemen} | PJA: {a.DepartemenPja} | PIC: {a.DepartemenPic}");
             }
         }
     }

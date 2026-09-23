@@ -35,6 +35,41 @@ namespace MBS_SAP.Controllers
                 || trimmed.Equals("Complete", StringComparison.OrdinalIgnoreCase);
         }
 
+        private async Task<List<ActionPlanSummaryItem>> GetMonthlyActionPlansAsync(int year, int month)
+        {
+            var cache = HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
+            var cacheKey = $"MonthlyActionPlansSummary_{year}_{month}";
+            if (cache.TryGetValue(cacheKey, out List<ActionPlanSummaryItem>? cached) && cached != null)
+            {
+                return cached;
+            }
+
+            var startOfMonth = new DateTime(year, month, 1);
+            var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
+
+            var list = await _context.ActionPlans
+                .AsNoTracking()
+                .Where(a => !a.IsDeleted && (
+                    (a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth) ||
+                    (a.CreatedAt >= startOfMonth && a.CreatedAt <= endOfMonth)
+                ))
+                .Select(a => new ActionPlanSummaryItem
+                {
+                    Nik = a.Nik,
+                    NikPic = a.NikPic,
+                    NikPja = a.NikPja,
+                    Departemen = a.Departemen,
+                    DepartemenPic = a.DepartemenPic,
+                    DepartemenPja = a.DepartemenPja,
+                    PerusahaanId = a.PerusahaanId,
+                    Status = a.Status
+                })
+                .ToListAsync();
+
+            cache.Set(cacheKey, list, TimeSpan.FromMinutes(5));
+            return list;
+        }
+
         private async Task<(int? companyId, HashSet<int> allowedCompanyIds)> ResolveCompanyScopeAsync()
         {
             var compIdStr = User.FindFirst("CompanyId")?.Value;
@@ -298,23 +333,7 @@ namespace MBS_SAP.Controllers
                     dbHazards = rawHazards.Where(h => h.Nik != null).Select(h => h.Nik!).ToList();
                     dbHazardsClosed = rawHazards.Where(h => h.Nik != null && IsClosedStatus(h.StatusTemuan)).Select(h => h.Nik!).ToList();
 
-                    rawActionPlansList = await _context.ActionPlans
-                        .Where(a => !a.IsDeleted && (
-                            (a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth) ||
-                            (a.CreatedAt >= startOfMonth && a.CreatedAt <= endOfMonth)
-                        ))
-                        .Select(a => new ActionPlanSummaryItem
-                        {
-                            Nik = a.Nik,
-                            NikPic = a.NikPic,
-                            NikPja = a.NikPja,
-                            Departemen = a.Departemen,
-                            DepartemenPic = a.DepartemenPic,
-                            DepartemenPja = a.DepartemenPja,
-                            PerusahaanId = a.PerusahaanId,
-                            Status = a.Status
-                        })
-                        .ToListAsync();
+                    rawActionPlansList = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
 
                     dbInspections = await _context.Inspections
                         .Where(i => !i.IsDeleted && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth)
@@ -3391,6 +3410,8 @@ namespace MBS_SAP.Controllers
 
                 bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
 
+                var monthlyActionPlans = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
+
                 foreach (var comp in companiesToCompare)
                 {
                     var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
@@ -3420,9 +3441,7 @@ namespace MBS_SAP.Controllers
                     int p5mAct = targetEmps.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                     int p5mTgt = targetEmps.Sum(e => (int)e.p5m.target);
 
-                    var reqCacheKey = $"MonthlyData_WithCloseRate_{selectedYear}_{selectedMonth}";
-                    var rawActionPlansList = (HttpContext.Items[reqCacheKey] as MonthlyComplianceCacheData)?.ActionPlansRaw ?? new List<ActionPlanSummaryItem>();
-                    var compAssignedAp = rawActionPlansList.Where(a => a.PerusahaanId == comp.PerusahaanId).ToList();
+                    var compAssignedAp = monthlyActionPlans.Where(a => a.PerusahaanId == comp.PerusahaanId).ToList();
                     int compEffectiveTotalAp = compAssignedAp.Count;
                     int compEffectiveClosedAp = compAssignedAp.Count(a => IsClosedStatus(a.Status));
                     double compCloseRate = compEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)compEffectiveClosedAp / compEffectiveTotalAp * 100.0), 1) : 100.0;
@@ -3516,6 +3535,8 @@ namespace MBS_SAP.Controllers
                 var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
                 var targetEmployees = employees.Where(e => (bool)e.isTargetSap).ToList();
 
+                var monthlyActionPlans = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
+
                 var deptAchievements = targetEmployees
                     .GroupBy(e => (string)e.departmentName)
                     .Select(g => {
@@ -3542,10 +3563,8 @@ namespace MBS_SAP.Controllers
                         int p5mAct = g.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                         int p5mTgt = g.Sum(e => (int)e.p5m.target);
 
-                        var reqCacheKey = $"MonthlyData_WithCloseRate_{selectedYear}_{selectedMonth}";
-                        var rawActionPlansList = (HttpContext.Items[reqCacheKey] as MonthlyComplianceCacheData)?.ActionPlansRaw ?? new List<ActionPlanSummaryItem>();
                         var deptName = g.Key;
-                        var deptAssignedAp = rawActionPlansList.Where(a =>
+                        var deptAssignedAp = monthlyActionPlans.Where(a =>
                             (!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
                             (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase))
                         ).ToList();
@@ -3748,6 +3767,8 @@ namespace MBS_SAP.Controllers
 
                 bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
                 var allEmployees = new List<dynamic>();
+                var monthlyActionPlans = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
+
                 foreach (var comp in companiesToCompare)
                 {
                     var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
@@ -3776,9 +3797,7 @@ namespace MBS_SAP.Controllers
                     int p5mAct = targetEmps.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                     int p5mTgt = targetEmps.Sum(e => (int)e.p5m.target);
 
-                    var reqCacheKey = $"MonthlyData_WithCloseRate_{selectedYear}_{selectedMonth}";
-                    var rawActionPlansList = (HttpContext.Items[reqCacheKey] as MonthlyComplianceCacheData)?.ActionPlansRaw ?? new List<ActionPlanSummaryItem>();
-                    var compAssignedAp = rawActionPlansList.Where(a => a.PerusahaanId == comp.PerusahaanId).ToList();
+                    var compAssignedAp = monthlyActionPlans.Where(a => a.PerusahaanId == comp.PerusahaanId).ToList();
                     int compEffectiveTotalAp = compAssignedAp.Count;
                     int compEffectiveClosedAp = compAssignedAp.Count(a => IsClosedStatus(a.Status));
                     double compCloseRate = compEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)compEffectiveClosedAp / compEffectiveTotalAp * 100.0), 1) : 100.0;
@@ -3820,6 +3839,8 @@ namespace MBS_SAP.Controllers
 
                 var targetEmployees = rawEmployees.Where(e => (bool)e.isTargetSap).ToList();
 
+                var monthlyActionPlans = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
+
                 deptAchievements = targetEmployees
                     .GroupBy(e => (string)e.departmentName)
                     .Select(g => {
@@ -3846,10 +3867,8 @@ namespace MBS_SAP.Controllers
                         int p5mAct = g.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                         int p5mTgt = g.Sum(e => (int)e.p5m.target);
 
-                        var reqCacheKey = $"MonthlyData_WithCloseRate_{selectedYear}_{selectedMonth}";
-                        var rawActionPlansList = (HttpContext.Items[reqCacheKey] as MonthlyComplianceCacheData)?.ActionPlansRaw ?? new List<ActionPlanSummaryItem>();
                         var deptName = g.Key;
-                        var deptAssignedAp = rawActionPlansList.Where(a =>
+                        var deptAssignedAp = monthlyActionPlans.Where(a =>
                             (!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
                             (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase))
                         ).ToList();
