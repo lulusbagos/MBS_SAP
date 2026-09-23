@@ -2713,7 +2713,7 @@
                         </div>
                     </div>
                     <div class="premium-body">
-                        <div style="height: 220px; display: flex; align-items: center; justify-content: center;">
+                        <div style="height: 220px; position: relative;">
                             <canvas id="chartKategoriBahaya"></canvas>
                         </div>
                         <div class="row g-2 mt-2 text-center" style="font-size: 11.5px; font-weight: 700;">
@@ -3055,28 +3055,31 @@
                     <div class="analytics-filter-group">
                         <span class="analytics-filter-label"><i class="bi bi-calendar3 me-1"></i>Bulan:</span>
                         <select class="form-select form-select-sm analytics-select" id="selHazReqMonth" onchange="applyHazardReqFilters()" style="min-width: 120px;">
-                            <option value="1">Januari</option>
-                            <option value="2">Februari</option>
-                            <option value="3">Maret</option>
-                            <option value="4">April</option>
-                            <option value="5">Mei</option>
-                            <option value="6">Juni</option>
-                            <option value="7">Juli</option>
-                            <option value="8">Agustus</option>
-                            <option value="9">September</option>
-                            <option value="10">Oktober</option>
-                            <option value="11">November</option>
-                            <option value="12">Desember</option>
+                            @for (int m = 1; m <= 12; m++)
+                            {
+                                var mName = new DateTime(2026, m, 1).ToString("MMMM", new System.Globalization.CultureInfo("id-ID"));
+                                bool isSel = m == (int)(ViewBag.SelectedMonth ?? DateTime.Today.Month);
+                                if (isSel) {
+                                    <option value="@m" selected>@mName</option>
+                                } else {
+                                    <option value="@m">@mName</option>
+                                }
+                            }
                         </select>
                     </div>
 
                     <div class="analytics-filter-group">
                         <span class="analytics-filter-label"><i class="bi bi-calendar-event me-1"></i>Tahun:</span>
                         <select class="form-select form-select-sm analytics-select" id="selHazReqYear" onchange="applyHazardReqFilters()" style="min-width: 90px;">
-                            <option value="2024">2024</option>
-                            <option value="2025">2025</option>
-                            <option value="2026">2026</option>
-                            <option value="2027">2027</option>
+                            @for (int y = 2024; y <= DateTime.Today.Year + 1; y++)
+                            {
+                                bool isSelY = y == (int)(ViewBag.SelectedYear ?? DateTime.Today.Year);
+                                if (isSelY) {
+                                    <option value="@y" selected>@y</option>
+                                } else {
+                                    <option value="@y">@y</option>
+                                }
+                            }
                         </select>
                     </div>
 
@@ -3527,8 +3530,13 @@
         if (tab === 'analytics') {
             loadAnalyticsTab();
         }
-        if (tab === 'company' && typeof window._initCompanyCharts === 'function') {
-            window._initCompanyCharts();
+        if (tab === 'company') {
+            if (typeof window._initCompanyCharts === 'function') {
+                window._initCompanyCharts();
+            }
+            if (typeof renderCompanyKategoriChart === 'function') {
+                renderCompanyKategoriChart();
+            }
         }
         if (tab === 'hitsafe' && typeof window.initHitSafeMap === 'function') {
             window.requestAnimationFrame(function () {
@@ -4897,11 +4905,22 @@
             ttaCount = @(ViewBag.UnsafeActCount ?? 0);
         }
 
-        if (_analyticsData && _analyticsData.hazardBreakdown) {
-            const hb = _companyKategoriMode === 'ytd' ? _analyticsData.hazardBreakdown.ytd : _analyticsData.hazardBreakdown.mtd;
-            if (hb) {
-                ktaCount = hb.kta || 0;
-                ttaCount = hb.tta || 0;
+        if (_analyticsData) {
+            if (_analyticsData.hazardBreakdown) {
+                const hb = _companyKategoriMode === 'ytd' ? _analyticsData.hazardBreakdown.ytd : _analyticsData.hazardBreakdown.mtd;
+                if (hb) {
+                    ktaCount = hb.kta || 0;
+                    ttaCount = hb.tta || 0;
+                }
+            } else if (_analyticsData.kategoriBahaya) {
+                const kb = _analyticsData.kategoriBahaya;
+                if (_companyKategoriMode === 'ytd') {
+                    ktaCount = kb.unsafeConditionYtd || 0;
+                    ttaCount = kb.unsafeActYtd || 0;
+                } else {
+                    ktaCount = kb.unsafeConditionMtd ?? kb.unsafeCondition ?? 0;
+                    ttaCount = kb.unsafeActMtd ?? kb.unsafeAct ?? 0;
+                }
             }
         }
 
@@ -4918,13 +4937,18 @@
             _chartKategoriBahayaInstance.destroy();
         }
 
+        const hasData = total > 0;
+        const chartData = hasData ? [ktaCount, ttaCount] : [0, 0, 1];
+        const chartLabels = hasData ? ['KTA (Kondisi Tidak Aman)', 'TTA (Tindakan Tidak Aman)'] : ['Belum Ada Data'];
+        const chartColors = hasData ? ['#3b82f6', '#f59e0b'] : ['#e2e8f0'];
+
         _chartKategoriBahayaInstance = new Chart(ctx.getContext('2d'), {
             type: 'doughnut',
             data: {
-                labels: ['KTA (Kondisi Tidak Aman)', 'TTA (Tindakan Tidak Aman)'],
+                labels: chartLabels,
                 datasets: [{
-                    data: [ktaCount, ttaCount],
-                    backgroundColor: ['#3b82f6', '#f59e0b'],
+                    data: chartData,
+                    backgroundColor: chartColors,
                     borderWidth: 2,
                     borderColor: isDark ? '#1e293b' : '#ffffff'
                 }]
@@ -4938,6 +4962,7 @@
                         labels: { color: textColor, font: { weight: 'bold', size: 11 } }
                     },
                     tooltip: {
+                        enabled: hasData,
                         callbacks: {
                             label: function(context) {
                                 const val = context.raw || 0;

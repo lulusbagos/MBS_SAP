@@ -1792,6 +1792,25 @@ namespace MBS_SAP.Controllers
                     unsafeConditionMtd = unsafeConditionCount,
                     unsafeActYtd = unsafeActCountYtd,
                     unsafeConditionYtd = unsafeConditionCountYtd
+                },
+                hazardBreakdown = new
+                {
+                    mtd = new
+                    {
+                        total = unsafeConditionCount + unsafeActCount,
+                        kta = unsafeConditionCount,
+                        tta = unsafeActCount,
+                        ktaPct = (unsafeConditionCount + unsafeActCount) > 0 ? Math.Round((double)unsafeConditionCount / (unsafeConditionCount + unsafeActCount) * 100.0, 1) : 0,
+                        ttaPct = (unsafeConditionCount + unsafeActCount) > 0 ? Math.Round((double)unsafeActCount / (unsafeConditionCount + unsafeActCount) * 100.0, 1) : 0
+                    },
+                    ytd = new
+                    {
+                        total = unsafeConditionCountYtd + unsafeActCountYtd,
+                        kta = unsafeConditionCountYtd,
+                        tta = unsafeActCountYtd,
+                        ktaPct = (unsafeConditionCountYtd + unsafeActCountYtd) > 0 ? Math.Round((double)unsafeConditionCountYtd / (unsafeConditionCountYtd + unsafeActCountYtd) * 100.0, 1) : 0,
+                        ttaPct = (unsafeConditionCountYtd + unsafeActCountYtd) > 0 ? Math.Round((double)unsafeActCountYtd / (unsafeConditionCountYtd + unsafeActCountYtd) * 100.0, 1) : 0
+                    }
                 }
             };
 
