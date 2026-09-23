@@ -278,23 +278,57 @@ namespace MBS_SAP.Controllers
 
                 stats.TotalActionPlans = totalActionPlansCount;
 
-                // Query Action Plan Open: individu (saya sebagai pembuat/PJA/PIC)
+                // Query Action Plan MTD data to align Closing Rate calculations with League & Compliance (MTD Period)
                 var currentKaryawanForAP = await _context.Karyawans
                     .Where(k => k.NoNik != null && k.NoNik.Trim() == userNik && k.StatusAktif)
-                    .Select(k => new { k.IdPerusahaan })
+                    .Select(k => new { k.IdPerusahaan, k.IdDepartemen })
                     .FirstOrDefaultAsync();
                 int? userCompanyId = currentKaryawanForAP?.IdPerusahaan;
 
                 var userName = User.Identity?.Name ?? string.Empty;
 
-                // 1. DIARAHKAN KE SAYA (PJA / PIC)
+                bool isClosedStatusHelper(string? s)
+                {
+                    if (string.IsNullOrWhiteSpace(s)) return false;
+                    var trimmed = s.Trim();
+                    return trimmed.Equals("Closed", StringComparison.OrdinalIgnoreCase)
+                        || trimmed.Equals("Close", StringComparison.OrdinalIgnoreCase)
+                        || trimmed.Equals("Selesai", StringComparison.OrdinalIgnoreCase)
+                        || trimmed.Equals("Complete", StringComparison.OrdinalIgnoreCase);
+                }
+
+                // Fetch raw MTD hazards & action plans for current month
+                var rawHazardsMtd = await _context.HazardReports
+                    .AsNoTracking()
+                    .Where(h => !h.IsDeleted && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth)
+                    .Select(h => new { h.Nik, h.StatusTemuan })
+                    .ToListAsync();
+
+                var rawActionPlansMtd = await _context.ActionPlans
+                    .AsNoTracking()
+                    .Where(a => !a.IsDeleted && (
+                        (a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth) ||
+                        (a.CreatedAt >= startOfMonth && a.CreatedAt <= endOfMonth)
+                    ))
+                    .Select(a => new { a.Nik, a.Status, a.NikPja, a.NikPic, a.Pja, a.Pic, a.Departemen, a.DepartemenPja, a.DepartemenPic })
+                    .ToListAsync();
+
+                // 1. DIARAHKAN KE SAYA (PJA / PIC) - MTD
+                var assignedToMeMtd = rawActionPlansMtd
+                    .Where(a => a.NikPja == userNik || a.NikPic == userNik || 
+                        (!string.IsNullOrEmpty(a.Pja) && a.Pja.Equals(userName, StringComparison.OrdinalIgnoreCase)) || 
+                        (!string.IsNullOrEmpty(a.Pic) && a.Pic.Equals(userName, StringComparison.OrdinalIgnoreCase)))
+                    .ToList();
+
+                int assignedMtdTotal = assignedToMeMtd.Count;
+                int assignedMtdClosed = assignedToMeMtd.Count(a => isClosedStatusHelper(a.Status));
+                int assignedMtdOpen = Math.Max(0, assignedMtdTotal - assignedMtdClosed);
+                double assignedCloseRate = assignedMtdTotal > 0 ? Math.Round((double)assignedMtdClosed / assignedMtdTotal * 100.0, 1) : 100.0;
+
                 var baseAssignedActionPlansQuery = _context.ActionPlans
                     .AsNoTracking()
                     .Where(a => !a.IsDeleted 
                         && (a.NikPja == userNik || a.NikPic == userNik || (string.IsNullOrEmpty(a.NikPja) && !string.IsNullOrEmpty(a.Pja) && a.Pja.ToLower() == userName.ToLower()) || (string.IsNullOrEmpty(a.NikPic) && !string.IsNullOrEmpty(a.Pic) && a.Pic.ToLower() == userName.ToLower())));
-
-                int assignedActionPlansOpenCount = await baseAssignedActionPlansQuery.CountAsync(a => a.Status == "Open");
-                int assignedActionPlansClosedCount = await baseAssignedActionPlansQuery.CountAsync(a => a.Status == "Closed" || a.Status == "Close" || a.Status == "Selesai" || a.Status == "Complete");
 
                 var assignedActionPlanItems = await baseAssignedActionPlansQuery
                     .Where(a => a.Status == "Open")
@@ -315,25 +349,33 @@ namespace MBS_SAP.Controllers
                         TargetRole = a.NikPic == userNik ? "PIC" : "PJA",
                         Pja = a.Pja ?? "-",
                         Pic = a.Pic ?? "-",
-                        ActionUrl = "/ActionPlan/Index?startDate=2000-01-01&filter=assigned&status=open"
+                        ActionUrl = "/ActionPlan/Index?startDate=" + startOfMonth.ToString("yyyy-MM-dd") + "&filter=assigned&status=open"
                     })
                     .ToListAsync();
 
                 stats.AssignedTasksToClose = assignedActionPlanItems;
                 stats.AssignedHazardsCount = 0;
-                stats.AssignedActionPlansCount = assignedActionPlansOpenCount;
-                stats.AssignedToMeCount = assignedActionPlansOpenCount;
-                int assignedTotal = assignedActionPlansOpenCount + assignedActionPlansClosedCount;
-                stats.AssignedTotalCount = assignedTotal;
-                stats.AssignedClosedCount = assignedActionPlansClosedCount;
-                stats.AssignedCloseRate = assignedTotal > 0 ? Math.Round((double)assignedActionPlansClosedCount / assignedTotal * 100.0, 1) : 100.0;
+                stats.AssignedActionPlansCount = assignedMtdOpen;
+                stats.AssignedToMeCount = assignedMtdOpen;
+                stats.AssignedTotalCount = assignedMtdTotal;
+                stats.AssignedClosedCount = assignedMtdClosed;
+                stats.AssignedCloseRate = assignedCloseRate;
 
-                // 2. DIBUAT OLEH SAYA (Created by me)
+                // 2. DIBUAT OLEH SAYA (Created by me) - MTD (matches squad player close rate in League)
+                int userActH = rawHazardsMtd.Count(h => !string.IsNullOrEmpty(h.Nik) && string.Equals(h.Nik.Trim(), userNik, StringComparison.OrdinalIgnoreCase));
+                int userActHClosed = rawHazardsMtd.Count(h => !string.IsNullOrEmpty(h.Nik) && string.Equals(h.Nik.Trim(), userNik, StringComparison.OrdinalIgnoreCase) && isClosedStatusHelper(h.StatusTemuan));
+
+                int userActAp = rawActionPlansMtd.Count(a => !string.IsNullOrEmpty(a.Nik) && string.Equals(a.Nik.Trim(), userNik, StringComparison.OrdinalIgnoreCase));
+                int userActApClosed = rawActionPlansMtd.Count(a => !string.IsNullOrEmpty(a.Nik) && string.Equals(a.Nik.Trim(), userNik, StringComparison.OrdinalIgnoreCase) && isClosedStatusHelper(a.Status));
+
+                int userEffectiveTotalAp = userActAp >= userActH && userActAp > 0 ? userActAp : userActH;
+                int userEffectiveClosedAp = userActAp >= userActH && userActAp > 0 ? userActApClosed : userActHClosed;
+                int userEffectiveOpenAp = Math.Max(0, userEffectiveTotalAp - userEffectiveClosedAp);
+                double userCloseRate = userEffectiveTotalAp > 0 ? Math.Round((double)userEffectiveClosedAp / userEffectiveTotalAp * 100.0, 1) : 100.0;
+
                 var baseMyCreatedActionPlansQuery = _context.ActionPlans
                     .AsNoTracking()
                     .Where(a => !a.IsDeleted && a.Nik == userNik);
-                int myCreatedActionPlansOpenCount = await baseMyCreatedActionPlansQuery.CountAsync(a => a.Status == "Open");
-                int myCreatedActionPlansClosedCount = await baseMyCreatedActionPlansQuery.CountAsync(a => a.Status == "Closed" || a.Status == "Close" || a.Status == "Selesai" || a.Status == "Complete");
 
                 var myCreatedActionPlanItems = await baseMyCreatedActionPlansQuery
                     .Where(a => a.Status == "Open")
@@ -354,19 +396,18 @@ namespace MBS_SAP.Controllers
                         TargetRole = "Pembuat",
                         Pja = a.Pja ?? "-",
                         Pic = a.Pic ?? "-",
-                        ActionUrl = "/ActionPlan/Index?startDate=2000-01-01&filter=created&status=open"
+                        ActionUrl = "/ActionPlan/Index?startDate=" + startOfMonth.ToString("yyyy-MM-dd") + "&filter=created&status=open"
                     })
                     .ToListAsync();
 
                 stats.CreatedByMeTasks = myCreatedActionPlanItems;
-                stats.CreatedByMeOpenCount = myCreatedActionPlansOpenCount;
-                int createdTotal = myCreatedActionPlansOpenCount + myCreatedActionPlansClosedCount;
-                stats.CreatedByMeTotalCount = createdTotal;
-                stats.CreatedByMeClosedCount = myCreatedActionPlansClosedCount;
-                stats.CreatedByMeCloseRate = createdTotal > 0 ? Math.Round((double)myCreatedActionPlansClosedCount / createdTotal * 100.0, 1) : 100.0;
-                stats.MyOpenActionPlans = stats.CreatedByMeOpenCount;
+                stats.CreatedByMeOpenCount = userEffectiveOpenAp;
+                stats.CreatedByMeTotalCount = userEffectiveTotalAp;
+                stats.CreatedByMeClosedCount = userEffectiveClosedAp;
+                stats.CreatedByMeCloseRate = userCloseRate;
+                stats.MyOpenActionPlans = userEffectiveOpenAp;
 
-                // 3. DEPARTEMEN SAYA (Department)
+                // 3. DEPARTEMEN SAYA (Department) - MTD (matches Department close rate in League & Compliance)
                 stats.DeptOpenCount = 0;
                 stats.DeptClosedCount = 0;
                 stats.DeptTotalCount = 0;
@@ -383,42 +424,77 @@ namespace MBS_SAP.Controllers
 
                 if (!string.IsNullOrEmpty(userDept))
                 {
-                    var baseDeptActionPlansQuery = _context.ActionPlans
-                        .AsNoTracking()
-                        .Where(a => !a.IsDeleted && (a.Departemen == userDept || a.DepartemenPja == userDept || a.DepartemenPic == userDept));
-                    int deptActionPlansOpenCount = await baseDeptActionPlansQuery.CountAsync(a => a.Status == "Open");
-                    int deptActionPlansClosedCount = await baseDeptActionPlansQuery.CountAsync(a => a.Status == "Closed" || a.Status == "Close" || a.Status == "Selesai" || a.Status == "Complete");
-
-                    stats.DeptOpenCount = deptActionPlansOpenCount;
-                    int deptTotal = deptActionPlansOpenCount + deptActionPlansClosedCount;
-                    stats.DeptTotalCount = deptTotal;
-                    stats.DeptClosedCount = deptActionPlansClosedCount;
-                    stats.DeptCloseRate = deptTotal > 0 ? Math.Round((double)deptActionPlansClosedCount / deptTotal * 100.0, 1) : 100.0;
-                    stats.DeptOpenActionPlans = stats.DeptOpenCount;
-
-                    // 3a. Diarahkan ke Departemen Saya (PJA/PIC)
-                    var baseDeptAssignedQuery = _context.ActionPlans
-                        .AsNoTracking()
-                        .Where(a => !a.IsDeleted && (a.DepartemenPja == userDept || a.DepartemenPic == userDept));
-                    int deptAssignedOpen = await baseDeptAssignedQuery.CountAsync(a => a.Status == "Open");
-                    int deptAssignedClosed = await baseDeptAssignedQuery.CountAsync(a => a.Status == "Closed" || a.Status == "Close" || a.Status == "Selesai" || a.Status == "Complete");
+                    // 3a. Diarahkan ke Departemen Saya (PJA/PIC) MTD
+                    var deptAssignedMtd = rawActionPlansMtd
+                        .Where(a => (!string.IsNullOrEmpty(a.DepartemenPja) && a.DepartemenPja.Equals(userDept, StringComparison.OrdinalIgnoreCase)) ||
+                                    (!string.IsNullOrEmpty(a.DepartemenPic) && a.DepartemenPic.Equals(userDept, StringComparison.OrdinalIgnoreCase)))
+                        .ToList();
+                    int deptAssignedOpen = deptAssignedMtd.Count(a => !isClosedStatusHelper(a.Status));
+                    int deptAssignedClosed = deptAssignedMtd.Count(a => isClosedStatusHelper(a.Status));
+                    int deptAssignedTotal = deptAssignedOpen + deptAssignedClosed;
                     stats.DeptAssignedOpenCount = deptAssignedOpen;
                     stats.DeptAssignedClosedCount = deptAssignedClosed;
-                    int deptAssignedTotal = deptAssignedOpen + deptAssignedClosed;
                     stats.DeptAssignedTotalCount = deptAssignedTotal;
                     stats.DeptAssignedCloseRate = deptAssignedTotal > 0 ? Math.Round((double)deptAssignedClosed / deptAssignedTotal * 100.0, 1) : 100.0;
 
-                    // 3b. Dibuat ke/oleh Departemen Saya (Pelapor)
-                    var baseDeptCreatedQuery = _context.ActionPlans
-                        .AsNoTracking()
-                        .Where(a => !a.IsDeleted && a.Departemen == userDept);
-                    int deptCreatedOpen = await baseDeptCreatedQuery.CountAsync(a => a.Status == "Open");
-                    int deptCreatedClosed = await baseDeptCreatedQuery.CountAsync(a => a.Status == "Closed" || a.Status == "Close" || a.Status == "Selesai" || a.Status == "Complete");
+                    // 3b. Dibuat oleh Departemen Saya (Pelapor) MTD - exact match with PerformanceController League calculation
+                    var deptEmployeesNiks = await (from k in _context.Karyawans
+                                                   join d in _context.Departemens on k.IdDepartemen equals d.DepartemenId into dg
+                                                   from d in dg.DefaultIfEmpty()
+                                                   where k.StatusAktif == true
+                                                      && (userCompanyId == null || k.IdPerusahaan == userCompanyId.Value)
+                                                      && (d != null ? d.NamaDepartemen : "General") == userDept
+                                                      && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth)
+                                                   select k.NoNik)
+                                                   .Where(nik => !string.IsNullOrEmpty(nik))
+                                                   .Distinct()
+                                                   .ToListAsync();
+
+                    int deptEffectiveTotalAp = 0;
+                    int deptEffectiveClosedAp = 0;
+
+                    if (deptEmployeesNiks.Any())
+                    {
+                        var deptNiksSet = new HashSet<string>(deptEmployeesNiks, StringComparer.OrdinalIgnoreCase);
+
+                        foreach (var empNik in deptNiksSet)
+                        {
+                            int empActH = rawHazardsMtd.Count(h => !string.IsNullOrEmpty(h.Nik) && string.Equals(h.Nik.Trim(), empNik, StringComparison.OrdinalIgnoreCase));
+                            int empActHClosed = rawHazardsMtd.Count(h => !string.IsNullOrEmpty(h.Nik) && string.Equals(h.Nik.Trim(), empNik, StringComparison.OrdinalIgnoreCase) && isClosedStatusHelper(h.StatusTemuan));
+
+                            int empActAp = rawActionPlansMtd.Count(a => !string.IsNullOrEmpty(a.Nik) && string.Equals(a.Nik.Trim(), empNik, StringComparison.OrdinalIgnoreCase));
+                            int empActApClosed = rawActionPlansMtd.Count(a => !string.IsNullOrEmpty(a.Nik) && string.Equals(a.Nik.Trim(), empNik, StringComparison.OrdinalIgnoreCase) && isClosedStatusHelper(a.Status));
+
+                            int empEffTotal = empActAp >= empActH && empActAp > 0 ? empActAp : empActH;
+                            int empEffClosed = empActAp >= empActH && empActAp > 0 ? empActApClosed : empActHClosed;
+
+                            deptEffectiveTotalAp += empEffTotal;
+                            deptEffectiveClosedAp += empEffClosed;
+                        }
+                    }
+                    else
+                    {
+                        int deptActAp = rawActionPlansMtd.Count(a => !string.IsNullOrEmpty(a.Departemen) && a.Departemen.Equals(userDept, StringComparison.OrdinalIgnoreCase));
+                        int deptActApClosed = rawActionPlansMtd.Count(a => !string.IsNullOrEmpty(a.Departemen) && a.Departemen.Equals(userDept, StringComparison.OrdinalIgnoreCase) && isClosedStatusHelper(a.Status));
+                        deptEffectiveTotalAp = deptActAp;
+                        deptEffectiveClosedAp = deptActApClosed;
+                    }
+
+                    int deptCreatedOpen = Math.Max(0, deptEffectiveTotalAp - deptEffectiveClosedAp);
                     stats.DeptCreatedOpenCount = deptCreatedOpen;
-                    stats.DeptCreatedClosedCount = deptCreatedClosed;
-                    int deptCreatedTotal = deptCreatedOpen + deptCreatedClosed;
-                    stats.DeptCreatedTotalCount = deptCreatedTotal;
-                    stats.DeptCreatedCloseRate = deptCreatedTotal > 0 ? Math.Round((double)deptCreatedClosed / deptCreatedTotal * 100.0, 1) : 100.0;
+                    stats.DeptCreatedClosedCount = deptEffectiveClosedAp;
+                    stats.DeptCreatedTotalCount = deptEffectiveTotalAp;
+                    stats.DeptCreatedCloseRate = deptEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)deptEffectiveClosedAp / deptEffectiveTotalAp * 100.0), 1) : 100.0;
+
+                    stats.DeptOpenCount = deptCreatedOpen;
+                    stats.DeptClosedCount = deptEffectiveClosedAp;
+                    stats.DeptTotalCount = deptEffectiveTotalAp;
+                    stats.DeptCloseRate = stats.DeptCreatedCloseRate;
+                    stats.DeptOpenActionPlans = stats.DeptOpenCount;
+
+                    var baseDeptActionPlansQuery = _context.ActionPlans
+                        .AsNoTracking()
+                        .Where(a => !a.IsDeleted && (a.Departemen == userDept || a.DepartemenPja == userDept || a.DepartemenPic == userDept));
 
                     var deptActionPlanItems = await baseDeptActionPlansQuery
                         .Where(a => a.Status == "Open")
@@ -439,7 +515,7 @@ namespace MBS_SAP.Controllers
                             TargetRole = "Dept",
                             Pja = a.Pja ?? "-",
                             Pic = a.Pic ?? "-",
-                            ActionUrl = "/ActionPlan/Index?startDate=2000-01-01&filter=dept&status=open&dept=" + Uri.EscapeDataString(userDept)
+                            ActionUrl = "/ActionPlan/Index?startDate=" + startOfMonth.ToString("yyyy-MM-dd") + "&filter=dept&status=open&dept=" + Uri.EscapeDataString(userDept)
                         })
                         .ToListAsync();
 

@@ -177,6 +177,9 @@
             var deptCreatedClosedCount = (int)(ViewData["DeptCreatedClosedCount"] ?? 0);
             var deptCreatedCloseRate = (double)(ViewData["DeptCreatedCloseRate"] ?? 100.0);
 
+            var startOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            var startOfMonthStr = startOfMonth.ToString("yyyy-MM-dd");
+
             var totalUnclosedAll = assignedToMeCount + createdByMeOpenCount + deptOpenCount;
 
             string GetRateColor(double r) => r >= 80 ? "#10b981" : (r >= 50 ? "#f59e0b" : "#ef4444");
@@ -400,10 +403,10 @@
                         <h6 style="font-weight: 800; font-size: 14px; margin: 0; color: var(--text-main); letter-spacing: -0.2px;">
                             Monitoring Action Plan & Temuan
                         </h6>
-                        <small class="text-muted" style="font-size: 11px;">Status tindak lanjut temuan K3 &amp; Tingkat Penutupan (Closing Rate)</small>
+                        <small class="text-muted" style="font-size: 11px;">Status tindak lanjut temuan K3 &amp; Tingkat Penutupan (Closing Rate) Periode MTD (@DateTime.Today.ToString("MMMM yyyy"))</small>
                     </div>
                 </div>
-                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-startDate="2000-01-01" class="btn btn-sm btn-outline-info px-3 py-1 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm" style="border-radius: 99px; font-size: 11.5px;">
+                <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-startDate="@startOfMonthStr" class="btn btn-sm btn-outline-info px-3 py-1 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm" style="border-radius: 99px; font-size: 11.5px;">
                     <i class="bi bi-journal-check"></i>
                     <span>Buka Semua Action Plan</span>
                     <i class="bi bi-arrow-right-short" style="font-size: 16px;"></i>
@@ -414,7 +417,7 @@
             <div class="row g-2 g-md-3">
                 <!-- Card 1: Diarahkan ke Saya -->
                 <div class="col-6 col-md-6 col-xl-3">
-                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="assigned" asp-route-startDate="2000-01-01" class="text-decoration-none h-100 d-block">
+                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="assigned" asp-route-startDate="@startOfMonthStr" class="text-decoration-none h-100 d-block">
                         <div class="android-ap-card theme-blue" style="border-left: 3.5px solid #0284c7 !important;">
                             <div>
                                 <div class="d-flex justify-content-between align-items-start mb-1.5 gap-1">
@@ -471,7 +474,7 @@
 
                 <!-- Card 2: Dibuat Oleh Saya -->
                 <div class="col-6 col-md-6 col-xl-3">
-                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="created" asp-route-startDate="2000-01-01" class="text-decoration-none h-100 d-block">
+                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="created" asp-route-startDate="@startOfMonthStr" class="text-decoration-none h-100 d-block">
                         <div class="android-ap-card theme-amber" style="border-left: 3.5px solid #f59e0b !important;">
                             <div>
                                 <div class="d-flex justify-content-between align-items-start mb-1.5 gap-1">
@@ -528,7 +531,7 @@
 
                 <!-- Card 3: Diarahkan ke Dept Saya -->
                 <div class="col-6 col-md-6 col-xl-3">
-                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="dept_assigned" asp-route-dept="@userDeptName" asp-route-startDate="2000-01-01" class="text-decoration-none h-100 d-block">
+                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="dept_assigned" asp-route-dept="@userDeptName" asp-route-startDate="@startOfMonthStr" class="text-decoration-none h-100 d-block">
                         <div class="android-ap-card theme-indigo" style="border-left: 3.5px solid #6366f1 !important;">
                             <div>
                                 <div class="d-flex justify-content-between align-items-start mb-1.5 gap-1">
@@ -587,7 +590,7 @@
 
                 <!-- Card 4: Dibuat ke/oleh Dept Saya -->
                 <div class="col-6 col-md-6 col-xl-3">
-                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="dept_created" asp-route-dept="@userDeptName" asp-route-startDate="2000-01-01" class="text-decoration-none h-100 d-block">
+                    <a asp-controller="ActionPlan" asp-action="Index" asp-route-status="open" asp-route-filter="dept_created" asp-route-dept="@userDeptName" asp-route-startDate="@startOfMonthStr" class="text-decoration-none h-100 d-block">
                         <div class="android-ap-card theme-purple" style="border-left: 3.5px solid #8b5cf6 !important;">
                             <div>
                                 <div class="d-flex justify-content-between align-items-start mb-1.5 gap-1">
