@@ -486,10 +486,10 @@ namespace MBS_SAP.Controllers
                     stats.DeptCreatedTotalCount = deptEffectiveTotalAp;
                     stats.DeptCreatedCloseRate = deptEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)deptEffectiveClosedAp / deptEffectiveTotalAp * 100.0), 1) : 100.0;
 
-                    stats.DeptOpenCount = deptCreatedOpen;
-                    stats.DeptClosedCount = deptEffectiveClosedAp;
-                    stats.DeptTotalCount = deptEffectiveTotalAp;
-                    stats.DeptCloseRate = stats.DeptCreatedCloseRate;
+                    stats.DeptOpenCount = stats.DeptAssignedOpenCount;
+                    stats.DeptClosedCount = stats.DeptAssignedClosedCount;
+                    stats.DeptTotalCount = stats.DeptAssignedTotalCount;
+                    stats.DeptCloseRate = stats.DeptAssignedCloseRate;
                     stats.DeptOpenActionPlans = stats.DeptOpenCount;
 
                     var baseDeptActionPlansQuery = _context.ActionPlans

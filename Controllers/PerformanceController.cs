@@ -25,6 +25,16 @@ namespace MBS_SAP.Controllers
             _context = context;
         }
 
+        private static bool IsClosedStatus(string? s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return false;
+            var trimmed = s.Trim();
+            return trimmed.Equals("Closed", StringComparison.OrdinalIgnoreCase)
+                || trimmed.Equals("Close", StringComparison.OrdinalIgnoreCase)
+                || trimmed.Equals("Selesai", StringComparison.OrdinalIgnoreCase)
+                || trimmed.Equals("Complete", StringComparison.OrdinalIgnoreCase);
+        }
+
         private async Task<(int? companyId, HashSet<int> allowedCompanyIds)> ResolveCompanyScopeAsync()
         {
             var compIdStr = User.FindFirst("CompanyId")?.Value;
@@ -256,29 +266,22 @@ namespace MBS_SAP.Controllers
             var coachings = new List<string>();
             var observations = new List<string>();
 
-            bool isClosedStatusHelper(string? s)
-            {
-                if (string.IsNullOrWhiteSpace(s)) return false;
-                var trimmed = s.Trim();
-                return trimmed.Equals("Closed", StringComparison.OrdinalIgnoreCase)
-                    || trimmed.Equals("Close", StringComparison.OrdinalIgnoreCase)
-                    || trimmed.Equals("Selesai", StringComparison.OrdinalIgnoreCase)
-                    || trimmed.Equals("Complete", StringComparison.OrdinalIgnoreCase);
-            }
+            // isClosedStatus check is handled by static IsClosedStatus
+
+            List<ActionPlanSummaryItem> rawActionPlansList = new();
 
             if (employeeNiks.Count > 0)
             {
                 var employeeNiksSet = new HashSet<string>(employeeNiks, StringComparer.OrdinalIgnoreCase);
                 var reqCacheKey = $"MonthlyData_WithCloseRate_{selectedYear}_{selectedMonth}";
 
-                List<string> dbHazards, dbHazardsClosed, dbActionPlansAll, dbActionPlansClosed, dbInspections, dbSafetyTalks, dbP5ms, allCoachings, dbObservations;
+                List<string> dbHazards, dbHazardsClosed, dbInspections, dbSafetyTalks, dbP5ms, allCoachings, dbObservations;
 
                 if (HttpContext.Items[reqCacheKey] is MonthlyComplianceCacheData cachedData)
                 {
                     dbHazards = cachedData.Hazards;
                     dbHazardsClosed = cachedData.HazardsClosed;
-                    dbActionPlansAll = cachedData.ActionPlansAll;
-                    dbActionPlansClosed = cachedData.ActionPlansClosed;
+                    rawActionPlansList = cachedData.ActionPlansRaw;
                     dbInspections = cachedData.Inspections;
                     dbSafetyTalks = cachedData.SafetyTalks;
                     dbP5ms = cachedData.P5ms;
@@ -293,18 +296,25 @@ namespace MBS_SAP.Controllers
                         .ToListAsync();
 
                     dbHazards = rawHazards.Where(h => h.Nik != null).Select(h => h.Nik!).ToList();
-                    dbHazardsClosed = rawHazards.Where(h => h.Nik != null && isClosedStatusHelper(h.StatusTemuan)).Select(h => h.Nik!).ToList();
+                    dbHazardsClosed = rawHazards.Where(h => h.Nik != null && IsClosedStatus(h.StatusTemuan)).Select(h => h.Nik!).ToList();
 
-                    var rawActionPlans = await _context.ActionPlans
+                    rawActionPlansList = await _context.ActionPlans
                         .Where(a => !a.IsDeleted && (
                             (a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth) ||
                             (a.CreatedAt >= startOfMonth && a.CreatedAt <= endOfMonth)
                         ))
-                        .Select(a => new { a.Nik, a.Status })
+                        .Select(a => new ActionPlanSummaryItem
+                        {
+                            Nik = a.Nik,
+                            NikPic = a.NikPic,
+                            NikPja = a.NikPja,
+                            Departemen = a.Departemen,
+                            DepartemenPic = a.DepartemenPic,
+                            DepartemenPja = a.DepartemenPja,
+                            PerusahaanId = a.PerusahaanId,
+                            Status = a.Status
+                        })
                         .ToListAsync();
-
-                    dbActionPlansAll = rawActionPlans.Where(a => a.Nik != null).Select(a => a.Nik!).ToList();
-                    dbActionPlansClosed = rawActionPlans.Where(a => a.Nik != null && isClosedStatusHelper(a.Status)).Select(a => a.Nik!).ToList();
 
                     dbInspections = await _context.Inspections
                         .Where(i => !i.IsDeleted && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth)
@@ -342,8 +352,7 @@ namespace MBS_SAP.Controllers
                     {
                         Hazards = dbHazards,
                         HazardsClosed = dbHazardsClosed,
-                        ActionPlansAll = dbActionPlansAll,
-                        ActionPlansClosed = dbActionPlansClosed,
+                        ActionPlansRaw = rawActionPlansList,
                         Inspections = dbInspections,
                         SafetyTalks = dbSafetyTalks,
                         P5ms = dbP5ms,
@@ -354,8 +363,6 @@ namespace MBS_SAP.Controllers
 
                 hazards = dbHazards.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
                 hazardsClosed = dbHazardsClosed.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
-                actionPlansAll = dbActionPlansAll.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
-                actionPlansClosed = dbActionPlansClosed.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
                 inspections = dbInspections.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
                 safetyTalks = dbSafetyTalks.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
                 p5ms = dbP5ms.Where(n => n != null && employeeNiksSet.Contains(n)).ToList();
@@ -454,11 +461,14 @@ namespace MBS_SAP.Controllers
 
                 int mtdActH = hazards.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int mtdActHClosed = hazardsClosed.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
-                int mtdActAp = actionPlansAll.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
-                int mtdActApClosed = actionPlansClosed.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
 
-                int empEffectiveTotalAp = mtdActAp >= mtdActH && mtdActAp > 0 ? mtdActAp : mtdActH;
-                int empEffectiveClosedAp = mtdActAp >= mtdActH && mtdActAp > 0 ? mtdActApClosed : mtdActHClosed;
+                var empAssignedAp = rawActionPlansList.Where(a =>
+                    (!string.IsNullOrEmpty(a.NikPic) && string.Equals(a.NikPic.Trim(), nik, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(a.NikPja) && string.Equals(a.NikPja.Trim(), nik, StringComparison.OrdinalIgnoreCase))
+                ).ToList();
+
+                int empEffectiveTotalAp = empAssignedAp.Count;
+                int empEffectiveClosedAp = empAssignedAp.Count(a => IsClosedStatus(a.Status));
                 double empCloseRate = empEffectiveTotalAp > 0 ? Math.Round((double)empEffectiveClosedAp / empEffectiveTotalAp * 100.0, 1) : 100.0;
 
                 int mtdActI = inspections.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
@@ -3410,8 +3420,11 @@ namespace MBS_SAP.Controllers
                     int p5mAct = targetEmps.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                     int p5mTgt = targetEmps.Sum(e => (int)e.p5m.target);
 
-                    int compEffectiveTotalAp = targetEmps.Sum(e => (int)e.closeRateEffectiveTotal);
-                    int compEffectiveClosedAp = targetEmps.Sum(e => (int)e.closeRateEffectiveClosed);
+                    var reqCacheKey = $"MonthlyData_WithCloseRate_{selectedYear}_{selectedMonth}";
+                    var rawActionPlansList = (HttpContext.Items[reqCacheKey] as MonthlyComplianceCacheData)?.ActionPlansRaw ?? new List<ActionPlanSummaryItem>();
+                    var compAssignedAp = rawActionPlansList.Where(a => a.PerusahaanId == comp.PerusahaanId).ToList();
+                    int compEffectiveTotalAp = compAssignedAp.Count;
+                    int compEffectiveClosedAp = compAssignedAp.Count(a => IsClosedStatus(a.Status));
                     double compCloseRate = compEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)compEffectiveClosedAp / compEffectiveTotalAp * 100.0), 1) : 100.0;
 
                     double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
@@ -3529,8 +3542,16 @@ namespace MBS_SAP.Controllers
                         int p5mAct = g.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                         int p5mTgt = g.Sum(e => (int)e.p5m.target);
 
-                        int deptEffectiveTotalAp = g.Sum(e => (int)e.closeRateEffectiveTotal);
-                        int deptEffectiveClosedAp = g.Sum(e => (int)e.closeRateEffectiveClosed);
+                        var reqCacheKey = $"MonthlyData_WithCloseRate_{selectedYear}_{selectedMonth}";
+                        var rawActionPlansList = (HttpContext.Items[reqCacheKey] as MonthlyComplianceCacheData)?.ActionPlansRaw ?? new List<ActionPlanSummaryItem>();
+                        var deptName = g.Key;
+                        var deptAssignedAp = rawActionPlansList.Where(a =>
+                            (!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
+                            (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase))
+                        ).ToList();
+
+                        int deptEffectiveTotalAp = deptAssignedAp.Count;
+                        int deptEffectiveClosedAp = deptAssignedAp.Count(a => IsClosedStatus(a.Status));
                         double deptCloseRate = deptEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)deptEffectiveClosedAp / deptEffectiveTotalAp * 100.0), 1) : 100.0;
                         
                         double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
@@ -3755,8 +3776,11 @@ namespace MBS_SAP.Controllers
                     int p5mAct = targetEmps.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                     int p5mTgt = targetEmps.Sum(e => (int)e.p5m.target);
 
-                    int compEffectiveTotalAp = targetEmps.Sum(e => (int)e.closeRateEffectiveTotal);
-                    int compEffectiveClosedAp = targetEmps.Sum(e => (int)e.closeRateEffectiveClosed);
+                    var reqCacheKey = $"MonthlyData_WithCloseRate_{selectedYear}_{selectedMonth}";
+                    var rawActionPlansList = (HttpContext.Items[reqCacheKey] as MonthlyComplianceCacheData)?.ActionPlansRaw ?? new List<ActionPlanSummaryItem>();
+                    var compAssignedAp = rawActionPlansList.Where(a => a.PerusahaanId == comp.PerusahaanId).ToList();
+                    int compEffectiveTotalAp = compAssignedAp.Count;
+                    int compEffectiveClosedAp = compAssignedAp.Count(a => IsClosedStatus(a.Status));
                     double compCloseRate = compEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)compEffectiveClosedAp / compEffectiveTotalAp * 100.0), 1) : 100.0;
 
                     double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
@@ -3822,8 +3846,16 @@ namespace MBS_SAP.Controllers
                         int p5mAct = g.Sum(e => Math.Min((int)e.p5m.actual, (int)e.p5m.target));
                         int p5mTgt = g.Sum(e => (int)e.p5m.target);
 
-                        int deptEffectiveTotalAp = g.Sum(e => (int)e.closeRateEffectiveTotal);
-                        int deptEffectiveClosedAp = g.Sum(e => (int)e.closeRateEffectiveClosed);
+                        var reqCacheKey = $"MonthlyData_WithCloseRate_{selectedYear}_{selectedMonth}";
+                        var rawActionPlansList = (HttpContext.Items[reqCacheKey] as MonthlyComplianceCacheData)?.ActionPlansRaw ?? new List<ActionPlanSummaryItem>();
+                        var deptName = g.Key;
+                        var deptAssignedAp = rawActionPlansList.Where(a =>
+                            (!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
+                            (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase))
+                        ).ToList();
+
+                        int deptEffectiveTotalAp = deptAssignedAp.Count;
+                        int deptEffectiveClosedAp = deptAssignedAp.Count(a => IsClosedStatus(a.Status));
                         double deptCloseRate = deptEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)deptEffectiveClosedAp / deptEffectiveTotalAp * 100.0), 1) : 100.0;
                         
                         double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
@@ -8431,12 +8463,25 @@ namespace MBS_SAP.Controllers
         public int TargetCoaching { get; set; }
     }
 
+    public class ActionPlanSummaryItem
+    {
+        public string? Nik { get; set; }
+        public string? NikPic { get; set; }
+        public string? NikPja { get; set; }
+        public string? Departemen { get; set; }
+        public string? DepartemenPic { get; set; }
+        public string? DepartemenPja { get; set; }
+        public int? PerusahaanId { get; set; }
+        public string? Status { get; set; }
+    }
+
     public class MonthlyComplianceCacheData
     {
         public List<string> Hazards { get; set; } = new();
         public List<string> HazardsClosed { get; set; } = new();
         public List<string> ActionPlansAll { get; set; } = new();
         public List<string> ActionPlansClosed { get; set; } = new();
+        public List<ActionPlanSummaryItem> ActionPlansRaw { get; set; } = new();
         public List<string> Inspections { get; set; } = new();
         public List<string> SafetyTalks { get; set; } = new();
         public List<string> P5ms { get; set; } = new();
