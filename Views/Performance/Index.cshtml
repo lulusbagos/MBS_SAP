@@ -3646,10 +3646,10 @@
             new Chart(ctxMyProp, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'P5M', 'Observasi'],
+                    labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'P5M', 'Observasi', 'Coaching'],
                     datasets: [{
-                        data: [@ViewBag.MyHazardsMonth, @ViewBag.MyInspectionsMonth, @ViewBag.MySafetyTalksMonth, @ViewBag.MyP5msMonth, @ViewBag.MyObservationsMonth],
-                        backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#10b981', '#fb923c'],
+                        data: [@ViewBag.MyHazardsMonth, @ViewBag.MyInspectionsMonth, @ViewBag.MySafetyTalksMonth, @ViewBag.MyP5msMonth, @ViewBag.MyObservationsMonth, @(ViewBag.MyCoachingsMonth ?? 0)],
+                        backgroundColor: ['#f43f5e', '#3b82f6', '#a855f7', '#10b981', '#fb923c', '#0d9488'],
                         borderWidth: 0
                     }]
                 },

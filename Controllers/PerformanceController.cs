@@ -2753,7 +2753,83 @@ namespace MBS_SAP.Controllers
                         targetObservasi = targetMapping.TargetObservasi ?? 0;
                         targetCoaching = targetMapping.TargetCoaching ?? 0;
                         kategoriPengawas = targetMapping.KategoriPengawas;
+                        ViewBag.AlasanTargetZero = targetMapping.AlasanTargetZero;
                     }
+                }
+
+                // Scale targets by roster to match Home & League calculations
+                int totalDaysInMonth = DateTime.DaysInMonth(startOfMonth.Year, startOfMonth.Month);
+                int computedOnsiteDays = totalDaysInMonth;
+                bool hasRoster = false;
+                bool isTugasExempt = false;
+
+                var rosterHistory = await _context.Rosters
+                    .Where(r => r.Nik == userNik)
+                    .OrderByDescending(r => r.AkhirCuti)
+                    .ToListAsync();
+
+                if (rosterHistory != null && rosterHistory.Any())
+                {
+                    int computedOnsite = 0;
+                    bool hasAnyRoster = false;
+                    foreach (var r in rosterHistory)
+                    {
+                        hasAnyRoster = true;
+                        if (r.TipeRoster == "TUGAS")
+                        {
+                            var overlapStartT = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
+                            var overlapEndT = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                            if (overlapStartT <= overlapEndT)
+                            {
+                                isTugasExempt = true;
+                            }
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                        }
+
+                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
+                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                        if (overlapStart <= overlapEnd)
+                        {
+                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                        }
+                    }
+                    if (hasAnyRoster)
+                    {
+                        hasRoster = true;
+                        computedOnsiteDays = computedOnsite;
+                    }
+                }
+                else if (currentKaryawan != null && currentKaryawan.TanggalMasuk.HasValue && currentKaryawan.TanggalMasuk.Value > startOfMonth)
+                {
+                    hasRoster = true;
+                    computedOnsiteDays = (endOfMonth.Date - currentKaryawan.TanggalMasuk.Value.Date).Days + 1;
+                }
+
+                double ratio = hasRoster ? (double)computedOnsiteDays / totalDaysInMonth : 1.0;
+
+                int ScaleTarget(int baseTarget, double rat, int daysOnsite)
+                {
+                    if (baseTarget == 0) return 0;
+                    if (daysOnsite == 0) return 0;
+                    int scaled = (int)Math.Round(baseTarget * rat, MidpointRounding.AwayFromZero);
+                    return Math.Max(scaled, 1);
+                }
+
+                if (isTugasExempt)
+                {
+                    targetHazardReport = 0;
+                    targetInspeksi = 0;
+                    targetSafetyTalk = 0;
+                    targetObservasi = 0;
+                    targetCoaching = 0;
+                }
+                else if (hasRoster)
+                {
+                    targetHazardReport = ScaleTarget(targetHazardReport, ratio, computedOnsiteDays);
+                    targetInspeksi = ScaleTarget(targetInspeksi, ratio, computedOnsiteDays);
+                    targetSafetyTalk = ScaleTarget(targetSafetyTalk, ratio, computedOnsiteDays);
+                    targetObservasi = ScaleTarget(targetObservasi, ratio, computedOnsiteDays);
+                    targetCoaching = ScaleTarget(targetCoaching, ratio, computedOnsiteDays);
                 }
 
                 // Personal metrics must always follow logged-in user identity (NIK), not company aggregation.
@@ -2779,26 +2855,16 @@ namespace MBS_SAP.Controllers
                 myCoachingsMonth = await myCoachingsQuery.CountAsync(c => c.CreatedAt >= startOfMonth);
             }
 
-            int wTarH = targetHazardReport > 0 ? Math.Max(1, (int)Math.Round(targetHazardReport / 4.0, MidpointRounding.AwayFromZero)) : 0;
-            int wTarI = targetInspeksi > 0 ? Math.Max(1, (int)Math.Round(targetInspeksi / 4.0, MidpointRounding.AwayFromZero)) : 0;
-            int wTarST = targetSafetyTalk > 0 ? Math.Max(1, (int)Math.Round(targetSafetyTalk / 4.0, MidpointRounding.AwayFromZero)) : 0;
-            int wTarO = targetObservasi > 0 ? Math.Max(1, (int)Math.Round(targetObservasi / 4.0, MidpointRounding.AwayFromZero)) : 0;
-            int wTarC = targetCoaching > 0 ? Math.Max(1, (int)Math.Round(targetCoaching / 4.0, MidpointRounding.AwayFromZero)) : 0;
-
-            int myTotalWeek = Math.Min(myHazardsWeek, wTarH) +
-                             Math.Min(myInspectionsWeek, wTarI) +
-                             Math.Min(mySafetyTalksWeek, wTarST) +
-                             Math.Min(myObservationsWeek, wTarO) +
-                             Math.Min(myCoachingsWeek, wTarC);
-
-            int myTotalMonth = Math.Min(myHazardsMonth, targetHazardReport) +
-                              Math.Min(myInspectionsMonth, targetInspeksi) +
-                              Math.Min(mySafetyTalksMonth, targetSafetyTalk) +
-                              Math.Min(myObservationsMonth, targetObservasi) +
-                              Math.Min(myCoachingsMonth, targetCoaching);
+            int cappedActH = Math.Min(myHazardsMonth, targetHazardReport);
+            int cappedActI = Math.Min(myInspectionsMonth, targetInspeksi);
+            int cappedActST = Math.Min(mySafetyTalksMonth, targetSafetyTalk);
+            int cappedActO = Math.Min(myObservationsMonth, targetObservasi);
+            int cappedActC = Math.Min(myCoachingsMonth, targetCoaching);
 
             int myTotalMonthTarget = targetHazardReport + targetInspeksi + targetSafetyTalk + targetObservasi + targetCoaching;
-            int myWeeklyTarget = wTarH + wTarI + wTarST + wTarO + wTarC;
+            int myTotalMonth = cappedActH + cappedActI + cappedActST + cappedActO + cappedActC;
+            int myWeeklyTarget = myTotalMonthTarget > 0 ? Math.Max(1, (int)Math.Round(myTotalMonthTarget / 4.0, MidpointRounding.AwayFromZero)) : 0;
+            int myTotalWeek = myHazardsWeek + myInspectionsWeek + mySafetyTalksWeek + myObservationsWeek + myCoachingsWeek;
 
             // 9. Average Closure Days for Action Plans
             var closedActions = await _context.ActionPlans
