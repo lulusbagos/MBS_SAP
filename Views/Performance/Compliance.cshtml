@@ -1812,8 +1812,8 @@
                                     if (!meta.hidden) {
                                         meta.data.forEach((bar, index) => {
                                             const val = dataset.data[index];
-                                            // 1. Draw percentage value at top of bar if > 0
-                                            if (val > 0) {
+                                            // 1. Draw percentage value at top of bar (including 0%)
+                                            if (val !== null && val !== undefined && !isNaN(val)) {
                                                 ctx.fillStyle = labelColor;
                                                 ctx.font = 'bold 9.5px Outfit, sans-serif';
                                                 ctx.textAlign = 'center';

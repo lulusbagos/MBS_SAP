@@ -7117,160 +7117,38 @@ namespace MBS_SAP.Controllers
                 var relatedCompanies = grp.DirectCompanies.Concat(grp.SubconCompanies).Distinct().ToList();
                 var companyIds = relatedCompanies.Select(rc => rc.PerusahaanId).ToList();
 
-                // Batch retrieval for employees
-                var allGroupKaryawans = await _context.Karyawans.AsNoTracking()
-                    .Where(k => k.StatusAktif && companyIds.Contains(k.IdPerusahaan) && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonthM))
-                    .ToListAsync();
+                // Retrieve compliance data for each company in the group using GetEmployeesComplianceData
+                var allGroupEmps = new List<dynamic>();
+                var empsByCompany = new Dictionary<int, List<dynamic>>();
 
-                allGroupKaryawans = FilterEmployeesByParentScope(allGroupKaryawans, grp.ScopeParentId, allCompanies, relations);
-                
-                var allGroupKaryawanIds = allGroupKaryawans.Select(k => k.IdKaryawan).ToList();
-                var allGroupTargets = await _context.KaryawanJabatanMappings.AsNoTracking()
-                    .Where(m => allGroupKaryawanIds.Contains(m.KaryawanId))
-                    .ToDictionaryAsync(m => m.KaryawanId);
-
-                var allGroupKaryawanNiks = allGroupKaryawans.Select(k => k.NoNik).Where(nik => !string.IsNullOrEmpty(nik)).ToList();
-                var groupRosters = await _context.Rosters.AsNoTracking()
-                    .Where(r => allGroupKaryawanNiks.Contains(r.Nik))
-                    .ToListAsync();
-                var groupRostersByNik = groupRosters
-                    .GroupBy(r => r.Nik, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
-
-                int ScaleTargetSubcon(int baseTarget, double rat, int daysOnsite)
+                foreach (var rc in relatedCompanies)
                 {
-                    if (baseTarget == 0) return 0;
-                    if (daysOnsite == 0) return 0;
-                    int scaled = (int)Math.Round(baseTarget * rat, MidpointRounding.AwayFromZero);
-                    return Math.Max(scaled, 1);
+                    var compEmps = await GetEmployeesComplianceData(rc.PerusahaanId, null, selectedYear, selectedMonth, grp.ScopeParentId, includeNonTarget: true);
+                    empsByCompany[rc.PerusahaanId] = compEmps;
+                    allGroupEmps.AddRange(compEmps);
                 }
 
-                int totalDaysInMonthGroup = DateTime.DaysInMonth(selectedYear, selectedMonth);
+                int totalGroupEmployees = allGroupEmps.Count;
+                var groupTargetEmps = allGroupEmps.Where(e => (bool)e.isTargetSap).ToList();
+                int employeesWithTargetCount = groupTargetEmps.Count;
 
-                // Fetch MTD actual logs
-                var allGroupHazards = await _context.HazardReports.AsNoTracking()
-                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && companyIds.Contains(h.PerusahaanId.Value) && h.Tanggal >= startOfMonthMaincon && h.Tanggal <= endOfMonthMaincon)
-                    .Select(h => new { PerusahaanId = h.PerusahaanId ?? 0, h.Nik, h.StatusTemuan })
-                    .ToListAsync();
+                int totalTargetH = groupTargetEmps.Sum(e => (int)e.hazard.target);
+                int totalActualH = groupTargetEmps.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
 
-                var allGroupInspections = await _context.Inspections.AsNoTracking()
-                    .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && companyIds.Contains(i.PerusahaanId.Value) && i.Tanggal >= startOfMonthMaincon && i.Tanggal <= endOfMonthMaincon)
-                    .Select(i => new { PerusahaanId = i.PerusahaanId ?? 0, i.Nik })
-                    .ToListAsync();
+                int totalTargetI = groupTargetEmps.Sum(e => (int)e.inspeksi.target);
+                int totalActualI = groupTargetEmps.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
 
-                var allGroupSafetyTalks = await _context.SafetyTalks.AsNoTracking()
-                    .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && companyIds.Contains(s.PerusahaanId.Value) && s.Tanggal >= startOfMonthMaincon && s.Tanggal <= endOfMonthMaincon)
-                    .Select(s => new { PerusahaanId = s.PerusahaanId ?? 0, s.Nik })
-                    .ToListAsync();
+                int totalTargetS = groupTargetEmps.Sum(e => (int)e.safetyTalk.target);
+                int totalActualS = groupTargetEmps.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
 
-                var allGroupCoachingCreators = await _context.Coachings.AsNoTracking()
-                    .Where(co => !co.IsDeleted && co.PerusahaanId.HasValue && companyIds.Contains(co.PerusahaanId.Value) && co.CreatedAt >= startOfMonthMaincon && co.CreatedAt <= endOfMonthMaincon)
-                    .Select(co => new { PerusahaanId = co.PerusahaanId ?? 0, co.Nik })
-                    .ToListAsync();
+                int totalTargetO = groupTargetEmps.Sum(e => (int)e.observasi.target);
+                int totalActualO = groupTargetEmps.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
 
-                var allGroupCoachingParticipants = await (from p in _context.CoachingParticipants.AsNoTracking()
-                                                          join k in _context.Karyawans.AsNoTracking() on p.Nik equals k.NoNik
-                                                          where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonthMaincon && p.Coaching.CreatedAt <= endOfMonthMaincon && companyIds.Contains(k.IdPerusahaan)
-                                                          select new { PerusahaanId = k.IdPerusahaan, p.Nik })
-                                                          .ToListAsync();
+                int totalTargetC = groupTargetEmps.Sum(e => (int)e.coaching.target);
+                int totalActualC = groupTargetEmps.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
 
-                var allGroupCoachings = allGroupCoachingCreators.Concat(allGroupCoachingParticipants).ToList();
-
-                var allGroupObservations = await (from o in _context.Observations.AsNoTracking()
-                                                   join k in _context.Karyawans.AsNoTracking() on o.Nik equals k.NoNik
-                                                   where !o.IsDeleted && o.CreatedAt >= startOfMonthMaincon && o.CreatedAt <= endOfMonthMaincon && companyIds.Contains(k.IdPerusahaan)
-                                                   select new { PerusahaanId = k.IdPerusahaan, o.Nik })
-                                                   .ToListAsync();
-
-                int totalGroupEmployees = allGroupKaryawans.Count;
-                int employeesWithTargetCount = 0;
-                int totalTargetH = 0, totalActualH = 0;
-                int totalTargetI = 0, totalActualI = 0;
-                int totalTargetS = 0, totalActualS = 0;
-                int totalTargetO = 0, totalActualO = 0;
-                int totalTargetC = 0, totalActualC = 0;
-
-                var hazByNik = allGroupHazards.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                var insByNik = allGroupInspections.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                var stByNik = allGroupSafetyTalks.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                var coaByNik = allGroupCoachings.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                var obsByNik = allGroupObservations.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-
-                foreach (var emp in allGroupKaryawans)
-                {
-                    var nik = (emp.NoNik ?? string.Empty).Trim();
-                    int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0;
-                    if (allGroupTargets.TryGetValue(emp.IdKaryawan, out var t))
-                    {
-                        hTar = t.TargetHazardReport ?? 0;
-                        insTar = t.TargetInspeksi ?? 0;
-                        stTar = t.TargetSafetyTalk ?? 0;
-                        obsTar = t.TargetObservasi ?? 0;
-                        cTar = t.TargetCoaching ?? 0;
-                    }
-
-                    if (hTar + insTar + stTar + obsTar + cTar == 0)
-                    {
-                        continue;
-                    }
-
-                    employeesWithTargetCount++;
-
-                    int onsiteDays = totalDaysInMonthGroup;
-                    bool hasRoster = false;
-
-                    if (!string.IsNullOrEmpty(nik) && groupRostersByNik.TryGetValue(nik, out var empRosters))
-                    {
-                        int computedOnsite = 0;
-                        bool hasAnyRoster = false;
-                        foreach (var r in empRosters)
-                        {
-                            hasAnyRoster = true;
-                            if (r.TipeRoster == "TUGAS")
-                            {
-                                continue; // Periode Tugas is exempt from SAP (target = 0)
-                            }
-
-                            var overlapStart = r.AwalDinas > startOfMonthMaincon ? r.AwalDinas : startOfMonthMaincon;
-                            var overlapEnd = r.AkhirDinas < endOfMonthMaincon ? r.AkhirDinas : endOfMonthMaincon;
-                            if (overlapStart <= overlapEnd)
-                            {
-                                computedOnsite += (overlapEnd - overlapStart).Days + 1;
-                            }
-                        }
-                        if (hasAnyRoster)
-                        {
-                            hasRoster = true;
-                            onsiteDays = computedOnsite;
-                        }
-                    }
-
-                    double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonthGroup : 1.0;
-
-                    int mtdTgtH = hasRoster ? ScaleTargetSubcon(hTar, ratio, onsiteDays) : hTar;
-                    int mtdTgtI = hasRoster ? ScaleTargetSubcon(insTar, ratio, onsiteDays) : insTar;
-                    int mtdTgtST = hasRoster ? ScaleTargetSubcon(stTar, ratio, onsiteDays) : stTar;
-                    int mtdTgtO = hasRoster ? ScaleTargetSubcon(obsTar, ratio, onsiteDays) : obsTar;
-                    int mtdTgtC = hasRoster ? ScaleTargetSubcon(cTar, ratio, onsiteDays) : cTar;
-
-                    int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
-                    int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
-                    int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
-                    int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
-                    int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
-
-                    int cappedH = Math.Min(actH, mtdTgtH);
-                    int cappedI = Math.Min(actI, mtdTgtI);
-                    int cappedST = Math.Min(actST, mtdTgtST);
-                    int cappedO = Math.Min(actO, mtdTgtO);
-                    int cappedC = Math.Min(actC, mtdTgtC);
-
-                    totalTargetH += mtdTgtH; totalActualH += cappedH;
-                    totalTargetI += mtdTgtI; totalActualI += cappedI;
-                    totalTargetS += mtdTgtST; totalActualS += cappedST;
-                    totalTargetO += mtdTgtO; totalActualO += cappedO;
-                    totalTargetC += mtdTgtC; totalActualC += cappedC;
-                }
+                int totalGroupTarget = totalTargetH + totalTargetI + totalTargetS + totalTargetO + totalTargetC;
+                int totalGroupActual = totalActualH + totalActualI + totalActualS + totalActualO + totalActualC;
 
                 var uncompliantSubs = new List<string>();   // punya target tapi belum ada submisi
                 var noTargetSubs = new List<string>();        // tidak ada karyawan ber-target sama sekali
@@ -7278,96 +7156,26 @@ namespace MBS_SAP.Controllers
                 // Subcon calculations
                 foreach (var sub in grp.SubconCompanies)
                 {
-                    var subKaryawans = allGroupKaryawans.Where(k => k.IdPerusahaan == sub.PerusahaanId).ToList();
-                    int subTargetH = 0, subActualH = 0;
-                    int subTargetI = 0, subActualI = 0;
-                    int subTargetS = 0, subActualS = 0;
-                    int subTargetO = 0, subActualO = 0;
-                    int subTargetC = 0, subActualC = 0;
-                    int subEmpsWithTarget = 0;
-                    int subRawSubmissions = 0;
+                    empsByCompany.TryGetValue(sub.PerusahaanId, out var subKaryawans);
+                    subKaryawans ??= new List<dynamic>();
 
-                    foreach (var emp in subKaryawans)
-                    {
-                        var nik = (emp.NoNik ?? string.Empty).Trim();
-                        int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0;
-                        if (allGroupTargets.TryGetValue(emp.IdKaryawan, out var t))
-                        {
-                            hTar = t.TargetHazardReport ?? 0;
-                            insTar = t.TargetInspeksi ?? 0;
-                            stTar = t.TargetSafetyTalk ?? 0;
-                            obsTar = t.TargetObservasi ?? 0;
-                            cTar = t.TargetCoaching ?? 0;
-                        }
+                    var subTargetEmps = subKaryawans.Where(e => (bool)e.isTargetSap).ToList();
+                    int subEmpsWithTarget = subTargetEmps.Count;
 
-                        int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
-                        int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
-                        int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
-                        int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
-                        int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
-
-                        // Akumulasi raw submissions berdasarkan NIK karyawan subcon ini
-                        subRawSubmissions += (actH + actI + actST + actO + actC);
-
-                        if (hTar + insTar + stTar + obsTar + cTar == 0)
-                        {
-                            continue;
-                        }
-
-                        subEmpsWithTarget++;
-
-                        int onsiteDays = totalDaysInMonthGroup;
-                        bool hasRoster = false;
-
-                        if (!string.IsNullOrEmpty(nik) && groupRostersByNik.TryGetValue(nik, out var empRosters))
-                        {
-                            int computedOnsite = 0;
-                            bool hasAnyRoster = false;
-                            foreach (var r in empRosters)
-                            {
-                                hasAnyRoster = true;
-                                if (r.TipeRoster == "TUGAS")
-                                {
-                                    continue; // Periode Tugas is exempt from SAP (target = 0)
-                                }
-
-                                var overlapStart = r.AwalDinas > startOfMonthMaincon ? r.AwalDinas : startOfMonthMaincon;
-                                var overlapEnd = r.AkhirDinas < endOfMonthMaincon ? r.AkhirDinas : endOfMonthMaincon;
-                                if (overlapStart <= overlapEnd)
-                                {
-                                    computedOnsite += (overlapEnd - overlapStart).Days + 1;
-                                }
-                            }
-                            if (hasAnyRoster)
-                            {
-                                hasRoster = true;
-                                onsiteDays = computedOnsite;
-                            }
-                        }
-
-                        double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonthGroup : 1.0;
-
-                        int mtdTgtH = hasRoster ? ScaleTargetSubcon(hTar, ratio, onsiteDays) : hTar;
-                        int mtdTgtI = hasRoster ? ScaleTargetSubcon(insTar, ratio, onsiteDays) : insTar;
-                        int mtdTgtST = hasRoster ? ScaleTargetSubcon(stTar, ratio, onsiteDays) : stTar;
-                        int mtdTgtO = hasRoster ? ScaleTargetSubcon(obsTar, ratio, onsiteDays) : obsTar;
-                        int mtdTgtC = hasRoster ? ScaleTargetSubcon(cTar, ratio, onsiteDays) : cTar;
-
-                        int cappedH = Math.Min(actH, mtdTgtH);
-                        int cappedI = Math.Min(actI, mtdTgtI);
-                        int cappedST = Math.Min(actST, mtdTgtST);
-                        int cappedO = Math.Min(actO, mtdTgtO);
-                        int cappedC = Math.Min(actC, mtdTgtC);
-
-                        subTargetH += mtdTgtH; subActualH += cappedH;
-                        subTargetI += mtdTgtI; subActualI += cappedI;
-                        subTargetS += mtdTgtST; subActualS += cappedST;
-                        subTargetO += mtdTgtO; subActualO += cappedO;
-                        subTargetC += mtdTgtC; subActualC += cappedC;
-                    }
+                    int subTargetH = subTargetEmps.Sum(e => (int)e.hazard.target);
+                    int subActualH = subTargetEmps.Sum(e => Math.Min((int)e.hazard.actual, (int)e.hazard.target));
+                    int subTargetI = subTargetEmps.Sum(e => (int)e.inspeksi.target);
+                    int subActualI = subTargetEmps.Sum(e => Math.Min((int)e.inspeksi.actual, (int)e.inspeksi.target));
+                    int subTargetS = subTargetEmps.Sum(e => (int)e.safetyTalk.target);
+                    int subActualS = subTargetEmps.Sum(e => Math.Min((int)e.safetyTalk.actual, (int)e.safetyTalk.target));
+                    int subTargetO = subTargetEmps.Sum(e => (int)e.observasi.target);
+                    int subActualO = subTargetEmps.Sum(e => Math.Min((int)e.observasi.actual, (int)e.observasi.target));
+                    int subTargetC = subTargetEmps.Sum(e => (int)e.coaching.target);
+                    int subActualC = subTargetEmps.Sum(e => Math.Min((int)e.coaching.actual, (int)e.coaching.target));
 
                     int subTargetTotal = subTargetH + subTargetI + subTargetS + subTargetO + subTargetC;
                     int subActualTotal = subActualH + subActualI + subActualS + subActualO + subActualC;
+                    int subRawSubmissions = subKaryawans.Sum(e => (int)e.totalActualAll);
 
                     if (subEmpsWithTarget == 0)
                     {
@@ -7391,7 +7199,7 @@ namespace MBS_SAP.Controllers
                                 ParentCompanyId = grp.SubconParentId,
                                 TotalEmployees = subKaryawans.Count,
                                 EmployeesWithTarget = subEmpsWithTarget,
-                                ComplianceRate = subTargetTotal > 0 ? Math.Round((double)subActualTotal / subTargetTotal * 100.0, 1) : 0,
+                                ComplianceRate = subTargetTotal > 0 ? Math.Min(100.0, Math.Round((double)subActualTotal / subTargetTotal * 100.0, 1)) : 0,
                                 TotalSubmissions = subRawSubmissions,
                                 TargetSubmissions = subTargetTotal
                             });
@@ -7419,6 +7227,11 @@ namespace MBS_SAP.Controllers
                 int totalGroupAps = allGroupActionPlans.Count;
                 int closedGroupAps = allGroupActionPlans.Count(a => isClosedStatus(a.Status));
 
+                var allGroupHazards = await _context.HazardReports.AsNoTracking()
+                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && companyIds.Contains(h.PerusahaanId.Value) && h.Tanggal >= startOfMonthMaincon && h.Tanggal <= endOfMonthMaincon)
+                    .Select(h => new { PerusahaanId = h.PerusahaanId ?? 0, h.StatusTemuan })
+                    .ToListAsync();
+
                 int totalGroupHazards = allGroupHazards.Count;
                 int closedGroupHazards = allGroupHazards.Count(h => isClosedStatus(h.StatusTemuan));
 
@@ -7428,9 +7241,6 @@ namespace MBS_SAP.Controllers
 
                 int openGroupAps = Math.Max(0, effectiveTotalAps - effectiveClosedAps);
                 double groupClosureRate = effectiveTotalAps > 0 ? Math.Round(Math.Min(100.0, (double)effectiveClosedAps / effectiveTotalAps * 100.0), 1) : 100.0;
-
-                int totalGroupTarget = totalTargetH + totalTargetI + totalTargetS + totalTargetO + totalTargetC;
-                int totalGroupActual = totalActualH + totalActualI + totalActualS + totalActualO + totalActualC;
 
                 bool isNewPolicyPeriod = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
 

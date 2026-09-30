@@ -224,52 +224,44 @@ SELECT
         ELSE CAST(50.00 AS DECIMAL(5,2))
     END AS confidence_score,
     CASE
-        WHEN r.perusahaan_id = 4 THEN 0
-        ELSE
-            CASE
-                WHEN nik_override.force_zero_target = 1 THEN 0
-                WHEN resolved_map.final_kode_jabatan_standar = 'GM' THEN 1
-                WHEN resolved_map.final_kode_jabatan_standar IN ('SRM', 'MGR') THEN 2
-                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU')
-                    THEN CASE
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 8
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 4
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 2
-                            ELSE 4
-                         END
-                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSP', 'SPV', 'SROF', 'OFF', 'FM')
-                    THEN CASE
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 8
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 4
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 2
-                            ELSE 4
-                         END
-                ELSE 0
-            END
+        WHEN nik_override.force_zero_target = 1 THEN 0
+        WHEN resolved_map.final_kode_jabatan_standar = 'GM' THEN 1
+        WHEN resolved_map.final_kode_jabatan_standar IN ('SRM', 'MGR') THEN 2
+        WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU')
+            THEN CASE
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 8
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 4
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 2
+                    ELSE 4
+                 END
+        WHEN resolved_map.final_kode_jabatan_standar IN ('SRSP', 'SPV', 'SROF', 'OFF', 'FM')
+            THEN CASE
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 8
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 4
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 2
+                    ELSE 4
+                 END
+        ELSE 0
     END AS target_inspeksi,
     CASE
-        WHEN r.perusahaan_id = 4 THEN 0
-        ELSE
-            CASE
-                WHEN nik_override.force_zero_target = 1 THEN 0
-                WHEN resolved_map.final_kode_jabatan_standar = 'GM' THEN 1
-                WHEN resolved_map.final_kode_jabatan_standar IN ('SRM', 'MGR') THEN 2
-                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU')
-                    THEN CASE
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 8
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 4
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 2
-                            ELSE 4
-                         END
-                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSP', 'SPV', 'SROF', 'OFF', 'FM')
-                    THEN CASE
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 8
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 4
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 2
-                            ELSE 4
-                         END
-                ELSE 0
-            END
+        WHEN nik_override.force_zero_target = 1 THEN 0
+        WHEN resolved_map.final_kode_jabatan_standar = 'GM' THEN 1
+        WHEN resolved_map.final_kode_jabatan_standar IN ('SRM', 'MGR') THEN 2
+        WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU')
+            THEN CASE
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 8
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 4
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 2
+                    ELSE 4
+                 END
+        WHEN resolved_map.final_kode_jabatan_standar IN ('SRSP', 'SPV', 'SROF', 'OFF', 'FM')
+            THEN CASE
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 8
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 4
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 2
+                    ELSE 4
+                 END
+        ELSE 0
     END AS target_observasi,
     CASE
         WHEN nik_override.force_zero_target = 1 THEN 0
@@ -291,52 +283,39 @@ SELECT
         ELSE 0
     END AS target_hazard_report,
     CASE
-        WHEN r.perusahaan_id = 4 THEN 0
-        ELSE
-            CASE
-                WHEN nik_override.force_zero_target = 1 THEN 0
-                WHEN resolved_map.final_kode_jabatan_standar IN ('GM', 'SRM', 'MGR') THEN 1
-                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU')
-                    THEN CASE
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 2
-                            ELSE 1
-                         END
-                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSP', 'SPV', 'SROF', 'OFF', 'FM')
-                    THEN CASE
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 2
-                            ELSE 1
-                         END
-                ELSE 0
-            END
+        WHEN nik_override.force_zero_target = 1 THEN 0
+        WHEN resolved_map.final_kode_jabatan_standar = 'GM' THEN 1
+        WHEN resolved_map.final_kode_jabatan_standar IN ('SRM', 'MGR') THEN 1
+        WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU')
+            THEN CASE
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 2
+                    ELSE 1
+                 END
+        WHEN resolved_map.final_kode_jabatan_standar IN ('SRSP', 'SPV', 'SROF', 'OFF', 'FM')
+            THEN CASE
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 2
+                    ELSE 1
+                 END
+        ELSE 0
     END AS target_coaching,
     CASE
-        WHEN r.perusahaan_id = 4 THEN
-            CASE
-                WHEN nik_override.force_zero_target = 1 THEN 0
-                WHEN resolved_map.final_kode_jabatan_standar IN ('GM', 'SRM', 'MGR') THEN 1
-                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU', 'SRSP', 'SPV', 'SROF', 'OFF', 'FM') THEN 1
-                ELSE 0
-            END
-        ELSE
-            CASE
-                WHEN nik_override.force_zero_target = 1 THEN 0
-                WHEN resolved_map.final_kode_jabatan_standar IN ('GM', 'SRM', 'MGR') THEN 1
-                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU')
-                    THEN CASE
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 4
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 2
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 1
-                            ELSE 2
-                         END
-                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSP', 'SPV', 'SROF', 'OFF', 'FM')
-                    THEN CASE
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 4
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 2
-                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 1
-                            ELSE 2
-                         END
-                ELSE 0
-            END
+        WHEN nik_override.force_zero_target = 1 THEN 0
+        WHEN resolved_map.final_kode_jabatan_standar IN ('GM', 'SRM', 'MGR') THEN 1
+        WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU')
+            THEN CASE
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 4
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 2
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 1
+                    ELSE 2
+                 END
+        WHEN resolved_map.final_kode_jabatan_standar IN ('SRSP', 'SPV', 'SROF', 'OFF', 'FM')
+            THEN CASE
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 4
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 2
+                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 1
+                    ELSE 2
+                 END
+        ELSE 0
     END AS target_safety_talk,
     CASE
         WHEN nik_override.force_zero_target = 1
