@@ -6340,10 +6340,10 @@ namespace MBS_SAP.Controllers
             ViewBag.AreaActionPlanStats = actionPlanAreaStats;
 
             // 3. Subcontractor Achievements
-            var childCompanies = await _context.Perusahaans
-                .Where(p => p.PerusahaanIndukId == selectedCompanyId && p.StatusAktif)
-                .OrderBy(p => p.NamaPerusahaan)
-                .ToListAsync();
+            var childIdsFromParent = allCompanies.Where(p => p.PerusahaanIndukId == selectedCompanyId).Select(p => p.PerusahaanId).ToList();
+            var childIdsFromRelations = relations.Where(r => r.ParentCompanyId == selectedCompanyId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
+            var allChildCompanyIds = childIdsFromParent.Concat(childIdsFromRelations).Distinct().Where(id => id != selectedCompanyId).ToList();
+            var childCompanies = allCompanies.Where(p => allChildCompanyIds.Contains(p.PerusahaanId)).OrderBy(p => p.NamaPerusahaan).ToList();
 
             var subconComplianceList = new List<CompanyLeaderboardViewModel>();
 
