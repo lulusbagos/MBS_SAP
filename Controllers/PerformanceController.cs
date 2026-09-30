@@ -254,7 +254,7 @@ namespace MBS_SAP.Controllers
                     if (parents.Count > 1 && parentIdFilter.Value != companyId)
                     {
                         var relasiIds = relations
-                            .Where(r => r.ChildCompanyId == companyId && r.ParentCompanyId == parentIdFilter.Value)
+                            .Where(r => r.ChildCompanyId == companyId && (r.ParentCompanyId == parentIdFilter.Value || r.RelasiId == parentIdFilter.Value))
                             .Select(r => r.RelasiId)
                             .Where(id => id.HasValue)
                             .Select(id => id!.Value)
@@ -3324,12 +3324,13 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> League(int? companyId = null, string mode = "dept", int? year = null, int? month = null, string targetFilter = "target")
+        public async Task<IActionResult> League(int? companyId = null, string mode = "dept", int? year = null, int? month = null, string targetFilter = "target", int? parentId = null)
         {
             ViewData["HeaderTitle"] = "League SAP";
             ViewData["ActiveTab"] = "Performance";
             ViewBag.Mode = mode; // "dept" or "company"
             ViewBag.TargetFilter = targetFilter;
+            ViewBag.ParentId = parentId;
 
             var today = DateTime.Today;
             int selectedYear = year ?? today.Year;
@@ -3389,6 +3390,35 @@ namespace MBS_SAP.Controllers
 
             var selectedCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? allowedCompanies.First();
 
+            int? effectiveParentScope = null;
+            var userNik = User.Identity?.Name ?? User.FindFirst("Nrp")?.Value;
+
+            if (!isAdmin)
+            {
+                if (resolvedCompanyId.HasValue && selectedCompanyId != resolvedCompanyId.Value)
+                {
+                    effectiveParentScope = resolvedCompanyId.Value;
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(userNik))
+                    {
+                        var myKaryawan = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                        if (myKaryawan != null && myKaryawan.PerusahaanNodeId.HasValue && myKaryawan.PerusahaanNodeId.Value > 0)
+                        {
+                            effectiveParentScope = myKaryawan.PerusahaanNodeId.Value;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (parentId.HasValue && parentId.Value > 0)
+                {
+                    effectiveParentScope = parentId.Value;
+                }
+            }
+
             // FILTER dropdown list to only show the selected company and its child companies (subcons)
             var dropdownCompanyIds = new HashSet<int> { selectedCompany.PerusahaanId };
             var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
@@ -3403,10 +3433,10 @@ namespace MBS_SAP.Controllers
                 // If it has no children, set root to its parent so we show parent and siblings
                 var directParentId = selectedCompany.PerusahaanIndukId;
                 var relationParentId = relations.FirstOrDefault(r => r.ChildCompanyId == selectedCompany.PerusahaanId && r.ParentCompanyId.HasValue)?.ParentCompanyId;
-                int? parentId = (directParentId != null && directParentId > 0) ? directParentId : relationParentId;
-                if (parentId.HasValue && parentId > 0)
+                int? pId = (directParentId != null && directParentId > 0) ? directParentId : relationParentId;
+                if (pId.HasValue && pId > 0)
                 {
-                    rootId = parentId.Value;
+                    rootId = pId.Value;
                     dropdownCompanyIds.Add(rootId);
                 }
             }
@@ -3424,10 +3454,10 @@ namespace MBS_SAP.Controllers
                 }
             }
             
-            void GetDescendants(int parentId)
+            void GetDescendants(int pId)
             {
-                var childrenFromParentId = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
-                var childrenFromRelations = relations.Where(r => r.ParentCompanyId == parentId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
+                var childrenFromParentId = allCompanies.Where(c => c.PerusahaanIndukId == pId).Select(c => c.PerusahaanId).ToList();
+                var childrenFromRelations = relations.Where(r => r.ParentCompanyId == pId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
                 var children = childrenFromParentId.Concat(childrenFromRelations).Distinct().ToList();
 
                 foreach (var childId in children)
@@ -3499,7 +3529,11 @@ namespace MBS_SAP.Controllers
 
                 foreach (var comp in companiesToCompare)
                 {
-                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
+                    int? compParentScope = (selectedCompanyId > 0 && selectedCompanyId != comp.PerusahaanId) 
+                        ? selectedCompanyId 
+                        : effectiveParentScope;
+
+                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, compParentScope, includeNonTarget: includeNonTarget);
 
                     allEmployees.AddRange(compEmps);
 
@@ -3617,7 +3651,7 @@ namespace MBS_SAP.Controllers
             {
                 // Liga Internal: Departments
                 bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
-                var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
+                var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, effectiveParentScope, includeNonTarget: includeNonTarget);
                 var targetEmployees = employees.Where(e => (bool)e.isTargetSap).ToList();
 
                 var monthlyActionPlans = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
@@ -3741,7 +3775,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportLeagueToExcel(int? companyId = null, string mode = "dept", string? departmentName = null, int? year = null, int? month = null, string targetFilter = "target")
+        public async Task<IActionResult> ExportLeagueToExcel(int? companyId = null, string mode = "dept", string? departmentName = null, int? year = null, int? month = null, string targetFilter = "target", int? parentId = null)
         {
             var today = DateTime.Today;
             int selectedYear = year ?? today.Year;
@@ -3797,6 +3831,35 @@ namespace MBS_SAP.Controllers
             }
 
             var selectedCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? allowedCompanies.First();
+
+            int? effectiveParentScope = null;
+            var userNik = User.Identity?.Name ?? User.FindFirst("Nrp")?.Value;
+
+            if (!isAdmin)
+            {
+                if (resolvedCompanyId.HasValue && selectedCompanyId != resolvedCompanyId.Value)
+                {
+                    effectiveParentScope = resolvedCompanyId.Value;
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(userNik))
+                    {
+                        var myKaryawan = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                        if (myKaryawan != null && myKaryawan.PerusahaanNodeId.HasValue && myKaryawan.PerusahaanNodeId.Value > 0)
+                        {
+                            effectiveParentScope = myKaryawan.PerusahaanNodeId.Value;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (parentId.HasValue && parentId.Value > 0)
+                {
+                    effectiveParentScope = parentId.Value;
+                }
+            }
 
             List<dynamic> employeesData = new List<dynamic>();
             var companyStandings = new List<dynamic>();
@@ -3856,7 +3919,11 @@ namespace MBS_SAP.Controllers
 
                 foreach (var comp in companiesToCompare)
                 {
-                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
+                    int? compParentScope = (selectedCompanyId > 0 && selectedCompanyId != comp.PerusahaanId) 
+                        ? selectedCompanyId 
+                        : effectiveParentScope;
+
+                    var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, compParentScope, includeNonTarget: includeNonTarget);
                     allEmployees.AddRange(compEmps);
 
                     var targetEmps = compEmps.Where(e => (bool)e.isTargetSap).ToList();
@@ -3919,7 +3986,7 @@ namespace MBS_SAP.Controllers
             else
             {
                 bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
-                var rawEmployees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
+                var rawEmployees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, effectiveParentScope, includeNonTarget: includeNonTarget);
                 employeesData = rawEmployees;
 
                 var targetEmployees = rawEmployees.Where(e => (bool)e.isTargetSap).ToList();
@@ -4421,7 +4488,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportSapDetailToExcel(int? companyId = null, string mode = "dept", string? departmentName = null, int? year = null, int? month = null, string targetFilter = "target")
+        public async Task<IActionResult> ExportSapDetailToExcel(int? companyId = null, string mode = "dept", string? departmentName = null, int? year = null, int? month = null, string targetFilter = "target", int? parentId = null)
         {
             await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
 
@@ -4489,6 +4556,35 @@ namespace MBS_SAP.Controllers
 
             var selectedCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? allowedCompanies.First();
 
+            int? effectiveParentScope = null;
+            var userNik = User.Identity?.Name ?? User.FindFirst("Nrp")?.Value;
+
+            if (!isAdmin)
+            {
+                if (resolvedCompanyId.HasValue && selectedCompanyId != resolvedCompanyId.Value)
+                {
+                    effectiveParentScope = resolvedCompanyId.Value;
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(userNik))
+                    {
+                        var myKaryawan = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                        if (myKaryawan != null && myKaryawan.PerusahaanNodeId.HasValue && myKaryawan.PerusahaanNodeId.Value > 0)
+                        {
+                            effectiveParentScope = myKaryawan.PerusahaanNodeId.Value;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (parentId.HasValue && parentId.Value > 0)
+                {
+                    effectiveParentScope = parentId.Value;
+                }
+            }
+
             var targetCompanyIds = new HashSet<int>();
             if (mode == "core")
             {
@@ -4523,7 +4619,8 @@ namespace MBS_SAP.Controllers
             var allEmpsList = new List<dynamic>();
             foreach (var cId in targetCompanyIds)
             {
-                var emps = await GetEmployeesComplianceData(cId, departmentName, selectedYear, selectedMonth, selectedCompanyId, includeNonTarget: includeNonTarget);
+                int? cParentScope = (selectedCompanyId > 0 && selectedCompanyId != cId) ? selectedCompanyId : effectiveParentScope;
+                var emps = await GetEmployeesComplianceData(cId, departmentName, selectedYear, selectedMonth, cParentScope, includeNonTarget: includeNonTarget);
                 allEmpsList.AddRange(emps);
             }
 
@@ -8307,7 +8404,20 @@ namespace MBS_SAP.Controllers
                 {
                     if (parents.Count > 1)
                     {
-                        return emp.PerusahaanNodeId == parentId;
+                        var relasiIds = relations
+                            .Where(r => r.ChildCompanyId == emp.IdPerusahaan && (r.ParentCompanyId == parentId || r.RelasiId == parentId))
+                            .Select(r => r.RelasiId)
+                            .Where(id => id.HasValue)
+                            .Select(id => id!.Value)
+                            .ToList();
+
+                        var allowedNodeIds = new HashSet<int> { parentId };
+                        foreach (var relId in relasiIds)
+                        {
+                            allowedNodeIds.Add(relId);
+                        }
+
+                        return emp.PerusahaanNodeId.HasValue && allowedNodeIds.Contains(emp.PerusahaanNodeId.Value);
                     }
                 }
                 

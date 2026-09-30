@@ -1,4 +1,3 @@
-
 ALTER   VIEW dbo.vw_r_karyawan_jabatan_mapping_preview
 AS
 WITH base_data AS
@@ -12,10 +11,14 @@ WITH base_data AS
         m.nama_jabatan,
         m.status_jabatan,
         k.level_jabatan,
-        UPPER(LTRIM(RTRIM(ISNULL(m.nama_jabatan, '')))) AS nama_jabatan_norm
+        p.nama_perusahaan,
+        UPPER(LTRIM(RTRIM(ISNULL(m.nama_jabatan, '')))) AS nama_jabatan_norm,
+        UPPER(LTRIM(RTRIM(ISNULL(p.nama_perusahaan, '')))) AS nama_perusahaan_norm
     FROM ONE_DB_MITRA.dbo.tbl_t_karyawan k
     LEFT JOIN ONE_DB_MITRA.dbo.tbl_m_jabatan m
         ON m.id = k.id_jabatan
+    LEFT JOIN ONE_DB_MITRA.dbo.tbl_m_perusahaan p
+        ON p.id = k.id_perusahaan
     WHERE ISNULL(k.status_aktif, 0) = 1
       AND k.deleted_at IS NULL
 ),
@@ -31,6 +34,7 @@ resolved AS
         b.status_jabatan,
         b.level_jabatan,
         b.nama_jabatan_norm,
+        b.nama_perusahaan_norm,
         exact_alias.r_jabatan_id AS exact_r_jabatan_id,
         exact_alias.alias_nama_jabatan AS exact_alias,
         fuzzy_rule.kode_jabatan_standar AS fuzzy_kode,
@@ -70,7 +74,10 @@ resolved AS
             ('SUPERVISIOR', 'SPV'),
             ('DIREKTUR', 'GM'),
             ('DIRECTOR', 'GM'),
-            ('SISWA MAGANG', 'OFF'),
+            ('SISWA MAGANG', 'NST'),
+            ('MAGANG', 'NST'),
+            ('MAHASISWA', 'NST'),
+            ('INTERNSHIP', 'NST'),
             ('PARAMEDIK', 'NST'),
             ('PARAMEDIC', 'NST'),
             ('SURVEYOR', 'OFF'),
@@ -125,6 +132,10 @@ resolved AS
         SELECT
             CASE
                 WHEN b.nama_jabatan_norm = '' THEN 'NST'
+                WHEN b.nama_jabatan_norm LIKE '%MAGANG%'
+                  OR b.nama_jabatan_norm LIKE '%SISWA MAGANG%'
+                  OR b.nama_jabatan_norm LIKE '%MAHASISWA%'
+                  OR b.nama_jabatan_norm LIKE '%INTERNSHIP%' THEN 'NST'
                 WHEN b.nama_jabatan_norm LIKE '%GENERAL MANAGER%' THEN 'GM'
                 WHEN b.nama_jabatan_norm LIKE '%DIREKTUR%' OR b.nama_jabatan_norm LIKE '%DIRECTOR%' THEN 'GM'
                 WHEN b.nama_jabatan_norm IN ('GENERAL', 'OPERATION', 'OPERATIONS', 'ANGGOTA TC', 'CLEANING SERVICE', 'CELANING SERVICE') THEN 'NST'
@@ -191,9 +202,7 @@ SELECT
                         THEN 'Pengawas Support Dept - Office'
                     ELSE 'Pengawas Support Dept - Non Office'
                  END
-        WHEN resolved_map.final_kode_jabatan_standar = 'SPV'
-            THEN 'Pengawas Area Operasional'
-        ELSE 'Berdasarkan Jabatan'
+        ELSE resolved_map.final_kategori_pengawas
     END AS kategori_mapping,
     resolved_map.final_r_jabatan_id AS r_jabatan_id,
     resolved_map.final_kode_jabatan_standar AS kode_jabatan_standar,
@@ -301,11 +310,31 @@ SELECT
             END
     END AS target_coaching,
     CASE
-        WHEN r.perusahaan_id = 4 THEN 0
+        WHEN r.perusahaan_id = 4 THEN
+            CASE
+                WHEN nik_override.force_zero_target = 1 THEN 0
+                WHEN resolved_map.final_kode_jabatan_standar IN ('GM', 'SRM', 'MGR') THEN 1
+                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU', 'SRSP', 'SPV', 'SROF', 'OFF', 'FM') THEN 1
+                ELSE 0
+            END
         ELSE
             CASE
                 WHEN nik_override.force_zero_target = 1 THEN 0
-                WHEN resolved_map.final_kode_jabatan_standar IN ('GM', 'SRM', 'MGR', 'SRSU', 'SU', 'SRSP', 'SPV', 'SROF', 'OFF', 'FM') THEN 4
+                WHEN resolved_map.final_kode_jabatan_standar IN ('GM', 'SRM', 'MGR') THEN 1
+                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU')
+                    THEN CASE
+                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 4
+                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 2
+                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 1
+                            ELSE 2
+                         END
+                WHEN resolved_map.final_kode_jabatan_standar IN ('SRSP', 'SPV', 'SROF', 'OFF', 'FM')
+                    THEN CASE
+                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 4
+                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 2
+                            WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 1
+                            ELSE 2
+                         END
                 ELSE 0
             END
     END AS target_safety_talk,
@@ -323,7 +352,9 @@ OUTER APPLY
 (
     SELECT
         CASE
-            WHEN r.perusahaan_id IN (336, 339) THEN 1
+            WHEN r.perusahaan_id IN (336, 339, 257, 286) THEN 1
+            WHEN r.nama_perusahaan_norm LIKE '%MAGANG%'
+              OR r.nama_perusahaan_norm LIKE '%SISWA MAGANG%' THEN 1
             WHEN UPPER(LTRIM(RTRIM(ISNULL(r.level_jabatan, '')))) = 'NON SAP'
             THEN 1
             WHEN UPPER(LTRIM(RTRIM(ISNULL(r.no_nik, '')))) IN
@@ -371,6 +402,10 @@ OUTER APPLY
             OR r.nama_jabatan_norm LIKE '%DRIVER DT%'
             OR r.nama_jabatan_norm LIKE '%DT DRIVER%'
             OR r.nama_jabatan_norm LIKE '%MEKANIK MCC%'
+            OR r.nama_jabatan_norm LIKE '%MAGANG%'
+            OR r.nama_jabatan_norm LIKE '%SISWA MAGANG%'
+            OR r.nama_jabatan_norm LIKE '%MAHASISWA%'
+            OR r.nama_jabatan_norm LIKE '%INTERNSHIP%'
             THEN 1
             ELSE 0
         END AS force_zero_target
@@ -379,6 +414,11 @@ OUTER APPLY
 (
     SELECT
         CASE
+            WHEN r.nama_jabatan_norm LIKE '%MAGANG%'
+              OR r.nama_jabatan_norm LIKE '%SISWA MAGANG%'
+              OR r.nama_jabatan_norm LIKE '%MAHASISWA%'
+              OR r.nama_jabatan_norm LIKE '%INTERNSHIP%'
+                THEN 'NST'
             WHEN r.nama_jabatan_norm LIKE '%PATROL%'
                 THEN 'NST'
             WHEN r.nama_jabatan_norm LIKE '%STAFF%'

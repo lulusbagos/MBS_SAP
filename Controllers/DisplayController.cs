@@ -2292,7 +2292,20 @@ namespace MBS_SAP.Controllers
                 {
                     if (parents.Count > 1)
                     {
-                        return emp.PerusahaanNodeId == parentId;
+                        var relasiIds = relations
+                            .Where(r => r.ChildCompanyId == emp.IdPerusahaan && (r.ParentCompanyId == parentId || r.RelasiId == parentId))
+                            .Select(r => r.RelasiId)
+                            .Where(id => id.HasValue)
+                            .Select(id => id!.Value)
+                            .ToList();
+
+                        var allowedNodeIds = new HashSet<int> { parentId };
+                        foreach (var relId in relasiIds)
+                        {
+                            allowedNodeIds.Add(relId);
+                        }
+
+                        return emp.PerusahaanNodeId.HasValue && allowedNodeIds.Contains(emp.PerusahaanNodeId.Value);
                     }
                 }
 

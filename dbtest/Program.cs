@@ -15,7 +15,17 @@ namespace dbtest
     {
         static async Task Main(string[] args)
         {
-            var configPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "appsettings.json");
+            var configPath = File.Exists("appsettings.json") 
+                ? Path.GetFullPath("appsettings.json") 
+                : Path.Combine(Directory.GetCurrentDirectory(), "MBS_SAP", "appsettings.json");
+            if (!File.Exists(configPath))
+            {
+                configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+            }
+            if (!File.Exists(configPath))
+            {
+                configPath = @"d:\4. PROJECT\2. Web\MBS_SAP\appsettings.json";
+            }
             var configuration = new ConfigurationBuilder()
                 .AddJsonFile(configPath, optional: false, reloadOnChange: true)
                 .Build();
@@ -35,35 +45,62 @@ namespace dbtest
             var startOfMonth = new DateTime(selectedYear, selectedMonth, 1);
             var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
 
-            bool isClosed(string? s)
+            await context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
+
+            string targetNik = "23021900738";
+            Console.WriteLine($"Looking for NIK: {targetNik}");
+
+            var kRaw = await context.Karyawans.AsNoTracking().FirstOrDefaultAsync(k => k.NoNik == targetNik);
+            if (kRaw == null)
             {
-                if (string.IsNullOrWhiteSpace(s)) return false;
-                var t = s.Trim();
-                return t.Equals("Closed", StringComparison.OrdinalIgnoreCase) || t.Equals("Close", StringComparison.OrdinalIgnoreCase) || t.Equals("Selesai", StringComparison.OrdinalIgnoreCase) || t.Equals("Complete", StringComparison.OrdinalIgnoreCase);
+                Console.WriteLine("Karyawan NOT FOUND in Karyawans table!");
+                return;
+            }
+            Console.WriteLine($"Found Karyawan ID: {kRaw.IdKaryawan}, Personal: {kRaw.IdPersonal}, Dept: {kRaw.IdDepartemen}, Jabatan: {kRaw.IdJabatan}, Comp: {kRaw.IdPerusahaan}");
+
+            var pRaw = await context.Personals.AsNoTracking().FirstOrDefaultAsync(p => p.IdPersonal == kRaw.IdPersonal);
+            var dRaw = await context.Departemens.AsNoTracking().FirstOrDefaultAsync(d => d.DepartemenId == kRaw.IdDepartemen);
+            var jRaw = await context.Jabatans.AsNoTracking().FirstOrDefaultAsync(j => j.JabatanId == kRaw.IdJabatan);
+            var cRaw = await context.Perusahaans.AsNoTracking().FirstOrDefaultAsync(c => c.PerusahaanId == kRaw.IdPerusahaan);
+
+            Console.WriteLine($"Nama: {pRaw?.NamaLengkap}");
+            Console.WriteLine($"Company: {cRaw?.NamaPerusahaan} ({kRaw.IdPerusahaan})");
+            Console.WriteLine($"Dept: {dRaw?.NamaDepartemen} ({kRaw.IdDepartemen})");
+            Console.WriteLine($"Jabatan: {jRaw?.NamaJabatan} ({kRaw.IdJabatan})");
+            Console.WriteLine($"Status: {kRaw.StatusAktif}, TglMasuk: {kRaw.TanggalMasuk}");
+
+            var mapping = await context.KaryawanJabatanMappings.AsNoTracking()
+                .FirstOrDefaultAsync(m => m.KaryawanId == kRaw.IdKaryawan);
+            
+            if (mapping != null)
+            {
+                Console.WriteLine($"Mapping: Hazard={mapping.TargetHazardReport}, Inspeksi={mapping.TargetInspeksi}, SafetyTalk={mapping.TargetSafetyTalk}, Observasi={mapping.TargetObservasi}, Coaching={mapping.TargetCoaching}");
+            }
+            else
+            {
+                Console.WriteLine("No custom mapping found (default targets apply)");
             }
 
-            var allMtdAp = await context.ActionPlans
-                .AsNoTracking()
-                .Where(a => !a.IsDeleted && ((a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth) || (a.CreatedAt >= startOfMonth && a.CreatedAt <= endOfMonth)))
-                .Select(a => new { a.Id, a.Tanggal, a.Status, a.Departemen, a.DepartemenPja, a.DepartemenPic, a.PerusahaanId })
+            // Check rosters
+            var rosters = await context.Rosters.AsNoTracking()
+                .Where(r => r.Nik == targetNik)
                 .ToListAsync();
-
-            var depts = allMtdAp
-                .Select(a => !string.IsNullOrEmpty(a.DepartemenPja) ? a.DepartemenPja.Trim() : (!string.IsNullOrEmpty(a.DepartemenPic) ? a.DepartemenPic.Trim() : (!string.IsNullOrEmpty(a.Departemen) ? a.Departemen.Trim() : "General")))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(d => d)
-                .ToList();
-
-            var sheHaulingAp = allMtdAp.Where(a => 
-                (!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), "SHE HAULING", StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), "SHE HAULING", StringComparison.OrdinalIgnoreCase))
-            ).ToList();
-
-            Console.WriteLine($"=== SHE HAULING ASSIGNED ITEMS ===");
-            foreach (var a in sheHaulingAp)
+            Console.WriteLine($"Rosters count: {rosters.Count}");
+            foreach (var r in rosters)
             {
-                Console.WriteLine($"ID: {a.Id} | Status: {a.Status} | Dept: {a.Departemen} | PJA: {a.DepartemenPja} | PIC: {a.DepartemenPic}");
+                Console.WriteLine($"  Roster: {r.TipeRoster} {r.AwalDinas:yyyy-MM-dd} to {r.AkhirDinas:yyyy-MM-dd}");
             }
+
+            // Check existing activities for 2026-09
+            var hList = await context.HazardReports.AsNoTracking().Where(x => !x.IsDeleted && x.Nik == targetNik && x.Tanggal >= startOfMonth && x.Tanggal <= endOfMonth).ToListAsync();
+            var iList = await context.Inspections.AsNoTracking().Where(x => !x.IsDeleted && x.Nik == targetNik && x.Tanggal >= startOfMonth && x.Tanggal <= endOfMonth).ToListAsync();
+            var stList = await context.SafetyTalks.AsNoTracking().Where(x => !x.IsDeleted && x.Nik == targetNik && x.Tanggal >= startOfMonth && x.Tanggal <= endOfMonth).ToListAsync();
+            var oList = await context.Observations.AsNoTracking().Where(x => !x.IsDeleted && x.Nik == targetNik && x.CreatedAt >= startOfMonth && x.CreatedAt <= endOfMonth).ToListAsync();
+            var cList = await context.Coachings.AsNoTracking().Where(x => !x.IsDeleted && x.Nik == targetNik && x.CreatedAt >= startOfMonth && x.CreatedAt <= endOfMonth).ToListAsync();
+            var cpList = await context.CoachingParticipants.AsNoTracking().Where(x => x.Nik == targetNik && x.Coaching != null && !x.Coaching.IsDeleted && x.Coaching.CreatedAt >= startOfMonth && x.Coaching.CreatedAt <= endOfMonth).ToListAsync();
+            var pList = await context.P5ms.AsNoTracking().Where(x => !x.IsDeleted && x.Nik == targetNik && x.Tanggal >= startOfMonth && x.Tanggal <= endOfMonth).ToListAsync();
+
+            Console.WriteLine($"Actual 2026-09: Hazard={hList.Count}, Inspeksi={iList.Count}, SafetyTalk={stList.Count}, Observasi={oList.Count}, Coaching={cList.Count + cpList.Count}, P5M={pList.Count}");
         }
     }
 }

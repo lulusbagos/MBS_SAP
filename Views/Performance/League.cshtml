@@ -545,6 +545,10 @@
         <form id="leagueFilterForm" method="get" action="/Performance/League" class="row g-2 align-items-end">
             <input type="hidden" name="mode" value="@currentMode" />
             <input type="hidden" id="companyIdInput" name="companyId" value="@selectedCompanyId" />
+            @if (ViewBag.ParentId != null)
+            {
+                <input type="hidden" name="parentId" value="@ViewBag.ParentId" />
+            }
 
             <!-- Searchable Company Dropdown -->
             <div class="col-md-5 col-sm-12">
@@ -811,7 +815,7 @@
                                         var shieldColor = GetDeptColor(comp.CompanyName);
                                         var initials = GetDeptInitials(comp.CompanyName);
 
-                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(comp.MtdAchievementRate) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(comp.MtdAchievementRate) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept@(selectedCompanyId > 0 && selectedCompanyId != (int)comp.CompanyId ? $"&parentId={selectedCompanyId}" : "")';">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass">@rankText</div>
                                             </td>
@@ -874,7 +878,7 @@
                                             {
                                                 var shieldColor = GetDeptColor(comp.CompanyName);
                                                 var initials = GetDeptInitials(comp.CompanyName);
-                                                <tr class="league-tr-relegation" style="cursor: pointer;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                                <tr class="league-tr-relegation" style="cursor: pointer;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept@(selectedCompanyId > 0 && selectedCompanyId != (int)comp.CompanyId ? $"&parentId={selectedCompanyId}" : "")';">
                                                     <td class="align-left">
                                                         <div class="d-flex align-items-center">
                                                             <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
@@ -1594,6 +1598,9 @@
         const month = '@selectedMonth';
         const targetFilter = getSelectedTargetFilter();
         let url = '@Url.Action("ExportLeagueToExcel", "Performance")?companyId=' + companyId + '&mode=' + encodeURIComponent(mode) + '&year=' + year + '&month=' + month + '&targetFilter=' + encodeURIComponent(targetFilter);
+        if ('@ViewBag.ParentId') {
+            url += '&parentId=' + '@ViewBag.ParentId';
+        }
         if (currentSquadDeptFilter) {
             url += '&departmentName=' + encodeURIComponent(currentSquadDeptFilter);
         }
@@ -1612,6 +1619,9 @@
         const month = '@selectedMonth';
         const targetFilter = getSelectedTargetFilter();
         let url = '@Url.Action("ExportSapDetailToExcel", "Performance")?companyId=' + companyId + '&mode=' + encodeURIComponent(mode) + '&year=' + year + '&month=' + month + '&targetFilter=' + encodeURIComponent(targetFilter);
+        if ('@ViewBag.ParentId') {
+            url += '&parentId=' + '@ViewBag.ParentId';
+        }
         if (currentSquadDeptFilter) {
             url += '&departmentName=' + encodeURIComponent(currentSquadDeptFilter);
         }
