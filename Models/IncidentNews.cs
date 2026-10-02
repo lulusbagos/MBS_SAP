@@ -38,6 +38,15 @@ namespace MBS_SAP.Models
 
         public bool IsPublished { get; set; } = true;
 
+        public bool IsBanner { get; set; } = false;
+
+        public bool IsUpdate { get; set; } = true;
+
+        public int BannerUrutan { get; set; } = 0;
+
+        [MaxLength(200)]
+        public string? Tags { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedAt { get; set; }

@@ -179,6 +179,73 @@
     .badge-property { background: rgba(245,158,11,.2); color: #b45309; }
     .badge-firstaid { background: rgba(59,130,246,.2); color: #1d4ed8; }
     .badge-medical { background: rgba(139,92,246,.2); color: #6d28d9; }
+
+    .badge-banner { background: rgba(14,165,233,.22); color: #0284c7; border: 1px solid rgba(14,165,233,.4); }
+    .badge-terbaru-pulse {
+        background: linear-gradient(135deg, #ef4444, #f97316);
+        color: #fff !important;
+        font-weight: 800;
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        animation: pulseFire 2s infinite ease-in-out;
+    }
+    .badge-terbaru-sm {
+        background: linear-gradient(135deg, #ef4444, #f97316);
+        color: #fff !important;
+        font-weight: 800;
+        font-size: 9px;
+        padding: 2px 6px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        vertical-align: middle;
+        box-shadow: 0 2px 6px rgba(239,68,68,0.3);
+    }
+    @@keyframes pulseFire {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+        50% { transform: scale(1.05); box-shadow: 0 0 16px rgba(239, 68, 68, 0.7); }
+    }
+
+    .btn-toggle-badge {
+        border: none;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        text-align: left;
+        white-space: nowrap;
+    }
+    .btn-toggle-badge.active-banner {
+        background: rgba(245, 158, 11, 0.18);
+        color: #b45309;
+        border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+    .btn-toggle-badge.active-update {
+        background: rgba(16, 185, 129, 0.18);
+        color: #047857;
+        border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .btn-toggle-badge.inactive {
+        background: rgba(148, 163, 184, 0.12);
+        color: #64748b;
+        border: 1px dashed rgba(148, 163, 184, 0.3);
+    }
+    .btn-toggle-badge:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.1);
+    }
+
     .badge-default { background: rgba(148,163,184,.22); color: #334155; }
 
     .row-title {
@@ -334,8 +401,9 @@
         {
             var newestBadge = GetCategoryBadgeClass(newest.Kategori);
             <div class="newest-card">
-                <div class="newest-header">
-                    <i class="bi bi-stars me-1"></i> Data Insiden Paling Baru
+                <div class="newest-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-stars me-1"></i> Data Insiden / Informasi Paling Baru</span>
+                    <span class="badge-terbaru-pulse"><i class="bi bi-fire"></i> TERBARU</span>
                 </div>
                 <div class="newest-body">
                     @if (!string.IsNullOrWhiteSpace(newest.GambarUrl))
@@ -367,6 +435,14 @@
                                 <span><i class="bi bi-building"></i> @newCompName</span>
                             }
                             <span class="badge-soft @newestBadge">@(newest.Kategori ?? "-")</span>
+                            @if (newest.IsBanner)
+                            {
+                                <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #b45309; font-size: 10px; border-radius: 6px;"><i class="bi bi-badge-ad"></i> Banner Home</span>
+                            }
+                            @if (newest.IsUpdate)
+                            {
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #047857; font-size: 10px; border-radius: 6px;"><i class="bi bi-bell"></i> Safety Updates</span>
+                            }
                         </div>
                         <p class="newest-desc">@newest.Konten</p>
                     </div>
@@ -388,6 +464,7 @@
                             <th style="width: 210px;">Judul</th>
                             <th style="width: 140px;">Perusahaan</th>
                             <th style="width: 120px;">Kategori</th>
+                            <th style="width: 130px;">Target Mobile</th>
                             <th style="width: 140px;">Tgl Kejadian</th>
                             <th style="width: 180px;">Lokasi</th>
                             <th style="width: 230px;">Keterangan</th>
@@ -400,10 +477,17 @@
                         @foreach (var item in incidents)
                         {
                             var badgeClass = GetCategoryBadgeClass(item.Kategori);
+                            bool isItemNewest = (newest != null && item.Id == newest.Id);
                             <tr>
                                 <td><strong>#@item.Id</strong></td>
                                 <td>
-                                    <div class="row-title" title="@item.Judul">@item.Judul</div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        @if (isItemNewest)
+                                        {
+                                            <span class="badge-terbaru-sm" title="Berita Paling Baru"><i class="bi bi-fire"></i> TERBARU</span>
+                                        }
+                                        <div class="row-title" title="@item.Judul">@item.Judul</div>
+                                    </div>
                                 </td>
                                 <td>
                                     @{
@@ -417,6 +501,24 @@
                                 </td>
                                 <td>
                                     <span class="badge-soft @badgeClass">@(item.Kategori ?? "-")</span>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-column gap-1">
+                                        <form asp-action="ToggleBanner" method="post" style="display:inline; margin:0;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn-toggle-badge @(item.IsBanner ? "active-banner" : "inactive")" title="Klik untuk ubah tayang Banner Home">
+                                                <i class="bi bi-badge-ad"></i> @(item.IsBanner ? "Banner ON" : "Banner OFF")
+                                            </button>
+                                        </form>
+                                        <form asp-action="ToggleUpdate" method="post" style="display:inline; margin:0;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@item.Id" />
+                                            <button type="submit" class="btn-toggle-badge @(item.IsUpdate ? "active-update" : "inactive")" title="Klik untuk ubah tayang Safety Update">
+                                                <i class="bi bi-bell"></i> @(item.IsUpdate ? "Update ON" : "Update OFF")
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                                 <td>
                                     @(item.TanggalKejadian?.ToString("dd MMM yyyy") ?? "-")
@@ -489,6 +591,7 @@
     private static string GetCategoryBadgeClass(string? category)
     {
         var c = (category ?? string.Empty).Trim().ToLowerInvariant();
+        if (c.Contains("banner")) return "badge-banner";
         if (c.Contains("near")) return "badge-nearmiss";
         if (c.Contains("property")) return "badge-property";
         if (c.Contains("first aid")) return "badge-firstaid";

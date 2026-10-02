@@ -114,4 +114,18 @@
             </div>
         </form>
     </div>
-</div>
+<</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const catSelect = document.getElementById('kategoriSelect');
+        const checkBanner = document.getElementById('checkBanner');
+        if (catSelect && checkBanner) {
+            catSelect.addEventListener('change', function() {
+                if (this.value.toLowerCase().includes('banner')) {
+                    checkBanner.checked = true;
+                }
+            });
+        }
+    });
+</script>
