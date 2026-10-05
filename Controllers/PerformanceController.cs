@@ -786,8 +786,8 @@ namespace MBS_SAP.Controllers
             {
                 if (baseTarget == 0) return 0;
                 if (daysOnsite == 0) return 0;
-                int scaled = (int)Math.Round(baseTarget * rat, MidpointRounding.AwayFromZero);
-                return Math.Max(scaled, 1);
+                int scaled = (int)Math.Round(baseTarget * Math.Min(1.0, rat), MidpointRounding.AwayFromZero);
+                return Math.Min(baseTarget, Math.Max(scaled, 1));
             }
 
             var employeeTargets = new Dictionary<string, (int hTar, int insTar, int stTar, int obsTar, int cTar, int p5mTar, int totalMtd, int totalYtd, int wH, int wI, int wST, int wO, int wC)>(StringComparer.OrdinalIgnoreCase);
@@ -835,16 +835,16 @@ namespace MBS_SAP.Controllers
                     if (hasAnyRoster)
                     {
                         hasRoster = true;
-                        onsiteDays = computedOnsite;
+                        onsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
                     }
                 }
                 else if (effectiveEmpStart > startOfMonth)
                 {
                     hasRoster = true;
-                    onsiteDays = (endOfMonth.Date - effectiveEmpStart.Date).Days + 1;
+                    onsiteDays = Math.Min((endOfMonth.Date - effectiveEmpStart.Date).Days + 1, totalDaysInMonth);
                 }
 
-                double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonth : 1.0;
+                double ratio = hasRoster ? Math.Min(1.0, (double)onsiteDays / totalDaysInMonth) : 1.0;
                 int mH = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
                 int mI = hasRoster ? ScaleTarget(insTar, ratio, onsiteDays) : insTar;
                 int mST = hasRoster ? ScaleTarget(stTar, ratio, onsiteDays) : stTar;
@@ -4502,7 +4502,7 @@ namespace MBS_SAP.Controllers
                 else
                 {
                     stdHeaders = new[] {
-                        "Pos", clubHeader, "Skuad (Orang)", "Total Target", "Kepatuhan SAP (%)",
+                        "Pos", clubHeader, "Skuad (Orang)", "Total Target", "PTS (Kepatuhan %)",
                         "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *", "Close Rate (%)"
                     };
                 }
@@ -4745,17 +4745,32 @@ namespace MBS_SAP.Controllers
                 wsSquad.Cell(3, 1).Style.Font.FontSize = 10;
 
                 string targetFilterLabel = targetFilter == "nontarget_active" ? "Non-Target Aktif SAP" : (targetFilter == "all" ? "Semua Karyawan (+ Non-Target)" : (targetFilter == "nontarget" ? "Non-Target SAP" : "Hanya Target SAP"));
-                wsSquad.Cell(4, 1).Value = $"Kategori: {modeLabel} | Filter Target: {targetFilterLabel} | Total Pemain: {sorted.Count} Orang | Waktu Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
+                wsSquad.Cell(4, 1).Value = $"Kategori: {modeLabel} | Filter Target: {targetFilterLabel} | Total Pemain: {sorted.Count} Orang | Target Skuad Tertinggi: {maxTargetPlayerExcel} Program | Waktu Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
                 wsSquad.Cell(4, 1).Style.Font.Italic = true;
                 wsSquad.Cell(4, 1).Style.Font.FontSize = 9;
                 wsSquad.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
 
-                // Setup Table Headers
+                wsSquad.Cell(5, 1).Value = "Formula Skor PTS: (50% × Close Rate) + (25% × Kualitas AI) + (15% × Capaian SAP) + (10% × Skala Beban Perorangan)";
+                wsSquad.Cell(5, 1).Style.Font.Italic = true;
+                wsSquad.Cell(5, 1).Style.Font.FontSize = 9;
+                wsSquad.Cell(5, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+                wsSquad.Cell(5, 1).Style.Font.Bold = true;
+
+                // Setup Table Headers (29 Kolom Komprehensif)
                 string[] squadHeaders = new[] {
-                    "Peringkat", "Nama Karyawan", "NIK", "Departemen", "Jabatan", "Kategori SAP", "Status Roster", "Kepatuhan (%)",
-                    "Hazard Actual", "Hazard Target", "Inspeksi Actual", "Inspeksi Target",
-                    "Safety Talk Actual", "Safety Talk Target", "Observasi Actual", "Observasi Target",
-                    "Coaching Actual", "Coaching Target", "P5M Actual *", "P5M Target", "Close Rate (%)"
+                    "Peringkat", "Nama Karyawan", "NIK", "Departemen", "Jabatan", "Kategori SAP", "Status Roster",
+                    "Total Skor PTS (%)",
+                    "Close Rate (%)", "Poin Close Rate (50%)",
+                    "Kualitas AI (%)", "Poin Kualitas (25%)",
+                    "Capaian SAP (%)", "Poin Capaian (15%)",
+                    "Skala Beban (%)", "Poin Beban (10%)",
+                    "Target MTD",
+                    "Hazard Actual", "Hazard Target",
+                    "Inspeksi Actual", "Inspeksi Target",
+                    "Safety Talk Actual", "Safety Talk Target",
+                    "Observasi Actual", "Observasi Target",
+                    "Coaching Actual", "Coaching Target",
+                    "P5M Actual *", "P5M Target"
                 };
 
                 for (int i = 0; i < squadHeaders.Length; i++)
@@ -4766,15 +4781,27 @@ namespace MBS_SAP.Controllers
                     cell.Style.Font.FontSize = 10;
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                    if (i == 18 || i == 19) // P5M
-                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber
-                    else if (i == 20) // Close Rate
+
+                    if (i == 7) // Total Skor PTS
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a"); // Dark Slate
+                    else if (i == 8 || i == 9) // Close Rate & Poin
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald
+                    else if (i == 10 || i == 11) // Kualitas & Poin
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#5b21b6"); // Purple
+                    else if (i == 12 || i == 13) // Capaian SAP & Poin
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1d4ed8"); // Royal Blue
+                    else if (i >= 14 && i <= 16) // Skala Beban, Poin & Target MTD
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#c2410c"); // Orange/Amber
+                    else if (i >= 27) // P5M
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Brown
+                    else if (i >= 17) // Hazard s/d Coaching
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#334155"); // Slate
                     else
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
+
                     cell.Style.Font.FontColor = XLColor.White;
                 }
-                wsSquad.Row(6).Height = 25;
+                wsSquad.Row(6).Height = 28;
 
                 int row = 7;
                 int rank = 1;
@@ -4788,30 +4815,68 @@ namespace MBS_SAP.Controllers
                     wsSquad.Cell(row, 6).Value = emp.isTargetSap ? "Target SAP" : (emp.isActivelyReporting ? "Non-Target (Aktif)" : "Non-Target");
                     wsSquad.Cell(row, 7).Value = emp.hasRoster ? $"{emp.onsiteDays} Hari Onsite" : "Belum Roster";
                     
-                    var compCell = wsSquad.Cell(row, 8);
-                    compCell.Value = emp.complianceRate;
-                    compCell.Style.NumberFormat.Format = "0.0\"%\"";
+                    // Col 8: Total Skor PTS
+                    var totalScoreCell = wsSquad.Cell(row, 8);
+                    totalScoreCell.Value = emp.totalScore;
+                    totalScoreCell.Style.NumberFormat.Format = "0.0\"%\"";
+                    totalScoreCell.Style.Font.Bold = true;
+                    if (emp.totalScore >= 80)
+                        totalScoreCell.Style.Font.FontColor = XLColor.FromHtml("#16a34a"); // Green
+                    else if (emp.totalScore >= 50)
+                        totalScoreCell.Style.Font.FontColor = XLColor.FromHtml("#2563eb"); // Blue
+                    else
+                        totalScoreCell.Style.Font.FontColor = XLColor.FromHtml("#dc2626"); // Red
 
-                    wsSquad.Cell(row, 9).Value = emp.hazard.actual;
-                    wsSquad.Cell(row, 10).Value = emp.hazard.target;
+                    // Col 9-10: Close Rate
+                    var crCell = wsSquad.Cell(row, 9);
+                    SetRateCell(crCell, emp.scoreCloseRate);
+                    var ptsCloseCell = wsSquad.Cell(row, 10);
+                    ptsCloseCell.Value = emp.ptsClose;
+                    ptsCloseCell.Style.NumberFormat.Format = "0.00";
+
+                    // Col 11-12: Kualitas AI
+                    var qualCell = wsSquad.Cell(row, 11);
+                    SetRateCell(qualCell, emp.scoreKualitas);
+                    var ptsQualCell = wsSquad.Cell(row, 12);
+                    ptsQualCell.Value = emp.ptsKualitas;
+                    ptsQualCell.Style.NumberFormat.Format = "0.00";
+
+                    // Col 13-14: Capaian SAP
+                    var compCell = wsSquad.Cell(row, 13);
+                    SetRateCell(compCell, emp.scoreCapaian);
+                    var ptsCapCell = wsSquad.Cell(row, 14);
+                    ptsCapCell.Value = emp.ptsCapaian;
+                    ptsCapCell.Style.NumberFormat.Format = "0.00";
+
+                    // Col 15-17: Skala Beban & Target MTD
+                    var bebanCell = wsSquad.Cell(row, 15);
+                    SetRateCell(bebanCell, emp.scoreSkalaBeban);
+                    var ptsBebanCell = wsSquad.Cell(row, 16);
+                    ptsBebanCell.Value = emp.ptsBeban;
+                    ptsBebanCell.Style.NumberFormat.Format = "0.00";
+                    var tgtCell = wsSquad.Cell(row, 17);
+                    tgtCell.Value = emp.mtdTotalTarget;
+                    tgtCell.Style.NumberFormat.Format = "#,##0";
+                    tgtCell.Style.Font.Bold = true;
+
+                    // Col 18-29: Rincian Aktual & Target Tiap Program
+                    wsSquad.Cell(row, 18).Value = emp.hazard.actual;
+                    wsSquad.Cell(row, 19).Value = emp.hazard.target;
                     
-                    wsSquad.Cell(row, 11).Value = emp.inspeksi.actual;
-                    wsSquad.Cell(row, 12).Value = emp.inspeksi.target;
+                    wsSquad.Cell(row, 20).Value = emp.inspeksi.actual;
+                    wsSquad.Cell(row, 21).Value = emp.inspeksi.target;
 
-                    wsSquad.Cell(row, 13).Value = emp.safetyTalk.actual;
-                    wsSquad.Cell(row, 14).Value = emp.safetyTalk.target;
+                    wsSquad.Cell(row, 22).Value = emp.safetyTalk.actual;
+                    wsSquad.Cell(row, 23).Value = emp.safetyTalk.target;
 
-                    wsSquad.Cell(row, 15).Value = emp.observasi.actual;
-                    wsSquad.Cell(row, 16).Value = emp.observasi.target;
+                    wsSquad.Cell(row, 24).Value = emp.observasi.actual;
+                    wsSquad.Cell(row, 25).Value = emp.observasi.target;
 
-                    wsSquad.Cell(row, 17).Value = emp.coaching.actual;
-                    wsSquad.Cell(row, 18).Value = emp.coaching.target;
+                    wsSquad.Cell(row, 26).Value = emp.coaching.actual;
+                    wsSquad.Cell(row, 27).Value = emp.coaching.target;
 
-                    wsSquad.Cell(row, 19).Value = emp.p5m.actual;
-                    wsSquad.Cell(row, 20).Value = emp.p5m.target;
-
-                    var crCell = wsSquad.Cell(row, 21);
-                    SetRateCell(crCell, emp.closeRate);
+                    wsSquad.Cell(row, 28).Value = emp.p5m.actual;
+                    wsSquad.Cell(row, 29).Value = emp.p5m.target;
 
                     // Alignments
                     wsSquad.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -4822,33 +4887,23 @@ namespace MBS_SAP.Controllers
                     wsSquad.Cell(row, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     wsSquad.Cell(row, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     wsSquad.Cell(row, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                    for (int c = 9; c <= 21; c++)
+
+                    for (int c = 9; c <= 17; c++)
+                    {
+                        wsSquad.Cell(row, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    }
+                    for (int c = 18; c <= 29; c++)
                     {
                         wsSquad.Cell(row, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    }
-
-                    // Format values as number
-                    for (int c = 9; c <= 20; c++)
-                    {
                         wsSquad.Cell(row, c).Style.NumberFormat.Format = "#,##0";
-                        if (c % 2 != 0) // Actual columns: 9, 11, 13, 15, 17, 19
+                        if (c % 2 == 0) // Actual columns: 18, 20, 22, 24, 26, 28
                         {
                             wsSquad.Cell(row, c).Style.Font.Bold = true;
                         }
                     }
 
-                    // Conditional Formatting for Compliance Rate
-                    if (emp.complianceRate >= 100)
-                        compCell.Style.Font.FontColor = XLColor.FromHtml("#16a34a"); // Green
-                    else if (emp.complianceRate >= 80)
-                        compCell.Style.Font.FontColor = XLColor.FromHtml("#2563eb"); // Blue
-                    else
-                        compCell.Style.Font.FontColor = XLColor.FromHtml("#dc2626"); // Red
-                        
-                    compCell.Style.Font.Bold = true;
-
                     // Border styling
-                    var rowRange = wsSquad.Range(row, 1, row, 21);
+                    var rowRange = wsSquad.Range(row, 1, row, 29);
                     rowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     rowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                     rowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -4886,8 +4941,8 @@ namespace MBS_SAP.Controllers
                 // Add thick outer border to the entire table
                 if (row > 7)
                 {
-                    wsSquad.Range(6, 1, row - 1, 21).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    wsSquad.Range(6, 1, row - 1, 21).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
+                    wsSquad.Range(6, 1, row - 1, 29).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    wsSquad.Range(6, 1, row - 1, 29).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
                 }
 
                 // Auto fit columns
