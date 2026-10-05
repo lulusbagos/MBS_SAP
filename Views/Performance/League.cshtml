@@ -97,24 +97,63 @@
         return rate + "%";
     }
 
-    public string BuildPtsTooltip(dynamic comp) {
+    public string BuildPtsTooltip(dynamic entity) {
         try {
-            string compName = System.Net.WebUtility.HtmlEncode((string)comp.CompanyName);
-            int wClose = (int)comp.WeightClose;
-            int wKualitas = (int)comp.WeightKualitas;
-            int wCapaian = (int)comp.WeightCapaian;
-            int wBeban = (int)comp.WeightBeban;
+            string entityName = "";
+            string entityTag = "KARTU EVALUASI KINERJA K3LH";
+            string bebanLabel = "Skala Beban";
 
-            double scClose = (double)comp.ScoreCloseRate;
-            double scKualitas = (double)comp.ScoreKualitas;
-            double scCapaian = (double)comp.ScorePencapaian;
-            double scBeban = (double)comp.ScoreSkalaBeban;
+            try {
+                if (!string.IsNullOrEmpty((string)entity.DepartmentName)) {
+                    entityName = (string)entity.DepartmentName;
+                    entityTag = "KARTU EVALUASI DEPARTEMEN";
+                    bebanLabel = "Skala Beban Dept";
+                }
+            } catch {}
 
-            double ptClose = (double)comp.PtsClose;
-            double ptKualitas = (double)comp.PtsKualitas;
-            double ptCapaian = (double)comp.PtsPencapaian;
-            double ptBeban = (double)comp.PtsBeban;
-            double totScore = (double)comp.TotalScore;
+            if (string.IsNullOrEmpty(entityName)) {
+                try {
+                    if (!string.IsNullOrEmpty((string)entity.CompanyName)) {
+                        entityName = (string)entity.CompanyName;
+                        entityTag = "KARTU EVALUASI PERUSAHAAN";
+                        bebanLabel = "Skala Beban Tim";
+                    }
+                } catch {}
+            }
+
+            if (string.IsNullOrEmpty(entityName)) {
+                try {
+                    if (!string.IsNullOrEmpty((string)entity.name)) {
+                        entityName = (string)entity.name;
+                        entityTag = "KARTU EVALUASI PEMAIN";
+                        bebanLabel = "Skala Beban Target";
+                    }
+                } catch {}
+            }
+
+            if (string.IsNullOrEmpty(entityName)) {
+                entityName = "Klub / Skuad K3";
+            }
+            entityName = System.Net.WebUtility.HtmlEncode(entityName);
+
+            int wClose = 50, wKualitas = 25, wCapaian = 15, wBeban = 10;
+            try { wClose = (int)entity.WeightClose; } catch { try { wClose = (int)entity.weightClose; } catch {} }
+            try { wKualitas = (int)entity.WeightKualitas; } catch { try { wKualitas = (int)entity.weightKualitas; } catch {} }
+            try { wCapaian = (int)entity.WeightCapaian; } catch { try { wCapaian = (int)entity.weightCapaian; } catch {} }
+            try { wBeban = (int)entity.WeightBeban; } catch { try { wBeban = (int)entity.weightBeban; } catch {} }
+
+            double scClose = 0.0, scKualitas = 100.0, scCapaian = 0.0, scBeban = 0.0;
+            try { scClose = (double)entity.ScoreCloseRate; } catch { try { scClose = (double)entity.scoreCloseRate; } catch {} }
+            try { scKualitas = (double)entity.ScoreKualitas; } catch { try { scKualitas = (double)entity.scoreKualitas; } catch {} }
+            try { scCapaian = (double)entity.ScorePencapaian; } catch { try { scCapaian = (double)entity.scorePencapaian; } catch {} }
+            try { scBeban = (double)entity.ScoreSkalaBeban; } catch { try { scBeban = (double)entity.scoreSkalaBeban; } catch {} }
+
+            double ptClose = 0.0, ptKualitas = 0.0, ptCapaian = 0.0, ptBeban = 0.0, totScore = 0.0;
+            try { ptClose = (double)entity.PtsClose; } catch { try { ptClose = (double)entity.ptsClose; } catch {} }
+            try { ptKualitas = (double)entity.PtsKualitas; } catch { try { ptKualitas = (double)entity.ptsKualitas; } catch {} }
+            try { ptCapaian = (double)entity.PtsPencapaian; } catch { try { ptCapaian = (double)entity.ptsPencapaian; } catch {} }
+            try { ptBeban = (double)entity.PtsBeban; } catch { try { ptBeban = (double)entity.ptsBeban; } catch {} }
+            try { totScore = (double)entity.TotalScore; } catch { try { totScore = (double)entity.totalScore; } catch {} }
 
             double barClose = Math.Min(100.0, Math.Max(0.0, scClose));
             double barKualitas = Math.Min(100.0, Math.Max(0.0, scKualitas));
@@ -124,8 +163,8 @@
             return "<div class='pts-corp-card'>" +
                    "<div class='pts-corp-header'>" +
                        "<div class='pts-corp-meta'>" +
-                           "<span class='pts-corp-tag'>KARTU EVALUASI KINERJA K3LH</span>" +
-                           $"<div class='pts-corp-title' title='{compName}'>{compName}</div>" +
+                           $"<span class='pts-corp-tag'>{entityTag}</span>" +
+                           $"<div class='pts-corp-title' title='{entityName}'>{entityName}</div>" +
                        "</div>" +
                        "<div class='pts-corp-badge'>" +
                            $"<span class='pts-corp-badge-score'>{totScore:F1}</span>" +
@@ -188,7 +227,7 @@
                            "<div class='pts-corp-item-top'>" +
                                "<div class='pts-corp-indicator'>" +
                                    "<span class='pts-corp-dot' style='background: #06b6d4; box-shadow: 0 0 6px rgba(6, 182, 212, 0.6);'></span>" +
-                                   "<span class='pts-corp-name'>Skala Beban Tim</span>" +
+                                   $"<span class='pts-corp-name'>{bebanLabel}</span>" +
                                    $"<span class='pts-corp-weight'>{wBeban}%</span>" +
                                "</div>" +
                                "<div class='pts-corp-calc'>" +
@@ -1627,6 +1666,23 @@
                         </div>
                     </div>
 
+                    <!-- Formula Strip (Modern & Transparan) -->
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 px-3 rounded-3 mb-3" style="background: rgba(37, 99, 235, 0.05); border: 1px dashed #93c5fd;">
+                        <div class="d-flex align-items-center gap-2 flex-wrap" style="font-size: 11.5px;">
+                            <span class="fw-bold text-dark"><i class="bi bi-calculator me-1 text-primary"></i>Rumus Skor Total:</span>
+                            <span class="badge shadow-sm" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 11px;">🛡️ 50% Close Rate AP</span>
+                            <span class="text-muted fw-bold">+</span>
+                            <span class="badge shadow-sm" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 11px;">⭐ 25% Kualitas</span>
+                            <span class="text-muted fw-bold">+</span>
+                            <span class="badge shadow-sm" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 11px;">🎯 15% Capaian</span>
+                            <span class="text-muted fw-bold">+</span>
+                            <span class="badge shadow-sm" style="background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; font-size: 11px;">⚖️ 10% Skala Beban</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold" style="font-size: 11px; border-radius: 6px; padding: 3px 8px;" data-bs-toggle="modal" data-bs-target="#leagueScoringModal">
+                            <i class="bi bi-info-circle me-1"></i>Penjelasan Rumus
+                        </button>
+                    </div>
+
                     <div class="table-responsive league-table-wrap mb-3">
                         <table class="league-table">
                             <thead>
@@ -1802,6 +1858,23 @@
                         </div>
                     </div>
 
+                    <!-- Formula Strip (Modern & Transparan) -->
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 px-3 rounded-3 mb-3" style="background: rgba(37, 99, 235, 0.05); border: 1px dashed #93c5fd;">
+                        <div class="d-flex align-items-center gap-2 flex-wrap" style="font-size: 11.5px;">
+                            <span class="fw-bold text-dark"><i class="bi bi-calculator me-1 text-primary"></i>Rumus Skor Total:</span>
+                            <span class="badge shadow-sm" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 11px;">🛡️ 50% Close Rate AP</span>
+                            <span class="text-muted fw-bold">+</span>
+                            <span class="badge shadow-sm" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 11px;">⭐ 25% Kualitas</span>
+                            <span class="text-muted fw-bold">+</span>
+                            <span class="badge shadow-sm" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 11px;">🎯 15% Capaian</span>
+                            <span class="text-muted fw-bold">+</span>
+                            <span class="badge shadow-sm" style="background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; font-size: 11px;">⚖️ 10% Skala Beban</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold" style="font-size: 11px; border-radius: 6px; padding: 3px 8px;" data-bs-toggle="modal" data-bs-target="#leagueScoringModal">
+                            <i class="bi bi-info-circle me-1"></i>Penjelasan Rumus
+                        </button>
+                    </div>
+
                     <div class="table-responsive league-table-wrap mb-3">
                         <table class="league-table">
                             <thead>
@@ -1809,7 +1882,7 @@
                                     <th style="width: 50px;">Pos</th>
                                     <th class="align-left">Klub (Departemen)</th>
                                     <th style="width: 80px;">Skuad</th>
-                                    <th style="width: 100px; background-color: #1e3a8a;">PTS (Compliance %)</th>
+                                    <th style="width: 105px; background-color: #1e3a8a;" title="Poin Total Skor agregat (50% Close Rate + 25% Kualitas + 15% Capaian + 10% Beban)">PTS (Skor Total)</th>
                                     <th style="width: 120px;">Form (5 Laga)</th>
                                     <th style="width: 60px;">HZ</th>
                                     <th style="width: 60px;">IP</th>
@@ -1859,7 +1932,7 @@
                                         var shieldColor = GetDeptColor(dept.DepartmentName);
                                         var initials = GetDeptInitials(dept.DepartmentName);
 
-                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(dept.MtdAchievementRate) !important;" onclick="filterPlayerTable('@dept.DepartmentName.Replace("'", "\\'")');">
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(dept.TotalScore) !important;" onclick="filterPlayerTable('@dept.DepartmentName.Replace("'", "\\'")');">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass">@rankText</div>
                                             </td>
@@ -1868,7 +1941,16 @@
                                                 <span class="fw-bold" style="color: #334155;">@dept.DepartmentName</span>
                                             </td>
                                             <td class="text-center">@dept.EmployeeCount</td>
-                                            <td class="text-center fw-bold" style="color: @GetRateColor(dept.MtdAchievementRate); background-color: rgba(30, 58, 138, 0.03);">@dept.MtdAchievementRate%</td>
+                                            <td class="text-center fw-bold" style="color: @GetRateColor(dept.TotalScore); background-color: rgba(30, 58, 138, 0.03);"
+                                                data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="@BuildPtsTooltip(dept)">
+                                                <div class="d-inline-flex flex-column align-items-center" style="cursor: help;" onclick="event.stopPropagation();">
+                                                    <div class="d-inline-flex align-items-center gap-1">
+                                                        <span style="font-size: 13px; font-weight: 800;">@(dept.TotalScore.ToString("F1"))</span>
+                                                        <i class="bi bi-info-circle text-muted" style="font-size: 9px;"></i>
+                                                    </div>
+                                                    <div style="font-size: 9px; color: #64748b; font-weight: 500;">@dept.MtdAchievementRate% cap.</div>
+                                                </div>
+                                            </td>
                                             <td class="text-center" style="white-space: nowrap;">
                                                 @GetFormDotsHtml(dept.MtdHazardRate, dept.MtdInspeksiRate, dept.MtdSafetyTalkRate, dept.MtdObservasiRate, dept.MtdCoachingRate)
                                             </td>
@@ -1901,7 +1983,7 @@
                                             <tr>
                                                 <th class="align-left">Klub (Departemen)</th>
                                                 <th style="width: 80px;">Skuad</th>
-                                                <th style="width: 100px; background-color: #991b1b; color: white;">PTS (Compliance %)</th>
+                                                <th style="width: 105px; background-color: #991b1b; color: white;">PTS (Skor Total)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1915,7 +1997,7 @@
                                                         <span class="fw-bold" style="color: #991b1b;">@dept.DepartmentName</span>
                                                     </td>
                                                     <td class="text-center text-danger">@dept.EmployeeCount</td>
-                                                    <td class="text-center fw-bold text-danger">0%</td>
+                                                    <td class="text-center fw-bold text-danger">0.0</td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -1983,7 +2065,7 @@
                                 <tr style="position: sticky; top: 0; z-index: 10;">
                                     <th style="width: 50px; background: #0f172a;">Pos</th>
                                     <th class="align-left" style="background: #0f172a;">Pemain</th>
-                                    <th style="width: 90px; background: #0f172a;">PTS %</th>
+                                    <th style="width: 105px; background: #0f172a;" title="Poin Total Skor agregat (50% Close Rate + 25% Kualitas + 15% Capaian + 10% Beban)">PTS (Skor Total)</th>
                                     <th style="width: 110px; background: #0f172a;">Form (5 Program)</th>
                                     <th style="background: #0f172a; width: 80px;">Rincian</th>
                                 </tr>
@@ -2034,7 +2116,7 @@
                                             rankClass = "league-rank-relegation";
                                         }
 
-                                        var rowStyle = zeroTarget ? "background-color: #f8fafc !important;" : $"background-color: {GetRowBgColor((double)emp.complianceRate)} !important;";
+                                        var rowStyle = zeroTarget ? "background-color: #f8fafc !important;" : $"background-color: {GetRowBgColor((double)emp.totalScore)} !important;";
 
                                         <tr class="@rowClass player-row" style="@rowStyle" data-dept="@emp.departmentName">
                                             <td class="text-center">
@@ -2085,21 +2167,13 @@
                                                     }
                                                 </div>
                                             </td>
-                                            <td class="text-center fw-bold" style="font-size: 13px;">
-                                                @if (emp.isNonTarget == true)
+                                            <td class="text-center fw-bold" style="font-size: 13px; color: @GetRateColor((double)emp.totalScore); background-color: rgba(30, 58, 138, 0.03);"
+                                                data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="@BuildPtsTooltip(emp)">
+                                                @if (emp.isNonTarget == true && emp.isActivelyReporting != true)
                                                 {
-                                                    if (emp.isActivelyReporting == true)
-                                                    {
-                                                        <span class="badge bg-success text-white" style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px;" title="Aktif membuat @emp.totalActualAll laporan SAP">
-                                                            AKTIF (@emp.totalActualAll)
-                                                        </span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="badge" style="background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;" title="Non-Target SAP">
-                                                            NON-TARGET
-                                                        </span>
-                                                    }
+                                                    <span class="badge" style="background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;" title="Non-Target SAP">
+                                                        NON-TARGET
+                                                    </span>
                                                 }
                                                 else if (zeroTarget)
                                                 {
@@ -2109,7 +2183,13 @@
                                                 }
                                                 else
                                                 {
-                                                    <span style="color: @GetRateColor(emp.complianceRate);">@emp.complianceRate%</span>
+                                                    <div class="d-inline-flex flex-column align-items-center" style="cursor: help;">
+                                                        <div class="d-inline-flex align-items-center gap-1">
+                                                            <span style="font-size: 13px; font-weight: 800;">@(((double)emp.totalScore).ToString("F1"))</span>
+                                                            <i class="bi bi-info-circle text-muted" style="font-size: 9px;"></i>
+                                                        </div>
+                                                        <div style="font-size: 9px; color: #64748b; font-weight: 500;">@emp.complianceRate% cap.</div>
+                                                    </div>
                                                 }
                                             </td>
                                             <td class="text-center" style="white-space: nowrap;">

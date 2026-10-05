@@ -3715,31 +3715,88 @@ namespace MBS_SAP.Controllers
                     filteredEmployees = scopedEmployees.Where(e => (bool)e.isTargetSap);
                 }
 
+                int maxEmpTargetComp = filteredEmployees.Any(e => (bool)e.isTargetSap)
+                    ? filteredEmployees.Where(e => (bool)e.isTargetSap).Max(e => (int)e.mtdTotalTarget)
+                    : 1;
+                if (maxEmpTargetComp <= 0) maxEmpTargetComp = 1;
+
                 var sortedEmployees = filteredEmployees
-                    .Select(e => new {
-                        name = (string)e.karyawanName,
-                        nik = (string)e.nik,
-                        departmentName = (string)e.departmentName,
-                        jabatanName = (string)e.jabatanName,
-                        isTargetSap = (bool)e.isTargetSap,
-                        isNonTarget = (bool)e.isNonTarget,
-                        isActivelyReporting = (bool)e.isActivelyReporting,
-                        totalActualAll = (int)e.totalActualAll,
-                        complianceRate = (double)e.complianceRate,
-                        closeRate = (double)e.closeRate,
-                        mtdTotalTarget = (int)e.mtdTotalTarget,
-                        onsiteDays = (int)e.onsiteDays,
-                        hasRoster = (bool)e.hasRoster,
-                        isNewHire = (bool)(e.isNewHire ?? false),
-                        tanggalMasukStr = (string?)e.tanggalMasukStr,
-                        hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
-                        inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
-                        safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
-                        observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
-                        coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
-                        p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                    .Select(e => {
+                        bool isZeroTarget = ((int)e.mtdTotalTarget == 0 || ((bool)e.hasRoster && (int)e.onsiteDays == 0));
+                        double scorePencapaian = (double)e.complianceRate;
+                        double scoreCloseRate = (double)e.closeRate;
+                        double scoreKualitas = 100.0;
+                        double scoreSkalaBeban = 0.0;
+
+                        if ((bool)e.isTargetSap && !isZeroTarget)
+                        {
+                            scoreSkalaBeban = maxEmpTargetComp > 0 ? (Math.Log10((int)e.mtdTotalTarget + 1) / Math.Log10(maxEmpTargetComp + 1)) * 100.0 : 0.0;
+                        }
+                        else if ((bool)e.isNonTarget && (bool)e.isActivelyReporting)
+                        {
+                            scorePencapaian = 100.0;
+                            scoreSkalaBeban = maxEmpTargetComp > 0 ? Math.Min(100.0, (Math.Log10((int)e.totalActualAll + 1) / Math.Log10(maxEmpTargetComp + 1)) * 100.0) : 0.0;
+                        }
+
+                        double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
+                        double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
+                        double ptsPencapaian = Math.Round(scorePencapaian * 0.15, 2);
+                        double ptsBeban = Math.Round(scoreSkalaBeban * 0.10, 2);
+                        double empTotalScore = isZeroTarget ? 0.0 : Math.Round(ptsClose + ptsKualitas + ptsPencapaian + ptsBeban, 2);
+
+                        return new {
+                            name = (string)e.karyawanName,
+                            nik = (string)e.nik,
+                            departmentName = (string)e.departmentName,
+                            jabatanName = (string)e.jabatanName,
+                            isTargetSap = (bool)e.isTargetSap,
+                            isNonTarget = (bool)e.isNonTarget,
+                            isActivelyReporting = (bool)e.isActivelyReporting,
+                            totalActualAll = (int)e.totalActualAll,
+                            complianceRate = (double)e.complianceRate,
+                            closeRate = (double)e.closeRate,
+                            mtdTotalTarget = (int)e.mtdTotalTarget,
+                            onsiteDays = (int)e.onsiteDays,
+                            hasRoster = (bool)e.hasRoster,
+                            isNewHire = (bool)(e.isNewHire ?? false),
+                            tanggalMasukStr = (string?)e.tanggalMasukStr,
+                            hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
+                            inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
+                            safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
+                            observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
+                            coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
+                            p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target },
+                            totalScore = empTotalScore,
+                            TotalScore = empTotalScore,
+                            scoreCloseRate = Math.Round(scoreCloseRate, 1),
+                            scoreKualitas = Math.Round(scoreKualitas, 1),
+                            scorePencapaian = Math.Round(scorePencapaian, 1),
+                            scoreSkalaBeban = Math.Round(scoreSkalaBeban, 1),
+                            ScoreCloseRate = Math.Round(scoreCloseRate, 1),
+                            ScoreKualitas = Math.Round(scoreKualitas, 1),
+                            ScorePencapaian = Math.Round(scorePencapaian, 1),
+                            ScoreSkalaBeban = Math.Round(scoreSkalaBeban, 1),
+                            ptsClose = ptsClose,
+                            ptsKualitas = ptsKualitas,
+                            ptsPencapaian = ptsPencapaian,
+                            ptsBeban = ptsBeban,
+                            PtsClose = ptsClose,
+                            PtsKualitas = ptsKualitas,
+                            PtsPencapaian = ptsPencapaian,
+                            PtsBeban = ptsBeban,
+                            weightClose = 50,
+                            weightKualitas = 25,
+                            weightCapaian = 15,
+                            weightBeban = 10,
+                            WeightClose = 50,
+                            WeightKualitas = 25,
+                            WeightCapaian = 15,
+                            WeightBeban = 10
+                        };
                     })
                     .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
+                    .ThenByDescending(e => e.totalScore)
+                    .ThenByDescending(e => e.closeRate)
                     .ThenByDescending(e => e.complianceRate)
                     .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                     .ToList();
@@ -3814,7 +3871,50 @@ namespace MBS_SAP.Controllers
                             MtdCloseRate = deptCloseRate
                         };
                     })
-                    .OrderByDescending(d => d.MtdAchievementRate)
+                    .ToList();
+
+                int maxDeptTarget = deptAchievements.Any() ? deptAchievements.Max(d => d.TotalTarget) : 1;
+                if (maxDeptTarget <= 0) maxDeptTarget = 1;
+
+                bool isCurrentNewPolicy = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
+                ViewBag.IsNewPolicyPeriod = isCurrentNewPolicy;
+
+                double wClose = isCurrentNewPolicy ? 0.50 : 0.40;
+                double wKualitas = 0.25;
+                double wCapaian = isCurrentNewPolicy ? 0.15 : 0.20;
+                double wBeban = isCurrentNewPolicy ? 0.10 : 0.15;
+
+                foreach (var d in deptAchievements)
+                {
+                    double scorePencapaian = d.MtdAchievementRate;
+                    double scoreSkalaBeban = maxDeptTarget > 0 ? (Math.Log10(d.TotalTarget + 1) / Math.Log10(maxDeptTarget + 1)) * 100.0 : 0.0;
+                    double scoreCloseRate = d.MtdCloseRate;
+                    double scoreKualitas = 100.0; // Mutu AI 5.0/5.0 * 100
+
+                    double ptsClose = Math.Round(scoreCloseRate * wClose, 2);
+                    double ptsKualitas = Math.Round(scoreKualitas * wKualitas, 2);
+                    double ptsPencapaian = Math.Round(scorePencapaian * wCapaian, 2);
+                    double ptsBeban = Math.Round(scoreSkalaBeban * wBeban, 2);
+
+                    d.ScoreCloseRate = Math.Round(scoreCloseRate, 1);
+                    d.ScoreKualitas = Math.Round(scoreKualitas, 1);
+                    d.ScorePencapaian = Math.Round(scorePencapaian, 1);
+                    d.ScoreSkalaBeban = Math.Round(scoreSkalaBeban, 1);
+                    d.PtsClose = ptsClose;
+                    d.PtsKualitas = ptsKualitas;
+                    d.PtsPencapaian = ptsPencapaian;
+                    d.PtsBeban = ptsBeban;
+                    d.WeightClose = (int)(wClose * 100);
+                    d.WeightKualitas = (int)(wKualitas * 100);
+                    d.WeightCapaian = (int)(wCapaian * 100);
+                    d.WeightBeban = (int)(wBeban * 100);
+                    d.TotalScore = Math.Round(ptsClose + ptsKualitas + ptsPencapaian + ptsBeban, 2);
+                }
+
+                deptAchievements = deptAchievements
+                    .OrderByDescending(d => d.TotalScore)
+                    .ThenByDescending(d => d.MtdCloseRate)
+                    .ThenByDescending(d => d.MtdAchievementRate)
                     .ToList();
 
                 var activeDeptAchievements = deptAchievements.Where(d => d.TotalTarget > 0).ToList();
@@ -3839,30 +3939,87 @@ namespace MBS_SAP.Controllers
                     filteredEmployees = employees.Where(e => (bool)e.isTargetSap);
                 }
 
-                var sortedEmployees = filteredEmployees.Select(e => new {
-                    name = (string)e.karyawanName,
-                    nik = (string)e.nik,
-                    departmentName = (string)e.departmentName,
-                    jabatanName = (string)e.jabatanName,
-                    isTargetSap = (bool)e.isTargetSap,
-                    isNonTarget = (bool)e.isNonTarget,
-                    isActivelyReporting = (bool)e.isActivelyReporting,
-                    totalActualAll = (int)e.totalActualAll,
-                    complianceRate = (double)e.complianceRate,
-                    closeRate = (double)e.closeRate,
-                    mtdTotalTarget = (int)e.mtdTotalTarget,
-                    onsiteDays = (int)e.onsiteDays,
-                    hasRoster = (bool)e.hasRoster,
-                    isNewHire = (bool)(e.isNewHire ?? false),
-                    tanggalMasukStr = (string?)e.tanggalMasukStr,
-                    hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
-                    inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
-                    safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
-                    observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
-                    coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
-                    p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                int maxEmpTargetDept = filteredEmployees.Any(e => (bool)e.isTargetSap)
+                    ? filteredEmployees.Where(e => (bool)e.isTargetSap).Max(e => (int)e.mtdTotalTarget)
+                    : 1;
+                if (maxEmpTargetDept <= 0) maxEmpTargetDept = 1;
+
+                var sortedEmployees = filteredEmployees.Select(e => {
+                    bool isZeroTarget = ((int)e.mtdTotalTarget == 0 || ((bool)e.hasRoster && (int)e.onsiteDays == 0));
+                    double scorePencapaian = (double)e.complianceRate;
+                    double scoreCloseRate = (double)e.closeRate;
+                    double scoreKualitas = 100.0;
+                    double scoreSkalaBeban = 0.0;
+
+                    if ((bool)e.isTargetSap && !isZeroTarget)
+                    {
+                        scoreSkalaBeban = maxEmpTargetDept > 0 ? (Math.Log10((int)e.mtdTotalTarget + 1) / Math.Log10(maxEmpTargetDept + 1)) * 100.0 : 0.0;
+                    }
+                    else if ((bool)e.isNonTarget && (bool)e.isActivelyReporting)
+                    {
+                        scorePencapaian = 100.0;
+                        scoreSkalaBeban = maxEmpTargetDept > 0 ? Math.Min(100.0, (Math.Log10((int)e.totalActualAll + 1) / Math.Log10(maxEmpTargetDept + 1)) * 100.0) : 0.0;
+                    }
+
+                    double ptsClose = Math.Round(scoreCloseRate * wClose, 2);
+                    double ptsKualitas = Math.Round(scoreKualitas * wKualitas, 2);
+                    double ptsPencapaian = Math.Round(scorePencapaian * wCapaian, 2);
+                    double ptsBeban = Math.Round(scoreSkalaBeban * wBeban, 2);
+                    double empTotalScore = isZeroTarget ? 0.0 : Math.Round(ptsClose + ptsKualitas + ptsPencapaian + ptsBeban, 2);
+
+                    return new {
+                        name = (string)e.karyawanName,
+                        nik = (string)e.nik,
+                        departmentName = (string)e.departmentName,
+                        jabatanName = (string)e.jabatanName,
+                        isTargetSap = (bool)e.isTargetSap,
+                        isNonTarget = (bool)e.isNonTarget,
+                        isActivelyReporting = (bool)e.isActivelyReporting,
+                        totalActualAll = (int)e.totalActualAll,
+                        complianceRate = (double)e.complianceRate,
+                        closeRate = (double)e.closeRate,
+                        mtdTotalTarget = (int)e.mtdTotalTarget,
+                        onsiteDays = (int)e.onsiteDays,
+                        hasRoster = (bool)e.hasRoster,
+                        isNewHire = (bool)(e.isNewHire ?? false),
+                        tanggalMasukStr = (string?)e.tanggalMasukStr,
+                        hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
+                        inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
+                        safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
+                        observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
+                        coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
+                        p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target },
+                        totalScore = empTotalScore,
+                        TotalScore = empTotalScore,
+                        scoreCloseRate = Math.Round(scoreCloseRate, 1),
+                        scoreKualitas = Math.Round(scoreKualitas, 1),
+                        scorePencapaian = Math.Round(scorePencapaian, 1),
+                        scoreSkalaBeban = Math.Round(scoreSkalaBeban, 1),
+                        ScoreCloseRate = Math.Round(scoreCloseRate, 1),
+                        ScoreKualitas = Math.Round(scoreKualitas, 1),
+                        ScorePencapaian = Math.Round(scorePencapaian, 1),
+                        ScoreSkalaBeban = Math.Round(scoreSkalaBeban, 1),
+                        ptsClose = ptsClose,
+                        ptsKualitas = ptsKualitas,
+                        ptsPencapaian = ptsPencapaian,
+                        ptsBeban = ptsBeban,
+                        PtsClose = ptsClose,
+                        PtsKualitas = ptsKualitas,
+                        PtsPencapaian = ptsPencapaian,
+                        PtsBeban = ptsBeban,
+                        weightClose = (int)(wClose * 100),
+                        weightKualitas = (int)(wKualitas * 100),
+                        weightCapaian = (int)(wCapaian * 100),
+                        weightBeban = (int)(wBeban * 100),
+                        WeightClose = (int)(wClose * 100),
+                        WeightKualitas = (int)(wKualitas * 100),
+                        WeightCapaian = (int)(wCapaian * 100),
+                        WeightBeban = (int)(wBeban * 100)
+                    };
                 })
                 .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
+                .ThenByDescending(e => e.totalScore)
+                .ThenByDescending(e => e.closeRate)
                 .ThenByDescending(e => e.complianceRate)
                 .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                 .ToList();
@@ -4232,7 +4389,49 @@ namespace MBS_SAP.Controllers
                             MtdCloseRate = deptCloseRate
                         };
                     })
-                    .OrderByDescending(d => d.MtdAchievementRate)
+                    .ToList();
+
+                int maxDeptTarget = deptAchievements.Any() ? deptAchievements.Max(d => d.TotalTarget) : 1;
+                if (maxDeptTarget <= 0) maxDeptTarget = 1;
+
+                bool isCurrentNewPolicy = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
+
+                double wClose = isCurrentNewPolicy ? 0.50 : 0.40;
+                double wKualitas = 0.25;
+                double wCapaian = isCurrentNewPolicy ? 0.15 : 0.20;
+                double wBeban = isCurrentNewPolicy ? 0.10 : 0.15;
+
+                foreach (var d in deptAchievements)
+                {
+                    double scorePencapaian = d.MtdAchievementRate;
+                    double scoreSkalaBeban = maxDeptTarget > 0 ? (Math.Log10(d.TotalTarget + 1) / Math.Log10(maxDeptTarget + 1)) * 100.0 : 0.0;
+                    double scoreCloseRate = d.MtdCloseRate;
+                    double scoreKualitas = 100.0;
+
+                    double ptsClose = Math.Round(scoreCloseRate * wClose, 2);
+                    double ptsKualitas = Math.Round(scoreKualitas * wKualitas, 2);
+                    double ptsPencapaian = Math.Round(scorePencapaian * wCapaian, 2);
+                    double ptsBeban = Math.Round(scoreSkalaBeban * wBeban, 2);
+
+                    d.ScoreCloseRate = Math.Round(scoreCloseRate, 1);
+                    d.ScoreKualitas = Math.Round(scoreKualitas, 1);
+                    d.ScorePencapaian = Math.Round(scorePencapaian, 1);
+                    d.ScoreSkalaBeban = Math.Round(scoreSkalaBeban, 1);
+                    d.PtsClose = ptsClose;
+                    d.PtsKualitas = ptsKualitas;
+                    d.PtsPencapaian = ptsPencapaian;
+                    d.PtsBeban = ptsBeban;
+                    d.WeightClose = (int)(wClose * 100);
+                    d.WeightKualitas = (int)(wKualitas * 100);
+                    d.WeightCapaian = (int)(wCapaian * 100);
+                    d.WeightBeban = (int)(wBeban * 100);
+                    d.TotalScore = Math.Round(ptsClose + ptsKualitas + ptsPencapaian + ptsBeban, 2);
+                }
+
+                deptAchievements = deptAchievements
+                    .OrderByDescending(d => d.TotalScore)
+                    .ThenByDescending(d => d.MtdCloseRate)
+                    .ThenByDescending(d => d.MtdAchievementRate)
                     .ToList();
             }
 
@@ -4260,28 +4459,66 @@ namespace MBS_SAP.Controllers
                 employeesData = employeesData.Where(e => (bool)e.isTargetSap).ToList();
             }
 
+            int maxEmpTargetExport = employeesData.Any(e => (bool)e.isTargetSap)
+                ? employeesData.Where(e => (bool)e.isTargetSap).Max(e => (int)e.mtdTotalTarget)
+                : 1;
+            if (maxEmpTargetExport <= 0) maxEmpTargetExport = 1;
+
+            bool isExportNewPolicy = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
+            double expWClose = isExportNewPolicy ? 0.50 : 0.40;
+            double expWKualitas = 0.25;
+            double expWCapaian = isExportNewPolicy ? 0.15 : 0.20;
+            double expWBeban = isExportNewPolicy ? 0.10 : 0.15;
+
             var sorted = employeesData
-                .Select(e => new {
-                    name = (string)e.karyawanName,
-                    nik = (string)e.nik,
-                    departmentName = (string)e.departmentName,
-                    jabatanName = (string)e.jabatanName,
-                    isTargetSap = (bool)e.isTargetSap,
-                    isNonTarget = (bool)e.isNonTarget,
-                    isActivelyReporting = (bool)e.isActivelyReporting,
-                    complianceRate = (double)e.complianceRate,
-                    closeRate = (double)e.closeRate,
-                    mtdTotalTarget = (int)e.mtdTotalTarget,
-                    onsiteDays = (int)e.onsiteDays,
-                    hasRoster = (bool)e.hasRoster,
-                    hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
-                    inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
-                    safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
-                    observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
-                    coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
-                    p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                .Select(e => {
+                    bool isZeroTarget = ((int)e.mtdTotalTarget == 0 || ((bool)e.hasRoster && (int)e.onsiteDays == 0));
+                    double scorePencapaian = (double)e.complianceRate;
+                    double scoreCloseRate = (double)e.closeRate;
+                    double scoreKualitas = 100.0;
+                    double scoreSkalaBeban = 0.0;
+
+                    if ((bool)e.isTargetSap && !isZeroTarget)
+                    {
+                        scoreSkalaBeban = maxEmpTargetExport > 0 ? (Math.Log10((int)e.mtdTotalTarget + 1) / Math.Log10(maxEmpTargetExport + 1)) * 100.0 : 0.0;
+                    }
+                    else if ((bool)e.isNonTarget && (bool)e.isActivelyReporting)
+                    {
+                        scorePencapaian = 100.0;
+                        scoreSkalaBeban = maxEmpTargetExport > 0 ? Math.Min(100.0, (Math.Log10((int)e.totalActualAll + 1) / Math.Log10(maxEmpTargetExport + 1)) * 100.0) : 0.0;
+                    }
+
+                    double ptsClose = Math.Round(scoreCloseRate * expWClose, 2);
+                    double ptsKualitas = Math.Round(scoreKualitas * expWKualitas, 2);
+                    double ptsPencapaian = Math.Round(scorePencapaian * expWCapaian, 2);
+                    double ptsBeban = Math.Round(scoreSkalaBeban * expWBeban, 2);
+                    double empTotalScore = isZeroTarget ? 0.0 : Math.Round(ptsClose + ptsKualitas + ptsPencapaian + ptsBeban, 2);
+
+                    return new {
+                        name = (string)e.karyawanName,
+                        nik = (string)e.nik,
+                        departmentName = (string)e.departmentName,
+                        jabatanName = (string)e.jabatanName,
+                        isTargetSap = (bool)e.isTargetSap,
+                        isNonTarget = (bool)e.isNonTarget,
+                        isActivelyReporting = (bool)e.isActivelyReporting,
+                        complianceRate = (double)e.complianceRate,
+                        closeRate = (double)e.closeRate,
+                        totalScore = empTotalScore,
+                        mtdTotalTarget = (int)e.mtdTotalTarget,
+                        onsiteDays = (int)e.onsiteDays,
+                        hasRoster = (bool)e.hasRoster,
+                        hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
+                        inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
+                        safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
+                        observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
+                        coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
+                        p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                    };
                 })
                 .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
+                .ThenByDescending(e => e.totalScore)
+                .ThenByDescending(e => e.closeRate)
                 .ThenByDescending(e => e.complianceRate)
                 .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                 .ToList();
@@ -4335,7 +4572,7 @@ namespace MBS_SAP.Controllers
                 else
                 {
                     stdHeaders = new[] {
-                        "Pos", clubHeader, "Skuad (Orang)", "Total Target", "Kepatuhan SAP (%)",
+                        "Pos", clubHeader, "Skuad (Orang)", "Total Target", "PTS (Skor Total)", "Capaian (%)",
                         "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *", "Close Rate (%)"
                     };
                 }
@@ -4372,10 +4609,12 @@ namespace MBS_SAP.Controllers
                     }
                     else
                     {
-                        if (i == 10)
+                        if (i == 11)
                             cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber P5M
-                        else if (i == 11)
+                        else if (i == 12)
                             cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald Close Rate
+                        else if (i == 4)
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // PTS
                         else
                             cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
                     }
@@ -4493,7 +4732,9 @@ namespace MBS_SAP.Controllers
                 {
                     var sortedDept = deptAchievements
                         .Where(d => d.TotalTarget > 0)
-                        .OrderByDescending(d => d.MtdAchievementRate)
+                        .OrderByDescending(d => d.TotalScore)
+                        .ThenByDescending(d => d.MtdCloseRate)
+                        .ThenByDescending(d => d.MtdAchievementRate)
                         .ToList();
 
                     foreach (var dept in sortedDept)
@@ -4503,17 +4744,21 @@ namespace MBS_SAP.Controllers
                         wsStandings.Cell(sRow, 3).Value = dept.EmployeeCount;
                         wsStandings.Cell(sRow, 4).Value = dept.TotalTarget;
 
-                        wsStandings.Cell(sRow, 5).Value = dept.MtdAchievementRate;
-                        wsStandings.Cell(sRow, 5).Style.NumberFormat.Format = "0.0\"%\"";
+                        wsStandings.Cell(sRow, 5).Value = dept.TotalScore;
+                        wsStandings.Cell(sRow, 5).Style.NumberFormat.Format = "0.00";
                         wsStandings.Cell(sRow, 5).Style.Font.Bold = true;
 
-                        SetRateCell(wsStandings.Cell(sRow, 6), dept.MtdHazardRate);
-                        SetRateCell(wsStandings.Cell(sRow, 7), dept.MtdInspeksiRate);
-                        SetRateCell(wsStandings.Cell(sRow, 8), dept.MtdSafetyTalkRate);
-                        SetRateCell(wsStandings.Cell(sRow, 9), dept.MtdObservasiRate);
-                        SetRateCell(wsStandings.Cell(sRow, 10), dept.MtdCoachingRate);
-                        SetRateCell(wsStandings.Cell(sRow, 11), dept.MtdP5mRate);
-                        SetRateCell(wsStandings.Cell(sRow, 12), dept.MtdCloseRate);
+                        wsStandings.Cell(sRow, 6).Value = dept.MtdAchievementRate;
+                        wsStandings.Cell(sRow, 6).Style.NumberFormat.Format = "0.0\"%\"";
+                        wsStandings.Cell(sRow, 6).Style.Font.Bold = false;
+
+                        SetRateCell(wsStandings.Cell(sRow, 7), dept.MtdHazardRate);
+                        SetRateCell(wsStandings.Cell(sRow, 8), dept.MtdInspeksiRate);
+                        SetRateCell(wsStandings.Cell(sRow, 9), dept.MtdSafetyTalkRate);
+                        SetRateCell(wsStandings.Cell(sRow, 10), dept.MtdObservasiRate);
+                        SetRateCell(wsStandings.Cell(sRow, 11), dept.MtdCoachingRate);
+                        SetRateCell(wsStandings.Cell(sRow, 12), dept.MtdP5mRate);
+                        SetRateCell(wsStandings.Cell(sRow, 13), dept.MtdCloseRate);
 
                         // Alignments
                         wsStandings.Cell(sRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -4521,12 +4766,13 @@ namespace MBS_SAP.Controllers
                         wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                        for (int c = 6; c <= 12; c++)
+                        wsStandings.Cell(sRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                        for (int c = 7; c <= 13; c++)
                         {
                             wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         }
 
-                        var sRowRange = wsStandings.Range(sRow, 1, sRow, 12);
+                        var sRowRange = wsStandings.Range(sRow, 1, sRow, 13);
                         sRowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                         sRowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                         sRowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -4544,10 +4790,11 @@ namespace MBS_SAP.Controllers
                 }
 
                 wsStandings.SheetView.FreezeRows(6);
+                int maxCols = isCompanyMode ? 14 : 13;
                 if (sRow > 7)
                 {
-                    wsStandings.Range(6, 1, sRow - 1, 12).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    wsStandings.Range(6, 1, sRow - 1, 12).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
+                    wsStandings.Range(6, 1, sRow - 1, maxCols).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    wsStandings.Range(6, 1, sRow - 1, maxCols).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
                 }
                 wsStandings.Columns().AdjustToContents();
                 foreach (var col in wsStandings.ColumnsUsed())
@@ -4585,7 +4832,7 @@ namespace MBS_SAP.Controllers
 
                 // Setup Table Headers
                 string[] squadHeaders = new[] {
-                    "Peringkat", "Nama Karyawan", "NIK", "Departemen", "Jabatan", "Kategori SAP", "Status Roster", "Kepatuhan (%)",
+                    "Peringkat", "Nama Karyawan", "NIK", "Departemen", "Jabatan", "Kategori SAP", "Status Roster", "PTS (Skor Total)", "Capaian (%)",
                     "Hazard Actual", "Hazard Target", "Inspeksi Actual", "Inspeksi Target",
                     "Safety Talk Actual", "Safety Talk Target", "Observasi Actual", "Observasi Target",
                     "Coaching Actual", "Coaching Target", "P5M Actual *", "P5M Target", "Close Rate (%)"
@@ -4599,9 +4846,11 @@ namespace MBS_SAP.Controllers
                     cell.Style.Font.FontSize = 10;
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                    if (i == 18 || i == 19) // P5M
+                    if (i == 7) // PTS (Skor Total)
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a");
+                    else if (i == 19 || i == 20) // P5M
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber
-                    else if (i == 20) // Close Rate
+                    else if (i == 21) // Close Rate
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald
                     else
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
@@ -4621,29 +4870,34 @@ namespace MBS_SAP.Controllers
                     wsSquad.Cell(row, 6).Value = emp.isTargetSap ? "Target SAP" : (emp.isActivelyReporting ? "Non-Target (Aktif)" : "Non-Target");
                     wsSquad.Cell(row, 7).Value = emp.hasRoster ? $"{emp.onsiteDays} Hari Onsite" : "Belum Roster";
                     
-                    var compCell = wsSquad.Cell(row, 8);
+                    var ptsCell = wsSquad.Cell(row, 8);
+                    ptsCell.Value = emp.totalScore;
+                    ptsCell.Style.NumberFormat.Format = "0.00";
+                    ptsCell.Style.Font.Bold = true;
+
+                    var compCell = wsSquad.Cell(row, 9);
                     compCell.Value = emp.complianceRate;
                     compCell.Style.NumberFormat.Format = "0.0\"%\"";
 
-                    wsSquad.Cell(row, 9).Value = emp.hazard.actual;
-                    wsSquad.Cell(row, 10).Value = emp.hazard.target;
+                    wsSquad.Cell(row, 10).Value = emp.hazard.actual;
+                    wsSquad.Cell(row, 11).Value = emp.hazard.target;
                     
-                    wsSquad.Cell(row, 11).Value = emp.inspeksi.actual;
-                    wsSquad.Cell(row, 12).Value = emp.inspeksi.target;
+                    wsSquad.Cell(row, 12).Value = emp.inspeksi.actual;
+                    wsSquad.Cell(row, 13).Value = emp.inspeksi.target;
 
-                    wsSquad.Cell(row, 13).Value = emp.safetyTalk.actual;
-                    wsSquad.Cell(row, 14).Value = emp.safetyTalk.target;
+                    wsSquad.Cell(row, 14).Value = emp.safetyTalk.actual;
+                    wsSquad.Cell(row, 15).Value = emp.safetyTalk.target;
 
-                    wsSquad.Cell(row, 15).Value = emp.observasi.actual;
-                    wsSquad.Cell(row, 16).Value = emp.observasi.target;
+                    wsSquad.Cell(row, 16).Value = emp.observasi.actual;
+                    wsSquad.Cell(row, 17).Value = emp.observasi.target;
 
-                    wsSquad.Cell(row, 17).Value = emp.coaching.actual;
-                    wsSquad.Cell(row, 18).Value = emp.coaching.target;
+                    wsSquad.Cell(row, 18).Value = emp.coaching.actual;
+                    wsSquad.Cell(row, 19).Value = emp.coaching.target;
 
-                    wsSquad.Cell(row, 19).Value = emp.p5m.actual;
-                    wsSquad.Cell(row, 20).Value = emp.p5m.target;
+                    wsSquad.Cell(row, 20).Value = emp.p5m.actual;
+                    wsSquad.Cell(row, 21).Value = emp.p5m.target;
 
-                    var crCell = wsSquad.Cell(row, 21);
+                    var crCell = wsSquad.Cell(row, 22);
                     SetRateCell(crCell, emp.closeRate);
 
                     // Alignments
@@ -4655,16 +4909,17 @@ namespace MBS_SAP.Controllers
                     wsSquad.Cell(row, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     wsSquad.Cell(row, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     wsSquad.Cell(row, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                    for (int c = 9; c <= 21; c++)
+                    wsSquad.Cell(row, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    for (int c = 10; c <= 22; c++)
                     {
                         wsSquad.Cell(row, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     }
 
                     // Format values as number
-                    for (int c = 9; c <= 20; c++)
+                    for (int c = 10; c <= 21; c++)
                     {
                         wsSquad.Cell(row, c).Style.NumberFormat.Format = "#,##0";
-                        if (c % 2 != 0) // Actual columns: 9, 11, 13, 15, 17, 19
+                        if (c % 2 == 0) // Actual columns: 10, 12, 14, 16, 18, 20
                         {
                             wsSquad.Cell(row, c).Style.Font.Bold = true;
                         }
@@ -4681,7 +4936,7 @@ namespace MBS_SAP.Controllers
                     compCell.Style.Font.Bold = true;
 
                     // Border styling
-                    var rowRange = wsSquad.Range(row, 1, row, 21);
+                    var rowRange = wsSquad.Range(row, 1, row, 22);
                     rowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     rowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                     rowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -4719,8 +4974,8 @@ namespace MBS_SAP.Controllers
                 // Add thick outer border to the entire table
                 if (row > 7)
                 {
-                    wsSquad.Range(6, 1, row - 1, 21).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    wsSquad.Range(6, 1, row - 1, 21).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
+                    wsSquad.Range(6, 1, row - 1, 22).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    wsSquad.Range(6, 1, row - 1, 22).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
                 }
 
                 // Auto fit columns
@@ -8618,6 +8873,21 @@ namespace MBS_SAP.Controllers
         public double MtdObservasiRate { get; set; }
         public double MtdCoachingRate { get; set; }
         public double YtdCloseRate { get; set; } = 100.0;
+
+        // KPI Skor Liga (Formula Terintegrasi 50/25/15/10)
+        public double TotalScore { get; set; }
+        public double ScoreCloseRate { get; set; }
+        public double ScoreKualitas { get; set; }
+        public double ScorePencapaian { get; set; }
+        public double ScoreSkalaBeban { get; set; }
+        public double PtsClose { get; set; }
+        public double PtsKualitas { get; set; }
+        public double PtsPencapaian { get; set; }
+        public double PtsBeban { get; set; }
+        public int WeightClose { get; set; } = 50;
+        public int WeightKualitas { get; set; } = 25;
+        public int WeightCapaian { get; set; } = 15;
+        public int WeightBeban { get; set; } = 10;
     }
 
     public class ComplianceEmployeeViewModel
