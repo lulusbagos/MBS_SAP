@@ -144,7 +144,7 @@ namespace MBS_SAP.Services
                 var replicationService = scope.ServiceProvider.GetRequiredService<PostgresReplicationService>();
                 var result = await replicationService.ReplicateAsync(lookbackDays, cancellationToken);
 
-                var dedupResult = await RunHazardDedupCleanupAsync(scope.ServiceProvider, cancellationToken);
+                var dedupResult = await RunAllDedupCleanupAsync(scope.ServiceProvider, cancellationToken);
 
                 _logger.LogInformation(
                     "Postgres replication {Mode} completed. " +
@@ -155,7 +155,7 @@ namespace MBS_SAP.Services
                     "P2H +{P2hInserted} ~{P2hUpdated} (dup {P2hSkipped}), " +
                     "P5M +{P5mInserted} ~{P5mUpdated} (dup {P5mSkipped}), " +
                     "SafetyTalk +{SafetyTalkInserted} ~{SafetyTalkUpdated} (dup {SafetyTalkSkipped}), " +
-                    "hazard dedup cleaned {DedupCleanedRows} rows, lookback {LookbackDays} days.",
+                    "all-modules dedup cleaned {DedupCleanedRows} rows, lookback {LookbackDays} days.",
                     mode,
                     result.HazardInserted,
                     result.HazardUpdated,
@@ -195,63 +195,84 @@ namespace MBS_SAP.Services
             }
         }
 
-        private async Task<int> RunHazardDedupCleanupAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        private async Task<int> RunAllDedupCleanupAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
         {
             var context = serviceProvider.GetRequiredService<AppDbContext>();
 
-            var hazardRows = await context.HazardReports
-                .Where(h => !h.IsDeleted)
-                .Select(h => new
-                {
-                    h.Id,
-                    h.Nik,
-                    h.Tanggal,
-                    h.Waktu,
-                    h.Area,
-                    h.Lokasi,
-                    h.Temuan,
-                    h.PerusahaanId,
-                    h.CreatedAt
-                })
-                .OrderByDescending(h => h.CreatedAt)
-                .ThenByDescending(h => h.Id)
-                .ToListAsync(cancellationToken);
+            var sql = @"
+                -- 1. Hazard Report
+                WITH cte_h AS (
+                    SELECT id, ROW_NUMBER() OVER (
+                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(CAST(temuan AS NVARCHAR(200)), ''))))
+                        ORDER BY id ASC
+                    ) as rn FROM tbl_t_hazard_report WHERE is_deleted = 0
+                )
+                UPDATE tbl_t_hazard_report SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_h WHERE rn > 1);
 
-            static string Normalize(string? value) => (value ?? string.Empty).Trim().ToUpperInvariant();
+                -- 2. Inspeksi K3
+                WITH cte_i AS (
+                    SELECT id, ROW_NUMBER() OVER (
+                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(jenis_inspeksi, '')))), LTRIM(RTRIM(UPPER(ISNULL(lokasi, ''))))
+                        ORDER BY id ASC
+                    ) as rn FROM tbl_t_inspection WHERE is_deleted = 0
+                )
+                UPDATE tbl_t_inspection SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_i WHERE rn > 1);
 
-            var keySet = new HashSet<string>();
-            var duplicateIds = new List<int>();
+                -- 3. Safety Talk
+                WITH cte_s AS (
+                    SELECT id, ROW_NUMBER() OVER (
+                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(judul, ''))))
+                        ORDER BY id ASC
+                    ) as rn FROM tbl_t_safety_talk WHERE is_deleted = 0
+                )
+                UPDATE tbl_t_safety_talk SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_s WHERE rn > 1);
 
-            foreach (var row in hazardRows)
+                -- 4. Observasi K3
+                WITH cte_o AS (
+                    SELECT id, ROW_NUMBER() OVER (
+                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), date, LTRIM(RTRIM(UPPER(ISNULL(CAST(kegiatan_yang_diamati AS NVARCHAR(500)), '')))), LTRIM(RTRIM(UPPER(ISNULL(perihal_yang_diamati, ''))))
+                        ORDER BY id ASC
+                    ) as rn FROM tbl_t_observation WHERE is_deleted = 0
+                )
+                UPDATE tbl_t_observation SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_o WHERE rn > 1);
+
+                -- 5. Coaching K3
+                WITH cte_c AS (
+                    SELECT id, ROW_NUMBER() OVER (
+                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(tema, ''))))
+                        ORDER BY id ASC
+                    ) as rn FROM tbl_t_coaching WHERE is_deleted = 0
+                )
+                UPDATE tbl_t_coaching SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_c WHERE rn > 1);
+
+                -- 6. P5M Checklist
+                WITH cte_p AS (
+                    SELECT id, ROW_NUMBER() OVER (
+                        PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(CAST(list_pertanyaan AS NVARCHAR(500)), ''))))
+                        ORDER BY id ASC
+                    ) as rn FROM tbl_t_p5m WHERE is_deleted = 0
+                )
+                UPDATE tbl_t_p5m SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_p WHERE rn > 1);
+            ";
+
+            try
             {
-                var companyKey = row.PerusahaanId?.ToString() ?? "0";
-                var key = $"{Normalize(row.Nik)}|{row.Tanggal:yyyy-MM-dd}|{row.Waktu.Hours:D2}:{row.Waktu.Minutes:D2}:{row.Waktu.Seconds:D2}|{Normalize(row.Area)}|{Normalize(row.Lokasi)}|{Normalize(row.Temuan)}|{companyKey}";
-
-                if (!keySet.Add(key))
+                var rowsAffected = await context.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+                if (rowsAffected > 0)
                 {
-                    duplicateIds.Add(row.Id);
+                    _logger.LogWarning("All-modules dedup cleanup soft-deleted {RowsAffected} duplicate rows.", rowsAffected);
                 }
+                else
+                {
+                    _logger.LogInformation("All-modules dedup cleanup: no active duplicates found.");
+                }
+                return rowsAffected;
             }
-
-            if (duplicateIds.Count == 0)
+            catch (Exception ex)
             {
-                _logger.LogInformation("Hazard dedup audit: no active duplicates found.");
+                _logger.LogError(ex, "Error executing all-modules dedup cleanup.");
                 return 0;
             }
-
-            var duplicateRows = await context.HazardReports
-                .Where(h => duplicateIds.Contains(h.Id))
-                .ToListAsync(cancellationToken);
-
-            foreach (var row in duplicateRows)
-            {
-                row.IsDeleted = true;
-            }
-
-            await context.SaveChangesAsync(cancellationToken);
-
-            _logger.LogWarning("Hazard dedup cleanup soft-deleted {DuplicateCount} duplicate rows.", duplicateRows.Count);
-            return duplicateRows.Count;
         }
     }
 }

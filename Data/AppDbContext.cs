@@ -113,8 +113,27 @@ namespace MBS_SAP.Data
             modelBuilder.Entity<MasterArea>()
                 .ToTable("tbl_m_area_utama");
 
-            modelBuilder.Entity<IncidentNews>()
-                .ToTable("tbl_t_incident_news");
+            modelBuilder.Entity<IncidentNews>(entity =>
+            {
+                entity.ToTable("tbl_t_incident_news");
+                entity.Property(e => e.Id).HasColumnName("id");
+                entity.Property(e => e.Judul).HasColumnName("judul");
+                entity.Property(e => e.Konten).HasColumnName("konten");
+                entity.Property(e => e.GambarUrl).HasColumnName("gambar_url");
+                entity.Property(e => e.Lokasi).HasColumnName("lokasi");
+                entity.Property(e => e.TanggalKejadian).HasColumnName("tanggal_kejadian");
+                entity.Property(e => e.Kategori).HasColumnName("kategori");
+                entity.Property(e => e.PerusahaanId).HasColumnName("perusahaan_id");
+                entity.Property(e => e.DibuatOleh).HasColumnName("dibuat_oleh");
+                entity.Property(e => e.NikPembuat).HasColumnName("nik_pembuat");
+                entity.Property(e => e.IsPublished).HasColumnName("is_published");
+                entity.Property(e => e.IsBanner).HasColumnName("is_banner");
+                entity.Property(e => e.IsUpdate).HasColumnName("is_update");
+                entity.Property(e => e.BannerUrutan).HasColumnName("banner_urutan");
+                entity.Property(e => e.Tags).HasColumnName("tags");
+                entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+                entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
+            });
 
             modelBuilder.Entity<AttendanceEvent>()
                 .ToTable("tbl_t_attendance_event");

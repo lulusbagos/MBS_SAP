@@ -3481,7 +3481,12 @@ namespace MBS_SAP.Controllers
                 var allEmployees = new List<dynamic>();
 
                 var companiesToCompare = allowedCompanies;
-                if (selectedCompanyId > 0)
+                if (mode == "company")
+                {
+                    // Super League compares ALL active allowed companies across the board
+                    companiesToCompare = allowedCompanies.Where(c => !ExcludedCompanies.IsExcluded(c.PerusahaanId)).ToList();
+                }
+                else if (selectedCompanyId > 0)
                 {
                     var childIds = allCompanies.Where(c => c.PerusahaanIndukId == selectedCompanyId).Select(c => c.PerusahaanId).ToList();
                     var relationChildIds = relations.Where(r => r.ParentCompanyId == selectedCompanyId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
@@ -3527,11 +3532,22 @@ namespace MBS_SAP.Controllers
 
                 var monthlyActionPlans = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
 
+                var startOfMonthM = new DateTime(selectedYear, selectedMonth, 1);
+                var endOfMonthM = startOfMonthM.AddMonths(1).AddTicks(-1);
+
+                var allHazardsMonth = await _context.HazardReports
+                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM)
+                    .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
+                    .ToListAsync();
+
+                var hazardCounts = allHazardsMonth.GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+                var closedHazardCounts = allHazardsMonth.Where(h => IsClosedStatus(h.StatusTemuan)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+
                 foreach (var comp in companiesToCompare)
                 {
-                    int? compParentScope = (selectedCompanyId > 0 && selectedCompanyId != comp.PerusahaanId) 
-                        ? selectedCompanyId 
-                        : effectiveParentScope;
+                    int? compParentScope = (mode == "company")
+                        ? null
+                        : ((selectedCompanyId > 0 && selectedCompanyId != comp.PerusahaanId) ? selectedCompanyId : effectiveParentScope);
 
                     var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, compParentScope, includeNonTarget: includeNonTarget);
 
@@ -3561,8 +3577,15 @@ namespace MBS_SAP.Controllers
                     int p5mTgt = targetEmps.Sum(e => (int)e.p5m.target);
 
                     var compAssignedAp = monthlyActionPlans.Where(a => a.PerusahaanId == comp.PerusahaanId).ToList();
-                    int compEffectiveTotalAp = compAssignedAp.Count;
-                    int compEffectiveClosedAp = compAssignedAp.Count(a => IsClosedStatus(a.Status));
+                    int compApTotal = compAssignedAp.Count;
+                    int compApClosed = compAssignedAp.Count(a => IsClosedStatus(a.Status));
+
+                    int hC = hazardCounts.TryGetValue(comp.PerusahaanId, out int hcVal) ? hcVal : 0;
+                    int hCClosed = closedHazardCounts.TryGetValue(comp.PerusahaanId, out int hccVal) ? hccVal : 0;
+
+                    // Close rate adalah beban pembuat SAP (berdasarkan Hazard & Action Plan yang dibuat perusahaan), persis sesuai di Compliance
+                    int compEffectiveTotalAp = compApTotal >= hC && compApTotal > 0 ? compApTotal : hC;
+                    int compEffectiveClosedAp = compApTotal >= hC && compApTotal > 0 ? compApClosed : hCClosed;
                     double compCloseRate = compEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)compEffectiveClosedAp / compEffectiveTotalAp * 100.0), 1) : 100.0;
 
                     double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
@@ -3579,6 +3602,7 @@ namespace MBS_SAP.Controllers
                         PjoName = comp.NamaPjo,
                         EmployeeCount = targetEmps.Count,
                         TotalTarget = totalTarget,
+                        TotalActual = totalActual,
                         MtdAchievementRate = mtdRate,
                         MtdHazardRate = hRate,
                         MtdInspeksiRate = iRate,
@@ -3586,13 +3610,88 @@ namespace MBS_SAP.Controllers
                         MtdObservasiRate = oRate,
                         MtdCoachingRate = cRate,
                         MtdP5mRate = p5mRate,
-                        MtdCloseRate = compCloseRate
+                        MtdCloseRate = compCloseRate,
+                        TotalScore = 0.0
                     });
                 }
 
-                var allStandings = companyStandings.Where(x => (int)x.TotalTarget > 0).OrderByDescending(x => (double)x.MtdAchievementRate).ToList();
+                int maxTargetAll = companyStandings.Any() ? companyStandings.Max(x => (int)x.TotalTarget) : 1;
+                if (maxTargetAll <= 0) maxTargetAll = 1;
+
+                bool isCurrentNewPolicy = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
+                ViewBag.IsNewPolicyPeriod = isCurrentNewPolicy;
+
+                var rankedStandings = new List<dynamic>();
+                foreach (var x in companyStandings)
+                {
+                    double scorePencapaian = (double)x.MtdAchievementRate;
+                    double scoreSkalaBeban = maxTargetAll > 0 ? (Math.Log10((int)x.TotalTarget + 1) / Math.Log10(maxTargetAll + 1)) * 100.0 : 0.0;
+                    double scoreCloseRate = (double)x.MtdCloseRate;
+                    double scoreKualitas = 100.0; // Standar Mutu SAP 5.0/5.0 * 100.0 persis sesuai Compliance
+
+                    double wClose = isCurrentNewPolicy ? 0.50 : 0.40;
+                    double wKualitas = 0.25;
+                    double wCapaian = isCurrentNewPolicy ? 0.15 : 0.20;
+                    double wBeban = isCurrentNewPolicy ? 0.10 : 0.15;
+
+                    double ptsClose = Math.Round(scoreCloseRate * wClose, 2);
+                    double ptsKualitas = Math.Round(scoreKualitas * wKualitas, 2);
+                    double ptsPencapaian = Math.Round(scorePencapaian * wCapaian, 2);
+                    double ptsBeban = Math.Round(scoreSkalaBeban * wBeban, 2);
+
+                    double totalScore = ptsClose + ptsKualitas + ptsPencapaian + ptsBeban;
+
+                    rankedStandings.Add(new {
+                        CompanyId = x.CompanyId,
+                        CompanyName = x.CompanyName,
+                        PjoName = x.PjoName,
+                        EmployeeCount = x.EmployeeCount,
+                        TotalTarget = x.TotalTarget,
+                        TotalActual = x.TotalActual,
+                        MtdAchievementRate = x.MtdAchievementRate,
+                        MtdHazardRate = x.MtdHazardRate,
+                        MtdInspeksiRate = x.MtdInspeksiRate,
+                        MtdSafetyTalkRate = x.MtdSafetyTalkRate,
+                        MtdObservasiRate = x.MtdObservasiRate,
+                        MtdCoachingRate = x.MtdCoachingRate,
+                        MtdP5mRate = x.MtdP5mRate,
+                        MtdCloseRate = x.MtdCloseRate,
+                        ScoreCloseRate = Math.Round(scoreCloseRate, 1),
+                        ScoreKualitas = Math.Round(scoreKualitas, 1),
+                        ScorePencapaian = Math.Round(scorePencapaian, 1),
+                        ScoreSkalaBeban = Math.Round(scoreSkalaBeban, 1),
+                        PtsClose = ptsClose,
+                        PtsKualitas = ptsKualitas,
+                        PtsPencapaian = ptsPencapaian,
+                        PtsBeban = ptsBeban,
+                        WeightClose = (int)(wClose * 100),
+                        WeightKualitas = (int)(wKualitas * 100),
+                        WeightCapaian = (int)(wCapaian * 100),
+                        WeightBeban = (int)(wBeban * 100),
+                        TotalScore = Math.Round(totalScore, 2)
+                    });
+                }
+
+                // Urutan klasemen diselaraskan dengan Compliance: TotalScore DESC, lalu MtdCloseRate DESC, lalu MtdAchievementRate DESC
+                var allStandings = rankedStandings.Where(x => (int)x.TotalTarget > 0).OrderByDescending(x => (double)x.TotalScore).ThenByDescending(x => (double)x.MtdCloseRate).ThenByDescending(x => (double)x.MtdAchievementRate).ToList();
                 ViewBag.CompanyStandings = allStandings.Where(x => !((int)x.TotalTarget > 0 && (double)x.MtdAchievementRate == 0)).ToList();
                 ViewBag.CompanyRedZone = allStandings.Where(x => (int)x.TotalTarget > 0 && (double)x.MtdAchievementRate == 0).ToList();
+
+                // 3 Klasemen menurut jumlah karyawan (Skuad SAP):
+                // Tier 1: Skuad > 100
+                // Tier 2: Skuad 21 - 100
+                // Tier 3: Skuad 1 - 20
+                var tier1All = allStandings.Where(x => (int)x.EmployeeCount > 100).ToList();
+                ViewBag.Tier1Standings = tier1All.Where(x => (double)x.MtdAchievementRate > 0).ToList();
+                ViewBag.Tier1RedZone = tier1All.Where(x => (double)x.MtdAchievementRate == 0).ToList();
+
+                var tier2All = allStandings.Where(x => (int)x.EmployeeCount >= 21 && (int)x.EmployeeCount <= 100).ToList();
+                ViewBag.Tier2Standings = tier2All.Where(x => (double)x.MtdAchievementRate > 0).ToList();
+                ViewBag.Tier2RedZone = tier2All.Where(x => (double)x.MtdAchievementRate == 0).ToList();
+
+                var tier3All = allStandings.Where(x => (int)x.EmployeeCount <= 20).ToList();
+                ViewBag.Tier3Standings = tier3All.Where(x => (double)x.MtdAchievementRate > 0).ToList();
+                ViewBag.Tier3RedZone = tier3All.Where(x => (double)x.MtdAchievementRate == 0).ToList();
 
                 // Non-admin can only see their own squad players even in global league mode
                 var scopedEmployees = allEmployees
@@ -3895,6 +3994,10 @@ namespace MBS_SAP.Controllers
                     };
                     companiesToCompare = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan ?? "")).ToList();
                 }
+                else if (mode == "company")
+                {
+                    companiesToCompare = allowedCompanies.Where(c => !ExcludedCompanies.IsExcluded(c.PerusahaanId)).ToList();
+                }
                 else if (selectedCompanyId > 0)
                 {
                     var childIds = allCompanies.Where(c => c.PerusahaanIndukId == selectedCompanyId).Select(c => c.PerusahaanId).ToList();
@@ -3917,11 +4020,22 @@ namespace MBS_SAP.Controllers
                 var allEmployees = new List<dynamic>();
                 var monthlyActionPlans = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
 
+                var startOfMonthM = new DateTime(selectedYear, selectedMonth, 1);
+                var endOfMonthM = startOfMonthM.AddMonths(1).AddTicks(-1);
+
+                var allHazardsMonth = await _context.HazardReports
+                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM)
+                    .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
+                    .ToListAsync();
+
+                var hazardCounts = allHazardsMonth.GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+                var closedHazardCounts = allHazardsMonth.Where(h => IsClosedStatus(h.StatusTemuan)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
+
                 foreach (var comp in companiesToCompare)
                 {
-                    int? compParentScope = (selectedCompanyId > 0 && selectedCompanyId != comp.PerusahaanId) 
-                        ? selectedCompanyId 
-                        : effectiveParentScope;
+                    int? compParentScope = (mode == "company")
+                        ? null
+                        : ((selectedCompanyId > 0 && selectedCompanyId != comp.PerusahaanId) ? selectedCompanyId : effectiveParentScope);
 
                     var compEmps = await GetEmployeesComplianceData(comp.PerusahaanId, null, selectedYear, selectedMonth, compParentScope, includeNonTarget: includeNonTarget);
                     allEmployees.AddRange(compEmps);
@@ -3950,8 +4064,15 @@ namespace MBS_SAP.Controllers
                     int p5mTgt = targetEmps.Sum(e => (int)e.p5m.target);
 
                     var compAssignedAp = monthlyActionPlans.Where(a => a.PerusahaanId == comp.PerusahaanId).ToList();
-                    int compEffectiveTotalAp = compAssignedAp.Count;
-                    int compEffectiveClosedAp = compAssignedAp.Count(a => IsClosedStatus(a.Status));
+                    int compApTotal = compAssignedAp.Count;
+                    int compApClosed = compAssignedAp.Count(a => IsClosedStatus(a.Status));
+
+                    int hC = hazardCounts.TryGetValue(comp.PerusahaanId, out int hcVal) ? hcVal : 0;
+                    int hCClosed = closedHazardCounts.TryGetValue(comp.PerusahaanId, out int hccVal) ? hccVal : 0;
+
+                    // Close rate adalah beban pembuat SAP (berdasarkan Hazard & Action Plan yang dibuat perusahaan), persis sesuai di Compliance
+                    int compEffectiveTotalAp = compApTotal >= hC && compApTotal > 0 ? compApTotal : hC;
+                    int compEffectiveClosedAp = compApTotal >= hC && compApTotal > 0 ? compApClosed : hCClosed;
                     double compCloseRate = compEffectiveTotalAp > 0 ? Math.Round(Math.Min(100.0, (double)compEffectiveClosedAp / compEffectiveTotalAp * 100.0), 1) : 100.0;
 
                     double mtdRate = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalActual / totalTarget * 100.0, 1)) : 0;
@@ -3968,6 +4089,7 @@ namespace MBS_SAP.Controllers
                         PjoName = comp.NamaPjo,
                         EmployeeCount = targetEmps.Count,
                         TotalTarget = totalTarget,
+                        TotalActual = totalActual,
                         MtdAchievementRate = mtdRate,
                         MtdHazardRate = hRate,
                         MtdInspeksiRate = iRate,
@@ -3975,9 +4097,67 @@ namespace MBS_SAP.Controllers
                         MtdObservasiRate = oRate,
                         MtdCoachingRate = cRate,
                         MtdP5mRate = p5mRate,
-                        MtdCloseRate = compCloseRate
+                        MtdCloseRate = compCloseRate,
+                        TotalScore = 0.0
                     });
                 }
+
+                int maxTargetAll = companyStandings.Any() ? companyStandings.Max(x => (int)x.TotalTarget) : 1;
+                if (maxTargetAll <= 0) maxTargetAll = 1;
+
+                bool isCurrentNewPolicy = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
+
+                var rankedStandings = new List<dynamic>();
+                foreach (var x in companyStandings)
+                {
+                    double scorePencapaian = (double)x.MtdAchievementRate;
+                    double scoreSkalaBeban = maxTargetAll > 0 ? (Math.Log10((int)x.TotalTarget + 1) / Math.Log10(maxTargetAll + 1)) * 100.0 : 0.0;
+                    double scoreCloseRate = (double)x.MtdCloseRate;
+                    double scoreKualitas = 100.0;
+
+                    double wClose = isCurrentNewPolicy ? 0.50 : 0.40;
+                    double wKualitas = 0.25;
+                    double wCapaian = isCurrentNewPolicy ? 0.15 : 0.20;
+                    double wBeban = isCurrentNewPolicy ? 0.10 : 0.15;
+
+                    double ptsClose = Math.Round(scoreCloseRate * wClose, 2);
+                    double ptsKualitas = Math.Round(scoreKualitas * wKualitas, 2);
+                    double ptsPencapaian = Math.Round(scorePencapaian * wCapaian, 2);
+                    double ptsBeban = Math.Round(scoreSkalaBeban * wBeban, 2);
+
+                    double totalScore = ptsClose + ptsKualitas + ptsPencapaian + ptsBeban;
+
+                    rankedStandings.Add(new {
+                        CompanyId = x.CompanyId,
+                        CompanyName = x.CompanyName,
+                        PjoName = x.PjoName,
+                        EmployeeCount = x.EmployeeCount,
+                        TotalTarget = x.TotalTarget,
+                        TotalActual = x.TotalActual,
+                        MtdAchievementRate = x.MtdAchievementRate,
+                        MtdHazardRate = x.MtdHazardRate,
+                        MtdInspeksiRate = x.MtdInspeksiRate,
+                        MtdSafetyTalkRate = x.MtdSafetyTalkRate,
+                        MtdObservasiRate = x.MtdObservasiRate,
+                        MtdCoachingRate = x.MtdCoachingRate,
+                        MtdP5mRate = x.MtdP5mRate,
+                        MtdCloseRate = x.MtdCloseRate,
+                        ScoreCloseRate = Math.Round(scoreCloseRate, 1),
+                        ScoreKualitas = Math.Round(scoreKualitas, 1),
+                        ScorePencapaian = Math.Round(scorePencapaian, 1),
+                        ScoreSkalaBeban = Math.Round(scoreSkalaBeban, 1),
+                        PtsClose = ptsClose,
+                        PtsKualitas = ptsKualitas,
+                        PtsPencapaian = ptsPencapaian,
+                        PtsBeban = ptsBeban,
+                        WeightClose = (int)(wClose * 100),
+                        WeightKualitas = (int)(wKualitas * 100),
+                        WeightCapaian = (int)(wCapaian * 100),
+                        WeightBeban = (int)(wBeban * 100),
+                        TotalScore = Math.Round(totalScore, 2)
+                    });
+                }
+                companyStandings = rankedStandings;
 
                 employeesData = allEmployees
                     .Where(e => isAdmin || (isSafetyRole && allowedCompanyIds.Contains((int)e.companyId)) || (int)e.companyId == resolvedCompanyId)
@@ -4136,10 +4316,29 @@ namespace MBS_SAP.Controllers
                 wsStandings.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
 
                 string clubHeader = (mode == "company" || mode == "core") ? "Klub (Perusahaan)" : "Klub (Departemen)";
-                string[] stdHeaders = new[] {
-                    "Pos", clubHeader, "Skuad (Orang)", "Total Target", "Kepatuhan SAP (%)",
-                    "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *", "Close Rate (%)"
-                };
+                bool isCompanyMode = (mode == "company");
+                string[] stdHeaders;
+                if (isCompanyMode)
+                {
+                    stdHeaders = new[] {
+                        "Pos", "Divisi / Tier", clubHeader, "Skuad (Orang)", "Total Target", "PTS (Skor Total)", "Capaian (%)",
+                        "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *", "Close Rate (%)"
+                    };
+                }
+                else if (mode == "core")
+                {
+                    stdHeaders = new[] {
+                        "Pos", clubHeader, "Skuad (Orang)", "Total Target", "PTS (Skor Total)", "Capaian (%)",
+                        "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *", "Close Rate (%)"
+                    };
+                }
+                else
+                {
+                    stdHeaders = new[] {
+                        "Pos", clubHeader, "Skuad (Orang)", "Total Target", "Kepatuhan SAP (%)",
+                        "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *", "Close Rate (%)"
+                    };
+                }
 
                 for (int i = 0; i < stdHeaders.Length; i++)
                 {
@@ -4149,12 +4348,37 @@ namespace MBS_SAP.Controllers
                     cell.Style.Font.FontSize = 10;
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                    if (i == 10)
-                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber P5M
-                    else if (i == 11)
-                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald Close Rate
+                    if (isCompanyMode)
+                    {
+                        if (i == 12)
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber P5M
+                        else if (i == 13)
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald Close Rate
+                        else if (i == 5)
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // PTS
+                        else
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
+                    }
+                    else if (mode == "core")
+                    {
+                        if (i == 11)
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber P5M
+                        else if (i == 12)
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald Close Rate
+                        else if (i == 4)
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // PTS
+                        else
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
+                    }
                     else
-                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
+                    {
+                        if (i == 10)
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber P5M
+                        else if (i == 11)
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald Close Rate
+                        else
+                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
+                    }
                     cell.Style.Font.FontColor = XLColor.White;
                 }
                 wsStandings.Row(6).Height = 25;
@@ -4183,40 +4407,71 @@ namespace MBS_SAP.Controllers
                 {
                     var sortedCompanyStandings = companyStandings
                         .Where(x => (int)x.TotalTarget > 0)
-                        .OrderByDescending(x => (double)x.MtdAchievementRate)
+                        .OrderByDescending(x => (double)x.TotalScore)
+                        .ThenByDescending(x => (double)x.MtdCloseRate)
+                        .ThenByDescending(x => (double)x.MtdAchievementRate)
                         .ToList();
 
                     foreach (var comp in sortedCompanyStandings)
                     {
-                        wsStandings.Cell(sRow, 1).Value = sRank;
-                        wsStandings.Cell(sRow, 2).Value = (string)comp.CompanyName;
-                        wsStandings.Cell(sRow, 3).Value = (int)comp.EmployeeCount;
-                        wsStandings.Cell(sRow, 4).Value = (int)comp.TotalTarget;
+                        int col = 1;
+                        wsStandings.Cell(sRow, col++).Value = sRank;
+                        if (isCompanyMode)
+                        {
+                            int empCount = (int)comp.EmployeeCount;
+                            string tierName = empCount > 100 ? "Tier 1 (>100)" : (empCount >= 21 ? "Tier 2 (21-100)" : "Tier 3 (1-20)");
+                            wsStandings.Cell(sRow, col++).Value = tierName;
+                        }
+                        wsStandings.Cell(sRow, col++).Value = (string)comp.CompanyName;
+                        wsStandings.Cell(sRow, col++).Value = (int)comp.EmployeeCount;
+                        wsStandings.Cell(sRow, col++).Value = (int)comp.TotalTarget;
 
-                        wsStandings.Cell(sRow, 5).Value = (double)comp.MtdAchievementRate;
-                        wsStandings.Cell(sRow, 5).Style.NumberFormat.Format = "0.0\"%\"";
-                        wsStandings.Cell(sRow, 5).Style.Font.Bold = true;
+                        wsStandings.Cell(sRow, col).Value = (double)comp.TotalScore;
+                        wsStandings.Cell(sRow, col).Style.NumberFormat.Format = "0.00";
+                        wsStandings.Cell(sRow, col++).Style.Font.Bold = true;
 
-                        SetRateCell(wsStandings.Cell(sRow, 6), (double)comp.MtdHazardRate);
-                        SetRateCell(wsStandings.Cell(sRow, 7), (double)comp.MtdInspeksiRate);
-                        SetRateCell(wsStandings.Cell(sRow, 8), (double)comp.MtdSafetyTalkRate);
-                        SetRateCell(wsStandings.Cell(sRow, 9), (double)comp.MtdObservasiRate);
-                        SetRateCell(wsStandings.Cell(sRow, 10), (double)comp.MtdCoachingRate);
-                        SetRateCell(wsStandings.Cell(sRow, 11), (double)comp.MtdP5mRate);
-                        SetRateCell(wsStandings.Cell(sRow, 12), (double)comp.MtdCloseRate);
+                        wsStandings.Cell(sRow, col).Value = (double)comp.MtdAchievementRate;
+                        wsStandings.Cell(sRow, col).Style.NumberFormat.Format = "0.0\"%\"";
+                        wsStandings.Cell(sRow, col++).Style.Font.Bold = false;
+
+                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdHazardRate);
+                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdInspeksiRate);
+                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdSafetyTalkRate);
+                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdObservasiRate);
+                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdCoachingRate);
+                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdP5mRate);
+                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdCloseRate);
 
                         // Alignments
                         wsStandings.Cell(sRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsStandings.Cell(sRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                        wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                        for (int c = 6; c <= 12; c++)
+                        if (isCompanyMode)
                         {
-                            wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsStandings.Cell(sRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                            wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsStandings.Cell(sRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            wsStandings.Cell(sRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            for (int c = 8; c <= 14; c++)
+                            {
+                                wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            }
+                        }
+                        else
+                        {
+                            wsStandings.Cell(sRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                            wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            wsStandings.Cell(sRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            for (int c = 7; c <= 13; c++)
+                            {
+                                wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            }
                         }
 
-                        var sRowRange = wsStandings.Range(sRow, 1, sRow, 12);
+                        int totalCols = isCompanyMode ? 14 : 13;
+                        var sRowRange = wsStandings.Range(sRow, 1, sRow, totalCols);
                         sRowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                         sRowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                         sRowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;

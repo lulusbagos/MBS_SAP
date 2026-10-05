@@ -19,6 +19,7 @@ namespace MBS_SAP.Controllers
 
         private static readonly string[] IncidentCategoryOptions =
         {
+            "Banner Informasi",
             "Fatality",
             "First Aid Injury",
             "Kebakaran",
@@ -27,10 +28,48 @@ namespace MBS_SAP.Controllers
             "Property Damage"
         };
 
+        private static bool _schemaEnsured = false;
+        private static readonly object _schemaLock = new();
+
         public IncidentController(AppDbContext context, MBS_SAP.Services.ImageUploadService imageUploadService)
         {
             _context = context;
             _imageUploadService = imageUploadService;
+            EnsureSchema();
+        }
+
+        private void EnsureSchema()
+        {
+            if (_schemaEnsured) return;
+            lock (_schemaLock)
+            {
+                if (_schemaEnsured) return;
+                try
+                {
+                    const string sql = @"
+                        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tbl_t_incident_news') AND name = 'is_banner')
+                        BEGIN
+                            ALTER TABLE tbl_t_incident_news ADD is_banner BIT NOT NULL DEFAULT 0;
+                        END
+                        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tbl_t_incident_news') AND name = 'is_update')
+                        BEGIN
+                            ALTER TABLE tbl_t_incident_news ADD is_update BIT NOT NULL DEFAULT 1;
+                        END
+                        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tbl_t_incident_news') AND name = 'banner_urutan')
+                        BEGIN
+                            ALTER TABLE tbl_t_incident_news ADD banner_urutan INT NOT NULL DEFAULT 0;
+                        END
+                        IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('tbl_t_incident_news') AND name = 'tags')
+                        BEGIN
+                            ALTER TABLE tbl_t_incident_news ADD tags NVARCHAR(250) NULL;
+                        END";
+                    _context.Database.ExecuteSqlRaw(sql);
+                    _schemaEnsured = true;
+                }
+                catch
+                {
+                }
+            }
         }
 
         private bool IsAdmin() => User.IsInRole("Admin");
@@ -155,7 +194,8 @@ namespace MBS_SAP.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(string judul, string konten, string? lokasi, 
-            DateTime? tanggalKejadian, string? kategori, int? perusahaanId, IFormFile? gambar)
+            DateTime? tanggalKejadian, string? kategori, int? perusahaanId, IFormFile? gambar,
+            bool isBanner = false, bool isUpdate = true)
         {
             if (!IsAdmin())
             {
@@ -187,6 +227,8 @@ namespace MBS_SAP.Controllers
                 TanggalKejadian = tanggalKejadian,
                 Kategori = CanonicalizeIncidentCategory(kategori) ?? "Near Miss",
                 PerusahaanId = perusahaanId,
+                IsBanner = isBanner,
+                IsUpdate = isUpdate,
                 DibuatOleh = User.Identity?.Name ?? "Admin",
                 NikPembuat = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0",
                 CreatedAt = DateTime.Now
@@ -225,7 +267,8 @@ namespace MBS_SAP.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, string judul, string konten, string? lokasi,
-            DateTime? tanggalKejadian, string? kategori, int? perusahaanId, IFormFile? gambar)
+            DateTime? tanggalKejadian, string? kategori, int? perusahaanId, IFormFile? gambar,
+            bool isBanner = false, bool isUpdate = false)
         {
             if (!IsAdmin())
             {
@@ -245,6 +288,8 @@ namespace MBS_SAP.Controllers
                 TempData["ErrorMessage"] = "Judul dan konten wajib diisi.";
                 incident.Kategori = kategori;
                 incident.PerusahaanId = perusahaanId;
+                incident.IsBanner = isBanner;
+                incident.IsUpdate = isUpdate;
                 SetIncidentCategoryOptions(kategori);
                 await SetCompanyOptionsAsync(perusahaanId);
                 return View(incident);
@@ -261,6 +306,8 @@ namespace MBS_SAP.Controllers
             incident.TanggalKejadian = tanggalKejadian;
             incident.Kategori = Truncate(CanonicalizeIncidentCategory(kategori) ?? "Near Miss", 100);
             incident.PerusahaanId = perusahaanId;
+            incident.IsBanner = isBanner;
+            incident.IsUpdate = isUpdate;
             incident.UpdatedAt = DateTime.Now;
 
             await _context.SaveChangesAsync();
@@ -593,6 +640,40 @@ namespace MBS_SAP.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleBanner(int id, int page = 1)
+        {
+            if (!IsAdmin()) return Forbid();
+
+            var incident = await _context.IncidentNewsList.FirstOrDefaultAsync(i => i.Id == id);
+            if (incident != null)
+            {
+                incident.IsBanner = !incident.IsBanner;
+                incident.UpdatedAt = DateTime.Now;
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Penayangan Banner Home untuk #{incident.Id} diubah menjadi {(incident.IsBanner ? "AKTIF" : "NONAKTIF")}.";
+            }
+            return RedirectToAction(nameof(Index), new { page });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleUpdate(int id, int page = 1)
+        {
+            if (!IsAdmin()) return Forbid();
+
+            var incident = await _context.IncidentNewsList.FirstOrDefaultAsync(i => i.Id == id);
+            if (incident != null)
+            {
+                incident.IsUpdate = !incident.IsUpdate;
+                incident.UpdatedAt = DateTime.Now;
+                await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Penayangan Safety Updates untuk #{incident.Id} diubah menjadi {(incident.IsUpdate ? "AKTIF" : "NONAKTIF")}.";
+            }
+            return RedirectToAction(nameof(Index), new { page });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
             if (!IsAdmin())
@@ -673,6 +754,13 @@ namespace MBS_SAP.Controllers
         {
             var text = (rawCategory ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(text)) return null;
+
+            if (text.Equals("banner informasi", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("banner", StringComparison.OrdinalIgnoreCase)
+                || text.Equals("informasi", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Banner Informasi";
+            }
 
             if (text.Equals("fatality", StringComparison.OrdinalIgnoreCase)
                 || text.Equals("fatal", StringComparison.OrdinalIgnoreCase)

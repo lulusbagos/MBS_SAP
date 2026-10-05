@@ -96,9 +96,325 @@
         if (rate < 0) return "N/A";
         return rate + "%";
     }
+
+    public string BuildPtsTooltip(dynamic comp) {
+        try {
+            string compName = System.Net.WebUtility.HtmlEncode((string)comp.CompanyName);
+            int wClose = (int)comp.WeightClose;
+            int wKualitas = (int)comp.WeightKualitas;
+            int wCapaian = (int)comp.WeightCapaian;
+            int wBeban = (int)comp.WeightBeban;
+
+            double scClose = (double)comp.ScoreCloseRate;
+            double scKualitas = (double)comp.ScoreKualitas;
+            double scCapaian = (double)comp.ScorePencapaian;
+            double scBeban = (double)comp.ScoreSkalaBeban;
+
+            double ptClose = (double)comp.PtsClose;
+            double ptKualitas = (double)comp.PtsKualitas;
+            double ptCapaian = (double)comp.PtsPencapaian;
+            double ptBeban = (double)comp.PtsBeban;
+            double totScore = (double)comp.TotalScore;
+
+            double barClose = Math.Min(100.0, Math.Max(0.0, scClose));
+            double barKualitas = Math.Min(100.0, Math.Max(0.0, scKualitas));
+            double barCapaian = Math.Min(100.0, Math.Max(0.0, scCapaian));
+            double barBeban = Math.Min(100.0, Math.Max(0.0, scBeban));
+
+            return "<div class='pts-corp-card'>" +
+                   "<div class='pts-corp-header'>" +
+                       "<div class='pts-corp-meta'>" +
+                           "<span class='pts-corp-tag'>KARTU EVALUASI KINERJA K3LH</span>" +
+                           $"<div class='pts-corp-title' title='{compName}'>{compName}</div>" +
+                       "</div>" +
+                       "<div class='pts-corp-badge'>" +
+                           $"<span class='pts-corp-badge-score'>{totScore:F1}</span>" +
+                           "<span class='pts-corp-badge-unit'>PTS</span>" +
+                       "</div>" +
+                   "</div>" +
+                   "<div class='pts-corp-list'>" +
+                       "<div class='pts-corp-item'>" +
+                           "<div class='pts-corp-item-top'>" +
+                               "<div class='pts-corp-indicator'>" +
+                                   "<span class='pts-corp-dot' style='background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);'></span>" +
+                                   "<span class='pts-corp-name'>Action Plan Closure</span>" +
+                                   $"<span class='pts-corp-weight'>{wClose}%</span>" +
+                               "</div>" +
+                               "<div class='pts-corp-calc'>" +
+                                   $"<span class='pts-corp-val'>{scClose:F1}%</span>" +
+                                   $"<span class='pts-corp-math'>&times; {wClose}% &rarr;</span>" +
+                                   $"<span class='pts-corp-pts' style='color: #34d399;'>+{ptClose:F2}</span>" +
+                               "</div>" +
+                           "</div>" +
+                           "<div class='pts-corp-bar-bg'>" +
+                               $"<div class='pts-corp-bar-fill' style='width: {barClose:F1}%; background: linear-gradient(90deg, #059669, #10b981);'></div>" +
+                           "</div>" +
+                       "</div>" +
+                       "<div class='pts-corp-item'>" +
+                           "<div class='pts-corp-item-top'>" +
+                               "<div class='pts-corp-indicator'>" +
+                                   "<span class='pts-corp-dot' style='background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);'></span>" +
+                                   "<span class='pts-corp-name'>Mutu Laporan AI</span>" +
+                                   $"<span class='pts-corp-weight'>{wKualitas}%</span>" +
+                               "</div>" +
+                               "<div class='pts-corp-calc'>" +
+                                   $"<span class='pts-corp-val'>{scKualitas:F0}%</span>" +
+                                   $"<span class='pts-corp-math'>&times; {wKualitas}% &rarr;</span>" +
+                                   $"<span class='pts-corp-pts' style='color: #fbbf24;'>+{ptKualitas:F2}</span>" +
+                               "</div>" +
+                           "</div>" +
+                           "<div class='pts-corp-bar-bg'>" +
+                               $"<div class='pts-corp-bar-fill' style='width: {barKualitas:F1}%; background: linear-gradient(90deg, #d97706, #f59e0b);'></div>" +
+                           "</div>" +
+                       "</div>" +
+                       "<div class='pts-corp-item'>" +
+                           "<div class='pts-corp-item-top'>" +
+                               "<div class='pts-corp-indicator'>" +
+                                   "<span class='pts-corp-dot' style='background: #3b82f6; box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);'></span>" +
+                                   "<span class='pts-corp-name'>Capaian 5 SAP</span>" +
+                                   $"<span class='pts-corp-weight'>{wCapaian}%</span>" +
+                               "</div>" +
+                               "<div class='pts-corp-calc'>" +
+                                   $"<span class='pts-corp-val'>{scCapaian:F1}%</span>" +
+                                   $"<span class='pts-corp-math'>&times; {wCapaian}% &rarr;</span>" +
+                                   $"<span class='pts-corp-pts' style='color: #60a5fa;'>+{ptCapaian:F2}</span>" +
+                               "</div>" +
+                           "</div>" +
+                           "<div class='pts-corp-bar-bg'>" +
+                               $"<div class='pts-corp-bar-fill' style='width: {barCapaian:F1}%; background: linear-gradient(90deg, #2563eb, #3b82f6);'></div>" +
+                           "</div>" +
+                       "</div>" +
+                       "<div class='pts-corp-item'>" +
+                           "<div class='pts-corp-item-top'>" +
+                               "<div class='pts-corp-indicator'>" +
+                                   "<span class='pts-corp-dot' style='background: #06b6d4; box-shadow: 0 0 6px rgba(6, 182, 212, 0.6);'></span>" +
+                                   "<span class='pts-corp-name'>Skala Beban Tim</span>" +
+                                   $"<span class='pts-corp-weight'>{wBeban}%</span>" +
+                               "</div>" +
+                               "<div class='pts-corp-calc'>" +
+                                   $"<span class='pts-corp-val'>{scBeban:F1}%</span>" +
+                                   $"<span class='pts-corp-math'>&times; {wBeban}% &rarr;</span>" +
+                                   $"<span class='pts-corp-pts' style='color: #22d3ee;'>+{ptBeban:F2}</span>" +
+                               "</div>" +
+                           "</div>" +
+                           "<div class='pts-corp-bar-bg'>" +
+                               $"<div class='pts-corp-bar-fill' style='width: {barBeban:F1}%; background: linear-gradient(90deg, #0891b2, #06b6d4);'></div>" +
+                           "</div>" +
+                       "</div>" +
+                   "</div>" +
+                   "<div class='pts-corp-footer'>" +
+                       "<div>" +
+                           "<div class='pts-corp-footer-lbl'>AKUMULASI SKOR AKHIR</div>" +
+                           "<div class='pts-corp-footer-sub'>Standar Metodologi Terpadu (Compliance)</div>" +
+                       "</div>" +
+                       "<div class='pts-corp-footer-score'>" +
+                           $"<span class='pts-corp-total-val'>{totScore:F2}</span>" +
+                           "<span class='pts-corp-total-max'>/ 100 PTS</span>" +
+                       "</div>" +
+                   "</div>" +
+                   "</div>";
+        } catch {
+            return "Rincian Skor Penilaian Performa";
+        }
+    }
 }
 
 <style>
+    .tooltip {
+        opacity: 1 !important;
+    }
+    .tooltip-inner {
+        max-width: 380px !important;
+        text-align: left !important;
+        padding: 14px 16px !important;
+        border-radius: 14px !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+        background: #090e1a !important;
+        color: #f8fafc !important;
+        border: 1px solid rgba(148, 163, 184, 0.25) !important;
+    }
+    .bs-tooltip-top .tooltip-arrow::before,
+    .bs-tooltip-auto[data-popper-placement^=top] .tooltip-arrow::before {
+        border-top-color: #090e1a !important;
+    }
+    .bs-tooltip-bottom .tooltip-arrow::before,
+    .bs-tooltip-auto[data-popper-placement^=bottom] .tooltip-arrow::before {
+        border-bottom-color: #090e1a !important;
+    }
+    .pts-corp-card {
+        width: 345px;
+        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .pts-corp-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .pts-corp-meta {
+        max-width: 240px;
+    }
+    .pts-corp-tag {
+        font-size: 8.5px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.12);
+        padding: 2px 6px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-bottom: 4px;
+        border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+    .pts-corp-title {
+        font-size: 13.5px;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: -0.2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+    }
+    .pts-corp-badge {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: #ffffff;
+        padding: 4px 10px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        display: flex;
+        align-items: baseline;
+        gap: 3px;
+        flex-shrink: 0;
+    }
+    .pts-corp-badge-score {
+        font-weight: 850;
+        font-size: 13px;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+    .pts-corp-badge-unit {
+        font-size: 9px;
+        font-weight: 700;
+        opacity: 0.9;
+    }
+    .pts-corp-list {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+    .pts-corp-item {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 8px;
+        padding: 7px 10px;
+        transition: background 0.15s ease;
+    }
+    .pts-corp-item-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+    }
+    .pts-corp-indicator {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .pts-corp-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+    .pts-corp-name {
+        color: #f1f5f9;
+        font-weight: 700;
+        font-size: 11.5px;
+        letter-spacing: -0.1px;
+    }
+    .pts-corp-weight {
+        font-size: 9.5px;
+        font-weight: 600;
+        color: #94a3b8;
+        background: rgba(255, 255, 255, 0.08);
+        padding: 1px 5px;
+        border-radius: 4px;
+    }
+    .pts-corp-calc {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-variant-numeric: tabular-nums;
+    }
+    .pts-corp-val {
+        font-size: 11px;
+        font-weight: 600;
+        color: #e2e8f0;
+    }
+    .pts-corp-math {
+        font-size: 9.5px;
+        color: #64748b;
+        font-weight: 500;
+    }
+    .pts-corp-pts {
+        font-size: 12px;
+        font-weight: 800;
+        min-width: 48px;
+        text-align: right;
+    }
+    .pts-corp-bar-bg {
+        height: 3px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    .pts-corp-bar-fill {
+        height: 100%;
+        border-radius: 2px;
+    }
+    .pts-corp-footer {
+        margin-top: 10px;
+        padding-top: 9px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.15);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .pts-corp-footer-lbl {
+        font-size: 9px;
+        font-weight: 700;
+        color: #94a3b8;
+        letter-spacing: 0.6px;
+        text-transform: uppercase;
+    }
+    .pts-corp-footer-sub {
+        font-size: 9.5px;
+        color: #64748b;
+        font-weight: 500;
+    }
+    .pts-corp-footer-score {
+        display: flex;
+        align-items: baseline;
+        gap: 3px;
+        text-align: right;
+    }
+    .pts-corp-total-val {
+        font-size: 15px;
+        font-weight: 850;
+        color: #fbbf24;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.3px;
+    }
+    .pts-corp-total-max {
+        font-size: 9.5px;
+        color: #94a3b8;
+        font-weight: 600;
+    }
     .league-card {
         border: 1px solid #e2e8f0;
         border-radius: 16px;
@@ -708,7 +1024,7 @@
                 <div>
                     <h2 class="league-title-main">League Safety Accountability Program</h2>
                     <div style="font-size: 13px; font-weight: 600; color: #a1a1aa; margin-top: 2px;">
-                        Kategori Klasemen Utama &bull; @companyName
+                        @(currentMode == "company" ? "Super League • Evaluasi Kinerja K3LH Seluruh Perusahaan" : (currentMode == "core" ? "Liga Perusahaan Inti" : $"Klasemen Klub Internal • {companyName}"))
                     </div>
                 </div>
             </div>
@@ -746,12 +1062,560 @@
     <div class="row g-4">
         <!-- Left Column: internal/company standings -->
         <div class="col-xl-7">
-            @if (currentMode == "company" || currentMode == "core")
+            @if (currentMode == "company")
+            {
+                var tier1Standings = ViewBag.Tier1Standings as List<dynamic> ?? new List<dynamic>();
+                var tier1RedZone = ViewBag.Tier1RedZone as List<dynamic> ?? new List<dynamic>();
+                var tier2Standings = ViewBag.Tier2Standings as List<dynamic> ?? new List<dynamic>();
+                var tier2RedZone = ViewBag.Tier2RedZone as List<dynamic> ?? new List<dynamic>();
+                var tier3Standings = ViewBag.Tier3Standings as List<dynamic> ?? new List<dynamic>();
+                var tier3RedZone = ViewBag.Tier3RedZone as List<dynamic> ?? new List<dynamic>();
+                var totalCompanies = tier1Standings.Count + tier1RedZone.Count + tier2Standings.Count + tier2RedZone.Count + tier3Standings.Count + tier3RedZone.Count;
+
+                <!-- Super League Summary Banner (Warna Cerah & Kontras Tinggi) -->
+                <div class="league-card p-3 mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #eff6ff 100%); border: 1px solid #bfdbfe; border-left: 6px solid #2563eb; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.08);">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <h5 class="mb-0 fw-bold" style="font-size: 18px; color: #1e3a8a !important; letter-spacing: -0.3px;">
+                                    <i class="bi bi-globe2 me-2 text-primary" style="font-size: 20px;"></i>Super League (Antar Perusahaan)
+                                </h5>
+                                <span class="badge" style="background: rgba(37, 99, 235, 0.1); color: #1d4ed8; border: 1px solid rgba(37, 99, 235, 0.25); font-weight: 700; font-size: 11px; padding: 4px 8px; border-radius: 6px;">
+                                    <i class="bi bi-layers-fill me-1"></i>3 Divisi Bertingkat
+                                </span>
+                            </div>
+                            <div style="font-size: 12.5px; color: #64748b; font-weight: 500; margin-top: 3px;">
+                                Peringkat agregat diselaraskan dengan modul <a href="/Performance/Compliance" target="_blank" class="fw-bold text-primary text-decoration-none">Compliance (Top Performance Companies)</a>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary text-white px-3 py-2 shadow-sm" style="font-size: 12px; font-weight: 800; border-radius: 8px; letter-spacing: 0.5px;">
+                                <i class="bi bi-buildings me-1"></i> @totalCompanies PERUSAHAAN
+                            </span>
+                            <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm" onclick="downloadSquadExcel(this);" title="Unduh Laporan Klasemen Excel (.xlsx)" style="font-size: 11px; border-radius: 8px; padding: 6px 12px; background: #16a34a; border: 1px solid #15803d;">
+                                <i class="bi bi-file-earmark-excel-fill me-1"></i> <span class="d-none d-sm-inline">Klasemen Excel</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Formula Strip (Modern & Transparan) -->
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 px-3 rounded-3 mb-2" style="background: rgba(37, 99, 235, 0.05); border: 1px dashed #93c5fd;">
+                        <div class="d-flex align-items-center gap-2 flex-wrap" style="font-size: 11.5px;">
+                            <span class="fw-bold text-dark"><i class="bi bi-calculator me-1 text-primary"></i>Rumus Skor Total:</span>
+                            <span class="badge shadow-sm" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 11px;">🛡️ 50% Close Rate AP</span>
+                            <span class="text-muted fw-bold">+</span>
+                            <span class="badge shadow-sm" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 11px;">⭐ 25% Kualitas</span>
+                            <span class="text-muted fw-bold">+</span>
+                            <span class="badge shadow-sm" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 11px;">🎯 15% Capaian</span>
+                            <span class="text-muted fw-bold">+</span>
+                            <span class="badge shadow-sm" style="background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; font-size: 11px;">⚖️ 10% Skala Beban</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold" style="font-size: 11px; border-radius: 6px; padding: 3px 8px;" data-bs-toggle="modal" data-bs-target="#leagueScoringModal">
+                            <i class="bi bi-info-circle me-1"></i>Penjelasan Rumus
+                        </button>
+                    </div>
+                    <!-- Quick Jump Links (Warna Cerah) -->
+                    <div class="d-flex flex-wrap gap-2 pt-2 border-top" style="border-color: #e2e8f0 !important;">
+                        <a href="#tier1Section" class="btn btn-sm text-decoration-none fw-bold d-flex align-items-center gap-2 shadow-sm" style="background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; border-radius: 8px; font-size: 11px; padding: 6px 12px;">
+                            <span>🏆 Tier 1 &bull; Divisi Utama (&gt;100 Skuad):</span>
+                            <span class="badge bg-warning text-dark fw-bold" style="font-size: 11px;">@(tier1Standings.Count + tier1RedZone.Count) Klub</span>
+                        </a>
+                        <a href="#tier2Section" class="btn btn-sm text-decoration-none fw-bold d-flex align-items-center gap-2 shadow-sm" style="background: #f0f9ff; color: #0369a1; border: 1px solid #7dd3fc; border-radius: 8px; font-size: 11px; padding: 6px 12px;">
+                            <span>🥈 Tier 2 &bull; Divisi Satu (21–100 Skuad):</span>
+                            <span class="badge bg-info text-white fw-bold" style="font-size: 11px;">@(tier2Standings.Count + tier2RedZone.Count) Klub</span>
+                        </a>
+                        <a href="#tier3Section" class="btn btn-sm text-decoration-none fw-bold d-flex align-items-center gap-2 shadow-sm" style="background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; border-radius: 8px; font-size: 11px; padding: 6px 12px;">
+                            <span>🥉 Tier 3 &bull; Divisi Dua (1–20 Skuad):</span>
+                            <span class="badge bg-success text-white fw-bold" style="font-size: 11px;">@(tier3Standings.Count + tier3RedZone.Count) Klub</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════════════ -->
+                <!-- TIER 1: DIVISI UTAMA (> 100 SKUAD) -->
+                <!-- ══════════════════════════════════════════════════════════════ -->
+                <div class="league-card p-3 mb-4" id="tier1Section" style="border-top: 4px solid #f59e0b;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">
+                                <i class="bi bi-trophy-fill me-1"></i> TIER 1
+                            </span>
+                            <h5 class="mb-0 fw-bold" style="color: #0f172a; font-size: 16px;">Divisi Utama (Skuad &gt; 100 Karyawan)</h5>
+                        </div>
+                        <span class="badge bg-warning text-dark px-2 py-1 fw-bold" style="font-size: 11px;">@tier1Standings.Count KLUB AKTIF</span>
+                    </div>
+
+                    <div class="table-responsive league-table-wrap mb-3">
+                        <table class="league-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">Pos</th>
+                                    <th class="align-left">Klub (Perusahaan)</th>
+                                    <th style="width: 80px;">Skuad</th>
+                                    <th style="width: 105px; background-color: #1e3a8a;" title="Poin Total Skor agregat (Komparasi sama dengan Compliance)">PTS (Skor Total)</th>
+                                    <th style="width: 120px;">Form (5 Laga)</th>
+                                    <th style="width: 60px;">HZ</th>
+                                    <th style="width: 60px;">IP</th>
+                                    <th style="width: 60px;">ST</th>
+                                    <th style="width: 60px;">OB</th>
+                                    <th style="width: 60px;">CC</th>
+                                    <th style="width: 65px; background-color: #78350f;">P5M *</th>
+                                    <th style="width: 75px; background-color: #065f46;">Close Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!tier1Standings.Any())
+                                {
+                                    <tr>
+                                        <td colspan="12" class="text-center text-muted py-4">Belum ada data perusahaan untuk Tier 1.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    int idx = 0;
+                                    foreach (var comp in tier1Standings)
+                                    {
+                                        idx++;
+                                        var rowClass = "league-tr-normal";
+                                        var rankClass = "";
+                                        var rankText = idx.ToString();
+
+                                        if (comp.MtdAchievementRate == 0)
+                                        {
+                                            rowClass = "league-tr-no-movement";
+                                            rankClass = "league-rank-no-movement";
+                                        }
+                                        else if (idx <= 3)
+                                        {
+                                            rowClass = "league-tr-champions";
+                                            rankClass = "league-rank-champions";
+                                            if (idx == 1) rankText = "🥇 1";
+                                            else if (idx == 2) rankText = "🥈 2";
+                                            else if (idx == 3) rankText = "🥉 3";
+                                        }
+
+                                        var shieldColor = GetDeptColor(comp.CompanyName);
+                                        var initials = GetDeptInitials(comp.CompanyName);
+
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(comp.MtdAchievementRate) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                            <td class="text-center">
+                                                <div class="league-rank-pill @rankClass">@rankText</div>
+                                            </td>
+                                            <td class="align-left">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
+                                                    <div>
+                                                        <div class="fw-bold" style="color: #334155; font-size: 14px;">@comp.CompanyName</div>
+                                                        <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center fw-bold">@comp.EmployeeCount</td>
+                                            <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.TotalScore); background-color: rgba(30, 58, 138, 0.03);"
+                                                data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="@BuildPtsTooltip(comp)">
+                                                <div class="d-inline-flex align-items-center gap-1" style="cursor: help;" onclick="event.stopPropagation();">
+                                                    <span>@(((double)comp.TotalScore).ToString("F1"))</span>
+                                                    <i class="bi bi-info-circle text-muted" style="font-size: 10px;"></i>
+                                                </div>
+                                            </td>
+                                            <td class="text-center" style="white-space: nowrap;">
+                                                @GetFormDotsHtml(comp.MtdHazardRate, comp.MtdInspeksiRate, comp.MtdSafetyTalkRate, comp.MtdObservasiRate, comp.MtdCoachingRate)
+                                            </td>
+                                            <td class="text-center">@FormatRate(comp.MtdHazardRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdInspeksiRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdSafetyTalkRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdObservasiRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdCoachingRate)</td>
+                                            <td class="text-center" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: @GetRateColor(comp.MtdP5mRate);">@FormatRate(comp.MtdP5mRate)</td>
+                                            <td class="text-center" style="background-color: #ecfdf5; border-left: 2px solid #10b981; color: @GetRateColor(comp.MtdCloseRate);">@FormatRate(comp.MtdCloseRate)</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (tier1RedZone.Any())
+                    {
+                        <div class="mt-3 p-3 rounded" style="background-color: #fef2f2; border: 1px solid #fca5a5;">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-exclamation-triangle-fill text-danger me-2" style="font-size: 16px;"></i>
+                                <h6 class="mb-0 fw-bold text-danger" style="font-size: 13px;">ZONA DEGRADASI TIER 1 (Target Ada, Pencapaian 0%)</h6>
+                            </div>
+                            <div class="table-responsive league-table-wrap">
+                                <table class="league-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="align-left">Klub (Perusahaan)</th>
+                                            <th style="width: 80px;">Skuad</th>
+                                            <th style="width: 105px; background-color: #991b1b; color: white;">PTS (Skor Total)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var comp in tier1RedZone)
+                                        {
+                                            var shieldColor = GetDeptColor(comp.CompanyName);
+                                            var initials = GetDeptInitials(comp.CompanyName);
+                                            <tr class="league-tr-relegation" style="cursor: pointer;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                                <td class="align-left">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
+                                                        <div>
+                                                            <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@comp.CompanyName</div>
+                                                            <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center text-danger fw-bold">@comp.EmployeeCount</td>
+                                                <td class="text-center fw-bold text-danger"
+                                                    data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="@BuildPtsTooltip(comp)">
+                                                    <div class="d-inline-flex align-items-center gap-1" style="cursor: help;" onclick="event.stopPropagation();">
+                                                        <span>@(((double)comp.TotalScore).ToString("F1"))</span>
+                                                        <i class="bi bi-info-circle text-danger" style="font-size: 10px;"></i>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════════════ -->
+                <!-- TIER 2: DIVISI SATU (21 - 100 SKUAD) -->
+                <!-- ══════════════════════════════════════════════════════════════ -->
+                <div class="league-card p-3 mb-4" id="tier2Section" style="border-top: 4px solid #0284c7;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">
+                                <i class="bi bi-award-fill me-1"></i> TIER 2
+                            </span>
+                            <h5 class="mb-0 fw-bold" style="color: #0f172a; font-size: 16px;">Divisi Satu (Skuad 21 – 100 Karyawan)</h5>
+                        </div>
+                        <span class="badge bg-info text-dark px-2 py-1 fw-bold" style="font-size: 11px;">@tier2Standings.Count KLUB AKTIF</span>
+                    </div>
+
+                    <div class="table-responsive league-table-wrap mb-3">
+                        <table class="league-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">Pos</th>
+                                    <th class="align-left">Klub (Perusahaan)</th>
+                                    <th style="width: 80px;">Skuad</th>
+                                    <th style="width: 105px; background-color: #1e3a8a;" title="Poin Total Skor agregat (Komparasi sama dengan Compliance)">PTS (Skor Total)</th>
+                                    <th style="width: 120px;">Form (5 Laga)</th>
+                                    <th style="width: 60px;">HZ</th>
+                                    <th style="width: 60px;">IP</th>
+                                    <th style="width: 60px;">ST</th>
+                                    <th style="width: 60px;">OB</th>
+                                    <th style="width: 60px;">CC</th>
+                                    <th style="width: 65px; background-color: #78350f;">P5M *</th>
+                                    <th style="width: 75px; background-color: #065f46;">Close Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!tier2Standings.Any())
+                                {
+                                    <tr>
+                                        <td colspan="12" class="text-center text-muted py-4">Belum ada data perusahaan untuk Tier 2.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    int idx = 0;
+                                    foreach (var comp in tier2Standings)
+                                    {
+                                        idx++;
+                                        var rowClass = "league-tr-normal";
+                                        var rankClass = "";
+                                        var rankText = idx.ToString();
+
+                                        if (comp.MtdAchievementRate == 0)
+                                        {
+                                            rowClass = "league-tr-no-movement";
+                                            rankClass = "league-rank-no-movement";
+                                        }
+                                        else if (idx <= 3)
+                                        {
+                                            rowClass = "league-tr-champions";
+                                            rankClass = "league-rank-champions";
+                                            if (idx == 1) rankText = "🥇 1";
+                                            else if (idx == 2) rankText = "🥈 2";
+                                            else if (idx == 3) rankText = "🥉 3";
+                                        }
+
+                                        var shieldColor = GetDeptColor(comp.CompanyName);
+                                        var initials = GetDeptInitials(comp.CompanyName);
+
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(comp.MtdAchievementRate) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                            <td class="text-center">
+                                                <div class="league-rank-pill @rankClass">@rankText</div>
+                                            </td>
+                                            <td class="align-left">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
+                                                    <div>
+                                                        <div class="fw-bold" style="color: #334155; font-size: 14px;">@comp.CompanyName</div>
+                                                        <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center fw-bold">@comp.EmployeeCount</td>
+                                            <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.TotalScore); background-color: rgba(30, 58, 138, 0.03);"
+                                                data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="@BuildPtsTooltip(comp)">
+                                                <div class="d-inline-flex align-items-center gap-1" style="cursor: help;" onclick="event.stopPropagation();">
+                                                    <span>@(((double)comp.TotalScore).ToString("F1"))</span>
+                                                    <i class="bi bi-info-circle text-muted" style="font-size: 10px;"></i>
+                                                </div>
+                                            </td>
+                                            <td class="text-center" style="white-space: nowrap;">
+                                                @GetFormDotsHtml(comp.MtdHazardRate, comp.MtdInspeksiRate, comp.MtdSafetyTalkRate, comp.MtdObservasiRate, comp.MtdCoachingRate)
+                                            </td>
+                                            <td class="text-center">@FormatRate(comp.MtdHazardRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdInspeksiRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdSafetyTalkRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdObservasiRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdCoachingRate)</td>
+                                            <td class="text-center" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: @GetRateColor(comp.MtdP5mRate);">@FormatRate(comp.MtdP5mRate)</td>
+                                            <td class="text-center" style="background-color: #ecfdf5; border-left: 2px solid #10b981; color: @GetRateColor(comp.MtdCloseRate);">@FormatRate(comp.MtdCloseRate)</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (tier2RedZone.Any())
+                    {
+                        <div class="mt-3 p-3 rounded" style="background-color: #fef2f2; border: 1px solid #fca5a5;">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-exclamation-triangle-fill text-danger me-2" style="font-size: 16px;"></i>
+                                <h6 class="mb-0 fw-bold text-danger" style="font-size: 13px;">ZONA DEGRADASI TIER 2 (Target Ada, Pencapaian 0%)</h6>
+                            </div>
+                            <div class="table-responsive league-table-wrap">
+                                <table class="league-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="align-left">Klub (Perusahaan)</th>
+                                            <th style="width: 80px;">Skuad</th>
+                                            <th style="width: 105px; background-color: #991b1b; color: white;">PTS (Skor Total)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var comp in tier2RedZone)
+                                        {
+                                            var shieldColor = GetDeptColor(comp.CompanyName);
+                                            var initials = GetDeptInitials(comp.CompanyName);
+                                            <tr class="league-tr-relegation" style="cursor: pointer;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                                <td class="align-left">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
+                                                        <div>
+                                                            <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@comp.CompanyName</div>
+                                                            <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center text-danger fw-bold">@comp.EmployeeCount</td>
+                                                <td class="text-center fw-bold text-danger"
+                                                    data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="@BuildPtsTooltip(comp)">
+                                                    <div class="d-inline-flex align-items-center gap-1" style="cursor: help;" onclick="event.stopPropagation();">
+                                                        <span>@(((double)comp.TotalScore).ToString("F1"))</span>
+                                                        <i class="bi bi-info-circle text-danger" style="font-size: 10px;"></i>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- ══════════════════════════════════════════════════════════════ -->
+                <!-- TIER 3: DIVISI DUA (1 - 20 SKUAD) -->
+                <!-- ══════════════════════════════════════════════════════════════ -->
+                <div class="league-card p-3 mb-4" id="tier3Section" style="border-top: 4px solid #059669;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge" style="background: linear-gradient(135deg, #059669, #047857); color: #fff; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">
+                                <i class="bi bi-shield-shaded me-1"></i> TIER 3
+                            </span>
+                            <h5 class="mb-0 fw-bold" style="color: #0f172a; font-size: 16px;">Divisi Dua (Skuad 1 – 20 Karyawan)</h5>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success text-white px-2 py-1 fw-bold" style="font-size: 11px;">@tier3Standings.Count KLUB AKTIF</span>
+                            <div class="input-group input-group-sm" style="max-width: 220px;">
+                                <span class="input-group-text bg-white border-end-0 py-0"><i class="bi bi-search text-muted" style="font-size: 11px;"></i></span>
+                                <input type="text" id="tier3SearchInput" placeholder="Cari nama perusahaan..." class="form-control border-start-0" style="font-size: 11px;" onkeyup="filterTier3Table();" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive league-table-wrap mb-3" style="max-height: 560px; overflow-y: auto;">
+                        <table class="league-table" id="tier3Table">
+                            <thead>
+                                <tr style="position: sticky; top: 0; z-index: 5;">
+                                    <th style="width: 50px;">Pos</th>
+                                    <th class="align-left">Klub (Perusahaan)</th>
+                                    <th style="width: 80px;">Skuad</th>
+                                    <th style="width: 105px; background-color: #1e3a8a;" title="Poin Total Skor agregat (Komparasi sama dengan Compliance)">PTS (Skor Total)</th>
+                                    <th style="width: 120px;">Form (5 Laga)</th>
+                                    <th style="width: 60px;">HZ</th>
+                                    <th style="width: 60px;">IP</th>
+                                    <th style="width: 60px;">ST</th>
+                                    <th style="width: 60px;">OB</th>
+                                    <th style="width: 60px;">CC</th>
+                                    <th style="width: 65px; background-color: #78350f;">P5M *</th>
+                                    <th style="width: 75px; background-color: #065f46;">Close Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!tier3Standings.Any())
+                                {
+                                    <tr>
+                                        <td colspan="12" class="text-center text-muted py-4">Belum ada data perusahaan untuk Tier 3.</td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    int idx = 0;
+                                    foreach (var comp in tier3Standings)
+                                    {
+                                        idx++;
+                                        var rowClass = "league-tr-normal";
+                                        var rankClass = "";
+                                        var rankText = idx.ToString();
+
+                                        if (comp.MtdAchievementRate == 0)
+                                        {
+                                            rowClass = "league-tr-no-movement";
+                                            rankClass = "league-rank-no-movement";
+                                        }
+                                        else if (idx <= 3)
+                                        {
+                                            rowClass = "league-tr-champions";
+                                            rankClass = "league-rank-champions";
+                                            if (idx == 1) rankText = "🥇 1";
+                                            else if (idx == 2) rankText = "🥈 2";
+                                            else if (idx == 3) rankText = "🥉 3";
+                                        }
+
+                                        var shieldColor = GetDeptColor(comp.CompanyName);
+                                        var initials = GetDeptInitials(comp.CompanyName);
+
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(comp.MtdAchievementRate) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                            <td class="text-center">
+                                                <div class="league-rank-pill @rankClass">@rankText</div>
+                                            </td>
+                                            <td class="align-left">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
+                                                    <div>
+                                                        <div class="fw-bold tier3-comp-name" style="color: #334155; font-size: 14px;">@comp.CompanyName</div>
+                                                        <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center fw-bold">@comp.EmployeeCount</td>
+                                            <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.TotalScore); background-color: rgba(30, 58, 138, 0.03);"
+                                                data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="@BuildPtsTooltip(comp)">
+                                                <div class="d-inline-flex align-items-center gap-1" style="cursor: help;" onclick="event.stopPropagation();">
+                                                    <span>@(((double)comp.TotalScore).ToString("F1"))</span>
+                                                    <i class="bi bi-info-circle text-muted" style="font-size: 10px;"></i>
+                                                </div>
+                                            </td>
+                                            <td class="text-center" style="white-space: nowrap;">
+                                                @GetFormDotsHtml(comp.MtdHazardRate, comp.MtdInspeksiRate, comp.MtdSafetyTalkRate, comp.MtdObservasiRate, comp.MtdCoachingRate)
+                                            </td>
+                                            <td class="text-center">@FormatRate(comp.MtdHazardRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdInspeksiRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdSafetyTalkRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdObservasiRate)</td>
+                                            <td class="text-center">@FormatRate(comp.MtdCoachingRate)</td>
+                                            <td class="text-center" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: @GetRateColor(comp.MtdP5mRate);">@FormatRate(comp.MtdP5mRate)</td>
+                                            <td class="text-center" style="background-color: #ecfdf5; border-left: 2px solid #10b981; color: @GetRateColor(comp.MtdCloseRate);">@FormatRate(comp.MtdCloseRate)</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (tier3RedZone.Any())
+                    {
+                        <div class="mt-3 p-3 rounded" style="background-color: #fef2f2; border: 1px solid #fca5a5;">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-exclamation-triangle-fill text-danger me-2" style="font-size: 16px;"></i>
+                                <h6 class="mb-0 fw-bold text-danger" style="font-size: 13px;">ZONA DEGRADASI TIER 3 (Target Ada, Pencapaian 0%)</h6>
+                            </div>
+                            <div class="table-responsive league-table-wrap">
+                                <table class="league-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="align-left">Klub (Perusahaan)</th>
+                                            <th style="width: 80px;">Skuad</th>
+                                            <th style="width: 105px; background-color: #991b1b; color: white;">PTS (Skor Total)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var comp in tier3RedZone)
+                                        {
+                                            var shieldColor = GetDeptColor(comp.CompanyName);
+                                            var initials = GetDeptInitials(comp.CompanyName);
+                                            <tr class="league-tr-relegation" style="cursor: pointer;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                                <td class="align-left">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
+                                                        <div>
+                                                            <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@comp.CompanyName</div>
+                                                            <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center text-danger fw-bold">@comp.EmployeeCount</td>
+                                                <td class="text-center fw-bold text-danger"
+                                                    data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="@BuildPtsTooltip(comp)">
+                                                    <div class="d-inline-flex align-items-center gap-1" style="cursor: help;" onclick="event.stopPropagation();">
+                                                        <span>@(((double)comp.TotalScore).ToString("F1"))</span>
+                                                        <i class="bi bi-info-circle text-danger" style="font-size: 10px;"></i>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="legend-box mt-3 mb-2">
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #000000;"></div>
+                        <span>0–39% (Hitam)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #dc2626;"></div>
+                        <span>40–79% (Merah)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-dot" style="background: #16a34a;"></div>
+                        <span>80–100% (Hijau)</span>
+                    </div>
+                </div>
+                <span class="text-muted mt-1 mb-4 d-block" style="font-size: 11px; font-style: italic; line-height: 1.4;">
+                    * Klik baris Perusahaan untuk melihat Klasemen Internal (Klub / Departemen) dari perusahaan tersebut secara detail.
+                </span>
+            }
+            else if (currentMode == "core")
             {
                 var companyStandings = ViewBag.CompanyStandings as List<dynamic> ?? new List<dynamic>();
                 <div class="league-card p-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0" style="font-weight: 800; color: #0f172a;"><i class="bi bi-globe me-2 text-primary"></i>Super League (Antar Company)</h5>
+                        <h5 class="mb-0" style="font-weight: 800; color: #0f172a;"><i class="bi bi-star-fill me-2 text-warning"></i>Liga Perusahaan Inti</h5>
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-primary px-2 py-1" style="font-size: 10px; font-weight: 700;">@companyStandings.Count COMPANY</span>
                             <button type="button" class="btn btn-sm btn-outline-warning" onclick="downloadSapDetailExcel(this);" title="Unduh Detail Seluruh SAP + AI Quality (.xlsx)" style="font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px;">
@@ -770,7 +1634,7 @@
                                     <th style="width: 50px;">Pos</th>
                                     <th class="align-left">Klub (Perusahaan)</th>
                                     <th style="width: 80px;">Skuad</th>
-                                    <th style="width: 100px; background-color: #1e3a8a;">PTS (Compliance %)</th>
+                                    <th style="width: 105px; background-color: #1e3a8a;" title="Poin Total Skor agregat (Komparasi sama dengan Compliance)">PTS (Skor Total)</th>
                                     <th style="width: 120px;">Form (5 Laga)</th>
                                     <th style="width: 60px;">HZ</th>
                                     <th style="width: 60px;">IP</th>
@@ -823,21 +1687,19 @@
                                                 <div class="d-flex align-items-center">
                                                     <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
                                                     <div>
-                                                        @if (currentMode == "core")
-                                                        {
-                                                            <div class="fw-bold" style="color: #334155; font-size: 14px;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? comp.CompanyName : comp.PjoName)</div>
-                                                            <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.CompanyName)</div>
-                                                        }
-                                                        else
-                                                        {
-                                                            <div class="fw-bold" style="color: #334155; font-size: 14px;">@comp.CompanyName</div>
-                                                            <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
-                                                        }
+                                                        <div class="fw-bold" style="color: #334155; font-size: 14px;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? comp.CompanyName : comp.PjoName)</div>
+                                                        <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.CompanyName)</div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td class="text-center">@comp.EmployeeCount</td>
-                                            <td class="text-center fw-bold" style="color: @GetRateColor(comp.MtdAchievementRate); background-color: rgba(30, 58, 138, 0.03);">@comp.MtdAchievementRate%</td>
+                                            <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.TotalScore); background-color: rgba(30, 58, 138, 0.03);"
+                                                data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="@BuildPtsTooltip(comp)">
+                                                <div class="d-inline-flex align-items-center gap-1" style="cursor: help;" onclick="event.stopPropagation();">
+                                                    <span>@(((double)comp.TotalScore).ToString("F1"))</span>
+                                                    <i class="bi bi-info-circle text-muted" style="font-size: 10px;"></i>
+                                                </div>
+                                            </td>
                                             <td class="text-center" style="white-space: nowrap;">
                                                 @GetFormDotsHtml(comp.MtdHazardRate, comp.MtdInspeksiRate, comp.MtdSafetyTalkRate, comp.MtdObservasiRate, comp.MtdCoachingRate)
                                             </td>
@@ -870,7 +1732,7 @@
                                             <tr>
                                                 <th class="align-left">Klub (Perusahaan)</th>
                                                 <th style="width: 80px;">Skuad</th>
-                                                <th style="width: 100px; background-color: #991b1b; color: white;">PTS (Compliance %)</th>
+                                                <th style="width: 105px; background-color: #991b1b; color: white;">PTS (Skor Total)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -883,21 +1745,19 @@
                                                         <div class="d-flex align-items-center">
                                                             <div class="football-badge me-2" style="background-color: @shieldColor;">@initials</div>
                                                             <div>
-                                                                @if (currentMode == "core")
-                                                                {
-                                                                    <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? comp.CompanyName : comp.PjoName)</div>
-                                                                    <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.CompanyName)</div>
-                                                                }
-                                                                else
-                                                                {
-                                                                    <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@comp.CompanyName</div>
-                                                                    <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.PjoName)</div>
-                                                                }
+                                                                <div class="fw-bold" style="color: #991b1b; font-size: 14px;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? comp.CompanyName : comp.PjoName)</div>
+                                                                <div style="font-size: 11px; color: #64748b;">@(string.IsNullOrWhiteSpace(comp.PjoName) ? "" : comp.CompanyName)</div>
                                                             </div>
                                                         </div>
                                                     </td>
                                                     <td class="text-center text-danger">@comp.EmployeeCount</td>
-                                                    <td class="text-center fw-bold text-danger">0%</td>
+                                                    <td class="text-center fw-bold text-danger"
+                                                        data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="@BuildPtsTooltip(comp)">
+                                                        <div class="d-inline-flex align-items-center gap-1" style="cursor: help;" onclick="event.stopPropagation();">
+                                                            <span>@(((double)comp.TotalScore).ToString("F1"))</span>
+                                                            <i class="bi bi-info-circle text-danger" style="font-size: 10px;"></i>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                             }
                                         </tbody>
@@ -1095,12 +1955,6 @@
                         <button type="button" class="btn btn-sm btn-outline-light d-none" id="resetFilterBtn" onclick="resetPlayerFilter();" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px;">
                             <i class="bi bi-x-circle me-1"></i> Tampilkan Semua
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-warning" id="downloadSapDetailBtn" onclick="downloadSapDetailExcel(this);" title="Unduh Rincian Seluruh SAP per Sheet + Bintang Kualitas AI (.xlsx)" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
-                            <i class="bi bi-stars text-warning" id="aiIcon"></i> <span class="d-none d-md-inline ms-1">Detail SAP + AI</span>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-light" id="downloadExcelBtn" onclick="downloadSquadExcel(this);" title="Unduh Laporan Klasemen Excel (.xlsx)" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
-                            <i class="bi bi-file-earmark-excel-fill text-success" id="excelIcon"></i> <span class="d-none d-md-inline ms-1">Klasemen Excel</span>
-                        </button>
                         <button type="button" class="btn btn-sm btn-outline-light" id="toggleAllDetailsBtn" onclick="toggleAllDetails();" title="Tampilkan Semua Rincian Kepatuhan" style="font-size: 10px; font-weight: 700; border-radius: 4px; padding: 4px 8px; transition: all 0.2s;">
                             <i class="bi bi-eye" id="detailsIcon"></i> <span class="d-none d-md-inline ms-1" id="detailsText">Buka Rincian</span>
                         </button>
@@ -1118,9 +1972,9 @@
                         <!-- Populated dynamically via JS -->
                     </div>
 
-                    <div class="alert alert-info py-2 px-3 mb-3 border-0 d-flex align-items-center gap-2" id="filterAlert" style="border-radius: 8px; font-size: 12px; background-color: #f0f9ff; color: #0369a1;">
+                    <div class="alert alert-info py-2 px-3 mb-3 border-0 d-none align-items-center gap-2" id="filterAlert" style="border-radius: 8px; font-size: 12px; background-color: #f0f9ff; color: #0369a1;">
                         <i class="bi bi-info-circle-fill"></i>
-                        <span id="filterAlertText">Menampilkan seluruh daftar pemain perusahaan.</span>
+                        <span id="filterAlertText"></span>
                     </div>
 
                     <div class="table-responsive league-table-wrap" style="max-height: 520px; overflow-y: auto;">
@@ -1317,7 +2171,125 @@
     </div>
 </div>
 
+<!-- Modal Penjelasan Rumus Skor Liga -->
+<div class="modal fade" id="leagueScoringModal" tabindex="-1" aria-labelledby="leagueScoringModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 text-white p-3 px-4" style="background: linear-gradient(135deg, #1e3a8a, #2563eb) !important;">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-white bg-opacity-20 p-2 d-flex align-items-center justify-content-center" style="width:36px; height:36px;">
+                        <i class="bi bi-calculator-fill fs-5 text-white"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0 text-white" id="leagueScoringModalLabel">Metodologi & Bobot Perhitungan Skor Liga</h5>
+                        <div class="text-white-50" style="font-size: 12px;">Sistem pembobotan performa terintegrasi (Identik dengan Menu Compliance)</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light">
+                <!-- Ringkasan Rumus -->
+                <div class="p-3 rounded-3 mb-4 text-center shadow-sm" style="background: #ffffff; border: 1px solid #bfdbfe;">
+                    <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;">Formula Agregat PTS</div>
+                    <div class="fw-bold fs-5 text-primary">
+                        Skor = (50% &times; Close Rate) + (25% &times; Kualitas) + (15% &times; Capaian) + (10% &times; Skala Beban)
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <!-- 1. Close Rate -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm rounded-3">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded p-2 text-success" style="background: #ecfdf5;"><i class="bi bi-shield-check fs-5"></i></div>
+                                        <div class="fw-bold text-dark" style="font-size: 14px;">1. Close Rate Action Plan</div>
+                                    </div>
+                                    <span class="badge bg-success rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 50%</span>
+                                </div>
+                                <p class="text-muted mb-0" style="font-size: 12px; line-height: 1.5;">
+                                    Tingkat penyelesaian dan tindak lanjut temuan bahaya/isu K3LH (Action Plan Closed). Memiliki bobot terbesar karena tindakan korektif nyata merupakan faktor kunci keselamatan.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Kualitas -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm rounded-3">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded p-2 text-warning" style="background: #fffbeb;"><i class="bi bi-stars fs-5"></i></div>
+                                        <div class="fw-bold text-dark" style="font-size: 14px;">2. Kualitas Input (Mutu)</div>
+                                    </div>
+                                    <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 25%</span>
+                                </div>
+                                <p class="text-muted mb-0" style="font-size: 12px; line-height: 1.5;">
+                                    Rata-rata validasi mutu data laporan SAP (Hazard, Inspeksi, Observasi, Coaching, Safety Talk) yang dievaluasi secara objektif oleh AI Safety Validator.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Capaian -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm rounded-3">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded p-2 text-primary" style="background: #eff6ff;"><i class="bi bi-bullseye fs-5"></i></div>
+                                        <div class="fw-bold text-dark" style="font-size: 14px;">3. Capaian Target (Volume)</div>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 15%</span>
+                                </div>
+                                <p class="text-muted mb-0" style="font-size: 12px; line-height: 1.5;">
+                                    Persentase rata-rata penyelesaian target wajib 5 program SAP (maks. 100%). Menilai kepatuhan kuantitatif seluruh anggota skuad.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Skala Beban -->
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm rounded-3">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="rounded p-2 text-info" style="background: #f0fdfa;"><i class="bi bi-people-fill fs-5"></i></div>
+                                        <div class="fw-bold text-dark" style="font-size: 14px;">4. Skala Beban Tenaga Kerja</div>
+                                    </div>
+                                    <span class="badge bg-info text-white rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 10%</span>
+                                </div>
+                                <p class="text-muted mb-0" style="font-size: 12px; line-height: 1.5;">
+                                    Apresiasi keadilan operasional berdasarkan rasio jumlah karyawan aktif. Memberikan faktor proporsional bagi entitas dengan skala operasi dan personil lebih besar.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info d-flex align-items-center gap-2 mt-3 mb-0 py-2 px-3 border-0 rounded-3" style="font-size: 12px; background: #e0f2fe; color: #0369a1;">
+                    <i class="bi bi-lightbulb-fill text-info fs-6"></i>
+                    <span><strong>Tips:</strong> Arahkan kursor / sentuh angka <strong>PTS (ⓘ)</strong> pada tabel klasemen mana saja untuk melihat kalkulasi detail angka riil tiap perusahaan.</span>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-3 bg-white">
+                <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal" style="border-radius: 8px; font-size: 13px;">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+            new bootstrap.Tooltip(tooltipTriggerEl, { container: 'body', sanitize: false });
+        });
+    });
+
     function filterPlayerTable(deptName) {
         const rows = document.querySelectorAll('.player-row');
         const alertBox = document.getElementById('filterAlert');
@@ -1337,8 +2309,12 @@
         });
 
         // Update alert layout
-        alertBox.style.backgroundColor = '#ecfdf5';
-        alertBox.style.color = '#047857';
+        if (alertBox) {
+            alertBox.classList.remove('d-none');
+            alertBox.classList.add('d-flex');
+            alertBox.style.backgroundColor = '#ecfdf5';
+            alertBox.style.color = '#047857';
+        }
         if (alertText) {
             alertText.innerHTML = 'Menampilkan Skuad Klub <strong>' + deptName + '</strong> (' + (matchCount / 2) + ' Pemain)';
         }
@@ -1372,10 +2348,12 @@
             }
         });
 
-        alertBox.style.backgroundColor = '#f0f9ff';
-        alertBox.style.color = '#0369a1';
+        if (alertBox) {
+            alertBox.classList.remove('d-flex');
+            alertBox.classList.add('d-none');
+        }
         if (alertText) {
-            alertText.innerHTML = 'Menampilkan seluruh daftar pemain perusahaan.';
+            alertText.innerHTML = '';
         }
         
         currentSquadDeptFilter = null; // Reset filter state
@@ -1765,5 +2743,20 @@
             if (chevron) chevron.style.transform = 'rotate(0deg)';
         }
     });
+    // ─── Filter Tier 3 Standings Table ──────────────────────────────────
+    function filterTier3Table() {
+        const input = document.getElementById('tier3SearchInput');
+        if (!input) return;
+        const query = input.value.toLowerCase().trim();
+        const table = document.getElementById('tier3Table');
+        if (!table) return;
+        table.querySelectorAll('tbody tr').forEach(function(row) {
+            const nameEl = row.querySelector('.tier3-comp-name');
+            if (nameEl) {
+                const name = nameEl.textContent.toLowerCase();
+                row.style.display = query === '' || name.includes(query) ? '' : 'none';
+            }
+        });
+    }
     // ───────────────────────────────────────────────────────────────────────
 </script>

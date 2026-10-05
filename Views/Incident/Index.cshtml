@@ -507,6 +507,7 @@
                                         <form asp-action="ToggleBanner" method="post" style="display:inline; margin:0;">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@item.Id" />
+                                            <input type="hidden" name="page" value="@currentPage" />
                                             <button type="submit" class="btn-toggle-badge @(item.IsBanner ? "active-banner" : "inactive")" title="Klik untuk ubah tayang Banner Home">
                                                 <i class="bi bi-badge-ad"></i> @(item.IsBanner ? "Banner ON" : "Banner OFF")
                                             </button>
@@ -514,6 +515,7 @@
                                         <form asp-action="ToggleUpdate" method="post" style="display:inline; margin:0;">
                                             @Html.AntiForgeryToken()
                                             <input type="hidden" name="id" value="@item.Id" />
+                                            <input type="hidden" name="page" value="@currentPage" />
                                             <button type="submit" class="btn-toggle-badge @(item.IsUpdate ? "active-update" : "inactive")" title="Klik untuk ubah tayang Safety Update">
                                                 <i class="bi bi-bell"></i> @(item.IsUpdate ? "Update ON" : "Update OFF")
                                             </button>
