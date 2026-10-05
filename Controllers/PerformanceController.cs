@@ -503,14 +503,79 @@ namespace MBS_SAP.Controllers
                 int mtdActH = hazards.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int mtdActHClosed = hazardsClosed.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
 
+                // ==============================================================
+                // CLOSE RATE DUAL ACCOUNTABILITY (50% Pembuat / 50% Yang Dituju)
+                // DENGAN ATURAN SELF-CLOSE / INTERNAL DEPT (Maksimal 50% Penilaian)
+                // ==============================================================
+
+                // 1. SISI PEMBUAT / PELAPOR
+                var empCreatedAp = rawActionPlansList.Where(a => !string.IsNullOrEmpty(a.Nik) && string.Equals(a.Nik.Trim(), nik, StringComparison.OrdinalIgnoreCase)).ToList();
+                int crCreatedTotal = empCreatedAp.Count;
+                int crCreatedClosedFull = 0; // Cross-dept closed (100% bobot)
+                int crCreatedClosedSelf = 0; // Self-close / internal dept closed (50% bobot)
+                int crCreatedOpen = 0;
+                double crCreatorScore = 100.0;
+
+                if (crCreatedTotal > 0)
+                {
+                    double totalEarned = 0.0;
+                    foreach (var ap in empCreatedAp)
+                    {
+                        if (IsClosedStatus(ap.Status))
+                        {
+                            bool isSelfPic = (!string.IsNullOrEmpty(ap.NikPic) && string.Equals(ap.NikPic.Trim(), nik, StringComparison.OrdinalIgnoreCase))
+                                          || (!string.IsNullOrEmpty(ap.NikPja) && string.Equals(ap.NikPja.Trim(), nik, StringComparison.OrdinalIgnoreCase))
+                                          || string.IsNullOrEmpty(ap.NikPic);
+                            bool isSameDept = !string.IsNullOrEmpty(ap.Departemen) && !string.IsNullOrEmpty(ap.DepartemenPic)
+                                              && string.Equals(ap.Departemen.Trim(), ap.DepartemenPic.Trim(), StringComparison.OrdinalIgnoreCase);
+
+                            if (isSelfPic || isSameDept)
+                            {
+                                totalEarned += 0.50; // Max 50% for self-close / internal dept
+                                crCreatedClosedSelf++;
+                            }
+                            else
+                            {
+                                totalEarned += 1.00; // Full 100% for cross-dept closed
+                                crCreatedClosedFull++;
+                            }
+                        }
+                        else
+                        {
+                            crCreatedOpen++;
+                        }
+                    }
+                    crCreatorScore = Math.Min(100.0, Math.Max(0.0, Math.Round((totalEarned / crCreatedTotal) * 100.0, 1)));
+                }
+
+                // 2. SISI YANG DITUJU (PIC / PJA)
                 var empAssignedAp = rawActionPlansList.Where(a =>
                     (!string.IsNullOrEmpty(a.NikPic) && string.Equals(a.NikPic.Trim(), nik, StringComparison.OrdinalIgnoreCase)) ||
                     (!string.IsNullOrEmpty(a.NikPja) && string.Equals(a.NikPja.Trim(), nik, StringComparison.OrdinalIgnoreCase))
                 ).ToList();
 
-                int empEffectiveTotalAp = empAssignedAp.Count;
-                int empEffectiveClosedAp = empAssignedAp.Count(a => IsClosedStatus(a.Status));
-                double empCloseRate = empEffectiveTotalAp > 0 ? Math.Round((double)empEffectiveClosedAp / empEffectiveTotalAp * 100.0, 1) : 100.0;
+                int crAssignedTotal = empAssignedAp.Count;
+                int crAssignedClosed = empAssignedAp.Count(a => IsClosedStatus(a.Status));
+                double crPicScore = crAssignedTotal > 0 ? Math.Min(100.0, Math.Max(0.0, Math.Round((double)crAssignedClosed / crAssignedTotal * 100.0, 1))) : 100.0;
+
+                // 3. KOMBINASI DUAL ACCOUNTABILITY (50:50)
+                double empCloseRate;
+                if (crCreatedTotal > 0 && crAssignedTotal > 0)
+                {
+                    empCloseRate = Math.Round((crCreatorScore * 0.50) + (crPicScore * 0.50), 1);
+                }
+                else if (crCreatedTotal > 0)
+                {
+                    empCloseRate = crCreatorScore;
+                }
+                else if (crAssignedTotal > 0)
+                {
+                    empCloseRate = crPicScore;
+                }
+                else
+                {
+                    empCloseRate = 100.0;
+                }
 
                 int mtdActI = inspections.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
                 int mtdActST = safetyTalks.Count(n => string.Equals(n, nik, StringComparison.OrdinalIgnoreCase));
@@ -551,8 +616,16 @@ namespace MBS_SAP.Controllers
                     totalActualAll = totalActualAll,
                     complianceRate = compliance,
                     closeRate = empCloseRate,
-                    closeRateEffectiveTotal = empEffectiveTotalAp,
-                    closeRateEffectiveClosed = empEffectiveClosedAp,
+                    crCreatorScore = crCreatorScore,
+                    crPicScore = crPicScore,
+                    crCreatedTotal = crCreatedTotal,
+                    crCreatedClosedFull = crCreatedClosedFull,
+                    crCreatedClosedSelf = crCreatedClosedSelf,
+                    crCreatedOpen = crCreatedOpen,
+                    crAssignedTotal = crAssignedTotal,
+                    crAssignedClosed = crAssignedClosed,
+                    closeRateEffectiveTotal = crAssignedTotal + crCreatedTotal,
+                    closeRateEffectiveClosed = crAssignedClosed + crCreatedClosedFull + crCreatedClosedSelf,
                     onsiteDays = onsiteDays,
                     hasRoster = hasRoster,
                     isNewHire = isNewHire,
@@ -3818,6 +3891,14 @@ namespace MBS_SAP.Controllers
                             totalActualAll = (int)e.totalActualAll,
                             complianceRate = complianceRate,
                             closeRate = closeRate,
+                            crCreatorScore = (double)(e.crCreatorScore ?? 100.0),
+                            crPicScore = (double)(e.crPicScore ?? 100.0),
+                            crCreatedTotal = (int)(e.crCreatedTotal ?? 0),
+                            crCreatedClosedFull = (int)(e.crCreatedClosedFull ?? 0),
+                            crCreatedClosedSelf = (int)(e.crCreatedClosedSelf ?? 0),
+                            crCreatedOpen = (int)(e.crCreatedOpen ?? 0),
+                            crAssignedTotal = (int)(e.crAssignedTotal ?? 0),
+                            crAssignedClosed = (int)(e.crAssignedClosed ?? 0),
                             scoreCloseRate = Math.Round(scoreCloseRate, 1),
                             scoreKualitas = Math.Round(scoreKualitas, 1),
                             scoreCapaian = Math.Round(scoreCapaian, 1),
@@ -3980,6 +4061,14 @@ namespace MBS_SAP.Controllers
                         totalActualAll = (int)e.totalActualAll,
                         complianceRate = complianceRate,
                         closeRate = closeRate,
+                        crCreatorScore = (double)(e.crCreatorScore ?? 100.0),
+                        crPicScore = (double)(e.crPicScore ?? 100.0),
+                        crCreatedTotal = (int)(e.crCreatedTotal ?? 0),
+                        crCreatedClosedFull = (int)(e.crCreatedClosedFull ?? 0),
+                        crCreatedClosedSelf = (int)(e.crCreatedClosedSelf ?? 0),
+                        crCreatedOpen = (int)(e.crCreatedOpen ?? 0),
+                        crAssignedTotal = (int)(e.crAssignedTotal ?? 0),
+                        crAssignedClosed = (int)(e.crAssignedClosed ?? 0),
                         scoreCloseRate = Math.Round(scoreCloseRate, 1),
                         scoreKualitas = Math.Round(scoreKualitas, 1),
                         scoreCapaian = Math.Round(scoreCapaian, 1),
@@ -4443,6 +4532,14 @@ namespace MBS_SAP.Controllers
                         isActivelyReporting = (bool)e.isActivelyReporting,
                         complianceRate = complianceRate,
                         closeRate = closeRate,
+                        crCreatorScore = (double)(e.crCreatorScore ?? 100.0),
+                        crPicScore = (double)(e.crPicScore ?? 100.0),
+                        crCreatedTotal = (int)(e.crCreatedTotal ?? 0),
+                        crCreatedClosedFull = (int)(e.crCreatedClosedFull ?? 0),
+                        crCreatedClosedSelf = (int)(e.crCreatedClosedSelf ?? 0),
+                        crCreatedOpen = (int)(e.crCreatedOpen ?? 0),
+                        crAssignedTotal = (int)(e.crAssignedTotal ?? 0),
+                        crAssignedClosed = (int)(e.crAssignedClosed ?? 0),
                         scoreCloseRate = Math.Round(scoreCloseRate, 1),
                         scoreKualitas = Math.Round(scoreKualitas, 1),
                         scoreCapaian = Math.Round(scoreCapaian, 1),
