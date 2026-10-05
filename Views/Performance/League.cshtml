@@ -2161,68 +2161,84 @@
 
                                                     @if (!zeroTarget && emp.isTargetSap == true)
                                                     {
-                                                        <div class="mt-2.5 p-2.5 border rounded" style="background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border-color: #e2e8f0 !important;">
-                                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px dashed #cbd5e1;">
-                                                                <div class="d-flex align-items-center gap-1.5">
-                                                                    <span class="badge bg-primary px-1.5 py-0.5" style="font-size: 10px;"><i class="bi bi-calculator-fill me-1"></i>FORMULA SKOR</span>
-                                                                    <span class="fw-bold text-dark" style="font-size: 11px;">Rincian Perhitungan Skor Akhir (PTS)</span>
+                                                        <div class="mt-3 p-3 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-2" style="border-bottom: 1px solid #e2e8f0;">
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <div class="d-flex align-items-center justify-content-center rounded-2" style="width: 24px; height: 24px; background: #2563eb; color: white; font-size: 11px;">
+                                                                        <i class="bi bi-calculator"></i>
+                                                                    </div>
+                                                                    <span class="fw-bold text-dark" style="font-size: 12px; letter-spacing: -0.2px;">Rincian Formula Skor Akhir (PTS)</span>
+                                                                    <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-size: 9.5px; font-weight: 600; border: 1px solid #bfdbfe;">Standar Bobot Terintegrasi</span>
                                                                 </div>
                                                                 <div>
-                                                                    <span class="badge bg-dark text-white px-2 py-1 shadow-sm" style="font-size: 11px; font-weight: 700;">
-                                                                        Skor Akhir: @emp.totalScore pts (@emp.totalScore%)
+                                                                    <span class="badge px-3 py-1.5 rounded-pill shadow-xs" style="background: #0f172a; color: #38bdf8; font-size: 11px; font-weight: 700; border: 1px solid #334155;">
+                                                                        Total Skor: <span class="text-white">@emp.totalScore pts</span> (@emp.totalScore%)
                                                                     </span>
                                                                 </div>
                                                             </div>
                                                             
                                                             <div class="row g-2 text-center" style="font-size: 11px;">
+                                                                <!-- 1. Close Rate -->
                                                                 <div class="col-6 col-md-3">
-                                                                    <div class="p-2 rounded bg-white border shadow-xs h-100">
-                                                                        <div class="d-flex align-items-center justify-content-between mb-1">
-                                                                            <span class="text-muted" style="font-size: 10px; font-weight: 600;">1. Close Rate</span>
-                                                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-1 py-0" style="font-size: 9px;">Bobot 50%</span>
+                                                                    <div class="p-2.5 rounded-3 bg-white h-100 d-flex flex-column justify-content-between" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                                                                        <div class="d-flex align-items-center justify-content-between mb-1.5">
+                                                                            <span class="text-secondary fw-semibold" style="font-size: 11px;">1. Close Rate</span>
+                                                                            <span class="badge rounded-pill" style="background: #dcfce7; color: #15803d; font-size: 9.5px; font-weight: 600;">Bobot 50%</span>
                                                                         </div>
-                                                                        <div class="fw-bold fs-6 text-success">@emp.scoreCloseRate%</div>
-                                                                        <div class="text-muted pt-1" style="font-size: 10px; border-top: 1px solid #f1f5f9;">
+                                                                        <div class="my-1">
+                                                                            <span class="fw-bold fs-5 text-success">@emp.scoreCloseRate%</span>
+                                                                        </div>
+                                                                        <div class="pt-1.5 mt-auto" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
                                                                             50% &times; @emp.scoreCloseRate% = <strong class="text-dark">@emp.ptsClose pts</strong>
                                                                         </div>
                                                                     </div>
                                                                 </div>
+
+                                                                <!-- 2. Kualitas -->
                                                                 <div class="col-6 col-md-3">
-                                                                    <div class="p-2 rounded bg-white border shadow-xs h-100">
-                                                                        <div class="d-flex align-items-center justify-content-between mb-1">
-                                                                            <span class="text-muted" style="font-size: 10px; font-weight: 600;">2. Kualitas</span>
-                                                                            <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning border-opacity-20 px-1 py-0" style="font-size: 9px;">Bobot 25%</span>
+                                                                    <div class="p-2.5 rounded-3 bg-white h-100 d-flex flex-column justify-content-between" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                                                                        <div class="d-flex align-items-center justify-content-between mb-1.5">
+                                                                            <span class="text-secondary fw-semibold" style="font-size: 11px;">2. Kualitas Mutu</span>
+                                                                            <span class="badge rounded-pill" style="background: #fef3c7; color: #b45309; font-size: 9.5px; font-weight: 600;">Bobot 25%</span>
                                                                         </div>
-                                                                        <div class="fw-bold fs-6 text-warning-emphasis">@emp.scoreKualitas%</div>
-                                                                        <div class="text-muted pt-1" style="font-size: 10px; border-top: 1px solid #f1f5f9;">
+                                                                        <div class="my-1">
+                                                                            <span class="fw-bold fs-5" style="color: #d97706;">@emp.scoreKualitas%</span>
+                                                                        </div>
+                                                                        <div class="pt-1.5 mt-auto" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
                                                                             25% &times; @emp.scoreKualitas% = <strong class="text-dark">@emp.ptsKualitas pts</strong>
                                                                         </div>
                                                                     </div>
                                                                 </div>
+
+                                                                <!-- 3. Capaian -->
                                                                 <div class="col-6 col-md-3">
-                                                                    <div class="p-2 rounded bg-white border shadow-xs h-100">
-                                                                        <div class="d-flex align-items-center justify-content-between mb-1">
-                                                                            <span class="text-muted" style="font-size: 10px; font-weight: 600;">3. Capaian</span>
-                                                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-20 px-1 py-0" style="font-size: 9px;">Bobot 15%</span>
+                                                                    <div class="p-2.5 rounded-3 bg-white h-100 d-flex flex-column justify-content-between" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                                                                        <div class="d-flex align-items-center justify-content-between mb-1.5">
+                                                                            <span class="text-secondary fw-semibold" style="font-size: 11px;">3. Capaian Target</span>
+                                                                            <span class="badge rounded-pill" style="background: #dbeafe; color: #1d4ed8; font-size: 9.5px; font-weight: 600;">Bobot 15%</span>
                                                                         </div>
-                                                                        <div class="fw-bold fs-6 text-primary">@emp.scoreCapaian%</div>
-                                                                        <div class="text-muted pt-1" style="font-size: 10px; border-top: 1px solid #f1f5f9;">
+                                                                        <div class="my-1">
+                                                                            <span class="fw-bold fs-5 text-primary">@emp.scoreCapaian%</span>
+                                                                        </div>
+                                                                        <div class="pt-1.5 mt-auto" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
                                                                             15% &times; @emp.scoreCapaian% = <strong class="text-dark">@emp.ptsCapaian pts</strong>
                                                                         </div>
                                                                     </div>
                                                                 </div>
+
+                                                                <!-- 4. Skala Beban -->
                                                                 <div class="col-6 col-md-3">
-                                                                    <div class="p-2 rounded bg-white border shadow-xs h-100">
-                                                                        <div class="d-flex align-items-center justify-content-between mb-1">
-                                                                            <span class="text-muted" style="font-size: 10px; font-weight: 600;">4. Skala Beban</span>
-                                                                            <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-20 px-1 py-0" style="font-size: 9px;">Bobot 10%</span>
+                                                                    <div class="p-2.5 rounded-3 bg-white h-100 d-flex flex-column justify-content-between" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
+                                                                        <div class="d-flex align-items-center justify-content-between mb-1.5">
+                                                                            <span class="text-secondary fw-semibold" style="font-size: 11px;">4. Skala Beban</span>
+                                                                            <span class="badge rounded-pill" style="background: #e0e7ff; color: #4338ca; font-size: 9.5px; font-weight: 600;">Bobot 10%</span>
                                                                         </div>
-                                                                        <div class="fw-bold fs-6 text-info">@emp.scoreSkalaBeban%</div>
-                                                                        <div class="text-muted pt-1" style="font-size: 10px; border-top: 1px solid #f1f5f9;">
+                                                                        <div class="my-1">
+                                                                            <span class="fw-bold fs-5" style="color: #4338ca;">@emp.scoreSkalaBeban%</span>
+                                                                        </div>
+                                                                        <div class="pt-1.5 mt-auto" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
                                                                             10% &times; @emp.scoreSkalaBeban% = <strong class="text-dark">@emp.ptsBeban pts</strong>
-                                                                        </div>
-                                                                        <div class="text-muted" style="font-size: 9px; margin-top: 2px;">
-                                                                            Target: @emp.mtdTotalTarget / Max: @emp.maxTargetPlayer
+                                                                            <div class="text-muted" style="font-size: 9px; margin-top: 2px;">Target: @emp.mtdTotalTarget / Max: @emp.maxTargetPlayer</div>
                                                                         </div>
                                                                     </div>
                                                                 </div>

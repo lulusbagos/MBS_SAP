@@ -474,23 +474,23 @@ namespace MBS_SAP.Controllers
                     if (hasAnyRoster)
                     {
                         hasRoster = true;
-                        onsiteDays = computedOnsite;
+                        onsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
                     }
                 }
                 else if (effectiveEmpStart > startOfMonth)
                 {
                     hasRoster = true;
-                    onsiteDays = (endOfMonth.Date - effectiveEmpStart.Date).Days + 1;
+                    onsiteDays = Math.Min((endOfMonth.Date - effectiveEmpStart.Date).Days + 1, totalDaysInMonth);
                 }
 
-                double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonth : 1.0;
+                double ratio = hasRoster ? Math.Min(1.0, (double)onsiteDays / totalDaysInMonth) : 1.0;
 
                 int ScaleTarget(int baseTarget, double rat, int daysOnsite)
                 {
                     if (baseTarget == 0) return 0;
                     if (daysOnsite == 0) return 0;
-                    int scaled = (int)Math.Round(baseTarget * rat, MidpointRounding.AwayFromZero);
-                    return Math.Max(scaled, 1);
+                    int scaled = (int)Math.Round(baseTarget * Math.Min(1.0, rat), MidpointRounding.AwayFromZero);
+                    return Math.Min(baseTarget, Math.Max(scaled, 1));
                 }
 
                 int mtdTgtH = (isTargetSap && hasRoster) ? ScaleTarget(hTar, ratio, onsiteDays) : (isTargetSap ? hTar : 0);
@@ -3793,7 +3793,7 @@ namespace MBS_SAP.Controllers
                         double scoreKualitas = 100.0;
                         double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
                         double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayer > 0)
-                            ? Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayer + 1)) * 100.0))
+                            ? (empTarget >= maxTargetPlayer ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayer + 1)) * 100.0)))
                             : 0.0;
 
                         double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
@@ -3949,7 +3949,7 @@ namespace MBS_SAP.Controllers
                     double scoreKualitas = 100.0;
                     double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
                     double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayerDept > 0)
-                        ? Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayerDept + 1)) * 100.0))
+                        ? (empTarget >= maxTargetPlayerDept ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayerDept + 1)) * 100.0)))
                         : 0.0;
 
                     double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
@@ -4407,7 +4407,7 @@ namespace MBS_SAP.Controllers
                     double scoreKualitas = 100.0;
                     double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
                     double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayerExcel > 0)
-                        ? Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayerExcel + 1)) * 100.0))
+                        ? (empTarget >= maxTargetPlayerExcel ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayerExcel + 1)) * 100.0)))
                         : 0.0;
 
                     double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
