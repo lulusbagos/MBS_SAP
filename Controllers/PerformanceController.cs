@@ -3787,14 +3787,15 @@ namespace MBS_SAP.Controllers
                 var sortedEmployees = filteredEmployees
                     .Select(e => {
                         int empTarget = (int)e.mtdTotalTarget;
+                        int empActual = (int)e.mtdTotalActual;
                         double closeRate = (double)e.closeRate;
                         double complianceRate = (double)e.complianceRate;
                         double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
                         double scoreKualitas = 100.0;
                         double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
-                        double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayer > 0)
-                            ? (empTarget >= maxTargetPlayer ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayer + 1)) * 100.0)))
-                            : 0.0;
+                        double scoreSkalaBeban = empTarget > 0
+                            ? Math.Min(100.0, Math.Max(0.0, Math.Round((double)empActual / empTarget * 100.0, 1)))
+                            : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
                         double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
                         double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
@@ -3943,14 +3944,15 @@ namespace MBS_SAP.Controllers
 
                 var sortedEmployees = filteredEmployees.Select(e => {
                     int empTarget = (int)e.mtdTotalTarget;
+                    int empActual = (int)e.mtdTotalActual;
                     double closeRate = (double)e.closeRate;
                     double complianceRate = (double)e.complianceRate;
                     double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
                     double scoreKualitas = 100.0;
                     double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
-                    double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayerDept > 0)
-                        ? (empTarget >= maxTargetPlayerDept ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayerDept + 1)) * 100.0)))
-                        : 0.0;
+                    double scoreSkalaBeban = empTarget > 0
+                        ? Math.Min(100.0, Math.Max(0.0, Math.Round((double)empActual / empTarget * 100.0, 1)))
+                        : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
                     double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
                     double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
@@ -4401,14 +4403,15 @@ namespace MBS_SAP.Controllers
             var sorted = employeesData
                 .Select(e => {
                     int empTarget = (int)e.mtdTotalTarget;
+                    int empActual = (int)e.mtdTotalActual;
                     double closeRate = (double)e.closeRate;
                     double complianceRate = (double)e.complianceRate;
                     double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
                     double scoreKualitas = 100.0;
                     double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
-                    double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayerExcel > 0)
-                        ? (empTarget >= maxTargetPlayerExcel ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayerExcel + 1)) * 100.0)))
-                        : 0.0;
+                    double scoreSkalaBeban = empTarget > 0
+                        ? Math.Min(100.0, Math.Max(0.0, Math.Round((double)empActual / empTarget * 100.0, 1)))
+                        : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
                     double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
                     double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
