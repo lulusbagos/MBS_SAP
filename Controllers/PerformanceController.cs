@@ -3780,21 +3780,25 @@ namespace MBS_SAP.Controllers
                     filteredEmployees = scopedEmployees.Where(e => (bool)e.isTargetSap);
                 }
 
-                var targetEmployees = filteredEmployees.Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0).ToList();
-                int maxTargetPlayer = targetEmployees.Any() ? targetEmployees.Max(e => (int)e.mtdTotalTarget) : 1;
-                if (maxTargetPlayer <= 0) maxTargetPlayer = 1;
+                var maxTargetByDept = filteredEmployees
+                    .Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0)
+                    .GroupBy(e => (string)e.departmentName ?? "", StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Max(e => (int)e.mtdTotalTarget), StringComparer.OrdinalIgnoreCase);
 
                 var sortedEmployees = filteredEmployees
                     .Select(e => {
                         int empTarget = (int)e.mtdTotalTarget;
                         int empActual = (int)e.mtdTotalActual;
+                        string dept = (string)e.departmentName ?? "";
+                        int maxTargetDept = maxTargetByDept.TryGetValue(dept, out int maxD) && maxD > 0 ? maxD : (empTarget > 0 ? empTarget : 1);
+
                         double closeRate = (double)e.closeRate;
                         double complianceRate = (double)e.complianceRate;
                         double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
                         double scoreKualitas = 100.0;
                         double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
-                        double scoreSkalaBeban = empTarget > 0
-                            ? Math.Min(100.0, Math.Max(0.0, Math.Round((double)empActual / empTarget * 100.0, 1)))
+                        double scoreSkalaBeban = (empTarget > 0 && maxTargetDept > 0)
+                            ? (empTarget >= maxTargetDept ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetDept + 1)) * 100.0)))
                             : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
                         double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
@@ -3823,7 +3827,7 @@ namespace MBS_SAP.Controllers
                             ptsCapaian = ptsCapaian,
                             ptsBeban = ptsBeban,
                             totalScore = totalScore,
-                            maxTargetPlayer = maxTargetPlayer,
+                            maxTargetPlayer = maxTargetDept,
                             mtdTotalTarget = empTarget,
                             mtdTotalActual = empActual,
                             onsiteDays = (int)e.onsiteDays,
@@ -3939,20 +3943,24 @@ namespace MBS_SAP.Controllers
                     filteredEmployees = employees.Where(e => (bool)e.isTargetSap);
                 }
 
-                var targetDeptEmployees = filteredEmployees.Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0).ToList();
-                int maxTargetPlayerDept = targetDeptEmployees.Any() ? targetDeptEmployees.Max(e => (int)e.mtdTotalTarget) : 1;
-                if (maxTargetPlayerDept <= 0) maxTargetPlayerDept = 1;
+                var maxTargetByDeptMode = filteredEmployees
+                    .Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0)
+                    .GroupBy(e => (string)e.departmentName ?? "", StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.Max(e => (int)e.mtdTotalTarget), StringComparer.OrdinalIgnoreCase);
 
                 var sortedEmployees = filteredEmployees.Select(e => {
                     int empTarget = (int)e.mtdTotalTarget;
                     int empActual = (int)e.mtdTotalActual;
+                    string dept = (string)e.departmentName ?? "";
+                    int maxTargetDept = maxTargetByDeptMode.TryGetValue(dept, out int maxD) && maxD > 0 ? maxD : (empTarget > 0 ? empTarget : 1);
+
                     double closeRate = (double)e.closeRate;
                     double complianceRate = (double)e.complianceRate;
                     double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
                     double scoreKualitas = 100.0;
                     double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
-                    double scoreSkalaBeban = empTarget > 0
-                        ? Math.Min(100.0, Math.Max(0.0, Math.Round((double)empActual / empTarget * 100.0, 1)))
+                    double scoreSkalaBeban = (empTarget > 0 && maxTargetDept > 0)
+                        ? (empTarget >= maxTargetDept ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetDept + 1)) * 100.0)))
                         : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
                     double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
@@ -3981,7 +3989,7 @@ namespace MBS_SAP.Controllers
                         ptsCapaian = ptsCapaian,
                         ptsBeban = ptsBeban,
                         totalScore = totalScore,
-                        maxTargetPlayer = maxTargetPlayerDept,
+                        maxTargetPlayer = maxTargetDept,
                         mtdTotalTarget = empTarget,
                         mtdTotalActual = empActual,
                         onsiteDays = (int)e.onsiteDays,
@@ -4398,21 +4406,25 @@ namespace MBS_SAP.Controllers
                 employeesData = employeesData.Where(e => (bool)e.isTargetSap).ToList();
             }
 
-            var targetEmployeesExcel = employeesData.Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0).ToList();
-            int maxTargetPlayerExcel = targetEmployeesExcel.Any() ? targetEmployeesExcel.Max(e => (int)e.mtdTotalTarget) : 1;
-            if (maxTargetPlayerExcel <= 0) maxTargetPlayerExcel = 1;
+            var maxTargetByDeptExcel = employeesData
+                .Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0)
+                .GroupBy(e => (string)e.departmentName ?? "", StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Max(e => (int)e.mtdTotalTarget), StringComparer.OrdinalIgnoreCase);
 
             var sorted = employeesData
                 .Select(e => {
                     int empTarget = (int)e.mtdTotalTarget;
                     int empActual = (int)e.mtdTotalActual;
+                    string dept = (string)e.departmentName ?? "";
+                    int maxTargetDept = maxTargetByDeptExcel.TryGetValue(dept, out int maxD) && maxD > 0 ? maxD : (empTarget > 0 ? empTarget : 1);
+
                     double closeRate = (double)e.closeRate;
                     double complianceRate = (double)e.complianceRate;
                     double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
                     double scoreKualitas = 100.0;
                     double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
-                    double scoreSkalaBeban = empTarget > 0
-                        ? Math.Min(100.0, Math.Max(0.0, Math.Round((double)empActual / empTarget * 100.0, 1)))
+                    double scoreSkalaBeban = (empTarget > 0 && maxTargetDept > 0)
+                        ? (empTarget >= maxTargetDept ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetDept + 1)) * 100.0)))
                         : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
                     double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
@@ -4440,7 +4452,7 @@ namespace MBS_SAP.Controllers
                         ptsCapaian = ptsCapaian,
                         ptsBeban = ptsBeban,
                         totalScore = totalScore,
-                        maxTargetPlayer = maxTargetPlayerExcel,
+                        maxTargetPlayer = maxTargetDept,
                         mtdTotalTarget = empTarget,
                         mtdTotalActual = empActual,
                         onsiteDays = (int)e.onsiteDays,
@@ -4751,12 +4763,12 @@ namespace MBS_SAP.Controllers
                 wsSquad.Cell(3, 1).Style.Font.FontSize = 10;
 
                 string targetFilterLabel = targetFilter == "nontarget_active" ? "Non-Target Aktif SAP" : (targetFilter == "all" ? "Semua Karyawan (+ Non-Target)" : (targetFilter == "nontarget" ? "Non-Target SAP" : "Hanya Target SAP"));
-                wsSquad.Cell(4, 1).Value = $"Kategori: {modeLabel} | Filter Target: {targetFilterLabel} | Total Pemain: {sorted.Count} Orang | Target Skuad Tertinggi: {maxTargetPlayerExcel} Program | Waktu Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
+                wsSquad.Cell(4, 1).Value = $"Kategori: {modeLabel} | Filter Target: {targetFilterLabel} | Total Pemain: {sorted.Count} Orang | Waktu Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
                 wsSquad.Cell(4, 1).Style.Font.Italic = true;
                 wsSquad.Cell(4, 1).Style.Font.FontSize = 9;
                 wsSquad.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
 
-                wsSquad.Cell(5, 1).Value = "Formula Skor PTS: (50% × Close Rate) + (25% × Kualitas AI) + (15% × Capaian SAP) + (10% × Skala Beban Perorangan)";
+                wsSquad.Cell(5, 1).Value = "Formula Skor PTS: (50% × Close Rate) + (25% × Kualitas AI) + (15% × Capaian SAP) + (10% × Skala Beban Departemen [Target / Max Dept])";
                 wsSquad.Cell(5, 1).Style.Font.Italic = true;
                 wsSquad.Cell(5, 1).Style.Font.FontSize = 9;
                 wsSquad.Cell(5, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
