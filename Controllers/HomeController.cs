@@ -227,42 +227,53 @@ namespace MBS_SAP.Controllers
                 Console.WriteLine($"[DEBUG-HOME] endOfMonth: {endOfMonth:yyyy-MM-dd HH:mm:ss}");
                 Console.WriteLine($"[DEBUG-HOME] lookbackDate: {lookbackDate:yyyy-MM-dd HH:mm:ss}");
                 
-                int thisMonthHazardsCount = await hazardQuery.CountAsync(h => h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth);
+                int thisMonthHazardsCount = await hazardQuery.Where(h => h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth).Select(h => new { h.Tanggal, h.Waktu, h.Lokasi }).Distinct().CountAsync();
                 Console.WriteLine($"[DEBUG-HOME] thisMonthHazardsCount: {thisMonthHazardsCount}");
                 
-                int openHazardsCount = await hazardQuery.CountAsync(h => h.StatusTemuan == "Open");
-                int closedHazardsCount = await hazardQuery.CountAsync(h => h.StatusTemuan == "Closed");
-                int totalHazardsCount = openHazardsCount + closedHazardsCount;
+                int openHazardsCount = await hazardQuery.Where(h => h.StatusTemuan == "Open").Select(h => new { h.Tanggal, h.Waktu, h.Lokasi }).Distinct().CountAsync();
+                int closedHazardsCount = await hazardQuery.Where(h => h.StatusTemuan == "Closed").Select(h => new { h.Tanggal, h.Waktu, h.Lokasi }).Distinct().CountAsync();
+                int totalHazardsCount = await hazardQuery.Select(h => new { h.Tanggal, h.Waktu, h.Lokasi }).Distinct().CountAsync();
 
-                int thisMonthInspectionsCount = await inspectionQuery.CountAsync(i => i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth);
-                int totalInspectionsCount = await inspectionQuery.CountAsync();
+                int thisMonthInspectionsCount = await inspectionQuery.Where(i => i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth).Select(i => new { i.Tanggal, i.Waktu }).Distinct().CountAsync();
+                int totalInspectionsCount = await inspectionQuery.Select(i => new { i.Tanggal, i.Waktu }).Distinct().CountAsync();
 
                 int totalActionPlansCount = await actionPlanQuery.CountAsync();
 
-                int thisMonthSafetyTalksCount = await safetyTalkQuery.CountAsync(s => s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth);
-                int totalSafetyTalksCount = await safetyTalkQuery.CountAsync();
+                var rawMonthSafetyTalks = await safetyTalkQuery.Where(s => s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth).Select(s => s.Tanggal).ToListAsync();
+                int thisMonthSafetyTalksCount = rawMonthSafetyTalks.Select(d => $"{d.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(d)}").Distinct().Count();
 
-                int thisMonthP5msCount = await p5mQuery.CountAsync(p => p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth);
-                int totalP5msCount = await p5mQuery.CountAsync();
+                var rawTotalSafetyTalks = await safetyTalkQuery.Select(s => s.Tanggal).ToListAsync();
+                int totalSafetyTalksCount = rawTotalSafetyTalks.Select(d => $"{d.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(d)}").Distinct().Count();
+
+                int thisMonthP5msCount = await p5mQuery.Where(p => p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth).Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();
+                int totalP5msCount = await p5mQuery.Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();
 
                 int coachingAsCreator = await _context.Coachings
                     .Where(c => !c.IsDeleted && c.Nik == userNik && c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth)
+                    .Select(c => new { c.Tanggal, c.Waktu })
+                    .Distinct()
                     .CountAsync();
                 int coachingAsParticipant = await _context.CoachingParticipants
                     .Where(p => p.Nik == userNik && p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth)
+                    .Select(p => p.CoachingId)
+                    .Distinct()
                     .CountAsync();
                 int thisMonthCoachingsCount = coachingAsCreator + coachingAsParticipant;
 
                 int totalCoachingAsCreator = await _context.Coachings
                     .Where(c => !c.IsDeleted && c.Nik == userNik)
+                    .Select(c => new { c.Tanggal, c.Waktu })
+                    .Distinct()
                     .CountAsync();
                 int totalCoachingAsParticipant = await _context.CoachingParticipants
                     .Where(p => p.Nik == userNik && p.Coaching != null && !p.Coaching.IsDeleted)
+                    .Select(p => p.CoachingId)
+                    .Distinct()
                     .CountAsync();
                 int totalCoachingsCount = totalCoachingAsCreator + totalCoachingAsParticipant;
 
-                int thisMonthObservationsCount = await observationQuery.CountAsync(o => o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth);
-                int totalObservationsCount = await observationQuery.CountAsync();
+                int thisMonthObservationsCount = await observationQuery.Where(o => o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth).Select(o => new { o.Date.Date, o.KegiatanYangDiamati }).Distinct().CountAsync();
+                int totalObservationsCount = await observationQuery.Select(o => new { o.Date.Date, o.KegiatanYangDiamati }).Distinct().CountAsync();
 
                 // [FIX] Hapus kredit action plan agar konsisten dengan perhitungan Liga
                 // Sebelumnya ThisMonthHazards dan ThisMonthInspections ditambah closedAssignedCredits

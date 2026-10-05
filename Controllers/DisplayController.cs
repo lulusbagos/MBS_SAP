@@ -65,33 +65,38 @@ namespace MBS_SAP.Controllers
                     .ToListAsync();
 
                 var todayStart = DateTime.Today;
-                int todayHazards     = await _context.HazardReports.CountAsync(h => !h.IsDeleted && h.CreatedAt >= todayStart);
-                int todayInspections = await _context.Inspections.CountAsync(i => !i.IsDeleted && i.CreatedAt >= todayStart);
-                int todaySafetyTalks = await _context.SafetyTalks.CountAsync(s => !s.IsDeleted && s.CreatedAt >= todayStart);
-                int todayP5ms        = await _context.P5ms.CountAsync(p => !p.IsDeleted && p.CreatedAt >= todayStart);
-                int todayObservations= await _context.Observations.CountAsync(o => !o.IsDeleted && o.CreatedAt >= todayStart);
+                int todayHazards     = await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= todayStart).Select(h => new { h.Nik, h.Tanggal, h.Waktu }).Distinct().CountAsync();
+                int todayInspections = await _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= todayStart).Select(i => new { i.Nik, i.Tanggal, i.Waktu }).Distinct().CountAsync();
+                int todaySafetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= todayStart).Select(s => new { s.Nik, s.Tanggal }).Distinct().CountAsync();
+                int todayP5ms        = await _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= todayStart).Select(p => new { p.Nik, p.Tanggal, p.Waktu }).Distinct().CountAsync();
+                int todayObservations= await _context.Observations.Where(o => !o.IsDeleted && o.CreatedAt >= todayStart).Select(o => new { o.Nik, o.Date, o.KegiatanYangDiamati }).Distinct().CountAsync();
                 int todayP2h         = await _context.P2hReports.CountAsync(r => !r.IsDeleted && r.CreatedAt >= todayStart);
-                int todayCoachings   = await _context.Coachings.CountAsync(c => !c.IsDeleted && c.CreatedAt >= todayStart);
+                int todayCoachings   = await _context.Coachings.Where(c => !c.IsDeleted && c.CreatedAt >= todayStart).Select(c => new { c.Nik, c.Tanggal, c.Waktu }).Distinct().CountAsync();
 
                 // ── Company-level monthly realization lists ─────────────────────
-                var monthHazardsByCompany    = await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= startOfMonth && h.PerusahaanId != null).Select(h => h.PerusahaanId!.Value).ToListAsync();
-                var monthInspectionsByCompany= await _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= startOfMonth && i.PerusahaanId != null).Select(i => i.PerusahaanId!.Value).ToListAsync();
-                var monthSafetyTalksByCompany= await _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= startOfMonth && s.PerusahaanId != null).Select(s => s.PerusahaanId!.Value).ToListAsync();
-                var monthP5msByCompany       = await _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= startOfMonth && p.PerusahaanId != null).Select(p => p.PerusahaanId!.Value).ToListAsync();
-                var monthCoachingsByCompany  = await _context.Coachings.Where(c => !c.IsDeleted && c.CreatedAt >= startOfMonth && c.PerusahaanId != null).Select(c => c.PerusahaanId!.Value).ToListAsync();
-                var monthObservationsByCompany = await (from o in _context.Observations
+                var monthHazardsByCompany    = (await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= startOfMonth && h.PerusahaanId != null).Select(h => new { CompId = h.PerusahaanId!.Value, h.Nik, h.Tanggal, h.Waktu }).Distinct().ToListAsync()).Select(h => h.CompId).ToList();
+                var monthInspectionsByCompany= (await _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= startOfMonth && i.PerusahaanId != null).Select(i => new { CompId = i.PerusahaanId!.Value, i.Nik, i.Tanggal, i.Waktu }).Distinct().ToListAsync()).Select(i => i.CompId).ToList();
+                var rawMonthSTComp           = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= startOfMonth && s.PerusahaanId != null).Select(s => new { CompId = s.PerusahaanId!.Value, s.Nik, s.Tanggal }).ToListAsync();
+                var monthSafetyTalksByCompany= rawMonthSTComp.Select(s => new { s.CompId, s.Nik, WeekKey = $"{s.Tanggal.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(s.Tanggal)}" }).Distinct().Select(s => s.CompId).ToList();
+                var monthP5msByCompany       = (await _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= startOfMonth && p.PerusahaanId != null).Select(p => new { CompId = p.PerusahaanId!.Value, p.Nik, p.Tanggal, p.Waktu }).Distinct().ToListAsync()).Select(p => p.CompId).ToList();
+                var monthCoachingsByCompany  = (await _context.Coachings.Where(c => !c.IsDeleted && c.CreatedAt >= startOfMonth && c.PerusahaanId != null).Select(c => new { CompId = c.PerusahaanId!.Value, c.Nik, c.Tanggal, c.Waktu }).Distinct().ToListAsync()).Select(c => c.CompId).ToList();
+                var monthObservationsByCompany = (await (from o in _context.Observations
                                                          join k in _context.Karyawans on o.Nik equals k.NoNik
                                                          where !o.IsDeleted && o.CreatedAt >= startOfMonth
-                                                         select k.IdPerusahaan)
-                                                        .ToListAsync();
+                                                         select new { CompId = k.IdPerusahaan, o.Nik, o.Date, o.KegiatanYangDiamati })
+                                                        .Distinct()
+                                                        .ToListAsync())
+                                                        .Select(o => o.CompId)
+                                                        .ToList();
 
                 // ── Weekly aggregates ───────────────────────────────────────────
-                int weekHazards      = await _context.HazardReports.CountAsync(h => !h.IsDeleted && h.CreatedAt >= startOfWeek);
-                int weekInspections  = await _context.Inspections.CountAsync(i => !i.IsDeleted && i.CreatedAt >= startOfWeek);
-                int weekSafetyTalks  = await _context.SafetyTalks.CountAsync(s => !s.IsDeleted && s.CreatedAt >= startOfWeek);
-                int weekP5ms         = await _context.P5ms.CountAsync(p => !p.IsDeleted && p.CreatedAt >= startOfWeek);
-                int weekCoachings    = await _context.Coachings.CountAsync(c => !c.IsDeleted && c.CreatedAt >= startOfWeek);
-                int weekObs          = await _context.Observations.CountAsync(o => !o.IsDeleted && o.CreatedAt >= startOfWeek);
+                int weekHazards      = await _context.HazardReports.Where(h => !h.IsDeleted && h.CreatedAt >= startOfWeek).Select(h => new { h.Nik, h.Tanggal, h.Waktu }).Distinct().CountAsync();
+                int weekInspections  = await _context.Inspections.Where(i => !i.IsDeleted && i.CreatedAt >= startOfWeek).Select(i => new { i.Nik, i.Tanggal, i.Waktu }).Distinct().CountAsync();
+                var rawWeekSTDisplay = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.CreatedAt >= startOfWeek).Select(s => new { s.Nik, s.Tanggal }).ToListAsync();
+                int weekSafetyTalks  = rawWeekSTDisplay.Select(s => new { s.Nik, WeekKey = $"{s.Tanggal.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(s.Tanggal)}" }).Distinct().Count();
+                int weekP5ms         = await _context.P5ms.Where(p => !p.IsDeleted && p.CreatedAt >= startOfWeek).Select(p => new { p.Nik, p.Tanggal, p.Waktu }).Distinct().CountAsync();
+                int weekCoachings    = await _context.Coachings.Where(c => !c.IsDeleted && c.CreatedAt >= startOfWeek).Select(c => new { c.Nik, c.Tanggal, c.Waktu }).Distinct().CountAsync();
+                int weekObs          = await _context.Observations.Where(o => !o.IsDeleted && o.CreatedAt >= startOfWeek).Select(o => new { o.Nik, o.Date, o.KegiatanYangDiamati }).Distinct().CountAsync();
                 int weeklyRealization= weekHazards + weekInspections + weekSafetyTalks + weekCoachings + weekObs;
 
                 // ── Monthly aggregates ──────────────────────────────────────────
@@ -100,7 +105,7 @@ namespace MBS_SAP.Controllers
                 int monthSafetyTalks = monthSafetyTalksByCompany.Count;
                 int monthP5ms        = monthP5msByCompany.Count;
                 int monthCoachings   = monthCoachingsByCompany.Count;
-                int monthObs         = await _context.Observations.CountAsync(o => !o.IsDeleted && o.CreatedAt >= startOfMonth);
+                int monthObs         = monthObservationsByCompany.Count;
                 int monthlyRealization = monthHazards + monthInspections + monthSafetyTalks + monthObs + monthCoachings;
 
                 // ── Overall targets ─────────────────────────────────────────────
