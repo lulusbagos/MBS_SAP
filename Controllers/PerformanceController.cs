@@ -3597,10 +3597,13 @@ namespace MBS_SAP.Controllers
                 var startOfMonthM = new DateTime(selectedYear, selectedMonth, 1);
                 var endOfMonthM = startOfMonthM.AddMonths(1).AddTicks(-1);
 
-                var allHazardsMonth = await _context.HazardReports
-                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM)
+                var allHazardsMonth = (await _context.HazardReports
+                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM && h.Nik != null)
+                    .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan })
+                    .Distinct()
+                    .ToListAsync())
                     .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
-                    .ToListAsync();
+                    .ToList();
 
                 var hazardCounts = allHazardsMonth.GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
                 var closedHazardCounts = allHazardsMonth.Where(h => IsClosedStatus(h.StatusTemuan)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
@@ -3777,31 +3780,64 @@ namespace MBS_SAP.Controllers
                     filteredEmployees = scopedEmployees.Where(e => (bool)e.isTargetSap);
                 }
 
+                var targetEmployees = filteredEmployees.Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0).ToList();
+                int maxTargetPlayer = targetEmployees.Any() ? targetEmployees.Max(e => (int)e.mtdTotalTarget) : 1;
+                if (maxTargetPlayer <= 0) maxTargetPlayer = 1;
+
                 var sortedEmployees = filteredEmployees
-                    .Select(e => new {
-                        name = (string)e.karyawanName,
-                        nik = (string)e.nik,
-                        departmentName = (string)e.departmentName,
-                        jabatanName = (string)e.jabatanName,
-                        isTargetSap = (bool)e.isTargetSap,
-                        isNonTarget = (bool)e.isNonTarget,
-                        isActivelyReporting = (bool)e.isActivelyReporting,
-                        totalActualAll = (int)e.totalActualAll,
-                        complianceRate = (double)e.complianceRate,
-                        closeRate = (double)e.closeRate,
-                        mtdTotalTarget = (int)e.mtdTotalTarget,
-                        onsiteDays = (int)e.onsiteDays,
-                        hasRoster = (bool)e.hasRoster,
-                        isNewHire = (bool)(e.isNewHire ?? false),
-                        tanggalMasukStr = (string?)e.tanggalMasukStr,
-                        hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
-                        inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
-                        safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
-                        observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
-                        coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
-                        p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                    .Select(e => {
+                        int empTarget = (int)e.mtdTotalTarget;
+                        double closeRate = (double)e.closeRate;
+                        double complianceRate = (double)e.complianceRate;
+                        double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
+                        double scoreKualitas = 100.0;
+                        double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
+                        double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayer > 0)
+                            ? Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayer + 1)) * 100.0))
+                            : 0.0;
+
+                        double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
+                        double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
+                        double ptsCapaian = Math.Round(scoreCapaian * 0.15, 2);
+                        double ptsBeban = Math.Round(scoreSkalaBeban * 0.10, 2);
+                        double totalScore = Math.Round(ptsClose + ptsKualitas + ptsCapaian + ptsBeban, 2);
+
+                        return new {
+                            name = (string)e.karyawanName,
+                            nik = (string)e.nik,
+                            departmentName = (string)e.departmentName,
+                            jabatanName = (string)e.jabatanName,
+                            isTargetSap = (bool)e.isTargetSap,
+                            isNonTarget = (bool)e.isNonTarget,
+                            isActivelyReporting = (bool)e.isActivelyReporting,
+                            totalActualAll = (int)e.totalActualAll,
+                            complianceRate = complianceRate,
+                            closeRate = closeRate,
+                            scoreCloseRate = Math.Round(scoreCloseRate, 1),
+                            scoreKualitas = Math.Round(scoreKualitas, 1),
+                            scoreCapaian = Math.Round(scoreCapaian, 1),
+                            scoreSkalaBeban = Math.Round(scoreSkalaBeban, 1),
+                            ptsClose = ptsClose,
+                            ptsKualitas = ptsKualitas,
+                            ptsCapaian = ptsCapaian,
+                            ptsBeban = ptsBeban,
+                            totalScore = totalScore,
+                            maxTargetPlayer = maxTargetPlayer,
+                            mtdTotalTarget = empTarget,
+                            onsiteDays = (int)e.onsiteDays,
+                            hasRoster = (bool)e.hasRoster,
+                            isNewHire = (bool)(e.isNewHire ?? false),
+                            tanggalMasukStr = (string?)e.tanggalMasukStr,
+                            hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
+                            inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
+                            safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
+                            observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
+                            coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
+                            p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                        };
                     })
                     .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
+                    .ThenByDescending(e => e.totalScore)
                     .ThenByDescending(e => e.complianceRate)
                     .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                     .ToList();
@@ -3901,30 +3937,63 @@ namespace MBS_SAP.Controllers
                     filteredEmployees = employees.Where(e => (bool)e.isTargetSap);
                 }
 
-                var sortedEmployees = filteredEmployees.Select(e => new {
-                    name = (string)e.karyawanName,
-                    nik = (string)e.nik,
-                    departmentName = (string)e.departmentName,
-                    jabatanName = (string)e.jabatanName,
-                    isTargetSap = (bool)e.isTargetSap,
-                    isNonTarget = (bool)e.isNonTarget,
-                    isActivelyReporting = (bool)e.isActivelyReporting,
-                    totalActualAll = (int)e.totalActualAll,
-                    complianceRate = (double)e.complianceRate,
-                    closeRate = (double)e.closeRate,
-                    mtdTotalTarget = (int)e.mtdTotalTarget,
-                    onsiteDays = (int)e.onsiteDays,
-                    hasRoster = (bool)e.hasRoster,
-                    isNewHire = (bool)(e.isNewHire ?? false),
-                    tanggalMasukStr = (string?)e.tanggalMasukStr,
-                    hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
-                    inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
-                    safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
-                    observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
-                    coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
-                    p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                var targetDeptEmployees = filteredEmployees.Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0).ToList();
+                int maxTargetPlayerDept = targetDeptEmployees.Any() ? targetDeptEmployees.Max(e => (int)e.mtdTotalTarget) : 1;
+                if (maxTargetPlayerDept <= 0) maxTargetPlayerDept = 1;
+
+                var sortedEmployees = filteredEmployees.Select(e => {
+                    int empTarget = (int)e.mtdTotalTarget;
+                    double closeRate = (double)e.closeRate;
+                    double complianceRate = (double)e.complianceRate;
+                    double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
+                    double scoreKualitas = 100.0;
+                    double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
+                    double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayerDept > 0)
+                        ? Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayerDept + 1)) * 100.0))
+                        : 0.0;
+
+                    double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
+                    double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
+                    double ptsCapaian = Math.Round(scoreCapaian * 0.15, 2);
+                    double ptsBeban = Math.Round(scoreSkalaBeban * 0.10, 2);
+                    double totalScore = Math.Round(ptsClose + ptsKualitas + ptsCapaian + ptsBeban, 2);
+
+                    return new {
+                        name = (string)e.karyawanName,
+                        nik = (string)e.nik,
+                        departmentName = (string)e.departmentName,
+                        jabatanName = (string)e.jabatanName,
+                        isTargetSap = (bool)e.isTargetSap,
+                        isNonTarget = (bool)e.isNonTarget,
+                        isActivelyReporting = (bool)e.isActivelyReporting,
+                        totalActualAll = (int)e.totalActualAll,
+                        complianceRate = complianceRate,
+                        closeRate = closeRate,
+                        scoreCloseRate = Math.Round(scoreCloseRate, 1),
+                        scoreKualitas = Math.Round(scoreKualitas, 1),
+                        scoreCapaian = Math.Round(scoreCapaian, 1),
+                        scoreSkalaBeban = Math.Round(scoreSkalaBeban, 1),
+                        ptsClose = ptsClose,
+                        ptsKualitas = ptsKualitas,
+                        ptsCapaian = ptsCapaian,
+                        ptsBeban = ptsBeban,
+                        totalScore = totalScore,
+                        maxTargetPlayer = maxTargetPlayerDept,
+                        mtdTotalTarget = empTarget,
+                        onsiteDays = (int)e.onsiteDays,
+                        hasRoster = (bool)e.hasRoster,
+                        isNewHire = (bool)(e.isNewHire ?? false),
+                        tanggalMasukStr = (string?)e.tanggalMasukStr,
+                        hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
+                        inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
+                        safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
+                        observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
+                        coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
+                        p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                    };
                 })
                 .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
+                .ThenByDescending(e => e.totalScore)
                 .ThenByDescending(e => e.complianceRate)
                 .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                 .ToList();
@@ -4085,10 +4154,13 @@ namespace MBS_SAP.Controllers
                 var startOfMonthM = new DateTime(selectedYear, selectedMonth, 1);
                 var endOfMonthM = startOfMonthM.AddMonths(1).AddTicks(-1);
 
-                var allHazardsMonth = await _context.HazardReports
-                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM)
+                var allHazardsMonth = (await _context.HazardReports
+                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM && h.Nik != null)
+                    .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan })
+                    .Distinct()
+                    .ToListAsync())
                     .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
-                    .ToListAsync();
+                    .ToList();
 
                 var hazardCounts = allHazardsMonth.GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
                 var closedHazardCounts = allHazardsMonth.Where(h => IsClosedStatus(h.StatusTemuan)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
@@ -4322,28 +4394,61 @@ namespace MBS_SAP.Controllers
                 employeesData = employeesData.Where(e => (bool)e.isTargetSap).ToList();
             }
 
+            var targetEmployeesExcel = employeesData.Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0).ToList();
+            int maxTargetPlayerExcel = targetEmployeesExcel.Any() ? targetEmployeesExcel.Max(e => (int)e.mtdTotalTarget) : 1;
+            if (maxTargetPlayerExcel <= 0) maxTargetPlayerExcel = 1;
+
             var sorted = employeesData
-                .Select(e => new {
-                    name = (string)e.karyawanName,
-                    nik = (string)e.nik,
-                    departmentName = (string)e.departmentName,
-                    jabatanName = (string)e.jabatanName,
-                    isTargetSap = (bool)e.isTargetSap,
-                    isNonTarget = (bool)e.isNonTarget,
-                    isActivelyReporting = (bool)e.isActivelyReporting,
-                    complianceRate = (double)e.complianceRate,
-                    closeRate = (double)e.closeRate,
-                    mtdTotalTarget = (int)e.mtdTotalTarget,
-                    onsiteDays = (int)e.onsiteDays,
-                    hasRoster = (bool)e.hasRoster,
-                    hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
-                    inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
-                    safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
-                    observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
-                    coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
-                    p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                .Select(e => {
+                    int empTarget = (int)e.mtdTotalTarget;
+                    double closeRate = (double)e.closeRate;
+                    double complianceRate = (double)e.complianceRate;
+                    double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
+                    double scoreKualitas = 100.0;
+                    double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
+                    double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayerExcel > 0)
+                        ? Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetPlayerExcel + 1)) * 100.0))
+                        : 0.0;
+
+                    double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
+                    double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
+                    double ptsCapaian = Math.Round(scoreCapaian * 0.15, 2);
+                    double ptsBeban = Math.Round(scoreSkalaBeban * 0.10, 2);
+                    double totalScore = Math.Round(ptsClose + ptsKualitas + ptsCapaian + ptsBeban, 2);
+
+                    return new {
+                        name = (string)e.karyawanName,
+                        nik = (string)e.nik,
+                        departmentName = (string)e.departmentName,
+                        jabatanName = (string)e.jabatanName,
+                        isTargetSap = (bool)e.isTargetSap,
+                        isNonTarget = (bool)e.isNonTarget,
+                        isActivelyReporting = (bool)e.isActivelyReporting,
+                        complianceRate = complianceRate,
+                        closeRate = closeRate,
+                        scoreCloseRate = Math.Round(scoreCloseRate, 1),
+                        scoreKualitas = Math.Round(scoreKualitas, 1),
+                        scoreCapaian = Math.Round(scoreCapaian, 1),
+                        scoreSkalaBeban = Math.Round(scoreSkalaBeban, 1),
+                        ptsClose = ptsClose,
+                        ptsKualitas = ptsKualitas,
+                        ptsCapaian = ptsCapaian,
+                        ptsBeban = ptsBeban,
+                        totalScore = totalScore,
+                        maxTargetPlayer = maxTargetPlayerExcel,
+                        mtdTotalTarget = empTarget,
+                        onsiteDays = (int)e.onsiteDays,
+                        hasRoster = (bool)e.hasRoster,
+                        hazard = new { actual = (int)e.hazard.actual, target = (int)e.hazard.target },
+                        inspeksi = new { actual = (int)e.inspeksi.actual, target = (int)e.inspeksi.target },
+                        safetyTalk = new { actual = (int)e.safetyTalk.actual, target = (int)e.safetyTalk.target },
+                        observasi = new { actual = (int)e.observasi.actual, target = (int)e.observasi.target },
+                        coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
+                        p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
+                    };
                 })
                 .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
+                .ThenByDescending(e => e.totalScore)
                 .ThenByDescending(e => e.complianceRate)
                 .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                 .ToList();
@@ -7818,10 +7923,13 @@ namespace MBS_SAP.Controllers
 
             // 7. Top 10 Best Performance Companies
             // Close rate menjadi beban pembuat SAP (berdasarkan PerusahaanId pembuat Hazard & Action Plan)
-            var allHazardsMonth = await _context.HazardReports
-                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM)
+            var allHazardsMonth = (await _context.HazardReports
+                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM && h.Nik != null)
+                .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan })
+                .Distinct()
+                .ToListAsync())
                 .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
-                .ToListAsync();
+                .ToList();
 
             var hazardCounts = allHazardsMonth.GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
             var closedHazardCounts = allHazardsMonth.Where(h => isClosedStatusRank(h.StatusTemuan)).GroupBy(h => h.PerusahaanId!.Value).ToDictionary(g => g.Key, g => g.Count());
