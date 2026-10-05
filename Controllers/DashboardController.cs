@@ -26,9 +26,9 @@ namespace MBS_SAP.Controllers
             var nrp = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "";
             
             // Individual Achievements
-            var hazardCount = await _context.HazardReports.CountAsync(h => h.Nik == nrp);
+            var hazardCount = await _context.HazardReports.Where(h => !h.IsDeleted && h.Nik == nrp).Select(h => new { h.Tanggal, h.Waktu }).Distinct().CountAsync();
             var p5mCount = await _context.P5ms.Where(p => !p.IsDeleted && p.Nik == nrp).Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();
-            var inspectionCount = await _context.Inspections.CountAsync(i => i.Nik == nrp);
+            var inspectionCount = await _context.Inspections.Where(i => !i.IsDeleted && i.Nik == nrp).Select(i => new { i.Tanggal, i.Waktu }).Distinct().CountAsync();
             var actionPlanCount = await _context.ActionPlans.CountAsync(a => a.NikPic == nrp && a.Status == "Selesai");
 
             ViewBag.HazardCount = hazardCount;
