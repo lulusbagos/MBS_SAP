@@ -242,8 +242,8 @@ namespace MBS_SAP.Controllers
                 int thisMonthSafetyTalksCount = await safetyTalkQuery.CountAsync(s => s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth);
                 int totalSafetyTalksCount = await safetyTalkQuery.CountAsync();
 
-                int thisMonthP5msCount = await p5mQuery.CountAsync(p => p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth);
-                int totalP5msCount = await p5mQuery.CountAsync();
+                int thisMonthP5msCount = await p5mQuery.Where(p => p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth).Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();
+                int totalP5msCount = await p5mQuery.Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();
 
                 int coachingAsCreator = await _context.Coachings
                     .Where(c => !c.IsDeleted && c.Nik == userNik && c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth)
@@ -636,8 +636,20 @@ namespace MBS_SAP.Controllers
                         User = s.Nama
                     }).ToListAsync();
 
-                var recentP5ms = await p5mQuery
+                var recentP5ms = (await p5mQuery
                     .OrderByDescending(p => p.CreatedAt)
+                    .Take(8)
+                    .Select(p => new
+                    {
+                        p.Tanggal,
+                        p.Waktu,
+                        p.Judul,
+                        p.Keterangan,
+                        p.CreatedAt,
+                        p.Nama
+                    }).ToListAsync())
+                    .GroupBy(p => new { p.Tanggal, p.Waktu })
+                    .Select(g => g.First())
                     .Take(2)
                     .Select(p => new RecentActivityViewModel
                     {
@@ -647,7 +659,7 @@ namespace MBS_SAP.Controllers
                         Date = p.CreatedAt,
                         Status = "Completed",
                         User = p.Nama
-                    }).ToListAsync();
+                    }).ToList();
 
                 var recentCoachings = await coachingQuery
                     .OrderByDescending(c => c.CreatedAt)

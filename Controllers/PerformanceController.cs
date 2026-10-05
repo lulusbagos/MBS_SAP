@@ -346,8 +346,9 @@ namespace MBS_SAP.Controllers
                         .ToListAsync();
 
                     dbP5ms = await _context.P5ms
-                        .Where(p => !p.IsDeleted && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth)
-                        .Select(p => p.Nik)
+                        .Where(p => !p.IsDeleted && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth && p.Nik != null)
+                        .GroupBy(p => new { p.Nik, p.Tanggal, p.Waktu })
+                        .Select(g => g.Key.Nik!)
                         .ToListAsync();
 
                     var coachingCreators = await _context.Coachings
@@ -862,7 +863,8 @@ namespace MBS_SAP.Controllers
 
             var dbP5ms = await _context.P5ms.AsNoTracking()
                 .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && p.Tanggal >= baseStartDate && p.Tanggal <= endOfYear && !ExcludedCompanies.Ids.Contains(p.PerusahaanId!.Value))
-                .Select(p => new { CompId = p.PerusahaanId!.Value, Nik = p.Nik.Trim(), Date = p.Tanggal })
+                .GroupBy(p => new { CompId = p.PerusahaanId!.Value, Nik = p.Nik.Trim(), Date = p.Tanggal, p.Waktu })
+                .Select(g => new { CompId = g.Key.CompId, Nik = g.Key.Nik, Date = g.Key.Date })
                 .ToListAsync();
 
             var dbCoachings = await _context.Coachings.AsNoTracking()
@@ -2270,7 +2272,7 @@ namespace MBS_SAP.Controllers
             int weekHazards = await hazards.CountAsync(h => h.Tanggal >= startOfWeek);
             int weekInspections = await inspections.CountAsync(i => i.Tanggal >= startOfWeek);
             int weekSafetyTalks = await safetyTalks.CountAsync(s => s.Tanggal >= startOfWeek);
-            int weekP5ms = await p5ms.CountAsync(p => p.Tanggal >= startOfWeek);
+            int weekP5ms = await p5ms.Where(p => p.Tanggal >= startOfWeek).Select(p => new { p.Nik, p.Tanggal, p.Waktu }).Distinct().CountAsync();
             int weekCoachings = await coachings.CountAsync(c => c.CreatedAt >= startOfWeek);
             int weekObservations = await observationsQuery.CountAsync(o => o.CreatedAt >= startOfWeek);
             int weekTotal = weekHazards + weekInspections + weekSafetyTalks + weekCoachings + weekObservations;
@@ -2279,7 +2281,7 @@ namespace MBS_SAP.Controllers
             int monthHazards = await hazards.CountAsync(h => h.Tanggal >= startOfMonth);
             int monthInspections = await inspections.CountAsync(i => i.Tanggal >= startOfMonth);
             int monthSafetyTalks = await safetyTalks.CountAsync(s => s.Tanggal >= startOfMonth);
-            int monthP5ms = await p5ms.CountAsync(p => p.Tanggal >= startOfMonth);
+            int monthP5ms = await p5ms.Where(p => p.Tanggal >= startOfMonth).Select(p => new { p.Nik, p.Tanggal, p.Waktu }).Distinct().CountAsync();
             int monthCoachings = await coachings.CountAsync(c => c.CreatedAt >= startOfMonth);
             int monthObservations = await observationsQuery.CountAsync(o => o.CreatedAt >= startOfMonth);
             int monthTotal = monthHazards + monthInspections + monthSafetyTalks + monthCoachings + monthObservations;
@@ -2540,7 +2542,8 @@ namespace MBS_SAP.Controllers
                 .ToListAsync();
             var compP5mNik = await _context.P5ms
                 .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && p.Tanggal >= startOfMonth && !ExcludedCompanies.Ids.Contains(p.PerusahaanId!.Value))
-                .Select(p => new { CompId = p.PerusahaanId!.Value, p.Nik })
+                .GroupBy(p => new { CompId = p.PerusahaanId!.Value, Nik = p.Nik, p.Tanggal, p.Waktu })
+                .Select(g => new { CompId = g.Key.CompId, Nik = g.Key.Nik })
                 .ToListAsync();
             var compCoaNik = await _context.Coachings
                 .Where(c => !c.IsDeleted && c.PerusahaanId.HasValue && c.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(c.PerusahaanId!.Value))
@@ -2687,7 +2690,7 @@ namespace MBS_SAP.Controllers
                 int hCount = await hazards.CountAsync(h => h.Tanggal >= monthStart && h.CreatedAt < monthEnd);
                 int iCount = await inspections.CountAsync(i => i.Tanggal >= monthStart && i.CreatedAt < monthEnd);
                 int sCount = await safetyTalks.CountAsync(s => s.Tanggal >= monthStart && s.CreatedAt < monthEnd);
-                int pCount = await p5ms.CountAsync(p => p.Tanggal >= monthStart && p.CreatedAt < monthEnd);
+                int pCount = await p5ms.Where(p => p.Tanggal >= monthStart && p.CreatedAt < monthEnd).Select(p => new { p.Nik, p.Tanggal, p.Waktu }).Distinct().CountAsync();
                 int oCount = await observationsQuery.CountAsync(o => o.Date >= monthStart && o.CreatedAt < monthEnd);
                 int cCount = await coachings.CountAsync(c => c.CreatedAt >= monthStart && c.CreatedAt < monthEnd);
                 int incCount = await incidentBaseQuery.CountAsync(inc => (inc.TanggalKejadian ?? inc.CreatedAt) >= monthStart && (inc.TanggalKejadian ?? inc.CreatedAt) < monthEnd);
@@ -2843,14 +2846,14 @@ namespace MBS_SAP.Controllers
                 myHazardsWeek = await myHazardsQuery.CountAsync(h => h.Tanggal >= startOfWeek);
                 myInspectionsWeek = await myInspectionsQuery.CountAsync(i => i.Tanggal >= startOfWeek);
                 mySafetyTalksWeek = await mySafetyTalksQuery.CountAsync(s => s.Tanggal >= startOfWeek);
-                myP5msWeek = await myP5msQuery.CountAsync(p => p.Tanggal >= startOfWeek);
+                myP5msWeek = await myP5msQuery.Where(p => p.Tanggal >= startOfWeek).Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();
                 myObservationsWeek = await myObservationsQuery.CountAsync(o => o.Date >= startOfWeek);
                 myCoachingsWeek = await myCoachingsQuery.CountAsync(c => c.CreatedAt >= startOfWeek);
 
                 myHazardsMonth = await myHazardsQuery.CountAsync(h => h.Tanggal >= startOfMonth);
                 myInspectionsMonth = await myInspectionsQuery.CountAsync(i => i.Tanggal >= startOfMonth);
                 mySafetyTalksMonth = await mySafetyTalksQuery.CountAsync(s => s.Tanggal >= startOfMonth);
-                myP5msMonth = await myP5msQuery.CountAsync(p => p.Tanggal >= startOfMonth);
+                myP5msMonth = await myP5msQuery.Where(p => p.Tanggal >= startOfMonth).Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();
                 myObservationsMonth = await myObservationsQuery.CountAsync(o => o.Date >= startOfMonth);
                 myCoachingsMonth = await myCoachingsQuery.CountAsync(c => c.CreatedAt >= startOfMonth);
             }
@@ -3096,7 +3099,10 @@ namespace MBS_SAP.Controllers
             var monthHazNiks = await hazards.Where(h => h.Tanggal >= startOfMonth).Select(h => new { h.Nik }).ToListAsync();
             var monthInsNiks = await inspections.Where(i => i.Tanggal >= startOfMonth).Select(i => new { i.Nik }).ToListAsync();
             var monthSafNiks = await safetyTalks.Where(s => s.Tanggal >= startOfMonth).Select(s => new { s.Nik }).ToListAsync();
-            var monthP5mNiks = await p5ms.Where(p => p.Tanggal >= startOfMonth).Select(p => new { p.Nik }).ToListAsync();
+            var monthP5mNiks = await p5ms.Where(p => p.Tanggal >= startOfMonth)
+                .GroupBy(p => new { p.Nik, p.Tanggal, p.Waktu })
+                .Select(g => new { Nik = g.Key.Nik })
+                .ToListAsync();
 
             foreach (var item in monthHazNiks.Concat(monthInsNiks).Concat(monthSafNiks).Concat(monthP5mNiks))
             {
@@ -3219,8 +3225,21 @@ namespace MBS_SAP.Controllers
                     User = s.Nama
                 }).ToListAsync();
 
-            var histP5ms = await p5ms
+            var histP5ms = (await p5ms
                 .OrderByDescending(p => p.CreatedAt)
+                .Take(100)
+                .Select(p => new
+                {
+                    p.Tanggal,
+                    p.Waktu,
+                    p.Judul,
+                    p.Keterangan,
+                    p.CreatedAt,
+                    p.Nik,
+                    p.Nama
+                }).ToListAsync())
+                .GroupBy(p => new { p.Nik, p.Tanggal, p.Waktu })
+                .Select(g => g.First())
                 .Take(25)
                 .Select(p => new PerformanceHistoryViewModel
                 {
@@ -3230,7 +3249,7 @@ namespace MBS_SAP.Controllers
                     Date = p.CreatedAt,
                     Nik = p.Nik,
                     User = p.Nama
-                }).ToListAsync();
+                }).ToList();
 
             var companyHistory = histHazards
                 .Concat(histInspections)
@@ -6910,7 +6929,8 @@ namespace MBS_SAP.Controllers
 
                 var p5ms = await _context.P5ms
                     .Where(p => !p.IsDeleted && childCompanyIds.Contains(p.PerusahaanId ?? 0) && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth)
-                    .Select(p => new { p.PerusahaanId, p.Nik })
+                    .GroupBy(p => new { p.PerusahaanId, p.Nik, p.Tanggal, p.Waktu })
+                    .Select(g => new { g.Key.PerusahaanId, g.Key.Nik })
                     .ToListAsync();
 
                 var coachingCreators = await _context.Coachings
@@ -7081,7 +7101,8 @@ namespace MBS_SAP.Controllers
 
             var groupP5ms = await _context.P5ms
                 .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && relatedCompanyIds.Contains(p.PerusahaanId.Value) && p.Tanggal >= startOfMonthM && p.Tanggal <= endOfMonthM)
-                .Select(p => new { p.PerusahaanId, p.Nik })
+                .GroupBy(p => new { p.PerusahaanId, p.Nik, p.Tanggal, p.Waktu })
+                .Select(g => new { g.Key.PerusahaanId, g.Key.Nik })
                 .ToListAsync();
 
             var groupCoachingCreators = await _context.Coachings
@@ -8358,7 +8379,7 @@ namespace MBS_SAP.Controllers
             var hazNiks = await hazards.Select(h => h.Nik).ToListAsync();
             var insNiks = await inspections.Select(i => i.Nik).ToListAsync();
             var safNiks = await safetyTalks.Select(s => s.Nik).ToListAsync();
-            var p5mNiks = await p5ms.Select(p => p.Nik).ToListAsync();
+            var p5mNiks = await p5ms.GroupBy(p => new { p.Nik, p.Tanggal, p.Waktu }).Select(g => g.Key.Nik).ToListAsync();
 
             foreach (var nik in hazNiks.Concat(insNiks).Concat(safNiks).Concat(p5mNiks))
             {
@@ -8465,15 +8486,28 @@ namespace MBS_SAP.Controllers
                 User = s.Nama
             }).ToListAsync();
 
-            var allP5ms = await p5ms.OrderByDescending(p => p.CreatedAt).Select(p => new PerformanceHistoryViewModel
-            {
-                Type = "P5m",
-                Title = p.Judul ?? "Pre-Start",
-                Description = p.Keterangan ?? "",
-                Date = p.CreatedAt,
-                Nik = p.Nik,
-                User = p.Nama
-            }).ToListAsync();
+            var allP5ms = (await p5ms
+                .Select(p => new
+                {
+                    p.Tanggal,
+                    p.Waktu,
+                    p.Judul,
+                    p.Keterangan,
+                    p.CreatedAt,
+                    p.Nik,
+                    p.Nama
+                }).ToListAsync())
+                .GroupBy(p => new { p.Nik, p.Tanggal, p.Waktu })
+                .Select(g => g.OrderByDescending(x => x.CreatedAt).First())
+                .Select(p => new PerformanceHistoryViewModel
+                {
+                    Type = "P5m",
+                    Title = p.Judul ?? "Pre-Start",
+                    Description = p.Keterangan ?? "",
+                    Date = p.CreatedAt,
+                    Nik = p.Nik,
+                    User = p.Nama
+                }).ToList();
 
             var fullHistory = allHazards.Concat(allInspections).Concat(allSafetyTalks).Concat(allP5ms)
                 .OrderByDescending(x => x.Date)

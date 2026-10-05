@@ -27,7 +27,7 @@ namespace MBS_SAP.Controllers
             
             // Individual Achievements
             var hazardCount = await _context.HazardReports.CountAsync(h => h.Nik == nrp);
-            var p5mCount = await _context.P5ms.CountAsync(p => p.Nik == nrp);
+            var p5mCount = await _context.P5ms.Where(p => !p.IsDeleted && p.Nik == nrp).Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();
             var inspectionCount = await _context.Inspections.CountAsync(i => i.Nik == nrp);
             var actionPlanCount = await _context.ActionPlans.CountAsync(a => a.NikPic == nrp && a.Status == "Selesai");
 

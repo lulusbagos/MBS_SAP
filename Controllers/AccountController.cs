@@ -514,7 +514,7 @@ namespace MBS_SAP.Controllers
             int myHazards = await _context.HazardReports.CountAsync(h => !h.IsDeleted && h.Nik == nrp && h.CreatedAt >= startOfMonth);
             int myInspections = await _context.Inspections.CountAsync(i => !i.IsDeleted && i.Nik == nrp && i.CreatedAt >= startOfMonth);
             int mySafetyTalks = await _context.SafetyTalks.CountAsync(s => !s.IsDeleted && s.Nik == nrp && s.CreatedAt >= startOfMonth);
-            int myP5ms = await _context.P5ms.CountAsync(p => !p.IsDeleted && p.Nik == nrp && p.CreatedAt >= startOfMonth);
+            int myP5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.Nik == nrp && p.CreatedAt >= startOfMonth).Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();
 
             int totalSubmissions = myHazards + myInspections + mySafetyTalks + myP5ms;
             double complianceRate = Math.Min((totalSubmissions / 4.0) * 100.0, 100.0);
