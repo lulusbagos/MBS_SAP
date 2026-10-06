@@ -12,6 +12,7 @@ namespace MBS_SAP.Models
         public int? JabatanIdExisting { get; set; }
         public string? NamaJabatanExisting { get; set; }
         public string? KategoriPengawas { get; set; }
+        public string? KategoriMapping { get; set; }
         public int? RJabatanId { get; set; }
         public string? KodeJabatanStandar { get; set; }
         public string? NamaJabatanStandar { get; set; }

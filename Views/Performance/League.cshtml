@@ -80,16 +80,23 @@
 
     public string GetRateColor(double rate) {
         if (rate < 0) return "#64748b"; // gray for N/A
-        if (rate >= 80) return "#16a34a"; // Hijau
-        if (rate >= 40) return "#dc2626"; // Merah
-        return "#000000"; // Hitam
+        if (rate >= 80) return "#16a34a"; // 80–100% Hijau (Tercapai / Patuh)
+        if (rate >= 40) return "#dc2626"; // 40–79% Merah (Perlu Perhatian)
+        return "#0f172a"; // 0–39% Hitam (Kritis / Degradasi)
     }
 
     public string GetRowBgColor(double rate) {
         if (rate < 0) return ""; 
-        if (rate >= 80) return "rgba(22, 163, 74, 0.15)"; // Green with opacity
-        if (rate >= 40) return "rgba(220, 38, 38, 0.15)"; // Red with opacity
-        return "rgba(0, 0, 0, 0.08)"; // Black with opacity
+        if (rate >= 80) return "rgba(22, 163, 74, 0.04)"; // Hijau lembut & bersih
+        if (rate >= 40) return "rgba(220, 38, 38, 0.04)"; // Merah lembut
+        return "rgba(15, 23, 42, 0.04)"; // Hitam / abu lembut
+    }
+
+    public string GetRowBorderColor(double rate) {
+        if (rate < 0) return "#cbd5e1";
+        if (rate >= 80) return "#16a34a"; // Hijau
+        if (rate >= 40) return "#dc2626"; // Merah
+        return "#0f172a"; // Hitam
     }
 
     public string FormatRate(double rate) {
@@ -833,6 +840,77 @@
         .podium-silver .podium-block { height: 45px; }
         .podium-bronze .podium-block { height: 35px; }
     }
+
+    /* Player Detail Card - Clean & Minimalist */
+    .player-detail-box {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        padding: 14px 16px;
+    }
+    .kpi-summary-strip {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 8px 6px;
+    }
+    .kpi-summary-item {
+        flex: 1 1 0;
+        min-width: 85px;
+        text-align: center;
+        padding: 4px 6px;
+    }
+    .kpi-summary-item + .kpi-summary-item {
+        border-left: 1px solid #e2e8f0;
+    }
+    @@media (max-width: 767.98px) {
+        .kpi-summary-strip {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            padding: 8px;
+        }
+        .kpi-summary-item {
+            flex: none;
+            min-width: unset;
+            border-left: none !important;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 6px 4px;
+        }
+        .kpi-summary-item:last-child {
+            grid-column: span 2;
+        }
+    }
+    .pts-clean-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 12px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .pts-clean-card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .pts-card-badge {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+        font-weight: 700 !important;
+        font-size: 9px !important;
+        padding: 2.5px 7px !important;
+        line-height: 1.2 !important;
+    }
 </style>
 
     @{
@@ -955,7 +1033,17 @@
                         <div class="btn-group btn-group-sm" role="group" aria-label="Target Filter">
                             <input type="radio" class="btn-check" name="targetFilter" id="tf_target" value="target" @(targetFilter == "target" ? "checked" : "") onchange="this.form.submit();">
                             <label class="btn btn-outline-primary fw-bold" for="tf_target" style="font-size: 11px; border-radius: 6px 0 0 6px;">
-                                <i class="bi bi-bullseye me-1"></i>Hanya Target SAP
+                                <i class="bi bi-bullseye me-1"></i>Hanya Target SAP @((ViewBag.TargetSapCount as int? > 0) ? $"({ViewBag.TargetSapCount})" : "")
+                            </label>
+
+                            <input type="radio" class="btn-check" name="targetFilter" id="tf_nontarget_pengawas" value="nontarget_pengawas" @(targetFilter == "nontarget_pengawas" ? "checked" : "") onchange="this.form.submit();">
+                            <label class="btn btn-outline-danger fw-bold" for="tf_nontarget_pengawas" style="font-size: 11px;">
+                                <i class="bi bi-person-x-fill me-1"></i>Pengawas Non-SAP @((ViewBag.NonSapSupervisorsCount as int? > 0) ? $"({ViewBag.NonSapSupervisorsCount})" : "")
+                            </label>
+
+                            <input type="radio" class="btn-check" name="targetFilter" id="tf_nonstaff_targeted" value="nonstaff_targeted" @(targetFilter == "nonstaff_targeted" ? "checked" : "") onchange="this.form.submit();">
+                            <label class="btn btn-outline-warning text-dark fw-bold" for="tf_nonstaff_targeted" style="font-size: 11px;">
+                                <i class="bi bi-person-exclamation me-1"></i>Non-Staf Tertarget SAP @((ViewBag.NonStaffTargetedCount as int? > 0) ? $"({ViewBag.NonStaffTargetedCount})" : "")
                             </label>
 
                             <input type="radio" class="btn-check" name="targetFilter" id="tf_nontarget_active" value="nontarget_active" @(targetFilter == "nontarget_active" ? "checked" : "") onchange="this.form.submit();">
@@ -970,7 +1058,19 @@
                         </div>
                     </div>
                     <div class="text-muted" style="font-size: 11px;">
-                        @if (targetFilter == "nontarget_active")
+                        @if (targetFilter == "nontarget_pengawas")
+                        {
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
+                                <i class="bi bi-person-x-fill me-1"></i>Menampilkan @(ViewBag.NonSapSupervisorsCount ?? 0) pengawas struktural yang target SAP-nya dibuat 0 / NON-SAP
+                            </span>
+                        }
+                        else if (targetFilter == "nonstaff_targeted")
+                        {
+                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle px-2 py-1">
+                                <i class="bi bi-person-exclamation me-1"></i>Menampilkan @(ViewBag.NonStaffTargetedCount ?? 0) karyawan non-staf / pelaksana yang terdaftar memiliki target K3 SAP
+                            </span>
+                        }
+                        else if (targetFilter == "nontarget_active")
                         {
                             <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
                                 <i class="bi bi-lightning-charge-fill me-1"></i>Menampilkan karyawan di luar target yang aktif membuat laporan SAP
@@ -1046,6 +1146,57 @@
         </div>
     </div>
  
+    @{
+        var nonSapCount = ViewBag.NonSapSupervisorsCount as int? ?? 0;
+        var nonStaffTargetedCount = ViewBag.NonStaffTargetedCount as int? ?? 0;
+        var targetCount = ViewBag.TargetSapCount as int? ?? 0;
+        var totalActive = ViewBag.TotalActiveEmployees as int? ?? (targetCount + nonSapCount);
+        var hasAnomaly = nonSapCount > 0 || nonStaffTargetedCount > 0;
+    }
+    @if (hasAnomaly)
+    {
+        <div class="alert shadow-sm border-0 mb-4" style="background: linear-gradient(135deg, #fff7ed 0%, #fff1f2 50%, #fef2f2 100%); border-left: 6px solid #e11d48 !important; border-radius: 12px; padding: 16px 20px;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 48px; height: 48px; border-radius: 12px; background: #e11d48; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 10px rgba(225, 29, 72, 0.3); flex-shrink: 0;">
+                        <i class="bi bi-shield-exclamation"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark d-flex align-items-center flex-wrap gap-2" style="font-size: 14.5px;">
+                            <span>Audit Anomali Target Jabatan K3:</span>
+                            @if (nonSapCount > 0)
+                            {
+                                <span class="badge bg-danger fs-6 px-2.5 py-1 shadow-xs" title="Pengawas struktural yang seharusnya bertarget K3 namun dimatikan">
+                                    <i class="bi bi-person-x-fill me-1"></i>@nonSapCount Pengawas Non-SAP (Target 0)
+                                </span>
+                            }
+                            @if (nonStaffTargetedCount > 0)
+                            {
+                                <span class="badge bg-warning text-dark fs-6 px-2.5 py-1 shadow-xs border border-warning-subtle" title="Non-staf pelaksana yang seharusnya tidak bertarget namun tertarget">
+                                    <i class="bi bi-person-exclamation me-1"></i>@nonStaffTargetedCount Non-Staf Tertarget SAP
+                                </span>
+                            }
+                            <span class="badge bg-white text-muted border fw-bold" style="font-size: 11px;">
+                                Total Skuad Target: @targetCount dari @totalActive Karyawan Aktif
+                            </span>
+                        </div>
+                        <div class="text-secondary small mt-1" style="line-height: 1.45;">
+                            Terdeteksi anomali penetapan target SAP di database master karyawan: Pengawas struktural (Foreman/Spv/dll) dimatikan menjadi 'NON SAP', dan sebaliknya pelaksana/non-staf diberi target K3.
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <a href="@Url.Action("ExportTargetAnomaliesExcel", "Performance", new { companyId = selectedCompanyId, year = selectedYear, month = selectedMonth })" class="btn btn-success btn-sm fw-bold shadow-sm" style="border-radius: 8px; font-size: 12px; padding: 7px 15px; background: #16a34a; border: 1px solid #15803d;">
+                        <i class="bi bi-file-earmark-excel-fill me-1"></i> Download Excel Audit (.xlsx)
+                    </a>
+                    <button type="button" class="btn btn-danger btn-sm fw-bold shadow-sm" style="border-radius: 8px; font-size: 12px; padding: 7px 15px;" data-bs-toggle="modal" data-bs-target="#modalNonSapSupervisors">
+                        <i class="bi bi-table me-1"></i> Rincian Detail (@(nonSapCount + nonStaffTargetedCount) Orang)
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
      <!-- League Mode Navigation Tab -->
      <div class="d-flex flex-wrap gap-2 mb-4 bg-light p-2 rounded-3 shadow-sm border" style="width: fit-content; max-width: 100%;">
         <button class="btn btn-sm @(currentMode == "dept" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=dept&year=@selectedYear&month=@selectedMonth&targetFilter=@targetFilter';">
@@ -1196,7 +1347,7 @@
                                         var shieldColor = GetDeptColor(comp.CompanyName);
                                         var initials = GetDeptInitials(comp.CompanyName);
 
-                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(comp.MtdAchievementRate) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor((double)comp.TotalScore) !important; border-left: 4px solid @GetRowBorderColor((double)comp.TotalScore) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass">@rankText</div>
                                             </td>
@@ -1348,7 +1499,7 @@
                                         var shieldColor = GetDeptColor(comp.CompanyName);
                                         var initials = GetDeptInitials(comp.CompanyName);
 
-                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(comp.MtdAchievementRate) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor((double)comp.TotalScore) !important; border-left: 4px solid @GetRowBorderColor((double)comp.TotalScore) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass">@rankText</div>
                                             </td>
@@ -1506,7 +1657,7 @@
                                         var shieldColor = GetDeptColor(comp.CompanyName);
                                         var initials = GetDeptInitials(comp.CompanyName);
 
-                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(comp.MtdAchievementRate) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor((double)comp.TotalScore) !important; border-left: 4px solid @GetRowBorderColor((double)comp.TotalScore) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept';">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass">@rankText</div>
                                             </td>
@@ -1679,7 +1830,7 @@
                                         var shieldColor = GetDeptColor(comp.CompanyName);
                                         var initials = GetDeptInitials(comp.CompanyName);
 
-                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(comp.MtdAchievementRate) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept@(selectedCompanyId > 0 && selectedCompanyId != (int)comp.CompanyId ? $"&parentId={selectedCompanyId}" : "")';">
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor((double)comp.TotalScore) !important; border-left: 4px solid @GetRowBorderColor((double)comp.TotalScore) !important;" onclick="location.href='?companyId=@comp.CompanyId&mode=dept@(selectedCompanyId > 0 && selectedCompanyId != (int)comp.CompanyId ? $"&parentId={selectedCompanyId}" : "")';">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass">@rankText</div>
                                             </td>
@@ -1808,23 +1959,24 @@
                                 <tr>
                                     <th style="width: 50px;">Pos</th>
                                     <th class="align-left">Klub (Departemen)</th>
-                                    <th style="width: 80px;">Skuad</th>
-                                    <th style="width: 100px; background-color: #1e3a8a;">PTS (Compliance %)</th>
+                                    <th style="width: 75px;">Skuad</th>
+                                    <th style="width: 110px; background-color: #1e3a8a;" title="Persentase Kepatuhan Capaian Target K3 Bulanan (Standar SOP)">Capaian Target (%)</th>
                                     <th style="width: 120px;">Form (5 Laga)</th>
-                                    <th style="width: 60px;">HZ</th>
-                                    <th style="width: 60px;">IP</th>
-                                    <th style="width: 60px;">ST</th>
-                                    <th style="width: 60px;">OB</th>
-                                    <th style="width: 60px;">CC</th>
+                                    <th style="width: 55px;">HZ</th>
+                                    <th style="width: 55px;">IP</th>
+                                    <th style="width: 55px;">ST</th>
+                                    <th style="width: 55px;">OB</th>
+                                    <th style="width: 55px;">CC</th>
                                     <th style="width: 65px; background-color: #78350f;">P5M *</th>
                                     <th style="width: 75px; background-color: #065f46;">Close Rate</th>
+                                    <th style="width: 65px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @if (!deptAchievements.Any())
                                 {
                                     <tr>
-                                        <td colspan="12" class="text-center text-muted py-4">Belum ada data klub terdaftar.</td>
+                                        <td colspan="13" class="text-center text-muted py-4">Belum ada data klub terdaftar.</td>
                                     </tr>
                                 }
                                 else
@@ -1859,7 +2011,7 @@
                                         var shieldColor = GetDeptColor(dept.DepartmentName);
                                         var initials = GetDeptInitials(dept.DepartmentName);
 
-                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(dept.MtdAchievementRate) !important;" onclick="filterPlayerTable('@dept.DepartmentName.Replace("'", "\\'")');">
+                                        <tr class="@rowClass" style="cursor: pointer; background-color: @GetRowBgColor(dept.MtdAchievementRate) !important; border-left: 4px solid @GetRowBorderColor(dept.MtdAchievementRate) !important;" onclick="filterPlayerTable('@dept.DepartmentName.Replace("'", "\\'")');">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass">@rankText</div>
                                             </td>
@@ -1868,17 +2020,265 @@
                                                 <span class="fw-bold" style="color: #334155;">@dept.DepartmentName</span>
                                             </td>
                                             <td class="text-center">@dept.EmployeeCount</td>
-                                            <td class="text-center fw-bold" style="color: @GetRateColor(dept.MtdAchievementRate); background-color: rgba(30, 58, 138, 0.03);">@dept.MtdAchievementRate%</td>
+                                            <td class="text-center fw-bold" style="background-color: rgba(30, 58, 138, 0.04);">
+                                                <div style="color: @GetRateColor(dept.MtdAchievementRate); font-size: 14px; font-weight: 800;">@FormatRate(dept.MtdAchievementRate)</div>
+                                            </td>
                                             <td class="text-center" style="white-space: nowrap;">
                                                 @GetFormDotsHtml(dept.MtdHazardRate, dept.MtdInspeksiRate, dept.MtdSafetyTalkRate, dept.MtdObservasiRate, dept.MtdCoachingRate)
                                             </td>
-                                            <td class="text-center">@FormatRate(dept.MtdHazardRate)</td>
-                                            <td class="text-center">@FormatRate(dept.MtdInspeksiRate)</td>
-                                            <td class="text-center">@FormatRate(dept.MtdSafetyTalkRate)</td>
-                                            <td class="text-center">@FormatRate(dept.MtdObservasiRate)</td>
-                                            <td class="text-center">@FormatRate(dept.MtdCoachingRate)</td>
-                                            <td class="text-center" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: @GetRateColor(dept.MtdP5mRate);">@FormatRate(dept.MtdP5mRate)</td>
-                                            <td class="text-center" style="background-color: #ecfdf5; border-left: 2px solid #10b981; color: @GetRateColor(dept.MtdCloseRate);">@FormatRate(dept.MtdCloseRate)</td>
+                                            <td class="text-center" style="color: @GetRateColor(dept.MtdHazardRate); font-weight: 600;">@FormatRate(dept.MtdHazardRate)</td>
+                                            <td class="text-center" style="color: @GetRateColor(dept.MtdInspeksiRate); font-weight: 600;">@FormatRate(dept.MtdInspeksiRate)</td>
+                                            <td class="text-center" style="color: @GetRateColor(dept.MtdSafetyTalkRate); font-weight: 600;">@FormatRate(dept.MtdSafetyTalkRate)</td>
+                                            <td class="text-center" style="color: @GetRateColor(dept.MtdObservasiRate); font-weight: 600;">@FormatRate(dept.MtdObservasiRate)</td>
+                                            <td class="text-center" style="color: @GetRateColor(dept.MtdCoachingRate); font-weight: 600;">@FormatRate(dept.MtdCoachingRate)</td>
+                                            <td class="text-center" style="background-color: #fffbeb; border-left: 2px solid #f59e0b; color: @GetRateColor(dept.MtdP5mRate); font-weight: 600;">@FormatRate(dept.MtdP5mRate)</td>
+                                            <td class="text-center" style="background-color: #ecfdf5; border-left: 2px solid #10b981; color: @GetRateColor(dept.MtdCloseRate); font-weight: 600;">@FormatRate(dept.MtdCloseRate)</td>
+                                            <td class="text-center" onclick="event.stopPropagation();">
+                                                <button class="btn btn-sm btn-outline-secondary py-0.5 px-2 rounded-pill" style="font-size: 10px; font-weight: 600; border-color: #cbd5e1; color: #334155;" type="button" data-bs-toggle="collapse" data-bs-target="#detail-dept-@idx" aria-expanded="false">
+                                                    Detail <i class="bi bi-chevron-down ms-1" style="font-size: 9px;"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Collapsible Department Detail Card -->
+                                        <tr class="collapse" id="detail-dept-@idx" style="background-color: #f8fafc;">
+                                            <td colspan="13" class="p-2 p-md-3">
+                                                <div class="player-detail-box">
+                                                    <!-- Header Bar Departemen -->
+                                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2" style="border-bottom: 1px solid #e2e8f0;">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <div class="football-badge" style="background-color: @shieldColor; width: 22px; height: 26px; font-size: 8px;">@initials</div>
+                                                            <div class="fw-bold text-dark" style="font-size: 12px; letter-spacing: -0.2px;">
+                                                                Aktivitas K3 Departemen: <span class="text-primary">@dept.DepartmentName</span>
+                                                            </div>
+                                                            <span class="badge rounded-pill" style="background: #e0f2fe; color: #0369a1; font-size: 9.5px; font-weight: 600; border: 1px solid #bae6fd;">
+                                                                <i class="bi bi-people me-1"></i>@dept.EmployeeCount Skuad Target
+                                                            </span>
+                                                        </div>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <button type="button" class="btn btn-sm btn-outline-primary py-0.5 px-2.5 rounded-pill fw-semibold" style="font-size: 10.5px;" onclick="filterPlayerTable('@dept.DepartmentName.Replace("'", "\\'")');">
+                                                                <i class="bi bi-funnel-fill me-1"></i>Saring Skuad Pemain (@dept.EmployeeCount)
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- 7 KPI Summary Strip (Horizontal & Compact) -->
+                                                    <div class="kpi-summary-strip mb-3">
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">Hazard</div>
+                                                            <div class="fw-bold" style="font-size: 13px;">@dept.HazardActual / @dept.HazardTarget</div>
+                                                            <div style="font-size: 9.5px; color: @GetRateColor(dept.MtdHazardRate); font-weight: 600;">@FormatRate(dept.MtdHazardRate)</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">Inspeksi</div>
+                                                            <div class="fw-bold" style="font-size: 13px;">@dept.InspeksiActual / @dept.InspeksiTarget</div>
+                                                            <div style="font-size: 9.5px; color: @GetRateColor(dept.MtdInspeksiRate); font-weight: 600;">@FormatRate(dept.MtdInspeksiRate)</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">S. Talk</div>
+                                                            <div class="fw-bold" style="font-size: 13px;">@dept.SafetyTalkActual / @dept.SafetyTalkTarget</div>
+                                                            <div style="font-size: 9.5px; color: @GetRateColor(dept.MtdSafetyTalkRate); font-weight: 600;">@FormatRate(dept.MtdSafetyTalkRate)</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">Observasi</div>
+                                                            <div class="fw-bold" style="font-size: 13px;">@dept.ObservasiActual / @dept.ObservasiTarget</div>
+                                                            <div style="font-size: 9.5px; color: @GetRateColor(dept.MtdObservasiRate); font-weight: 600;">@FormatRate(dept.MtdObservasiRate)</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">Coaching</div>
+                                                            <div class="fw-bold" style="font-size: 13px;">@dept.CoachingActual / @dept.CoachingTarget</div>
+                                                            <div style="font-size: 9.5px; color: @GetRateColor(dept.MtdCoachingRate); font-weight: 600;">@FormatRate(dept.MtdCoachingRate)</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">P5M *</div>
+                                                            <div class="fw-bold text-warning-emphasis" style="font-size: 13px;">@dept.P5mActual / @dept.P5mTarget</div>
+                                                            <div style="font-size: 9.5px; color: @GetRateColor(dept.MtdP5mRate); font-weight: 600;">@FormatRate(dept.MtdP5mRate)</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">Close Rate</div>
+                                                            <div class="fw-bold" style="font-size: 13px; color: @GetRateColor(dept.MtdCloseRate);">@FormatRate(dept.MtdCloseRate)</div>
+                                                            <div style="font-size: 9.5px; color: #64748b; font-weight: 600;">@dept.ApClosed / @dept.ApTotal AP</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- PTS Formula Section -->
+                                                    <div class="p-3 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                                                        <!-- Section Header -->
+                                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2.5 mb-3" style="border-bottom: 1px solid #e2e8f0;">
+                                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                <div class="d-flex align-items-center justify-content-center rounded-2 bg-primary text-white" style="width: 24px; height: 24px; font-size: 11px;">
+                                                                    <i class="bi bi-calculator"></i>
+                                                                </div>
+                                                                <span class="fw-bold text-dark" style="font-size: 12.5px; letter-spacing: -0.2px;">Rincian Formula Skor Akhir (PTS) Departemen</span>
+                                                                <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-size: 9.5px; font-weight: 600; border: 1px solid #bfdbfe;">
+                                                                    <i class="bi bi-shield-check me-1"></i>Standar Akuntabilitas Departemen
+                                                                </span>
+                                                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill btn-open-scoring-modal" 
+                                                                        data-bs-toggle="modal" data-bs-target="#leagueScoringModal" 
+                                                                        style="font-size: 10px; font-weight: 600;" 
+                                                                        title="Buka rincian hitungan riil & metodologi departemen"
+                                                                        data-type="departemen"
+                                                                        data-name="@dept.DepartmentName"
+                                                                        data-dept="@dept.DepartmentName"
+                                                                        data-pos="Departemen"
+                                                                        data-total-score="@dept.TotalScore"
+                                                                        data-score-close="@dept.ScoreCloseRate"
+                                                                        data-pts-close="@dept.PtsClose"
+                                                                        data-ap-closed="@dept.ApClosed"
+                                                                        data-ap-total="@dept.ApTotal"
+                                                                        data-score-kualitas="@dept.ScoreKualitas"
+                                                                        data-pts-kualitas="@dept.PtsKualitas"
+                                                                        data-score-capaian="@dept.ScoreCapaian"
+                                                                        data-pts-capaian="@dept.PtsCapaian"
+                                                                        data-act-capaian="@dept.TotalActual"
+                                                                        data-tgt-capaian="@dept.TotalTarget"
+                                                                        data-compliance="@dept.MtdAchievementRate"
+                                                                        data-score-beban="@dept.ScoreSkalaBeban"
+                                                                        data-pts-beban="@dept.PtsBeban"
+                                                                        data-user-target="@dept.TotalTarget"
+                                                                        data-max-target="@dept.MaxTargetDept"
+                                                                        data-kpi-hazard="@dept.HazardActual / @dept.HazardTarget"
+                                                                        data-kpi-inspeksi="@dept.InspeksiActual / @dept.InspeksiTarget"
+                                                                        data-kpi-safetytalk="@dept.SafetyTalkActual / @dept.SafetyTalkTarget"
+                                                                        data-kpi-observasi="@dept.ObservasiActual / @dept.ObservasiTarget"
+                                                                        data-kpi-coaching="@dept.CoachingActual / @dept.CoachingTarget"
+                                                                        data-kpi-p5m="@dept.P5mActual / @dept.P5mTarget">
+                                                                    <i class="bi bi-calculator me-1"></i>Detail Hitungan &amp; Panduan
+                                                                </button>
+                                                            </div>
+                                                            <div>
+                                                                <span class="badge px-3 py-1.5 rounded-pill shadow-xs" style="background: #0f172a; color: #38bdf8; font-size: 11.5px; font-weight: 700; border: 1px solid #334155;">
+                                                                    Total Skor: <span class="text-white">@dept.TotalScore pts</span> (@dept.TotalScore%)
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- 4 Formula Cards -->
+                                                        <div class="row g-2 g-md-3 text-center" style="font-size: 11px;">
+                                                            <!-- 1. Close Rate -->
+                                                            <div class="col-12 col-sm-6 col-xl-3">
+                                                                <div class="pts-clean-card">
+                                                                    <div>
+                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Close Rate</span>
+                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot 50%</span>
+                                                                        </div>
+                                                                        <div class="my-2">
+                                                                            <span class="fw-bold fs-4 text-success">@dept.ScoreCloseRate%</span>
+                                                                        </div>
+                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                            50% &times; @dept.ScoreCloseRate% = <strong class="text-dark">@dept.PtsClose pts</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                            <span>Closed: <strong class="text-dark">@dept.ApClosed</strong></span>
+                                                                            <span>Total: <strong class="text-dark">@dept.ApTotal AP</strong></span>
+                                                                        </div>
+                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                            <i class="bi bi-shield-check me-1 text-success"></i>Tingkat penutupan temuan bahaya &amp; action plan lingkup departemen.
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- 2. Kualitas Mutu -->
+                                                            <div class="col-12 col-sm-6 col-xl-3">
+                                                                <div class="pts-clean-card">
+                                                                    <div>
+                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Kualitas Mutu</span>
+                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #fef3c7; color: #b45309;">Bobot 25%</span>
+                                                                        </div>
+                                                                        <div class="my-2">
+                                                                            <span class="fw-bold fs-4" style="color: #d97706;">@dept.ScoreKualitas%</span>
+                                                                        </div>
+                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                            25% &times; @dept.ScoreKualitas% = <strong class="text-dark">@dept.PtsKualitas pts</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                            <span>Standar Mutu SAP</span>
+                                                                            <span class="text-success fw-bold"><i class="bi bi-check-circle me-0.5"></i>5.0 / 5.0 ★</span>
+                                                                        </div>
+                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                            <i class="bi bi-patch-check me-1 text-warning"></i>Kualitas validasi data laporan K3 departemen (Baseline 100% tanpa penalti).
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- 3. Capaian Target -->
+                                                            <div class="col-12 col-sm-6 col-xl-3">
+                                                                <div class="pts-clean-card">
+                                                                    <div>
+                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Capaian Target</span>
+                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot 15%</span>
+                                                                        </div>
+                                                                        <div class="my-2">
+                                                                            <span class="fw-bold fs-4 text-primary">@dept.ScoreCapaian%</span>
+                                                                        </div>
+                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                            15% &times; @dept.ScoreCapaian% = <strong class="text-dark">@dept.PtsCapaian pts</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                            <span>Realisasi: <strong class="text-dark">@dept.TotalActual</strong></span>
+                                                                            <span>Target: <strong class="text-dark">@dept.TotalTarget</strong></span>
+                                                                        </div>
+                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                            <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif seluruh anggota departemen (@dept.MtdAchievementRate%).
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- 4. Skala Beban -->
+                                                            <div class="col-12 col-sm-6 col-xl-3">
+                                                                <div class="pts-clean-card">
+                                                                    <div>
+                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">4. Skala Beban</span>
+                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #e0e7ff; color: #4338ca;">Bobot 10%</span>
+                                                                        </div>
+                                                                        <div class="my-2">
+                                                                            <span class="fw-bold fs-4" style="color: #4338ca;">@dept.ScoreSkalaBeban%</span>
+                                                                        </div>
+                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                            10% &times; @dept.ScoreSkalaBeban% = <strong class="text-dark">@dept.PtsBeban pts</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                            <span>Target Dept: <strong class="text-dark">@dept.TotalTarget</strong></span>
+                                                                            <span>Max Dept: <strong class="text-dark">@dept.MaxTargetDept</strong></span>
+                                                                        </div>
+                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                            <i class="bi bi-people me-1 text-indigo" style="color: #4338ca;"></i>Faktor keadilan beban operasional departemen vs departemen target terbesar.
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Banner Rangkuman Akumulasi PTS Departemen -->
+                                                        <div class="mt-2.5 p-2 px-3 rounded-2 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background: #ffffff; border: 1px solid #e2e8f0; font-size: 11px;">
+                                                            <div class="d-flex align-items-center gap-2">
+                                                                <div class="d-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary" style="width: 22px; height: 22px; font-size: 11px; flex-shrink: 0;">
+                                                                    <i class="bi bi-info-circle-fill"></i>
+                                                                </div>
+                                                                <div class="text-secondary" style="font-size: 11px; line-height: 1.4;">
+                                                                    <strong class="text-dark">Akumulasi Skor PTS Departemen:</strong> (@dept.PtsClose pts) + (@dept.PtsKualitas pts) + (@dept.PtsCapaian pts) + (@dept.PtsBeban pts) = <strong class="text-primary fs-6">@dept.TotalScore pts (@dept.TotalScore%)</strong>
+                                                                    <span class="text-muted d-none d-lg-inline ms-2">&bull; Standar penilaian agregat departemen terpadu.</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
                                         </tr>
                                     }
                                 }
@@ -1901,7 +2301,7 @@
                                             <tr>
                                                 <th class="align-left">Klub (Departemen)</th>
                                                 <th style="width: 80px;">Skuad</th>
-                                                <th style="width: 100px; background-color: #991b1b; color: white;">PTS (Compliance %)</th>
+                                                <th style="width: 105px; background-color: #991b1b; color: white;">Capaian (%)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1927,20 +2327,20 @@
 
                     <div class="legend-box mt-3">
                         <div class="legend-item">
-                            <div class="legend-dot" style="background: #000000;"></div>
-                            <span>0–39% (Hitam)</span>
+                            <div class="legend-dot" style="background: #16a34a;"></div>
+                            <span>80–100% (Hijau &bull; Tercapai / Patuh)</span>
                         </div>
                         <div class="legend-item">
                             <div class="legend-dot" style="background: #dc2626;"></div>
-                            <span>40–79% (Merah)</span>
+                            <span>40–79% (Merah &bull; Perlu Perhatian)</span>
                         </div>
                         <div class="legend-item">
-                            <div class="legend-dot" style="background: #16a34a;"></div>
-                            <span>80–100% (Hijau)</span>
+                            <div class="legend-dot" style="background: #0f172a;"></div>
+                            <span>0–39% (Hitam &bull; Kritis / Degradasi)</span>
                         </div>
                     </div>
                     <span class="text-muted mt-2 d-block" style="font-size: 11px; font-style: italic; line-height: 1.4;">
-                        * Klik baris Departemen di atas untuk langsung menyaring daftar skuad pemain di samping/bawah secara instan.
+                        * Standar warna SOP diterapkan pada <strong>Aksen Baris &amp; Skor Total PTS</strong> (80–100 pts Hijau, 40–79 pts Merah, &lt;40 pts Hitam) serta sub-program K3 individual. Klik baris Departemen untuk menyaring skuad pemain.
                     </span>
                 </div>
             }
@@ -1983,7 +2383,7 @@
                                 <tr style="position: sticky; top: 0; z-index: 10;">
                                     <th style="width: 50px; background: #0f172a;">Pos</th>
                                     <th class="align-left" style="background: #0f172a;">Pemain</th>
-                                    <th style="width: 90px; background: #0f172a;">PTS %</th>
+                                    <th style="width: 95px; background: #0f172a;" title="Persentase Kepatuhan Capaian Target (SOP)">Capaian %</th>
                                     <th style="width: 110px; background: #0f172a;">Form (5 Program)</th>
                                     <th style="background: #0f172a; width: 80px;">Rincian</th>
                                 </tr>
@@ -2034,7 +2434,7 @@
                                             rankClass = "league-rank-relegation";
                                         }
 
-                                        var rowStyle = zeroTarget ? "background-color: #f8fafc !important;" : $"background-color: {GetRowBgColor((double)emp.totalScore)} !important;";
+                                        var rowStyle = zeroTarget ? "background-color: #f8fafc !important; border-left: 4px solid #cbd5e1 !important;" : $"background-color: {GetRowBgColor((double)emp.complianceRate)} !important; border-left: 4px solid {GetRowBorderColor((double)emp.complianceRate)} !important;";
 
                                         <tr class="@rowClass player-row" style="@rowStyle" data-dept="@emp.departmentName">
                                             <td class="text-center">
@@ -2043,13 +2443,19 @@
                                             <td class="align-left">
                                                 <div class="fw-bold d-inline-flex align-items-center flex-wrap gap-1" style="color: #334155; font-size: 13px;">
                                                     <span>@emp.name</span>
+                                                    @if (emp.isPotentialSupervisorNonSap == true)
+                                                    {
+                                                        <span class="badge bg-danger text-white py-0 px-1" style="font-size: 9px; font-weight: 700;" title="Karyawan Pengawas yang dimatikan (Status Master: NON-SAP / Target Nol)">
+                                                            <i class="bi bi-person-x-fill me-1"></i>Pengawas Non-SAP
+                                                        </span>
+                                                    }
                                                     @if (emp.isNewHire == true)
                                                     {
                                                         <span class="badge badge-newhire" title="Karyawan baru bergabung (@(emp.tanggalMasukStr ?? "Baru")) (Target dihitung proporsional)">
                                                             <i class="bi bi-sparkles me-1 text-warning"></i>New Hire
                                                         </span>
                                                     }
-                                                    @if (emp.isNonTarget == true)
+                                                    @if (emp.isNonTarget == true && emp.isPotentialSupervisorNonSap != true)
                                                     {
                                                         if (emp.isActivelyReporting == true)
                                                         {
@@ -2066,7 +2472,13 @@
                                                     }
                                                 </div>
                                                 <div style="font-size: 10px; color: #64748b;">
-                                                    @emp.nik &bull; <span class="badge bg-light text-dark py-0" style="font-size: 9px;">@emp.departmentName</span> &bull; <span style="font-size: 9px; color: #94a3b8;">@(emp.jabatanName ?? "-")</span>
+                                                    @emp.nik &bull; <span class="badge bg-light text-dark py-0" style="font-size: 9px;">@emp.departmentName</span> &bull; <span style="font-size: 9px; color: #94a3b8;">@(emp.namaJabatanExisting ?? emp.jabatanName ?? "-")</span>
+                                                    @if (emp.isPotentialSupervisorNonSap == true)
+                                                    {
+                                                        <div style="font-size: 9.5px; color: #dc2626; font-weight: 600;" class="mt-0.5">
+                                                            <i class="bi bi-x-circle me-1"></i>Alasan Target 0: @(emp.alasanTargetZero ?? "Override daftar NIK/jabatan") (Level: NON SAP)
+                                                        </div>
+                                                    }
                                                     @if (emp.hasRoster)
                                                     {
                                                         <span>&bull;</span>
@@ -2086,7 +2498,17 @@
                                                 </div>
                                             </td>
                                             <td class="text-center fw-bold" style="font-size: 13px;">
-                                                @if (emp.isNonTarget == true)
+                                                @if (emp.isPotentialSupervisorNonSap == true)
+                                                {
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;" title="@(emp.alasanTargetZero ?? "Override daftar NIK/jabatan")">
+                                                        TARGET DIMATIKAN
+                                                    </span>
+                                                    @if (emp.totalActualAll > 0)
+                                                    {
+                                                        <div style="font-size: 9px; color: #16a34a; font-weight: 600;" class="mt-0.5">Realisasi: @emp.totalActualAll SAP</div>
+                                                    }
+                                                }
+                                                else if (emp.isNonTarget == true)
                                                 {
                                                     if (emp.isActivelyReporting == true)
                                                     {
@@ -2109,144 +2531,247 @@
                                                 }
                                                 else
                                                 {
-                                                    <div style="color: @GetRateColor((double)emp.totalScore); font-size: 13px;">@emp.totalScore%</div>
-                                                    <div style="font-size: 9px; color: #64748b; font-weight: normal;" title="Capaian Kuantitatif Target">Capaian: @emp.complianceRate%</div>
+                                                    <div style="color: @GetRateColor((double)emp.complianceRate); font-size: 14px; font-weight: 800;">@emp.complianceRate%</div>
                                                 }
                                             </td>
                                             <td class="text-center" style="white-space: nowrap;">
                                                 @GetEmpFormDotsHtml(emp.hazard.actual, emp.hazard.target, emp.inspeksi.actual, emp.inspeksi.target, emp.safetyTalk.actual, emp.safetyTalk.target, emp.observasi.actual, emp.observasi.target, emp.coaching.actual, emp.coaching.target)
                                             </td>
                                             <td class="text-center">
-                                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 10px;" type="button" data-bs-toggle="collapse" data-bs-target="#detail-@emp.nik" aria-expanded="false">
-                                                    Detail <i class="bi bi-chevron-down ms-1"></i>
+                                                <button class="btn btn-sm btn-outline-secondary py-0.5 px-2 rounded-pill" style="font-size: 10px; font-weight: 600; border-color: #cbd5e1; color: #334155;" type="button" data-bs-toggle="collapse" data-bs-target="#detail-@emp.nik" aria-expanded="false">
+                                                    Detail <i class="bi bi-chevron-down ms-1" style="font-size: 9px;"></i>
                                                 </button>
                                             </td>
                                         </tr>
                                         <tr class="collapse player-row" id="detail-@emp.nik" data-dept="@emp.departmentName" style="background-color: #f8fafc;">
-                                            <td colspan="5" class="p-3">
-                                                <div class="p-2.5 border rounded bg-white shadow-xs">
-                                                    <div class="fw-bold text-dark mb-2" style="font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
-                                                        Aktivitas K3 Bulan Ini (Realisasi / Target)
-                                                    </div>
-                                                    <div class="row text-center g-2" style="font-size: 11px;">
-                                                        <div class="col-4 col-sm-auto flex-fill">
-                                                            <div class="text-muted">Hazard</div>
-                                                            <div class="fw-bold">@emp.hazard.actual / @emp.hazard.target</div>
+                                            <td colspan="5" class="p-2 p-md-3">
+                                                <div class="player-detail-box">
+                                                    <!-- Header Bar -->
+                                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2" style="border-bottom: 1px solid #e2e8f0;">
+                                                        <div class="fw-bold text-dark" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                            Aktivitas K3 Bulan Ini <span class="text-muted fw-normal text-none">(Realisasi / Target)</span>
                                                         </div>
-                                                        <div class="col-4 col-sm-auto flex-fill">
-                                                            <div class="text-muted">Inspeksi</div>
-                                                            <div class="fw-bold">@emp.inspeksi.actual / @emp.inspeksi.target</div>
-                                                        </div>
-                                                        <div class="col-4 col-sm-auto flex-fill">
-                                                            <div class="text-muted">S. Talk</div>
-                                                            <div class="fw-bold">@emp.safetyTalk.actual / @emp.safetyTalk.target</div>
-                                                        </div>
-                                                        <div class="col-4 col-sm-auto flex-fill">
-                                                            <div class="text-muted">Observasi</div>
-                                                            <div class="fw-bold">@emp.observasi.actual / @emp.observasi.target</div>
-                                                        </div>
-                                                        <div class="col-4 col-sm-auto flex-fill">
-                                                            <div class="text-muted">Coaching</div>
-                                                            <div class="fw-bold">@emp.coaching.actual / @emp.coaching.target</div>
-                                                        </div>
-                                                        <div class="col-4 col-sm-auto flex-fill bg-light rounded" style="border-left: 2px solid #f59e0b;">
-                                                            <div class="text-muted">P5M *</div>
-                                                            <div class="fw-bold text-warning-emphasis">@emp.p5m.actual / @emp.p5m.target</div>
-                                                        </div>
-                                                        <div class="col-4 col-sm-auto flex-fill bg-light rounded" style="border-left: 2px solid #10b981;">
-                                                            <div class="text-muted">Close Rate</div>
-                                                            <div class="fw-bold" style="color: @GetRateColor((double)emp.closeRate);">@FormatRate((double)emp.closeRate)</div>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            @if (emp.hasRoster == true)
+                                                            {
+                                                                <span class="badge rounded-pill" style="background: #e0f2fe; color: #0369a1; font-size: 10px; font-weight: 600; border: 1px solid #bae6fd;">
+                                                                    <i class="bi bi-calendar3 me-1"></i>@emp.onsiteDays Hari Onsite
+                                                                </span>
+                                                            }
+                                                            <span class="badge rounded-pill bg-light text-secondary border px-2 py-0.5" style="font-size: 10px;">
+                                                                NIK: @emp.nik
+                                                            </span>
                                                         </div>
                                                     </div>
 
+                                                    <!-- 7 KPI Summary Strip (Horizontal & Compact) -->
+                                                    <div class="kpi-summary-strip mb-3">
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">Hazard</div>
+                                                            <div class="fw-bold" style="font-size: 13px;">@emp.hazard.actual / @emp.hazard.target</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">Inspeksi</div>
+                                                            <div class="fw-bold" style="font-size: 13px;">@emp.inspeksi.actual / @emp.inspeksi.target</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">S. Talk</div>
+                                                            <div class="fw-bold" style="font-size: 13px;">@emp.safetyTalk.actual / @emp.safetyTalk.target</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">Observasi</div>
+                                                            <div class="fw-bold" style="font-size: 13px;">@emp.observasi.actual / @emp.observasi.target</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">Coaching</div>
+                                                            <div class="fw-bold" style="font-size: 13px;">@emp.coaching.actual / @emp.coaching.target</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">P5M *</div>
+                                                            <div class="fw-bold text-warning-emphasis" style="font-size: 13px;">@emp.p5m.actual / @emp.p5m.target</div>
+                                                        </div>
+                                                        <div class="kpi-summary-item">
+                                                            <div class="text-muted" style="font-size: 11px;">Close Rate</div>
+                                                            <div class="fw-bold" style="font-size: 13px; color: @GetRateColor((double)emp.closeRate);">@FormatRate((double)emp.closeRate)</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- PTS Formula Section -->
                                                     @if (!zeroTarget && emp.isTargetSap == true)
                                                     {
-                                                        <div class="mt-3 p-3 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-                                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 mb-2" style="border-bottom: 1px solid #e2e8f0;">
-                                                                <div class="d-flex align-items-center gap-2">
-                                                                    <div class="d-flex align-items-center justify-content-center rounded-2" style="width: 24px; height: 24px; background: #2563eb; color: white; font-size: 11px;">
+                                                        <div class="p-3 rounded-3" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                                                            <!-- Section Header -->
+                                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2.5 mb-3" style="border-bottom: 1px solid #e2e8f0;">
+                                                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                                    <div class="d-flex align-items-center justify-content-center rounded-2 bg-primary text-white" style="width: 24px; height: 24px; font-size: 11px;">
                                                                         <i class="bi bi-calculator"></i>
                                                                     </div>
-                                                                    <span class="fw-bold text-dark" style="font-size: 12px; letter-spacing: -0.2px;">Rincian Formula Skor Akhir (PTS)</span>
-                                                                    <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-size: 9.5px; font-weight: 600; border: 1px solid #bfdbfe;" title="Dual Accountability: Close Rate dihitung 50% Pembuat dan 50% PIC yang dituju (Self/Internal close maks 50%)"><i class="bi bi-shield-check me-1"></i>Dual Accountability Close Rate</span>
+                                                                    <span class="fw-bold text-dark" style="font-size: 12.5px; letter-spacing: -0.2px;">Rincian Formula Skor Akhir (PTS)</span>
+                                                                    <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-size: 9.5px; font-weight: 600; border: 1px solid #bfdbfe;" title="Dual Accountability: Close Rate dihitung 50% Pembuat dan 50% PIC yang dituju (Self/Internal close maks 50%)">
+                                                                        <i class="bi bi-shield-check me-1"></i>Dual Accountability Close Rate
+                                                                    </span>
+                                                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill btn-open-scoring-modal" 
+                                                                            data-bs-toggle="modal" data-bs-target="#leagueScoringModal" 
+                                                                            style="font-size: 10px; font-weight: 600;" 
+                                                                            title="Buka rincian hitungan riil & metodologi penilaian"
+                                                                            data-type="karyawan"
+                                                                            data-name="@emp.name"
+                                                                            data-nik="@emp.nik"
+                                                                            data-dept="@emp.departmentName"
+                                                                            data-pos="@(emp.namaJabatanExisting ?? emp.jabatanName ?? "-")"
+                                                                            data-onsite="@emp.onsiteDays"
+                                                                            data-total-score="@emp.totalScore"
+                                                                            data-score-close="@emp.scoreCloseRate"
+                                                                            data-pts-close="@emp.ptsClose"
+                                                                            data-cr-creator="@emp.crCreatorScore"
+                                                                            data-cr-pic="@emp.crPicScore"
+                                                                            data-score-kualitas="@emp.scoreKualitas"
+                                                                            data-pts-kualitas="@emp.ptsKualitas"
+                                                                            data-score-capaian="@emp.scoreCapaian"
+                                                                            data-pts-capaian="@emp.ptsCapaian"
+                                                                            data-act-capaian="@emp.mtdTotalActual"
+                                                                            data-tgt-capaian="@emp.mtdTotalTarget"
+                                                                            data-compliance="@emp.complianceRate"
+                                                                            data-score-beban="@emp.scoreSkalaBeban"
+                                                                            data-pts-beban="@emp.ptsBeban"
+                                                                            data-user-target="@emp.mtdTotalTarget"
+                                                                            data-max-target="@emp.maxTargetPlayer"
+                                                                            data-kpi-hazard="@emp.hazard.actual / @emp.hazard.target"
+                                                                            data-kpi-inspeksi="@emp.inspeksi.actual / @emp.inspeksi.target"
+                                                                            data-kpi-safetytalk="@emp.safetyTalk.actual / @emp.safetyTalk.target"
+                                                                            data-kpi-observasi="@emp.observasi.actual / @emp.observasi.target"
+                                                                            data-kpi-coaching="@emp.coaching.actual / @emp.coaching.target"
+                                                                            data-kpi-p5m="@emp.p5m.actual / @emp.p5m.target">
+                                                                        <i class="bi bi-calculator me-1"></i>Detail Hitungan &amp; Panduan
+                                                                    </button>
                                                                 </div>
                                                                 <div>
-                                                                    <span class="badge px-3 py-1.5 rounded-pill shadow-xs" style="background: #0f172a; color: #38bdf8; font-size: 11px; font-weight: 700; border: 1px solid #334155;">
+                                                                    <span class="badge px-3 py-1.5 rounded-pill shadow-xs" style="background: #0f172a; color: #38bdf8; font-size: 11.5px; font-weight: 700; border: 1px solid #334155;">
                                                                         Total Skor: <span class="text-white">@emp.totalScore pts</span> (@emp.totalScore%)
                                                                     </span>
                                                                 </div>
                                                             </div>
-                                                            
-                                                            <div class="row g-2 text-center" style="font-size: 11px;">
+
+                                                            <!-- 4 Formula Cards -->
+                                                            <div class="row g-2 g-md-3 text-center" style="font-size: 11px;">
                                                                 <!-- 1. Close Rate -->
-                                                                <div class="col-6 col-md-3">
-                                                                    <div class="p-2.5 rounded-3 bg-white h-100 d-flex flex-column justify-content-between" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                                                                        <div class="d-flex align-items-center justify-content-between mb-1.5">
-                                                                            <span class="text-secondary fw-semibold" style="font-size: 11px;">1. Close Rate</span>
-                                                                            <span class="badge rounded-pill" style="background: #dcfce7; color: #15803d; font-size: 9.5px; font-weight: 600;">Bobot 50%</span>
+                                                                <div class="col-12 col-sm-6 col-xl-3">
+                                                                    <div class="pts-clean-card">
+                                                                        <div>
+                                                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                                <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Close Rate</span>
+                                                                                <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot 50%</span>
+                                                                            </div>
+                                                                            <div class="my-2">
+                                                                                <span class="fw-bold fs-4 text-success">@emp.scoreCloseRate%</span>
+                                                                            </div>
+                                                                            <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                                50% &times; @emp.scoreCloseRate% = <strong class="text-dark">@emp.ptsClose pts</strong>
+                                                                            </div>
                                                                         </div>
-                                                                        <div class="my-1">
-                                                                            <span class="fw-bold fs-5 text-success">@emp.scoreCloseRate%</span>
-                                                                        </div>
-                                                                        <div class="pt-1.5 mt-auto" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
-                                                                            50% &times; @emp.scoreCloseRate% = <strong class="text-dark">@emp.ptsClose pts</strong>
-                                                                            <div class="d-flex justify-content-between align-items-center mt-1 pt-1" style="font-size: 8.5px; border-top: 1px dashed #e2e8f0; color: #475569;">
+                                                                        <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                            <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
                                                                                 <span>Pelapor: <strong class="text-dark">@emp.crCreatorScore%</strong></span>
                                                                                 <span>PIC: <strong class="text-dark">@emp.crPicScore%</strong></span>
                                                                             </div>
-                                                                            <div class="text-muted text-center" style="font-size: 8px; margin-top: 2px;">
-                                                                                <em>*Self/Internal close maks 50%</em>
+                                                                            <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                                <i class="bi bi-shield-check me-1 text-success"></i>Penyelesaian temuan K3. Penutupan mandiri dibatasi maks 50% untuk verifikasi silang.
                                                                             </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
 
-                                                                <!-- 2. Kualitas -->
-                                                                <div class="col-6 col-md-3">
-                                                                    <div class="p-2.5 rounded-3 bg-white h-100 d-flex flex-column justify-content-between" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                                                                        <div class="d-flex align-items-center justify-content-between mb-1.5">
-                                                                            <span class="text-secondary fw-semibold" style="font-size: 11px;">2. Kualitas Mutu</span>
-                                                                            <span class="badge rounded-pill" style="background: #fef3c7; color: #b45309; font-size: 9.5px; font-weight: 600;">Bobot 25%</span>
+                                                                <!-- 2. Kualitas Mutu -->
+                                                                <div class="col-12 col-sm-6 col-xl-3">
+                                                                    <div class="pts-clean-card">
+                                                                        <div>
+                                                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                                <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Kualitas Mutu</span>
+                                                                                <span class="badge rounded-pill pts-card-badge" style="background: #fef3c7; color: #b45309;">Bobot 25%</span>
+                                                                            </div>
+                                                                            <div class="my-2">
+                                                                                <span class="fw-bold fs-4" style="color: #d97706;">@emp.scoreKualitas%</span>
+                                                                            </div>
+                                                                            <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                                25% &times; @emp.scoreKualitas% = <strong class="text-dark">@emp.ptsKualitas pts</strong>
+                                                                            </div>
                                                                         </div>
-                                                                        <div class="my-1">
-                                                                            <span class="fw-bold fs-5" style="color: #d97706;">@emp.scoreKualitas%</span>
-                                                                        </div>
-                                                                        <div class="pt-1.5 mt-auto" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
-                                                                            25% &times; @emp.scoreKualitas% = <strong class="text-dark">@emp.ptsKualitas pts</strong>
+                                                                        <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                            <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                                <span>Standar Mutu SAP</span>
+                                                                                <span class="text-success fw-bold"><i class="bi bi-check-circle me-0.5"></i>5.0 / 5.0 ★</span>
+                                                                            </div>
+                                                                            <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                                <i class="bi bi-patch-check me-1 text-warning"></i>Mutu deskripsi & bukti validasi SAP (Baseline 100% tanpa penalti).
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
 
-                                                                <!-- 3. Capaian -->
-                                                                <div class="col-6 col-md-3">
-                                                                    <div class="p-2.5 rounded-3 bg-white h-100 d-flex flex-column justify-content-between" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                                                                        <div class="d-flex align-items-center justify-content-between mb-1.5">
-                                                                            <span class="text-secondary fw-semibold" style="font-size: 11px;">3. Capaian Target</span>
-                                                                            <span class="badge rounded-pill" style="background: #dbeafe; color: #1d4ed8; font-size: 9.5px; font-weight: 600;">Bobot 15%</span>
+                                                                <!-- 3. Capaian Target -->
+                                                                <div class="col-12 col-sm-6 col-xl-3">
+                                                                    <div class="pts-clean-card">
+                                                                        <div>
+                                                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                                <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Capaian Target</span>
+                                                                                <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot 15%</span>
+                                                                            </div>
+                                                                            <div class="my-2">
+                                                                                <span class="fw-bold fs-4 text-primary">@emp.scoreCapaian%</span>
+                                                                            </div>
+                                                                            <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                                15% &times; @emp.scoreCapaian% = <strong class="text-dark">@emp.ptsCapaian pts</strong>
+                                                                            </div>
                                                                         </div>
-                                                                        <div class="my-1">
-                                                                            <span class="fw-bold fs-5 text-primary">@emp.scoreCapaian%</span>
-                                                                        </div>
-                                                                        <div class="pt-1.5 mt-auto" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
-                                                                            15% &times; @emp.scoreCapaian% = <strong class="text-dark">@emp.ptsCapaian pts</strong>
+                                                                        <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                            <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                                <span>Realisasi: <strong class="text-dark">@emp.mtdTotalActual</strong></span>
+                                                                                <span>Target: <strong class="text-dark">@emp.mtdTotalTarget</strong></span>
+                                                                            </div>
+                                                                            <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                                <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif 5 program bulanan (@emp.complianceRate%) sesuai hari onsite.
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
 
                                                                 <!-- 4. Skala Beban -->
-                                                                <div class="col-6 col-md-3">
-                                                                    <div class="p-2.5 rounded-3 bg-white h-100 d-flex flex-column justify-content-between" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.02);">
-                                                                        <div class="d-flex align-items-center justify-content-between mb-1.5">
-                                                                            <span class="text-secondary fw-semibold" style="font-size: 11px;">4. Skala Beban</span>
-                                                                            <span class="badge rounded-pill" style="background: #e0e7ff; color: #4338ca; font-size: 9.5px; font-weight: 600;">Bobot 10%</span>
+                                                                <div class="col-12 col-sm-6 col-xl-3">
+                                                                    <div class="pts-clean-card">
+                                                                        <div>
+                                                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                                <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">4. Skala Beban</span>
+                                                                                <span class="badge rounded-pill pts-card-badge" style="background: #e0e7ff; color: #4338ca;">Bobot 10%</span>
+                                                                            </div>
+                                                                            <div class="my-2">
+                                                                                <span class="fw-bold fs-4" style="color: #4338ca;">@emp.scoreSkalaBeban%</span>
+                                                                            </div>
+                                                                            <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                                10% &times; @emp.scoreSkalaBeban% = <strong class="text-dark">@emp.ptsBeban pts</strong>
+                                                                            </div>
                                                                         </div>
-                                                                        <div class="my-1">
-                                                                            <span class="fw-bold fs-5" style="color: #4338ca;">@emp.scoreSkalaBeban%</span>
+                                                                        <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                            <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                                <span>Target Anda: <strong class="text-dark">@emp.mtdTotalTarget</strong></span>
+                                                                                <span>Max Dept: <strong class="text-dark">@emp.maxTargetPlayer</strong></span>
+                                                                            </div>
+                                                                            <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                                <i class="bi bi-people me-1 text-indigo" style="color: #4338ca;"></i>Faktor keadilan beban tugas individu terhadap tugas tertinggi di departemen.
+                                                                            </div>
                                                                         </div>
-                                                                        <div class="pt-1.5 mt-auto" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
-                                                                            10% &times; @emp.scoreSkalaBeban% = <strong class="text-dark">@emp.ptsBeban pts</strong>
-                                                                            <div class="text-muted" style="font-size: 9px; margin-top: 2px;">Target: @emp.mtdTotalTarget / Max Dept: @emp.maxTargetPlayer</div>
-                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- Banner Rangkuman Akumulasi PTS -->
+                                                            <div class="mt-2.5 p-2 px-3 rounded-2 d-flex flex-wrap align-items-center justify-content-between gap-2" style="background: #ffffff; border: 1px solid #e2e8f0; font-size: 11px;">
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <div class="d-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary" style="width: 22px; height: 22px; font-size: 11px; flex-shrink: 0;">
+                                                                        <i class="bi bi-info-circle-fill"></i>
+                                                                    </div>
+                                                                    <div class="text-secondary" style="font-size: 11px; line-height: 1.4;">
+                                                                        <strong class="text-dark">Akumulasi Skor PTS:</strong> (@emp.ptsClose pts) + (@emp.ptsKualitas pts) + (@emp.ptsCapaian pts) + (@emp.ptsBeban pts) = <strong class="text-primary fs-6">@emp.totalScore pts (@emp.totalScore%)</strong>
+                                                                        <span class="text-muted d-none d-lg-inline ms-2">&bull; Standar penilaian objektif, akuntabel &amp; terverifikasi sistem.</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -2266,7 +2791,7 @@
     </div>
 </div>
 
-<!-- Modal Penjelasan Rumus Skor Liga -->
+<!-- Modal Penjelasan Rumus Skor Liga & Simulasi Riil -->
 <div class="modal fade" id="leagueScoringModal" tabindex="-1" aria-labelledby="leagueScoringModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
@@ -2276,102 +2801,615 @@
                         <i class="bi bi-calculator-fill fs-5 text-white"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title fw-bold mb-0 text-white" id="leagueScoringModalLabel">Metodologi & Bobot Perhitungan Skor Liga</h5>
-                        <div class="text-white-50" style="font-size: 12px;">Sistem pembobotan performa terintegrasi (Identik dengan Menu Compliance)</div>
+                        <h5 class="modal-title fw-bold mb-0 text-white" id="scoringModalTitle">Detail Perhitungan Skor Liga</h5>
+                        <div class="text-white-50" id="scoringModalSubtitle" style="font-size: 12px;">Transparansi Formula &amp; Audit Skor Berdasarkan Data Riil</div>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4 bg-light">
-                <!-- Ringkasan Rumus -->
-                <div class="p-3 rounded-3 mb-4 text-center shadow-sm" style="background: #ffffff; border: 1px solid #bfdbfe;">
-                    <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;">Formula Agregat PTS</div>
-                    <div class="fw-bold fs-5 text-primary">
-                        Skor = (50% &times; Close Rate) + (25% &times; Kualitas) + (15% &times; Capaian) + (10% &times; Skala Beban)
+
+            <!-- Tab Navigation -->
+            <ul class="nav nav-tabs px-3 pt-2 bg-light border-bottom" id="scoringModalTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold text-dark" id="tab-real-calc-link" data-bs-toggle="tab" data-bs-target="#tab-real-calc" type="button" role="tab" aria-selected="true" style="font-size: 12.5px;">
+                        <i class="bi bi-person-badge-fill me-1 text-primary"></i>Kalkulasi Riil (<span id="scoringTabSubject">Data Terpilih</span>)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold text-secondary" id="tab-sop-guide-link" data-bs-toggle="tab" data-bs-target="#tab-sop-guide" type="button" role="tab" aria-selected="false" style="font-size: 12.5px;">
+                        <i class="bi bi-book-half me-1 text-primary"></i>Panduan SOP &amp; Metodologi
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="scoringModalTabContent">
+                <!-- TAB 1: KALKULASI RIIL DATA AKTUAL -->
+                <div class="tab-pane fade show active p-4 bg-light" id="tab-real-calc" role="tabpanel">
+                    <!-- Profile Card Subjek Terpilih -->
+                    <div class="card border-0 shadow-sm rounded-3 mb-3" style="background: #ffffff; border-left: 4px solid #2563eb !important;">
+                        <div class="card-body p-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-2.5">
+                                <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px; font-size: 16px;">
+                                    <i class="bi bi-person-fill" id="mRealIcon"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark fs-6" id="mRealName">-</div>
+                                    <div class="text-secondary" style="font-size: 11.5px;">
+                                        <span id="mRealDeptNik">-</span>
+                                        <span class="badge rounded-pill bg-light text-secondary border ms-1" id="mRealOnsiteBadge" style="font-size: 10px;">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-muted fw-semibold" style="font-size: 11px;">Total Skor Akhir (PTS):</div>
+                                <span class="badge px-3 py-1.5 rounded-pill shadow-xs" style="background: #0f172a; color: #38bdf8; font-size: 13px; font-weight: 800; border: 1px solid #334155;">
+                                    <span id="mRealTotalScore">-</span> pts (<span id="mRealTotalPct">-</span>)
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formula Banner -->
+                    <div class="p-2.5 rounded-3 mb-3 text-center shadow-xs" style="background: #eff6ff; border: 1px dashed #93c5fd; font-size: 11.5px;">
+                        <div class="text-primary fw-semibold mb-0.5" style="letter-spacing: 0.3px;">Formula Agregat PTS:</div>
+                        <div class="fw-bold text-dark font-monospace" style="font-size: 12px;">
+                            (50% &times; Close Rate) + (25% &times; Kualitas) + (15% &times; Capaian) + (10% &times; Skala Beban)
+                        </div>
+                    </div>
+
+                    <!-- 4 Kartu Pilar Riil -->
+                    <div class="row g-2.5 g-md-3">
+                        <!-- Pilar 1: Close Rate -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded p-1.5 text-success" style="background: #ecfdf5;"><i class="bi bi-shield-check fs-5"></i></div>
+                                            <div class="fw-bold text-dark" style="font-size: 13px;">1. Close Rate Action Plan</div>
+                                        </div>
+                                        <span class="badge bg-success rounded-pill px-2 py-0.5" style="font-size: 10px;">Bobot 50%</span>
+                                    </div>
+                                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                                        <span class="fw-bold fs-4 text-success" id="mRealCrScore">-</span>
+                                        <span class="text-secondary" style="font-size: 11.5px;">&rarr; 50% &times; <span id="mRealCrFormula">-</span> = <strong class="text-dark" id="mRealCrPts">-</strong></span>
+                                    </div>
+                                    <div class="p-2 rounded bg-light border text-secondary" style="font-size: 11px; line-height: 1.45;">
+                                        <div id="mRealCrDetails" class="mb-1 fw-semibold text-dark">-</div>
+                                        <div class="text-muted" id="mRealCrDesc">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pilar 2: Kualitas -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded p-1.5 text-warning" style="background: #fffbeb;"><i class="bi bi-stars fs-5"></i></div>
+                                            <div class="fw-bold text-dark" style="font-size: 13px;">2. Kualitas Mutu Laporan SAP</div>
+                                        </div>
+                                        <span class="badge bg-warning text-dark rounded-pill px-2 py-0.5" style="font-size: 10px;">Bobot 25%</span>
+                                    </div>
+                                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                                        <span class="fw-bold fs-4" style="color: #d97706;" id="mRealKualitasScore">-</span>
+                                        <span class="text-secondary" style="font-size: 11.5px;">&rarr; 25% &times; <span id="mRealKualitasFormula">-</span> = <strong class="text-dark" id="mRealKualitasPts">-</strong></span>
+                                    </div>
+                                    <div class="p-2 rounded bg-light border text-secondary" style="font-size: 11px; line-height: 1.45;">
+                                        <div id="mRealKualitasDetails" class="mb-1 fw-semibold text-dark">-</div>
+                                        <div class="text-muted" id="mRealKualitasDesc">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pilar 3: Capaian -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded p-1.5 text-primary" style="background: #eff6ff;"><i class="bi bi-bullseye fs-5"></i></div>
+                                            <div class="fw-bold text-dark" style="font-size: 13px;">3. Capaian Target (Volume)</div>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill px-2 py-0.5" style="font-size: 10px;">Bobot 15%</span>
+                                    </div>
+                                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                                        <span class="fw-bold fs-4 text-primary" id="mRealCapaianScore">-</span>
+                                        <span class="text-secondary" style="font-size: 11.5px;">&rarr; 15% &times; <span id="mRealCapaianFormula">-</span> = <strong class="text-dark" id="mRealCapaianPts">-</strong></span>
+                                    </div>
+                                    <div class="p-2 rounded bg-light border text-secondary" style="font-size: 11px; line-height: 1.45;">
+                                        <div id="mRealCapaianDetails" class="mb-1 fw-semibold text-dark">-</div>
+                                        <div class="text-muted" id="mRealKpiStrip" style="font-size: 10px;">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pilar 4: Skala Beban -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded p-1.5 text-info" style="background: #f0fdfa;"><i class="bi bi-people-fill fs-5"></i></div>
+                                            <div class="fw-bold text-dark" style="font-size: 13px;">4. Skala Beban Operasional</div>
+                                        </div>
+                                        <span class="badge rounded-pill px-2 py-0.5 text-white" style="background: #4338ca; font-size: 10px;">Bobot 10%</span>
+                                    </div>
+                                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                                        <span class="fw-bold fs-4" style="color: #4338ca;" id="mRealBebanScore">-</span>
+                                        <span class="text-secondary" style="font-size: 11.5px;">&rarr; 10% &times; <span id="mRealBebanFormula">-</span> = <strong class="text-dark" id="mRealBebanPts">-</strong></span>
+                                    </div>
+                                    <div class="p-2 rounded bg-light border text-secondary" style="font-size: 11px; line-height: 1.45;">
+                                        <div id="mRealBebanDetails" class="mb-1 fw-semibold text-dark">-</div>
+                                        <div class="text-muted" id="mRealBebanDesc">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kotak Akumulasi Riil Bawah -->
+                    <div class="mt-3 p-3 rounded-3 bg-white border shadow-xs text-center">
+                        <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;">
+                            <i class="bi bi-calculator me-1 text-primary"></i>Kalkulasi Skor Akumulasi Aktual:
+                        </div>
+                        <div class="fw-bold fs-6 text-dark font-monospace">
+                            (<span id="mSumClose" class="text-success">0</span> pts) + 
+                            (<span id="mSumKualitas" class="text-warning">0</span> pts) + 
+                            (<span id="mSumCapaian" class="text-primary">0</span> pts) + 
+                            (<span id="mSumBeban" style="color: #4338ca;">0</span> pts) = 
+                            <span id="mSumTotal" class="badge bg-primary fs-6 px-3 py-1 ms-1 shadow-xs">- pts</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="row g-3">
-                    <!-- 1. Close Rate -->
-                    <div class="col-md-6">
-                        <div class="card h-100 border-0 shadow-sm rounded-3">
-                            <div class="card-body p-3">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="rounded p-2 text-success" style="background: #ecfdf5;"><i class="bi bi-shield-check fs-5"></i></div>
-                                        <div class="fw-bold text-dark" style="font-size: 14px;">1. Close Rate Action Plan</div>
+                <!-- TAB 2: PANDUAN RESMI & METODOLOGI SOP -->
+                <div class="tab-pane fade p-4 bg-light" id="tab-sop-guide" role="tabpanel">
+                    <!-- Ringkasan Rumus -->
+                    <div class="p-3 rounded-3 mb-4 text-center shadow-sm" style="background: #ffffff; border: 1px solid #bfdbfe;">
+                        <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;">Formula Agregat PTS</div>
+                        <div class="fw-bold fs-5 text-primary">
+                            Skor = (50% &times; Close Rate) + (25% &times; Kualitas) + (15% &times; Capaian) + (10% &times; Skala Beban)
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- 1. Close Rate -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded p-2 text-success" style="background: #ecfdf5;"><i class="bi bi-shield-check fs-5"></i></div>
+                                            <div class="fw-bold text-dark" style="font-size: 13.5px;">1. Close Rate Action Plan</div>
+                                        </div>
+                                        <span class="badge bg-success rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 50%</span>
                                     </div>
-                                    <span class="badge bg-success rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 50%</span>
+                                    <p class="text-muted mb-2" style="font-size: 12px; line-height: 1.5;">
+                                        Tingkat penyelesaian dan tindak lanjut temuan bahaya/isu K3LH. Merupakan pilar keselamatan paling kritis dengan bobot tertinggi (50 pts).
+                                    </p>
+                                    <div class="p-2 rounded bg-light border" style="font-size: 11px; color: #334155;">
+                                        <div class="fw-bold text-dark mb-1"><i class="bi bi-shield-check text-success me-1"></i>Standar Validasi &amp; Integritas Data (Dual Accountability):</div>
+                                        <ul class="mb-0 ps-3 text-secondary" style="line-height: 1.4;">
+                                            <li>Dihitung <strong>50% dari sisi Pelapor</strong> dan <strong>50% dari sisi PIC</strong> yang ditunjuk.</li>
+                                            <li><strong>Self-Close Cap 50%:</strong> Temuan yang ditutup sendiri oleh pelapor tanpa verifikasi pihak kedua dibatasi maksimal 50% guna memastikan kepatuhan verifikasi faktual di lapangan.</li>
+                                            <li>Jika tidak ada temuan tertunggak (zero overdue), skor bernilai penuh (100%).</li>
+                                        </ul>
+                                    </div>
                                 </div>
-                                <p class="text-muted mb-0" style="font-size: 12px; line-height: 1.5;">
-                                    Tingkat penyelesaian dan tindak lanjut temuan bahaya/isu K3LH (Action Plan Closed). Memiliki bobot terbesar karena tindakan korektif nyata merupakan faktor kunci keselamatan.
-                                </p>
+                            </div>
+                        </div>
+
+                        <!-- 2. Kualitas -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded p-2 text-warning" style="background: #fffbeb;"><i class="bi bi-stars fs-5"></i></div>
+                                            <div class="fw-bold text-dark" style="font-size: 13.5px;">2. Kualitas Input (Mutu)</div>
+                                        </div>
+                                        <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 25%</span>
+                                    </div>
+                                    <p class="text-muted mb-2" style="font-size: 12px; line-height: 1.5;">
+                                        Validasi objektif atas standar kelengkapan data laporan SAP (deskripsi spesifik, kejelasan tindakan, bukti foto relevan, dan ketepatan level risiko).
+                                    </p>
+                                    <div class="p-2 rounded bg-light border" style="font-size: 11px; color: #334155;">
+                                        <div class="fw-bold text-dark mb-1"><i class="bi bi-patch-check text-warning me-1"></i>Standar Mutu & Penalti:</div>
+                                        <ul class="mb-0 ps-3 text-secondary" style="line-height: 1.4;">
+                                            <li><strong>Baseline Standar:</strong> Bernilai 100% (5.0 / 5.0 bintang) untuk setiap laporan yang memenuhi standar mutu.</li>
+                                            <li>Pengurangan nilai (penalti) otomatis terjadi bila laporan ditolak verifikator, foto tidak sesuai, atau deskripsi fiktif.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Capaian -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded p-2 text-primary" style="background: #eff6ff;"><i class="bi bi-bullseye fs-5"></i></div>
+                                            <div class="fw-bold text-dark" style="font-size: 13.5px;">3. Capaian Target (Volume)</div>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 15%</span>
+                                    </div>
+                                    <p class="text-muted mb-2" style="font-size: 12px; line-height: 1.5;">
+                                        Persentase pemenuhan kuota fisik 5 program wajib SAP (Hazard, Inspeksi, Safety Talk, Observasi, Coaching, P5M) dengan batas maksimal 100%.
+                                    </p>
+                                    <div class="p-2 rounded bg-light border" style="font-size: 11px; color: #334155;">
+                                        <div class="fw-bold text-dark mb-1"><i class="bi bi-calendar3-check text-primary me-1"></i>Penyesuaian Hari Kerja (Onsite):</div>
+                                        <ul class="mb-0 ps-3 text-secondary" style="line-height: 1.4;">
+                                            <li>Rumus: <code>(Total Realisasi / Total Target) &times; 100%</code>.</li>
+                                            <li>Target disesuaikan proporsional berdasarkan <strong>Hari Onsite</strong>. Karyawan cuti/off tidak dibebani target saat tidak berada di area kerja.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Skala Beban -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded p-2 text-info" style="background: #f0fdfa;"><i class="bi bi-people-fill fs-5"></i></div>
+                                            <div class="fw-bold text-dark" style="font-size: 13.5px;">4. Skala Beban Operasional</div>
+                                        </div>
+                                        <span class="badge bg-info text-white rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 10%</span>
+                                    </div>
+                                    <p class="text-muted mb-2" style="font-size: 12px; line-height: 1.5;">
+                                        Faktor keadilan operasional yang mengapresiasi pengawas/karyawan yang memikul target tugas lebih tinggi dibanding rekan lain di departemennya.
+                                    </p>
+                                    <div class="p-2 rounded bg-light border" style="font-size: 11px; color: #334155;">
+                                        <div class="fw-bold text-dark mb-1"><i class="bi bi-calculator text-info me-1"></i>Formula Keadilan Beban:</div>
+                                        <ul class="mb-0 ps-3 text-secondary" style="line-height: 1.4;">
+                                            <li>Rumus: <code>(log10(Target + 1) / log10(Max Target Dept + 1)) &times; 100%</code>.</li>
+                                            <li>Karyawan yang memikul beban target maksimal departemen langsung memperoleh 100% (10 pts penuh).</li>
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 2. Kualitas -->
-                    <div class="col-md-6">
-                        <div class="card h-100 border-0 shadow-sm rounded-3">
-                            <div class="card-body p-3">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="rounded p-2 text-warning" style="background: #fffbeb;"><i class="bi bi-stars fs-5"></i></div>
-                                        <div class="fw-bold text-dark" style="font-size: 14px;">2. Kualitas Input (Mutu)</div>
-                                    </div>
-                                    <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 25%</span>
-                                </div>
-                                <p class="text-muted mb-0" style="font-size: 12px; line-height: 1.5;">
-                                    Rata-rata validasi mutu data laporan SAP (Hazard, Inspeksi, Observasi, Coaching, Safety Talk) yang dievaluasi secara objektif oleh AI Safety Validator.
-                                </p>
-                            </div>
+                    <!-- Contoh Simulasi Riil -->
+                    <div class="mt-3 p-3 rounded-3 bg-white border shadow-xs" style="font-size: 11.5px;">
+                        <div class="fw-bold text-dark mb-1.5"><i class="bi bi-lightbulb-fill text-warning me-1"></i>Contoh Simulasi Perhitungan Teoretis:</div>
+                        <div class="text-muted mb-2">
+                            Misalkan seorang pengawas memiliki <strong>Close Rate 100%</strong>, <strong>Kualitas 100%</strong>, <strong>Capaian Target 93.3%</strong> (14 dari 15 tugas), dan memegang <strong>Target Tertinggi di Dept (100%)</strong>:
+                        </div>
+                        <div class="p-2 rounded bg-light font-monospace text-dark d-flex flex-wrap gap-2 justify-content-between align-items-center" style="font-size: 11px;">
+                            <span>&bull; Close Rate: 50% &times; 100% = <strong>50.0 pts</strong></span>
+                            <span>&bull; Kualitas: 25% &times; 100% = <strong>25.0 pts</strong></span>
+                            <span>&bull; Capaian: 15% &times; 93.3% = <strong>14.0 pts</strong></span>
+                            <span>&bull; Beban: 10% &times; 100% = <strong>10.0 pts</strong></span>
+                            <span class="text-primary fw-bold">&rarr; Total: <strong>99.0 pts (99%)</strong></span>
                         </div>
                     </div>
-
-                    <!-- 3. Capaian -->
-                    <div class="col-md-6">
-                        <div class="card h-100 border-0 shadow-sm rounded-3">
-                            <div class="card-body p-3">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="rounded p-2 text-primary" style="background: #eff6ff;"><i class="bi bi-bullseye fs-5"></i></div>
-                                        <div class="fw-bold text-dark" style="font-size: 14px;">3. Capaian Target (Volume)</div>
-                                    </div>
-                                    <span class="badge bg-primary rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 15%</span>
-                                </div>
-                                <p class="text-muted mb-0" style="font-size: 12px; line-height: 1.5;">
-                                    Persentase rata-rata penyelesaian target wajib 5 program SAP (maks. 100%). Menilai kepatuhan kuantitatif seluruh anggota skuad.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 4. Skala Beban -->
-                    <div class="col-md-6">
-                        <div class="card h-100 border-0 shadow-sm rounded-3">
-                            <div class="card-body p-3">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="rounded p-2 text-info" style="background: #f0fdfa;"><i class="bi bi-people-fill fs-5"></i></div>
-                                        <div class="fw-bold text-dark" style="font-size: 14px;">4. Skala Beban Tenaga Kerja</div>
-                                    </div>
-                                    <span class="badge bg-info text-white rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 10%</span>
-                                </div>
-                                <p class="text-muted mb-0" style="font-size: 12px; line-height: 1.5;">
-                                    Apresiasi keadilan operasional berdasarkan rasio jumlah karyawan aktif. Memberikan faktor proporsional bagi entitas dengan skala operasi dan personil lebih besar.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="alert alert-info d-flex align-items-center gap-2 mt-3 mb-0 py-2 px-3 border-0 rounded-3" style="font-size: 12px; background: #e0f2fe; color: #0369a1;">
-                    <i class="bi bi-lightbulb-fill text-info fs-6"></i>
-                    <span><strong>Tips:</strong> Arahkan kursor / sentuh angka <strong>PTS (ⓘ)</strong> pada tabel klasemen mana saja untuk melihat kalkulasi detail angka riil tiap perusahaan.</span>
                 </div>
             </div>
-            <div class="modal-footer border-0 p-3 bg-white">
+
+            <div class="modal-footer border-0 p-3 bg-white d-flex justify-content-between align-items-center">
+                <div class="text-muted" style="font-size: 11.5px;">
+                    <i class="bi bi-shield-check text-success me-1"></i>Data terintegrasi real-time dengan database SAP &amp; PostgreSQL.
+                </div>
                 <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal" style="border-radius: 8px; font-size: 13px;">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Audit Anomali Target Jabatan (Pengawas Non-SAP & Non-Staf Tertarget) -->
+@{
+    var nonSapSupervisorsList = ViewBag.NonSapSupervisors as List<dynamic> ?? new List<dynamic>();
+    var nonStaffTargetedList = ViewBag.NonStaffTargeted as List<dynamic> ?? new List<dynamic>();
+    var totalAnomaliesCount = nonSapSupervisorsList.Count + nonStaffTargetedList.Count;
+}
+<div class="modal fade" id="modalNonSapSupervisors" tabindex="-1" aria-labelledby="modalNonSapSupervisorsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 1200px;">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header text-white" style="background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%); padding: 18px 24px; border-bottom: 3px solid #e11d48;">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 46px; height: 46px; border-radius: 12px; background: #e11d48; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 10px rgba(225, 29, 72, 0.4);">
+                        <i class="bi bi-shield-exclamation"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="modalNonSapSupervisorsLabel" style="font-size: 17px; letter-spacing: -0.2px;">
+                            Audit Anomali Target Jabatan K3 &bull; @companyName
+                        </h5>
+                        <div style="font-size: 12px; opacity: 0.9;" class="d-flex align-items-center gap-2 mt-0.5">
+                            <span>Total <strong>@totalAnomaliesCount Kasus</strong> Anomali Terdeteksi</span>
+                            <span class="badge bg-danger text-white px-2 py-0.5" style="font-size: 10px;">@nonSapSupervisorsList.Count Pengawas Non-SAP</span>
+                            <span class="badge bg-warning text-dark px-2 py-0.5" style="font-size: 10px;">@nonStaffTargetedList.Count Non-Staf Tertarget</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="@Url.Action("ExportTargetAnomaliesExcel", "Performance", new { companyId = selectedCompanyId, year = selectedYear, month = selectedMonth })" class="btn btn-success btn-sm fw-bold shadow-sm" style="border-radius: 8px; font-size: 12px; padding: 6px 14px; background: #16a34a; border: 1px solid #15803d;">
+                        <i class="bi bi-file-earmark-excel-fill me-1"></i> Unduh Excel Audit (.xlsx)
+                    </a>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+
+            <!-- Modal Body with Tabs -->
+            <div class="modal-body p-4" style="background-color: #f8fafc;">
+                <!-- Nav Tabs -->
+                <ul class="nav nav-pills mb-3 p-1.5 bg-white rounded-3 shadow-xs border" id="anomalyTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold text-dark d-flex align-items-center gap-2 px-3 py-2" id="pengawas-tab" data-bs-toggle="pill" data-bs-target="#pengawas-content" type="button" role="tab" aria-controls="pengawas-content" aria-selected="true" style="border-radius: 8px; font-size: 13px;">
+                            <i class="bi bi-person-x-fill text-danger fs-6"></i>
+                            <span>1. Harusnya Wajib SAP (Pengawas) tapi Target 0 di ONE DB</span>
+                            <span class="badge bg-danger rounded-pill px-2 py-0.5" style="font-size: 11px;">@nonSapSupervisorsList.Count</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold text-dark d-flex align-items-center gap-2 px-3 py-2" id="nonstaff-tab" data-bs-toggle="pill" data-bs-target="#nonstaff-content" type="button" role="tab" aria-controls="nonstaff-content" aria-selected="false" style="border-radius: 8px; font-size: 13px;">
+                            <i class="bi bi-person-exclamation text-warning fs-6"></i>
+                            <span>2. Harusnya Tidak Wajib SAP (Non-Staf) tapi Diberi Target</span>
+                            <span class="badge bg-warning text-dark rounded-pill px-2 py-0.5 border border-warning" style="font-size: 11px;">@nonStaffTargetedList.Count</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="anomalyTabContent">
+                    <!-- TAB 1: PENGAWAS STRUKTURAL NON-SAP -->
+                    <div class="tab-pane fade show active" id="pengawas-content" role="tabpanel" aria-labelledby="pengawas-tab">
+                        <div class="alert alert-danger border-0 shadow-xs mb-3" style="border-radius: 10px; background: #fef2f2; color: #991b1b; font-size: 12px;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-exclamation-triangle-fill fs-5 text-danger flex-shrink-0"></i>
+                                <div>
+                                    <strong>Kategori: Jabatan Masuk List Wajib SAP (Pengawas Operasional).</strong> Karyawan berjabatan struktural pengawas (<strong>Foreman, Supervisor, Superintendent, Manager, Officer, Surveyor, Inspector</strong>) yang semestinya memiliki target K3 bulanan. Namun di master <strong>ONE DB</strong>, status level jabatannya di-set <strong>'NON SAP' (Target Nol)</strong>.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Search & Action Box -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6 col-12">
+                                <div class="input-group shadow-xs">
+                                    <span class="input-group-text bg-white border-end-0" style="border-radius: 8px 0 0 8px;">
+                                        <i class="bi bi-search text-muted"></i>
+                                    </span>
+                                    <input type="text" id="searchNonSapInput" class="form-control border-start-0" placeholder="Ketik NIK, Nama, Departemen, atau Jabatan ONE DB..." style="border-radius: 0 8px 8px 0; font-size: 13px;" onkeyup="filterNonSapTable();">
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12 d-flex justify-content-md-end align-items-center gap-2">
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1.5" style="font-size: 11.5px; font-weight: 700;">
+                                    <i class="bi bi-people-fill me-1"></i>Menampilkan <span id="nonSapVisibleCount">@nonSapSupervisorsList.Count</span> dari @nonSapSupervisorsList.Count Orang
+                                </span>
+                                <button type="button" class="btn btn-outline-danger btn-sm fw-bold shadow-xs" onclick="filterNonSapSupervisors();" data-bs-dismiss="modal" style="border-radius: 8px; font-size: 12px;">
+                                    <i class="bi bi-funnel-fill me-1"></i>Saring di Kolom Skuad
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Table 1 Container -->
+                        <div class="table-responsive bg-white rounded-3 shadow-sm border" style="max-height: 440px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0" id="nonSapTable" style="font-size: 12.5px;">
+                                <thead class="table-light sticky-top" style="z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                    <tr>
+                                        <th class="text-center" style="width: 45px;">No</th>
+                                        <th style="width: 105px;">NIK</th>
+                                        <th>Nama Lengkap</th>
+                                        <th>Departemen</th>
+                                        <th>Jabatan ONE DB (Master)</th>
+                                        <th>Jabatan Standar</th>
+                                        <th class="text-center" style="width: 135px;">Kategori Jabatan SAP</th>
+                                        <th class="text-center" style="width: 110px;">Status ONE DB</th>
+                                        <th class="text-center" style="width: 130px;">Aktual SAP Dibuat</th>
+                                        <th>Keterangan Tindak Lanjut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        int noSpv = 1;
+                                        foreach (var spv in nonSapSupervisorsList.OrderBy(s => (string)s.departmentName).ThenBy(s => (string)s.karyawanName))
+                                        {
+                                            int spvTotalAct = (int)(spv.mtdTotalActual ?? spv.totalActualAll ?? 0);
+                                            int spvHz = (int)(spv.hazard?.actual ?? 0);
+                                            int spvIp = (int)(spv.inspeksi?.actual ?? 0);
+                                            int spvSt = (int)(spv.safetyTalk?.actual ?? 0);
+
+                                            <tr class="non-sap-row">
+                                                <td class="text-center text-muted fw-bold">@(noSpv++)</td>
+                                                <td class="fw-bold font-monospace text-secondary">@spv.nik</td>
+                                                <td>
+                                                    <div class="fw-bold text-dark">@spv.karyawanName</div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-light text-dark border px-2 py-1" style="font-size: 11px;">@spv.departmentName</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold px-2 py-1" style="font-size: 11px;">
+                                                        @(spv.namaJabatanExisting ?? spv.jabatanName)
+                                                    </span>
+                                                </td>
+                                                <td class="text-muted">@(spv.namaJabatanStandar ?? "-")</td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" style="font-size: 10.5px; font-weight: 700;">
+                                                        <i class="bi bi-shield-check me-1"></i>Wajib Target SAP
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-danger text-white px-2 py-1" style="font-size: 10px; font-weight: 700;">
+                                                        NON SAP (Target 0)
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    @if (spvTotalAct > 0)
+                                                    {
+                                                        <div class="badge bg-success text-white px-2 py-1 fw-bold" style="font-size: 11px;" title="Total laporan SAP yang dibuat bulan ini">
+                                                            @spvTotalAct SAP
+                                                        </div>
+                                                        <div class="text-muted mt-0.5" style="font-size: 9.5px;">
+                                                            HZ:@spvHz &bull; IP:@spvIp &bull; ST:@spvSt
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-light text-muted border px-2 py-0.5" style="font-size: 11px;">0 SAP</span>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="text-danger small fw-semibold">
+                                                        <i class="bi bi-exclamation-circle me-1"></i>Harusnya Wajib SAP &bull; Ubah level ONE DB jadi Pengawas
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: NON-STAF / PELAKSANA TERTARGET SAP -->
+                    <div class="tab-pane fade" id="nonstaff-content" role="tabpanel" aria-labelledby="nonstaff-tab">
+                        <div class="alert alert-warning border-0 shadow-xs mb-3" style="border-radius: 10px; background: #fffbeb; color: #92400e; font-size: 12px;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-info-circle-fill fs-5 text-warning flex-shrink-0"></i>
+                                <div>
+                                    <strong>Kategori: Jabatan Tidak Wajib SAP (Pelaksana / Non-Staf).</strong> Karyawan berjabatan pelaksana operasional / teknis (contoh: <strong>Cook, Chef Cook, Blaster, Operator, Helper, Crew, Driver, Mekanik, Cleaning Service</strong>) yang tugasnya bukan pengawas K3 lapangan, namun di sistem master saat ini <strong>diberi beban target SAP</strong>.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Search & Action Box 2 -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6 col-12">
+                                <div class="input-group shadow-xs">
+                                    <span class="input-group-text bg-white border-end-0" style="border-radius: 8px 0 0 8px;">
+                                        <i class="bi bi-search text-muted"></i>
+                                    </span>
+                                    <input type="text" id="searchNonStaffInput" class="form-control border-start-0" placeholder="Ketik NIK, Nama, Departemen, atau Jabatan ONE DB..." style="border-radius: 0 8px 8px 0; font-size: 13px;" onkeyup="filterNonStaffTable();">
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12 d-flex justify-content-md-end align-items-center gap-2">
+                                <span class="badge bg-warning-subtle text-dark border border-warning px-2.5 py-1.5" style="font-size: 11.5px; font-weight: 700;">
+                                    <i class="bi bi-people-fill me-1"></i>Menampilkan <span id="nonStaffVisibleCount">@nonStaffTargetedList.Count</span> dari @nonStaffTargetedList.Count Orang
+                                </span>
+                                <button type="button" class="btn btn-outline-warning text-dark btn-sm fw-bold shadow-xs border-dark-subtle" onclick="filterNonStaffTargeted();" data-bs-dismiss="modal" style="border-radius: 8px; font-size: 12px;">
+                                    <i class="bi bi-funnel-fill me-1"></i>Saring di Kolom Skuad
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Table 2 Container -->
+                        <div class="table-responsive bg-white rounded-3 shadow-sm border" style="max-height: 440px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0" id="nonStaffTable" style="font-size: 12.5px;">
+                                <thead class="table-light sticky-top" style="z-index: 2; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                    <tr>
+                                        <th class="text-center" style="width: 45px;">No</th>
+                                        <th style="width: 105px;">NIK</th>
+                                        <th>Nama Lengkap</th>
+                                        <th>Departemen</th>
+                                        <th>Jabatan ONE DB (Master)</th>
+                                        <th class="text-center" style="width: 135px;">Kategori Jabatan SAP</th>
+                                        <th class="text-center" style="width: 120px;">Target Diberikan</th>
+                                        <th class="text-center" style="width: 130px;">Aktual SAP Dibuat</th>
+                                        <th class="text-center" style="width: 80px;">Capaian</th>
+                                        <th>Keterangan Tindak Lanjut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (!nonStaffTargetedList.Any())
+                                    {
+                                        <tr>
+                                            <td colspan="10" class="text-center text-muted py-4">
+                                                <i class="bi bi-check-circle text-success me-1"></i> Tidak ditemukan karyawan non-staf yang tertarget SAP di perusahaan ini.
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        int noStaff = 1;
+                                        foreach (var ns in nonStaffTargetedList.OrderBy(s => (string)s.departmentName).ThenBy(s => (string)s.karyawanName))
+                                        {
+                                            int nsTgtTotal = (int)(ns.totalTarget ?? ns.mtdTotalTarget ?? 0);
+                                            int nsTgtHz = (int)(ns.targetHazard ?? ns.hazard?.target ?? 0);
+                                            int nsTgtIp = (int)(ns.targetInspeksi ?? ns.inspeksi?.target ?? 0);
+                                            int nsTgtSt = (int)(ns.targetSafetyTalk ?? ns.safetyTalk?.target ?? 0);
+
+                                            int nsActTotal = (int)(ns.totalActual ?? ns.mtdTotalActual ?? 0);
+                                            int nsActHz = (int)(ns.actualHazard ?? ns.hazard?.actual ?? 0);
+                                            int nsActIp = (int)(ns.actualInspeksi ?? ns.inspeksi?.actual ?? 0);
+                                            int nsActSt = (int)(ns.actualSafetyTalk ?? ns.safetyTalk?.actual ?? 0);
+                                            double nsRate = (double)(ns.complianceRate ?? ns.mtdAchievementRate ?? 0.0);
+
+                                            <tr class="non-staff-row">
+                                                <td class="text-center text-muted fw-bold">@(noStaff++)</td>
+                                                <td class="fw-bold font-monospace text-secondary">@ns.nik</td>
+                                                <td>
+                                                    <div class="fw-bold text-dark">@ns.karyawanName</div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-light text-dark border px-2 py-1" style="font-size: 11px;">@ns.departmentName</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-warning-subtle text-dark border border-warning fw-bold px-2 py-1" style="font-size: 11px;">
+                                                        @(ns.namaJabatanExisting ?? ns.jabatanName)
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" style="font-size: 10.5px; font-weight: 700;">
+                                                        Tidak Wajib Target SAP
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <div class="badge bg-primary text-white fw-bold px-2 py-1" style="font-size: 11px;">
+                                                        @nsTgtTotal Target
+                                                    </div>
+                                                    <div class="text-muted mt-0.5" style="font-size: 9.5px;">
+                                                        HZ:@nsTgtHz &bull; IP:@nsTgtIp &bull; ST:@nsTgtSt
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <div class="badge @(nsActTotal > 0 ? "bg-success" : "bg-light text-muted border") text-white px-2 py-1 fw-bold" style="font-size: 11px;">
+                                                        @nsActTotal SAP
+                                                    </div>
+                                                    <div class="text-muted mt-0.5" style="font-size: 9.5px;">
+                                                        HZ:@nsActHz &bull; IP:@nsActIp &bull; ST:@nsActSt
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="badge @(nsRate >= 80 ? "bg-success" : (nsRate >= 40 ? "bg-danger" : "bg-dark")) text-white px-2 py-0.5" style="font-size: 10.5px;">
+                                                        @(nsRate.ToString("F1"))%
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="text-warning-emphasis small fw-semibold">
+                                                        <i class="bi bi-arrow-right-circle me-1 text-warning"></i>Kaji ulang target &bull; Ubah status ke Non-Target
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light px-4 py-3 d-flex justify-content-between align-items-center">
+                <span class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i>File Excel audit mencakup 2 Sheet lengkap dengan rekomendasi pembaruan Master Data (ONE_DB_MITRA).
+                </span>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="@Url.Action("ExportTargetAnomaliesExcel", "Performance", new { companyId = selectedCompanyId, year = selectedYear, month = selectedMonth })" class="btn btn-success btn-sm fw-bold px-3" style="border-radius: 8px;">
+                        <i class="bi bi-download me-1"></i> Unduh File Excel (.xlsx)
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm fw-bold px-4" data-bs-dismiss="modal" style="border-radius: 8px;">Tutup</button>
+                </div>
             </div>
         </div>
     </div>
@@ -2384,6 +3422,58 @@
             new bootstrap.Tooltip(tooltipTriggerEl, { container: 'body', sanitize: false });
         });
     });
+
+    function filterNonSapTable() {
+        const input = document.getElementById('searchNonSapInput');
+        const filter = input ? input.value.toLowerCase() : '';
+        const rows = document.querySelectorAll('#nonSapTable .non-sap-row');
+        let visible = 0;
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            if (text.indexOf(filter) > -1) {
+                row.style.display = '';
+                visible++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        const countSpan = document.getElementById('nonSapVisibleCount');
+        if (countSpan) countSpan.textContent = visible;
+    }
+
+    function filterNonStaffTable() {
+        const input = document.getElementById('searchNonStaffInput');
+        const filter = input ? input.value.toLowerCase() : '';
+        const rows = document.querySelectorAll('#nonStaffTable .non-staff-row');
+        let visible = 0;
+        rows.forEach(row => {
+            const text = row.innerText.toLowerCase();
+            if (text.indexOf(filter) > -1) {
+                row.style.display = '';
+                visible++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        const countSpan = document.getElementById('nonStaffVisibleCount');
+        if (countSpan) countSpan.textContent = visible;
+    }
+
+    function filterNonSapSupervisors() {
+        const radio = document.getElementById('tf_nontarget_pengawas');
+        if (radio) {
+            radio.checked = true;
+            radio.form.submit();
+        }
+    }
+
+    function filterNonStaffTargeted() {
+        const radio = document.getElementById('tf_nonstaff_targeted');
+        if (radio) {
+            radio.checked = true;
+            radio.form.submit();
+        }
+    }
 
     function filterPlayerTable(deptName) {
         const rows = document.querySelectorAll('.player-row');
@@ -2853,5 +3943,240 @@
             }
         });
     }
+    // ─── Filter Non-SAP Supervisors ────────────────────────────────────
+    function filterNonSapSupervisors() {
+        const radio = document.getElementById('tf_nontarget_pengawas');
+        if (radio) {
+            radio.checked = true;
+            radio.form.submit();
+        } else {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('targetFilter', 'nontarget_pengawas');
+            window.location.search = urlParams.toString();
+        }
+    }
+
+    function filterNonSapTable() {
+        const input = document.getElementById('searchNonSapInput');
+        if (!input) return;
+        const query = input.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('#nonSapTable tbody tr.non-sap-row');
+        let visibleCount = 0;
+        rows.forEach(function(row) {
+            const text = row.innerText.toLowerCase();
+            if (query === '' || text.includes(query)) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        const counter = document.getElementById('nonSapVisibleCount');
+        if (counter) counter.innerText = visibleCount;
+    }
+    // ─── Modal Scoring Handler (Live Real Calculation vs SOP Guide) ────
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tombol khusus dari card riil (Departemen / Karyawan)
+        document.querySelectorAll('.btn-open-scoring-modal').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                const d = this.dataset;
+                const isDept = d.type === 'departemen';
+                
+                // Update Subject Header & Tab Name
+                const subjectName = d.name || '-';
+                const tabSub = document.getElementById('scoringTabSubject');
+                if (tabSub) tabSub.textContent = subjectName;
+                
+                const realName = document.getElementById('mRealName');
+                if (realName) realName.textContent = subjectName;
+                
+                const modalTitle = document.getElementById('scoringModalTitle');
+                if (modalTitle) {
+                    modalTitle.textContent = isDept 
+                        ? 'Kalkulasi Skor Riil: Departemen ' + subjectName 
+                        : 'Kalkulasi Skor Riil: ' + subjectName;
+                }
+                
+                const modalSub = document.getElementById('scoringModalSubtitle');
+                if (modalSub) {
+                    modalSub.textContent = isDept 
+                        ? 'Rincian akumulasi skor 4 pilar agregat tingkat departemen' 
+                        : (d.pos ? d.pos + ' • ' : '') + 'Audit transparansi formula performa K3';
+                }
+                
+                const icon = document.getElementById('mRealIcon');
+                if (icon) {
+                    icon.className = isDept ? 'bi bi-building' : 'bi bi-person-fill';
+                }
+                
+                // Sub info (NIK / Dept / Posisi)
+                const deptNik = document.getElementById('mRealDeptNik');
+                const onsiteBadge = document.getElementById('mRealOnsiteBadge');
+                if (isDept) {
+                    if (deptNik) deptNik.textContent = 'Departemen ' + subjectName;
+                    if (onsiteBadge) onsiteBadge.style.display = 'none';
+                } else {
+                    if (deptNik) deptNik.textContent = (d.pos || '') + (d.dept ? ' • ' + d.dept : '') + (d.nik ? ' (NIK: ' + d.nik + ')' : '');
+                    if (onsiteBadge) {
+                        if (d.onsite) {
+                            onsiteBadge.style.display = 'inline-block';
+                            onsiteBadge.innerHTML = '<i class="bi bi-calendar3 me-1"></i>' + d.onsite + ' Hari Onsite';
+                        } else {
+                            onsiteBadge.style.display = 'none';
+                        }
+                    }
+                }
+                
+                // Total Score
+                const totalScore = d.totalScore || '0';
+                const elTot = document.getElementById('mRealTotalScore');
+                if (elTot) elTot.textContent = totalScore;
+                const elTotPct = document.getElementById('mRealTotalPct');
+                if (elTotPct) elTotPct.textContent = totalScore + '%';
+                
+                // Pilar 1: Close Rate
+                const scoreClose = d.scoreClose || '0';
+                const ptsClose = d.ptsClose || '0';
+                const elCrScore = document.getElementById('mRealCrScore');
+                if (elCrScore) elCrScore.textContent = scoreClose + '%';
+                const elCrForm = document.getElementById('mRealCrFormula');
+                if (elCrForm) elCrForm.textContent = scoreClose + '%';
+                const elCrPts = document.getElementById('mRealCrPts');
+                if (elCrPts) elCrPts.textContent = ptsClose + ' pts';
+                
+                const elCrDetails = document.getElementById('mRealCrDetails');
+                const elCrDesc = document.getElementById('mRealCrDesc');
+                if (isDept) {
+                    if (elCrDetails) {
+                        elCrDetails.innerHTML = 'Status AP: <strong>' + (d.apClosed || '0') + ' Selesai</strong> dari total <strong>' + (d.apTotal || '0') + ' Action Plan</strong>';
+                    }
+                    if (elCrDesc) {
+                        elCrDesc.textContent = parseFloat(scoreClose) >= 100 
+                            ? 'Seluruh action plan temuan K3 departemen telah tuntas 100%.' 
+                            : 'Terdapat temuan K3 departemen yang masih berstatus Open/tertunggak. Tindak lanjut penyelesaian akan mendongkrak skor ini.';
+                    }
+                } else {
+                    const crCreator = d.crCreator || '0';
+                    const crPic = d.crPic || '0';
+                    if (elCrDetails) {
+                        elCrDetails.innerHTML = 'Pelapor Temuan: <strong>' + crCreator + '%</strong> • PIC Eksekutor: <strong>' + crPic + '%</strong>';
+                    }
+                    if (elCrDesc) {
+                        if (parseFloat(scoreClose) === 0) {
+                            elCrDesc.textContent = 'Close Rate 0% terjadi karena terdapat temuan yang dilaporkan atau ditugaskan kepada Anda yang belum berstatus Closed (masih Open). Segera selesaikan action plan tersebut untuk meraih 50 pts penuh.';
+                        } else if (parseFloat(scoreClose) < 100) {
+                            elCrDesc.textContent = 'Penutupan temuan mandiri dibatasi maks 50% (Dual Accountability) guna validasi silang fakta lapangan. Selesaikan tugas sebagai PIC untuk nilai maksimal.';
+                        } else {
+                            elCrDesc.textContent = 'Luar biasa! Seluruh temuan yang dibuat maupun ditugaskan kepada Anda telah tuntas 100% (50.0 pts maksimal).';
+                        }
+                    }
+                }
+                
+                // Pilar 2: Kualitas Mutu
+                const scoreKualitas = d.scoreKualitas || '0';
+                const ptsKualitas = d.ptsKualitas || '0';
+                const elKualitasScore = document.getElementById('mRealKualitasScore');
+                if (elKualitasScore) elKualitasScore.textContent = scoreKualitas + '%';
+                const elKualitasForm = document.getElementById('mRealKualitasFormula');
+                if (elKualitasForm) elKualitasForm.textContent = scoreKualitas + '%';
+                const elKualitasPts = document.getElementById('mRealKualitasPts');
+                if (elKualitasPts) elKualitasPts.textContent = ptsKualitas + ' pts';
+                
+                const stars = (parseFloat(scoreKualitas) * 5 / 100).toFixed(1);
+                const elKualitasDet = document.getElementById('mRealKualitasDetails');
+                if (elKualitasDet) {
+                    elKualitasDet.innerHTML = 'Standar Mutu SAP: <span class="text-warning fw-bold">' + stars + ' / 5.0 ★</span> (' + scoreKualitas + '%)';
+                }
+                const elKualitasDesc = document.getElementById('mRealKualitasDesc');
+                if (elKualitasDesc) {
+                    elKualitasDesc.textContent = parseFloat(scoreKualitas) >= 100 
+                        ? 'Mutu deskripsi, foto bukti, dan tindakan mitigasi laporan SAP memenuhi standar mutu penuh tanpa penalti.' 
+                        : 'Evaluasi otomatis sistem SAP atas kelengkapan foto bukti, deskripsi tindakan spesifik, dan validitas data laporan.';
+                }
+                
+                // Pilar 3: Capaian Target
+                const scoreCapaian = d.scoreCapaian || '0';
+                const ptsCapaian = d.ptsCapaian || '0';
+                const actCapaian = d.actCapaian || '0';
+                const tgtCapaian = d.tgtCapaian || '0';
+                const compliance = d.compliance || scoreCapaian;
+                
+                const elCapScore = document.getElementById('mRealCapaianScore');
+                if (elCapScore) elCapScore.textContent = scoreCapaian + '%';
+                const elCapForm = document.getElementById('mRealCapaianFormula');
+                if (elCapForm) elCapForm.textContent = scoreCapaian + '%';
+                const elCapPts = document.getElementById('mRealCapaianPts');
+                if (elCapPts) elCapPts.textContent = ptsCapaian + ' pts';
+                
+                const elCapDet = document.getElementById('mRealCapaianDetails');
+                if (elCapDet) {
+                    elCapDet.innerHTML = 'Realisasi: <strong>' + actCapaian + '</strong> dari Target: <strong>' + tgtCapaian + '</strong> tugas (' + compliance + '%)';
+                }
+                const elKpiStrip = document.getElementById('mRealKpiStrip');
+                if (elKpiStrip) {
+                    elKpiStrip.innerHTML = 'Hzd: <strong>' + (d.kpiHazard || '-') + '</strong> | Insp: <strong>' + (d.kpiInspeksi || '-') + '</strong> | ST: <strong>' + (d.kpiSafetytalk || '-') + '</strong> | Obs: <strong>' + (d.kpiObservasi || '-') + '</strong> | Coach: <strong>' + (d.kpiCoaching || '-') + '</strong> | P5M: <strong>' + (d.kpiP5m || '-') + '</strong>';
+                }
+                
+                // Pilar 4: Skala Beban
+                const scoreBeban = d.scoreBeban || '0';
+                const ptsBeban = d.ptsBeban || '0';
+                const userTgt = d.userTarget || tgtCapaian;
+                const maxTgt = d.maxTarget || tgtCapaian;
+                
+                const elBebanScore = document.getElementById('mRealBebanScore');
+                if (elBebanScore) elBebanScore.textContent = scoreBeban + '%';
+                const elBebanForm = document.getElementById('mRealBebanFormula');
+                if (elBebanForm) elBebanForm.textContent = scoreBeban + '%';
+                const elBebanPts = document.getElementById('mRealBebanPts');
+                if (elBebanPts) elBebanPts.textContent = ptsBeban + ' pts';
+                
+                const elBebanDet = document.getElementById('mRealBebanDetails');
+                if (elBebanDet) {
+                    elBebanDet.innerHTML = 'Target Tugas: <strong>' + userTgt + '</strong> • Max Target Dept: <strong>' + maxTgt + '</strong>';
+                }
+                const elBebanDesc = document.getElementById('mRealBebanDesc');
+                if (elBebanDesc) {
+                    elBebanDesc.textContent = parseFloat(scoreBeban) >= 100 
+                        ? 'Memegang target tugas tertinggi di departemen, berhak atas 10.0 pts beban penuh.' 
+                        : 'Bobot logaritmik menjaga asas keadilan beban tugas individu terhadap beban rekan lain di departemen.';
+                }
+                
+                // Akumulasi Bawah
+                const elSumClose = document.getElementById('mSumClose');
+                if (elSumClose) elSumClose.textContent = ptsClose;
+                const elSumKualitas = document.getElementById('mSumKualitas');
+                if (elSumKualitas) elSumKualitas.textContent = ptsKualitas;
+                const elSumCapaian = document.getElementById('mSumCapaian');
+                if (elSumCapaian) elSumCapaian.textContent = ptsCapaian;
+                const elSumBeban = document.getElementById('mSumBeban');
+                if (elSumBeban) elSumBeban.textContent = ptsBeban;
+                const elSumTotal = document.getElementById('mSumTotal');
+                if (elSumTotal) elSumTotal.textContent = totalScore + ' pts (' + totalScore + '%)';
+                
+                // Otomatis buka Tab 1 (Kalkulasi Riil)
+                const realTabBtn = document.getElementById('tab-real-calc-link');
+                if (realTabBtn && typeof bootstrap !== 'undefined') {
+                    const bsTab = bootstrap.Tab.getOrCreateInstance(realTabBtn);
+                    bsTab.show();
+                }
+            });
+        });
+        
+        // Tombol Umum dari Header Rumus (tanpa user spesifik)
+        const generalModalBtn = document.querySelector('button[data-bs-target="#leagueScoringModal"]:not(.btn-open-scoring-modal)');
+        if (generalModalBtn) {
+            generalModalBtn.addEventListener('click', function() {
+                const modalTitle = document.getElementById('scoringModalTitle');
+                if (modalTitle) modalTitle.textContent = 'Metodologi & Bobot Perhitungan Skor Liga';
+                const modalSub = document.getElementById('scoringModalSubtitle');
+                if (modalSub) modalSub.textContent = 'Sistem pembobotan performa terintegrasi (Identik dengan Menu Compliance)';
+                const sopTabBtn = document.getElementById('tab-sop-guide-link');
+                if (sopTabBtn && typeof bootstrap !== 'undefined') {
+                    const bsTab = bootstrap.Tab.getOrCreateInstance(sopTabBtn);
+                    bsTab.show();
+                }
+            });
+        }
+    });
     // ───────────────────────────────────────────────────────────────────────
 </script>

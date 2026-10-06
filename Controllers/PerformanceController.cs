@@ -19,10 +19,12 @@ namespace MBS_SAP.Controllers
     public class PerformanceController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly MBS_SAP.Services.SapQualityService _qualityService;
 
-        public PerformanceController(AppDbContext context)
+        public PerformanceController(AppDbContext context, MBS_SAP.Services.SapQualityService qualityService)
         {
             _context = context;
+            _qualityService = qualityService;
         }
 
         private static bool IsClosedStatus(string? s)
@@ -182,6 +184,66 @@ namespace MBS_SAP.Controllers
 
             var result = await GetEmployeesComplianceData(companyId, departmentName, null, null, scopeCompanyId);
             return Json(result);
+        }
+
+        private static readonly string[] PotentialSupervisorKeywords = new[] {
+            "SUPERVISOR", "FOREMAN", "SUPERINTENDENT", "MANAGER", "OFFICER", "ENGINEER", 
+            "PLANNER", "SURVEYOR", "INSPECTOR", "SPECIALIST", "LEADER", "CHIEF", "COORDINATOR"
+        };
+
+        private static readonly string[] NonStaffJobKeywords = new[] {
+            "COOK", "CHEF", "OPERATOR", "DRIVER", "HELPER", "CREW", "CLEANER", "OFFICE BOY", 
+            "SECURITY", "SATPAM", "WAITER", "MEKANIK", "MECHANIC", "WELDER", "TYRE", "TIRE", 
+            "FUELMAN", "LUBEMAN", "DRILLER", "BLASTER", "RIGGER", "SCAFFOLDER", "JANITOR", "LABOR", "PEKERJA", "NON STAFF"
+        };
+
+        public static bool IsPotentialSupervisorNonSap(string? jobExisting, string? jobStandar, string? katPengawas, string? alasanZero, bool isTargetSap)
+        {
+            if (isTargetSap) return false;
+            var jobStr = (jobExisting ?? "").ToUpperInvariant();
+            var jobStdStr = (jobStandar ?? "").ToUpperInvariant();
+            var alasanStr = (alasanZero ?? "").ToUpperInvariant();
+            var katStr = (katPengawas ?? "").ToUpperInvariant();
+
+            // 1. Pengecualian mutlak: Jika posisi riil / standarnya adalah Non-Staff (CREW, Operator, dll) atau alasan target 0 adalah NST, BUKAN anomali pengawas!
+            if (jobStdStr.Contains("NON STAFF") ||
+                alasanStr.Contains("NST") ||
+                alasanStr.Contains("NON TARGET") ||
+                NonStaffJobKeywords.Any(kw => jobStr.Contains(kw) || jobStdStr.Contains(kw)))
+            {
+                return false;
+            }
+
+            // 2. Cek apakah jabatan riil atau jabatan standarnya masuk daftar kata kunci pengawas struktural
+            if (PotentialSupervisorKeywords.Any(kw => jobStr.Contains(kw) || jobStdStr.Contains(kw)))
+            {
+                return true;
+            }
+
+            // 3. Jika kategori pengawas di master bernilai pengawas operasional dan di-override NON SAP
+            if (katStr.Contains("PENGAWAS") && (alasanStr.Contains("OVERRIDE") || katStr.Contains("NON SAP")))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public static bool IsNonStaffTargetedSap(string? jobExisting, string? jobStandar, string? katPengawas, bool isTargetSap)
+        {
+            if (!isTargetSap) return false;
+            var jobStr = (jobExisting ?? "").ToUpperInvariant();
+            var jobStdStr = (jobStandar ?? "").ToUpperInvariant();
+            
+            // Jika ada kata pengawas struktural, bukan anomali non-staf
+            if (PotentialSupervisorKeywords.Any(kw => jobStr.Contains(kw) || jobStdStr.Contains(kw)))
+                return false;
+
+            // Jika ada kata non-staf / pelaksana lapangan
+            if (NonStaffJobKeywords.Any(kw => jobStr.Contains(kw) || jobStdStr.Contains(kw)))
+                return true;
+
+            return false;
         }
 
         private async Task<List<dynamic>> GetEmployeesComplianceData(int companyId, string? departmentNameFilter = null, int? year = null, int? month = null, int? parentIdFilter = null, bool includeNonTarget = false)
@@ -427,8 +489,10 @@ namespace MBS_SAP.Controllers
                 // MTD target = monthly target directly from mapping view
                 int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0, p5mTar = 1;
                 string jabatanName = "-";
-                if (mappingsDict.TryGetValue(k.IdKaryawan, out var m))
+                KaryawanJabatanMappingPreviewView? m = null;
+                if (mappingsDict.TryGetValue(k.IdKaryawan, out var foundMapping))
                 {
+                    m = foundMapping;
                     hTar = m.TargetHazardReport ?? 2;
                     insTar = m.TargetInspeksi ?? 1;
                     stTar = m.TargetSafetyTalk ?? 1;
@@ -438,6 +502,8 @@ namespace MBS_SAP.Controllers
                 }
 
                 bool isTargetSap = (hTar + insTar + stTar + obsTar + cTar > 0);
+                bool isPotentialSupervisorNonSap = !isTargetSap && IsPotentialSupervisorNonSap(m?.NamaJabatanExisting ?? k.NamaJabatan, m?.NamaJabatanStandar, m?.KategoriPengawas, m?.AlasanTargetZero, isTargetSap);
+                bool isNonStaffTargetedSap = isTargetSap && IsNonStaffTargetedSap(m?.NamaJabatanExisting ?? k.NamaJabatan, m?.NamaJabatanStandar, m?.KategoriPengawas, isTargetSap);
 
                 if (!includeNonTarget && !isTargetSap)
                 {
@@ -607,6 +673,13 @@ namespace MBS_SAP.Controllers
                     nik = nik,
                     departmentName = k.NamaDepartemen,
                     jabatanName = jabatanName,
+                    namaJabatanExisting = k.NamaJabatan,
+                    namaJabatanStandar = m?.NamaJabatanStandar ?? jabatanName,
+                    kategoriPengawas = m?.KategoriPengawas ?? "-",
+                    kategoriMapping = m?.KategoriMapping ?? "-",
+                    alasanTargetZero = m?.AlasanTargetZero ?? (!isTargetSap ? "Target SAP bernilai 0" : "-"),
+                    isPotentialSupervisorNonSap = isPotentialSupervisorNonSap,
+                    isNonStaffTargetedSap = isNonStaffTargetedSap,
                     companyId = companyId,
                     isTargetSap = isTargetSap,
                     isNonTarget = !isTargetSap,
@@ -3609,6 +3682,11 @@ namespace MBS_SAP.Controllers
             ViewBag.SelectedCompanyId = selectedCompany.PerusahaanId;
             ViewBag.CompanyName = selectedCompany.NamaPerusahaan;
 
+            var qualitySummary = await _qualityService.GetMonthlyQualityStatsAsync(selectedYear, selectedMonth);
+            var nikQualityStats = qualitySummary.NikStats;
+            var deptQualityStats = qualitySummary.DeptStats;
+            var compQualityStats = qualitySummary.CompStats;
+
             if (mode == "company" || mode == "core")
             {
                 // Liga Antar Company: Compare all companies
@@ -3765,7 +3843,10 @@ namespace MBS_SAP.Controllers
                     double scorePencapaian = (double)x.MtdAchievementRate;
                     double scoreSkalaBeban = maxTargetAll > 0 ? (Math.Log10((int)x.TotalTarget + 1) / Math.Log10(maxTargetAll + 1)) * 100.0 : 0.0;
                     double scoreCloseRate = (double)x.MtdCloseRate;
-                    double scoreKualitas = 100.0; // Standar Mutu SAP 5.0/5.0 * 100.0 persis sesuai Compliance
+                    int cIdStanding = (int)x.CompanyId;
+                    double scoreKualitas = (compQualityStats.TryGetValue(cIdStanding, out var cQ) && cQ.TotalRated > 0)
+                        ? cQ.ScoreKualitas
+                        : ((int)x.TotalActual > 0 ? 100.0 : 0.0);
 
                     double wClose = isCurrentNewPolicy ? 0.50 : 0.40;
                     double wKualitas = 0.25;
@@ -3867,8 +3948,11 @@ namespace MBS_SAP.Controllers
 
                         double closeRate = (double)e.closeRate;
                         double complianceRate = (double)e.complianceRate;
+                        string eNik = ((string)e.nik ?? "").Trim();
                         double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
-                        double scoreKualitas = 100.0;
+                        double scoreKualitas = (nikQualityStats.TryGetValue(eNik, out var empQ) && empQ.TotalRated > 0)
+                            ? empQ.ScoreKualitas
+                            : (empActual > 0 ? 100.0 : 0.0);
                         double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
                         double scoreSkalaBeban = (empTarget > 0 && maxTargetDept > 0)
                             ? (empTarget >= maxTargetDept ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetDept + 1)) * 100.0)))
@@ -3885,6 +3969,13 @@ namespace MBS_SAP.Controllers
                             nik = (string)e.nik,
                             departmentName = (string)e.departmentName,
                             jabatanName = (string)e.jabatanName,
+                            namaJabatanExisting = (string?)e.namaJabatanExisting,
+                            namaJabatanStandar = (string?)e.namaJabatanStandar,
+                            kategoriPengawas = (string?)e.kategoriPengawas,
+                            kategoriMapping = (string?)e.kategoriMapping,
+                            alasanTargetZero = (string?)e.alasanTargetZero,
+                            isPotentialSupervisorNonSap = (bool)(e.isPotentialSupervisorNonSap ?? false),
+                            isNonStaffTargetedSap = (bool)(e.isNonStaffTargetedSap ?? false),
                             isTargetSap = (bool)e.isTargetSap,
                             isNonTarget = (bool)e.isNonTarget,
                             isActivelyReporting = (bool)e.isActivelyReporting,
@@ -3924,9 +4015,9 @@ namespace MBS_SAP.Controllers
                         };
                     })
                     .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
-                    .ThenByDescending(e => e.totalScore)
                     .ThenByDescending(e => e.complianceRate)
                     .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
+                    .ThenByDescending(e => e.totalScore)
                     .ToList();
 
                 ViewBag.Employees = sortedEmployees;
@@ -3934,13 +4025,22 @@ namespace MBS_SAP.Controllers
             else
             {
                 // Liga Internal: Departments
-                bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
-                var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, effectiveParentScope, includeNonTarget: includeNonTarget);
+                // Always fetch all employees so we can detect non-SAP supervisors and total active staff accurately
+                var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, effectiveParentScope, includeNonTarget: true);
                 var targetEmployees = employees.Where(e => (bool)e.isTargetSap).ToList();
+
+                var nonSapSupervisors = employees.Where(e => (bool)e.isPotentialSupervisorNonSap).ToList();
+                var nonStaffTargeted = employees.Where(e => (bool)e.isNonStaffTargetedSap).ToList();
+                ViewBag.NonSapSupervisorsCount = nonSapSupervisors.Count;
+                ViewBag.NonSapSupervisors = nonSapSupervisors;
+                ViewBag.NonStaffTargetedCount = nonStaffTargeted.Count;
+                ViewBag.NonStaffTargeted = nonStaffTargeted;
+                ViewBag.TargetSapCount = targetEmployees.Count;
+                ViewBag.TotalActiveEmployees = employees.Count;
 
                 var monthlyActionPlans = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
 
-                var deptAchievements = targetEmployees
+                var rawDeptList = targetEmployees
                     .GroupBy(e => (string)e.departmentName)
                     .Select(g => {
                         int employeeCount = g.Count();
@@ -3983,31 +4083,105 @@ namespace MBS_SAP.Controllers
                         double oRate = oTgt > 0 ? Math.Min(100.0, Math.Round((double)oAct / oTgt * 100.0, 1)) : -1;
                         double cRate = cTgt > 0 ? Math.Min(100.0, Math.Round((double)cAct / cTgt * 100.0, 1)) : -1;
                         double p5mRate = p5mTgt > 0 ? Math.Min(100.0, Math.Round((double)p5mAct / p5mTgt * 100.0, 1)) : -1;
-                        
-                        return new DepartmentAchievementViewModel
-                        {
-                            DepartmentName = g.Key,
+
+                        return new {
+                            DeptName = deptName,
                             EmployeeCount = employeeCount,
                             TotalTarget = totalTarget,
-                            MtdAchievementRate = mtdRate,
-                            MtdHazardRate = hRate,
-                            MtdInspeksiRate = iRate,
-                            MtdSafetyTalkRate = stRate,
-                            MtdObservasiRate = oRate,
-                            MtdCoachingRate = cRate,
-                            MtdP5mRate = p5mRate,
-                            MtdCloseRate = deptCloseRate
+                            TotalActual = totalActual,
+                            MtdRate = mtdRate,
+                            HRate = hRate,
+                            IRate = iRate,
+                            StRate = stRate,
+                            ORate = oRate,
+                            CRate = cRate,
+                            P5mRate = p5mRate,
+                            DeptCloseRate = deptCloseRate,
+                            HAct = hAct, HTgt = hTgt,
+                            IAct = iAct, ITgt = iTgt,
+                            StAct = stAct, StTgt = stTgt,
+                            OAct = oAct, OTgt = oTgt,
+                            CAct = cAct, CTgt = cTgt,
+                            P5mAct = p5mAct, P5mTgt = p5mTgt,
+                            ApTotal = deptEffectiveTotalAp,
+                            ApClosed = deptEffectiveClosedAp
                         };
                     })
-                    .OrderByDescending(d => d.MtdAchievementRate)
                     .ToList();
+
+                int maxDeptTarget = rawDeptList.Any() ? rawDeptList.Max(d => d.TotalTarget) : 1;
+                if (maxDeptTarget <= 0) maxDeptTarget = 1;
+
+                var deptAchievements = rawDeptList.Select(d => {
+                    double scoreClose = Math.Min(100.0, Math.Max(0.0, d.DeptCloseRate));
+                    string dDeptKey = (d.DeptName ?? "").Trim();
+                    double scoreKualitas = (deptQualityStats.TryGetValue(dDeptKey, out var dQ) && dQ.TotalRated > 0)
+                        ? dQ.ScoreKualitas
+                        : (d.TotalActual > 0 ? 100.0 : 0.0);
+                    double scoreCapaian = Math.Min(100.0, Math.Max(0.0, d.MtdRate));
+                    double scoreBeban = (d.TotalTarget > 0 && maxDeptTarget > 0)
+                        ? (d.TotalTarget >= maxDeptTarget ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(d.TotalTarget + 1) / Math.Log10(maxDeptTarget + 1)) * 100.0)))
+                        : 0.0;
+
+                    double ptsClose = Math.Round(scoreClose * 0.50, 2);
+                    double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
+                    double ptsCapaian = Math.Round(scoreCapaian * 0.15, 2);
+                    double ptsBeban = Math.Round(scoreBeban * 0.10, 2);
+                    double totalScore = Math.Round(ptsClose + ptsKualitas + ptsCapaian + ptsBeban, 2);
+
+                    return new DepartmentAchievementViewModel
+                    {
+                        DepartmentName = d.DeptName,
+                        EmployeeCount = d.EmployeeCount,
+                        TotalTarget = d.TotalTarget,
+                        TotalActual = d.TotalActual,
+                        MtdAchievementRate = d.MtdRate,
+                        MtdHazardRate = d.HRate,
+                        MtdInspeksiRate = d.IRate,
+                        MtdSafetyTalkRate = d.StRate,
+                        MtdObservasiRate = d.ORate,
+                        MtdCoachingRate = d.CRate,
+                        MtdP5mRate = d.P5mRate,
+                        MtdCloseRate = d.DeptCloseRate,
+                        ScoreCloseRate = Math.Round(scoreClose, 1),
+                        ScoreKualitas = Math.Round(scoreKualitas, 1),
+                        ScoreCapaian = Math.Round(scoreCapaian, 1),
+                        ScoreSkalaBeban = Math.Round(scoreBeban, 1),
+                        PtsClose = ptsClose,
+                        PtsKualitas = ptsKualitas,
+                        PtsCapaian = ptsCapaian,
+                        PtsBeban = ptsBeban,
+                        TotalScore = totalScore,
+                        MaxTargetDept = maxDeptTarget,
+                        HazardActual = d.HAct, HazardTarget = d.HTgt,
+                        InspeksiActual = d.IAct, InspeksiTarget = d.ITgt,
+                        SafetyTalkActual = d.StAct, SafetyTalkTarget = d.StTgt,
+                        ObservasiActual = d.OAct, ObservasiTarget = d.OTgt,
+                        CoachingActual = d.CAct, CoachingTarget = d.CTgt,
+                        P5mActual = d.P5mAct, P5mTarget = d.P5mTgt,
+                        ApTotal = d.ApTotal, ApClosed = d.ApClosed
+                    };
+                })
+                .OrderBy(d => d.TotalTarget == 0 ? 1 : 0)
+                .ThenByDescending(d => d.MtdAchievementRate)
+                .ThenByDescending(d => d.TotalActual)
+                .ThenByDescending(d => d.TotalScore)
+                .ToList();
 
                 var activeDeptAchievements = deptAchievements.Where(d => d.TotalTarget > 0).ToList();
                 ViewBag.DepartmentAchievements = activeDeptAchievements.Where(d => !(d.TotalTarget > 0 && d.MtdAchievementRate == 0)).ToList();
                 ViewBag.DepartmentRedZone = activeDeptAchievements.Where(d => d.TotalTarget > 0 && d.MtdAchievementRate == 0).ToList();
 
                 IEnumerable<dynamic> filteredEmployees;
-                if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(targetFilter, "nontarget_pengawas", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmployees = employees.Where(e => (bool)e.isPotentialSupervisorNonSap);
+                }
+                else if (string.Equals(targetFilter, "nonstaff_targeted", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmployees = employees.Where(e => (bool)e.isNonStaffTargetedSap);
+                }
+                else if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
                 {
                     filteredEmployees = employees.Where(e => (bool)e.isNonTarget && (bool)e.isActivelyReporting);
                 }
@@ -4037,8 +4211,11 @@ namespace MBS_SAP.Controllers
 
                     double closeRate = (double)e.closeRate;
                     double complianceRate = (double)e.complianceRate;
+                    string eNikAll = ((string)e.nik ?? "").Trim();
                     double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
-                    double scoreKualitas = 100.0;
+                    double scoreKualitas = (nikQualityStats.TryGetValue(eNikAll, out var empQAll) && empQAll.TotalRated > 0)
+                        ? empQAll.ScoreKualitas
+                        : (empActual > 0 ? 100.0 : 0.0);
                     double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
                     double scoreSkalaBeban = (empTarget > 0 && maxTargetDept > 0)
                         ? (empTarget >= maxTargetDept ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetDept + 1)) * 100.0)))
@@ -4055,6 +4232,13 @@ namespace MBS_SAP.Controllers
                         nik = (string)e.nik,
                         departmentName = (string)e.departmentName,
                         jabatanName = (string)e.jabatanName,
+                        namaJabatanExisting = (string?)e.namaJabatanExisting,
+                        namaJabatanStandar = (string?)e.namaJabatanStandar,
+                        kategoriPengawas = (string?)e.kategoriPengawas,
+                        kategoriMapping = (string?)e.kategoriMapping,
+                        alasanTargetZero = (string?)e.alasanTargetZero,
+                        isPotentialSupervisorNonSap = (bool)(e.isPotentialSupervisorNonSap ?? false),
+                        isNonStaffTargetedSap = (bool)(e.isNonStaffTargetedSap ?? false),
                         isTargetSap = (bool)e.isTargetSap,
                         isNonTarget = (bool)e.isNonTarget,
                         isActivelyReporting = (bool)e.isActivelyReporting,
@@ -4092,14 +4276,24 @@ namespace MBS_SAP.Controllers
                         coaching = new { actual = (int)e.coaching.actual, target = (int)e.coaching.target },
                         p5m = new { actual = (int)e.p5m.actual, target = (int)e.p5m.target }
                     };
-                })
-                .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
-                .ThenByDescending(e => e.totalScore)
-                .ThenByDescending(e => e.complianceRate)
-                .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
-                .ToList();
+                });
 
-                ViewBag.Employees = sortedEmployees;
+                if (string.Equals(targetFilter, "nontarget_pengawas", StringComparison.OrdinalIgnoreCase))
+                {
+                    ViewBag.Employees = sortedEmployees
+                        .OrderBy(e => e.departmentName)
+                        .ThenBy(e => e.name)
+                        .ToList();
+                }
+                else
+                {
+                    ViewBag.Employees = sortedEmployees
+                        .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
+                        .ThenByDescending(e => e.complianceRate)
+                        .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
+                        .ThenByDescending(e => e.totalScore)
+                        .ToList();
+                }
             }
 
             return View();
@@ -4408,7 +4602,7 @@ namespace MBS_SAP.Controllers
 
                 var monthlyActionPlans = await GetMonthlyActionPlansAsync(selectedYear, selectedMonth);
 
-                deptAchievements = targetEmployees
+                var rawDeptListExcel = targetEmployees
                     .GroupBy(e => (string)e.departmentName)
                     .Select(g => {
                         int employeeCount = g.Count();
@@ -4451,24 +4645,87 @@ namespace MBS_SAP.Controllers
                         double oRate = oTgt > 0 ? Math.Min(100.0, Math.Round((double)oAct / oTgt * 100.0, 1)) : -1;
                         double cRate = cTgt > 0 ? Math.Min(100.0, Math.Round((double)cAct / cTgt * 100.0, 1)) : -1;
                         double p5mRate = p5mTgt > 0 ? Math.Min(100.0, Math.Round((double)p5mAct / p5mTgt * 100.0, 1)) : -1;
-                        
-                        return new DepartmentAchievementViewModel
-                        {
-                            DepartmentName = g.Key,
+
+                        return new {
+                            DeptName = deptName,
                             EmployeeCount = employeeCount,
                             TotalTarget = totalTarget,
-                            MtdAchievementRate = mtdRate,
-                            MtdHazardRate = hRate,
-                            MtdInspeksiRate = iRate,
-                            MtdSafetyTalkRate = stRate,
-                            MtdObservasiRate = oRate,
-                            MtdCoachingRate = cRate,
-                            MtdP5mRate = p5mRate,
-                            MtdCloseRate = deptCloseRate
+                            TotalActual = totalActual,
+                            MtdRate = mtdRate,
+                            HRate = hRate,
+                            IRate = iRate,
+                            StRate = stRate,
+                            ORate = oRate,
+                            CRate = cRate,
+                            P5mRate = p5mRate,
+                            DeptCloseRate = deptCloseRate,
+                            HAct = hAct, HTgt = hTgt,
+                            IAct = iAct, ITgt = iTgt,
+                            StAct = stAct, StTgt = stTgt,
+                            OAct = oAct, OTgt = oTgt,
+                            CAct = cAct, CTgt = cTgt,
+                            P5mAct = p5mAct, P5mTgt = p5mTgt,
+                            ApTotal = deptEffectiveTotalAp,
+                            ApClosed = deptEffectiveClosedAp
                         };
                     })
-                    .OrderByDescending(d => d.MtdAchievementRate)
                     .ToList();
+
+                int maxDeptTargetExcel = rawDeptListExcel.Any() ? rawDeptListExcel.Max(d => d.TotalTarget) : 1;
+                if (maxDeptTargetExcel <= 0) maxDeptTargetExcel = 1;
+
+                deptAchievements = rawDeptListExcel.Select(d => {
+                    double scoreClose = Math.Min(100.0, Math.Max(0.0, d.DeptCloseRate));
+                    double scoreKualitas = 100.0;
+                    double scoreCapaian = Math.Min(100.0, Math.Max(0.0, d.MtdRate));
+                    double scoreBeban = (d.TotalTarget > 0 && maxDeptTargetExcel > 0)
+                        ? (d.TotalTarget >= maxDeptTargetExcel ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(d.TotalTarget + 1) / Math.Log10(maxDeptTargetExcel + 1)) * 100.0)))
+                        : 0.0;
+
+                    double ptsClose = Math.Round(scoreClose * 0.50, 2);
+                    double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
+                    double ptsCapaian = Math.Round(scoreCapaian * 0.15, 2);
+                    double ptsBeban = Math.Round(scoreBeban * 0.10, 2);
+                    double totalScore = Math.Round(ptsClose + ptsKualitas + ptsCapaian + ptsBeban, 2);
+
+                    return new DepartmentAchievementViewModel
+                    {
+                        DepartmentName = d.DeptName,
+                        EmployeeCount = d.EmployeeCount,
+                        TotalTarget = d.TotalTarget,
+                        TotalActual = d.TotalActual,
+                        MtdAchievementRate = d.MtdRate,
+                        MtdHazardRate = d.HRate,
+                        MtdInspeksiRate = d.IRate,
+                        MtdSafetyTalkRate = d.StRate,
+                        MtdObservasiRate = d.ORate,
+                        MtdCoachingRate = d.CRate,
+                        MtdP5mRate = d.P5mRate,
+                        MtdCloseRate = d.DeptCloseRate,
+                        ScoreCloseRate = Math.Round(scoreClose, 1),
+                        ScoreKualitas = Math.Round(scoreKualitas, 1),
+                        ScoreCapaian = Math.Round(scoreCapaian, 1),
+                        ScoreSkalaBeban = Math.Round(scoreBeban, 1),
+                        PtsClose = ptsClose,
+                        PtsKualitas = ptsKualitas,
+                        PtsCapaian = ptsCapaian,
+                        PtsBeban = ptsBeban,
+                        TotalScore = totalScore,
+                        MaxTargetDept = maxDeptTargetExcel,
+                        HazardActual = d.HAct, HazardTarget = d.HTgt,
+                        InspeksiActual = d.IAct, InspeksiTarget = d.ITgt,
+                        SafetyTalkActual = d.StAct, SafetyTalkTarget = d.StTgt,
+                        ObservasiActual = d.OAct, ObservasiTarget = d.OTgt,
+                        CoachingActual = d.CAct, CoachingTarget = d.CTgt,
+                        P5mActual = d.P5mAct, P5mTarget = d.P5mTgt,
+                        ApTotal = d.ApTotal, ApClosed = d.ApClosed
+                    };
+                })
+                .OrderBy(d => d.TotalTarget == 0 ? 1 : 0)
+                .ThenByDescending(d => d.MtdAchievementRate)
+                .ThenByDescending(d => d.TotalActual)
+                .ThenByDescending(d => d.TotalScore)
+                .ToList();
             }
 
             if (!string.IsNullOrEmpty(departmentName))
@@ -4478,7 +4735,11 @@ namespace MBS_SAP.Controllers
                     .ToList();
             }
 
-            if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetFilter, "nontarget_pengawas", StringComparison.OrdinalIgnoreCase))
+            {
+                employeesData = employeesData.Where(e => (bool)e.isPotentialSupervisorNonSap).ToList();
+            }
+            else if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
             {
                 employeesData = employeesData.Where(e => (bool)e.isNonTarget && (bool)e.isActivelyReporting).ToList();
             }
@@ -4563,9 +4824,9 @@ namespace MBS_SAP.Controllers
                     };
                 })
                 .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
-                .ThenByDescending(e => e.totalScore)
                 .ThenByDescending(e => e.complianceRate)
                 .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
+                .ThenByDescending(e => e.totalScore)
                 .ToList();
 
             using (var workbook = new XLWorkbook())
@@ -4617,7 +4878,7 @@ namespace MBS_SAP.Controllers
                 else
                 {
                     stdHeaders = new[] {
-                        "Pos", clubHeader, "Skuad (Orang)", "Total Target", "PTS (Kepatuhan %)",
+                        "Pos", clubHeader, "Skuad (Orang)", "Total Target", "PTS (Skor Total)", "Capaian (%)",
                         "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *", "Close Rate (%)"
                     };
                 }
@@ -4775,7 +5036,10 @@ namespace MBS_SAP.Controllers
                 {
                     var sortedDept = deptAchievements
                         .Where(d => d.TotalTarget > 0)
-                        .OrderByDescending(d => d.MtdAchievementRate)
+                        .OrderBy(d => d.TotalTarget == 0 ? 1 : 0)
+                        .ThenByDescending(d => d.MtdAchievementRate)
+                        .ThenByDescending(d => d.TotalActual)
+                        .ThenByDescending(d => d.TotalScore)
                         .ToList();
 
                     foreach (var dept in sortedDept)
@@ -4785,17 +5049,21 @@ namespace MBS_SAP.Controllers
                         wsStandings.Cell(sRow, 3).Value = dept.EmployeeCount;
                         wsStandings.Cell(sRow, 4).Value = dept.TotalTarget;
 
-                        wsStandings.Cell(sRow, 5).Value = dept.MtdAchievementRate;
-                        wsStandings.Cell(sRow, 5).Style.NumberFormat.Format = "0.0\"%\"";
+                        wsStandings.Cell(sRow, 5).Value = dept.TotalScore;
+                        wsStandings.Cell(sRow, 5).Style.NumberFormat.Format = "0.00";
                         wsStandings.Cell(sRow, 5).Style.Font.Bold = true;
 
-                        SetRateCell(wsStandings.Cell(sRow, 6), dept.MtdHazardRate);
-                        SetRateCell(wsStandings.Cell(sRow, 7), dept.MtdInspeksiRate);
-                        SetRateCell(wsStandings.Cell(sRow, 8), dept.MtdSafetyTalkRate);
-                        SetRateCell(wsStandings.Cell(sRow, 9), dept.MtdObservasiRate);
-                        SetRateCell(wsStandings.Cell(sRow, 10), dept.MtdCoachingRate);
-                        SetRateCell(wsStandings.Cell(sRow, 11), dept.MtdP5mRate);
-                        SetRateCell(wsStandings.Cell(sRow, 12), dept.MtdCloseRate);
+                        wsStandings.Cell(sRow, 6).Value = dept.MtdAchievementRate;
+                        wsStandings.Cell(sRow, 6).Style.NumberFormat.Format = "0.0\"%\"";
+                        wsStandings.Cell(sRow, 6).Style.Font.Bold = false;
+
+                        SetRateCell(wsStandings.Cell(sRow, 7), dept.MtdHazardRate);
+                        SetRateCell(wsStandings.Cell(sRow, 8), dept.MtdInspeksiRate);
+                        SetRateCell(wsStandings.Cell(sRow, 9), dept.MtdSafetyTalkRate);
+                        SetRateCell(wsStandings.Cell(sRow, 10), dept.MtdObservasiRate);
+                        SetRateCell(wsStandings.Cell(sRow, 11), dept.MtdCoachingRate);
+                        SetRateCell(wsStandings.Cell(sRow, 12), dept.MtdP5mRate);
+                        SetRateCell(wsStandings.Cell(sRow, 13), dept.MtdCloseRate);
 
                         // Alignments
                         wsStandings.Cell(sRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -4803,12 +5071,13 @@ namespace MBS_SAP.Controllers
                         wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                        for (int c = 6; c <= 12; c++)
+                        wsStandings.Cell(sRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                        for (int c = 7; c <= 13; c++)
                         {
                             wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         }
 
-                        var sRowRange = wsStandings.Range(sRow, 1, sRow, 12);
+                        var sRowRange = wsStandings.Range(sRow, 1, sRow, 13);
                         sRowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                         sRowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                         sRowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -4859,7 +5128,7 @@ namespace MBS_SAP.Controllers
                 wsSquad.Cell(3, 1).Style.Font.Bold = true;
                 wsSquad.Cell(3, 1).Style.Font.FontSize = 10;
 
-                string targetFilterLabel = targetFilter == "nontarget_active" ? "Non-Target Aktif SAP" : (targetFilter == "all" ? "Semua Karyawan (+ Non-Target)" : (targetFilter == "nontarget" ? "Non-Target SAP" : "Hanya Target SAP"));
+                string targetFilterLabel = targetFilter == "nontarget_pengawas" ? "Pengawas Non-SAP (Target Nol)" : (targetFilter == "nontarget_active" ? "Non-Target Aktif SAP" : (targetFilter == "all" ? "Semua Karyawan (+ Non-Target)" : (targetFilter == "nontarget" ? "Non-Target SAP" : "Hanya Target SAP")));
                 wsSquad.Cell(4, 1).Value = $"Kategori: {modeLabel} | Filter Target: {targetFilterLabel} | Total Pemain: {sorted.Count} Orang | Waktu Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
                 wsSquad.Cell(4, 1).Style.Font.Italic = true;
                 wsSquad.Cell(4, 1).Style.Font.FontSize = 9;
@@ -5080,6 +5349,270 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> ExportTargetAnomaliesExcel(int? companyId = null, int? year = null, int? month = null, int? parentId = null)
+        {
+            await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
+
+            var today = DateTime.Today;
+            int selectedYear = year ?? today.Year;
+            int selectedMonth = month ?? today.Month;
+
+            string[] monthNames = { "", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember" };
+            string monthName = (selectedMonth >= 1 && selectedMonth <= 12) ? monthNames[selectedMonth] : selectedMonth.ToString();
+            string periodFormatted = $"{monthName.ToUpper()} {selectedYear}";
+
+            var (resolvedCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
+            var targetCompanyId = companyId ?? resolvedCompanyId;
+            if (targetCompanyId == 0) targetCompanyId = 1;
+
+            var selectedCompany = await _context.Perusahaans.FirstOrDefaultAsync(p => p.PerusahaanId == targetCompanyId);
+            if (selectedCompany == null)
+            {
+                return NotFound("Perusahaan tidak ditemukan.");
+            }
+
+            int? effectiveParentScope = (selectedCompany.PerusahaanId == 1 && parentId.HasValue) ? parentId.Value : null;
+
+            // Selalu ambil seluruh karyawan termasuk non-target untuk audit akurat
+            var employees = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, selectedYear, selectedMonth, effectiveParentScope, includeNonTarget: true);
+
+            var underTargetedSupervisors = employees
+                .Where(e => (bool)(e.isPotentialSupervisorNonSap ?? false))
+                .OrderBy(e => (string)e.departmentName)
+                .ThenBy(e => (string)e.karyawanName)
+                .ToList();
+
+            var overTargetedNonStaff = employees
+                .Where(e => (bool)(e.isNonStaffTargetedSap ?? false))
+                .OrderBy(e => (string)e.departmentName)
+                .ThenBy(e => (string)e.karyawanName)
+                .ToList();
+
+            using (var workbook = new XLWorkbook())
+            {
+                // ==========================================
+                // SHEET 1: JABATAN WAJIB SAP (PENGAWAS) TAPI TARGET 0 DI ONE DB
+                // ==========================================
+                var wsUnder = workbook.Worksheets.Add("1. Harusnya Wajib SAP (Target 0)");
+                wsUnder.ShowGridLines = true;
+
+                // Title Banner
+                wsUnder.Cell(1, 1).Value = "AUDIT MASTER DATA: JABATAN MASUK LIST WAJIB SAP (PENGAWAS) TETAPI TARGET 0 DI ONE DB";
+                wsUnder.Cell(1, 1).Style.Font.Bold = true;
+                wsUnder.Cell(1, 1).Style.Font.FontSize = 13;
+                wsUnder.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#991b1b");
+
+                wsUnder.Cell(2, 1).Value = $"PERUSAHAAN: {selectedCompany.NamaPerusahaan} | PERIODE: {periodFormatted}";
+                wsUnder.Cell(2, 1).Style.Font.Bold = true;
+                wsUnder.Cell(2, 1).Style.Font.FontSize = 11;
+                wsUnder.Cell(2, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                wsUnder.Cell(3, 1).Value = $"Total Ditemukan: {underTargetedSupervisors.Count} Orang | Waktu Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
+                wsUnder.Cell(3, 1).Style.Font.Italic = true;
+                wsUnder.Cell(3, 1).Style.Font.FontSize = 9.5;
+                wsUnder.Cell(3, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
+
+                wsUnder.Cell(4, 1).Value = "Keterangan: Karyawan di bawah ini jabatannya masuk list pengawas operasional (Foreman, Supervisor, Supt, Manager, Officer, dll). Namun di ONE DB status level jabatannya di-set 'NON SAP', sehingga target bulanan menjadi 0.";
+                wsUnder.Cell(4, 1).Style.Font.FontSize = 9.5;
+                wsUnder.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
+
+                string[] underHeaders = new[] {
+                    "No", "NIK", "Nama Lengkap", "Departemen", "Jabatan ONE DB (Master)", "Jabatan Standar",
+                    "Kategori Jabatan SAP", "Status di ONE DB", "Total Aktual SAP", "Aktual Hazard (HZ)",
+                    "Aktual Inspeksi (IP)", "Aktual Safety Talk (ST)", "Keterangan Anomali", "Rekomendasi Tindak Lanjut HR / HSE"
+                };
+
+                for (int i = 0; i < underHeaders.Length; i++)
+                {
+                    var cell = wsUnder.Cell(6, i + 1);
+                    cell.Value = underHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontSize = 10;
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#991b1b");
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                }
+                wsUnder.Row(6).Height = 26;
+
+                int row = 7;
+                int no = 1;
+                foreach (var emp in underTargetedSupervisors)
+                {
+                    int totalAct = (int)(emp.mtdTotalActual ?? emp.totalActualAll ?? 0);
+                    int hzAct = (int)(emp.hazard?.actual ?? 0);
+                    int ipAct = (int)(emp.inspeksi?.actual ?? 0);
+                    int stAct = (int)(emp.safetyTalk?.actual ?? 0);
+
+                    wsUnder.Cell(row, 1).Value = no++;
+                    wsUnder.Cell(row, 2).Value = (string)emp.nik;
+                    wsUnder.Cell(row, 3).Value = (string)emp.karyawanName;
+                    wsUnder.Cell(row, 4).Value = (string)emp.departmentName;
+                    wsUnder.Cell(row, 5).Value = (string)(emp.namaJabatanExisting ?? emp.jabatanName ?? "-");
+                    wsUnder.Cell(row, 6).Value = (string)(emp.namaJabatanStandar ?? "-");
+                    wsUnder.Cell(row, 7).Value = "Masuk List Wajib SAP (Pengawas Operasional)";
+                    wsUnder.Cell(row, 8).Value = "NON SAP (Target 0)";
+                    wsUnder.Cell(row, 9).Value = totalAct;
+                    wsUnder.Cell(row, 10).Value = hzAct;
+                    wsUnder.Cell(row, 11).Value = ipAct;
+                    wsUnder.Cell(row, 12).Value = stAct;
+                    wsUnder.Cell(row, 13).Value = (string)(emp.alasanTargetZero ?? "Override daftar NIK/jabatan di ONE DB");
+                    wsUnder.Cell(row, 14).Value = "Ubah level jabatan di ONE DB menjadi Pengawas agar terdaftar di skuad target K3 bulanan";
+
+                    wsUnder.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsUnder.Cell(row, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsUnder.Cell(row, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsUnder.Cell(row, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsUnder.Cell(row, 8).Style.Font.Bold = true;
+                    wsUnder.Cell(row, 8).Style.Font.FontColor = XLColor.FromHtml("#b91c1c");
+
+                    for (int c = 9; c <= 12; c++)
+                    {
+                        wsUnder.Cell(row, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsUnder.Cell(row, c).Style.Font.Bold = (c == 9 && totalAct > 0);
+                        if (c == 9 && totalAct > 0)
+                        {
+                            wsUnder.Cell(row, c).Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                        }
+                    }
+
+                    var rRange = wsUnder.Range(row, 1, row, underHeaders.Length);
+                    rRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    rRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    rRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+                    if (row % 2 == 0) rRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#fff1f2");
+
+                    row++;
+                }
+
+                wsUnder.SheetView.FreezeRows(6);
+                wsUnder.Columns().AdjustToContents();
+
+                // ==========================================
+                // SHEET 2: JABATAN TIDAK WAJIB SAP (PELAKSANA) TETAPI DIBERI TARGET SAP
+                // ==========================================
+                var wsOver = workbook.Worksheets.Add("2. Tidak Wajib SAP (Tertarget)");
+                wsOver.ShowGridLines = true;
+
+                // Title Banner
+                wsOver.Cell(1, 1).Value = "AUDIT MASTER DATA: JABATAN TIDAK WAJIB SAP (NON-STAF / PELAKSANA) TETAPI DIBERI TARGET SAP";
+                wsOver.Cell(1, 1).Style.Font.Bold = true;
+                wsOver.Cell(1, 1).Style.Font.FontSize = 13;
+                wsOver.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#c2410c");
+
+                wsOver.Cell(2, 1).Value = $"PERUSAHAAN: {selectedCompany.NamaPerusahaan} | PERIODE: {periodFormatted}";
+                wsOver.Cell(2, 1).Style.Font.Bold = true;
+                wsOver.Cell(2, 1).Style.Font.FontSize = 11;
+                wsOver.Cell(2, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+
+                wsOver.Cell(3, 1).Value = $"Total Ditemukan: {overTargetedNonStaff.Count} Orang | Waktu Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
+                wsOver.Cell(3, 1).Style.Font.Italic = true;
+                wsOver.Cell(3, 1).Style.Font.FontSize = 9.5;
+                wsOver.Cell(3, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
+
+                wsOver.Cell(4, 1).Value = "Keterangan: Karyawan di bawah ini berjabatan pelaksana teknis / non-staf (Cook, Operator, Helper, Crew, Mekanik, Driver, dll) yang tidak wajib target SAP, tetapi di master diberi beban target pengawas.";
+                wsOver.Cell(4, 1).Style.Font.FontSize = 9.5;
+                wsOver.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#c2410c");
+
+                string[] overHeaders = new[] {
+                    "No", "NIK", "Nama Lengkap", "Departemen", "Jabatan ONE DB (Master)", "Jabatan Standar",
+                    "Kategori Jabatan SAP", "Status di Master", "Target Total", "Target Hazard (HZ)", "Target Inspeksi (IP)",
+                    "Target Safety Talk (ST)", "Total Aktual SAP", "Aktual Hazard (HZ)", "Aktual Inspeksi (IP)",
+                    "Aktual Safety Talk (ST)", "% Capaian", "Keterangan Anomali", "Rekomendasi Tindak Lanjut HR / HSE"
+                };
+
+                for (int i = 0; i < overHeaders.Length; i++)
+                {
+                    var cell = wsOver.Cell(6, i + 1);
+                    cell.Value = overHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontSize = 10;
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#c2410c");
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                }
+                wsOver.Row(6).Height = 26;
+
+                int oRow = 7;
+                int oNo = 1;
+                foreach (var emp in overTargetedNonStaff)
+                {
+                    int tgtTotal = (int)emp.mtdTotalTarget;
+                    int tgtHz = (int)emp.hazard.target;
+                    int tgtIp = (int)emp.inspeksi.target;
+                    int tgtSt = (int)emp.safetyTalk.target;
+
+                    int actTotal = (int)emp.mtdTotalActual;
+                    int actHz = (int)emp.hazard.actual;
+                    int actIp = (int)emp.inspeksi.actual;
+                    int actSt = (int)emp.safetyTalk.actual;
+                    double rate = (double)emp.complianceRate;
+
+                    wsOver.Cell(oRow, 1).Value = oNo++;
+                    wsOver.Cell(oRow, 2).Value = (string)emp.nik;
+                    wsOver.Cell(oRow, 3).Value = (string)emp.karyawanName;
+                    wsOver.Cell(oRow, 4).Value = (string)emp.departmentName;
+                    wsOver.Cell(oRow, 5).Value = (string)(emp.namaJabatanExisting ?? emp.jabatanName ?? "-");
+                    wsOver.Cell(oRow, 6).Value = (string)(emp.namaJabatanStandar ?? "-");
+                    wsOver.Cell(oRow, 7).Value = "Tidak Wajib SAP (Pelaksana / Non-Staf)";
+                    wsOver.Cell(oRow, 8).Value = "Tertarget SAP (Over-Target)";
+                    wsOver.Cell(oRow, 9).Value = tgtTotal;
+                    wsOver.Cell(oRow, 10).Value = tgtHz;
+                    wsOver.Cell(oRow, 11).Value = tgtIp;
+                    wsOver.Cell(oRow, 12).Value = tgtSt;
+                    wsOver.Cell(oRow, 13).Value = actTotal;
+                    wsOver.Cell(oRow, 14).Value = actHz;
+                    wsOver.Cell(oRow, 15).Value = actIp;
+                    wsOver.Cell(oRow, 16).Value = actSt;
+                    wsOver.Cell(oRow, 17).Value = $"{rate:F1}%";
+                    wsOver.Cell(oRow, 18).Value = "Jabatan pelaksana/non-staf yang harusnya tidak wajib SAP, namun di master diberi target";
+                    wsOver.Cell(oRow, 19).Value = "Kaji ulang master: Ubah status menjadi Non-Target jika murni pelaksana operasional non-pengawas";
+
+                    wsOver.Cell(oRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsOver.Cell(oRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsOver.Cell(oRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsOver.Cell(oRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsOver.Cell(oRow, 8).Style.Font.Bold = true;
+                    wsOver.Cell(oRow, 8).Style.Font.FontColor = XLColor.FromHtml("#c2410c");
+
+                    for (int c = 9; c <= 17; c++)
+                    {
+                        wsOver.Cell(oRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    }
+                    wsOver.Cell(oRow, 9).Style.Font.Bold = true;
+                    wsOver.Cell(oRow, 13).Style.Font.Bold = true;
+                    if (actTotal > 0)
+                    {
+                        wsOver.Cell(oRow, 13).Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                    }
+
+                    var oRowRange = wsOver.Range(oRow, 1, oRow, overHeaders.Length);
+                    oRowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    oRowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#fed7aa");
+                    oRowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    oRowRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#fed7aa");
+                    if (oRow % 2 == 0) oRowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#fff7ed");
+
+                    oRow++;
+                }
+
+                wsOver.SheetView.FreezeRows(6);
+                wsOver.Columns().AdjustToContents();
+
+                using (var stream = new MemoryStream())
+                {
+                    workbook.SaveAs(stream);
+                    var content = stream.ToArray();
+                    string safeCompName = string.Concat((selectedCompany.NamaPerusahaan ?? "Company").Split(Path.GetInvalidFileNameChars())).Replace(" ", "_");
+                    string fileName = $"Audit_Anomali_Target_SAP_{safeCompName}_{monthName}_{selectedYear}.xlsx";
+                    return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+                }
+            }
+        }
+
+        [HttpGet]
         public async Task<IActionResult> ExportSapDetailToExcel(int? companyId = null, string mode = "dept", string? departmentName = null, int? year = null, int? month = null, string targetFilter = "target", int? parentId = null)
         {
             await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
@@ -5216,7 +5749,11 @@ namespace MBS_SAP.Controllers
                 allEmpsList.AddRange(emps);
             }
 
-            if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(targetFilter, "nontarget_pengawas", StringComparison.OrdinalIgnoreCase))
+            {
+                allEmpsList = allEmpsList.Where(e => (bool)e.isPotentialSupervisorNonSap).ToList();
+            }
+            else if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
             {
                 allEmpsList = allEmpsList.Where(e => (bool)e.isNonTarget && (bool)e.isActivelyReporting).ToList();
             }
@@ -5316,7 +5853,7 @@ namespace MBS_SAP.Controllers
                 };
             }
 
-            string targetFilterLabel = targetFilter == "nontarget_active" ? "Non-Target Aktif SAP" : (targetFilter == "all" ? "Semua Karyawan (+ Non-Target)" : (targetFilter == "nontarget" ? "Non-Target SAP" : "Hanya Target SAP"));
+            string targetFilterLabel = targetFilter == "nontarget_pengawas" ? "Pengawas Non-SAP (Target Nol)" : (targetFilter == "nontarget_active" ? "Non-Target Aktif SAP" : (targetFilter == "all" ? "Semua Karyawan (+ Non-Target)" : (targetFilter == "nontarget" ? "Non-Target SAP" : "Hanya Target SAP")));
 
             void StyleSheetHeader(IXLWorksheet ws, string title, int colCount, int dataCount)
             {
@@ -8218,6 +8755,7 @@ namespace MBS_SAP.Controllers
                 }
             }
 
+            var compQualitySummary = await _qualityService.GetMonthlyQualityStatsAsync(selectedYear, selectedMonth);
             var performanceList = new List<CompanyPerformanceViewModel>();
             int maxKuantitas = 1;
             int maxTargetAll = 1;
@@ -8283,7 +8821,9 @@ namespace MBS_SAP.Controllers
                         TotalClosedActionPlan = effectiveClosedAp,
                         CloseRate = closeRate,
                         AvgSpeedDays = avgSpeed,
-                        AvgQuality = 5.0 // Default quality standar
+                        AvgQuality = (compQualitySummary.CompStats.TryGetValue(cId, out var cQComp) && cQComp.TotalRated > 0)
+                            ? Math.Round((cQComp.ScoreKualitas / 100.0) * 5.0, 2)
+                            : 5.0
                     });
                 }
             }
@@ -9007,6 +9547,35 @@ namespace MBS_SAP.Controllers
         public double MtdObservasiRate { get; set; }
         public double MtdCoachingRate { get; set; }
         public double YtdCloseRate { get; set; } = 100.0;
+
+        // 4-Pillar PTS Scoring
+        public double ScoreCloseRate { get; set; }
+        public double ScoreKualitas { get; set; } = 100.0;
+        public double ScoreCapaian { get; set; }
+        public double ScoreSkalaBeban { get; set; }
+        public double PtsClose { get; set; }
+        public double PtsKualitas { get; set; }
+        public double PtsCapaian { get; set; }
+        public double PtsBeban { get; set; }
+        public double TotalScore { get; set; }
+        public int MaxTargetDept { get; set; }
+
+        // Raw counts for 6 programs
+        public int TotalActual { get; set; }
+        public int HazardActual { get; set; }
+        public int HazardTarget { get; set; }
+        public int InspeksiActual { get; set; }
+        public int InspeksiTarget { get; set; }
+        public int SafetyTalkActual { get; set; }
+        public int SafetyTalkTarget { get; set; }
+        public int ObservasiActual { get; set; }
+        public int ObservasiTarget { get; set; }
+        public int CoachingActual { get; set; }
+        public int CoachingTarget { get; set; }
+        public int P5mActual { get; set; }
+        public int P5mTarget { get; set; }
+        public int ApTotal { get; set; }
+        public int ApClosed { get; set; }
     }
 
     public class ComplianceEmployeeViewModel

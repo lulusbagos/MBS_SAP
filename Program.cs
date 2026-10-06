@@ -31,6 +31,8 @@ builder.Services.AddScoped<MBS_SAP.Services.ImageUploadService>();
 builder.Services.Configure<PostgresReplicationOptions>(builder.Configuration.GetSection("PostgresReplication"));
 builder.Services.AddScoped<PostgresReplicationService>();
 builder.Services.AddHostedService<PostgresReplicationScheduler>();
+builder.Services.AddScoped<MBS_SAP.Services.SapQualityService>();
+builder.Services.AddHostedService<MBS_SAP.Services.SapQualityAuditScheduler>();
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 
