@@ -233,7 +233,7 @@
                 @if (!string.IsNullOrEmpty(Model.GambarUrl))
                 {
                     var proxyUrl = Model.GambarUrl.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(Model.GambarUrl) : Model.GambarUrl;
-                    <img src="@proxyUrl" class="incident-popup-img" alt="@Model.Judul" />
+                    <img src="@proxyUrl" class="incident-popup-img" alt="@Model.Judul" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='none';" />
                     <div class="incident-popup-img-overlay"></div>
                 }
                 else

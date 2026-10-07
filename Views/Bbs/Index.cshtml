@@ -1,0 +1,1824 @@
+@model MBS_SAP.Models.BbsObservation
+@{
+    var obs = Model ?? new MBS_SAP.Models.BbsObservation();
+    bool isEdit = ViewBag.IsEditMode ?? false;
+    ViewData["Title"] = isEdit ? "Edit Observasi BBS - SAP" : "Observasi Perilaku (BBS) - SAP";
+    var areaList = ViewBag.AreaList as List<string> ?? new List<string>();
+    var companyList = ViewBag.CompanyList as List<MBS_SAP.Models.CompanyDropdownItem> ?? new List<MBS_SAP.Models.CompanyDropdownItem>();
+    var categories = ViewBag.Categories as List<MBS_SAP.Models.BbsCategory> ?? new List<MBS_SAP.Models.BbsCategory>();
+    var initialType = ViewBag.InitialType as string ?? (obs.ObservationType ?? "Rutin");
+
+    var myHistory = ViewBag.MyHistory as List<MBS_SAP.Models.BbsObservation> ?? new List<MBS_SAP.Models.BbsObservation>();
+    int myTotalCount = ViewBag.MyTotalCount ?? 0;
+    int mySafeCount = ViewBag.MySafeCount ?? 0;
+    int myAtRiskCount = ViewBag.MyAtRiskCount ?? 0;
+    int myCoachingCount = ViewBag.MyCoachingCount ?? 0;
+    double mySafeRate = ViewBag.MySafeRate ?? 100.0;
+}
+
+<style>
+    /* Radio Choice Card for Observation Type */
+    .bbs-type-card {
+        border: 2px solid var(--border-color);
+        border-radius: 16px;
+        background: var(--bg-card);
+        padding: 14px 18px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        user-select: none;
+    }
+    .bbs-type-card:hover {
+        border-color: var(--color-primary);
+        transform: translateY(-2px);
+    }
+    .bbs-type-card.selected {
+        border-color: var(--color-primary);
+        background: rgba(2, 132, 199, 0.08);
+        box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.25);
+    }
+    body.light-theme .bbs-type-card {
+        background: #ffffff;
+        box-shadow: 0 4px 16px rgba(149, 157, 165, 0.08);
+    }
+
+    /* Classification Toggle Cards */
+    .bbs-class-card {
+        border-radius: 16px;
+        padding: 14px 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        border: 2px solid var(--border-color);
+        background: var(--bg-card);
+        user-select: none;
+    }
+    .bbs-class-card.safe:hover, .bbs-class-card.safe.selected {
+        border-color: #10b981;
+        background: rgba(16, 185, 129, 0.12);
+        box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+    }
+    .bbs-class-card.at-risk:hover, .bbs-class-card.at-risk.selected {
+        border-color: #ef4444;
+        background: rgba(239, 68, 68, 0.12);
+        box-shadow: 0 0 16px rgba(239, 68, 68, 0.25);
+    }
+    body.light-theme .bbs-class-card {
+        background: #ffffff;
+    }
+
+    /* Risk Select Buttons matching standard Hazard form */
+    .risk-select-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    @@media (min-width: 768px) {
+        .risk-select-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+    .risk-select-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 11px 12px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 12.5px;
+        border: 2px solid var(--border-color);
+        background: var(--bg-card);
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+        text-align: center;
+    }
+    .risk-select-btn:hover {
+        transform: translateY(-2px);
+    }
+    .risk-select-btn.low.selected {
+        border-color: #10b981;
+        background: rgba(16, 185, 129, 0.18);
+        color: #10b981;
+        box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
+    }
+    .risk-select-btn.medium.selected {
+        border-color: #38bdf8;
+        background: rgba(56, 189, 248, 0.18);
+        color: #38bdf8;
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+    }
+    .risk-select-btn.high.selected {
+        border-color: #f97316;
+        background: rgba(249, 115, 22, 0.18);
+        color: #f97316;
+        box-shadow: 0 0 14px rgba(249, 115, 22, 0.25);
+    }
+    .risk-select-btn.extreme.selected {
+        border-color: #ef4444;
+        background: rgba(239, 68, 68, 0.18);
+        color: #ef4444;
+        box-shadow: 0 0 14px rgba(239, 68, 68, 0.25);
+    }
+    body.light-theme .risk-select-btn {
+        background: #ffffff;
+    }
+
+    /* Close buttons */
+    .btn-close-sap {
+        filter: invert(1) brightness(200%);
+        opacity: 0.8;
+    }
+    body.light-theme .btn-close-sap {
+        filter: none;
+        opacity: 0.6;
+    }
+
+    /* Section Subheadings inside form */
+    .bbs-form-section-title {
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--color-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 1.25rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    /* Behavior checklist items */
+    .behavior-check-item {
+        background: var(--bg-layout);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 10px 14px;
+        transition: all 0.2s ease;
+    }
+    .behavior-check-item:hover {
+        border-color: rgba(2, 132, 199, 0.3);
+    }
+    body.light-theme .behavior-check-item {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+    }
+
+    /* History Cards Styles */
+    .bbs-history-item {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 16px 18px;
+        transition: all 0.2s ease;
+    }
+    .bbs-history-item:hover {
+        border-color: rgba(2, 132, 199, 0.4);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    body.light-theme .bbs-history-item {
+        background: #ffffff;
+        box-shadow: 0 2px 10px rgba(149, 157, 165, 0.05);
+    }
+
+    .bbs-mini-kpi {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 8px 12px;
+        text-align: center;
+    }
+    body.light-theme .bbs-mini-kpi {
+        background: #ffffff;
+    }
+</style>
+
+<div class="animate-fade-in pb-4">
+
+    <!-- Header with Banner (Matching Safety Inspeksi, Hazard & Coaching) -->
+    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #0284c7, #38bdf8); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(2, 132, 199, 0.25);">
+            <!-- Decorative circles -->
+            <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+            
+            <i class="bi bi-shield-check text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px; letter-spacing: 0.5px;">OBSERVASI PERILAKU (BBS)</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Behavior Based Safety: Observasi perilaku aman &amp; berisiko di lingkungan kerja Anda.</p>
+        </div>
+    </div>
+
+    <!-- Alert Notifications -->
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-4" role="alert" style="background-color: rgba(34, 197, 94, 0.15); color: var(--color-green); border-radius: 12px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Hybrid Grid Layout: Form and List side-by-side on laptop, stacked on mobile -->
+    <div class="form-responsive-row">
+
+        <!-- ==================================================== -->
+        <!-- 1. FORMULIR INPUT OBSERVASI BBS (KOLOM KIRI)         -->
+        <!-- ==================================================== -->
+        <div class="card-sap border-primary-accent" style="overflow: visible;">
+            <form asp-controller="Bbs" asp-action="Create" method="post" id="bbsForm" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+
+                <!-- Hidden Fields -->
+                <input type="hidden" name="Id" id="inputObservationId" value="@obs.Id" />
+                <input type="hidden" name="ObservationType" id="inputObservationType" value="@initialType" />
+                <input type="hidden" name="Klasifikasi" id="inputKlasifikasi" value="@(string.IsNullOrEmpty(obs.Klasifikasi) ? "Berisiko" : obs.Klasifikasi)" />
+                <input type="hidden" name="TingkatRisiko" id="inputTingkatRisiko" value="@(string.IsNullOrEmpty(obs.TingkatRisiko) ? "Sedang" : obs.TingkatRisiko)" />
+                <input type="hidden" name="ResponsPekerja" id="inputResponsPekerja" value="@(string.IsNullOrEmpty(obs.ResponsPekerja) ? "Positif" : obs.ResponsPekerja)" />
+                <input type="hidden" name="ObservedNik" id="inputObservedNik" value="@obs.ObservedNik" />
+                <input type="hidden" name="ObservedNama" id="inputObservedNama" value="@obs.ObservedNama" />
+                <input type="hidden" name="ObservedJabatan" id="inputObservedJabatan" value="@obs.ObservedJabatan" />
+                <input type="hidden" name="ObservedDept" id="inputObservedDept" value="@obs.ObservedDept" />
+                <input type="hidden" name="ObservedPerusahaanId" id="inputObservedPerusahaanId" value="@obs.ObservedPerusahaanId" />
+                <input type="hidden" name="ObservedPerusahaan" id="inputObservedPerusahaan" value="@obs.ObservedPerusahaan" />
+                <input type="hidden" name="CategoryName" id="inputCategoryName" value="@obs.CategoryName" />
+                <input type="hidden" name="TopicName" id="inputTopicName" value="@obs.TopicName" />
+
+                <!-- Card Header -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 text-white" style="font-weight: 700;" id="formTitle">
+                        <i class="bi bi-person-check-fill me-2" style="color: var(--color-primary);"></i>
+                        @(isEdit ? $"Edit Observasi: {obs.ObservationNo}" : "Form Input Observasi Perilaku (BBS)")
+                    </h5>
+                    @if (isEdit)
+                    {
+                        <a asp-controller="Bbs" asp-action="Index" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px;">
+                            <i class="bi bi-x-circle me-1"></i> Batal Edit
+                        </a>
+                    }
+                </div>
+
+                <!-- PILIHAN TIPE OBSERVASI -->
+                <div class="row g-2 g-md-3 mb-3">
+                    <div class="col-12 col-md-6">
+                        <div class="bbs-type-card @(initialType == "Rutin" ? "selected" : "")" id="cardTypeRutin" onclick="setObservationType('Rutin')">
+                            <div class="d-flex align-items-center gap-2.5">
+                                <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(2, 132, 199, 0.15); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                                    <i class="bi bi-journal-check"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0" style="color: var(--text-main); font-size: 13px;">Observasi Rutin</h6>
+                                    <small class="text-muted" style="font-size: 11px;">Pemantauan perilaku umum &amp; APD harian</small>
+                                </div>
+                            </div>
+                            <i class="bi bi-check-circle-fill text-primary fs-5 type-check-icon" id="checkIconRutin" style="display: @(initialType == "Rutin" ? "block" : "none");"></i>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="bbs-type-card @(initialType == "SpecialCase" ? "selected" : "")" id="cardTypeSpecial" onclick="setObservationType('SpecialCase')">
+                            <div class="d-flex align-items-center gap-2.5">
+                                <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                                    <i class="bi bi-lightning-charge-fill"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0" style="color: var(--text-main); font-size: 13px;">Special Case</h6>
+                                    <small class="text-muted" style="font-size: 11px;">Aktivitas berisiko tinggi / kasus khusus</small>
+                                </div>
+                            </div>
+                            <i class="bi bi-check-circle-fill text-warning fs-5 type-check-icon" id="checkIconSpecial" style="display: @(initialType == "SpecialCase" ? "block" : "none");"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1. WAKTU & LOKASI OBSERVASI -->
+                <div class="bbs-form-section-title">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <span>1. Waktu &amp; Lokasi Observasi</span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="tanggal">Tanggal Observasi <span class="text-danger">*</span></label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-calendar-event-fill input-sap-icon"></i>
+                            <input type="date" id="tanggal" name="Tanggal" class="input-sap" value="@obs.Tanggal.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                    </div>
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="waktuStr">Waktu Observasi <span class="text-danger">*</span></label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-clock-fill input-sap-icon"></i>
+                            <input type="time" id="waktuStr" name="waktuStr" class="input-sap" value="@obs.Waktu" required />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Area Utama & Benchmark (Standard UI matching Hazard/Observation) -->
+                <div class="row">
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="areaSearch">Area Utama <span class="text-danger">*</span></label>
+                        <div class="position-relative mb-0">
+                            <div class="input-sap-wrapper mb-0">
+                                <i class="bi bi-geo-alt-fill input-sap-icon"></i>
+                                <input type="text" id="areaSearch" class="input-sap text-uppercase" placeholder="Ketik untuk mencari area..." autocomplete="off" style="padding-right: 36px;" value="@obs.Area" required />
+                                <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleAreaDropdown"></i>
+                            </div>
+                            <input type="hidden" id="Area" name="Area" value="@obs.Area" required />
+                            <div id="areaDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="benchmarkSearch">Detail Lokasi / Benchmark</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="position-relative flex-grow-1 mb-0">
+                                <div class="input-sap-wrapper mb-0">
+                                    <i class="bi bi-compass-fill input-sap-icon"></i>
+                                    <input type="text" id="benchmarkSearch" class="input-sap text-uppercase" placeholder="Pilih Area Utama dulu..." autocomplete="off" style="padding-right: 36px;" value="@obs.DetilLokasi" disabled />
+                                    <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleBenchmarkDropdown"></i>
+                                </div>
+                                <input type="hidden" id="DetilLokasi" name="DetilLokasi" value="@obs.DetilLokasi" />
+                                <div id="benchmarkDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-primary shadow-sm" style="height: 46px; border-radius: 12px; padding: 0 16px; background-color: var(--color-primary); border: none;" onclick="$('#addBenchmarkModal').modal('show')" title="Tambah Benchmark Baru" id="btnAddBenchmark" disabled>
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lokasi Spesifik + GPS -->
+                <div class="form-group-sap">
+                    <label class="form-label-sap" for="Lokasi">Lokasi Spesifik / Koordinat GPS <span class="text-danger">*</span></label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-geo-fill input-sap-icon"></i>
+                        <input type="text" id="Lokasi" name="Site" class="input-sap" placeholder="Masukkan lokasi spesifik / Klik ikon GPS di kanan..." value="@obs.Site" style="padding-right: 44px;" required />
+                        <button type="button" class="btn btn-link p-0 position-absolute" id="btnGetLocation" style="right: 14px; top: 12px; color: var(--color-primary);" onclick="getLocation()" title="Ambil Lokasi Aktual GPS">
+                            <i class="bi bi-crosshair fs-5"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted" style="font-size: 11px;">Klik ikon GPS untuk mengambil koordinat aktual perangkat Anda otomatis atau ketik lokasi secara manual.</small>
+                </div>
+
+                <!-- 2. PEKERJA YANG DIOBSERVASI -->
+                <div class="bbs-form-section-title">
+                    <i class="bi bi-person-bounding-box"></i>
+                    <span>2. Pekerja yang Diobservasi</span>
+                </div>
+
+                <div class="row">
+                    <div class="col-12 col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="selectObservedCompany">Perusahaan / Kontraktor</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-building input-sap-icon"></i>
+                            <select id="selectObservedCompany" class="input-sap" onchange="syncCompanyChange(this)">
+                                <option value="">-- Pilih Perusahaan --</option>
+                                @foreach (var c in companyList)
+                                {
+                                    <option value="@c.Id" data-name="@c.Nama" selected="@(c.Id == obs.ObservedPerusahaanId)">@c.Nama</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="searchWorkerInput">Cari Pekerja (NIK atau Nama)</label>
+                        <div class="position-relative mb-0">
+                            <div class="input-sap-wrapper mb-0">
+                                <i class="bi bi-search input-sap-icon"></i>
+                                <input type="text" id="searchWorkerInput" class="input-sap" placeholder="Ketik minimal 2 huruf nama atau NIK..." autocomplete="off" oninput="searchWorkerDebounced(this.value)" />
+                            </div>
+                            <div id="workerSearchResults" class="list-group position-absolute w-100 shadow-lg d-none" style="top: 105%; z-index: 1050; max-height: 240px; overflow-y: auto; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-color);"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selected Worker Chip -->
+                <div id="selectedWorkerCard" class="@(string.IsNullOrEmpty(obs.ObservedNama) ? "d-none" : "d-flex") align-items-center justify-content-between p-2.5 rounded-3 mb-3" style="background: rgba(2, 132, 199, 0.1); border: 1px solid rgba(2, 132, 199, 0.3);">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div style="width: 38px; height: 38px; border-radius: 50%; background: var(--color-primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 15px;" id="workerAvatarText">
+                            @((!string.IsNullOrEmpty(obs.ObservedNama)) ? obs.ObservedNama.Substring(0, 1).ToUpper() : "W")
+                        </div>
+                        <div>
+                            <div class="fw-bold" style="font-size: 13.5px; color: var(--text-main);" id="workerDisplayNama">@obs.ObservedNama</div>
+                            <div class="text-muted" style="font-size: 11px;" id="workerDisplaySub">NIK: @obs.ObservedNik &bull; @obs.ObservedJabatan &bull; @obs.ObservedPerusahaan</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearSelectedWorker()" style="border-radius: 8px; font-size: 11px;">
+                        <i class="bi bi-x-lg me-1"></i>Hapus
+                    </button>
+                </div>
+
+                <!-- 3. KATEGORI & BUTIR PERILAKU -->
+                <div class="bbs-form-section-title">
+                    <i class="bi bi-grid-fill"></i>
+                    <span>3. Kategori &amp; Butir Perilaku</span>
+                </div>
+
+                <div class="row">
+                    <div class="col-12 col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="selectCategory">Kategori BBS <span class="text-danger">*</span></label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-tag-fill input-sap-icon"></i>
+                            <select name="CategoryId" id="selectCategory" class="input-sap" required onchange="onCategoryChanged(this.value)">
+                                <option value="">-- Pilih Kategori BBS --</option>
+                                @foreach (var cat in categories)
+                                {
+                                    <option value="@cat.Id" data-name="@cat.Name" selected="@(cat.Id == obs.CategoryId)">@cat.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6 form-group-sap" id="topicFormGroup" style="display: @(initialType == "SpecialCase" ? "block" : "none");">
+                        <label class="form-label-sap" for="selectTopic">Sub-Topik Special Case <span class="text-danger">*</span></label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-lightning-charge-fill input-sap-icon text-warning"></i>
+                            <select name="TopicId" id="selectTopic" class="input-sap" onchange="onTopicChanged(this.value)">
+                                <option value="">-- Pilih Sub-Topik --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Checklist Butir Perilaku yang Diamati -->
+                <div class="p-3 rounded-4 mb-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <label class="form-label-sap mb-0" style="font-size: 12.5px;">
+                            <i class="bi bi-card-checklist me-1 text-primary"></i>Butir Perilaku yang Diamati
+                        </label>
+                        <small class="text-muted" id="behaviorCountBadge">Pilih kategori untuk memuat butir perilaku</small>
+                    </div>
+
+                    <div id="behaviorItemsContainer" class="d-flex flex-column gap-2 my-2">
+                        <div class="text-muted text-center py-3" style="font-size: 12px;">
+                            <i class="bi bi-arrow-up-circle me-1"></i> Silakan pilih Kategori BBS di atas untuk menampilkan daftar perilaku.
+                        </div>
+                    </div>
+
+                    <div class="mt-3 pt-2 border-top" style="border-color: var(--border-color) !important;">
+                        <label class="form-label-sap mb-1" style="font-size: 11.5px;">Perilaku Spesifik Lain (Jika tidak ada pada daftar di atas)</label>
+                        <input type="text" name="CustomBehavior" id="customBehaviorInput" class="input-sap" placeholder="Tuliskan perilaku spesifik lain..." value="@obs.CustomBehavior" />
+                    </div>
+                </div>
+
+                <!-- 4. KLASIFIKASI & TINGKAT RISIKO -->
+                <div class="bbs-form-section-title">
+                    <i class="bi bi-shield-check"></i>
+                    <span>4. Klasifikasi &amp; Tingkat Risiko</span>
+                </div>
+
+                <!-- Toggle Aman vs Berisiko -->
+                <label class="form-label-sap mb-1.5">Klasifikasi Temuan Perilaku <span class="text-danger">*</span></label>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="bbs-class-card safe @(obs.Klasifikasi == "Aman" ? "selected" : "")" id="btnClassSafe" onclick="selectKlasifikasi('Aman')">
+                            <div style="font-size: 26px;" class="mb-1">👍</div>
+                            <h6 class="fw-bold mb-0 text-success" style="font-size: 13.5px;">Perilaku Aman</h6>
+                            <small class="text-muted" style="font-size: 10.5px;">Safe Behavior</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="bbs-class-card at-risk @(obs.Klasifikasi != "Aman" ? "selected" : "")" id="btnClassAtRisk" onclick="selectKlasifikasi('Berisiko')">
+                            <div style="font-size: 26px;" class="mb-1">👎</div>
+                            <h6 class="fw-bold mb-0 text-danger" style="font-size: 13.5px;">Perilaku Berisiko</h6>
+                            <small class="text-muted" style="font-size: 10.5px;">At-Risk Behavior</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tingkat Risiko (Rendah / Sedang / Tinggi / Ekstrim) -->
+                <div class="form-group-sap mb-3">
+                    <label class="form-label-sap mb-1.5">Tingkat Risiko Konsekuensi <span class="text-danger">*</span></label>
+                    <div class="risk-select-grid">
+                        <div class="risk-select-btn low @(obs.TingkatRisiko == "Rendah" ? "selected" : "")" onclick="selectRiskLevel('Rendah')">
+                            <i class="bi bi-shield-check"></i>
+                            <span>RENDAH</span>
+                        </div>
+                        <div class="risk-select-btn medium @(string.IsNullOrEmpty(obs.TingkatRisiko) || obs.TingkatRisiko == "Sedang" ? "selected" : "")" onclick="selectRiskLevel('Sedang')">
+                            <i class="bi bi-shield-exclamation"></i>
+                            <span>SEDANG</span>
+                        </div>
+                        <div class="risk-select-btn high @(obs.TingkatRisiko == "Tinggi" ? "selected" : "")" onclick="selectRiskLevel('Tinggi')">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <span>TINGGI</span>
+                        </div>
+                        <div class="risk-select-btn extreme @(obs.TingkatRisiko == "Sangat Tinggi" || obs.TingkatRisiko == "Ekstrim" ? "selected" : "")" onclick="selectRiskLevel('Sangat Tinggi')">
+                            <i class="bi bi-exclamation-octagon-fill"></i>
+                            <span>SANGAT TINGGI</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kondisi Jalan & Traffic -->
+                <div class="row">
+                    <div class="col-12 col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="kondisiJalanSelect">Kondisi Jalan / Lingkungan</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-signpost-split-fill input-sap-icon"></i>
+                            <select name="KondisiJalan" id="kondisiJalanSelect" class="input-sap">
+                                <option value="Normal / Kering" selected="@(obs.KondisiJalan == "Normal / Kering")">Normal / Kering</option>
+                                <option value="Basah / Licin" selected="@(obs.KondisiJalan == "Basah / Licin")">Basah / Licin</option>
+                                <option value="Berdebu / Kabut" selected="@(obs.KondisiJalan == "Berdebu / Kabut")">Berdebu / Kabut (Visibilitas Rendah)</option>
+                                <option value="Bergelombang / Rusak" selected="@(obs.KondisiJalan == "Bergelombang / Rusak")">Bergelombang / Rusak</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6 form-group-sap">
+                        <label class="form-label-sap" for="kondisiKerjaSelect">Kondisi Traffic / Rekan Kerja</label>
+                        <div class="input-sap-wrapper">
+                            <i class="bi bi-people-fill input-sap-icon"></i>
+                            <select name="KondisiKerja" id="kondisiKerjaSelect" class="input-sap">
+                                <option value="Lancar" selected="@(obs.KondisiKerja == "Lancar")">Lancar / Normal</option>
+                                <option value="Sedang" selected="@(string.IsNullOrEmpty(obs.KondisiKerja) || obs.KondisiKerja == "Sedang")">Sedang</option>
+                                <option value="Padat / Ramai" selected="@(obs.KondisiKerja == "Padat / Ramai")">Padat / Ramai</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Faktor Pemicu -->
+                <div class="mb-3">
+                    <label class="form-label-sap mb-1.5">Faktor Pemicu (Bisa Pilih Lebih Dari 1):</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        @{
+                            var existingTriggers = (obs.FaktorPemicu ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                        }
+                        @foreach (var trigger in new[] {
+                            "Terburu-buru / Mengejar target",
+                            "Kebiasaan",
+                            "Kurang kesadaran",
+                            "Pengawasan kurang",
+                            "Kelelahan (Fatigue)",
+                            "Kondisi jalan / lingkungan",
+                            "Cuaca / Visibilitas",
+                            "Lainnya"
+                        })
+                        {
+                            <label class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1.5" style="border-radius: 99px; font-size: 11.5px; cursor: pointer;">
+                                <input type="checkbox" name="triggers" value="@trigger" class="form-check-input mt-0" checked="@(existingTriggers.Contains(trigger))" />
+                                <span>@trigger</span>
+                            </label>
+                        }
+                    </div>
+                </div>
+
+                <!-- Deskripsi Singkat Situasi -->
+                <div class="form-group-sap mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label-sap mb-0" for="inputDeskripsi">Deskripsi Singkat / Situasi</label>
+                        <span class="text-muted" style="font-size: 11px;"><span id="deskripsiCharCount">@((obs.Deskripsi ?? "").Length)</span>/300</span>
+                    </div>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-card-text input-sap-icon" style="top: 14px; align-items: flex-start;"></i>
+                        <textarea name="Deskripsi" id="inputDeskripsi" class="input-sap" rows="3" maxlength="300" placeholder="Tuliskan apa yang terjadi, perilaku pekerja, dan kondisi lingkungan saat itu..." oninput="document.getElementById('deskripsiCharCount').textContent = this.value.length">@obs.Deskripsi</textarea>
+                    </div>
+                </div>
+
+                <!-- 5. TINDAKAN LANGSUNG & COACHING -->
+                <div class="bbs-form-section-title">
+                    <i class="bi bi-chat-quote-fill"></i>
+                    <span>5. Tindakan Langsung &amp; Intervensi Coaching</span>
+                </div>
+
+                <!-- Respons Pekerja -->
+                <div class="mb-3">
+                    <label class="form-label-sap mb-1.5">Respons Pekerja yang Diobservasi <span class="text-danger">*</span></label>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <div class="bbs-type-card text-center justify-content-center p-2.5 @(string.IsNullOrEmpty(obs.ResponsPekerja) || obs.ResponsPekerja == "Positif" ? "selected" : "")" id="respPositif" onclick="selectRespons('Positif')">
+                                <span class="fw-bold text-success" style="font-size: 12.5px;"><i class="bi bi-emoji-smile-fill me-1"></i>Positif</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="bbs-type-card text-center justify-content-center p-2.5 @(obs.ResponsPekerja == "Netral" ? "selected" : "")" id="respNetral" onclick="selectRespons('Netral')">
+                                <span class="fw-bold text-warning" style="font-size: 12.5px;"><i class="bi bi-emoji-neutral-fill me-1"></i>Netral</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="bbs-type-card text-center justify-content-center p-2.5 @(obs.ResponsPekerja == "Resisten" ? "selected" : "")" id="respResisten" onclick="selectRespons('Resisten')">
+                                <span class="fw-bold text-danger" style="font-size: 12.5px;"><i class="bi bi-emoji-frown-fill me-1"></i>Resisten</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tindakan Langsung -->
+                <div class="mb-3">
+                    <label class="form-label-sap mb-1.5">Tindakan Langsung yang Dilakukan:</label>
+                    <div class="d-flex flex-column gap-2">
+                        @{
+                            var existingActions = (obs.TindakanDilakukan ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                        }
+                        @foreach (var action in new[] {
+                            "Memberikan apresiasi atas perilaku aman",
+                            "Melakukan diskusi / coaching singkat di lokasi",
+                            "Memberikan teguran lisan secara persuasif",
+                            "Menghentikan aktivitas / unit sementara (Stop Work)",
+                            "Melaporkan ke pengawas / supervisor",
+                            "Eskalasi ke tim Safety / HSE"
+                        })
+                        {
+                            <label class="p-2 rounded-3 d-flex align-items-center gap-2" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); cursor: pointer;">
+                                <input type="checkbox" name="actions" value="@action" class="form-check-input mt-0" checked="@(existingActions.Contains(action))" />
+                                <span style="font-size: 12.5px; color: var(--text-main);">@action</span>
+                            </label>
+                        }
+                    </div>
+                </div>
+
+                <!-- Catatan Coaching -->
+                <div class="form-group-sap mb-3">
+                    <label class="form-label-sap" for="inputCatatanCoaching">Catatan Coaching &amp; Komitmen Pekerja</label>
+                    <div class="input-sap-wrapper">
+                        <i class="bi bi-journal-text input-sap-icon" style="top: 14px; align-items: flex-start;"></i>
+                        <textarea name="CatatanCoaching" id="inputCatatanCoaching" class="input-sap" rows="3" placeholder="Tuliskan poin coaching yang didiskusikan dan komitmen pekerja...">@obs.CatatanCoaching</textarea>
+                    </div>
+                </div>
+
+                <!-- 6. FOTO BUKTI OBSERVASI (Standard SAP .upload-card) -->
+                <div class="bbs-form-section-title">
+                    <i class="bi bi-camera-fill"></i>
+                    <span>6. Bukti Foto Observasi</span>
+                </div>
+
+                <div class="form-group-sap mb-4">
+                    <label class="form-label-sap">Foto Bukti Observasi <span class="text-muted" style="font-size: 11px; font-weight: normal;">(Opsional, Maks. 15MB)</span></label>
+                    <input type="file" id="fotoInput" name="foto" accept="image/*" class="d-none" onchange="previewBbsImage(this)" />
+                    <div class="upload-card" onclick="document.getElementById('fotoInput').click()">
+                        <div id="uploadPlaceholder" class="@(!string.IsNullOrEmpty(obs.FotoUrl) ? "d-none" : "")">
+                            <i class="bi bi-camera-fill"></i>
+                            <h6 class="mb-1 text-white" style="font-weight: 700; font-size: 14px;">Ambil Foto / Pilih File</h6>
+                            <span class="text-muted" style="font-size: 11px;">Mendukung input kamera langsung atau galeri file</span>
+                        </div>
+                        <div id="imagePreviewContainer" class="@(string.IsNullOrEmpty(obs.FotoUrl) ? "d-none" : "") position-relative">
+                            <img id="previewImg" src="@(obs.FotoUrl ?? "")" alt="Preview Foto" style="max-width: 100%; max-height: 180px; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border-color); object-fit: contain;" />
+                            <div class="d-flex justify-content-center gap-3">
+                                <div style="font-size: 12px; color: var(--color-primary); font-weight: 600;"><i class="bi bi-arrow-repeat me-1"></i>Ganti Gambar</div>
+                                <div id="btnRemovePhoto" style="font-size: 12px; color: var(--color-red); font-weight: 600;" onclick="removeSelectedPhoto(event)"><i class="bi bi-trash3-fill me-1"></i>Hapus Foto</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOMBOL SIMPAN OBSERVASI -->
+                <button type="submit" id="btnSubmitForm" class="btn btn-sap-primary w-100 py-3 shadow-sm" style="font-size: 15px; font-weight: 700; letter-spacing: 0.3px; border-radius: 14px;">
+                    <i class="bi bi-send-fill me-2" id="btnSubmitIcon"></i>
+                    <span id="btnSubmitText">@(isEdit ? "SIMPAN PERUBAHAN OBSERVASI BBS" : "KIRIM LAPORAN OBSERVASI BBS")</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- 2. RIWAYAT OBSERVASI SAYA (KOLOM KANAN DI LAPTOP)    -->
+        <!-- ==================================================== -->
+        <div>
+            <!-- Header Kolom Riwayat -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="text-white mb-0" style="font-weight: 700;">
+                    <i class="bi bi-clock-history me-2" style="color: var(--color-primary);"></i>Log Observasi BBS Saya
+                </h6>
+                <span class="badge bg-primary" style="font-size: 11px; border-radius: 6px;">@myTotalCount Data</span>
+            </div>
+
+            <!-- Mini KPI Summary Pelapor -->
+            <div class="row g-2 mb-3">
+                <div class="col-6 col-sm-3">
+                    <div class="bbs-mini-kpi">
+                        <div class="text-muted" style="font-size: 10.5px;">Total</div>
+                        <div class="fw-bold text-white fs-6">@myTotalCount</div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="bbs-mini-kpi">
+                        <div class="text-muted" style="font-size: 10.5px;">Aman</div>
+                        <div class="fw-bold text-success fs-6">@mySafeCount</div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="bbs-mini-kpi">
+                        <div class="text-muted" style="font-size: 10.5px;">Berisiko</div>
+                        <div class="fw-bold text-danger fs-6">@myAtRiskCount</div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="bbs-mini-kpi">
+                        <div class="text-muted" style="font-size: 10.5px;">Coaching</div>
+                        <div class="fw-bold text-info fs-6">@myCoachingCount</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Filter Bar -->
+            <div class="input-sap-wrapper mb-3">
+                <i class="bi bi-search input-sap-icon" style="top: 14px;"></i>
+                <input type="text" id="historySearchInput" class="input-sap" placeholder="Cari nomor, lokasi, pekerja, kategori..." style="padding-left: 42px; font-size: 12.5px;" />
+            </div>
+
+            <!-- Daftar Kartu Riwayat Pengguna -->
+            @if (myHistory.Count == 0)
+            {
+                <div class="card-sap text-center py-5 text-muted border-0" style="background: rgba(255,255,255,0.02);">
+                    <i class="bi bi-inbox-fill d-block mb-2" style="font-size: 36px; opacity: 0.5;"></i>
+                    <h6 class="text-white fw-bold mb-1">Belum Ada Riwayat Observasi</h6>
+                    <p class="text-muted mb-0" style="font-size: 11.5px;">Observasi yang Anda input akan tampil otomatis di sini.</p>
+                </div>
+            }
+            else
+            {
+                <div style="display: flex; flex-direction: column; gap: 12px; max-height: 800px; overflow-y: auto; padding-right: 4px;" id="historyListContainer">
+                    @foreach (var item in myHistory)
+                    {
+                        var isSafe = item.Klasifikasi == "Aman";
+                        <div class="bbs-history-item">
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                    <span class="badge" style="background: rgba(2, 132, 199, 0.15); color: var(--color-primary); font-size: 11px; font-weight: 700; border-radius: 6px;">
+                                        @item.ObservationNo
+                                    </span>
+                                    <span class="badge" style="background: @(isSafe ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)"); color: @(isSafe ? "#10b981" : "#ef4444"); font-size: 11px; font-weight: 700; border-radius: 6px;">
+                                        <i class="bi @(isSafe ? "bi-hand-thumbs-up-fill" : "bi-hand-thumbs-down-fill") me-1"></i>@(isSafe ? "Aman" : "Berisiko")
+                                    </span>
+                                    <span class="badge bg-secondary" style="font-size: 10px; border-radius: 6px;">
+                                        @item.ObservationType
+                                    </span>
+                                </div>
+
+                                <div class="text-muted" style="font-size: 11px; white-space: nowrap;">
+                                    <i class="bi bi-calendar3 me-1"></i>@item.Tanggal.ToString("dd MMM yyyy")
+                                </div>
+                            </div>
+
+                            <div class="mb-2" style="font-size: 12.5px;">
+                                <div class="d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-geo-alt-fill text-primary" style="font-size: 13px;"></i>
+                                    <strong class="text-white">@item.Area</strong>
+                                    @if (!string.IsNullOrEmpty(item.DetilLokasi))
+                                    {
+                                        <span class="text-muted">&bull; @item.DetilLokasi</span>
+                                    }
+                                </div>
+                                <div class="text-muted ps-3" style="font-size: 11px;">@item.Site</div>
+                            </div>
+
+                            <div class="mb-2" style="font-size: 12px;">
+                                <div class="d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-person-fill text-info" style="font-size: 13px;"></i>
+                                    <span class="text-muted">Pekerja:</span>
+                                    <strong class="text-white">@(string.IsNullOrEmpty(item.ObservedNama) ? "-" : item.ObservedNama)</strong>
+                                    @if (!string.IsNullOrEmpty(item.ObservedPerusahaan))
+                                    {
+                                        <span class="text-muted">(@item.ObservedPerusahaan)</span>
+                                    }
+                                </div>
+                                <div class="text-muted ps-3" style="font-size: 11px;">Kategori: <strong class="text-white">@item.CategoryName</strong></div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(item.Deskripsi))
+                            {
+                                <div class="p-2 rounded mb-2 text-muted" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); font-size: 11.5px;">
+                                    <i class="bi bi-chat-left-quote me-1 text-primary"></i>@item.Deskripsi
+                                </div>
+                            }
+
+                            <!-- Aksi Item: Detail, Share PDF, Edit, Hapus -->
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top flex-wrap gap-2" style="border-color: var(--border-color) !important;">
+                                <div class="d-flex align-items-center gap-1.5">
+                                    <span class="text-muted" style="font-size: 10.5px;">Risiko:</span>
+                                    <span class="badge @(item.TingkatRisiko == "Rendah" ? "bg-success" : item.TingkatRisiko == "Sedang" ? "bg-info" : "bg-danger")" style="font-size: 10px; border-radius: 4px;">
+                                        @(item.TingkatRisiko ?? "Sedang")
+                                    </span>
+                                </div>
+
+                                <div class="d-flex align-items-center gap-1.5">
+                                    <button type="button" class="btn btn-sm btn-outline-info" style="border-radius: 8px; font-size: 11px; padding: 4px 8px;" onclick="viewObservationDetail(@item.Id)">
+                                        <i class="bi bi-eye me-1"></i>Detail
+                                    </button>
+
+                                    <!-- Tombol Share / Cetak PDF -->
+                                    <a href="/Bbs/PrintPdf/@item.Id" target="_blank" class="btn btn-sm btn-outline-danger fw-bold d-inline-flex align-items-center gap-1" style="border-radius: 8px; font-size: 11px; padding: 4px 8px;">
+                                        <i class="bi bi-file-earmark-pdf-fill"></i>
+                                        <span>PDF</span>
+                                    </a>
+
+                                    <a asp-controller="Bbs" asp-action="Index" asp-route-editId="@item.Id" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px; font-size: 11px; padding: 4px 8px;">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+
+                                    <form asp-controller="Bbs" asp-action="Delete" asp-route-id="@item.Id" method="post" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus observasi @item.ObservationNo?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius: 8px; font-size: 11px; padding: 4px 8px;">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Tambah Benchmark Baru (Standard SAP) -->
+<div class="modal fade" id="addBenchmarkModal" tabindex="-1" aria-labelledby="addBenchmarkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-white fw-bold" id="addBenchmarkModalLabel"><i class="bi bi-plus-square-fill text-primary me-2"></i>Tambah Benchmark Baru</h5>
+                <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <div class="alert alert-info py-2" style="font-size: 12px; border-radius: 8px; background: rgba(2, 132, 199, 0.1); border-color: rgba(2, 132, 199, 0.3); color: var(--color-primary);">
+                    <i class="bi bi-info-circle me-1"></i> Benchmark yang Anda tambahkan akan tersimpan untuk area yang sedang dipilih.
+                </div>
+                <div class="form-group-sap mb-3">
+                    <label class="form-label-sap">Area Utama</label>
+                    <input type="text" id="newBenchmarkArea" class="input-sap" disabled />
+                </div>
+                <div class="form-group-sap mb-3">
+                    <label class="form-label-sap">Nama Benchmark / Detail Lokasi <span class="text-danger">*</span></label>
+                    <input type="text" id="newBenchmarkName" class="input-sap text-uppercase" placeholder="Misal: KM 14 HAULING ROAD, BAY 3" />
+                    <div id="addBenchmarkError" class="text-danger mt-2" style="font-size: 12px; display: none;"></div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="text-white fw-bold mb-2" style="font-size: 13px;"><i class="bi bi-list-task me-1 text-primary"></i>Benchmark Terdaftar di Area Ini</h6>
+                    <div id="existingBenchmarksList" class="list-group" style="max-height: 180px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.15);">
+                        <div class="p-3 text-center text-muted" style="font-size: 12px;">Memuat daftar benchmark...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 10px;">Tutup</button>
+                <button type="button" class="btn btn-primary" id="btnSaveBenchmark" onclick="saveNewBenchmark()" style="border-radius: 10px; font-weight: 600;">Simpan Benchmark</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detail Observasi BBS -->
+<div class="modal fade" id="obsDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; color: var(--text-main);">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <span class="badge mb-1" id="modalBadgeStatus" style="font-size: 11px;">Status</span>
+                    <h5 class="modal-title fw-bold text-white mb-0" id="modalObsNo">BBS-XXXX</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalDetailBody">
+                <div class="text-center py-4 text-muted">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Memuat data detail observasi...
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 10px;">Tutup</button>
+                <a href="#" id="modalBtnPrintPdf" target="_blank" class="btn btn-danger fw-bold d-inline-flex align-items-center gap-1.5" style="border-radius: 10px;">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                    <span>Cetak / Share PDF</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    // State variables
+    let currentObsType = '@initialType';
+    let currentKlasifikasi = '@(string.IsNullOrEmpty(obs.Klasifikasi) ? "Berisiko" : obs.Klasifikasi)';
+    let currentRiskLevel = '@(string.IsNullOrEmpty(obs.TingkatRisiko) ? "Sedang" : obs.TingkatRisiko)';
+    let currentRespons = '@(string.IsNullOrEmpty(obs.ResponsPekerja) ? "Positif" : obs.ResponsPekerja)';
+    let workerSearchTimeout = null;
+    let globalBenchmarksList = [];
+
+    // Master Area list from server or fallback
+    var serverAreas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize((areaList ?? new List<string>()).Select(a => new { namaArea = a })));
+
+    var defaultStandardAreas = [
+        { namaArea: "Port/Jetty - Indexim" },
+        { namaArea: "CPP-33 & ROM - Indexim" },
+        { namaArea: "Kantor - Indexim" },
+        { namaArea: "Mess & Fasilitas - Indexim" },
+        { namaArea: "Settling Pond - Indexim" },
+        { namaArea: "Power Plant & Workshop - Indexim" },
+        { namaArea: "PIT - Unggul" },
+        { namaArea: "Road PIT Overburden - Unggul" },
+        { namaArea: "Kantor - Unggul" },
+        { namaArea: "Mess & Fasilitas - Unggul" },
+        { namaArea: "Settling Pond - Unggul" },
+        { namaArea: "PIT - KPP" },
+        { namaArea: "Road PIT Overburden - KPP" },
+        { namaArea: "Kantor - KPP" },
+        { namaArea: "Mess & Fasilitas - KPP" },
+        { namaArea: "Settling Pond - KPP" },
+        { namaArea: "PIT - MGE" },
+        { namaArea: "Road PIT Overburden - MGE" },
+        { namaArea: "Kantor - MGE" },
+        { namaArea: "Mess & Fasilitas - MGE" },
+        { namaArea: "Settling Pond - MGE" },
+        { namaArea: "Magazine/Gudang Handak" },
+        { namaArea: "Road Coal Mining (Jl. Anggrek)" },
+        { namaArea: "Road Coal Mining (Jl. Mawar)" },
+        { namaArea: "Road Coal Hauling (Jl. Nusantara)" },
+        { namaArea: "Other Area" }
+    ];
+
+    var areaMap = new Map();
+    defaultStandardAreas.forEach(function(a) {
+        if (a.namaArea) areaMap.set(a.namaArea.trim().toUpperCase(), a.namaArea.trim());
+    });
+    serverAreas.forEach(function(a) {
+        if (a.namaArea) areaMap.set(a.namaArea.trim().toUpperCase(), a.namaArea.trim());
+    });
+    var globalAreasList = Array.from(areaMap.values()).map(function(name) {
+        return { namaArea: name };
+    });
+
+    // 1. Tipe Observasi Toggle
+    function setObservationType(type) {
+        currentObsType = type;
+        document.getElementById('inputObservationType').value = type;
+
+        const cardRutin = document.getElementById('cardTypeRutin');
+        const cardSpecial = document.getElementById('cardTypeSpecial');
+        const iconRutin = document.getElementById('checkIconRutin');
+        const iconSpecial = document.getElementById('checkIconSpecial');
+        const topicGroup = document.getElementById('topicFormGroup');
+
+        if (type === 'Rutin') {
+            cardRutin.classList.add('selected');
+            cardSpecial.classList.remove('selected');
+            iconRutin.style.display = 'block';
+            iconSpecial.style.display = 'none';
+            topicGroup.style.display = 'none';
+            document.getElementById('inputTopicName').value = '';
+            document.getElementById('selectTopic').value = '';
+        } else {
+            cardSpecial.classList.add('selected');
+            cardRutin.classList.remove('selected');
+            iconSpecial.style.display = 'block';
+            iconRutin.style.display = 'none';
+            topicGroup.style.display = 'block';
+        }
+
+        reloadCategories(type);
+    }
+
+    // 2. Kategori & Topik Dropdowns
+    async function reloadCategories(type) {
+        try {
+            const res = await fetch(`/Bbs/GetCategories?type=${type}`);
+            const data = await res.json();
+            const catSelect = document.getElementById('selectCategory');
+            catSelect.innerHTML = '<option value="">-- Pilih Kategori BBS --</option>';
+
+            data.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = c.name;
+                opt.setAttribute('data-name', c.name);
+                catSelect.appendChild(opt);
+            });
+            $('#selectCategory').trigger('refresh');
+            $('#selectTopic').empty().append('<option value="">-- Pilih Sub-Topik --</option>').trigger('refresh');
+
+            document.getElementById('behaviorItemsContainer').innerHTML = `
+                <div class="text-muted text-center py-3" style="font-size: 12px;">
+                    <i class="bi bi-arrow-up-circle me-1"></i> Silakan pilih Kategori BBS di atas untuk menampilkan daftar perilaku.
+                </div>`;
+            document.getElementById('behaviorCountBadge').textContent = 'Pilih kategori untuk memuat butir perilaku';
+        } catch (e) {
+            console.error('Error reloading categories:', e);
+        }
+    }
+
+    async function onCategoryChanged(catId) {
+        if (!catId) return;
+        const catSelect = document.getElementById('selectCategory');
+        const catName = catSelect.options[catSelect.selectedIndex]?.getAttribute('data-name') || '';
+        document.getElementById('inputCategoryName').value = catName;
+
+        if (currentObsType === 'SpecialCase') {
+            try {
+                const res = await fetch(`/Bbs/GetTopics?categoryId=${catId}`);
+                const topics = await res.json();
+                const topicSelect = document.getElementById('selectTopic');
+                topicSelect.innerHTML = '<option value="">-- Pilih Sub-Topik --</option>';
+
+                topics.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = t.name;
+                    opt.setAttribute('data-name', t.name);
+                    topicSelect.appendChild(opt);
+                });
+                $('#selectTopic').trigger('refresh');
+            } catch (e) {
+                console.error('Error loading topics:', e);
+            }
+        }
+
+        loadBehaviors(catId, null);
+    }
+
+    function onTopicChanged(topicId) {
+        const topicSelect = document.getElementById('selectTopic');
+        const topicName = topicSelect.options[topicSelect.selectedIndex]?.getAttribute('data-name') || '';
+        document.getElementById('inputTopicName').value = topicName;
+
+        const catId = document.getElementById('selectCategory').value;
+        loadBehaviors(catId, topicId);
+    }
+
+    // 3. Load & Render Behaviors Checklist
+    async function loadBehaviors(catId, topicId) {
+        const container = document.getElementById('behaviorItemsContainer');
+        container.innerHTML = '<div class="text-center py-2 text-muted" style="font-size:12px;"><span class="spinner-border spinner-border-sm me-1"></span>Memuat butir perilaku...</div>';
+
+        let url = `/Bbs/GetBehaviors?categoryId=${catId}`;
+        if (topicId) url += `&topicId=${topicId}`;
+
+        try {
+            const res = await fetch(url);
+            const behaviors = await res.json();
+
+            if (!behaviors || behaviors.length === 0) {
+                container.innerHTML = '<div class="text-muted text-center py-2" style="font-size:12px;">Tidak ada butir perilaku pada kategori/topik ini. Anda dapat mengetikkan perilaku spesifik secara manual di bawah.</div>';
+                document.getElementById('behaviorCountBadge').textContent = '0 butir perilaku';
+                return;
+            }
+
+            document.getElementById('behaviorCountBadge').textContent = `${behaviors.length} butir perilaku tersedia`;
+            container.innerHTML = '';
+
+            const preselectedJson = '@Html.Raw(obs.SelectedBehaviorsJson ?? "[]")';
+            let preselectedList = [];
+            try { preselectedList = JSON.parse(preselectedJson); } catch (e) {}
+
+            behaviors.forEach(b => {
+                const match = preselectedList.find(p => p.id === b.id);
+                const isPreselected = !!match;
+                const initialStatus = match ? match.status : (b.defaultClassification || 'Berisiko');
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'behavior-check-item d-flex align-items-center justify-content-between gap-2 flex-wrap';
+                itemDiv.innerHTML = `
+                    <div class="d-flex align-items-center gap-2 flex-grow-1">
+                        <input type="checkbox" class="form-check-input behavior-checkbox mt-0" id="bhv_${b.id}" data-id="${b.id}" data-text="${escapeHtml(b.behaviorText)}" ${isPreselected ? 'checked' : ''} onchange="updateBehaviorSelection()" />
+                        <label for="bhv_${b.id}" class="form-check-label" style="font-size: 13px; color: var(--text-main); cursor: pointer;">
+                            ${escapeHtml(b.behaviorText)}
+                        </label>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <button type="button" class="btn btn-sm ${initialStatus === 'Aman' ? 'btn-success' : 'btn-outline-secondary'} status-btn-safe px-2 py-0.5" style="border-radius: 6px; font-size: 11px;" onclick="setBehaviorStatus(this, 'Aman')">
+                            <i class="bi bi-hand-thumbs-up-fill me-1"></i>Aman
+                        </button>
+                        <button type="button" class="btn btn-sm ${initialStatus === 'Berisiko' ? 'btn-danger' : 'btn-outline-secondary'} status-btn-atrisk px-2 py-0.5" style="border-radius: 6px; font-size: 11px;" onclick="setBehaviorStatus(this, 'Berisiko')">
+                            <i class="bi bi-hand-thumbs-down-fill me-1"></i>Berisiko
+                        </button>
+                    </div>
+                `;
+                container.appendChild(itemDiv);
+            });
+            updateBehaviorSelection();
+        } catch (e) {
+            container.innerHTML = '<div class="text-danger text-center py-2" style="font-size:12px;">Gagal memuat butir perilaku.</div>';
+        }
+    }
+
+    function setBehaviorStatus(btn, status) {
+        const row = btn.closest('.behavior-check-item');
+        const chk = row.querySelector('.behavior-checkbox');
+        chk.checked = true;
+
+        const btnSafe = row.querySelector('.status-btn-safe');
+        const btnRisk = row.querySelector('.status-btn-atrisk');
+
+        if (status === 'Aman') {
+            btnSafe.className = 'btn btn-sm btn-success status-btn-safe px-2 py-0.5';
+            btnRisk.className = 'btn btn-sm btn-outline-secondary status-btn-atrisk px-2 py-0.5';
+        } else {
+            btnRisk.className = 'btn btn-sm btn-danger status-btn-atrisk px-2 py-0.5';
+            btnSafe.className = 'btn btn-sm btn-outline-secondary status-btn-safe px-2 py-0.5';
+            selectKlasifikasi('Berisiko');
+        }
+        updateBehaviorSelection();
+    }
+
+    function updateBehaviorSelection() {
+        const checkedList = [];
+        document.querySelectorAll('.behavior-check-item').forEach(item => {
+            const chk = item.querySelector('.behavior-checkbox');
+            if (chk && chk.checked) {
+                const id = parseInt(chk.getAttribute('data-id'));
+                const text = chk.getAttribute('data-text');
+                const isSafe = item.querySelector('.status-btn-safe').classList.contains('btn-success');
+                checkedList.push({
+                    id: id,
+                    text: text,
+                    status: isSafe ? 'Aman' : 'Berisiko'
+                });
+            }
+        });
+
+        let holder = document.getElementById('behaviorsJsonInputHolder');
+        if (!holder) {
+            holder = document.createElement('div');
+            holder.id = 'behaviorsJsonInputHolder';
+            document.getElementById('bbsForm').appendChild(holder);
+        }
+        holder.innerHTML = '';
+        checkedList.forEach((b, idx) => {
+            const inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = `selectedBehaviors[${idx}]`;
+            inp.value = JSON.stringify(b);
+            holder.appendChild(inp);
+        });
+    }
+
+    // 4. Klasifikasi Toggle
+    function selectKlasifikasi(val) {
+        currentKlasifikasi = val;
+        document.getElementById('inputKlasifikasi').value = val;
+
+        const safeCard = document.getElementById('btnClassSafe');
+        const riskCard = document.getElementById('btnClassAtRisk');
+
+        if (val === 'Aman') {
+            safeCard.classList.add('selected');
+            riskCard.classList.remove('selected');
+        } else {
+            riskCard.classList.add('selected');
+            safeCard.classList.remove('selected');
+        }
+    }
+
+    // 5. Tingkat Risiko Radio
+    function selectRiskLevel(val) {
+        currentRiskLevel = val;
+        document.getElementById('inputTingkatRisiko').value = val;
+
+        document.querySelectorAll('.risk-select-btn').forEach(btn => btn.classList.remove('selected'));
+        if (val === 'Rendah') document.querySelector('.risk-select-btn.low').classList.add('selected');
+        else if (val === 'Sedang') document.querySelector('.risk-select-btn.medium').classList.add('selected');
+        else if (val === 'Tinggi') document.querySelector('.risk-select-btn.high').classList.add('selected');
+        else document.querySelector('.risk-select-btn.extreme').classList.add('selected');
+    }
+
+    // 6. Respons Pekerja
+    function selectRespons(val) {
+        currentRespons = val;
+        document.getElementById('inputResponsPekerja').value = val;
+
+        document.getElementById('respPositif').classList.toggle('selected', val === 'Positif');
+        document.getElementById('respNetral').classList.toggle('selected', val === 'Netral');
+        document.getElementById('respResisten').classList.toggle('selected', val === 'Resisten');
+    }
+
+    // 7. Perusahaan & Pencarian Pekerja
+    function syncCompanyChange(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        const compId = sel.value;
+        const compName = opt ? (opt.getAttribute('data-name') || opt.text) : '';
+        document.getElementById('inputObservedPerusahaanId').value = compId;
+        document.getElementById('inputObservedPerusahaan').value = compName;
+
+        const currentQ = document.getElementById('searchWorkerInput')?.value || '';
+        if (currentQ.trim().length >= 2) {
+            searchWorkerDebounced(currentQ);
+        }
+    }
+
+    function searchWorkerDebounced(q) {
+        clearTimeout(workerSearchTimeout);
+        if (!q || q.trim().length < 2) {
+            document.getElementById('workerSearchResults').classList.add('d-none');
+            return;
+        }
+
+        const compId = document.getElementById('selectObservedCompany')?.value || '';
+        workerSearchTimeout = setTimeout(async () => {
+            const resultsBox = document.getElementById('workerSearchResults');
+            resultsBox.innerHTML = '<div class="p-2.5 text-center text-muted" style="font-size:12px;"><span class="spinner-border spinner-border-sm me-1"></span>Mencari pekerja...</div>';
+            resultsBox.classList.remove('d-none');
+
+            try {
+                let url = `/Bbs/SearchWorker?q=${encodeURIComponent(q)}`;
+                if (compId) url += `&companyId=${encodeURIComponent(compId)}`;
+                const res = await fetch(url);
+                const workers = await res.json();
+
+                if (!workers || workers.length === 0) {
+                    resultsBox.innerHTML = '<div class="p-2.5 text-center text-muted" style="font-size:12px;">Tidak ada pekerja yang cocok.</div>';
+                    return;
+                }
+
+                resultsBox.innerHTML = '';
+                workers.forEach(w => {
+                    const item = document.createElement('a');
+                    item.href = 'javascript:void(0)';
+                    item.className = 'list-group-item list-group-item-action d-flex align-items-center justify-content-between p-2.5 border-bottom';
+                    item.style.background = 'transparent';
+                    item.style.color = 'var(--text-main)';
+                    item.style.borderColor = 'var(--border-color)';
+                    item.innerHTML = `
+                        <div>
+                            <div class="fw-bold" style="font-size: 13px;">${escapeHtml(w.nama)}</div>
+                            <div class="text-muted" style="font-size: 11px;">NIK: ${escapeHtml(w.nik)} &bull; ${escapeHtml(w.jabatan || '-')} &bull; ${escapeHtml(w.perusahaan || '-')}</div>
+                        </div>
+                        <i class="bi bi-chevron-right text-muted" style="font-size: 12px;"></i>
+                    `;
+                    item.onclick = (e) => {
+                        e.preventDefault();
+                        selectWorker(w);
+                    };
+                    resultsBox.appendChild(item);
+                });
+            } catch (e) {
+                resultsBox.innerHTML = '<div class="p-2.5 text-center text-danger" style="font-size:12px;">Gagal memuat pekerja.</div>';
+            }
+        }, 300);
+    }
+
+    function selectWorker(w) {
+        document.getElementById('inputObservedNik').value = w.nik || '';
+        document.getElementById('inputObservedNama').value = w.nama || '';
+        document.getElementById('inputObservedJabatan').value = w.jabatan || '';
+        document.getElementById('inputObservedDept').value = w.departemen || '';
+        document.getElementById('inputObservedPerusahaanId').value = w.perusahaanId || '';
+        document.getElementById('inputObservedPerusahaan').value = w.perusahaan || '';
+
+        document.getElementById('workerDisplayNama').textContent = w.nama || '';
+        document.getElementById('workerDisplaySub').textContent = `NIK: ${w.nik} \u2022 ${w.jabatan || '-'} \u2022 ${w.perusahaan || '-'}`;
+        document.getElementById('workerAvatarText').textContent = (w.nama || 'W').substring(0, 1).toUpperCase();
+
+        document.getElementById('selectedWorkerCard').classList.remove('d-none');
+        document.getElementById('selectedWorkerCard').classList.add('d-flex');
+        document.getElementById('workerSearchResults').classList.add('d-none');
+        document.getElementById('searchWorkerInput').value = '';
+
+        if (w.perusahaanId) {
+            const compSelect = document.getElementById('selectObservedCompany');
+            if (compSelect) {
+                compSelect.value = w.perusahaanId;
+                $(compSelect).trigger('refresh');
+            }
+        }
+    }
+
+    function clearSelectedWorker() {
+        document.getElementById('inputObservedNik').value = '';
+        document.getElementById('inputObservedNama').value = '';
+        document.getElementById('inputObservedJabatan').value = '';
+        document.getElementById('inputObservedDept').value = '';
+        document.getElementById('inputObservedPerusahaanId').value = '';
+        document.getElementById('inputObservedPerusahaan').value = '';
+        document.getElementById('selectedWorkerCard').classList.add('d-none');
+        document.getElementById('selectedWorkerCard').classList.remove('d-flex');
+    }
+
+    // 8. GPS Location: Dual Mode (Satelit Mobile + Wi-Fi/IP Desktop Fallback)
+    function getLocation(silent) {
+        const btn = document.getElementById('btnGetLocation');
+        const input = document.getElementById('Lokasi');
+        if (!input) return;
+
+        if (!navigator.geolocation) {
+            if (!silent) alert('Perangkat / browser Anda tidak mendukung fitur geolokasi GPS.');
+            return;
+        }
+
+        if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" style="width: 14px; height: 14px;"></span>';
+
+        function applyCoords(lat, lon) {
+            const coords = `${lat}, ${lon}`;
+            const current = (input.value || '').trim();
+            if (!current || current === '' || current.indexOf(',') !== -1 || current === 'Kalimantan Timur') {
+                input.value = coords;
+            } else if (current.endsWith('- ') || current.endsWith('-')) {
+                input.value = current.replace(/-+$/, '- ') + coords;
+            } else if (current.includes(' - ')) {
+                const parts = current.split(' - ');
+                input.value = `${parts[0]} - (${coords})`;
+            } else {
+                input.value = `${current} (${coords})`;
+            }
+
+            if (btn) {
+                btn.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-5"></i>';
+                setTimeout(() => { btn.innerHTML = '<i class="bi bi-crosshair fs-5"></i>'; }, 3000);
+            }
+        }
+
+        // Coba High Accuracy (Satelit HP / Windows Sensor API)
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                const lat = position.coords.latitude.toFixed(6);
+                const lon = position.coords.longitude.toFixed(6);
+                applyCoords(lat, lon);
+            },
+            function (err1) {
+                console.warn('GPS Satelit/High-Accuracy gagal, mencoba Wi-Fi/IP network fallback...', err1);
+                // Fallback Network/Wi-Fi (Sangat penting untuk Mode Laptop/PC tanpa chip satelit)
+                navigator.geolocation.getCurrentPosition(
+                    function (position2) {
+                        const lat = position2.coords.latitude.toFixed(6);
+                        const lon = position2.coords.longitude.toFixed(6);
+                        applyCoords(lat, lon);
+                    },
+                    function (err2) {
+                        console.error('GPS Fallback error:', err2);
+                        if (btn) {
+                            btn.innerHTML = '<i class="bi bi-crosshair text-danger fs-5"></i>';
+                            setTimeout(() => { btn.innerHTML = '<i class="bi bi-crosshair fs-5"></i>'; }, 3000);
+                        }
+                        if (!silent) {
+                            let msg = 'Tidak dapat mengambil titik koordinat GPS otomatis.';
+                            if (err2.code === 1) {
+                                msg += '\n\nIzin lokasi diblokir oleh browser. Klik ikon gembok/pengaturan perizinan di sebelah kiri bilah URL (address bar) browser Anda untuk mengizinkan akses lokasi.';
+                            } else if (err2.code === 2) {
+                                msg += '\n\nLokasi tidak tersedia pada jaringan komputer ini. Anda dapat mengetikkan nama lokasi / koordinat manual.';
+                            } else if (err2.code === 3) {
+                                msg += '\n\nWaktu permintaan lokasi habis (timeout). Anda dapat mengetik lokasi secara manual.';
+                            }
+                            alert(msg);
+                            input.focus();
+                        }
+                    },
+                    { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+                );
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+    }
+
+    // 9. Standard Area & Benchmark Search
+    function renderAreaDropdown(filterText) {
+        var menu = $('#areaDropdownMenu');
+        menu.empty();
+        var clean = (filterText || '').trim().toLowerCase();
+        var filtered = globalAreasList.filter(function(a) {
+            return !clean || a.namaArea.toLowerCase().includes(clean);
+        });
+
+        if (filtered.length > 0) {
+            filtered.forEach(function(item) {
+                var btn = $('<button type="button"></button>')
+                    .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
+                    .css({
+                        background: 'none',
+                        color: 'var(--text-main)',
+                        fontSize: '13px',
+                        borderBottom: '1px solid var(--border-color)',
+                        cursor: 'pointer'
+                    })
+                    .html('<i class="bi bi-geo-alt-fill me-2 text-primary"></i>' + escapeHtml(item.namaArea))
+                    .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
+                    .on('mouseleave', function() { $(this).css('background', 'none'); })
+                    .on('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectArea(item.namaArea);
+                    });
+                menu.append(btn);
+            });
+        } else if (clean.length > 0) {
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Area "' + escapeHtml(filterText) + '" tidak ditemukan</div>');
+        } else {
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada Area Utama.</div>');
+        }
+
+        menu.show();
+    }
+
+    function selectArea(namaArea) {
+        $('#areaSearch').val(namaArea);
+        $('#Area').val(namaArea);
+        $('#areaDropdownMenu').hide();
+        $('#areaSearch').removeClass('is-invalid');
+
+        loadBenchmarks(namaArea);
+
+        var currentLokasi = $('#Lokasi').val().trim();
+        if (currentLokasi === '' || currentLokasi === 'Kalimantan Timur') {
+            $('#Lokasi').val(namaArea + ' - ');
+            $('#Lokasi').focus();
+        } else if (currentLokasi.indexOf(' - ') !== -1) {
+            var parts = currentLokasi.split(' - ');
+            parts[0] = namaArea;
+            $('#Lokasi').val(parts.join(' - '));
+        } else {
+            $('#Lokasi').val(namaArea + ' - ' + currentLokasi);
+        }
+    }
+
+    function loadBenchmarks(areaUtama, preselectBenchmark) {
+        if (!areaUtama) return;
+        $('#benchmarkSearch').prop('disabled', true).val('Memuat benchmark...');
+        $('#btnAddBenchmark').prop('disabled', true);
+
+        $.ajax({
+            url: '/Api/GetBenchmarks',
+            type: 'GET',
+            data: { areaUtama: areaUtama },
+            success: function(response) {
+                globalBenchmarksList = response || [];
+                $('#benchmarkSearch').prop('disabled', false).val('');
+                $('#btnAddBenchmark').prop('disabled', false);
+
+                if (preselectBenchmark) {
+                    selectBenchmark(preselectBenchmark);
+                } else {
+                    $('#DetilLokasi').val('');
+                    renderBenchmarkDropdown('');
+                }
+            },
+            error: function() {
+                $('#benchmarkSearch').prop('disabled', false).val('');
+                $('#btnAddBenchmark').prop('disabled', false);
+            }
+        });
+    }
+
+    function renderBenchmarkDropdown(filterText) {
+        var menu = $('#benchmarkDropdownMenu');
+        menu.empty();
+        var clean = (filterText || '').trim().toLowerCase();
+        var filtered = globalBenchmarksList.filter(function(b) {
+            return b.namaBenchmark.toLowerCase().includes(clean);
+        });
+
+        if (filtered.length > 0) {
+            filtered.forEach(function(item) {
+                var btn = $('<button type="button"></button>')
+                    .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
+                    .css({
+                        background: 'none',
+                        color: 'var(--text-main)',
+                        fontSize: '13px',
+                        borderBottom: '1px solid var(--border-color)',
+                        cursor: 'pointer'
+                    })
+                    .html('<i class="bi bi-compass-fill me-2 text-primary"></i>' + item.namaBenchmark)
+                    .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
+                    .on('mouseleave', function() { $(this).css('background', 'none'); })
+                    .on('click', function() {
+                        selectBenchmark(item.namaBenchmark);
+                    });
+                menu.append(btn);
+            });
+        } else if (clean.length > 0) {
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Benchmark "' + filterText + '" tidak ditemukan</div>');
+        } else {
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada benchmark di area ini. Klik + untuk tambah.</div>');
+        }
+
+        if (menu.children().length > 0) menu.show(); else menu.hide();
+    }
+
+    function selectBenchmark(namaBenchmark) {
+        $('#benchmarkSearch').val(namaBenchmark);
+        $('#DetilLokasi').val(namaBenchmark);
+        $('#benchmarkDropdownMenu').hide();
+        $('#benchmarkSearch').removeClass('is-invalid');
+    }
+
+    function saveNewBenchmark() {
+        var btn = $('#btnSaveBenchmark');
+        var errorDiv = $('#addBenchmarkError');
+        var benchmarkName = $('#newBenchmarkName').val();
+        var areaUtama = $('#Area').val();
+
+        if (!areaUtama) {
+            errorDiv.text('Area utama belum dipilih!').show();
+            return;
+        }
+
+        if (!benchmarkName || benchmarkName.trim() === '') {
+            errorDiv.text('Nama benchmark tidak boleh kosong').show();
+            return;
+        }
+
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...');
+        errorDiv.hide();
+
+        $.ajax({
+            url: '/Api/AddBenchmark',
+            type: 'POST',
+            dataType: 'json',
+            data: { areaUtama: areaUtama, namaBenchmark: benchmarkName },
+            success: function(response) {
+                $('#addBenchmarkModal').modal('hide');
+                $('#newBenchmarkName').val('');
+                var benchmarkToSelect = (response && response.data) ? response.data.namaBenchmark : null;
+                loadBenchmarks(areaUtama, benchmarkToSelect);
+                btn.prop('disabled', false).text('Simpan Benchmark');
+            },
+            error: function(xhr) {
+                errorDiv.text(xhr.responseText || 'Terjadi kesalahan saat menyimpan benchmark').show();
+                btn.prop('disabled', false).text('Simpan Benchmark');
+            }
+        });
+    }
+
+    // 10. Photo Upload Preview & Remove
+    function previewBbsImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('previewImg').src = e.target.result;
+                document.getElementById('imagePreviewContainer').classList.remove('d-none');
+                document.getElementById('uploadPlaceholder').classList.add('d-none');
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function removeSelectedPhoto(e) {
+        if (e) e.stopPropagation();
+        const input = document.getElementById('fotoInput');
+        if (input) input.value = '';
+        document.getElementById('previewImg').src = '';
+        document.getElementById('imagePreviewContainer').classList.add('d-none');
+        document.getElementById('uploadPlaceholder').classList.remove('d-none');
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // 11. View Observation Detail Modal
+    async function viewObservationDetail(id) {
+        const modal = new bootstrap.Modal(document.getElementById('obsDetailModal'));
+        const body = document.getElementById('modalDetailBody');
+        const title = document.getElementById('modalObsNo');
+        const badge = document.getElementById('modalBadgeStatus');
+        const btnPrint = document.getElementById('modalBtnPrintPdf');
+
+        btnPrint.href = `/Bbs/PrintPdf/${id}`;
+        body.innerHTML = '<div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Memuat data detail observasi...</div>';
+        modal.show();
+
+        try {
+            const res = await fetch(`/Bbs/Detail/${id}?format=json`);
+            const json = await res.json();
+            if (!json || !json.data) {
+                body.innerHTML = '<div class="text-danger text-center py-3">Gagal memuat detail observasi.</div>';
+                return;
+            }
+
+            const d = json.data;
+            title.textContent = d.observationNo;
+
+            const isSafe = d.klasifikasi === 'Aman';
+            badge.className = `badge ${isSafe ? 'bg-success' : 'bg-danger'}`;
+            badge.textContent = isSafe ? 'Perilaku Aman' : 'Perilaku Berisiko';
+
+            let behaviorsHtml = '';
+            if (d.behaviors && d.behaviors.length > 0) {
+                behaviorsHtml = `
+                    <div class="mb-3">
+                        <label class="form-label-sap mb-1" style="font-size:12px;">Butir Perilaku yang Diamati:</label>
+                        <div class="d-flex flex-column gap-1.5">
+                            ${d.behaviors.map(b => `
+                                <div class="p-2 rounded d-flex justify-content-between align-items-center" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); font-size:12px;">
+                                    <span>${escapeHtml(b.text)}</span>
+                                    <span class="badge ${b.status === 'Aman' ? 'bg-success' : 'bg-danger'}">${escapeHtml(b.status)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>`;
+            }
+
+            let photoHtml = '';
+            if (d.fotoUrl) {
+                photoHtml = `
+                    <div class="mb-3 text-center">
+                        <img src="${escapeHtml(d.fotoUrl)}" alt="Foto Observasi" class="img-fluid rounded-3" style="max-height: 220px; border: 1px solid var(--border-color); object-fit: contain;" />
+                    </div>`;
+            }
+
+            body.innerHTML = `
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size:11px;">Tanggal &amp; Waktu</small>
+                        <strong style="font-size:13px;">${escapeHtml(d.tanggal)} &bull; ${escapeHtml(d.waktu)} WITA</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size:11px;">Tipe Observasi</small>
+                        <strong style="font-size:13px;">${escapeHtml(d.observationType)}</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size:11px;">Area &amp; Benchmark</small>
+                        <strong style="font-size:13px;">${escapeHtml(d.area)} ${d.detilLokasi ? '&bull; ' + escapeHtml(d.detilLokasi) : ''}</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size:11px;">Lokasi Spesifik</small>
+                        <strong style="font-size:13px;">${escapeHtml(d.site || '-')}</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size:11px;">Pekerja yang Diamati</small>
+                        <strong style="font-size:13px;">${escapeHtml(d.observedNama || '-')} ${d.observedNik ? '(' + escapeHtml(d.observedNik) + ')' : ''}</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size:11px;">Perusahaan &amp; Jabatan</small>
+                        <strong style="font-size:13px;">${escapeHtml(d.observedPerusahaan || '-')} &bull; ${escapeHtml(d.observedJabatan || '-')}</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size:11px;">Kategori BBS</small>
+                        <strong style="font-size:13px;">${escapeHtml(d.categoryName || '-')} ${d.topicName ? '- ' + escapeHtml(d.topicName) : ''}</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size:11px;">Tingkat Risiko</small>
+                        <span class="badge ${d.tingkatRisiko === 'Rendah' ? 'bg-success' : d.tingkatRisiko === 'Sedang' ? 'bg-info' : 'bg-danger'}">${escapeHtml(d.tingkatRisiko || 'Sedang')}</span>
+                    </div>
+                </div>
+
+                ${behaviorsHtml}
+
+                ${d.deskripsi ? `
+                    <div class="mb-3">
+                        <small class="text-muted d-block" style="font-size:11px;">Deskripsi Singkat / Situasi:</small>
+                        <div class="p-2.5 rounded" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); font-size:12px;">${escapeHtml(d.deskripsi)}</div>
+                    </div>` : ''}
+
+                ${d.tindakanDilakukan ? `
+                    <div class="mb-3">
+                        <small class="text-muted d-block" style="font-size:11px;">Tindakan Langsung Dilakukan:</small>
+                        <div class="p-2 rounded text-info" style="background: rgba(2, 132, 199, 0.05); border: 1px solid rgba(2, 132, 199, 0.2); font-size:12px;">${escapeHtml(d.tindakanDilakukan)}</div>
+                    </div>` : ''}
+
+                ${d.catatanCoaching ? `
+                    <div class="mb-3">
+                        <small class="text-muted d-block" style="font-size:11px;">Catatan Coaching &amp; Komitmen:</small>
+                        <div class="p-2.5 rounded text-success" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); font-size:12px;">${escapeHtml(d.catatanCoaching)}</div>
+                    </div>` : ''}
+
+                ${photoHtml}
+            `;
+        } catch (e) {
+            body.innerHTML = '<div class="text-danger text-center py-3">Terjadi kesalahan saat memuat detail observasi.</div>';
+        }
+    }
+
+    // Live search filter in my history column
+    $('#historySearchInput').on('input', function() {
+        var val = $(this).val().toLowerCase().trim();
+        $('.bbs-history-item').each(function() {
+            var text = $(this).text().toLowerCase();
+            $(this).toggle(text.indexOf(val) > -1);
+        });
+    });
+
+    // Form submission validation & UI loading state
+    document.getElementById('bbsForm').addEventListener('submit', function (e) {
+        const areaVal = document.getElementById('Area').value;
+        const lokasiVal = document.getElementById('Lokasi').value;
+        const catVal = document.getElementById('selectCategory').value;
+
+        if (!areaVal) {
+            e.preventDefault();
+            alert('Silakan pilih Area Utama terlebih dahulu.');
+            document.getElementById('areaSearch').focus();
+            return;
+        }
+
+        if (!lokasiVal) {
+            e.preventDefault();
+            alert('Silakan isi Lokasi Spesifik atau klik ikon GPS.');
+            document.getElementById('Lokasi').focus();
+            return;
+        }
+
+        if (!catVal) {
+            e.preventDefault();
+            alert('Silakan pilih Kategori BBS terlebih dahulu.');
+            document.getElementById('selectCategory').focus();
+            return;
+        }
+
+        const btn = document.getElementById('btnSubmitForm');
+        btn.disabled = true;
+        document.getElementById('btnSubmitIcon').className = 'spinner-border spinner-border-sm me-2';
+        document.getElementById('btnSubmitText').textContent = 'Menyimpan Laporan...';
+    });
+
+    // Auto-initialize on load
+    $(document).ready(function () {
+        $('#toggleAreaDropdown').on('click', function(e) {
+            e.stopPropagation();
+            var menu = $('#areaDropdownMenu');
+            if (menu.is(':visible')) {
+                menu.hide();
+            } else {
+                renderAreaDropdown('');
+            }
+        });
+
+        $('#areaSearch').on('input keyup', function() {
+            renderAreaDropdown($(this).val());
+            $('#Area').val($(this).val());
+        });
+
+        $('#areaSearch').on('focus', function() {
+            renderAreaDropdown('');
+        });
+
+        $('#toggleBenchmarkDropdown').on('click', function(e) {
+            e.stopPropagation();
+            if ($('#benchmarkSearch').prop('disabled')) {
+                alert('Pilih Area Utama terlebih dahulu.');
+                $('#areaSearch').focus();
+                return;
+            }
+            var menu = $('#benchmarkDropdownMenu');
+            if (menu.is(':visible')) {
+                menu.hide();
+            } else {
+                renderBenchmarkDropdown('');
+            }
+        });
+
+        $('#benchmarkSearch').on('input keyup', function() {
+            renderBenchmarkDropdown($(this).val());
+            $('#DetilLokasi').val($(this).val());
+        });
+
+        $('#benchmarkSearch').on('focus', function() {
+            if ($('#benchmarkSearch').prop('disabled')) return;
+            renderBenchmarkDropdown('');
+        });
+
+        $('#addBenchmarkModal').on('show.bs.modal', function() {
+            var area = $('#Area').val();
+            $('#newBenchmarkArea').val(area || 'Belum dipilih');
+            $('#newBenchmarkName').val('');
+            $('#addBenchmarkError').hide();
+
+            var list = $('#existingBenchmarksList');
+            list.empty();
+            if (globalBenchmarksList.length > 0) {
+                globalBenchmarksList.forEach(function(b) {
+                    list.append('<div class="list-group-item" style="font-size: 13px; background: rgba(0,0,0,0.1); border-color: var(--border-color); color: var(--text-main);"><i class="bi bi-compass me-2 text-muted"></i>' + escapeHtml(b.namaBenchmark) + '</div>');
+                });
+            } else {
+                list.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">Belum ada benchmark di area ini</div>');
+            }
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown').length) {
+                $('#benchmarkDropdownMenu').hide();
+            }
+            if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
+                $('#areaDropdownMenu').hide();
+            }
+            if (!$(e.target).closest('#searchWorkerInput, #workerSearchResults').length) {
+                $('#workerSearchResults').addClass('d-none');
+            }
+        });
+
+        const catSelect = document.getElementById('selectCategory');
+        if (catSelect && catSelect.value) {
+            onCategoryChanged(catSelect.value);
+        }
+
+        var initialArea = $('#Area').val();
+        if (initialArea) {
+            loadBenchmarks(initialArea, @Html.Raw(System.Text.Json.JsonSerializer.Serialize(obs.DetilLokasi ?? "")));
+        }
+
+        // Auto-detect GPS if new observation
+        var curLok = $('#Lokasi').val();
+        if (!$('#inputObservationId').val() && (!curLok || curLok === '' || curLok === 'Kalimantan Timur')) {
+            getLocation(true);
+        }
+    });
+</script>
+}

@@ -1,0 +1,726 @@
+@{
+    ViewData["Title"] = "Master Konten BBS - SAP";
+    string activeTab = ViewBag.ActiveTabName ?? "categories";
+    int? selCategoryId = ViewBag.CategoryId;
+    int? selTopicId = ViewBag.TopicId;
+    string searchQuery = ViewBag.SearchQuery ?? "";
+
+    var categories = ViewBag.Categories as List<MBS_SAP.Models.BbsCategory> ?? new List<MBS_SAP.Models.BbsCategory>();
+    var topics = ViewBag.Topics as List<MBS_SAP.Models.BbsTopic> ?? new List<MBS_SAP.Models.BbsTopic>();
+    var behaviors = ViewBag.Behaviors as List<MBS_SAP.Models.BbsBehavior> ?? new List<MBS_SAP.Models.BbsBehavior>();
+}
+
+<style>
+    .master-tab-btn {
+        padding: 9px 20px;
+        font-weight: 700;
+        font-size: 13px;
+        border-radius: 12px;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .master-tab-btn:hover {
+        color: var(--text-main);
+        background: rgba(255, 255, 255, 0.05);
+    }
+    .master-tab-btn.active {
+        background: var(--color-primary);
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+    .master-table-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 18px;
+        overflow: hidden;
+    }
+    .btn-close-sap {
+        filter: invert(1) brightness(200%);
+        opacity: 0.8;
+    }
+    body.light-theme .btn-close-sap {
+        filter: none;
+        opacity: 0.6;
+    }
+    .master-table-card .table {
+        --bs-table-bg: transparent;
+        --bs-table-color: var(--text-main);
+        --bs-table-hover-bg: rgba(255, 255, 255, 0.04);
+        color: var(--text-main);
+    }
+    body.light-theme .master-table-card {
+        background: #ffffff;
+        box-shadow: 0 4px 16px rgba(149, 157, 165, 0.08);
+    }
+    body.light-theme .master-table-card .table {
+        --bs-table-hover-bg: rgba(0, 0, 0, 0.03);
+        --bs-table-color: var(--text-main);
+    }
+    body.light-theme .master-table-card thead th {
+        color: var(--text-muted);
+    }
+</style>
+
+<div class="animate-fade-in pb-5 mb-4">
+
+    <!-- Screen Title -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 10.5px; font-weight: 700;">
+                    <i class="bi bi-shield-lock-fill me-1"></i>ADMINISTRATOR ONLY
+                </span>
+                <a asp-controller="Bbs" asp-action="Index" class="badge text-decoration-none" style="background: rgba(2, 132, 199, 0.12); color: var(--color-primary); font-size: 10.5px;">
+                    &larr; Form &amp; Riwayat Observasi BBS
+                </a>
+            </div>
+            <div class="screen-title">Master Data Konten BBS</div>
+            <p class="screen-subtitle">Kelola kategori, topik special case, dan butir-butir perilaku yang aktif di formulir BBS.</p>
+        </div>
+
+        <div>
+            @if (activeTab == "categories")
+            {
+                <button type="button" class="btn-sap-primary d-inline-flex align-items-center gap-2" style="padding: 10px 18px; font-size: 13px;" onclick="openCategoryModal()">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>Tambah Kategori Baru</span>
+                </button>
+            }
+            else if (activeTab == "topics")
+            {
+                <button type="button" class="btn btn-warning fw-bold d-inline-flex align-items-center gap-2 text-dark shadow-sm" style="border-radius: 14px; padding: 10px 18px; font-size: 13px;" onclick="openTopicModal()">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>Tambah Topik Baru</span>
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-success fw-bold d-inline-flex align-items-center gap-2 shadow-sm" style="border-radius: 14px; padding: 10px 18px; font-size: 13px;" onclick="openBehaviorModal()">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>Tambah Butir Perilaku</span>
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-3" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 14px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-3" role="alert" style="background-color: rgba(34, 197, 94, 0.15); color: var(--color-green); border-radius: 14px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Navigation Tabs -->
+    <div class="d-flex align-items-center gap-1.5 p-1 rounded-4 mb-3 flex-wrap" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); width: fit-content;">
+        <a href="/BbsMaster/Index?tab=categories" class="master-tab-btn @(activeTab == "categories" ? "active" : "")">
+            <i class="bi bi-grid-fill"></i>
+            <span>1. Master Kategori (@categories.Count)</span>
+        </a>
+        <a href="/BbsMaster/Index?tab=topics" class="master-tab-btn @(activeTab == "topics" ? "active" : "")">
+            <i class="bi bi-tags-fill"></i>
+            <span>2. Master Topik / Kasus (@topics.Count)</span>
+        </a>
+        <a href="/BbsMaster/Index?tab=behaviors" class="master-tab-btn @(activeTab == "behaviors" ? "active" : "")">
+            <i class="bi bi-card-checklist"></i>
+            <span>3. Master Butir Perilaku (@behaviors.Count)</span>
+        </a>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- TAB 1: MASTER KATEGORI BBS                                     -->
+    <!-- ============================================================== -->
+    @if (activeTab == "categories")
+    {
+        <div class="master-table-card card-sap p-0 mb-0">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color: var(--border-color) !important;">
+                <h6 class="fw-bold mb-0 text-primary" style="font-size: 13.5px;">
+                    <i class="bi bi-grid-3x3-gap-fill me-1"></i>Daftar Kategori Observasi BBS
+                </h6>
+                <small class="text-muted">Kategori memisahkan observasi Rutin, Kasus Khusus, atau Keduanya</small>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: 12.5px; color: var(--text-main);">
+                    <thead style="background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-color);">
+                        <tr>
+                            <th style="width: 45px;" class="text-center">#</th>
+                            <th style="width: 55px;">Icon</th>
+                            <th>Nama Kategori</th>
+                            <th>Tipe Tampilan</th>
+                            <th>Jumlah Topik</th>
+                            <th>Jumlah Perilaku</th>
+                            <th>Urutan</th>
+                            <th>Status</th>
+                            <th class="text-end" style="width: 120px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var cat in categories)
+                        {
+                            var typeClass = cat.CategoryType == "Rutin" ? "bg-primary" : (cat.CategoryType == "SpecialCase" ? "bg-warning text-dark" : "bg-info text-dark");
+                            <tr>
+                                <td class="text-center text-muted fw-bold">@cat.Id</td>
+                                <td>
+                                    <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(2, 132, 199, 0.12); color: @cat.Color; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                                        <i class="bi @cat.Icon"></i>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">@cat.Name</div>
+                                    <small class="text-muted" style="font-size: 11px;">@cat.Description</small>
+                                </td>
+                                <td>
+                                    <span class="badge @typeClass" style="font-size: 10px;">@cat.CategoryType</span>
+                                </td>
+                                <td>
+                                    <a href="/BbsMaster/Index?tab=topics&categoryId=@cat.Id" class="badge text-decoration-none" style="background: rgba(255,255,255,0.06); color: var(--text-main); font-size: 10.5px;">
+                                        @(cat.Topics?.Count ?? 0) Topik &rarr;
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="/BbsMaster/Index?tab=behaviors&categoryId=@cat.Id" class="badge text-decoration-none" style="background: rgba(255,255,255,0.06); color: var(--text-main); font-size: 10.5px;">
+                                        @(cat.Behaviors?.Count ?? 0) Butir &rarr;
+                                    </a>
+                                </td>
+                                <td class="text-muted">@cat.SortOrder</td>
+                                <td>
+                                    @if (cat.IsActive)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Aktif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-muted border border-secondary-subtle">Nonaktif</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-info" title="Edit Kategori" onclick='editCategory(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { cat.Id, cat.Name, cat.CategoryType, cat.Icon, cat.Color, cat.Description, cat.SortOrder, cat.IsActive })))'>
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </button>
+                                        <form method="post" action="/BbsMaster/ToggleCategory/@cat.Id" class="d-inline m-0">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm @(cat.IsActive ? "btn-outline-warning" : "btn-outline-success")" title="@(cat.IsActive ? "Nonaktifkan" : "Aktifkan")">
+                                                <i class="bi @(cat.IsActive ? "bi-eye-slash-fill" : "bi-eye-fill")"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <!-- ============================================================== -->
+    <!-- TAB 2: MASTER TOPIK / KASUS BBS                                -->
+    <!-- ============================================================== -->
+    @if (activeTab == "topics")
+    {
+        <div class="master-table-card card-sap p-0 mb-0">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color: var(--border-color) !important;">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h6 class="fw-bold mb-0 text-warning" style="font-size: 13.5px;">
+                        <i class="bi bi-tag-fill me-1"></i>Daftar Sub-Kategori / Topik Special Case
+                    </h6>
+                    <select class="form-select form-select-sm" style="width: auto; min-width: 190px; border-radius: 8px; font-size: 12px;" onchange="window.location.href='/BbsMaster/Index?tab=topics&categoryId=' + this.value">
+                        <option value="">-- Semua Kategori --</option>
+                        @foreach (var c in categories)
+                        {
+                            <option value="@c.Id" selected="@(c.Id == selCategoryId)">@c.Name</option>
+                        }
+                    </select>
+                </div>
+                <small class="text-muted">Topik mendetailkan fokus observasi (contoh: Distraksi Saat Mengemudi)</small>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: 12.5px; color: var(--text-main);">
+                    <thead style="background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-color);">
+                        <tr>
+                            <th style="width: 45px;" class="text-center">#</th>
+                            <th style="width: 55px;">Icon</th>
+                            <th>Nama Topik / Kasus</th>
+                            <th>Kategori Utama</th>
+                            <th>Jumlah Butir Perilaku</th>
+                            <th>Urutan</th>
+                            <th>Status</th>
+                            <th class="text-end" style="width: 120px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in topics)
+                        {
+                            <tr>
+                                <td class="text-center text-muted fw-bold">@t.Id</td>
+                                <td>
+                                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; display: flex; align-items: center; justify-content: center; font-size: 15px;">
+                                        <i class="bi @t.Icon"></i>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">@t.Name</div>
+                                    <small class="text-muted" style="font-size: 11px;">@t.Description</small>
+                                </td>
+                                <td>
+                                    <span class="badge" style="background: rgba(2, 132, 199, 0.15); color: #38bdf8; font-size: 10.5px;">
+                                        @(t.Category?.Name ?? "Umum")
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="/BbsMaster/Index?tab=behaviors&categoryId=@t.CategoryId&topicId=@t.Id" class="badge text-decoration-none" style="background: rgba(255,255,255,0.06); color: var(--text-main); font-size: 10.5px;">
+                                        @(t.Behaviors?.Count ?? 0) Butir Perilaku &rarr;
+                                    </a>
+                                </td>
+                                <td class="text-muted">@t.SortOrder</td>
+                                <td>
+                                    @if (t.IsActive)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Aktif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-muted border border-secondary-subtle">Nonaktif</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-info" title="Edit Topik" onclick='editTopic(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { t.Id, t.CategoryId, t.Name, t.Icon, t.Description, t.SortOrder, t.IsActive })))'>
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </button>
+                                        <form method="post" action="/BbsMaster/ToggleTopic/@t.Id" class="d-inline m-0">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm @(t.IsActive ? "btn-outline-warning" : "btn-outline-success")" title="@(t.IsActive ? "Nonaktifkan" : "Aktifkan")">
+                                                <i class="bi @(t.IsActive ? "bi-eye-slash-fill" : "bi-eye-fill")"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <!-- ============================================================== -->
+    <!-- TAB 3: MASTER BUTIR PERILAKU                                   -->
+    <!-- ============================================================== -->
+    @if (activeTab == "behaviors")
+    {
+        <div class="master-table-card card-sap p-0 mb-0">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color: var(--border-color) !important;">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h6 class="fw-bold mb-0 text-success" style="font-size: 13.5px;">
+                        <i class="bi bi-card-checklist me-1"></i>Daftar Butir Perilaku yang Diamati
+                    </h6>
+                    <select class="form-select form-select-sm" style="width: auto; min-width: 180px; border-radius: 8px; font-size: 12px;" onchange="window.location.href='/BbsMaster/Index?tab=behaviors&categoryId=' + this.value">
+                        <option value="">-- Filter Kategori --</option>
+                        @foreach (var c in categories)
+                        {
+                            <option value="@c.Id" selected="@(c.Id == selCategoryId)">@c.Name</option>
+                        }
+                    </select>
+                </div>
+                <small class="text-muted">Butir pilihan perilaku yang muncul pada checklist langkah 2</small>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: 12.5px; color: var(--text-main);">
+                    <thead style="background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-color);">
+                        <tr>
+                            <th style="width: 45px;" class="text-center">#</th>
+                            <th>Teks Perilaku</th>
+                            <th>Kategori &amp; Topik</th>
+                            <th>Klasifikasi</th>
+                            <th>Risiko Bawaan</th>
+                            <th>Status</th>
+                            <th class="text-end" style="width: 120px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in behaviors)
+                        {
+                            var isSafe = b.DefaultClassification == "Safe";
+                            var classBadge = isSafe ? "bg-success-subtle text-success border border-success-subtle" : "bg-danger-subtle text-danger border border-danger-subtle";
+
+                            <tr>
+                                <td class="text-center text-muted fw-bold">@b.Id</td>
+                                <td>
+                                    <div class="fw-bold">@b.BehaviorText</div>
+                                    @if (!string.IsNullOrEmpty(b.GuidanceNote))
+                                    {
+                                        <small class="text-muted" style="font-size: 11px;"><i class="bi bi-info-circle me-1"></i>@b.GuidanceNote</small>
+                                    }
+                                </td>
+                                <td>
+                                    <div style="font-size: 12px; color: var(--color-primary);">@(b.Category?.Name ?? "-")</div>
+                                    @if (b.Topic != null)
+                                    {
+                                        <small class="text-muted" style="font-size: 11px;">&rsaquo; @b.Topic.Name</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @classBadge" style="font-size: 10px;">@b.DefaultClassification</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary" style="font-size: 10px;">@b.DefaultRiskLevel</span>
+                                </td>
+                                <td>
+                                    @if (b.IsActive)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Aktif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-muted border border-secondary-subtle">Nonaktif</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-info" title="Edit Perilaku" onclick='editBehavior(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { b.Id, b.CategoryId, b.TopicId, b.BehaviorText, b.DefaultClassification, b.DefaultRiskLevel, b.GuidanceNote, b.SortOrder, b.IsActive })))'>
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </button>
+                                        <form method="post" action="/BbsMaster/ToggleBehavior/@b.Id" class="d-inline m-0">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm @(b.IsActive ? "btn-outline-warning" : "btn-outline-success")" title="@(b.IsActive ? "Nonaktifkan" : "Aktifkan")">
+                                                <i class="bi @(b.IsActive ? "bi-eye-slash-fill" : "bi-eye-fill")"></i>
+                                            </button>
+                                        </form>
+                                        <form method="post" action="/BbsMaster/DeleteBehavior/@b.Id" onsubmit="return confirm('Hapus butir perilaku ini?');" class="d-inline m-0">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus">
+                                                <i class="bi bi-trash3-fill"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- ============================================================== -->
+<!-- MODALS FOR MASTER CRUD                                         -->
+<!-- ============================================================== -->
+
+<!-- Modal Kategori -->
+<div class="modal fade" id="modalCategory" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 18px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">
+            <form method="post" action="/BbsMaster/SaveCategory">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="catModalId" value="0" />
+
+                <div class="modal-header py-3 px-4" style="border-bottom: 1px solid var(--border-color);">
+                    <h6 class="modal-title fw-bold" id="catModalTitle">Tambah Kategori BBS</h6>
+                    <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="catModalName">Nama Kategori <span class="text-danger">*</span></label>
+                        <input type="text" name="Name" id="catModalName" class="input-sap" required placeholder="Contoh: Mengemudi & Hauling" />
+                    </div>
+
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="catModalType">Tipe Tampilan</label>
+                        <select name="CategoryType" id="catModalType" class="input-sap">
+                            <option value="Both">Muncul di Keduanya (Rutin & Special Case)</option>
+                            <option value="Rutin">Observasi Rutin Saja</option>
+                            <option value="SpecialCase">Special Case Saja</option>
+                        </select>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6 form-group-sap">
+                            <label class="form-label-sap" for="catModalIcon">Icon</label>
+                            <input type="text" name="Icon" id="catModalIcon" class="input-sap" placeholder="bi-truck" />
+                        </div>
+                        <div class="col-6 form-group-sap">
+                            <label class="form-label-sap" for="catModalColor">Warna</label>
+                            <input type="color" name="Color" id="catModalColor" class="form-control form-control-color w-100" value="#0284c7" style="border-radius: 14px; height: 46px;" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="catModalDesc">Deskripsi Singkat</label>
+                        <input type="text" name="Description" id="catModalDesc" class="input-sap" placeholder="Keterangan singkat" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6 form-group-sap">
+                            <label class="form-label-sap" for="catModalSort">Urutan</label>
+                            <input type="number" name="SortOrder" id="catModalSort" class="input-sap" value="0" />
+                        </div>
+                        <div class="col-6 d-flex align-items-end">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="catModalActive" checked />
+                                <label class="form-check-label fw-bold" for="catModalActive" style="font-size: 12.5px;">Status Aktif</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2.5 px-4" style="border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn-sap-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn-sap-primary px-4">Simpan Kategori</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Topik -->
+<div class="modal fade" id="modalTopic" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 18px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">
+            <form method="post" action="/BbsMaster/SaveTopic">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="topicModalId" value="0" />
+
+                <div class="modal-header py-3 px-4" style="border-bottom: 1px solid var(--border-color);">
+                    <h6 class="modal-title fw-bold" id="topicModalTitle">Tambah Topik Special Case</h6>
+                    <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="topicModalCategory">Kategori Induk <span class="text-danger">*</span></label>
+                        <select name="CategoryId" id="topicModalCategory" class="input-sap" required>
+                            @foreach (var c in categories)
+                            {
+                                <option value="@c.Id">@c.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="topicModalName">Nama Topik / Kasus <span class="text-danger">*</span></label>
+                        <input type="text" name="Name" id="topicModalName" class="input-sap" required placeholder="Contoh: Distraksi Saat Mengemudi" />
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6 form-group-sap">
+                            <label class="form-label-sap" for="topicModalIcon">Icon</label>
+                            <input type="text" name="Icon" id="topicModalIcon" class="input-sap" placeholder="bi-tag" />
+                        </div>
+                        <div class="col-6 form-group-sap">
+                            <label class="form-label-sap" for="topicModalSort">Urutan</label>
+                            <input type="number" name="SortOrder" id="topicModalSort" class="input-sap" value="0" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="topicModalDesc">Deskripsi Topik</label>
+                        <input type="text" name="Description" id="topicModalDesc" class="input-sap" placeholder="Penjelasan fokus perilaku kasus" />
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="topicModalActive" checked />
+                        <label class="form-check-label fw-bold" for="topicModalActive" style="font-size: 12.5px;">Status Aktif</label>
+                    </div>
+                </div>
+                <div class="modal-footer py-2.5 px-4" style="border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn-sap-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning fw-bold px-4 text-dark" style="border-radius: 14px;">Simpan Topik</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Butir Perilaku -->
+<div class="modal fade" id="modalBehavior" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 18px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">
+            <form method="post" action="/BbsMaster/SaveBehavior">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="bhvModalId" value="0" />
+
+                <div class="modal-header py-3 px-4" style="border-bottom: 1px solid var(--border-color);">
+                    <h6 class="modal-title fw-bold" id="bhvModalTitle">Tambah Butir Perilaku yang Diamati</h6>
+                    <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row mb-3">
+                        <div class="col-12 col-md-6 form-group-sap">
+                            <label class="form-label-sap" for="bhvModalCategory">Kategori <span class="text-danger">*</span></label>
+                            <select name="CategoryId" id="bhvModalCategory" class="input-sap" required onchange="loadTopicsForBehaviorModal(this.value)">
+                                @foreach (var c in categories)
+                                {
+                                    <option value="@c.Id">@c.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6 form-group-sap">
+                            <label class="form-label-sap" for="bhvModalTopic">Topik Special Case (Opsional jika Rutin)</label>
+                            <select name="TopicId" id="bhvModalTopic" class="input-sap">
+                                <option value="0">-- Tanpa Topik (Umum) --</option>
+                                @foreach (var t in topics)
+                                {
+                                    <option value="@t.Id" data-cat="@t.CategoryId">@t.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="bhvModalText">Teks Perilaku yang Diamati <span class="text-danger">*</span></label>
+                        <input type="text" name="BehaviorText" id="bhvModalText" class="input-sap" required placeholder="Contoh: Menggunakan HP saat mengemudi" />
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12 col-md-6 form-group-sap">
+                            <label class="form-label-sap" for="bhvModalClass">Klasifikasi Bawaan</label>
+                            <select name="DefaultClassification" id="bhvModalClass" class="input-sap">
+                                <option value="At-Risk">Perilaku Berisiko (At-Risk)</option>
+                                <option value="Safe">Perilaku Aman (Safe)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6 form-group-sap">
+                            <label class="form-label-sap" for="bhvModalRisk">Tingkat Risiko Bawaan</label>
+                            <select name="DefaultRiskLevel" id="bhvModalRisk" class="input-sap">
+                                <option value="Sangat Tinggi">Sangat Tinggi (Fatality / Cidera Berat)</option>
+                                <option value="Tinggi">Tinggi (Cidera Sedang)</option>
+                                <option value="Sedang" selected>Sedang (Cidera Ringan)</option>
+                                <option value="Rendah">Rendah (Hampir Tidak Berdampak)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="bhvModalNote">Catatan Info / Referensi Observasi (Guidance Note)</label>
+                        <textarea name="GuidanceNote" id="bhvModalNote" class="input-sap" rows="2" placeholder="Petunjuk khusus bagi observer saat mengamati perilaku ini..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6 form-group-sap">
+                            <label class="form-label-sap" for="bhvModalSort">Urutan</label>
+                            <input type="number" name="SortOrder" id="bhvModalSort" class="input-sap" value="0" />
+                        </div>
+                        <div class="col-6 d-flex align-items-end">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="bhvModalActive" checked />
+                                <label class="form-check-label fw-bold" for="bhvModalActive" style="font-size: 12.5px;">Status Aktif</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2.5 px-4" style="border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn-sap-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4" style="border-radius: 14px;">Simpan Perilaku</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openCategoryModal() {
+        document.getElementById('catModalId').value = 0;
+        document.getElementById('catModalTitle').textContent = 'Tambah Kategori BBS Baru';
+        document.getElementById('catModalName').value = '';
+        document.getElementById('catModalType').value = 'Both';
+        document.getElementById('catModalIcon').value = 'bi-clipboard2-check';
+        document.getElementById('catModalColor').value = '#0284c7';
+        document.getElementById('catModalDesc').value = '';
+        document.getElementById('catModalSort').value = 0;
+        document.getElementById('catModalActive').checked = true;
+        new bootstrap.Modal(document.getElementById('modalCategory')).show();
+    }
+
+    function editCategory(c) {
+        document.getElementById('catModalId').value = c.Id;
+        document.getElementById('catModalTitle').textContent = `Edit Kategori: ${c.Name}`;
+        document.getElementById('catModalName').value = c.Name;
+        document.getElementById('catModalType').value = c.CategoryType;
+        document.getElementById('catModalIcon').value = c.Icon || 'bi-clipboard2-check';
+        document.getElementById('catModalColor').value = c.Color || '#0284c7';
+        document.getElementById('catModalDesc').value = c.Description || '';
+        document.getElementById('catModalSort').value = c.SortOrder || 0;
+        document.getElementById('catModalActive').checked = c.IsActive;
+        new bootstrap.Modal(document.getElementById('modalCategory')).show();
+    }
+
+    function openTopicModal() {
+        document.getElementById('topicModalId').value = 0;
+        document.getElementById('topicModalTitle').textContent = 'Tambah Topik Special Case Baru';
+        document.getElementById('topicModalName').value = '';
+        document.getElementById('topicModalIcon').value = 'bi-tag';
+        document.getElementById('topicModalDesc').value = '';
+        document.getElementById('topicModalSort').value = 0;
+        document.getElementById('topicModalActive').checked = true;
+        new bootstrap.Modal(document.getElementById('modalTopic')).show();
+    }
+
+    function editTopic(t) {
+        document.getElementById('topicModalId').value = t.Id;
+        document.getElementById('topicModalTitle').textContent = `Edit Topik: ${t.Name}`;
+        document.getElementById('topicModalCategory').value = t.CategoryId;
+        document.getElementById('topicModalName').value = t.Name;
+        document.getElementById('topicModalIcon').value = t.Icon || 'bi-tag';
+        document.getElementById('topicModalDesc').value = t.Description || '';
+        document.getElementById('topicModalSort').value = t.SortOrder || 0;
+        document.getElementById('topicModalActive').checked = t.IsActive;
+        new bootstrap.Modal(document.getElementById('modalTopic')).show();
+    }
+
+    function openBehaviorModal() {
+        document.getElementById('bhvModalId').value = 0;
+        document.getElementById('bhvModalTitle').textContent = 'Tambah Butir Perilaku Baru';
+        document.getElementById('bhvModalText').value = '';
+        document.getElementById('bhvModalClass').value = 'At-Risk';
+        document.getElementById('bhvModalRisk').value = 'Sedang';
+        document.getElementById('bhvModalNote').value = '';
+        document.getElementById('bhvModalSort').value = 0;
+        document.getElementById('bhvModalActive').checked = true;
+        new bootstrap.Modal(document.getElementById('modalBehavior')).show();
+    }
+
+    function editBehavior(b) {
+        document.getElementById('bhvModalId').value = b.Id;
+        document.getElementById('bhvModalTitle').textContent = `Edit Butir Perilaku`;
+        document.getElementById('bhvModalCategory').value = b.CategoryId;
+        loadTopicsForBehaviorModal(b.CategoryId);
+        document.getElementById('bhvModalTopic').value = b.TopicId || 0;
+        document.getElementById('bhvModalText').value = b.BehaviorText;
+        document.getElementById('bhvModalClass').value = b.DefaultClassification;
+        document.getElementById('bhvModalRisk').value = b.DefaultRiskLevel || 'Sedang';
+        document.getElementById('bhvModalNote').value = b.GuidanceNote || '';
+        document.getElementById('bhvModalSort').value = b.SortOrder || 0;
+        document.getElementById('bhvModalActive').checked = b.IsActive;
+        new bootstrap.Modal(document.getElementById('modalBehavior')).show();
+    }
+
+    function loadTopicsForBehaviorModal(catId) {
+        const topicSelect = document.getElementById('bhvModalTopic');
+        Array.from(topicSelect.options).forEach(opt => {
+            if (opt.value === '0') return;
+            const optCat = opt.getAttribute('data-cat');
+            opt.style.display = (!catId || optCat === String(catId)) ? 'block' : 'none';
+        });
+    }
+</script>

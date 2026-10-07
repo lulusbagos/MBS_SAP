@@ -67,7 +67,7 @@
                         <i class="bi bi-bar-chart-line-fill"></i>
                         <span>Pencapaian SAP</span>
                     </a>
-                    <a asp-controller="Performance" asp-action="League" asp-route-mode="company" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "League" ? "active" : "")">
+                    <a asp-controller="Performance" asp-action="League" asp-route-mode="dept" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "League" ? "active" : "")">
                         <i class="bi bi-trophy-fill"></i>
                         <span>Klasemen League</span>
                     </a>
@@ -94,6 +94,10 @@
                     <a asp-controller="Observation" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Observation" ? "active" : "")">
                         <i class="bi bi-eye-fill"></i>
                         <span>Observation</span>
+                    </a>
+                    <a asp-controller="Bbs" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "BBS" ? "active" : "")">
+                        <i class="bi bi-shield-check" style="color: #38bdf8;"></i>
+                        <span>BBS (Perilaku)</span>
                     </a>
                     <a asp-controller="SafetyTalk" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "SafetyTalk" ? "active" : "")">
                         <i class="bi bi-megaphone-fill"></i>
@@ -123,6 +127,10 @@
                         <a asp-controller="Incident" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Incident" ? "active" : "")">
                             <i class="bi bi-newspaper" style="color: #f43f5e;"></i>
                             <span>Insiden</span>
+                        </a>
+                        <a asp-controller="BbsMaster" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "BbsMaster" ? "active" : "")">
+                            <i class="bi bi-sliders2-vertical" style="color: #38bdf8;"></i>
+                            <span>Master BBS</span>
                         </a>
                     }
                     @if (canAccessUploadData)
@@ -278,6 +286,10 @@
                     <a asp-controller="Inspection" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "Inspection" ? "active" : "")">
                         <i class="bi bi-clipboard-check-fill"></i>
                         <span>Inspection</span>
+                    </a>
+                    <a asp-controller="Bbs" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "BBS" ? "active" : "")">
+                        <i class="bi bi-shield-check"></i>
+                        <span>BBS</span>
                     </a>
                     <a asp-controller="ActionPlan" asp-action="Index" class="nav-item-bottom @(ViewData["ActiveTab"]?.ToString() == "ActionPlan" ? "active" : "")">
                         <i class="bi bi-calendar-check-fill"></i>

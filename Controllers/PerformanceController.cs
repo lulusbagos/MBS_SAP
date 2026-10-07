@@ -511,43 +511,40 @@ namespace MBS_SAP.Controllers
                 }
 
                 int totalDaysInMonth = DateTime.DaysInMonth(selectedYear, selectedMonth);
-                int onsiteDays = totalDaysInMonth; // default if no roster setting
-                bool hasRoster = false;
-
                 DateTime effectiveEmpStart = (k.TanggalMasuk.HasValue && k.TanggalMasuk.Value > startOfMonth)
                     ? k.TanggalMasuk.Value
                     : startOfMonth;
+                int cutiDays = 0;
+                bool isTugasExempt = false;
 
                 if (rostersByNik.TryGetValue(nik, out var empRosters))
                 {
-                    int computedOnsite = 0;
-                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
-                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                            var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
+                            var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                            if (ovTStart <= ovTEnd) isTugasExempt = true;
+                            continue;
                         }
 
-                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
+                        // Target HANYA berkurang ketika karyawan cuti
+                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= effectiveEmpStart)
                         {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            var ovCutiStart = r.AwalCuti > effectiveEmpStart ? r.AwalCuti : effectiveEmpStart;
+                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
+                            if (ovCutiStart <= ovCutiEnd)
+                            {
+                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        onsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
-                    }
                 }
-                else if (effectiveEmpStart > startOfMonth)
-                {
-                    hasRoster = true;
-                    onsiteDays = Math.Min((endOfMonth.Date - effectiveEmpStart.Date).Days + 1, totalDaysInMonth);
-                }
+
+                int nonActiveBeforeJoin = (effectiveEmpStart > startOfMonth) ? (effectiveEmpStart - startOfMonth).Days : 0;
+                int onsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonth - nonActiveBeforeJoin - cutiDays);
+                bool hasRoster = (cutiDays > 0 || isTugasExempt || effectiveEmpStart > startOfMonth);
 
                 double ratio = hasRoster ? Math.Min(1.0, (double)onsiteDays / totalDaysInMonth) : 1.0;
 
@@ -957,38 +954,37 @@ namespace MBS_SAP.Controllers
                     ? emp.TanggalMasuk.Value
                     : startOfMonth;
 
-                int onsiteDays = totalDaysInMonth;
-                bool hasRoster = false;
+                int cutiDays = 0;
+                bool isTugasExempt = false;
+
                 if (rostersByNik.TryGetValue(nik, out var empRosters))
                 {
-                    int computedOnsite = 0;
-                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
-                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                            var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
+                            var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                            if (ovTStart <= ovTEnd) isTugasExempt = true;
+                            continue;
                         }
 
-                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
+                        // Target HANYA berkurang ketika karyawan cuti
+                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= effectiveEmpStart)
                         {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            var ovCutiStart = r.AwalCuti > effectiveEmpStart ? r.AwalCuti : effectiveEmpStart;
+                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
+                            if (ovCutiStart <= ovCutiEnd)
+                            {
+                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        onsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
-                    }
                 }
-                else if (effectiveEmpStart > startOfMonth)
-                {
-                    hasRoster = true;
-                    onsiteDays = Math.Min((endOfMonth.Date - effectiveEmpStart.Date).Days + 1, totalDaysInMonth);
-                }
+
+                int nonActiveBeforeJoin = (effectiveEmpStart > startOfMonth) ? (effectiveEmpStart - startOfMonth).Days : 0;
+                int onsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonth - nonActiveBeforeJoin - cutiDays);
+                bool hasRoster = (cutiDays > 0 || isTugasExempt || effectiveEmpStart > startOfMonth);
 
                 double ratio = hasRoster ? Math.Min(1.0, (double)onsiteDays / totalDaysInMonth) : 1.0;
                 int mH = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
@@ -2112,37 +2108,37 @@ namespace MBS_SAP.Controllers
                     : startOfMonth;
                 int possibleDays = Math.Max(1, (endOfMonth - effectiveEmpStart).Days + 1);
 
-                int onsiteDays = totalDaysInMonth;
-                bool hasRoster = false;
+                int cutiDays = 0;
+                bool isTugasExempt = false;
+
                 if (rostersByNik.TryGetValue(nik, out var empRosters))
                 {
-                    int computedOnsite = 0;
-                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
-                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
+                            var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
+                            var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                            if (ovTStart <= ovTEnd) isTugasExempt = true;
                             continue;
                         }
 
-                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
+                        // Target HANYA berkurang ketika karyawan cuti
+                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= effectiveEmpStart)
                         {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            var ovCutiStart = r.AwalCuti > effectiveEmpStart ? r.AwalCuti : effectiveEmpStart;
+                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
+                            if (ovCutiStart <= ovCutiEnd)
+                            {
+                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        onsiteDays = computedOnsite;
-                    }
                 }
-                else if (effectiveEmpStart > startOfMonth)
-                {
-                    onsiteDays = possibleDays;
-                }
+
+                int nonActiveBeforeJoin = (effectiveEmpStart > startOfMonth) ? (effectiveEmpStart - startOfMonth).Days : 0;
+                int onsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonth - nonActiveBeforeJoin - cutiDays);
+                bool hasRoster = (cutiDays > 0 || isTugasExempt || effectiveEmpStart > startOfMonth);
 
                 double ratio = (double)onsiteDays / possibleDays;
                 int finalMtdTarget = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
@@ -2379,43 +2375,42 @@ namespace MBS_SAP.Controllers
                 }
 
                 var nik = (emp.NoNik ?? string.Empty).Trim();
-                int onsiteDays = totalDaysInMonthM;
-                bool hasRoster = false;
 
                 DateTime effectiveEmpStart = (emp.TanggalMasuk.HasValue && emp.TanggalMasuk.Value > startOfMonth)
                     ? emp.TanggalMasuk.Value
                     : startOfMonth;
 
+                int cutiDays = 0;
+                bool isTugasExempt = false;
+
                 if (!string.IsNullOrEmpty(nik) && activeRostersByNik.TryGetValue(nik, out var empRosters))
                 {
-                    int computedOnsite = 0;
-                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
-                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                            var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
+                            var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                            if (ovTStart <= ovTEnd) isTugasExempt = true;
+                            continue;
                         }
 
-                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
+                        // Target HANYA berkurang ketika karyawan cuti
+                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= effectiveEmpStart)
                         {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            var ovCutiStart = r.AwalCuti > effectiveEmpStart ? r.AwalCuti : effectiveEmpStart;
+                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
+                            if (ovCutiStart <= ovCutiEnd)
+                            {
+                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        onsiteDays = computedOnsite;
-                    }
                 }
-                else if (effectiveEmpStart > startOfMonth)
-                {
-                    hasRoster = true;
-                    onsiteDays = (endOfMonth.Date - effectiveEmpStart.Date).Days + 1;
-                }
+
+                int nonActiveBeforeJoin = (effectiveEmpStart > startOfMonth) ? (effectiveEmpStart - startOfMonth).Days : 0;
+                int onsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonthM - nonActiveBeforeJoin - cutiDays);
+                bool hasRoster = (cutiDays > 0 || isTugasExempt || effectiveEmpStart > startOfMonth);
 
                 double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonthM : 1.0;
 
@@ -2978,11 +2973,9 @@ namespace MBS_SAP.Controllers
 
                 if (rosterHistory != null && rosterHistory.Any())
                 {
-                    int computedOnsite = 0;
-                    bool hasAnyRoster = false;
+                    int cutiDays = 0;
                     foreach (var r in rosterHistory)
                     {
-                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
                             var overlapStartT = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
@@ -2994,18 +2987,22 @@ namespace MBS_SAP.Controllers
                             continue; // Periode Tugas is exempt from SAP (target = 0)
                         }
 
-                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
+                        // Target HANYA berkurang ketika karyawan cuti
+                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= startOfMonth)
                         {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            var ovCutiStart = r.AwalCuti > startOfMonth ? r.AwalCuti : startOfMonth;
+                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
+                            if (ovCutiStart <= ovCutiEnd)
+                            {
+                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        computedOnsiteDays = computedOnsite;
-                    }
+
+                    int nonActiveBeforeJoin = (currentKaryawan != null && currentKaryawan.TanggalMasuk.HasValue && currentKaryawan.TanggalMasuk.Value > startOfMonth) 
+                        ? (currentKaryawan.TanggalMasuk.Value.Date - startOfMonth.Date).Days : 0;
+                    computedOnsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonth - nonActiveBeforeJoin - cutiDays);
+                    hasRoster = (cutiDays > 0 || isTugasExempt || (currentKaryawan != null && currentKaryawan.TanggalMasuk.HasValue && currentKaryawan.TanggalMasuk.Value > startOfMonth));
                 }
                 else if (currentKaryawan != null && currentKaryawan.TanggalMasuk.HasValue && currentKaryawan.TanggalMasuk.Value > startOfMonth)
                 {
@@ -3532,13 +3529,16 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> League(int? companyId = null, string mode = "dept", int? year = null, int? month = null, string targetFilter = "target", int? parentId = null)
+        public async Task<IActionResult> League(int? companyId = null, string mode = "dept", int? year = null, int? month = null, string targetFilter = "target", int? parentId = null, bool showAllPlayers = false, string squadTab = "best", string? departmentName = null)
         {
             ViewData["HeaderTitle"] = "League SAP";
             ViewData["ActiveTab"] = "Performance";
             ViewBag.Mode = mode; // "dept" or "company"
             ViewBag.TargetFilter = targetFilter;
             ViewBag.ParentId = parentId;
+            ViewBag.ShowAllPlayers = showAllPlayers;
+            ViewBag.SquadTab = string.Equals(squadTab, "volume", StringComparison.OrdinalIgnoreCase) ? "volume" : "best";
+            ViewBag.DepartmentName = departmentName;
 
             var today = DateTime.Today;
             int selectedYear = year ?? today.Year;
@@ -3547,12 +3547,21 @@ namespace MBS_SAP.Controllers
             ViewBag.SelectedMonth = selectedMonth;
 
             var (resolvedCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
-            var isAdmin = User.IsInRole("Admin");
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                          ?? User.FindFirst("Nrp")?.Value 
+                          ?? User.Identity?.Name;
+            var isAdmin = User.IsInRole("Admin") || string.Equals(userNik, "24051940986", StringComparison.OrdinalIgnoreCase);
             var jobTitle = User.FindFirst("JobTitle")?.Value;
             var department = User.FindFirst("Department")?.Value;
             bool isSafetyRole = CheckIsSafetyRole(jobTitle, department, isAdmin);
             ViewBag.IsSafetyRole = isSafetyRole;
             ViewBag.IsAdmin = isAdmin;
+
+            if (!isAdmin && (targetFilter == "nontarget_pengawas" || targetFilter == "nonstaff_targeted"))
+            {
+                targetFilter = "target";
+                ViewBag.TargetFilter = "target";
+            }
 
             // Fetch all active companies
             var allCompanies = await _context.Perusahaans
@@ -3599,7 +3608,7 @@ namespace MBS_SAP.Controllers
             var selectedCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? allowedCompanies.First();
 
             int? effectiveParentScope = null;
-            var userNik = User.Identity?.Name ?? User.FindFirst("Nrp")?.Value;
+            userNik ??= User.Identity?.Name ?? User.FindFirst("Nrp")?.Value;
 
             if (!isAdmin)
             {
@@ -3827,6 +3836,14 @@ namespace MBS_SAP.Controllers
                         MtdCoachingRate = cRate,
                         MtdP5mRate = p5mRate,
                         MtdCloseRate = compCloseRate,
+                        HazardActual = hAct, HazardTarget = hTgt,
+                        InspeksiActual = iAct, InspeksiTarget = iTgt,
+                        SafetyTalkActual = stAct, SafetyTalkTarget = stTgt,
+                        ObservasiActual = oAct, ObservasiTarget = oTgt,
+                        CoachingActual = cAct, CoachingTarget = cTgt,
+                        P5mActual = p5mAct, P5mTarget = p5mTgt,
+                        ApTotal = compEffectiveTotalAp,
+                        ApClosed = compEffectiveClosedAp,
                         TotalScore = 0.0
                     });
                 }
@@ -3834,14 +3851,32 @@ namespace MBS_SAP.Controllers
                 int maxTargetAll = companyStandings.Any() ? companyStandings.Max(x => (int)x.TotalTarget) : 1;
                 if (maxTargetAll <= 0) maxTargetAll = 1;
 
+                int maxTargetTier1 = companyStandings.Where(x => (int)x.EmployeeCount > 100).Select(x => (int)x.TotalTarget).DefaultIfEmpty(1).Max();
+                int maxTargetTier2 = companyStandings.Where(x => (int)x.EmployeeCount >= 21 && (int)x.EmployeeCount <= 100).Select(x => (int)x.TotalTarget).DefaultIfEmpty(1).Max();
+                int maxTargetTier3 = companyStandings.Where(x => (int)x.EmployeeCount <= 20).Select(x => (int)x.TotalTarget).DefaultIfEmpty(1).Max();
+
+                if (maxTargetTier1 <= 0) maxTargetTier1 = 1;
+                if (maxTargetTier2 <= 0) maxTargetTier2 = 1;
+                if (maxTargetTier3 <= 0) maxTargetTier3 = 1;
+
                 bool isCurrentNewPolicy = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
                 ViewBag.IsNewPolicyPeriod = isCurrentNewPolicy;
 
                 var rankedStandings = new List<dynamic>();
                 foreach (var x in companyStandings)
                 {
-                    double scorePencapaian = (double)x.MtdAchievementRate;
-                    double scoreSkalaBeban = maxTargetAll > 0 ? (Math.Log10((int)x.TotalTarget + 1) / Math.Log10(maxTargetAll + 1)) * 100.0 : 0.0;
+                    int empCount = (int)x.EmployeeCount;
+                    int effectiveMaxTarget = (mode == "company")
+                        ? (empCount > 100 ? maxTargetTier1 : (empCount >= 21 ? maxTargetTier2 : maxTargetTier3))
+                        : maxTargetAll;
+                    string tierLabel = (mode == "company")
+                        ? (empCount > 100 ? "Tier 1 (>100 Skuad)" : (empCount >= 21 ? "Tier 2 (21-100 Skuad)" : "Tier 3 (1-20 Skuad)"))
+                        : "Perusahaan Inti";
+
+                    double scorePencapaian = Math.Min(100.0, Math.Max(0.0, (double)x.MtdAchievementRate));
+                    double scoreSkalaBeban = (effectiveMaxTarget > 0 && (int)x.TotalTarget > 0)
+                        ? ((int)x.TotalTarget >= effectiveMaxTarget ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10((int)x.TotalTarget + 1) / Math.Log10(effectiveMaxTarget + 1)) * 100.0)))
+                        : 0.0;
                     double scoreCloseRate = (double)x.MtdCloseRate;
                     int cIdStanding = (int)x.CompanyId;
                     double scoreKualitas = (compQualityStats.TryGetValue(cIdStanding, out var cQ) && cQ.TotalRated > 0)
@@ -3878,16 +3913,30 @@ namespace MBS_SAP.Controllers
                         ScoreCloseRate = Math.Round(scoreCloseRate, 1),
                         ScoreKualitas = Math.Round(scoreKualitas, 1),
                         ScorePencapaian = Math.Round(scorePencapaian, 1),
+                        ScoreCapaian = Math.Round(scorePencapaian, 1),
                         ScoreSkalaBeban = Math.Round(scoreSkalaBeban, 1),
                         PtsClose = ptsClose,
                         PtsKualitas = ptsKualitas,
                         PtsPencapaian = ptsPencapaian,
+                        PtsCapaian = ptsPencapaian,
                         PtsBeban = ptsBeban,
                         WeightClose = (int)(wClose * 100),
                         WeightKualitas = (int)(wKualitas * 100),
                         WeightCapaian = (int)(wCapaian * 100),
                         WeightBeban = (int)(wBeban * 100),
-                        TotalScore = Math.Round(totalScore, 2)
+                        TotalScore = Math.Round(totalScore, 2),
+                        MaxTargetAll = maxTargetAll,
+                        MaxTargetDept = effectiveMaxTarget,
+                        MaxTargetTier = effectiveMaxTarget,
+                        TierLabel = tierLabel,
+                        HazardActual = x.HazardActual, HazardTarget = x.HazardTarget,
+                        InspeksiActual = x.InspeksiActual, InspeksiTarget = x.InspeksiTarget,
+                        SafetyTalkActual = x.SafetyTalkActual, SafetyTalkTarget = x.SafetyTalkTarget,
+                        ObservasiActual = x.ObservasiActual, ObservasiTarget = x.ObservasiTarget,
+                        CoachingActual = x.CoachingActual, CoachingTarget = x.CoachingTarget,
+                        P5mActual = x.P5mActual, P5mTarget = x.P5mTarget,
+                        ApTotal = x.ApTotal,
+                        ApClosed = x.ApClosed
                     });
                 }
 
@@ -3934,17 +3983,36 @@ namespace MBS_SAP.Controllers
                     filteredEmployees = scopedEmployees.Where(e => (bool)e.isTargetSap);
                 }
 
-                var maxTargetByDept = filteredEmployees
-                    .Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0)
-                    .GroupBy(e => (string)e.departmentName ?? "", StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Key, g => g.Max(e => (int)e.mtdTotalTarget), StringComparer.OrdinalIgnoreCase);
+                // Skala Beban Skuad Pemain:
+                // Di Super League (mode == "company") atau Perusahaan Inti (mode == "core"),
+                // tolak ukur beban operasional (max target) dibandingkan terhadap seluruh karyawan yang bertanding di liga tersebut,
+                // sehingga adil bagi pengawas operasional berbeban tinggi (tidak tersalip staf ber-target kecil).
+                int maxTargetPlayerLeague = filteredEmployees
+                    .Where(e => (bool)e.isTargetSap)
+                    .Select(e => (int)e.mtdTotalTarget)
+                    .DefaultIfEmpty(1)
+                    .Max();
+                if (maxTargetPlayerLeague <= 0) maxTargetPlayerLeague = 1;
+
+                var compNameLookup = allCompanies.ToDictionary(c => c.PerusahaanId, c => c.NamaPerusahaan ?? "");
 
                 var sortedEmployees = filteredEmployees
                     .Select(e => {
                         int empTarget = (int)e.mtdTotalTarget;
                         int empActual = (int)e.mtdTotalActual;
                         string dept = (string)e.departmentName ?? "";
-                        int maxTargetDept = maxTargetByDept.TryGetValue(dept, out int maxD) && maxD > 0 ? maxD : (empTarget > 0 ? empTarget : 1);
+
+                        int empCompId = 0;
+                        try { empCompId = (int)(e.companyId ?? 0); } catch { }
+                        string empCompName = "";
+                        if (empCompId > 0 && compNameLookup.TryGetValue(empCompId, out var foundCompName))
+                        {
+                            empCompName = foundCompName;
+                        }
+                        else
+                        {
+                            empCompName = selectedCompany.NamaPerusahaan ?? "";
+                        }
 
                         double closeRate = (double)e.closeRate;
                         double complianceRate = (double)e.complianceRate;
@@ -3954,8 +4022,8 @@ namespace MBS_SAP.Controllers
                             ? empQ.ScoreKualitas
                             : (empActual > 0 ? 100.0 : 0.0);
                         double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
-                        double scoreSkalaBeban = (empTarget > 0 && maxTargetDept > 0)
-                            ? (empTarget >= maxTargetDept ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetDept + 1)) * 100.0)))
+                        double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayerLeague > 0)
+                            ? Math.Min(100.0, Math.Max(0.0, ((double)empTarget / maxTargetPlayerLeague) * 100.0))
                             : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
                         double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
@@ -3967,6 +4035,8 @@ namespace MBS_SAP.Controllers
                         return new {
                             name = (string)e.karyawanName,
                             nik = (string)e.nik,
+                            companyId = empCompId,
+                            companyName = empCompName,
                             departmentName = (string)e.departmentName,
                             jabatanName = (string)e.jabatanName,
                             namaJabatanExisting = (string?)e.namaJabatanExisting,
@@ -3999,7 +4069,7 @@ namespace MBS_SAP.Controllers
                             ptsCapaian = ptsCapaian,
                             ptsBeban = ptsBeban,
                             totalScore = totalScore,
-                            maxTargetPlayer = maxTargetDept,
+                            maxTargetPlayer = maxTargetPlayerLeague,
                             mtdTotalTarget = empTarget,
                             mtdTotalActual = empActual,
                             onsiteDays = (int)e.onsiteDays,
@@ -4015,12 +4085,31 @@ namespace MBS_SAP.Controllers
                         };
                     })
                     .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
-                    .ThenByDescending(e => e.complianceRate)
-                    .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
-                    .ThenByDescending(e => e.totalScore)
+                    .ThenByDescending(e => (double)e.complianceRate >= 100.0 ? 1 : 0) // Syarat Mutlak Juara/Podium: Wajib tuntas 100% seluruh program K3 (Capaian 100% / All Green W)
+                    .ThenByDescending(e => (double)e.totalScore)
+                    .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah: keaktifan terus membuat laporan safety riil saat PTS sama
+                    .ThenByDescending(e => (double)e.complianceRate)
+                    .ThenByDescending(e => (double)e.closeRate)
+                    .ThenByDescending(e => (int)(e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual))
+                    .ToList();
+                var sortedByVolume = sortedEmployees
+                    .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
+                    .ThenByDescending(e => (int)e.totalActualAll)
+                    .ThenByDescending(e => (double)e.totalScore)
+                    .ThenByDescending(e => (double)e.complianceRate)
                     .ToList();
 
-                ViewBag.Employees = sortedEmployees;
+                ViewBag.TotalPlayerCount = sortedEmployees.Count;
+                if (!showAllPlayers)
+                {
+                    ViewBag.Employees = sortedEmployees.Take(10).ToList();
+                    ViewBag.TopReporters = sortedByVolume.Take(10).ToList();
+                }
+                else
+                {
+                    ViewBag.Employees = sortedEmployees;
+                    ViewBag.TopReporters = sortedByVolume;
+                }
             }
             else
             {
@@ -4198,16 +4287,17 @@ namespace MBS_SAP.Controllers
                     filteredEmployees = employees.Where(e => (bool)e.isTargetSap);
                 }
 
-                var maxTargetByDeptMode = filteredEmployees
-                    .Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0)
-                    .GroupBy(e => (string)e.departmentName ?? "", StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Key, g => g.Max(e => (int)e.mtdTotalTarget), StringComparer.OrdinalIgnoreCase);
+                int maxTargetPlayerComp = filteredEmployees
+                    .Where(e => (bool)e.isTargetSap)
+                    .Select(e => (int)e.mtdTotalTarget)
+                    .DefaultIfEmpty(1)
+                    .Max();
+                if (maxTargetPlayerComp <= 0) maxTargetPlayerComp = 1;
 
                 var sortedEmployees = filteredEmployees.Select(e => {
                     int empTarget = (int)e.mtdTotalTarget;
                     int empActual = (int)e.mtdTotalActual;
                     string dept = (string)e.departmentName ?? "";
-                    int maxTargetDept = maxTargetByDeptMode.TryGetValue(dept, out int maxD) && maxD > 0 ? maxD : (empTarget > 0 ? empTarget : 1);
 
                     double closeRate = (double)e.closeRate;
                     double complianceRate = (double)e.complianceRate;
@@ -4217,8 +4307,8 @@ namespace MBS_SAP.Controllers
                         ? empQAll.ScoreKualitas
                         : (empActual > 0 ? 100.0 : 0.0);
                     double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
-                    double scoreSkalaBeban = (empTarget > 0 && maxTargetDept > 0)
-                        ? (empTarget >= maxTargetDept ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetDept + 1)) * 100.0)))
+                    double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayerComp > 0)
+                        ? Math.Min(100.0, Math.Max(0.0, ((double)empTarget / maxTargetPlayerComp) * 100.0))
                         : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
                     double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
@@ -4230,6 +4320,8 @@ namespace MBS_SAP.Controllers
                     return new {
                         name = (string)e.karyawanName,
                         nik = (string)e.nik,
+                        companyId = selectedCompany.PerusahaanId,
+                        companyName = selectedCompany.NamaPerusahaan ?? "",
                         departmentName = (string)e.departmentName,
                         jabatanName = (string)e.jabatanName,
                         namaJabatanExisting = (string?)e.namaJabatanExisting,
@@ -4262,7 +4354,7 @@ namespace MBS_SAP.Controllers
                         ptsCapaian = ptsCapaian,
                         ptsBeban = ptsBeban,
                         totalScore = totalScore,
-                        maxTargetPlayer = maxTargetDept,
+                        maxTargetPlayer = maxTargetPlayerComp,
                         mtdTotalTarget = empTarget,
                         mtdTotalActual = empActual,
                         onsiteDays = (int)e.onsiteDays,
@@ -4278,21 +4370,36 @@ namespace MBS_SAP.Controllers
                     };
                 });
 
+                var sortedByVolume = sortedEmployees
+                    .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
+                    .ThenByDescending(e => (int)e.totalActualAll)
+                    .ThenByDescending(e => (double)e.totalScore)
+                    .ThenByDescending(e => (double)e.complianceRate)
+                    .ToList();
+
+                ViewBag.TotalPlayerCount = sortedEmployees.Count();
                 if (string.Equals(targetFilter, "nontarget_pengawas", StringComparison.OrdinalIgnoreCase))
                 {
                     ViewBag.Employees = sortedEmployees
                         .OrderBy(e => e.departmentName)
                         .ThenBy(e => e.name)
                         .ToList();
+                    ViewBag.TopReporters = ViewBag.Employees;
                 }
                 else
                 {
-                    ViewBag.Employees = sortedEmployees
+                    var sortedList = sortedEmployees
                         .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
                         .ThenByDescending(e => e.complianceRate)
+                        .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah keaktifan laporan riil
                         .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
                         .ThenByDescending(e => e.totalScore)
                         .ToList();
+
+                    // Pada Klasemen Internal (Klub / Departemen), sediakan seluruh anggota skuad perusahaan
+                    // agar ketika user mengklik departemen manapun di tabel klasemen, seluruh anggota skuad departemen tersebut tampil lengkap
+                    ViewBag.Employees = sortedList;
+                    ViewBag.TopReporters = sortedByVolume;
                 }
             }
 
@@ -4391,6 +4498,11 @@ namespace MBS_SAP.Controllers
             var deptAchievements = new List<DepartmentAchievementViewModel>();
 
             string modeLabel = mode == "company" ? "Super League (Antar Perusahaan)" : (mode == "core" ? "Liga Perusahaan Inti" : "Klasemen Internal (Departemen)");
+
+            var qualitySummary = await _qualityService.GetMonthlyQualityStatsAsync(selectedYear, selectedMonth);
+            var nikQualityStats = qualitySummary.NikStats;
+            var deptQualityStats = qualitySummary.DeptStats;
+            var compQualityStats = qualitySummary.CompStats;
 
             if (mode == "company" || mode == "core")
             {
@@ -4534,15 +4646,36 @@ namespace MBS_SAP.Controllers
                 int maxTargetAll = companyStandings.Any() ? companyStandings.Max(x => (int)x.TotalTarget) : 1;
                 if (maxTargetAll <= 0) maxTargetAll = 1;
 
+                int maxTargetTier1 = companyStandings.Where(x => (int)x.EmployeeCount > 100).Select(x => (int)x.TotalTarget).DefaultIfEmpty(1).Max();
+                int maxTargetTier2 = companyStandings.Where(x => (int)x.EmployeeCount >= 21 && (int)x.EmployeeCount <= 100).Select(x => (int)x.TotalTarget).DefaultIfEmpty(1).Max();
+                int maxTargetTier3 = companyStandings.Where(x => (int)x.EmployeeCount <= 20).Select(x => (int)x.TotalTarget).DefaultIfEmpty(1).Max();
+
+                if (maxTargetTier1 <= 0) maxTargetTier1 = 1;
+                if (maxTargetTier2 <= 0) maxTargetTier2 = 1;
+                if (maxTargetTier3 <= 0) maxTargetTier3 = 1;
+
                 bool isCurrentNewPolicy = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
 
                 var rankedStandings = new List<dynamic>();
                 foreach (var x in companyStandings)
                 {
-                    double scorePencapaian = (double)x.MtdAchievementRate;
-                    double scoreSkalaBeban = maxTargetAll > 0 ? (Math.Log10((int)x.TotalTarget + 1) / Math.Log10(maxTargetAll + 1)) * 100.0 : 0.0;
+                    int empCount = (int)x.EmployeeCount;
+                    int effectiveMaxTarget = (mode == "company")
+                        ? (empCount > 100 ? maxTargetTier1 : (empCount >= 21 ? maxTargetTier2 : maxTargetTier3))
+                        : maxTargetAll;
+                    string tierLabel = (mode == "company")
+                        ? (empCount > 100 ? "Tier 1 (>100 Skuad)" : (empCount >= 21 ? "Tier 2 (21-100 Skuad)" : "Tier 3 (1-20 Skuad)"))
+                        : "Perusahaan Inti";
+
+                    double scorePencapaian = Math.Min(100.0, Math.Max(0.0, (double)x.MtdAchievementRate));
+                    double scoreSkalaBeban = (effectiveMaxTarget > 0 && (int)x.TotalTarget > 0)
+                        ? ((int)x.TotalTarget >= effectiveMaxTarget ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10((int)x.TotalTarget + 1) / Math.Log10(effectiveMaxTarget + 1)) * 100.0)))
+                        : 0.0;
                     double scoreCloseRate = (double)x.MtdCloseRate;
-                    double scoreKualitas = 100.0;
+                    int cIdStanding = (int)x.CompanyId;
+                    double scoreKualitas = (compQualityStats.TryGetValue(cIdStanding, out var cQ) && cQ.TotalRated > 0)
+                        ? cQ.ScoreKualitas
+                        : ((int)x.TotalActual > 0 ? 100.0 : 0.0);
 
                     double wClose = isCurrentNewPolicy ? 0.50 : 0.40;
                     double wKualitas = 0.25;
@@ -4574,16 +4707,22 @@ namespace MBS_SAP.Controllers
                         ScoreCloseRate = Math.Round(scoreCloseRate, 1),
                         ScoreKualitas = Math.Round(scoreKualitas, 1),
                         ScorePencapaian = Math.Round(scorePencapaian, 1),
+                        ScoreCapaian = Math.Round(scorePencapaian, 1),
                         ScoreSkalaBeban = Math.Round(scoreSkalaBeban, 1),
                         PtsClose = ptsClose,
                         PtsKualitas = ptsKualitas,
                         PtsPencapaian = ptsPencapaian,
+                        PtsCapaian = ptsPencapaian,
                         PtsBeban = ptsBeban,
                         WeightClose = (int)(wClose * 100),
                         WeightKualitas = (int)(wKualitas * 100),
                         WeightCapaian = (int)(wCapaian * 100),
                         WeightBeban = (int)(wBeban * 100),
-                        TotalScore = Math.Round(totalScore, 2)
+                        TotalScore = Math.Round(totalScore, 2),
+                        MaxTargetAll = maxTargetAll,
+                        MaxTargetDept = effectiveMaxTarget,
+                        MaxTargetTier = effectiveMaxTarget,
+                        TierLabel = tierLabel
                     });
                 }
                 companyStandings = rankedStandings;
@@ -4676,7 +4815,10 @@ namespace MBS_SAP.Controllers
 
                 deptAchievements = rawDeptListExcel.Select(d => {
                     double scoreClose = Math.Min(100.0, Math.Max(0.0, d.DeptCloseRate));
-                    double scoreKualitas = 100.0;
+                    string dDeptKey = (d.DeptName ?? "").Trim();
+                    double scoreKualitas = (deptQualityStats.TryGetValue(dDeptKey, out var dQ) && dQ.TotalRated > 0)
+                        ? dQ.ScoreKualitas
+                        : (d.TotalActual > 0 ? 100.0 : 0.0);
                     double scoreCapaian = Math.Min(100.0, Math.Max(0.0, d.MtdRate));
                     double scoreBeban = (d.TotalTarget > 0 && maxDeptTargetExcel > 0)
                         ? (d.TotalTarget >= maxDeptTargetExcel ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(d.TotalTarget + 1) / Math.Log10(maxDeptTargetExcel + 1)) * 100.0)))
@@ -4756,25 +4898,29 @@ namespace MBS_SAP.Controllers
                 employeesData = employeesData.Where(e => (bool)e.isTargetSap).ToList();
             }
 
-            var maxTargetByDeptExcel = employeesData
-                .Where(e => (bool)e.isTargetSap && (int)e.mtdTotalTarget > 0)
-                .GroupBy(e => (string)e.departmentName ?? "", StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.Max(e => (int)e.mtdTotalTarget), StringComparer.OrdinalIgnoreCase);
+            int maxTargetPlayerExcel = employeesData
+                .Where(e => (bool)e.isTargetSap)
+                .Select(e => (int)e.mtdTotalTarget)
+                .DefaultIfEmpty(1)
+                .Max();
+            if (maxTargetPlayerExcel <= 0) maxTargetPlayerExcel = 1;
 
             var sorted = employeesData
                 .Select(e => {
                     int empTarget = (int)e.mtdTotalTarget;
                     int empActual = (int)e.mtdTotalActual;
                     string dept = (string)e.departmentName ?? "";
-                    int maxTargetDept = maxTargetByDeptExcel.TryGetValue(dept, out int maxD) && maxD > 0 ? maxD : (empTarget > 0 ? empTarget : 1);
 
                     double closeRate = (double)e.closeRate;
                     double complianceRate = (double)e.complianceRate;
+                    string eNik = ((string)e.nik ?? "").Trim();
                     double scoreCloseRate = Math.Min(100.0, Math.Max(0.0, closeRate));
-                    double scoreKualitas = 100.0;
+                    double scoreKualitas = (nikQualityStats.TryGetValue(eNik, out var empQ) && empQ.TotalRated > 0)
+                        ? empQ.ScoreKualitas
+                        : (empActual > 0 ? 100.0 : 0.0);
                     double scoreCapaian = Math.Min(100.0, Math.Max(0.0, complianceRate));
-                    double scoreSkalaBeban = (empTarget > 0 && maxTargetDept > 0)
-                        ? (empTarget >= maxTargetDept ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(empTarget + 1) / Math.Log10(maxTargetDept + 1)) * 100.0)))
+                    double scoreSkalaBeban = (empTarget > 0 && maxTargetPlayerExcel > 0)
+                        ? Math.Min(100.0, Math.Max(0.0, ((double)empTarget / maxTargetPlayerExcel) * 100.0))
                         : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
                     double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
@@ -4783,14 +4929,32 @@ namespace MBS_SAP.Controllers
                     double ptsBeban = Math.Round(scoreSkalaBeban * 0.10, 2);
                     double totalScore = Math.Round(ptsClose + ptsKualitas + ptsCapaian + ptsBeban, 2);
 
+                    string empCompName = "";
+                    try {
+                        empCompName = (string)e.companyName ?? "";
+                    } catch { }
+                    if (string.IsNullOrEmpty(empCompName))
+                    {
+                        try {
+                            int eCid = (int)e.companyId;
+                            empCompName = allCompanies.FirstOrDefault(c => c.PerusahaanId == eCid)?.NamaPerusahaan ?? "";
+                        } catch { }
+                    }
+                    if (string.IsNullOrEmpty(empCompName))
+                    {
+                        empCompName = selectedCompany.NamaPerusahaan ?? "";
+                    }
+
                     return new {
                         name = (string)e.karyawanName,
                         nik = (string)e.nik,
+                        companyName = empCompName,
                         departmentName = (string)e.departmentName,
                         jabatanName = (string)e.jabatanName,
                         isTargetSap = (bool)e.isTargetSap,
                         isNonTarget = (bool)e.isNonTarget,
                         isActivelyReporting = (bool)e.isActivelyReporting,
+                        totalActualAll = (int)e.totalActualAll,
                         complianceRate = complianceRate,
                         closeRate = closeRate,
                         crCreatorScore = (double)(e.crCreatorScore ?? 100.0),
@@ -4810,7 +4974,7 @@ namespace MBS_SAP.Controllers
                         ptsCapaian = ptsCapaian,
                         ptsBeban = ptsBeban,
                         totalScore = totalScore,
-                        maxTargetPlayer = maxTargetDept,
+                        maxTargetPlayer = maxTargetPlayerExcel,
                         mtdTotalTarget = empTarget,
                         mtdTotalActual = empActual,
                         onsiteDays = (int)e.onsiteDays,
@@ -4824,9 +4988,12 @@ namespace MBS_SAP.Controllers
                     };
                 })
                 .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
-                .ThenByDescending(e => e.complianceRate)
-                .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
-                .ThenByDescending(e => e.totalScore)
+                .ThenByDescending(e => (double)e.complianceRate >= 100.0 ? 1 : 0) // Syarat Mutlak Juara/Podium: Wajib tuntas 100% seluruh program K3 (Capaian 100% / All Green W)
+                .ThenByDescending(e => (mode == "company" || mode == "core") ? (double)e.totalScore : (double)e.complianceRate)
+                .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah: keaktifan terus membuat laporan safety riil saat skor sama
+                .ThenByDescending(e => (mode == "company" || mode == "core") ? (double)e.complianceRate : (double)e.totalScore)
+                .ThenByDescending(e => (double)e.closeRate)
+                .ThenByDescending(e => (int)(e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual))
                 .ToList();
 
             using (var workbook = new XLWorkbook())
@@ -4858,30 +5025,44 @@ namespace MBS_SAP.Controllers
                 wsStandings.Cell(4, 1).Style.Font.FontSize = 9;
                 wsStandings.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
 
+                wsStandings.Cell(5, 1).Value = "Formula Skor PTS: (50% × Close Rate) + (25% × Kualitas AI) + (15% × Capaian SAP) + (10% × Skala Beban)";
+                wsStandings.Cell(5, 1).Style.Font.Italic = true;
+                wsStandings.Cell(5, 1).Style.Font.FontSize = 9;
+                wsStandings.Cell(5, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
+                wsStandings.Cell(5, 1).Style.Font.Bold = true;
+
                 string clubHeader = (mode == "company" || mode == "core") ? "Klub (Perusahaan)" : "Klub (Departemen)";
                 bool isCompanyMode = (mode == "company");
                 string[] stdHeaders;
                 if (isCompanyMode)
                 {
                     stdHeaders = new[] {
-                        "Pos", "Divisi / Tier", clubHeader, "Skuad (Orang)", "Total Target", "PTS (Skor Total)", "Capaian (%)",
-                        "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *", "Close Rate (%)"
-                    };
-                }
-                else if (mode == "core")
-                {
-                    stdHeaders = new[] {
-                        "Pos", clubHeader, "Skuad (Orang)", "Total Target", "PTS (Skor Total)", "Capaian (%)",
-                        "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *", "Close Rate (%)"
+                        "Pos", "Divisi / Tier", clubHeader, "Skuad (Orang)", "Total Target", "PTS (Skor Total)",
+                        "Close Rate (%)", "PTS Close (50%)",
+                        "Kualitas AI (%)", "PTS Kualitas (25%)",
+                        "Capaian SAP (%)", "PTS Capaian (15%)",
+                        "Skala Beban (%)", "PTS Beban (10%)",
+                        "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *"
                     };
                 }
                 else
                 {
                     stdHeaders = new[] {
-                        "Pos", clubHeader, "Skuad (Orang)", "Total Target", "PTS (Skor Total)", "Capaian (%)",
-                        "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *", "Close Rate (%)"
+                        "Pos", clubHeader, "Skuad (Orang)", "Total Target", "PTS (Skor Total)",
+                        "Close Rate (%)", "PTS Close (50%)",
+                        "Kualitas AI (%)", "PTS Kualitas (25%)",
+                        "Capaian SAP (%)", "PTS Capaian (15%)",
+                        "Skala Beban (%)", "PTS Beban (10%)",
+                        "Hazard (%)", "Inspeksi (%)", "Safety Talk (%)", "Observasi (%)", "Coaching (%)", "P5M (%) *"
                     };
                 }
+
+                int ptsColIdx = isCompanyMode ? 5 : 4;
+                int closeColIdx = isCompanyMode ? 6 : 5;
+                int kualColIdx = isCompanyMode ? 8 : 7;
+                int capColIdx = isCompanyMode ? 10 : 9;
+                int bebanColIdx = isCompanyMode ? 12 : 11;
+                int p5mColIdx = isCompanyMode ? 19 : 18;
 
                 for (int i = 0; i < stdHeaders.Length; i++)
                 {
@@ -4891,40 +5072,27 @@ namespace MBS_SAP.Controllers
                     cell.Style.Font.FontSize = 10;
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-                    if (isCompanyMode)
-                    {
-                        if (i == 12)
-                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber P5M
-                        else if (i == 13)
-                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald Close Rate
-                        else if (i == 5)
-                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // PTS
-                        else
-                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
-                    }
-                    else if (mode == "core")
-                    {
-                        if (i == 11)
-                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber P5M
-                        else if (i == 12)
-                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald Close Rate
-                        else if (i == 4)
-                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // PTS
-                        else
-                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
-                    }
+
+                    if (i == ptsColIdx)
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a"); // PTS Dark Slate
+                    else if (i == closeColIdx || i == closeColIdx + 1)
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald Close Rate
+                    else if (i == kualColIdx || i == kualColIdx + 1)
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#5b21b6"); // Purple Kualitas
+                    else if (i == capColIdx || i == capColIdx + 1)
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1d4ed8"); // Royal Blue Capaian
+                    else if (i == bebanColIdx || i == bebanColIdx + 1)
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#c2410c"); // Orange Skala Beban
+                    else if (i == p5mColIdx)
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber P5M
+                    else if (i > bebanColIdx + 1)
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#334155"); // Slate KPI
                     else
-                    {
-                        if (i == 10)
-                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Amber P5M
-                        else if (i == 11)
-                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald Close Rate
-                        else
-                            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
-                    }
+                        cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy Info
+
                     cell.Style.Font.FontColor = XLColor.White;
                 }
-                wsStandings.Row(6).Height = 25;
+                wsStandings.Row(6).Height = 28;
 
                 int sRow = 7;
                 int sRank = 1;
@@ -4945,6 +5113,8 @@ namespace MBS_SAP.Controllers
                         else cell.Style.Font.FontColor = XLColor.FromHtml("#000000");
                     }
                 }
+
+                int totalStandingsCols = isCompanyMode ? 20 : 19;
 
                 if (mode == "company" || mode == "core")
                 {
@@ -4969,52 +5139,71 @@ namespace MBS_SAP.Controllers
                         wsStandings.Cell(sRow, col++).Value = (int)comp.EmployeeCount;
                         wsStandings.Cell(sRow, col++).Value = (int)comp.TotalTarget;
 
+                        // PTS (Skor Total)
                         wsStandings.Cell(sRow, col).Value = (double)comp.TotalScore;
                         wsStandings.Cell(sRow, col).Style.NumberFormat.Format = "0.00";
                         wsStandings.Cell(sRow, col++).Style.Font.Bold = true;
 
-                        wsStandings.Cell(sRow, col).Value = (double)comp.MtdAchievementRate;
-                        wsStandings.Cell(sRow, col).Style.NumberFormat.Format = "0.0\"%\"";
-                        wsStandings.Cell(sRow, col++).Style.Font.Bold = false;
+                        // 4 Pilar:
+                        // 1. Close Rate & PTS
+                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.ScoreCloseRate);
+                        var cPtsClose = wsStandings.Cell(sRow, col++);
+                        cPtsClose.Value = (double)comp.PtsClose;
+                        cPtsClose.Style.NumberFormat.Format = "0.00";
 
+                        // 2. Kualitas AI & PTS
+                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.ScoreKualitas);
+                        var cPtsKual = wsStandings.Cell(sRow, col++);
+                        cPtsKual.Value = (double)comp.PtsKualitas;
+                        cPtsKual.Style.NumberFormat.Format = "0.00";
+
+                        // 3. Capaian SAP & PTS
+                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.ScorePencapaian);
+                        var cPtsCap = wsStandings.Cell(sRow, col++);
+                        cPtsCap.Value = (double)comp.PtsPencapaian;
+                        cPtsCap.Style.NumberFormat.Format = "0.00";
+
+                        // 4. Skala Beban & PTS
+                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.ScoreSkalaBeban);
+                        var cPtsBeban = wsStandings.Cell(sRow, col++);
+                        cPtsBeban.Value = (double)comp.PtsBeban;
+                        cPtsBeban.Style.NumberFormat.Format = "0.00";
+
+                        // KPI Program Breakdown
                         SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdHazardRate);
                         SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdInspeksiRate);
                         SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdSafetyTalkRate);
                         SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdObservasiRate);
                         SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdCoachingRate);
                         SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdP5mRate);
-                        SetRateCell(wsStandings.Cell(sRow, col++), (double)comp.MtdCloseRate);
 
                         // Alignments
                         wsStandings.Cell(sRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         if (isCompanyMode)
                         {
-                            wsStandings.Cell(sRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                            wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                            wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                            wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                            wsStandings.Cell(sRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                            wsStandings.Cell(sRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                            for (int c = 8; c <= 14; c++)
+                            wsStandings.Cell(sRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; // Divisi / Tier
+                            wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left; // Klub
+                            wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; // Skuad
+                            wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; // Target
+                            wsStandings.Cell(sRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right; // PTS
+                            for (int c = 7; c <= totalStandingsCols; c++)
                             {
-                                wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                                wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = (c % 2 == 0 && c <= 14) ? XLAlignmentHorizontalValues.Right : XLAlignmentHorizontalValues.Center;
                             }
                         }
                         else
                         {
-                            wsStandings.Cell(sRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                            wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                            wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                            wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                            wsStandings.Cell(sRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                            for (int c = 7; c <= 13; c++)
+                            wsStandings.Cell(sRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left; // Klub
+                            wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; // Skuad
+                            wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; // Target
+                            wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right; // PTS
+                            for (int c = 6; c <= totalStandingsCols; c++)
                             {
-                                wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                                wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = (c % 2 == 1 && c <= 13) ? XLAlignmentHorizontalValues.Right : XLAlignmentHorizontalValues.Center;
                             }
                         }
 
-                        int totalCols = isCompanyMode ? 14 : 13;
-                        var sRowRange = wsStandings.Range(sRow, 1, sRow, totalCols);
+                        var sRowRange = wsStandings.Range(sRow, 1, sRow, totalStandingsCols);
                         sRowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                         sRowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                         sRowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -5044,26 +5233,49 @@ namespace MBS_SAP.Controllers
 
                     foreach (var dept in sortedDept)
                     {
-                        wsStandings.Cell(sRow, 1).Value = sRank;
-                        wsStandings.Cell(sRow, 2).Value = dept.DepartmentName;
-                        wsStandings.Cell(sRow, 3).Value = dept.EmployeeCount;
-                        wsStandings.Cell(sRow, 4).Value = dept.TotalTarget;
+                        int col = 1;
+                        wsStandings.Cell(sRow, col++).Value = sRank;
+                        wsStandings.Cell(sRow, col++).Value = dept.DepartmentName;
+                        wsStandings.Cell(sRow, col++).Value = dept.EmployeeCount;
+                        wsStandings.Cell(sRow, col++).Value = dept.TotalTarget;
 
-                        wsStandings.Cell(sRow, 5).Value = dept.TotalScore;
-                        wsStandings.Cell(sRow, 5).Style.NumberFormat.Format = "0.00";
-                        wsStandings.Cell(sRow, 5).Style.Font.Bold = true;
+                        // PTS (Skor Total)
+                        wsStandings.Cell(sRow, col).Value = dept.TotalScore;
+                        wsStandings.Cell(sRow, col).Style.NumberFormat.Format = "0.00";
+                        wsStandings.Cell(sRow, col++).Style.Font.Bold = true;
 
-                        wsStandings.Cell(sRow, 6).Value = dept.MtdAchievementRate;
-                        wsStandings.Cell(sRow, 6).Style.NumberFormat.Format = "0.0\"%\"";
-                        wsStandings.Cell(sRow, 6).Style.Font.Bold = false;
+                        // 4 Pilar:
+                        // 1. Close Rate & PTS
+                        SetRateCell(wsStandings.Cell(sRow, col++), dept.ScoreCloseRate);
+                        var cPtsClose = wsStandings.Cell(sRow, col++);
+                        cPtsClose.Value = dept.PtsClose;
+                        cPtsClose.Style.NumberFormat.Format = "0.00";
 
-                        SetRateCell(wsStandings.Cell(sRow, 7), dept.MtdHazardRate);
-                        SetRateCell(wsStandings.Cell(sRow, 8), dept.MtdInspeksiRate);
-                        SetRateCell(wsStandings.Cell(sRow, 9), dept.MtdSafetyTalkRate);
-                        SetRateCell(wsStandings.Cell(sRow, 10), dept.MtdObservasiRate);
-                        SetRateCell(wsStandings.Cell(sRow, 11), dept.MtdCoachingRate);
-                        SetRateCell(wsStandings.Cell(sRow, 12), dept.MtdP5mRate);
-                        SetRateCell(wsStandings.Cell(sRow, 13), dept.MtdCloseRate);
+                        // 2. Kualitas AI & PTS
+                        SetRateCell(wsStandings.Cell(sRow, col++), dept.ScoreKualitas);
+                        var cPtsKual = wsStandings.Cell(sRow, col++);
+                        cPtsKual.Value = dept.PtsKualitas;
+                        cPtsKual.Style.NumberFormat.Format = "0.00";
+
+                        // 3. Capaian SAP & PTS
+                        SetRateCell(wsStandings.Cell(sRow, col++), dept.ScoreCapaian);
+                        var cPtsCap = wsStandings.Cell(sRow, col++);
+                        cPtsCap.Value = dept.PtsCapaian;
+                        cPtsCap.Style.NumberFormat.Format = "0.00";
+
+                        // 4. Skala Beban & PTS
+                        SetRateCell(wsStandings.Cell(sRow, col++), dept.ScoreSkalaBeban);
+                        var cPtsBeban = wsStandings.Cell(sRow, col++);
+                        cPtsBeban.Value = dept.PtsBeban;
+                        cPtsBeban.Style.NumberFormat.Format = "0.00";
+
+                        // KPI Program Breakdown
+                        SetRateCell(wsStandings.Cell(sRow, col++), dept.MtdHazardRate);
+                        SetRateCell(wsStandings.Cell(sRow, col++), dept.MtdInspeksiRate);
+                        SetRateCell(wsStandings.Cell(sRow, col++), dept.MtdSafetyTalkRate);
+                        SetRateCell(wsStandings.Cell(sRow, col++), dept.MtdObservasiRate);
+                        SetRateCell(wsStandings.Cell(sRow, col++), dept.MtdCoachingRate);
+                        SetRateCell(wsStandings.Cell(sRow, col++), dept.MtdP5mRate);
 
                         // Alignments
                         wsStandings.Cell(sRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
@@ -5071,13 +5283,12 @@ namespace MBS_SAP.Controllers
                         wsStandings.Cell(sRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         wsStandings.Cell(sRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         wsStandings.Cell(sRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                        wsStandings.Cell(sRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                        for (int c = 7; c <= 13; c++)
+                        for (int c = 6; c <= totalStandingsCols; c++)
                         {
-                            wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsStandings.Cell(sRow, c).Style.Alignment.Horizontal = (c % 2 == 1 && c <= 13) ? XLAlignmentHorizontalValues.Right : XLAlignmentHorizontalValues.Center;
                         }
 
-                        var sRowRange = wsStandings.Range(sRow, 1, sRow, 13);
+                        var sRowRange = wsStandings.Range(sRow, 1, sRow, totalStandingsCols);
                         sRowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                         sRowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                         sRowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -5097,8 +5308,8 @@ namespace MBS_SAP.Controllers
                 wsStandings.SheetView.FreezeRows(6);
                 if (sRow > 7)
                 {
-                    wsStandings.Range(6, 1, sRow - 1, 12).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    wsStandings.Range(6, 1, sRow - 1, 12).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
+                    wsStandings.Range(6, 1, sRow - 1, totalStandingsCols).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    wsStandings.Range(6, 1, sRow - 1, totalStandingsCols).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
                 }
                 wsStandings.Columns().AdjustToContents();
                 foreach (var col in wsStandings.ColumnsUsed())
@@ -5140,9 +5351,12 @@ namespace MBS_SAP.Controllers
                 wsSquad.Cell(5, 1).Style.Font.FontColor = XLColor.FromHtml("#1e3a8a");
                 wsSquad.Cell(5, 1).Style.Font.Bold = true;
 
-                // Setup Table Headers (29 Kolom Komprehensif)
-                string[] squadHeaders = new[] {
-                    "Peringkat", "Nama Karyawan", "NIK", "Departemen", "Jabatan", "Kategori SAP", "Status Roster",
+                // Setup Table Headers (Komprehensif dengan Perusahaan jika multi-company)
+                bool hasCompColInSquad = (mode == "company" || mode == "core");
+                List<string> squadHeadersList = new List<string> { "Peringkat" };
+                if (hasCompColInSquad) squadHeadersList.Add("Perusahaan");
+                squadHeadersList.AddRange(new[] {
+                    "Nama Karyawan", "NIK", "Departemen", "Jabatan", "Kategori SAP", "Status Roster",
                     "Total Skor PTS (%)",
                     "Close Rate (%)", "Poin Close Rate (50%)",
                     "Kualitas AI (%)", "Poin Kualitas (25%)",
@@ -5155,7 +5369,9 @@ namespace MBS_SAP.Controllers
                     "Observasi Actual", "Observasi Target",
                     "Coaching Actual", "Coaching Target",
                     "P5M Actual *", "P5M Target"
-                };
+                });
+                string[] squadHeaders = squadHeadersList.ToArray();
+                int squadOffset = hasCompColInSquad ? 1 : 0;
 
                 for (int i = 0; i < squadHeaders.Length; i++)
                 {
@@ -5166,19 +5382,19 @@ namespace MBS_SAP.Controllers
                     cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
 
-                    if (i == 7) // Total Skor PTS
+                    if (i == 7 + squadOffset) // Total Skor PTS
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a"); // Dark Slate
-                    else if (i == 8 || i == 9) // Close Rate & Poin
+                    else if (i == 8 + squadOffset || i == 9 + squadOffset) // Close Rate & Poin
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Emerald
-                    else if (i == 10 || i == 11) // Kualitas & Poin
+                    else if (i == 10 + squadOffset || i == 11 + squadOffset) // Kualitas & Poin
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#5b21b6"); // Purple
-                    else if (i == 12 || i == 13) // Capaian SAP & Poin
+                    else if (i == 12 + squadOffset || i == 13 + squadOffset) // Capaian SAP & Poin
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1d4ed8"); // Royal Blue
-                    else if (i >= 14 && i <= 16) // Skala Beban, Poin & Target MTD
+                    else if (i >= 14 + squadOffset && i <= 16 + squadOffset) // Skala Beban, Poin & Target MTD
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#c2410c"); // Orange/Amber
-                    else if (i >= 27) // P5M
+                    else if (i >= 27 + squadOffset) // P5M
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // Brown
-                    else if (i >= 17) // Hazard s/d Coaching
+                    else if (i >= 17 + squadOffset) // Hazard s/d Coaching
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#334155"); // Slate
                     else
                         cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Navy
@@ -5187,20 +5403,26 @@ namespace MBS_SAP.Controllers
                 }
                 wsSquad.Row(6).Height = 28;
 
+                int totalSquadCols = squadHeaders.Length;
                 int row = 7;
                 int rank = 1;
                 foreach (var emp in sorted)
                 {
-                    wsSquad.Cell(row, 1).Value = rank;
-                    wsSquad.Cell(row, 2).Value = emp.name;
-                    wsSquad.Cell(row, 3).Value = emp.nik;
-                    wsSquad.Cell(row, 4).Value = emp.departmentName;
-                    wsSquad.Cell(row, 5).Value = emp.jabatanName;
-                    wsSquad.Cell(row, 6).Value = emp.isTargetSap ? "Target SAP" : (emp.isActivelyReporting ? "Non-Target (Aktif)" : "Non-Target");
-                    wsSquad.Cell(row, 7).Value = emp.hasRoster ? $"{emp.onsiteDays} Hari Onsite" : "Belum Roster";
+                    int col = 1;
+                    wsSquad.Cell(row, col++).Value = rank;
+                    if (hasCompColInSquad)
+                    {
+                        wsSquad.Cell(row, col++).Value = emp.companyName;
+                    }
+                    wsSquad.Cell(row, col++).Value = emp.name;
+                    wsSquad.Cell(row, col++).Value = emp.nik;
+                    wsSquad.Cell(row, col++).Value = emp.departmentName;
+                    wsSquad.Cell(row, col++).Value = emp.jabatanName;
+                    wsSquad.Cell(row, col++).Value = emp.isTargetSap ? "Target SAP" : (emp.isActivelyReporting ? "Non-Target (Aktif)" : "Non-Target");
+                    wsSquad.Cell(row, col++).Value = emp.hasRoster ? $"{emp.onsiteDays} Hari Onsite" : "Belum Roster";
                     
-                    // Col 8: Total Skor PTS
-                    var totalScoreCell = wsSquad.Cell(row, 8);
+                    // Col Total Skor PTS
+                    var totalScoreCell = wsSquad.Cell(row, col++);
                     totalScoreCell.Value = emp.totalScore;
                     totalScoreCell.Style.NumberFormat.Format = "0.0\"%\"";
                     totalScoreCell.Style.Font.Bold = true;
@@ -5211,83 +5433,93 @@ namespace MBS_SAP.Controllers
                     else
                         totalScoreCell.Style.Font.FontColor = XLColor.FromHtml("#dc2626"); // Red
 
-                    // Col 9-10: Close Rate
-                    var crCell = wsSquad.Cell(row, 9);
+                    // Close Rate
+                    var crCell = wsSquad.Cell(row, col++);
                     SetRateCell(crCell, emp.scoreCloseRate);
-                    var ptsCloseCell = wsSquad.Cell(row, 10);
+                    var ptsCloseCell = wsSquad.Cell(row, col++);
                     ptsCloseCell.Value = emp.ptsClose;
                     ptsCloseCell.Style.NumberFormat.Format = "0.00";
 
-                    // Col 11-12: Kualitas AI
-                    var qualCell = wsSquad.Cell(row, 11);
+                    // Kualitas AI
+                    var qualCell = wsSquad.Cell(row, col++);
                     SetRateCell(qualCell, emp.scoreKualitas);
-                    var ptsQualCell = wsSquad.Cell(row, 12);
+                    var ptsQualCell = wsSquad.Cell(row, col++);
                     ptsQualCell.Value = emp.ptsKualitas;
                     ptsQualCell.Style.NumberFormat.Format = "0.00";
 
-                    // Col 13-14: Capaian SAP
-                    var compCell = wsSquad.Cell(row, 13);
+                    // Capaian SAP
+                    var compCell = wsSquad.Cell(row, col++);
                     SetRateCell(compCell, emp.scoreCapaian);
-                    var ptsCapCell = wsSquad.Cell(row, 14);
+                    var ptsCapCell = wsSquad.Cell(row, col++);
                     ptsCapCell.Value = emp.ptsCapaian;
                     ptsCapCell.Style.NumberFormat.Format = "0.00";
 
-                    // Col 15-17: Skala Beban & Target MTD
-                    var bebanCell = wsSquad.Cell(row, 15);
+                    // Skala Beban & Target MTD
+                    var bebanCell = wsSquad.Cell(row, col++);
                     SetRateCell(bebanCell, emp.scoreSkalaBeban);
-                    var ptsBebanCell = wsSquad.Cell(row, 16);
+                    var ptsBebanCell = wsSquad.Cell(row, col++);
                     ptsBebanCell.Value = emp.ptsBeban;
                     ptsBebanCell.Style.NumberFormat.Format = "0.00";
-                    var tgtCell = wsSquad.Cell(row, 17);
+                    var tgtCell = wsSquad.Cell(row, col++);
                     tgtCell.Value = emp.mtdTotalTarget;
                     tgtCell.Style.NumberFormat.Format = "#,##0";
                     tgtCell.Style.Font.Bold = true;
 
-                    // Col 18-29: Rincian Aktual & Target Tiap Program
-                    wsSquad.Cell(row, 18).Value = emp.hazard.actual;
-                    wsSquad.Cell(row, 19).Value = emp.hazard.target;
+                    // Rincian Aktual & Target Tiap Program
+                    wsSquad.Cell(row, col++).Value = emp.hazard.actual;
+                    wsSquad.Cell(row, col++).Value = emp.hazard.target;
                     
-                    wsSquad.Cell(row, 20).Value = emp.inspeksi.actual;
-                    wsSquad.Cell(row, 21).Value = emp.inspeksi.target;
+                    wsSquad.Cell(row, col++).Value = emp.inspeksi.actual;
+                    wsSquad.Cell(row, col++).Value = emp.inspeksi.target;
 
-                    wsSquad.Cell(row, 22).Value = emp.safetyTalk.actual;
-                    wsSquad.Cell(row, 23).Value = emp.safetyTalk.target;
+                    wsSquad.Cell(row, col++).Value = emp.safetyTalk.actual;
+                    wsSquad.Cell(row, col++).Value = emp.safetyTalk.target;
 
-                    wsSquad.Cell(row, 24).Value = emp.observasi.actual;
-                    wsSquad.Cell(row, 25).Value = emp.observasi.target;
+                    wsSquad.Cell(row, col++).Value = emp.observasi.actual;
+                    wsSquad.Cell(row, col++).Value = emp.observasi.target;
 
-                    wsSquad.Cell(row, 26).Value = emp.coaching.actual;
-                    wsSquad.Cell(row, 27).Value = emp.coaching.target;
+                    wsSquad.Cell(row, col++).Value = emp.coaching.actual;
+                    wsSquad.Cell(row, col++).Value = emp.coaching.target;
 
-                    wsSquad.Cell(row, 28).Value = emp.p5m.actual;
-                    wsSquad.Cell(row, 29).Value = emp.p5m.target;
+                    wsSquad.Cell(row, col++).Value = emp.p5m.actual;
+                    wsSquad.Cell(row, col++).Value = emp.p5m.target;
 
                     // Alignments
                     wsSquad.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsSquad.Cell(row, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                    wsSquad.Cell(row, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsSquad.Cell(row, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                    wsSquad.Cell(row, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                    wsSquad.Cell(row, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsSquad.Cell(row, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsSquad.Cell(row, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    int aCol = 2;
+                    if (hasCompColInSquad)
+                    {
+                        wsSquad.Cell(row, aCol++).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                    }
+                    wsSquad.Cell(row, aCol++).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left; // Nama
+                    wsSquad.Cell(row, aCol++).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; // NIK
+                    wsSquad.Cell(row, aCol++).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left; // Dept
+                    wsSquad.Cell(row, aCol++).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left; // Jabatan
+                    wsSquad.Cell(row, aCol++).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; // Kategori
+                    wsSquad.Cell(row, aCol++).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center; // Roster
+                    wsSquad.Cell(row, aCol++).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right; // Skor PTS
 
-                    for (int c = 9; c <= 17; c++)
+                    int colStartRates = 9 + squadOffset;
+                    int colEndRates = 17 + squadOffset;
+                    for (int c = colStartRates; c <= colEndRates; c++)
                     {
                         wsSquad.Cell(row, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
                     }
-                    for (int c = 18; c <= 29; c++)
+
+                    int colStartKpi = 18 + squadOffset;
+                    int colEndKpi = 29 + squadOffset;
+                    for (int c = colStartKpi; c <= colEndKpi; c++)
                     {
                         wsSquad.Cell(row, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                         wsSquad.Cell(row, c).Style.NumberFormat.Format = "#,##0";
-                        if (c % 2 == 0) // Actual columns: 18, 20, 22, 24, 26, 28
+                        if ((c - squadOffset) % 2 == 0) // Actual columns
                         {
                             wsSquad.Cell(row, c).Style.Font.Bold = true;
                         }
                     }
 
                     // Border styling
-                    var rowRange = wsSquad.Range(row, 1, row, 29);
+                    var rowRange = wsSquad.Range(row, 1, row, totalSquadCols);
                     rowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     rowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                     rowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
@@ -5304,7 +5536,8 @@ namespace MBS_SAP.Controllers
                     {
                         // Red Zone: Has target but no achievement
                         rowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#fee2e2"); // Light red
-                        wsSquad.Cell(row, 2).Style.Font.FontColor = XLColor.FromHtml("#b91c1c"); // Dark red name
+                        int nameColIdx = hasCompColInSquad ? 3 : 2;
+                        wsSquad.Cell(row, nameColIdx).Style.Font.FontColor = XLColor.FromHtml("#b91c1c"); // Dark red name
                     }
                     else
                     {
@@ -5325,8 +5558,8 @@ namespace MBS_SAP.Controllers
                 // Add thick outer border to the entire table
                 if (row > 7)
                 {
-                    wsSquad.Range(6, 1, row - 1, 29).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
-                    wsSquad.Range(6, 1, row - 1, 29).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
+                    wsSquad.Range(6, 1, row - 1, totalSquadCols).Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    wsSquad.Range(6, 1, row - 1, totalSquadCols).Style.Border.OutsideBorderColor = XLColor.FromHtml("#0f172a");
                 }
 
                 // Auto fit columns
@@ -5351,6 +5584,15 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> ExportTargetAnomaliesExcel(int? companyId = null, int? year = null, int? month = null, int? parentId = null)
         {
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                          ?? User.FindFirst("Nrp")?.Value 
+                          ?? User.Identity?.Name;
+            var isAdmin = User.IsInRole("Admin") || string.Equals(userNik, "24051940986", StringComparison.OrdinalIgnoreCase);
+            if (!isAdmin)
+            {
+                return Forbid();
+            }
+
             await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
 
             var today = DateTime.Today;
@@ -7362,646 +7604,6 @@ namespace MBS_SAP.Controllers
             ViewBag.Departments = departments;
             ViewBag.SelectedDepartmentName = departmentName;
 
-            // Heavy GetEmployeesComplianceData for all companies removed.
-            // SAP Programs stats and ViewBags are now optimally calculated during Section 4 Group Metrics.
-
-            // Action Plan Overall Stats
-            var allCompanyActionPlans = await _context.ActionPlans
-                .Where(a => !a.IsDeleted && a.PerusahaanId == selectedCompanyId)
-                .Select(a => new { a.Status, a.RencanaPerbaikan })
-                .ToListAsync();
-
-            int apOutstanding = allCompanyActionPlans.Count(a => a.Status == "Open" && string.IsNullOrEmpty(a.RencanaPerbaikan));
-            int apProgress = allCompanyActionPlans.Count(a => a.Status == "Open" && !string.IsNullOrEmpty(a.RencanaPerbaikan));
-            int apClosed = allCompanyActionPlans.Count(a => a.Status == "Closed");
-            int apTotal = apOutstanding + apProgress + apClosed;
-
-            ViewBag.ApOutstanding = apOutstanding;
-            ViewBag.ApProgress = apProgress;
-            ViewBag.ApClosed = apClosed;
-            ViewBag.ApTotal = apTotal;
-            ViewBag.ApOutstandingPct = apTotal > 0 ? (int)Math.Round((double)apOutstanding / apTotal * 100) : 0;
-            ViewBag.ApProgressPct = apTotal > 0 ? (int)Math.Round((double)apProgress / apTotal * 100) : 0;
-            ViewBag.ApClosedPct = apTotal > 0 ? (int)Math.Round((double)apClosed / apTotal * 100) : 0;
-
-            // Hazard reports by type KTA (Kondisi Tidak Aman) vs TTA (Tindakan Tidak Aman) for the selected period MTD
-            var startOfPeriod = new DateTime(selectedYear, selectedMonth, 1);
-            var endOfPeriod = startOfPeriod.AddMonths(1);
-
-            var hazardReportsInPeriod = await _context.HazardReports
-                .Where(h => !h.IsDeleted 
-                         && h.Tanggal >= startOfPeriod 
-                         && h.Tanggal < endOfPeriod)
-                .Select(h => h.KategoriBahaya)
-                .ToListAsync();
-
-            int ktaCount = hazardReportsInPeriod.Count(k => k != null && k.Trim().ToLower().Contains("kondisi"));
-            int ttaCount = hazardReportsInPeriod.Count(k => k != null && k.Trim().ToLower().Contains("tindakan"));
-            int totalHazardInPeriod = hazardReportsInPeriod.Count;
-
-            ViewBag.PeriodKtaCount = ktaCount;
-            ViewBag.PeriodTtaCount = ttaCount;
-            ViewBag.PeriodTotalHazardCount = totalHazardInPeriod;
-            ViewBag.PeriodKtaPct = totalHazardInPeriod > 0 ? (int)Math.Round((double)ktaCount / totalHazardInPeriod * 100) : 0;
-            ViewBag.PeriodTtaPct = totalHazardInPeriod > 0 ? (int)Math.Round((double)ttaCount / totalHazardInPeriod * 100) : 0;
-
-            // Trend of KTA & TTA for the last 3 months ending in the selected month
-            string[] monthNames = { "", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember" };
-            var trendList = new List<object>();
-            for (int i = 2; i >= 0; i--)
-            {
-                var targetDate = startOfPeriod.AddMonths(-i);
-                var targetYear = targetDate.Year;
-                var targetMonth = targetDate.Month;
-                var monthStart = new DateTime(targetYear, targetMonth, 1);
-                var monthEnd = monthStart.AddMonths(1);
-
-                var reports = await _context.HazardReports
-                    .Where(h => !h.IsDeleted 
-                             && h.Tanggal >= monthStart 
-                             && h.Tanggal < monthEnd)
-                    .Select(h => h.KategoriBahaya)
-                    .ToListAsync();
-
-                int kta = reports.Count(k => k != null && k.Trim().ToLower().Contains("kondisi"));
-                int tta = reports.Count(k => k != null && k.Trim().ToLower().Contains("tindakan"));
-
-                trendList.Add(new {
-                    MonthLabel = $"{monthNames[targetMonth]} {targetYear}",
-                    Kta = kta,
-                    Tta = tta
-                });
-            }
-
-            ViewBag.HazardTrend = trendList;
-
-            // 1. Action Plans by Department (creator's department)
-            var actionPlanDeptStats = await _context.ActionPlans
-                .Where(a => !a.IsDeleted && a.PerusahaanId == selectedCompanyId)
-                .GroupBy(a => a.Departemen ?? "Lain-lain")
-                .Select(g => new ComplianceGroupStatViewModel
-                {
-                    GroupName = g.Key,
-                    TotalCreated = g.Count(),
-                    OpenCount = g.Count(a => a.Status == "Open"),
-                    ClosedCount = g.Count(a => a.Status == "Closed")
-                })
-                .OrderByDescending(s => s.OpenCount)
-                .Take(5)
-                .ToListAsync();
-
-            // 2. Action Plans by Area
-            var actionPlanAreaStats = await _context.ActionPlans
-                .Where(a => !a.IsDeleted && a.PerusahaanId == selectedCompanyId && a.Area != null && a.Area != "")
-                .GroupBy(a => a.Area!)
-                .Select(g => new ComplianceGroupStatViewModel
-                {
-                    GroupName = g.Key,
-                    TotalCreated = g.Count(),
-                    OpenCount = g.Count(a => a.Status == "Open"),
-                    ClosedCount = g.Count(a => a.Status == "Closed")
-                })
-                .OrderByDescending(s => s.OpenCount)
-                .Take(5)
-                .ToListAsync();
-
-            ViewBag.DeptActionPlanStats = actionPlanDeptStats;
-            ViewBag.AreaActionPlanStats = actionPlanAreaStats;
-
-            // 3. Subcontractor Achievements
-            var childIdsFromParent = allCompanies.Where(p => p.PerusahaanIndukId == selectedCompanyId).Select(p => p.PerusahaanId).ToList();
-            var childIdsFromRelations = relations.Where(r => r.ParentCompanyId == selectedCompanyId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
-            var allChildCompanyIds = childIdsFromParent.Concat(childIdsFromRelations).Distinct().Where(id => id != selectedCompanyId).ToList();
-            var childCompanies = allCompanies.Where(p => allChildCompanyIds.Contains(p.PerusahaanId)).OrderBy(p => p.NamaPerusahaan).ToList();
-
-            var subconComplianceList = new List<CompanyLeaderboardViewModel>();
-
-            if (childCompanies.Any())
-            {
-                var childCompanyIds = childCompanies.Select(p => p.PerusahaanId).ToList();
-
-                var startOfMonth = new DateTime(selectedYear, selectedMonth, 1);
-                var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
-
-                var allChildKaryawans = await _context.Karyawans
-                    .Where(k => k.StatusAktif && childCompanyIds.Contains(k.IdPerusahaan) && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonth))
-                    .ToListAsync();
-
-                allChildKaryawans = FilterEmployeesByParentScope(allChildKaryawans, selectedCompanyId, allCompanies, relations);
-
-                var allChildKaryawanIds = allChildKaryawans.Select(k => k.IdKaryawan).ToList();
-
-                var targets = await _context.KaryawanJabatanMappings
-                    .Where(m => allChildKaryawanIds.Contains(m.KaryawanId))
-                    .ToListAsync();
-                var targetsDict = targets.ToDictionary(m => m.KaryawanId);
-
-                var allChildNiks = allChildKaryawans.Select(k => k.NoNik).Where(nik => !string.IsNullOrEmpty(nik)).ToList();
-                var childRosters = await _context.Rosters.AsNoTracking()
-                    .Where(r => allChildNiks.Contains(r.Nik))
-                    .ToListAsync();
-                var childRostersByNik = childRosters
-                    .GroupBy(r => r.Nik, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
-
-                int ScaleTarget(int baseTarget, double rat, int daysOnsite)
-                {
-                    if (baseTarget == 0) return 0;
-                    if (daysOnsite == 0) return 0;
-                    int scaled = (int)Math.Round(baseTarget * rat, MidpointRounding.AwayFromZero);
-                    return Math.Max(scaled, 1);
-                }
-
-                var hazards = (await _context.HazardReports
-                    .Where(h => !h.IsDeleted && childCompanyIds.Contains(h.PerusahaanId ?? 0) && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth && h.Nik != null)
-                    .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi })
-                    .Distinct()
-                    .ToListAsync())
-                    .Select(h => new { h.PerusahaanId, h.Nik })
-                    .ToList();
-
-                var inspections = (await _context.Inspections
-                    .Where(i => !i.IsDeleted && childCompanyIds.Contains(i.PerusahaanId ?? 0) && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth && i.Nik != null)
-                    .Select(i => new { i.PerusahaanId, Nik = i.Nik.Trim(), i.Tanggal, i.Waktu })
-                    .Distinct()
-                    .ToListAsync())
-                    .Select(i => new { i.PerusahaanId, i.Nik })
-                    .ToList();
-
-                var rawSafetyTalks = await _context.SafetyTalks
-                    .Where(s => !s.IsDeleted && childCompanyIds.Contains(s.PerusahaanId ?? 0) && s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth && s.Nik != null)
-                    .Select(s => new { s.PerusahaanId, Nik = s.Nik.Trim(), s.Tanggal })
-                    .ToListAsync();
-
-                var safetyTalks = rawSafetyTalks
-                    .Select(s => new { s.PerusahaanId, s.Nik, WeekKey = $"{s.Tanggal.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(s.Tanggal)}" })
-                    .Distinct()
-                    .Select(s => new { s.PerusahaanId, s.Nik })
-                    .ToList();
-
-                var p5ms = (await _context.P5ms
-                    .Where(p => !p.IsDeleted && childCompanyIds.Contains(p.PerusahaanId ?? 0) && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth && p.Nik != null)
-                    .Select(p => new { p.PerusahaanId, Nik = p.Nik.Trim(), p.Tanggal, p.Waktu })
-                    .Distinct()
-                    .ToListAsync())
-                    .Select(p => new { p.PerusahaanId, p.Nik })
-                    .ToList();
-
-                var coachingCreators = (await _context.Coachings
-                    .Where(co => !co.IsDeleted && childCompanyIds.Contains(co.PerusahaanId ?? 0) && co.CreatedAt >= startOfMonth && co.CreatedAt <= endOfMonth && co.Nik != null)
-                    .Select(co => new { co.PerusahaanId, Nik = co.Nik.Trim(), co.Tanggal, co.Waktu })
-                    .Distinct()
-                    .ToListAsync())
-                    .Select(co => new { co.PerusahaanId, co.Nik })
-                    .ToList();
-
-                var coachingParticipants = (await (from p in _context.CoachingParticipants
-                                                  join k in _context.Karyawans on p.Nik equals k.NoNik
-                                                  where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth && childCompanyIds.Contains(k.IdPerusahaan) && p.Nik != null
-                                                  select new { PerusahaanId = (int?)k.IdPerusahaan, Nik = p.Nik.Trim(), p.CoachingId })
-                                                  .Distinct()
-                                                  .ToListAsync())
-                                                  .Select(p => new { p.PerusahaanId, p.Nik })
-                                                  .ToList();
-
-                var coachings = coachingCreators.Concat(coachingParticipants).ToList();
-
-                var observations = (await (from o in _context.Observations
-                                          join k in _context.Karyawans on o.Nik equals k.NoNik
-                                          where !o.IsDeleted && o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth && childCompanyIds.Contains(k.IdPerusahaan) && o.Nik != null
-                                          select new { PerusahaanId = (int?)k.IdPerusahaan, Nik = o.Nik.Trim(), Date = o.Date.Date, o.KegiatanYangDiamati })
-                                          .Distinct()
-                                          .ToListAsync())
-                                          .Select(o => new { o.PerusahaanId, o.Nik })
-                                          .ToList();
-
-                foreach (var sub in childCompanies)
-                {
-                    var companyEmps = allChildKaryawans.Where(k => k.IdPerusahaan == sub.PerusahaanId).ToList();
-                    int empCount = companyEmps.Count;
-
-                    int companyMtdTarget = 0;
-                    int companyMtdActual = 0;
-
-                    if (empCount > 0)
-                    {
-                        var subHaz = hazards.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
-                        var subIns = inspections.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
-                        var subSt = safetyTalks.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
-                        var subP5m = p5ms.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
-                        var subCoa = coachings.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
-                        var subObs = observations.Where(x => x.PerusahaanId == sub.PerusahaanId).Select(x => x.Nik).ToList();
-
-                        var hazByNik = subHaz.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                        var insByNik = subIns.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                        var stByNik = subSt.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                        var p5mByNik = subP5m.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                        var coaByNik = subCoa.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                        var obsByNik = subObs.GroupBy(n => n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-
-                        foreach (var emp in companyEmps)
-                        {
-                            var nik = (emp.NoNik ?? string.Empty).Trim();
-                            int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0;
-                            if (targetsDict.TryGetValue(emp.IdKaryawan, out var t))
-                            {
-                                hTar = t.TargetHazardReport ?? 0;
-                                insTar = t.TargetInspeksi ?? 0;
-                                stTar = t.TargetSafetyTalk ?? 0;
-                                obsTar = t.TargetObservasi ?? 0;
-                                cTar = t.TargetCoaching ?? 0;
-                            }
-
-                            if (hTar + insTar + stTar + obsTar + cTar == 0)
-                            {
-                                continue;
-                            }
-
-                            int totalDaysInMonth = DateTime.DaysInMonth(selectedYear, selectedMonth);
-                            int onsiteDays = totalDaysInMonth;
-                            bool hasRoster = false;
-
-                            if (!string.IsNullOrEmpty(nik) && childRostersByNik.TryGetValue(nik, out var empRosters))
-                            {
-                                int computedOnsite = 0;
-                                bool hasAnyRoster = false;
-                                foreach (var r in empRosters)
-                                {
-                                    hasAnyRoster = true;
-                                    if (r.TipeRoster == "TUGAS")
-                                    {
-                                        continue; // Periode Tugas is exempt from SAP (target = 0)
-                                    }
-
-                                    var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
-                                    var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                                    if (overlapStart <= overlapEnd)
-                                    {
-                                        computedOnsite += (overlapEnd - overlapStart).Days + 1;
-                                    }
-                                }
-                                if (hasAnyRoster)
-                                {
-                                    hasRoster = true;
-                                    onsiteDays = computedOnsite;
-                                }
-                            }
-
-                            double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonth : 1.0;
-
-                            int mtdTgtH = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
-                            int mtdTgtI = hasRoster ? ScaleTarget(insTar, ratio, onsiteDays) : insTar;
-                            int mtdTgtST = hasRoster ? ScaleTarget(stTar, ratio, onsiteDays) : stTar;
-                            int mtdTgtO = hasRoster ? ScaleTarget(obsTar, ratio, onsiteDays) : obsTar;
-                            int mtdTgtC = hasRoster ? ScaleTarget(cTar, ratio, onsiteDays) : cTar;
-
-                            int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
-                            int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
-                            int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
-                            int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
-                            int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
-
-                            int cappedH = Math.Min(actH, mtdTgtH);
-                            int cappedI = Math.Min(actI, mtdTgtI);
-                            int cappedST = Math.Min(actST, mtdTgtST);
-                            int cappedO = Math.Min(actO, mtdTgtO);
-                            int cappedC = Math.Min(actC, mtdTgtC);
-
-                            companyMtdTarget += (mtdTgtH + mtdTgtI + mtdTgtST + mtdTgtO + mtdTgtC);
-                            companyMtdActual += (cappedH + cappedI + cappedST + cappedO + cappedC);
-                        }
-                    }
-
-                    double achievementRate = companyMtdTarget > 0 ? Math.Min(100.0, Math.Round((double)companyMtdActual / companyMtdTarget * 100.0, 1)) : 0.0;
-
-                    subconComplianceList.Add(new CompanyLeaderboardViewModel
-                    {
-                        CompanyId = sub.PerusahaanId,
-                        CompanyName = sub.NamaPerusahaan ?? "Unknown",
-                        ActiveEmployees = empCount,
-                        TotalSubmissions = companyMtdActual,
-                        TargetSubmissions = companyMtdTarget,
-                        AchievementRate = achievementRate
-                    });
-                }
-            }
-
-            ViewBag.SubconComplianceList = subconComplianceList;
-
-            // 4. Group Detailed Compliance Metrics (all allowed companies)
-            var startOfMonthM = new DateTime(selectedYear, selectedMonth, 1);
-            var endOfMonthM = startOfMonthM.AddMonths(1).AddTicks(-1);
-            // Use ALL allowed company IDs so the KPI aggregates across every employee with a target
-            var relatedCompanyIds = allowedCompanies.Select(c => c.PerusahaanId).ToList();
-
-            var activeKaryawans = await _context.Karyawans
-                .Where(k => k.StatusAktif && relatedCompanyIds.Contains(k.IdPerusahaan) && (k.TanggalMasuk == null || k.TanggalMasuk <= endOfMonthM))
-                .ToListAsync();
-
-            activeKaryawans = FilterEmployeesByParentScope(activeKaryawans, selectedCompanyId, allCompanies, relations);
-
-            var activeKaryawanIds = activeKaryawans.Select(k => k.IdKaryawan).ToList();
-
-            var targetsList = await _context.KaryawanJabatanMappings
-                .Where(m => activeKaryawanIds.Contains(m.KaryawanId))
-                .ToListAsync();
-            var groupTargetsDict = targetsList.ToDictionary(m => m.KaryawanId);
-
-            var groupHazards = (await _context.HazardReports
-                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && relatedCompanyIds.Contains(h.PerusahaanId.Value) && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM && h.Nik != null)
-                .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan })
-                .Distinct()
-                .ToListAsync())
-                .Select(h => new { h.PerusahaanId, h.Nik, h.StatusTemuan })
-                .ToList();
-
-            var groupInspections = (await _context.Inspections
-                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && relatedCompanyIds.Contains(i.PerusahaanId.Value) && i.Tanggal >= startOfMonthM && i.Tanggal <= endOfMonthM && i.Nik != null)
-                .Select(i => new { i.PerusahaanId, Nik = i.Nik.Trim(), i.Tanggal, i.Waktu })
-                .Distinct()
-                .ToListAsync())
-                .Select(i => new { i.PerusahaanId, i.Nik })
-                .ToList();
-
-            var rawGroupST = await _context.SafetyTalks
-                .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && relatedCompanyIds.Contains(s.PerusahaanId.Value) && s.Tanggal >= startOfMonthM && s.Tanggal <= endOfMonthM && s.Nik != null)
-                .Select(s => new { s.PerusahaanId, Nik = s.Nik.Trim(), s.Tanggal })
-                .ToListAsync();
-
-            var groupSafetyTalks = rawGroupST
-                .Select(s => new { s.PerusahaanId, s.Nik, WeekKey = $"{s.Tanggal.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(s.Tanggal)}" })
-                .Distinct()
-                .Select(s => new { s.PerusahaanId, s.Nik })
-                .ToList();
-
-            var groupP5ms = (await _context.P5ms
-                .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && relatedCompanyIds.Contains(p.PerusahaanId.Value) && p.Tanggal >= startOfMonthM && p.Tanggal <= endOfMonthM && p.Nik != null)
-                .Select(p => new { p.PerusahaanId, Nik = p.Nik.Trim(), p.Tanggal, p.Waktu })
-                .Distinct()
-                .ToListAsync())
-                .Select(p => new { p.PerusahaanId, p.Nik })
-                .ToList();
-
-            var groupCoachingCreators = (await _context.Coachings
-                .Where(co => !co.IsDeleted && co.PerusahaanId.HasValue && relatedCompanyIds.Contains(co.PerusahaanId.Value) && co.CreatedAt >= startOfMonthM && co.CreatedAt <= endOfMonthM && co.Nik != null)
-                .Select(co => new { co.PerusahaanId, Nik = co.Nik.Trim(), co.Tanggal, co.Waktu })
-                .Distinct()
-                .ToListAsync())
-                .Select(co => new { co.PerusahaanId, co.Nik })
-                .ToList();
-
-            var groupCoachingParticipants = (await (from p in _context.CoachingParticipants
-                                                   join k in _context.Karyawans on p.Nik equals k.NoNik
-                                                   where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonthM && p.Coaching.CreatedAt <= endOfMonthM && relatedCompanyIds.Contains(k.IdPerusahaan) && p.Nik != null
-                                                   select new { PerusahaanId = (int?)k.IdPerusahaan, Nik = p.Nik.Trim(), p.CoachingId })
-                                                   .Distinct()
-                                                   .ToListAsync())
-                                                   .Select(p => new { p.PerusahaanId, p.Nik })
-                                                   .ToList();
-
-            var groupCoachings = groupCoachingCreators.Concat(groupCoachingParticipants).ToList();
-
-            var groupObservations = (await (from o in _context.Observations
-                                           join k in _context.Karyawans on o.Nik equals k.NoNik
-                                           where !o.IsDeleted && o.CreatedAt >= startOfMonthM && o.CreatedAt <= endOfMonthM && relatedCompanyIds.Contains(k.IdPerusahaan) && o.Nik != null
-                                           select new { PerusahaanId = (int?)k.IdPerusahaan, Nik = o.Nik.Trim(), Date = o.Date.Date, o.KegiatanYangDiamati })
-                                           .Distinct()
-                                           .ToListAsync())
-                                           .Select(o => new { o.PerusahaanId, o.Nik })
-                                           .ToList();
-
-            var gHazByNik = groupHazards.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-            var gInsByNik = groupInspections.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-            var gStByNik = groupSafetyTalks.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-            var gP5mByNik = groupP5ms.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-            var gCoaByNik = groupCoachings.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-            var gObsByNik = groupObservations.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-
-            int fullyCompliantCount = 0;
-            int participatingCount = 0;
-            int inactiveCount = 0;
-
-            int indeximBelum = 0;
-            int uduBelum = 0;
-            int kppBelum = 0;
-            int mgeBelum = 0;
-
-            int targetH = 0, actualH = 0, withTargetH = 0, fulfilledH = 0;
-            int targetI = 0, actualI = 0, withTargetI = 0, fulfilledI = 0;
-            int targetS = 0, actualS = 0, withTargetS = 0, fulfilledS = 0;
-            int targetO = 0, actualO = 0, withTargetO = 0, fulfilledO = 0;
-            int targetC = 0, actualC = 0, withTargetC = 0, fulfilledC = 0;
-
-            var activeNiks = activeKaryawans.Select(k => k.NoNik).Where(nik => !string.IsNullOrEmpty(nik)).ToList();
-            var activeRosters = await _context.Rosters.AsNoTracking()
-                .Where(r => activeNiks.Contains(r.Nik))
-                .ToListAsync();
-            var activeRostersByNik = activeRosters
-                .GroupBy(r => r.Nik, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
-
-            int ScaleTargetGroup(int baseTarget, double rat, int daysOnsite)
-            {
-                if (baseTarget == 0) return 0;
-                if (daysOnsite == 0) return 0;
-                int scaled = (int)Math.Round(baseTarget * rat, MidpointRounding.AwayFromZero);
-                return Math.Max(scaled, 1);
-            }
-
-            int totalDaysInMonthM = DateTime.DaysInMonth(selectedYear, selectedMonth);
-
-            foreach (var emp in activeKaryawans)
-            {
-                var nik = (emp.NoNik ?? string.Empty).Trim();
-                int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0;
-                if (groupTargetsDict.TryGetValue(emp.IdKaryawan, out var t))
-                {
-                    hTar = t.TargetHazardReport ?? 0;
-                    insTar = t.TargetInspeksi ?? 0;
-                    stTar = t.TargetSafetyTalk ?? 0;
-                    obsTar = t.TargetObservasi ?? 0;
-                    cTar = t.TargetCoaching ?? 0;
-                }
-
-                if (hTar + insTar + stTar + obsTar + cTar == 0)
-                {
-                    ViewData["AktifTidakAdaTarget"] = (int)(ViewData["AktifTidakAdaTarget"] ?? 0) + 1;
-                    
-                    int actHT = string.IsNullOrEmpty(nik) ? 0 : (gHazByNik.TryGetValue(nik, out var aht) ? aht : 0);
-                    int actIT = string.IsNullOrEmpty(nik) ? 0 : (gInsByNik.TryGetValue(nik, out var ait) ? ait : 0);
-                    int actSTT = string.IsNullOrEmpty(nik) ? 0 : (gStByNik.TryGetValue(nik, out var astt) ? astt : 0);
-                    int actOT = string.IsNullOrEmpty(nik) ? 0 : (gObsByNik.TryGetValue(nik, out var aot) ? aot : 0);
-                    int actCT = string.IsNullOrEmpty(nik) ? 0 : (gCoaByNik.TryGetValue(nik, out var actt) ? actt : 0);
-                    
-                    if (actHT + actIT + actSTT + actOT + actCT > 0)
-                    {
-                        ViewData["TidakAdaTargetTapiMengisi"] = (int)(ViewData["TidakAdaTargetTapiMengisi"] ?? 0) + 1;
-                    }
-                    continue;
-                }
-
-                int onsiteDays = totalDaysInMonthM;
-                bool hasRoster = false;
-
-                if (!string.IsNullOrEmpty(nik) && activeRostersByNik.TryGetValue(nik, out var empRosters))
-                {
-                    int computedOnsite = 0;
-                    bool hasAnyRoster = false;
-                    foreach (var r in empRosters)
-                    {
-                        hasAnyRoster = true;
-                        if (r.TipeRoster == "TUGAS")
-                        {
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
-                        }
-
-                        var overlapStart = r.AwalDinas > startOfMonthM ? r.AwalDinas : startOfMonthM;
-                        var overlapEnd = r.AkhirDinas < endOfMonthM ? r.AkhirDinas : endOfMonthM;
-                        if (overlapStart <= overlapEnd)
-                        {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
-                        }
-                    }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        onsiteDays = computedOnsite;
-                    }
-                }
-
-                double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonthM : 1.0;
-
-                int mtdTgtH = hasRoster ? ScaleTargetGroup(hTar, ratio, onsiteDays) : hTar;
-                int mtdTgtI = hasRoster ? ScaleTargetGroup(insTar, ratio, onsiteDays) : insTar;
-                int mtdTgtST = hasRoster ? ScaleTargetGroup(stTar, ratio, onsiteDays) : stTar;
-                int mtdTgtO = hasRoster ? ScaleTargetGroup(obsTar, ratio, onsiteDays) : obsTar;
-                int mtdTgtC = hasRoster ? ScaleTargetGroup(cTar, ratio, onsiteDays) : cTar;
-
-                int actH = string.IsNullOrEmpty(nik) ? 0 : (gHazByNik.TryGetValue(nik, out var ah) ? ah : 0);
-                int actI = string.IsNullOrEmpty(nik) ? 0 : (gInsByNik.TryGetValue(nik, out var ai) ? ai : 0);
-                int actST = string.IsNullOrEmpty(nik) ? 0 : (gStByNik.TryGetValue(nik, out var ast) ? ast : 0);
-                int actO = string.IsNullOrEmpty(nik) ? 0 : (gObsByNik.TryGetValue(nik, out var ao) ? ao : 0);
-                int actC = string.IsNullOrEmpty(nik) ? 0 : (gCoaByNik.TryGetValue(nik, out var ac) ? ac : 0);
-
-                int cappedH = Math.Min(actH, mtdTgtH);
-                int cappedI = Math.Min(actI, mtdTgtI);
-                int cappedST = Math.Min(actST, mtdTgtST);
-                int cappedO = Math.Min(actO, mtdTgtO);
-                int cappedC = Math.Min(actC, mtdTgtC);
-
-                int empTarget = mtdTgtH + mtdTgtI + mtdTgtST + mtdTgtO + mtdTgtC;
-                int empActual = cappedH + cappedI + cappedST + cappedO + cappedC;
-
-                if (empTarget > 0)
-                {
-                    if (empActual >= empTarget) fullyCompliantCount++;
-                    else if (empActual > 0) participatingCount++;
-                    else
-                    {
-                        inactiveCount++;
-                        // Target Companies specific counters
-                        if (emp.IdPerusahaan == 1) indeximBelum++;
-                        else if (emp.IdPerusahaan == 3) uduBelum++;
-                        else if (emp.IdPerusahaan == 4) kppBelum++;
-                        else if (emp.IdPerusahaan == 5) mgeBelum++;
-                    }
-                }
-                else
-                {
-                    inactiveCount++;
-                }
-
-                targetH += mtdTgtH; actualH += cappedH;
-                targetI += mtdTgtI; actualI += cappedI;
-                targetS += mtdTgtST; actualS += cappedST;
-                targetO += mtdTgtO; actualO += cappedO;
-                targetC += mtdTgtC; actualC += cappedC;
-
-                if (mtdTgtH > 0) { withTargetH++; if (actH >= 1) fulfilledH++; }
-                if (mtdTgtI > 0) { withTargetI++; if (actI >= 1) fulfilledI++; }
-                if (mtdTgtST > 0) { withTargetS++; if (actST >= 1) fulfilledS++; }
-                if (mtdTgtO > 0) { withTargetO++; if (actO >= 1) fulfilledO++; }
-                if (mtdTgtC > 0) { withTargetC++; if (actC >= 1) fulfilledC++; }
-            }
-
-            ViewBag.SapPrograms = new[]
-            {
-                new { Name = "Hazard Report", Icon = "bi-shield-exclamation", Color = "#6366f1", WithTarget = withTargetH, Fulfilled = fulfilledH, TotalActual = actualH, TotalTarget = targetH },
-                new { Name = "Inspeksi", Icon = "bi-check2-square", Color = "#3b82f6", WithTarget = withTargetI, Fulfilled = fulfilledI, TotalActual = actualI, TotalTarget = targetI },
-                new { Name = "Safety Talk", Icon = "bi-chat-left-quote-fill", Color = "#d97706", WithTarget = withTargetS, Fulfilled = fulfilledS, TotalActual = actualS, TotalTarget = targetS },
-                new { Name = "Observasi", Icon = "bi-eye-fill", Color = "#ec4899", WithTarget = withTargetO, Fulfilled = fulfilledO, TotalActual = actualO, TotalTarget = targetO },
-                new { Name = "Coaching", Icon = "bi-person-lines-fill", Color = "#a855f7", WithTarget = withTargetC, Fulfilled = fulfilledC, TotalActual = actualC, TotalTarget = targetC }
-            };
-
-            int totalBerTarget = fullyCompliantCount + participatingCount + inactiveCount;
-            ViewBag.TotalCount = totalBerTarget;
-            ViewBag.TotalEmployeesWithTarget = totalBerTarget;
-            ViewBag.WajibSap = totalBerTarget;
-            ViewBag.SudahMengisi = fullyCompliantCount + participatingCount;
-            ViewBag.BelumMengisi = inactiveCount;
-            
-            var childBreakdowns = new List<dynamic>
-            {
-                new { CompanyId = 1, CompanyName = "PT INDEXIM COALINDO", BelumMengisi = indeximBelum },
-                new { CompanyId = 3, CompanyName = "PT UNGGUL DINAMIKA UTAMA", BelumMengisi = uduBelum },
-                new { CompanyId = 4, CompanyName = "PT KALIMANTAN PRIMA PERSADA", BelumMengisi = kppBelum },
-                new { CompanyId = 5, CompanyName = "PT MEGA GLOBAL ENERGY", BelumMengisi = mgeBelum }
-            };
-            ViewBag.ChildBreakdowns = childBreakdowns.OrderByDescending(c => c.BelumMengisi).ToList();
-
-            ViewBag.CurrentPage = 1;
-            ViewBag.PageSize = 50;
-            ViewBag.TotalPages = 1;
-
-            // Hazard age distribution
-            var openHazards = await _context.HazardReports
-                .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && relatedCompanyIds.Contains(h.PerusahaanId.Value) && h.StatusTemuan == "Open")
-                .Select(h => h.Tanggal)
-                .ToListAsync();
-
-            int ageCritical = 0; // > 30 days
-            int ageWarning = 0;  // 8-30 days
-            int ageNew = 0;      // 0-7 days
-
-            foreach (var dt in openHazards)
-            {
-                var days = (today - dt).TotalDays;
-                if (days > 30) ageCritical++;
-                else if (days > 7) ageWarning++;
-                else ageNew++;
-            }
-
-            // P2H Kelayakan Kendaraan
-            var companyNiksList = activeKaryawans.Select(k => k.NoNik).Where(n => !string.IsNullOrEmpty(n)).ToList();
-            var p2hReports = await _context.P2hReports
-                .Where(r => !r.IsDeleted && r.Tanggal >= startOfMonthM && r.Tanggal <= endOfMonthM && companyNiksList.Contains(r.Nik))
-                .Select(r => new { r.GolA_Json, r.SimperKimper })
-                .ToListAsync();
-
-            int totalP2h = p2hReports.Count;
-            int criticalP2hDefects = p2hReports.Count(r => r.GolA_Json != null && r.GolA_Json.Contains("NOT_GOOD"));
-            int simperViolations = p2hReports.Count(r => r.SimperKimper == "TIDAK");
-
-            ViewBag.ActiveEmployeesCount = activeKaryawans.Count;
-            ViewBag.FullyCompliantCount = fullyCompliantCount;
-            ViewBag.ParticipatingCount = participatingCount;
-            ViewBag.InactiveCount = inactiveCount;
-
-            ViewBag.TargetH = targetH; ViewBag.ActualH = actualH;
-            ViewBag.TargetI = targetI; ViewBag.ActualI = actualI;
-            ViewBag.TargetS = targetS; ViewBag.ActualS = actualS;
-            ViewBag.TargetO = targetO; ViewBag.ActualO = actualO;
-            ViewBag.TargetC = targetC; ViewBag.ActualC = actualC;
-
-            ViewBag.AgeCritical = ageCritical;
-            ViewBag.AgeWarning = ageWarning;
-            ViewBag.AgeNew = ageNew;
-            ViewBag.TotalOpenHazards = openHazards.Count;
-
-            ViewBag.TotalP2h = totalP2h;
-            ViewBag.CriticalP2hDefects = criticalP2hDefects;
-            ViewBag.SimperViolations = simperViolations;
-
             // 5. Maincon Group Comparison Calculation
             // Grup yang dihitung:
             // 1. PT MEGA GLOBAL ENERGY (Id 5 + subkontraktornya)
@@ -8462,81 +8064,8 @@ namespace MBS_SAP.Controllers
 
             bool isCurrentNewPolicy = (selectedYear > 2026) || (selectedYear == 2026 && selectedMonth >= 9);
             ViewBag.IsNewPolicyPeriod = isCurrentNewPolicy;
-            var orderedSubcons = allSubconStats.OrderByDescending(s => s.ComplianceRate).ThenByDescending(s => s.TotalSubmissions).ToList();
-            ViewBag.MostActiveSubcon = orderedSubcons.FirstOrDefault();
-            ViewBag.AllSubconStats = orderedSubcons;
-            ViewBag.Top10BestSubcons = orderedSubcons.Take(10).ToList();
-            ViewBag.Top10OverAchieverSubcons = allSubconStats
-                .Where(s => s.ComplianceRate >= 100 && s.TotalSubmissions > s.TargetSubmissions)
-                .OrderByDescending(s => (s.TotalSubmissions - s.TargetSubmissions))
-                .Take(10)
-                .ToList();
             ViewBag.MainconGroupComparison = mainconGroupComparisonList;
 
-            // 5. Daily Awareness/Submission Trend (last 14 days)
-            var last14Days = Enumerable.Range(0, 14)
-                .Select(i => DateTime.Today.AddDays(-i))
-                .OrderBy(d => d)
-                .ToList();
-            var startDate = last14Days.First();
-
-            var dailyHazards = await _context.HazardReports
-                .Where(h => !h.IsDeleted && h.Tanggal >= startDate)
-                .GroupBy(h => h.Tanggal.Date)
-                .Select(g => new { Date = g.Key, Count = g.Count() })
-                .ToListAsync();
-
-            var dailyInspections = await _context.Inspections
-                .Where(i => !i.IsDeleted && i.Tanggal >= startDate)
-                .GroupBy(i => i.Tanggal.Date)
-                .Select(g => new { Date = g.Key, Count = g.Count() })
-                .ToListAsync();
-
-            var dailySafetyTalks = await _context.SafetyTalks
-                .Where(s => !s.IsDeleted && s.Tanggal >= startDate)
-                .GroupBy(s => s.Tanggal.Date)
-                .Select(g => new { Date = g.Key, Count = g.Count() })
-                .ToListAsync();
-
-            var dailyObservations = await _context.Observations
-                .Where(o => !o.IsDeleted && o.CreatedAt >= startDate)
-                .GroupBy(o => o.CreatedAt.Date)
-                .Select(g => new { Date = g.Key, Count = g.Count() })
-                .ToListAsync();
-
-            var dailyCoachings = await _context.Coachings
-                .Where(c => !c.IsDeleted && c.CreatedAt >= startDate)
-                .GroupBy(c => c.CreatedAt.Date)
-                .Select(g => new { Date = g.Key, Count = g.Count() })
-                .ToListAsync();
-
-            var dailyTrendLabels = new List<string>();
-            var dailyTrendValues = new List<int>();
-
-            foreach (var date in last14Days)
-            {
-                dailyTrendLabels.Add(date.ToString("dd MMM"));
-                int sum = 
-                    (dailyHazards.FirstOrDefault(d => d.Date == date)?.Count ?? 0) +
-                    (dailyInspections.FirstOrDefault(d => d.Date == date)?.Count ?? 0) +
-                    (dailySafetyTalks.FirstOrDefault(d => d.Date == date)?.Count ?? 0) +
-                    (dailyObservations.FirstOrDefault(d => d.Date == date)?.Count ?? 0) +
-                    (dailyCoachings.FirstOrDefault(d => d.Date == date)?.Count ?? 0);
-                dailyTrendValues.Add(sum);
-            }
-
-            ViewBag.DailyAwarenessTrendLabels = dailyTrendLabels;
-            ViewBag.DailyAwarenessTrendValues = dailyTrendValues;
-
-            // Calculate Active Submitting Employees and Awareness Rate optimally
-            int activeEmployees = fullyCompliantCount + participatingCount;
-            int totalEmpWithTarget = fullyCompliantCount + participatingCount + inactiveCount;
-            double employeeAwarenessRate = totalEmpWithTarget > 0 ? 
-                Math.Round((double)activeEmployees / totalEmpWithTarget * 100.0, 1) : 0.0;
-
-            ViewBag.ActiveEmployeesCount = activeEmployees;
-            ViewBag.TotalEmployeesWithTarget = totalEmpWithTarget;
-            ViewBag.EmployeeAwarenessRate = employeeAwarenessRate;
             // 6. Companies that have never logged in
             var loggedInCompanyIds = await _context.AppUsers
                 .Where(u => u.IdPerusahaan.HasValue)
@@ -8630,6 +8159,43 @@ namespace MBS_SAP.Controllers
 
             // 7. Top 10 Best Performance Companies
             // Close rate menjadi beban pembuat SAP (berdasarkan PerusahaanId pembuat Hazard & Action Plan)
+            var startOfMonthM = new DateTime(selectedYear, selectedMonth, 1);
+            var endOfMonthM = startOfMonthM.AddMonths(1).AddTicks(-1);
+
+            var groupInspections = await _context.Inspections.AsNoTracking()
+                .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && i.Tanggal >= startOfMonthM && i.Tanggal <= endOfMonthM)
+                .Select(i => new { i.PerusahaanId })
+                .ToListAsync();
+
+            var groupSafetyTalks = await _context.SafetyTalks.AsNoTracking()
+                .Where(s => !s.IsDeleted && s.Tanggal >= startOfMonthM && s.Tanggal <= endOfMonthM && s.PerusahaanId.HasValue)
+                .Select(s => new { s.PerusahaanId })
+                .ToListAsync();
+
+            var groupP5ms = await _context.P5ms.AsNoTracking()
+                .Where(p => !p.IsDeleted && p.Tanggal >= startOfMonthM && p.Tanggal <= endOfMonthM && p.PerusahaanId.HasValue)
+                .Select(p => new { p.PerusahaanId })
+                .ToListAsync();
+
+            var groupCoachingCreators = await _context.Coachings.AsNoTracking()
+                .Where(co => !co.IsDeleted && co.CreatedAt >= startOfMonthM && co.CreatedAt <= endOfMonthM && co.PerusahaanId.HasValue)
+                .Select(co => new { co.PerusahaanId })
+                .ToListAsync();
+
+            var groupCoachingParticipants = await (from p in _context.CoachingParticipants.AsNoTracking()
+                                                   join k in _context.Karyawans.AsNoTracking() on p.Nik equals k.NoNik
+                                                   where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonthM && p.Coaching.CreatedAt <= endOfMonthM && k.IdPerusahaan != null
+                                                   select new { PerusahaanId = (int?)k.IdPerusahaan })
+                                                   .ToListAsync();
+
+            var groupCoachings = groupCoachingCreators.Concat(groupCoachingParticipants).ToList();
+
+            var groupObservations = await (from o in _context.Observations.AsNoTracking()
+                                           join k in _context.Karyawans.AsNoTracking() on o.Nik equals k.NoNik
+                                           where !o.IsDeleted && o.CreatedAt >= startOfMonthM && o.CreatedAt <= endOfMonthM && k.IdPerusahaan != null
+                                           select new { PerusahaanId = (int?)k.IdPerusahaan })
+                                           .ToListAsync();
+
             var allHazardsMonth = (await _context.HazardReports
                 .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonthM && h.Tanggal <= endOfMonthM && h.Nik != null)
                 .Select(h => new { h.PerusahaanId, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan })
@@ -8705,33 +8271,36 @@ namespace MBS_SAP.Controllers
 
                 var nik = (emp.NoNik ?? string.Empty).Trim();
                 int onsiteDays = totalDaysInMonthTargetDict;
-                bool hasRoster = false;
+                int cutiDays = 0;
+                bool isTugasExempt = false;
 
                 if (!string.IsNullOrEmpty(nik) && allActiveRostersByNik.TryGetValue(nik, out var empRosters))
                 {
-                    int computedOnsite = 0;
-                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
-                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                            var ovTStart = r.AwalDinas > startOfMonthM ? r.AwalDinas : startOfMonthM;
+                            var ovTEnd = r.AkhirDinas < endOfMonthM ? r.AkhirDinas : endOfMonthM;
+                            if (ovTStart <= ovTEnd) isTugasExempt = true;
+                            continue;
                         }
 
-                        var overlapStart = r.AwalDinas > startOfMonthM ? r.AwalDinas : startOfMonthM;
-                        var overlapEnd = r.AkhirDinas < endOfMonthM ? r.AkhirDinas : endOfMonthM;
-                        if (overlapStart <= overlapEnd)
+                        // Target HANYA berkurang ketika karyawan cuti
+                        if (r.AwalCuti <= endOfMonthM && r.AkhirCuti >= startOfMonthM)
                         {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            var ovCutiStart = r.AwalCuti > startOfMonthM ? r.AwalCuti : startOfMonthM;
+                            var ovCutiEnd = r.AkhirCuti < endOfMonthM ? r.AkhirCuti : endOfMonthM;
+                            if (ovCutiStart <= ovCutiEnd)
+                            {
+                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        onsiteDays = computedOnsite;
-                    }
                 }
+
+                onsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonthTargetDict - cutiDays);
+                bool hasRoster = (cutiDays > 0 || isTugasExempt);
 
                 double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonthTargetDict : 1.0;
 

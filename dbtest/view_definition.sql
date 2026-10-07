@@ -300,21 +300,7 @@ SELECT
     END AS target_coaching,
     CASE
         WHEN nik_override.force_zero_target = 1 THEN 0
-        WHEN resolved_map.final_kode_jabatan_standar IN ('GM', 'SRM', 'MGR') THEN 1
-        WHEN resolved_map.final_kode_jabatan_standar IN ('SRSU', 'SU')
-            THEN CASE
-                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 4
-                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 2
-                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 1
-                    ELSE 2
-                 END
-        WHEN resolved_map.final_kode_jabatan_standar IN ('SRSP', 'SPV', 'SROF', 'OFF', 'FM')
-            THEN CASE
-                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Area Operasional' THEN 4
-                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Non Office' THEN 2
-                    WHEN resolved_map.final_kategori_pengawas = 'Pengawas Support Dept - Office' THEN 1
-                    ELSE 2
-                 END
+        WHEN resolved_map.final_kode_jabatan_standar IN ('GM', 'SRM', 'MGR', 'SRSU', 'SU', 'SRSP', 'SPV', 'SROF', 'OFF', 'FM') THEN 4
         ELSE 0
     END AS target_safety_talk,
     CASE

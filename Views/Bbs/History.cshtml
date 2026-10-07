@@ -1,0 +1,501 @@
+@model List<MBS_SAP.Models.BbsObservation>
+@{
+    ViewData["Title"] = "Riwayat Observasi Perilaku (BBS) - SAP";
+    int selectedMonth = ViewBag.SelectedMonth ?? DateTime.Today.Month;
+    int selectedYear = ViewBag.SelectedYear ?? DateTime.Today.Year;
+    string selectedType = ViewBag.SelectedType ?? "all";
+    string searchQuery = ViewBag.SearchQuery ?? "";
+    bool isAdmin = ViewBag.IsAdmin ?? false;
+    string currentUserNik = ViewBag.CurrentUserNik ?? "";
+
+    int totalCount = ViewBag.TotalCount ?? 0;
+    int safeCount = ViewBag.SafeCount ?? 0;
+    int atRiskCount = ViewBag.AtRiskCount ?? 0;
+    int coachingCount = ViewBag.CoachingCount ?? 0;
+    double safeRate = ViewBag.SafeRate ?? 100.0;
+
+    var monthNames = new[] {
+        new { Val = 1, Name = "Januari" },
+        new { Val = 2, Name = "Februari" },
+        new { Val = 3, Name = "Maret" },
+        new { Val = 4, Name = "April" },
+        new { Val = 5, Name = "Mei" },
+        new { Val = 6, Name = "Juni" },
+        new { Val = 7, Name = "Juli" },
+        new { Val = 8, Name = "Agustus" },
+        new { Val = 9, Name = "September" },
+        new { Val = 10, Name = "Oktober" },
+        new { Val = 11, Name = "November" },
+        new { Val = 12, Name = "Desember" }
+    };
+}
+
+<style>
+    .bbs-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    @@media (min-width: 992px) {
+        .bbs-kpi-grid {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+    }
+    .bbs-row-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 18px;
+        padding: 16px 18px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        position: relative;
+    }
+    .bbs-row-card:hover {
+        border-color: rgba(2, 132, 199, 0.4);
+        box-shadow: var(--shadow-sm);
+        transform: translateY(-2px);
+    }
+    .bbs-tag-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 99px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+    }
+    .btn-close-sap {
+        filter: invert(1) brightness(200%);
+        opacity: 0.8;
+    }
+    body.light-theme .btn-close-sap {
+        filter: none;
+        opacity: 0.6;
+    }
+    body.light-theme .bbs-row-card {
+        background: #ffffff;
+        box-shadow: 0 4px 16px rgba(149, 157, 165, 0.08);
+    }
+</style>
+
+<div class="animate-fade-in pb-5 mb-4">
+
+    <!-- Screen Title matching standard SAP forms -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+            <div class="screen-title">Riwayat Observasi BBS</div>
+            <p class="screen-subtitle">Daftar riwayat laporan observasi perilaku (BBS) operasional beserta analisis kepatuhan.</p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            @if (isAdmin)
+            {
+                <a asp-controller="BbsMaster" asp-action="Index" class="btn btn-sm btn-outline-info fw-bold d-inline-flex align-items-center gap-1.5" style="border-radius: 12px; height: 42px; font-size: 12.5px;">
+                    <i class="bi bi-gear-fill"></i>
+                    <span>Master BBS</span>
+                </a>
+            }
+            <a asp-controller="Bbs" asp-action="Index" class="btn-sap-primary d-inline-flex align-items-center gap-2" style="padding: 10px 18px; font-size: 13.5px; height: 42px; text-decoration: none;">
+                <i class="bi bi-plus-circle-fill"></i>
+                <span>+ Input Observasi Baru</span>
+            </a>
+            <a asp-controller="Bbs" asp-action="Index" asp-route-type="SpecialCase" class="btn btn-outline-warning fw-bold d-inline-flex align-items-center gap-2 px-3 text-warning" style="border-radius: 14px; height: 42px; font-size: 13.5px;">
+                <i class="bi bi-lightning-charge-fill"></i>
+                <span class="d-none d-sm-inline">Special Case</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-3" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 14px;">
+            <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
+            <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-3" role="alert" style="background-color: rgba(34, 197, 94, 0.15); color: var(--color-green); border-radius: 14px;">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
+            <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- KPI Summary Row using card-sap -->
+    <div class="bbs-kpi-grid">
+        <div class="card-sap border-primary-accent mb-0 p-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="form-label-sap mb-0" style="font-size: 11px;">Total Observasi</span>
+                <i class="bi bi-clipboard2-data-fill text-primary" style="font-size: 18px;"></i>
+            </div>
+            <h3 class="fw-bold mb-0" style="color: var(--text-main);">@totalCount</h3>
+            <small class="text-muted" style="font-size: 10.5px;">Periode @monthNames.First(m => m.Val == selectedMonth).Name @selectedYear</small>
+        </div>
+
+        <div class="card-sap border-green-accent mb-0 p-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="form-label-sap mb-0" style="font-size: 11px;">Safe Behavior</span>
+                <i class="bi bi-hand-thumbs-up-fill text-success" style="font-size: 18px;"></i>
+            </div>
+            <h3 class="fw-bold mb-0 text-success">@safeRate%</h3>
+            <small class="text-muted" style="font-size: 10.5px;">@safeCount Perilaku Aman (Safe)</small>
+        </div>
+
+        <div class="card-sap border-red-accent mb-0 p-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="form-label-sap mb-0" style="font-size: 11px;">Perilaku Berisiko</span>
+                <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 18px;"></i>
+            </div>
+            <h3 class="fw-bold mb-0 text-danger">@atRiskCount</h3>
+            <small class="text-muted" style="font-size: 10.5px;">At-Risk Behavior terintervensi</small>
+        </div>
+
+        <div class="card-sap border-orange-accent mb-0 p-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="form-label-sap mb-0" style="font-size: 11px;">Sesi Coaching</span>
+                <i class="bi bi-chat-quote-fill" style="color: #a855f7; font-size: 18px;"></i>
+            </div>
+            <h3 class="fw-bold mb-0" style="color: #a855f7;">@coachingCount</h3>
+            <small class="text-muted" style="font-size: 10.5px;">Diskusi &amp; komitmen pekerja</small>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card-sap p-3 mb-4" style="border-radius: 18px;">
+        <form method="get" action="/Bbs/History" class="row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="form-label-sap mb-1" style="font-size: 11px;">Tipe Observasi</label>
+                <div class="input-sap-wrapper mb-0">
+                    <i class="bi bi-funnel-fill input-sap-icon"></i>
+                    <select name="type" class="input-sap" onchange="this.form.submit();">
+                        <option value="all" selected="@(selectedType == "all")">Semua Tipe Observasi</option>
+                        <option value="Rutin" selected="@(selectedType == "Rutin")">Observasi Rutin Saja</option>
+                        <option value="SpecialCase" selected="@(selectedType == "SpecialCase")">Special Case Saja</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label-sap mb-1" style="font-size: 11px;">Bulan</label>
+                <div class="input-sap-wrapper mb-0">
+                    <i class="bi bi-calendar-month-fill input-sap-icon"></i>
+                    <select name="month" class="input-sap" onchange="this.form.submit();">
+                        @foreach (var m in monthNames)
+                        {
+                            <option value="@m.Val" selected="@(m.Val == selectedMonth)">@m.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label-sap mb-1" style="font-size: 11px;">Tahun</label>
+                <div class="input-sap-wrapper mb-0">
+                    <i class="bi bi-calendar-fill input-sap-icon"></i>
+                    <select name="year" class="input-sap" onchange="this.form.submit();">
+                        @for (int y = DateTime.Today.Year; y >= 2024; y--)
+                        {
+                            <option value="@y" selected="@(y == selectedYear)">@y</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label class="form-label-sap mb-1" style="font-size: 11px;">Cari Laporan</label>
+                <div class="input-sap-wrapper mb-0">
+                    <i class="bi bi-search input-sap-icon"></i>
+                    <input type="text" name="search" class="input-sap" placeholder="No. BBS, Nama Pekerja, Area..." value="@searchQuery" />
+                </div>
+            </div>
+
+            <div class="col-12 col-md-1">
+                <button type="submit" class="btn-sap-primary w-100" style="padding: 10px 0; font-size: 13px; height: 46px;">
+                    Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Observation List -->
+    @if (Model == null || Model.Count == 0)
+    {
+        <div class="text-center py-5 rounded-4 card-sap" style="border: 2px dashed var(--border-color);">
+            <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(2, 132, 199, 0.1); color: var(--color-primary); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+                <i class="bi bi-clipboard2-x" style="font-size: 28px;"></i>
+            </div>
+            <h5 class="fw-bold mb-1" style="color: var(--text-main);">Belum Ada Data Observasi BBS</h5>
+            <p class="text-muted mb-3" style="font-size: 13px; max-width: 440px; margin: 0 auto;">
+                Belum ada data observasi pada periode ini. Klik tombol di bawah untuk membuat observasi baru.
+            </p>
+            <div class="d-flex justify-content-center gap-2">
+                <a asp-controller="Bbs" asp-action="Index" class="btn-sap-primary" style="text-decoration: none; padding: 10px 20px;">
+                    <i class="bi bi-plus-circle me-1"></i> Observasi Rutin
+                </a>
+                <a asp-controller="Bbs" asp-action="Index" asp-route-type="SpecialCase" class="btn btn-outline-warning fw-bold px-3 py-2" style="border-radius: 14px;">
+                    <i class="bi bi-lightning-charge me-1"></i> Special Case
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-3">
+            @foreach (var obs in Model)
+            {
+                var isSafe = obs.Klasifikasi == "Aman";
+                var typeBadgeBg = obs.ObservationType == "SpecialCase" ? "rgba(245, 158, 11, 0.15)" : "rgba(2, 132, 199, 0.15)";
+                var typeBadgeColor = obs.ObservationType == "SpecialCase" ? "#fbbf24" : "#38bdf8";
+                var typeBorder = obs.ObservationType == "SpecialCase" ? "rgba(245, 158, 11, 0.3)" : "rgba(2, 132, 199, 0.3)";
+
+                var riskColor = obs.TingkatRisiko == "Sangat Tinggi" ? "#ef4444" :
+                                (obs.TingkatRisiko == "Tinggi" ? "#f97316" :
+                                (obs.TingkatRisiko == "Sedang" ? "#eab308" : "#10b981"));
+
+                <div class="bbs-row-card">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-12 col-md-7 col-lg-8">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-1.5">
+                                <span class="bbs-tag-pill" style="background: @typeBadgeBg; color: @typeBadgeColor; border: 1px solid @typeBorder;">
+                                    <i class="bi @(obs.ObservationType == "SpecialCase" ? "bi-lightning-charge-fill" : "bi-journal-check")"></i>
+                                    @(obs.ObservationType == "SpecialCase" ? "SPECIAL CASE" : "OBSERVASI RUTIN")
+                                </span>
+                                <span class="fw-bold font-monospace" style="font-size: 13px; color: var(--text-main);">
+                                    @obs.ObservationNo
+                                </span>
+                                <span class="text-muted" style="font-size: 11.5px;">&bull; @obs.Tanggal.ToString("dd MMM yyyy"), @obs.Waktu WITA</span>
+                            </div>
+
+                            <div class="fw-bold mb-1" style="font-size: 15px; color: var(--text-main);">
+                                @(obs.CategoryName ?? "Observasi Umum")
+                                @if (!string.IsNullOrEmpty(obs.TopicName))
+                                {
+                                    <span class="text-muted fw-normal" style="font-size: 13.5px;"> &rsaquo; @obs.TopicName</span>
+                                }
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2 flex-wrap text-muted mb-2" style="font-size: 12px;">
+                                <span><i class="bi bi-geo-alt-fill text-danger me-1"></i><strong>@obs.Area</strong> (@obs.Site)</span>
+                                @if (!string.IsNullOrEmpty(obs.DetilLokasi))
+                                {
+                                    <span>&bull; @obs.DetilLokasi</span>
+                                }
+                                <span>&bull; Pekerja: <strong class="text-info">@(obs.ObservedNama ?? "Tidak Dicatat")</strong> @(!string.IsNullOrEmpty(obs.ObservedJabatan) ? $"({obs.ObservedJabatan})" : "")</span>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(obs.Deskripsi))
+                            {
+                                <div class="text-muted text-truncate mb-2" style="font-size: 12px; max-width: 650px;" title="@obs.Deskripsi">
+                                    <i class="bi bi-chat-left-text me-1"></i>@obs.Deskripsi
+                                </div>
+                            }
+
+                            <!-- Badges -->
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                @if (isSafe)
+                                {
+                                    <span class="badge" style="background: rgba(16, 185, 129, 0.18); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 11px; padding: 4px 10px; border-radius: 6px;">
+                                        <i class="bi bi-hand-thumbs-up-fill me-1"></i>PERILAKU AMAN (SAFE)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge" style="background: rgba(244, 63, 94, 0.18); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.4); font-size: 11px; padding: 4px 10px; border-radius: 6px;">
+                                        <i class="bi bi-hand-thumbs-down-fill me-1"></i>PERILAKU BERISIKO (AT-RISK)
+                                    </span>
+                                }
+
+                                <span class="badge" style="background: rgba(255,255,255,0.06); color: @riskColor; border: 1px solid rgba(255,255,255,0.15); font-size: 11px; padding: 4px 10px; border-radius: 6px;">
+                                    <i class="bi bi-shield-fill-exclamation me-1"></i>Risiko: @obs.TingkatRisiko
+                                </span>
+
+                                <span class="badge" style="background: rgba(255,255,255,0.06); color: var(--text-muted); font-size: 11px; padding: 4px 10px; border-radius: 6px;">
+                                    Respons: <strong>@obs.ResponsPekerja</strong>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Right Actions -->
+                        <div class="col-12 col-md-5 col-lg-4 d-flex align-items-center justify-content-md-end gap-2 flex-wrap">
+                            @if (!string.IsNullOrEmpty(obs.FotoUrl))
+                            {
+                                <img src="@obs.FotoUrl" alt="Foto BBS" class="rounded-3 shadow-sm" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid var(--border-color); cursor: pointer;" onclick="showImageModal('@obs.FotoUrl')" title="Klik untuk memperbesar" />
+                            }
+
+                            <div class="d-flex align-items-center gap-1.5 ms-auto ms-md-0">
+                                <button type="button" class="btn btn-sm btn-outline-info px-2.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1" style="border-radius: 10px; font-size: 12px;" onclick="viewBbsDetail(@obs.Id)">
+                                    <i class="bi bi-eye-fill"></i>
+                                    <span>Detail</span>
+                                </button>
+
+                                @if (obs.ObserverNik == currentUserNik || isAdmin)
+                                {
+                                    <a asp-controller="Bbs" asp-action="Edit" asp-route-id="@obs.Id" class="btn btn-sm btn-outline-warning px-2.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1" style="border-radius: 10px; font-size: 12px;">
+                                        <i class="bi bi-pencil-fill"></i>
+                                        <span>Edit</span>
+                                    </a>
+
+                                    <form method="post" action="/Bbs/Delete/@obs.Id" onsubmit="return confirm('Apakah Anda yakin ingin menghapus observasi @obs.ObservationNo?');" class="d-inline m-0">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-sm btn-outline-danger px-2.5 py-1.5 fw-bold" style="border-radius: 10px; font-size: 12px;" title="Hapus">
+                                            <i class="bi bi-trash3-fill"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Modal Detail Observasi BBS -->
+<div class="modal fade" id="modalBbsDetail" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 20px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-main);">
+            <div class="modal-header py-3 px-4" style="border-bottom: 1px solid var(--border-color);">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(2, 132, 199, 0.15); color: var(--color-primary); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-clipboard2-check-fill fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0" id="detailModalTitle">Detail Observasi BBS</h6>
+                        <small class="text-muted" id="detailModalSubtitle">No. Observasi</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4" id="detailModalBody"></div>
+            <div class="modal-footer py-2.5 px-4" style="border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-secondary px-4 fw-bold" data-bs-dismiss="modal" style="border-radius: 10px; font-size: 12.5px;">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Foto Preview -->
+<div class="modal fade" id="modalImagePreview" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content bg-transparent border-0">
+            <div class="modal-body p-0 text-center position-relative">
+                <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 z-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                <img id="previewImgSrc" src="" alt="Bukti BBS" class="img-fluid rounded-4 shadow-lg" style="max-height: 80vh; border: 2px solid rgba(255,255,255,0.2);" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showImageModal(src) {
+        document.getElementById('previewImgSrc').src = src;
+        new bootstrap.Modal(document.getElementById('modalImagePreview')).show();
+    }
+
+    async function viewBbsDetail(id) {
+        const modal = new bootstrap.Modal(document.getElementById('modalBbsDetail'));
+        const bodyEl = document.getElementById('detailModalBody');
+        const titleEl = document.getElementById('detailModalTitle');
+        const subEl = document.getElementById('detailModalSubtitle');
+
+        bodyEl.innerHTML = `<div class="text-center py-4"><div class="spinner-border text-primary"></div><div class="mt-2 text-muted">Memuat data...</div></div>`;
+        modal.show();
+
+        try {
+            const res = await fetch(`/Bbs/Detail/${id}?json=1`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const result = await res.json();
+            if (!result.success) throw new Error('Data tidak ditemukan');
+
+            const d = result.data;
+            titleEl.textContent = `Observasi ${d.observationNo}`;
+            subEl.textContent = `${d.observationType === 'SpecialCase' ? 'Special Case' : 'Observasi Rutin'} &bull; ${d.tanggal} (${d.waktu} WITA)`;
+
+            const isSafe = d.klasifikasi === 'Aman';
+            const badgeClass = isSafe ? 'bg-success text-white' : 'bg-danger text-white';
+
+            let behaviorHtml = '';
+            if (d.behaviors && d.behaviors.length > 0) {
+                behaviorHtml = d.behaviors.map(b => `<li class="mb-1"><i class="bi bi-check2-circle me-1 text-primary"></i>${b}</li>`).join('');
+            }
+            if (d.customBehavior) {
+                behaviorHtml += `<li class="mb-1 text-warning"><i class="bi bi-pencil-square me-1"></i>${d.customBehavior} (Tambahan)</li>`;
+            }
+
+            bodyEl.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-3 border-bottom" style="border-color: var(--border-color) !important;">
+                    <div>
+                        <span class="badge ${badgeClass} px-3 py-1.5" style="font-size: 12px; border-radius: 8px;">
+                            ${isSafe ? '👍 PERILAKU AMAN (SAFE)' : '👎 PERILAKU BERISIKO (AT-RISK)'}
+                        </span>
+                        <span class="badge bg-secondary ms-1 px-2.5 py-1.5" style="font-size: 12px; border-radius: 8px;">
+                            Tingkat Risiko: <strong>${d.tingkatRisiko}</strong>
+                        </span>
+                    </div>
+                    <div class="text-muted" style="font-size: 12px;">
+                        Observer: <strong>${d.observerNama}</strong> (${d.observerNik})
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                            <h6 class="fw-bold mb-2 text-primary" style="font-size: 13px;"><i class="bi bi-person-badge me-1"></i>Pekerja yang Diobservasi</h6>
+                            <div style="font-size: 12.5px;"><strong>Nama:</strong> ${d.observedNama || '-'}</div>
+                            <div style="font-size: 12.5px;"><strong>NIK:</strong> ${d.observedNik || '-'}</div>
+                            <div style="font-size: 12.5px;"><strong>Jabatan:</strong> ${d.observedJabatan || '-'}</div>
+                            <div style="font-size: 12.5px;"><strong>Perusahaan:</strong> ${d.observedPerusahaan || '-'}</div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="p-3 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                            <h6 class="fw-bold mb-2 text-info" style="font-size: 13px;"><i class="bi bi-geo-alt me-1"></i>Lokasi & Konteks</h6>
+                            <div style="font-size: 12.5px;"><strong>Site / Area:</strong> ${d.site} / ${d.area}</div>
+                            <div style="font-size: 12.5px;"><strong>Detil Lokasi:</strong> ${d.detilLokasi || '-'}</div>
+                            <div style="font-size: 12.5px;"><strong>Kondisi Jalan:</strong> ${d.kondisiJalan || '-'}</div>
+                            <div style="font-size: 12.5px;"><strong>Traffic / Rekan:</strong> ${d.kondisiKerja || '-'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3 p-3 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                    <h6 class="fw-bold mb-2" style="font-size: 13px; color: #fbbf24;"><i class="bi bi-list-check me-1"></i>Perilaku yang Diamati:</h6>
+                    <div class="text-muted mb-2" style="font-size: 12px;"><strong>Kategori:</strong> ${d.categoryName || '-'} ${d.topicName ? `&rsaquo; ${d.topicName}` : ''}</div>
+                    <ul class="list-unstyled mb-0" style="font-size: 12.5px;">
+                        ${behaviorHtml || '<li class="text-muted">Tidak ada perilaku spesifik dipilih.</li>'}
+                    </ul>
+                </div>
+
+                ${d.deskripsi ? `
+                    <div class="mb-3 p-3 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                        <h6 class="fw-bold mb-1" style="font-size: 13px;"><i class="bi bi-text-paragraph me-1"></i>Deskripsi Singkat / Kejadian:</h6>
+                        <p class="mb-0 text-muted" style="font-size: 12.5px;">${d.deskripsi}</p>
+                    </div>
+                ` : ''}
+
+                <div class="p-3 rounded-3 mb-3" style="background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.2);">
+                    <h6 class="fw-bold mb-2" style="font-size: 13px; color: #c084fc;"><i class="bi bi-chat-quote-fill me-1"></i>Tindakan & Coaching</h6>
+                    <div style="font-size: 12.5px;"><strong>Respons Pekerja:</strong> <span class="badge bg-secondary">${d.responsPekerja}</span></div>
+                    <div style="font-size: 12.5px; margin-top: 4px;"><strong>Tindakan Langsung:</strong> ${d.tindakanDilakukan || '-'}</div>
+                    ${d.catatanCoaching ? `<div style="font-size: 12.5px; margin-top: 6px;"><strong>Catatan Coaching:</strong><br><em class="text-muted">${d.catatanCoaching}</em></div>` : ''}
+                </div>
+
+                ${d.fotoUrl ? `
+                    <div class="text-center p-3 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                        <h6 class="fw-bold mb-2 text-start" style="font-size: 13px;"><i class="bi bi-camera me-1"></i>Dokumentasi Foto / Bukti:</h6>
+                        <img src="${d.fotoUrl}" alt="Bukti" class="rounded-3 img-fluid" style="max-height: 250px; cursor: pointer;" onclick="showImageModal('${d.fotoUrl}')" />
+                    </div>
+                ` : ''}
+            `;
+        } catch (err) {
+            bodyEl.innerHTML = `<div class="alert alert-danger mb-0">Gagal memuat detail: ${err.message}</div>`;
+        }
+    }
+</script>

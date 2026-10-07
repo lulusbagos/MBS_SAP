@@ -148,31 +148,36 @@ namespace MBS_SAP.Controllers
                 int computedOnsiteDays = totalDaysInMonth;
                 bool hasRoster = false;
 
+                int cutiDays = 0;
+                bool isTugasExempt = false;
+
                 if (stats.RosterHistory != null && stats.RosterHistory.Any())
                 {
-                    int computedOnsite = 0;
-                    bool hasAnyRoster = false;
                     foreach (var r in stats.RosterHistory)
                     {
-                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                            var ovTStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
+                            var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                            if (ovTStart <= ovTEnd) isTugasExempt = true;
+                            continue;
                         }
 
-                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
+                        // Target HANYA berkurang ketika karyawan cuti
+                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= startOfMonth)
                         {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            var ovCutiStart = r.AwalCuti > startOfMonth ? r.AwalCuti : startOfMonth;
+                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
+                            if (ovCutiStart <= ovCutiEnd)
+                            {
+                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        computedOnsiteDays = computedOnsite;
-                    }
                 }
+
+                computedOnsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonth - cutiDays);
+                hasRoster = (cutiDays > 0 || isTugasExempt);
 
                 double ratio = hasRoster ? (double)computedOnsiteDays / totalDaysInMonth : 1.0;
 

@@ -39,6 +39,12 @@ namespace MBS_SAP.Data
         public DbSet<MitraDepartmentDropdownView> MitraDepartmentDropdowns { get; set; } = null!;
         public DbSet<SapQualityAssessment> SapQualityAssessments { get; set; } = null!;
 
+        // BBS (Behavior Based Safety)
+        public DbSet<BbsCategory> BbsCategories { get; set; } = null!;
+        public DbSet<BbsTopic> BbsTopics { get; set; } = null!;
+        public DbSet<BbsBehavior> BbsBehaviors { get; set; } = null!;
+        public DbSet<BbsObservation> BbsObservations { get; set; } = null!;
+
         // View entities
         public DbSet<KaryawanView> Karyawans { get; set; } = null!;
         public DbSet<PersonalView> Personals { get; set; } = null!;
@@ -167,6 +173,21 @@ namespace MBS_SAP.Data
 
             modelBuilder.Entity<SapQualityAssessment>()
                 .ToTable("tbl_m_penilaian_kualitas_sap");
+
+            // BBS mappings
+            modelBuilder.Entity<BbsCategory>()
+                .ToTable("tbl_m_bbs_category");
+
+            modelBuilder.Entity<BbsTopic>()
+                .ToTable("tbl_m_bbs_topic");
+
+            modelBuilder.Entity<BbsBehavior>()
+                .ToTable("tbl_m_bbs_behavior");
+
+            modelBuilder.Entity<BbsObservation>()
+                .ToTable("tbl_t_bbs_observation")
+                .HasIndex(b => b.ObservationNo)
+                .IsUnique();
 
             // View mappings
             modelBuilder.Entity<KaryawanView>()

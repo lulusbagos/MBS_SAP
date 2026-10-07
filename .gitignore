@@ -62,3 +62,6 @@ __pycache__/
 ## DB Backups
 db_backup/
 
+## Data & Excel sheets
+*.xlsx
+
