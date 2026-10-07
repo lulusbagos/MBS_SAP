@@ -1,4 +1,5 @@
 using System;
+using ClosedXML.Excel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -539,6 +540,146 @@ namespace MBS_SAP.Controllers
                 .ToListAsync();
 
             return Json(workers);
+        }
+
+        // ==========================================
+        // 5. EXPORT EXCEL REKAP OBSERVASI BBS
+        // ==========================================
+        [HttpGet]
+        public async Task<IActionResult> ExportExcel(string? filter = null, string? type = null, string? category = null)
+        {
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
+            var isAdmin = IsAdminUser();
+
+            var query = _context.BbsObservations
+                .Where(o => !o.IsDeleted);
+
+            if (!isAdmin)
+            {
+                query = query.Where(o => o.ObserverNik == userNik);
+            }
+
+            if (!string.IsNullOrEmpty(filter))
+            {
+                if (filter.Equals("Aman", StringComparison.OrdinalIgnoreCase))
+                    query = query.Where(o => o.Klasifikasi == "Aman");
+                else if (filter.Equals("Berisiko", StringComparison.OrdinalIgnoreCase))
+                    query = query.Where(o => o.Klasifikasi != "Aman");
+                else if (filter.Equals("Coaching", StringComparison.OrdinalIgnoreCase))
+                    query = query.Where(o => !string.IsNullOrEmpty(o.CatatanCoaching));
+            }
+
+            if (!string.IsNullOrEmpty(type))
+            {
+                query = query.Where(o => o.ObservationType == type);
+            }
+
+            if (!string.IsNullOrEmpty(category))
+            {
+                query = query.Where(o => o.CategoryName == category);
+            }
+
+            var list = await query
+                .OrderByDescending(o => o.Tanggal)
+                .ThenByDescending(o => o.CreatedAt)
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("Rekap Observasi BBS");
+
+            // Title block
+            ws.Cell(1, 1).Value = "LAPORAN REKAPITULASI OBSERVASI PERILAKU (BBS)";
+            ws.Cell(1, 1).Style.Font.Bold = true;
+            ws.Cell(1, 1).Style.Font.FontSize = 14;
+            ws.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#1E3A8A");
+
+            ws.Cell(2, 1).Value = $"Dicetak pada: {DateTime.Now:dd MMMM yyyy HH:mm} WITA | Total Data: {list.Count} Observasi";
+            ws.Cell(2, 1).Style.Font.Italic = true;
+            ws.Cell(2, 1).Style.Font.FontSize = 10;
+            ws.Cell(2, 1).Style.Font.FontColor = XLColor.Gray;
+
+            // Headers
+            string[] headers = new string[]
+            {
+                "No", "No Observasi", "Tipe", "Tanggal", "Waktu",
+                "Area Utama", "Detil Lokasi", "Koordinat GPS",
+                "Pelapor (NIK)", "Nama Pelapor", "Dept Pelapor", "Perusahaan Pelapor",
+                "Pekerja (NIK)", "Nama Pekerja", "Jabatan Pekerja", "Dept Pekerja", "Perusahaan Pekerja",
+                "Kategori BBS", "Sub-Topik", "Klasifikasi", "Tingkat Risiko",
+                "Deskripsi / Situasi", "Respons Pekerja", "Tindakan Dilakukan", "Catatan Coaching"
+            };
+
+            for (int c = 0; c < headers.Length; c++)
+            {
+                var cell = ws.Cell(4, c + 1);
+                cell.Value = headers[c];
+                cell.Style.Font.Bold = true;
+                cell.Style.Font.FontColor = XLColor.White;
+                cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0284C7");
+                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            }
+            ws.Row(4).Height = 24;
+
+            int rowIdx = 5;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var item = list[i];
+                ws.Cell(rowIdx, 1).Value = i + 1;
+                ws.Cell(rowIdx, 2).Value = item.ObservationNo;
+                ws.Cell(rowIdx, 3).Value = item.ObservationType;
+                ws.Cell(rowIdx, 4).Value = item.Tanggal.ToString("yyyy-MM-dd");
+                ws.Cell(rowIdx, 5).Value = item.Waktu;
+                ws.Cell(rowIdx, 6).Value = item.Area;
+                ws.Cell(rowIdx, 7).Value = item.DetilLokasi ?? "-";
+                ws.Cell(rowIdx, 8).Value = item.Site;
+                ws.Cell(rowIdx, 9).Value = item.ObserverNik;
+                ws.Cell(rowIdx, 10).Value = item.ObserverNama;
+                ws.Cell(rowIdx, 11).Value = item.ObserverDept ?? "-";
+                ws.Cell(rowIdx, 12).Value = item.ObserverPerusahaan ?? "-";
+                ws.Cell(rowIdx, 13).Value = item.ObservedNik ?? "-";
+                ws.Cell(rowIdx, 14).Value = item.ObservedNama ?? "-";
+                ws.Cell(rowIdx, 15).Value = item.ObservedJabatan ?? "-";
+                ws.Cell(rowIdx, 16).Value = item.ObservedDept ?? "-";
+                ws.Cell(rowIdx, 17).Value = item.ObservedPerusahaan ?? "-";
+                ws.Cell(rowIdx, 18).Value = item.CategoryName ?? "-";
+                ws.Cell(rowIdx, 19).Value = item.TopicName ?? "-";
+
+                var cellKlasifikasi = ws.Cell(rowIdx, 20);
+                cellKlasifikasi.Value = item.Klasifikasi;
+                if (item.Klasifikasi == "Aman")
+                {
+                    cellKlasifikasi.Style.Font.FontColor = XLColor.FromHtml("#16A34A");
+                    cellKlasifikasi.Style.Font.Bold = true;
+                }
+                else
+                {
+                    cellKlasifikasi.Style.Font.FontColor = XLColor.FromHtml("#DC2626");
+                    cellKlasifikasi.Style.Font.Bold = true;
+                }
+
+                ws.Cell(rowIdx, 21).Value = item.TingkatRisiko;
+                ws.Cell(rowIdx, 22).Value = item.Deskripsi ?? "-";
+                ws.Cell(rowIdx, 23).Value = item.ResponsPekerja;
+                ws.Cell(rowIdx, 24).Value = item.TindakanDilakukan ?? "-";
+                ws.Cell(rowIdx, 25).Value = item.CatatanCoaching ?? "-";
+
+                if (i % 2 == 1)
+                {
+                    ws.Range(rowIdx, 1, rowIdx, headers.Length).Style.Fill.BackgroundColor = XLColor.FromHtml("#F8FAFC");
+                }
+
+                rowIdx++;
+            }
+
+            ws.Columns().AdjustToContents(10, 45);
+
+            using var stream = new System.IO.MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+
+            var fileName = $"Rekap_Observasi_BBS_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
         // ==========================================
