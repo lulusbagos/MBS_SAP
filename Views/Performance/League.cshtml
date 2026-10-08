@@ -1467,6 +1467,7 @@
                                     <th class="align-left">Klub (Perusahaan)</th>
                                     <th style="width: 80px;">Skuad</th>
                                     <th style="width: 105px; background-color: #1e3a8a;" title="Poin Total Skor agregat (Komparasi sama dengan Compliance)">PTS (Skor Total)</th>
+                                    <th style="width: 90px; background-color: #047857;" title="Pencapaian Target SAP MTD (Realisasi / Target)">Capaian %</th>
                                     <th style="width: 120px;">Form (5 Laga)</th>
                                     <th style="width: 60px;">HZ</th>
                                     <th style="width: 60px;">IP</th>
@@ -1482,7 +1483,7 @@
                                 @if (!tier1Standings.Any())
                                 {
                                     <tr>
-                                        <td colspan="13" class="text-center text-muted py-4">Belum ada data perusahaan untuk Tier 1.</td>
+                                        <td colspan="14" class="text-center text-muted py-4">Belum ada data perusahaan untuk Tier 1.</td>
                                     </tr>
                                 }
                                 else
@@ -1529,6 +1530,10 @@
                                             <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.TotalScore); background-color: rgba(30, 58, 138, 0.03);">
                                                 <div style="font-size: 14px; font-weight: 800;">@(((double)comp.TotalScore).ToString("F1"))</div>
                                             </td>
+                                            <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.MtdAchievementRate); background-color: rgba(4, 120, 87, 0.03);">
+                                                <div style="font-size: 13.5px; font-weight: 800;">@FormatRate(comp.MtdAchievementRate)</div>
+                                                <div style="font-size: 9.5px; color: #64748b; font-weight: 600;" title="Realisasi / Target SAP">@comp.TotalActual / @comp.TotalTarget</div>
+                                            </td>
                                             <td class="text-center" style="white-space: nowrap;">
                                                 @GetFormDotsHtml(comp.MtdHazardRate, comp.MtdInspeksiRate, comp.MtdSafetyTalkRate, comp.MtdObservasiRate, comp.MtdCoachingRate)
                                             </td>
@@ -1548,7 +1553,7 @@
 
                                         <!-- Collapsible Tier 1 Company Detail Card -->
                                         <tr class="collapse" id="detail-tier1-@idx" style="background-color: #f8fafc;">
-                                            <td colspan="13" class="p-2 p-md-3">
+                                            <td colspan="14" class="p-2 p-md-3">
                                                 <div class="player-detail-box">
                                                     <!-- Header Bar Perusahaan -->
                                                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2" style="border-bottom: 1px solid #e2e8f0;">
@@ -1867,6 +1872,7 @@
                                     <th class="align-left">Klub (Perusahaan)</th>
                                     <th style="width: 80px;">Skuad</th>
                                     <th style="width: 105px; background-color: #1e3a8a;" title="Poin Total Skor agregat (Komparasi sama dengan Compliance)">PTS (Skor Total)</th>
+                                    <th style="width: 90px; background-color: #047857;" title="Pencapaian Target SAP MTD (Realisasi / Target)">Capaian %</th>
                                     <th style="width: 120px;">Form (5 Laga)</th>
                                     <th style="width: 60px;">HZ</th>
                                     <th style="width: 60px;">IP</th>
@@ -1882,7 +1888,7 @@
                                 @if (!tier2Standings.Any())
                                 {
                                     <tr>
-                                        <td colspan="13" class="text-center text-muted py-4">Belum ada data perusahaan untuk Tier 2.</td>
+                                        <td colspan="14" class="text-center text-muted py-4">Belum ada data perusahaan untuk Tier 2.</td>
                                     </tr>
                                 }
                                 else
@@ -1929,6 +1935,10 @@
                                             <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.TotalScore); background-color: rgba(30, 58, 138, 0.03);">
                                                 <div style="font-size: 14px; font-weight: 800;">@(((double)comp.TotalScore).ToString("F1"))</div>
                                             </td>
+                                            <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.MtdAchievementRate); background-color: rgba(4, 120, 87, 0.03);">
+                                                <div style="font-size: 13.5px; font-weight: 800;">@FormatRate(comp.MtdAchievementRate)</div>
+                                                <div style="font-size: 9.5px; color: #64748b; font-weight: 600;" title="Realisasi / Target SAP">@comp.TotalActual / @comp.TotalTarget</div>
+                                            </td>
                                             <td class="text-center" style="white-space: nowrap;">
                                                 @GetFormDotsHtml(comp.MtdHazardRate, comp.MtdInspeksiRate, comp.MtdSafetyTalkRate, comp.MtdObservasiRate, comp.MtdCoachingRate)
                                             </td>
@@ -1948,7 +1958,7 @@
 
                                         <!-- Collapsible Tier 2 Company Detail Card -->
                                         <tr class="collapse" id="detail-tier2-@idx" style="background-color: #f8fafc;">
-                                            <td colspan="13" class="p-2 p-md-3">
+                                            <td colspan="14" class="p-2 p-md-3">
                                                 <div class="player-detail-box">
                                                     <!-- Header Bar Perusahaan -->
                                                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2" style="border-bottom: 1px solid #e2e8f0;">
@@ -2273,6 +2283,7 @@
                                     <th class="align-left">Klub (Perusahaan)</th>
                                     <th style="width: 80px;">Skuad</th>
                                     <th style="width: 105px; background-color: #1e3a8a;" title="Poin Total Skor agregat (Komparasi sama dengan Compliance)">PTS (Skor Total)</th>
+                                    <th style="width: 90px; background-color: #047857;" title="Pencapaian Target SAP MTD (Realisasi / Target)">Capaian %</th>
                                     <th style="width: 120px;">Form (5 Laga)</th>
                                     <th style="width: 60px;">HZ</th>
                                     <th style="width: 60px;">IP</th>
@@ -2288,7 +2299,7 @@
                                 @if (!tier3Standings.Any())
                                 {
                                     <tr>
-                                        <td colspan="13" class="text-center text-muted py-4">Belum ada data perusahaan untuk Tier 3.</td>
+                                        <td colspan="14" class="text-center text-muted py-4">Belum ada data perusahaan untuk Tier 3.</td>
                                     </tr>
                                 }
                                 else
@@ -2335,6 +2346,10 @@
                                             <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.TotalScore); background-color: rgba(30, 58, 138, 0.03);">
                                                 <div style="font-size: 14px; font-weight: 800;">@(((double)comp.TotalScore).ToString("F1"))</div>
                                             </td>
+                                            <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.MtdAchievementRate); background-color: rgba(4, 120, 87, 0.03);">
+                                                <div style="font-size: 13.5px; font-weight: 800;">@FormatRate(comp.MtdAchievementRate)</div>
+                                                <div style="font-size: 9.5px; color: #64748b; font-weight: 600;" title="Realisasi / Target SAP">@comp.TotalActual / @comp.TotalTarget</div>
+                                            </td>
                                             <td class="text-center" style="white-space: nowrap;">
                                                 @GetFormDotsHtml(comp.MtdHazardRate, comp.MtdInspeksiRate, comp.MtdSafetyTalkRate, comp.MtdObservasiRate, comp.MtdCoachingRate)
                                             </td>
@@ -2354,7 +2369,7 @@
 
                                         <!-- Collapsible Tier 3 Company Detail Card -->
                                         <tr class="collapse" id="detail-tier3-@idx" style="background-color: #f8fafc;">
-                                            <td colspan="13" class="p-2 p-md-3">
+                                            <td colspan="14" class="p-2 p-md-3">
                                                 <div class="player-detail-box">
                                                     <!-- Header Bar Perusahaan -->
                                                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2" style="border-bottom: 1px solid #e2e8f0;">
@@ -2694,6 +2709,7 @@
                                     <th class="align-left">Klub (Perusahaan)</th>
                                     <th style="width: 80px;">Skuad</th>
                                     <th style="width: 105px; background-color: #1e3a8a;" title="Poin Total Skor agregat (Komparasi sama dengan Compliance)">PTS (Skor Total)</th>
+                                    <th style="width: 90px; background-color: #047857;" title="Pencapaian Target SAP MTD (Realisasi / Target)">Capaian %</th>
                                     <th style="width: 120px;">Form (5 Laga)</th>
                                     <th style="width: 60px;">HZ</th>
                                     <th style="width: 60px;">IP</th>
@@ -2709,7 +2725,7 @@
                                 @if (!companyStandings.Any())
                                 {
                                     <tr>
-                                        <td colspan="13" class="text-center text-muted py-4">Belum ada data perusahaan terdaftar.</td>
+                                        <td colspan="14" class="text-center text-muted py-4">Belum ada data perusahaan terdaftar.</td>
                                     </tr>
                                 }
                                 else
@@ -2756,6 +2772,10 @@
                                             <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.TotalScore); background-color: rgba(30, 58, 138, 0.03);">
                                                 <div style="font-size: 14px; font-weight: 800;">@(((double)comp.TotalScore).ToString("F1"))</div>
                                             </td>
+                                            <td class="text-center fw-bold" style="color: @GetRateColor((double)comp.MtdAchievementRate); background-color: rgba(4, 120, 87, 0.03);">
+                                                <div style="font-size: 13.5px; font-weight: 800;">@FormatRate(comp.MtdAchievementRate)</div>
+                                                <div style="font-size: 9.5px; color: #64748b; font-weight: 600;" title="Realisasi / Target SAP">@comp.TotalActual / @comp.TotalTarget</div>
+                                            </td>
                                             <td class="text-center" style="white-space: nowrap;">
                                                 @GetFormDotsHtml(comp.MtdHazardRate, comp.MtdInspeksiRate, comp.MtdSafetyTalkRate, comp.MtdObservasiRate, comp.MtdCoachingRate)
                                             </td>
@@ -2775,7 +2795,7 @@
 
                                         <!-- Collapsible Company Detail Card -->
                                         <tr class="collapse" id="detail-core-@idx" style="background-color: #f8fafc;">
-                                            <td colspan="13" class="p-2 p-md-3">
+                                            <td colspan="14" class="p-2 p-md-3">
                                                 <div class="player-detail-box">
                                                     <!-- Header Bar Perusahaan -->
                                                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2" style="border-bottom: 1px solid #e2e8f0;">
