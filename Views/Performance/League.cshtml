@@ -3639,13 +3639,9 @@
                                     {
                                         <th style="width: 115px; background: #0f172a;" title="Total Realisasi Laporan Safety dan Skor PTS">Laporan &amp; PTS</th>
                                     }
-                                    else if (currentMode == "company" || currentMode == "core")
-                                    {
-                                        <th style="width: 110px; background: #0f172a;" title="Poin Total Skor agregat (4 Pilar) dan Persentase Capaian Target SAP">PTS &amp; Capaian</th>
-                                    }
                                     else
                                     {
-                                        <th style="width: 95px; background: #0f172a;" title="Persentase Kepatuhan Capaian Target (SOP)">Capaian %</th>
+                                        <th style="width: 110px; background: #0f172a;" title="Poin Total Skor agregat (4 Pilar) dan Persentase Capaian Target SAP">PTS &amp; Capaian</th>
                                     }
                                     <th style="width: 110px; background: #0f172a;">Form (5 Program)</th>
                                     <th style="background: #0f172a; width: 80px;">Rincian</th>
@@ -3671,7 +3667,7 @@
                                         var rankClass = "";
                                         var rankText = empIdx.ToString();
                                         var zeroTarget = (emp.mtdTotalTarget == 0 || (emp.hasRoster && emp.onsiteDays == 0));
-                                        double evalRate = (currentMode == "company" || currentMode == "core") ? (double)emp.totalScore : (double)emp.complianceRate;
+                                        double evalRate = isVolumeMode ? (double)emp.complianceRate : (double)emp.totalScore;
 
                                         if (zeroTarget)
                                         {
@@ -3820,29 +3816,16 @@
                                                 }
                                                 else
                                                 {
-                                                    @if (currentMode == "company" || currentMode == "core")
-                                                    {
-                                                        <div class="player-score-main" style="color: @GetRateColor((double)emp.totalScore); font-size: 13.5px; font-weight: 800; cursor: help;" data-bs-toggle="tooltip" data-bs-html="true" title="&lt;b&gt;Rincian 4 Pilar PTS:&lt;/b&gt;&lt;br&gt;&bull; Capaian (35%): @emp.ptsCapaian pts (@emp.scoreCapaian%)&lt;br&gt;&bull; Close Rate (30%): @emp.ptsClose pts (@emp.scoreCloseRate%)&lt;br&gt;&bull; Kualitas (25%): @emp.ptsKualitas pts (@emp.scoreKualitas%)&lt;br&gt;&bull; Beban (10%): @emp.ptsBeban pts (@emp.scoreSkalaBeban%)&lt;br&gt;&lt;b&gt;TOTAL: @emp.totalScore pts&lt;/b&gt;">
-                                                            @(((double)emp.totalScore).ToString("F1")) pts
-                                                        </div>
-                                                        <div class="player-score-sub" style="font-size: 10px; color: #64748b; font-weight: 600;" title="Kepatuhan Capaian Target SAP & Keaktifan Laporan (Nilai tambah saat skor PTS sama)">
-                                                            Capaian: <span style="color: @GetRateColor((double)emp.complianceRate); font-weight: 700;">@emp.complianceRate%</span>
-                                                            <span class="text-muted mx-0.5">&bull;</span>
-                                                            <span class="badge py-0 px-1" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 9px; font-weight: 700;" title="Total realisasi laporan safety: @emp.totalActualAll laporan. Keaktifan melapor menjadi nilai tambah saat PTS sama.">
-                                                                <i class="bi bi-shield-check me-0.5"></i>@emp.totalActualAll Lap
-                                                            </span>
-                                                        </div>
-                                                    }
-                                                    else
-                                                    {
-                                                        <div class="player-score-main" style="color: @GetRateColor((double)emp.complianceRate); font-size: 14px; font-weight: 800;">@emp.complianceRate%</div>
-                                                        @if (emp.totalActualAll > 0)
-                                                        {
-                                                            <div class="player-score-sub" style="font-size: 9.5px; color: #047857; font-weight: 600;" title="Total realisasi laporan: @emp.totalActualAll SAP">
-                                                                <i class="bi bi-shield-check me-0.5"></i>@emp.totalActualAll Lap
-                                                            </div>
-                                                        }
-                                                    }
+                                                    <div class="player-score-main" style="color: @GetRateColor((double)emp.totalScore); font-size: 13.5px; font-weight: 800; cursor: help;" data-bs-toggle="tooltip" data-bs-html="true" title="&lt;b&gt;Rincian 4 Pilar PTS:&lt;/b&gt;&lt;br&gt;&bull; Capaian (35%): @emp.ptsCapaian pts (@emp.scoreCapaian%)&lt;br&gt;&bull; Close Rate (30%): @emp.ptsClose pts (@emp.scoreCloseRate%)&lt;br&gt;&bull; Kualitas (25%): @emp.ptsKualitas pts (@emp.scoreKualitas%)&lt;br&gt;&bull; Beban (10%): @emp.ptsBeban pts (@emp.scoreSkalaBeban%)&lt;br&gt;&lt;b&gt;TOTAL: @emp.totalScore pts&lt;/b&gt;">
+                                                        @(((double)emp.totalScore).ToString("F1")) pts
+                                                    </div>
+                                                    <div class="player-score-sub" style="font-size: 10px; color: #64748b; font-weight: 600;" title="Kepatuhan Capaian Target SAP & Keaktifan Laporan (Nilai tambah saat skor PTS sama)">
+                                                        Capaian: <span style="color: @GetRateColor((double)emp.complianceRate); font-weight: 700;">@emp.complianceRate%</span>
+                                                        <span class="text-muted mx-0.5">&bull;</span>
+                                                        <span class="badge py-0 px-1" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 9px; font-weight: 700;" title="Total realisasi laporan safety: @emp.totalActualAll laporan. Keaktifan melapor menjadi nilai tambah saat PTS sama.">
+                                                            <i class="bi bi-shield-check me-0.5"></i>@emp.totalActualAll Lap
+                                                        </span>
+                                                    </div>
                                                 }
                                             </td>
                                             <td class="text-center" style="white-space: nowrap;">

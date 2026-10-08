@@ -4506,10 +4506,12 @@ namespace MBS_SAP.Controllers
                 {
                     var sortedList = sortedEmployees
                         .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
-                        .ThenByDescending(e => e.complianceRate)
-                        .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah keaktifan laporan riil
-                        .ThenByDescending(e => e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual)
-                        .ThenByDescending(e => e.totalScore)
+                        .ThenByDescending(e => (double)e.complianceRate >= 100.0 ? 1 : 0) // Syarat Mutlak Juara/Podium: Wajib tuntas 100% seluruh program K3 (Capaian 100% / All Green W)
+                        .ThenByDescending(e => (double)e.totalScore)
+                        .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah: keaktifan terus membuat laporan safety riil saat PTS sama
+                        .ThenByDescending(e => (double)e.complianceRate)
+                        .ThenByDescending(e => (double)e.closeRate)
+                        .ThenByDescending(e => (int)(e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual))
                         .ToList();
 
                     // Pada Klasemen Internal (Klub / Departemen), sediakan seluruh anggota skuad perusahaan
@@ -5079,9 +5081,9 @@ namespace MBS_SAP.Controllers
                 })
                 .OrderBy(e => (e.mtdTotalTarget == 0 && !e.isActivelyReporting) ? 1 : 0)
                 .ThenByDescending(e => (double)e.complianceRate >= 100.0 ? 1 : 0) // Syarat Mutlak Juara/Podium: Wajib tuntas 100% seluruh program K3 (Capaian 100% / All Green W)
-                .ThenByDescending(e => (mode == "company" || mode == "core") ? (double)e.totalScore : (double)e.complianceRate)
+                .ThenByDescending(e => (double)e.totalScore)
                 .ThenByDescending(e => (int)e.totalActualAll) // Nilai tambah: keaktifan terus membuat laporan safety riil saat skor sama
-                .ThenByDescending(e => (mode == "company" || mode == "core") ? (double)e.complianceRate : (double)e.totalScore)
+                .ThenByDescending(e => (double)e.complianceRate)
                 .ThenByDescending(e => (double)e.closeRate)
                 .ThenByDescending(e => (int)(e.hazard.actual + e.inspeksi.actual + e.safetyTalk.actual + e.observasi.actual + e.coaching.actual + e.p5m.actual))
                 .ToList();
