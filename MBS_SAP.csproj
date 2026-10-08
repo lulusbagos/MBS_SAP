@@ -25,6 +25,10 @@
     <Content Remove="dbtest\**\*" />
     <EmbeddedResource Remove="dbtest\**\*" />
     <None Remove="dbtest\**\*" />
+    <Compile Remove="scratch\**\*.cs" />
+    <Content Remove="scratch\**\*" />
+    <EmbeddedResource Remove="scratch\**\*" />
+    <None Remove="scratch\**\*" />
   </ItemGroup>
 
 </Project>
