@@ -507,8 +507,8 @@
                                 <div class="d-flex align-items-center gap-1 flex-wrap justify-content-end">
                                     @if (!string.IsNullOrEmpty(userNik) || !string.IsNullOrEmpty(userDept))
                                     {
-                                        bool isOutbound = (item.Nik == userNik) || (!string.IsNullOrEmpty(userDept) && item.Departemen == userDept);
-                                        bool isInbound = (item.NikPja == userNik || item.NikPic == userNik) || (!string.IsNullOrEmpty(userDept) && (item.DepartemenPja == userDept || item.DepartemenPic == userDept));
+                                        bool isOutbound = (item.Nik == userNik) || (!string.IsNullOrEmpty(userDept) && string.Equals(item.Departemen?.Trim(), userDept.Trim(), StringComparison.OrdinalIgnoreCase));
+                                        bool isInbound = (item.NikPja == userNik || item.NikPic == userNik) || (!string.IsNullOrEmpty(userDept) && (string.Equals(item.DepartemenPja?.Trim(), userDept.Trim(), StringComparison.OrdinalIgnoreCase) || string.Equals(item.DepartemenPic?.Trim(), userDept.Trim(), StringComparison.OrdinalIgnoreCase)));
 
                                         if (isOutbound && isInbound)
                                         {
@@ -1082,9 +1082,14 @@
             let selectedType   = (urlParams.get('type') || '@(ViewBag.SelectedType ?? "all")').toLowerCase();
             let selectedStatus = (urlParams.get('status') || '@(ViewBag.SelectedStatus ?? "all")').toLowerCase();
             let specialFilter  = (urlParams.get('filter') || '@(ViewBag.SelectedFilter ?? "all")').toLowerCase();
-            let specialDept    = urlParams.get('dept') || '@(ViewBag.SelectedDept ?? "")';
+            let specialDept    = urlParams.get('dept') || @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.SelectedDept ?? ""));
             const currentUserNik = '@(userNik ?? "")'.trim();
-            const currentUserDept = '@(userDept ?? "")'.trim().toLowerCase();
+            const currentUserDept = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(userDept ?? ""));
+
+            function normalizeDept(name) {
+                if (!name) return '';
+                return name.toString().replace(/&amp;/gi, '&').trim().toLowerCase();
+            }
 
             // Debounce utility — prevents rapid-fire filter calls
             function debounce(fn, delay) {
@@ -1161,6 +1166,10 @@
 
             function applyFilters() {
                 let visible = 0;
+                const normUserDept = normalizeDept(currentUserDept);
+                const normSpecialDept = normalizeDept(specialDept);
+                const targetDept = normSpecialDept || normUserDept;
+
                 $('.action-plan-item').each(function () {
                     const t = $(this).attr('data-type') || '';
                     const s = $(this).attr('data-status') || '';
@@ -1176,7 +1185,7 @@
                     let matchT = (selectedType === 'all' || t === selectedType);
                     let matchS = (selectedStatus === 'all' || s === selectedStatus || (selectedStatus === 'open' && (s === 'outstanding' || s === 'progress')));
                     let matchP = (selectedPerusahaan === 'all' || p === selectedPerusahaan);
-                    let matchD = (selectedDepartemen === 'all' || d === selectedDepartemen);
+                    let matchD = (selectedDepartemen === 'all' || normalizeDept(d) === normalizeDept(selectedDepartemen));
                     
                     let matchSpecial = true;
                     if (specialFilter === 'assigned' || specialFilter === 'assigned_to_me') {
@@ -1184,14 +1193,13 @@
                     } else if (specialFilter === 'created' || specialFilter === 'created_by_me') {
                         matchSpecial = (currentUserNik !== '' && nik === currentUserNik);
                     } else if (specialFilter === 'dept_assigned') {
-                        matchSpecial = (currentUserDept !== '' && (dpja.toLowerCase() === currentUserDept || dpic.toLowerCase() === currentUserDept));
+                        matchSpecial = (targetDept !== '' && (normalizeDept(dpja) === targetDept || normalizeDept(dpic) === targetDept));
                     } else if (specialFilter === 'dept_created' || specialFilter === 'dept_made') {
-                        matchSpecial = (currentUserDept !== '' && d.toLowerCase() === currentUserDept);
+                        matchSpecial = (targetDept !== '' && normalizeDept(d) === targetDept);
                     } else if (specialFilter === 'mine') {
                         matchSpecial = (currentUserNik !== '' && (nik === currentUserNik || nikpja === currentUserNik || nikpic === currentUserNik));
                     } else if (specialFilter === 'dept') {
-                        const sd = specialDept ? specialDept.toLowerCase() : currentUserDept;
-                        matchSpecial = (sd !== '' && (d.toLowerCase() === sd || dpja.toLowerCase() === sd || dpic.toLowerCase() === sd));
+                        matchSpecial = (targetDept !== '' && (normalizeDept(d) === targetDept || normalizeDept(dpja) === targetDept || normalizeDept(dpic) === targetDept));
                     }
 
                     let matchR = (selectedResiko === 'all');
