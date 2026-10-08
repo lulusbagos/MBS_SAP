@@ -5721,7 +5721,7 @@ namespace MBS_SAP.Controllers
                 // ==========================================
                 // SHEET 1: JABATAN WAJIB SAP (PENGAWAS) TAPI TARGET 0 DI ONE DB
                 // ==========================================
-                var wsUnder = workbook.Worksheets.Add("1. Harusnya Wajib SAP (Target 0)");
+                var wsUnder = workbook.Worksheets.Add("1. Pengawas Target 0");
                 wsUnder.ShowGridLines = true;
 
                 // Title Banner
@@ -5820,7 +5820,7 @@ namespace MBS_SAP.Controllers
                 // ==========================================
                 // SHEET 2: JABATAN TIDAK WAJIB SAP (PELAKSANA) TETAPI DIBERI TARGET SAP
                 // ==========================================
-                var wsOver = workbook.Worksheets.Add("2. Tidak Wajib SAP (Tertarget)");
+                var wsOver = workbook.Worksheets.Add("2. Non-Staf Tertarget");
                 wsOver.ShowGridLines = true;
 
                 // Title Banner

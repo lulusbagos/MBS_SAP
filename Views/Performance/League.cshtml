@@ -17,7 +17,7 @@
                          ?? User.FindFirst("Nrp")?.Value 
                          ?? User.Identity?.Name ?? "";
     var isTopParent = (ViewBag.IsTopParent as bool? ?? false);
-    var isAdmin = (ViewBag.IsAdmin as bool? ?? false) || User.IsInRole("Admin") || string.Equals(currentUserNik, "24051940986", StringComparison.OrdinalIgnoreCase) || isTopParent;
+    var isAdmin = (ViewBag.IsAdmin as bool? ?? false) || User.IsInRole("Admin") || string.Equals(currentUserNik, "24051940986", StringComparison.OrdinalIgnoreCase);
     var canDownloadDetail = isAdmin || isSafetyRole;
     var targetFilter = ViewBag.TargetFilter as string ?? "target";
 }
