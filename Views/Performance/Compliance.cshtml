@@ -989,27 +989,27 @@
                             </div>
                             <div class="row g-2 pt-1" style="font-size: 11px;">
                                 <div class="col">
-                                    <div class="p-2 rounded h-100 text-center" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2);">
-                                        <strong class="text-primary d-block">1. Capaian Target (35%)</strong>
-                                        <span class="text-muted" style="font-size: 10px;">Aktual / Target</span>
-                                    </div>
-                                </div>
-                                <div class="col">
-                                    <div class="p-2 rounded h-100 text-center" style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.2);" data-bs-toggle="tooltip" title="Target Perusahaan dibanding Target Tertinggi.">
-                                        <strong class="text-info d-block">2. Skala Beban (10%)</strong>
-                                        <span class="text-muted" style="font-size: 10px;">Apresiasi Target</span>
+                                    <div class="p-2 rounded h-100 text-center" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25);">
+                                        <strong class="text-primary d-block" style="font-size: 12.5px;">1. Capaian Target (35%)</strong>
+                                        <span class="text-muted" style="font-size: 10px;">Aktual / Target Karyawan</span>
                                     </div>
                                 </div>
                                 <div class="col">
                                     <div class="p-2 rounded h-100 text-center shadow-sm" style="background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.35);" data-bs-toggle="tooltip" title="Beban Pembuat SAP: Rasio penutupan temuan Action Plan yang dibuat oleh perusahaan.">
-                                        <strong class="text-success d-block"><i class="bi bi-star-fill text-warning me-0.5"></i>3. Close Rate (30%)</strong>
+                                        <strong class="text-success d-block" style="font-size: 12.5px;"><i class="bi bi-star-fill text-warning me-0.5"></i>2. Close Rate (30%)</strong>
                                         <span class="text-muted" style="font-size: 10px;">Beban Pembuat SAP</span>
                                     </div>
                                 </div>
                                 <div class="col">
-                                    <div class="p-2 rounded h-100 text-center" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2);">
-                                        <strong class="text-warning d-block">4. Kualitas SAP (25%)</strong>
+                                    <div class="p-2 rounded h-100 text-center" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25);">
+                                        <strong class="text-warning d-block" style="font-size: 12.5px;">3. Kualitas Mutu SAP (25%)</strong>
                                         <span class="text-muted" style="font-size: 10px;">Rating Standar / 5.0</span>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="p-2 rounded h-100 text-center" style="background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25);" data-bs-toggle="tooltip" title="Target Perusahaan dibanding Target Tertinggi.">
+                                        <strong class="text-info d-block" style="font-size: 12.5px;">4. Skala Beban (10%)</strong>
+                                        <span class="text-muted" style="font-size: 10px;">Apresiasi Target</span>
                                     </div>
                                 </div>
                             </div>
@@ -1074,24 +1074,24 @@
                                 <th class="text-center border-bottom-0" style="width: 45px;">#</th>
                                 <th class="border-bottom-0" style="min-width: 180px;">Perusahaan</th>
                                 <th class="text-center border-bottom-0" title="[1] Bobot @(pctCapaian)%: Persentase Capaian Submisi terhadap Total Target Karyawan">
-                                    <span class="text-primary">[1] Capaian Target</span>
-                                    <div class="badge bg-primary text-white" style="font-size: 9px; padding: 2px 6px;">Bobot @(pctCapaian)%</div>
+                                    <span class="text-primary fw-bold" style="font-size: 12.5px;">[1] Capaian Target</span>
+                                    <div><span class="badge bg-primary text-white" style="font-size: 11px; font-weight: 800; padding: 3px 8px; letter-spacing: 0.3px;">Bobot @(pctCapaian)%</span></div>
                                 </th>
-                                <th class="text-center border-bottom-0" title="[2] Bobot @(pctBeban)%: Skala Beban. Apresiasi tingkat beban kerja dan besaran target perusahaan.">
-                                    <span class="text-info">[2] Skala Beban</span>
-                                    <div class="badge bg-info text-dark" style="font-size: 9px; padding: 2px 6px;">Bobot @(pctBeban)%</div>
+                                <th class="text-center border-bottom-0" title="[2] Bobot @(pctClose)%: Persentase Action Plan temuan yang dibuat perusahaan yang telah ditutup (Beban Pembuat SAP)">
+                                    <span class="text-success fw-bold" style="font-size: 12.5px;">[2] Close Rate AP</span>
+                                    <div><span class="badge bg-success text-white" style="font-size: 11px; font-weight: 800; padding: 3px 8px; letter-spacing: 0.3px;">Bobot @(pctClose)%</span></div>
                                 </th>
-                                <th class="text-center border-bottom-0" title="[3] Bobot @(pctClose)%: Persentase Action Plan temuan yang dibuat perusahaan yang telah ditutup (Beban Pembuat SAP)">
-                                    <span class="text-success">[3] Close Rate AP</span>
-                                    <div class="badge bg-success text-white" style="font-size: 9px; padding: 2px 6px;">Bobot @(pctClose)% (Beban Pembuat SAP)</div>
+                                <th class="text-center border-bottom-0" title="[3] Bobot @(pctKualitas)%: Standar Mutu / Kualitas Pelaporan Temuan SAP (Skala 1 - 5)">
+                                    <span class="text-warning fw-bold" style="font-size: 12.5px;">[3] Kualitas SAP</span>
+                                    <div><span class="badge bg-warning text-dark" style="font-size: 11px; font-weight: 800; padding: 3px 8px; letter-spacing: 0.3px;">Bobot @(pctKualitas)%</span></div>
                                 </th>
-                                <th class="text-center border-bottom-0" title="[4] Bobot @(pctKualitas)%: Standar Mutu / Kualitas Pelaporan Temuan SAP (Skala 1 - 5)">
-                                    <span class="text-warning">[4] Kualitas SAP</span>
-                                    <div class="badge bg-warning text-dark" style="font-size: 9px; padding: 2px 6px;">Bobot @(pctKualitas)%</div>
+                                <th class="text-center border-bottom-0" title="[4] Bobot @(pctBeban)%: Skala Beban. Apresiasi tingkat beban kerja dan besaran target perusahaan.">
+                                    <span class="text-info fw-bold" style="font-size: 12.5px;">[4] Skala Beban</span>
+                                    <div><span class="badge bg-info text-dark" style="font-size: 11px; font-weight: 800; padding: 3px 8px; letter-spacing: 0.3px;">Bobot @(pctBeban)%</span></div>
                                 </th>
                                 <th class="text-center border-bottom-0 text-warning" style="min-width: 110px;">
-                                    <span>Total Skor</span>
-                                    <div class="badge bg-warning text-dark fw-bold" style="font-size: 9px; padding: 2px 6px;">100 Poin</div>
+                                    <span class="fw-bold" style="font-size: 12.5px;">Total Skor</span>
+                                    <div><span class="badge bg-warning text-dark fw-bold" style="font-size: 11px; font-weight: 850; padding: 3px 8px;">100 Poin</span></div>
                                 </th>
                             </tr>
                         </thead>
@@ -1136,20 +1136,7 @@
                                         </div>
                                     </td>
 
-                                    <!-- [2] Skala Beban -->
-                                    <td class="text-center align-middle">
-                                        <div class="badge" style="background: rgba(6, 182, 212, 0.12); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.25); font-size: 11.5px; font-weight: 700;" data-bs-toggle="tooltip" title="Rumus: log10(Target + 1) / log10(Max Target + 1) * 100%&#10;log10(@(comp.TotalTarget) + 1) / log10(@(comp.MaxTargetAll) + 1) &times; 100% = @Math.Round(comp.ScoreSkalaBeban, 1)%">
-                                            @Math.Round(comp.ScoreSkalaBeban, 1)%
-                                        </div>
-                                        <div class="text-muted mt-1" style="font-size: 10px; cursor: help;" data-bs-toggle="tooltip" title="Target Perusahaan: @comp.TotalTarget / Target Tertinggi Seluruh Perusahaan: @comp.MaxTargetAll">
-                                            Tgt: @comp.TotalTarget / Max: @comp.MaxTargetAll
-                                        </div>
-                                        <div class="text-info fw-bold" style="font-size: 9.5px;" title="Nilai Poin = @Math.Round(comp.ScoreSkalaBeban, 1)% &times; @(pctBeban)%">
-                                            +@Math.Round(comp.ScoreSkalaBeban * wBeban, 1) pts
-                                        </div>
-                                    </td>
-
-                                    <!-- [3] Close Rate AP (Beban Pembuat SAP) -->
+                                    <!-- [2] Close Rate AP (Beban Pembuat SAP) -->
                                     <td class="text-center align-middle">
                                         @{
                                             string closeColor = comp.ScoreCloseRate >= 80 ? "#10b981" : (comp.ScoreCloseRate >= 50 ? "#f59e0b" : "#ef4444");
@@ -1160,12 +1147,12 @@
                                         <div class="text-muted mt-1" style="font-size: 10px; cursor: help;" data-bs-toggle="tooltip" title="Jumlah Action Plan Closed / Total Action Plan yang Dibuat">
                                             @(comp.TotalActionPlan > 0 ? $"{comp.TotalClosedActionPlan} / {comp.TotalActionPlan} AP" : $"{comp.TotalClosedHazard} / {comp.TotalHazard} Hazard")
                                         </div>
-                                        <div class="text-success fw-bold" style="font-size: 9.5px;" title="Nilai Poin = @Math.Round(comp.ScoreCloseRate, 1)% &times; @(pctClose)%">
+                                        <div class="text-success fw-bold" style="font-size: 10px;" title="Nilai Poin = @Math.Round(comp.ScoreCloseRate, 1)% &times; @(pctClose)%">
                                             +@Math.Round(comp.ScoreCloseRate * wClose, 1) pts
                                         </div>
                                     </td>
 
-                                    <!-- [4] Kualitas SAP -->
+                                    <!-- [3] Kualitas SAP -->
                                     <td class="text-center align-middle">
                                         <div style="color: #fbbf24; font-size: 12px;" data-bs-toggle="tooltip" title="Rating Kualitas SAP: @Math.Round(comp.AvgQuality, 1) / 5.0 (@Math.Round(comp.ScoreKualitas, 1)%)">
                                             @for (int i = 1; i <= 5; i++)
@@ -1183,18 +1170,31 @@
                                         <div class="text-muted mt-0.5" style="font-size: 10px;">
                                             Rating @Math.Round(comp.AvgQuality, 1) / 5
                                         </div>
-                                        <div class="text-warning fw-bold" style="font-size: 9.5px;" title="Nilai Poin = (@Math.Round(comp.AvgQuality, 1) / 5) &times; 100% &times; @(pctKualitas)%">
+                                        <div class="text-warning fw-bold" style="font-size: 10px;" title="Nilai Poin = (@Math.Round(comp.AvgQuality, 1) / 5) &times; 100% &times; @(pctKualitas)%">
                                             +@Math.Round(comp.ScoreKualitas * wKualitas, 1) pts
+                                        </div>
+                                    </td>
+
+                                    <!-- [4] Skala Beban -->
+                                    <td class="text-center align-middle">
+                                        <div class="badge" style="background: rgba(6, 182, 212, 0.12); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.25); font-size: 11.5px; font-weight: 700;" data-bs-toggle="tooltip" title="Rumus: log10(Target + 1) / log10(Max Target + 1) * 100%&#10;log10(@(comp.TotalTarget) + 1) / log10(@(comp.MaxTargetAll) + 1) &times; 100% = @Math.Round(comp.ScoreSkalaBeban, 1)%">
+                                            @Math.Round(comp.ScoreSkalaBeban, 1)%
+                                        </div>
+                                        <div class="text-muted mt-1" style="font-size: 10px; cursor: help;" data-bs-toggle="tooltip" title="Target Perusahaan: @comp.TotalTarget / Target Tertinggi Seluruh Perusahaan: @comp.MaxTargetAll">
+                                            Tgt: @comp.TotalTarget / Max: @comp.MaxTargetAll
+                                        </div>
+                                        <div class="text-info fw-bold" style="font-size: 10px;" title="Nilai Poin = @Math.Round(comp.ScoreSkalaBeban, 1)% &times; @(pctBeban)%">
+                                            +@Math.Round(comp.ScoreSkalaBeban * wBeban, 1) pts
                                         </div>
                                     </td>
 
                                     <!-- Total Skor Kolom Terakhir -->
                                     <td class="text-center align-middle">
-                                        <div class="fw-extrabold" style="color: #fbbf24; font-size: 15px; font-family: 'Outfit', sans-serif;" data-bs-toggle="tooltip" title="Rincian Total Skor:&#10;[1] Capaian Target (@(pctCapaian)%): @Math.Round(comp.ScorePencapaian * wCapaian, 1) Poin&#10;[2] Skala Beban (@(pctBeban)%): @Math.Round(comp.ScoreSkalaBeban * wBeban, 1) Poin&#10;[3] Close Rate (@(pctClose)%): @Math.Round(comp.ScoreCloseRate * wClose, 1) Poin (Beban Pembuat SAP)&#10;[4] Kualitas SAP (@(pctKualitas)%): @Math.Round(comp.ScoreKualitas * wKualitas, 1) Poin&#10;------------------------------------&#10;TOTAL: @Math.Round(comp.TotalScore, 1) Poin">
+                                        <div class="fw-extrabold" style="color: #fbbf24; font-size: 15px; font-family: 'Outfit', sans-serif;" data-bs-toggle="tooltip" title="Rincian Total Skor:&#10;[1] Capaian Target (@(pctCapaian)%): @Math.Round(comp.ScorePencapaian * wCapaian, 1) Poin&#10;[2] Close Rate (@(pctClose)%): @Math.Round(comp.ScoreCloseRate * wClose, 1) Poin (Beban Pembuat SAP)&#10;[3] Kualitas SAP (@(pctKualitas)%): @Math.Round(comp.ScoreKualitas * wKualitas, 1) Poin&#10;[4] Skala Beban (@(pctBeban)%): @Math.Round(comp.ScoreSkalaBeban * wBeban, 1) Poin&#10;------------------------------------&#10;TOTAL: @Math.Round(comp.TotalScore, 1) Poin">
                                             @Math.Round(comp.TotalScore, 1)
                                         </div>
-                                        <div class="badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 9.5px; font-weight: 700; padding: 2px 7px;" data-bs-toggle="tooltip" title="Klik / Arahkan kursor untuk melihat rincian penjumlahan 4 indikator">
-                                            Close @(pctClose)% (4 Indikator) <i class="bi bi-info-circle ms-0.5"></i>
+                                        <div class="badge" style="background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; font-weight: 800; padding: 2px 7px;" data-bs-toggle="tooltip" title="Klik / Arahkan kursor untuk melihat rincian penjumlahan 4 indikator">
+                                            Skor 4 Pilar <i class="bi bi-info-circle ms-0.5"></i>
                                         </div>
                                     </td>
                                 </tr>
@@ -1290,21 +1290,21 @@
                             </div>
 
                             <ul class="list-group list-group-flush mb-0" style="border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+                                <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(59, 130, 246, 0.12); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
+                                    <div><strong style="color: #60a5fa; font-size: 13.5px;"><i class="bi bi-bullseye text-primary me-1"></i>1. Capaian Target Submisi (35%)</strong><br><small style="color: #cbd5e1;">Total Submisi Aktual / Total Target Karyawan (Maks 100% &times; 35%).</small></div>
+                                    <span class="badge bg-primary rounded-pill px-3 py-1.5" style="font-size: 13px; font-weight: 800;">35%</span>
+                                </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(16, 185, 129, 0.12); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
-                                    <div><strong style="color: #34d399;"><i class="bi bi-star-fill text-warning me-1"></i>1. Close Rate Action Plan (30%) - Beban Pembuat SAP</strong><br><small style="color: #cbd5e1;">Persentase temuan/action plan yang dibuat oleh karyawan perusahaan dan berhasil ditutup (Closed / Total AP &times; 30%).</small></div>
-                                    <span class="badge bg-success rounded-pill px-2.5 py-1.5" style="font-size: 12px;">30%</span>
+                                    <div><strong style="color: #34d399; font-size: 13.5px;"><i class="bi bi-star-fill text-warning me-1"></i>2. Close Rate Action Plan (30%) - Beban Pembuat SAP</strong><br><small style="color: #cbd5e1;">Persentase temuan/action plan yang dibuat oleh karyawan perusahaan dan berhasil ditutup (Closed / Total AP &times; 30%).</small></div>
+                                    <span class="badge bg-success rounded-pill px-3 py-1.5" style="font-size: 13px; font-weight: 800;">30%</span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
-                                    <div><strong style="color: #fbbf24;">2. Kualitas Pelaporan SAP (25%)</strong><br><small style="color: #cbd5e1;">Standar mutu pelaporan SAP (1-5 Bintang / 5.0 &times; 25%).</small></div>
-                                    <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1.5" style="font-size: 12px;">25%</span>
+                                    <div><strong style="color: #fbbf24; font-size: 13.5px;"><i class="bi bi-patch-check text-warning me-1"></i>3. Kualitas Mutu SAP (25%)</strong><br><small style="color: #cbd5e1;">Standar mutu pelaporan SAP (1-5 Bintang / 5.0 &times; 25%).</small></div>
+                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5" style="font-size: 13px; font-weight: 800;">25%</span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
-                                    <div><strong style="color: #60a5fa;">3. Capaian Target Submisi (35%)</strong><br><small style="color: #cbd5e1;">Total Submisi Aktual / Total Target Karyawan (Maks 100% &times; 35%).</small></div>
-                                    <span class="badge bg-primary rounded-pill px-2.5 py-1.5" style="font-size: 12px;">35%</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
-                                    <div><strong style="color: #22d3ee;">4. Skala Beban / Effort (10%)</strong><br><small style="color: #cbd5e1;">Apresiasi logaritma proporsional terhadap target perusahaan dibandingkan target tertinggi.</small></div>
-                                    <span class="badge bg-info rounded-pill px-2.5 py-1.5" style="font-size: 12px;">10%</span>
+                                    <div><strong style="color: #22d3ee; font-size: 13.5px;"><i class="bi bi-people text-info me-1"></i>4. Skala Beban / Effort (10%)</strong><br><small style="color: #cbd5e1;">Apresiasi logaritma proporsional terhadap target perusahaan dibandingkan target tertinggi.</small></div>
+                                    <span class="badge bg-info rounded-pill px-3 py-1.5" style="font-size: 13px; font-weight: 800;">10%</span>
                                 </li>
                             </ul>
                         </div>

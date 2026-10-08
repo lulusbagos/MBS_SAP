@@ -151,6 +151,23 @@
                        "<div class='pts-corp-item'>" +
                            "<div class='pts-corp-item-top'>" +
                                "<div class='pts-corp-indicator'>" +
+                                   "<span class='pts-corp-dot' style='background: #3b82f6; box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);'></span>" +
+                                   "<span class='pts-corp-name'>Capaian 5 SAP</span>" +
+                                   $"<span class='pts-corp-weight'>{wCapaian}%</span>" +
+                               "</div>" +
+                               "<div class='pts-corp-calc'>" +
+                                   $"<span class='pts-corp-val'>{scCapaian:F1}%</span>" +
+                                   $"<span class='pts-corp-math'>&times; {wCapaian}% &rarr;</span>" +
+                                   $"<span class='pts-corp-pts' style='color: #60a5fa;'>+{ptCapaian:F2}</span>" +
+                               "</div>" +
+                           "</div>" +
+                           "<div class='pts-corp-bar-bg'>" +
+                               $"<div class='pts-corp-bar-fill' style='width: {barCapaian:F1}%; background: linear-gradient(90deg, #2563eb, #3b82f6);'></div>" +
+                           "</div>" +
+                       "</div>" +
+                       "<div class='pts-corp-item'>" +
+                           "<div class='pts-corp-item-top'>" +
+                               "<div class='pts-corp-indicator'>" +
                                    "<span class='pts-corp-dot' style='background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);'></span>" +
                                    "<span class='pts-corp-name'>Action Plan Closure</span>" +
                                    $"<span class='pts-corp-weight'>{wClose}%</span>" +
@@ -180,23 +197,6 @@
                            "</div>" +
                            "<div class='pts-corp-bar-bg'>" +
                                $"<div class='pts-corp-bar-fill' style='width: {barKualitas:F1}%; background: linear-gradient(90deg, #d97706, #f59e0b);'></div>" +
-                           "</div>" +
-                       "</div>" +
-                       "<div class='pts-corp-item'>" +
-                           "<div class='pts-corp-item-top'>" +
-                               "<div class='pts-corp-indicator'>" +
-                                   "<span class='pts-corp-dot' style='background: #3b82f6; box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);'></span>" +
-                                   "<span class='pts-corp-name'>Capaian 5 SAP</span>" +
-                                   $"<span class='pts-corp-weight'>{wCapaian}%</span>" +
-                               "</div>" +
-                               "<div class='pts-corp-calc'>" +
-                                   $"<span class='pts-corp-val'>{scCapaian:F1}%</span>" +
-                                   $"<span class='pts-corp-math'>&times; {wCapaian}% &rarr;</span>" +
-                                   $"<span class='pts-corp-pts' style='color: #60a5fa;'>+{ptCapaian:F2}</span>" +
-                               "</div>" +
-                           "</div>" +
-                           "<div class='pts-corp-bar-bg'>" +
-                               $"<div class='pts-corp-bar-fill' style='width: {barCapaian:F1}%; background: linear-gradient(90deg, #2563eb, #3b82f6);'></div>" +
                            "</div>" +
                        "</div>" +
                        "<div class='pts-corp-item'>" +
@@ -353,12 +353,13 @@
         letter-spacing: -0.1px;
     }
     .pts-corp-weight {
-        font-size: 9.5px;
-        font-weight: 600;
-        color: #94a3b8;
-        background: rgba(255, 255, 255, 0.08);
-        padding: 1px 5px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #f1f5f9;
+        background: rgba(255, 255, 255, 0.18);
+        padding: 2px 7px;
         border-radius: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
     }
     .pts-corp-calc {
         display: flex;
@@ -1059,10 +1060,11 @@
     .pts-card-badge {
         flex-shrink: 0 !important;
         white-space: nowrap !important;
-        font-weight: 700 !important;
-        font-size: 9px !important;
-        padding: 2.5px 7px !important;
+        font-weight: 800 !important;
+        font-size: 11.5px !important;
+        padding: 3px 9px !important;
         line-height: 1.2 !important;
+        border: 1px solid currentColor !important;
     }
 </style>
 
@@ -1417,13 +1419,13 @@
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 px-3 rounded-3 mb-2" style="background: rgba(37, 99, 235, 0.05); border: 1px dashed #93c5fd;">
                         <div class="d-flex align-items-center gap-2 flex-wrap" style="font-size: 11.5px;">
                             <span class="fw-bold text-dark"><i class="bi bi-calculator me-1 text-primary"></i>Rumus Skor Total:</span>
-                            <span class="badge shadow-sm" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 11px;">🎯 35% Capaian</span>
+                            <span class="badge shadow-sm" style="background: #eff6ff; color: #1d4ed8; border: 1.5px solid #93c5fd; font-size: 12px; font-weight: 800; padding: 4px 10px;">🎯 35% Capaian</span>
                             <span class="text-muted fw-bold">+</span>
-                            <span class="badge shadow-sm" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 11px;">🛡️ 30% Close Rate AP</span>
+                            <span class="badge shadow-sm" style="background: #ecfdf5; color: #047857; border: 1.5px solid #a7f3d0; font-size: 12px; font-weight: 800; padding: 4px 10px;">🛡️ 30% Close Rate AP</span>
                             <span class="text-muted fw-bold">+</span>
-                            <span class="badge shadow-sm" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 11px;">⭐ 25% Kualitas</span>
+                            <span class="badge shadow-sm" style="background: #fffbeb; color: #b45309; border: 1.5px solid #fde68a; font-size: 12px; font-weight: 800; padding: 4px 10px;">⭐ 25% Kualitas</span>
                             <span class="text-muted fw-bold">+</span>
-                            <span class="badge shadow-sm" style="background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; font-size: 11px;">⚖️ 10% Skala Beban</span>
+                            <span class="badge shadow-sm" style="background: #f0fdfa; color: #0f766e; border: 1.5px solid #99f6e4; font-size: 12px; font-weight: 800; padding: 4px 10px;">⚖️ 10% Skala Beban</span>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-primary fw-bold" style="font-size: 11px; border-radius: 6px; padding: 3px 8px;" data-bs-toggle="modal" data-bs-target="#leagueScoringModal">
                             <i class="bi bi-info-circle me-1"></i>Penjelasan Rumus
@@ -1671,12 +1673,39 @@
 
                                                         <!-- 4 Formula Cards -->
                                                         <div class="row g-2 g-md-3 text-center" style="font-size: 11px;">
-                                                            <!-- 1. Close Rate -->
+                                                            <!-- 1. Capaian Target -->
                                                             <div class="col-12 col-sm-6 col-xl-3">
                                                                 <div class="pts-clean-card">
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Close Rate</span>
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Capaian Target</span>
+                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot @(comp.WeightCapaian)%</span>
+                                                                        </div>
+                                                                        <div class="my-2">
+                                                                            <span class="fw-bold fs-4 text-primary">@comp.ScorePencapaian%</span>
+                                                                        </div>
+                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                            @(comp.WeightCapaian)% &times; @comp.ScorePencapaian% = <strong class="text-dark">@comp.PtsPencapaian pts</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                            <span>Realisasi: <strong class="text-dark">@comp.TotalActual</strong></span>
+                                                                            <span>Target: <strong class="text-dark">@comp.TotalTarget</strong></span>
+                                                                        </div>
+                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                            <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif seluruh anggota &amp; divisi perusahaan (@comp.MtdAchievementRate%).
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- 2. Close Rate -->
+                                                            <div class="col-12 col-sm-6 col-xl-3">
+                                                                <div class="pts-clean-card">
+                                                                    <div>
+                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Close Rate</span>
                                                                             <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot @(comp.WeightClose)%</span>
                                                                         </div>
                                                                         <div class="my-2">
@@ -1698,12 +1727,12 @@
                                                                 </div>
                                                             </div>
 
-                                                            <!-- 2. Kualitas Mutu -->
+                                                            <!-- 3. Kualitas Mutu -->
                                                             <div class="col-12 col-sm-6 col-xl-3">
                                                                 <div class="pts-clean-card">
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Kualitas Mutu</span>
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Kualitas Mutu</span>
                                                                             <span class="badge rounded-pill pts-card-badge" style="background: #fef3c7; color: #b45309;">Bobot @(comp.WeightKualitas)%</span>
                                                                         </div>
                                                                         <div class="my-2">
@@ -1720,33 +1749,6 @@
                                                                         </div>
                                                                         <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
                                                                             <i class="bi bi-patch-check me-1 text-warning"></i>Kualitas validasi data laporan K3 seluruh divisi perusahaan (Baseline 100% tanpa penalti).
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            <!-- 3. Capaian Target -->
-                                                            <div class="col-12 col-sm-6 col-xl-3">
-                                                                <div class="pts-clean-card">
-                                                                    <div>
-                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Capaian Target</span>
-                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot @(comp.WeightCapaian)%</span>
-                                                                        </div>
-                                                                        <div class="my-2">
-                                                                            <span class="fw-bold fs-4 text-primary">@comp.ScorePencapaian%</span>
-                                                                        </div>
-                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
-                                                                            @(comp.WeightCapaian)% &times; @comp.ScorePencapaian% = <strong class="text-dark">@comp.PtsPencapaian pts</strong>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
-                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
-                                                                            <span>Realisasi: <strong class="text-dark">@comp.TotalActual</strong></span>
-                                                                            <span>Target: <strong class="text-dark">@comp.TotalTarget</strong></span>
-                                                                        </div>
-                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
-                                                                            <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif seluruh anggota &amp; divisi perusahaan (@comp.MtdAchievementRate%).
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -1787,7 +1789,7 @@
                                                                     <i class="bi bi-info-circle-fill"></i>
                                                                 </div>
                                                                 <div class="text-secondary" style="font-size: 11px; line-height: 1.4;">
-                                                                    <strong class="text-dark">Akumulasi Skor PTS Perusahaan:</strong> (@comp.PtsClose pts) + (@comp.PtsKualitas pts) + (@comp.PtsPencapaian pts) + (@comp.PtsBeban pts) = <strong class="text-primary fs-6">@comp.TotalScore pts (@comp.TotalScore%)</strong>
+                                                                    <strong class="text-dark">Akumulasi Skor PTS Perusahaan:</strong> (@comp.PtsPencapaian pts) + (@comp.PtsClose pts) + (@comp.PtsKualitas pts) + (@comp.PtsBeban pts) = <strong class="text-primary fs-6">@comp.TotalScore pts (@comp.TotalScore%)</strong>
                                                                     <span class="ms-2 text-muted" style="font-size: 10px;">• Hierarki K3: Personal (Karyawan) &rarr; Departemen &rarr; Perusahaan (@comp.TierLabel)</span>
                                                                 </div>
                                                             </div>
@@ -2076,12 +2078,39 @@
 
                                                         <!-- 4 Formula Cards -->
                                                         <div class="row g-2 g-md-3 text-center" style="font-size: 11px;">
-                                                            <!-- 1. Close Rate -->
+                                                            <!-- 1. Capaian Target -->
                                                             <div class="col-12 col-sm-6 col-xl-3">
                                                                 <div class="pts-clean-card">
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Close Rate</span>
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Capaian Target</span>
+                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot @(comp.WeightCapaian)%</span>
+                                                                        </div>
+                                                                        <div class="my-2">
+                                                                            <span class="fw-bold fs-4 text-primary">@comp.ScorePencapaian%</span>
+                                                                        </div>
+                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                            @(comp.WeightCapaian)% &times; @comp.ScorePencapaian% = <strong class="text-dark">@comp.PtsPencapaian pts</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                            <span>Realisasi: <strong class="text-dark">@comp.TotalActual</strong></span>
+                                                                            <span>Target: <strong class="text-dark">@comp.TotalTarget</strong></span>
+                                                                        </div>
+                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                            <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif seluruh anggota &amp; divisi perusahaan (@comp.MtdAchievementRate%).
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- 2. Close Rate -->
+                                                            <div class="col-12 col-sm-6 col-xl-3">
+                                                                <div class="pts-clean-card">
+                                                                    <div>
+                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Close Rate</span>
                                                                             <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot @(comp.WeightClose)%</span>
                                                                         </div>
                                                                         <div class="my-2">
@@ -2103,12 +2132,12 @@
                                                                 </div>
                                                             </div>
 
-                                                            <!-- 2. Kualitas Mutu -->
+                                                            <!-- 3. Kualitas Mutu -->
                                                             <div class="col-12 col-sm-6 col-xl-3">
                                                                 <div class="pts-clean-card">
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Kualitas Mutu</span>
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Kualitas Mutu</span>
                                                                             <span class="badge rounded-pill pts-card-badge" style="background: #fef3c7; color: #b45309;">Bobot @(comp.WeightKualitas)%</span>
                                                                         </div>
                                                                         <div class="my-2">
@@ -2125,33 +2154,6 @@
                                                                         </div>
                                                                         <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
                                                                             <i class="bi bi-patch-check me-1 text-warning"></i>Kualitas validasi data laporan K3 seluruh divisi perusahaan (Baseline 100% tanpa penalti).
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            <!-- 3. Capaian Target -->
-                                                            <div class="col-12 col-sm-6 col-xl-3">
-                                                                <div class="pts-clean-card">
-                                                                    <div>
-                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Capaian Target</span>
-                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot @(comp.WeightCapaian)%</span>
-                                                                        </div>
-                                                                        <div class="my-2">
-                                                                            <span class="fw-bold fs-4 text-primary">@comp.ScorePencapaian%</span>
-                                                                        </div>
-                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
-                                                                            @(comp.WeightCapaian)% &times; @comp.ScorePencapaian% = <strong class="text-dark">@comp.PtsPencapaian pts</strong>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
-                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
-                                                                            <span>Realisasi: <strong class="text-dark">@comp.TotalActual</strong></span>
-                                                                            <span>Target: <strong class="text-dark">@comp.TotalTarget</strong></span>
-                                                                        </div>
-                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
-                                                                            <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif seluruh anggota &amp; divisi perusahaan (@comp.MtdAchievementRate%).
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -2192,7 +2194,7 @@
                                                                     <i class="bi bi-info-circle-fill"></i>
                                                                 </div>
                                                                 <div class="text-secondary" style="font-size: 11px; line-height: 1.4;">
-                                                                    <strong class="text-dark">Akumulasi Skor PTS Perusahaan:</strong> (@comp.PtsClose pts) + (@comp.PtsKualitas pts) + (@comp.PtsPencapaian pts) + (@comp.PtsBeban pts) = <strong class="text-primary fs-6">@comp.TotalScore pts (@comp.TotalScore%)</strong>
+                                                                    <strong class="text-dark">Akumulasi Skor PTS Perusahaan:</strong> (@comp.PtsPencapaian pts) + (@comp.PtsClose pts) + (@comp.PtsKualitas pts) + (@comp.PtsBeban pts) = <strong class="text-primary fs-6">@comp.TotalScore pts (@comp.TotalScore%)</strong>
                                                                     <span class="ms-2 text-muted" style="font-size: 10px;">• Hierarki K3: Personal (Karyawan) &rarr; Departemen &rarr; Perusahaan (@comp.TierLabel)</span>
                                                                 </div>
                                                             </div>
@@ -2487,12 +2489,39 @@
 
                                                         <!-- 4 Formula Cards -->
                                                         <div class="row g-2 g-md-3 text-center" style="font-size: 11px;">
-                                                            <!-- 1. Close Rate -->
+                                                            <!-- 1. Capaian Target -->
                                                             <div class="col-12 col-sm-6 col-xl-3">
                                                                 <div class="pts-clean-card">
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Close Rate</span>
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Capaian Target</span>
+                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot @(comp.WeightCapaian)%</span>
+                                                                        </div>
+                                                                        <div class="my-2">
+                                                                            <span class="fw-bold fs-4 text-primary">@comp.ScorePencapaian%</span>
+                                                                        </div>
+                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                            @(comp.WeightCapaian)% &times; @comp.ScorePencapaian% = <strong class="text-dark">@comp.PtsPencapaian pts</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                            <span>Realisasi: <strong class="text-dark">@comp.TotalActual</strong></span>
+                                                                            <span>Target: <strong class="text-dark">@comp.TotalTarget</strong></span>
+                                                                        </div>
+                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                            <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif seluruh anggota &amp; divisi perusahaan (@comp.MtdAchievementRate%).
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- 2. Close Rate -->
+                                                            <div class="col-12 col-sm-6 col-xl-3">
+                                                                <div class="pts-clean-card">
+                                                                    <div>
+                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Close Rate</span>
                                                                             <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot @(comp.WeightClose)%</span>
                                                                         </div>
                                                                         <div class="my-2">
@@ -2514,12 +2543,12 @@
                                                                 </div>
                                                             </div>
 
-                                                            <!-- 2. Kualitas Mutu -->
+                                                            <!-- 3. Kualitas Mutu -->
                                                             <div class="col-12 col-sm-6 col-xl-3">
                                                                 <div class="pts-clean-card">
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Kualitas Mutu</span>
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Kualitas Mutu</span>
                                                                             <span class="badge rounded-pill pts-card-badge" style="background: #fef3c7; color: #b45309;">Bobot @(comp.WeightKualitas)%</span>
                                                                         </div>
                                                                         <div class="my-2">
@@ -2536,33 +2565,6 @@
                                                                         </div>
                                                                         <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
                                                                             <i class="bi bi-patch-check me-1 text-warning"></i>Kualitas validasi data laporan K3 seluruh divisi perusahaan (Baseline 100% tanpa penalti).
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            <!-- 3. Capaian Target -->
-                                                            <div class="col-12 col-sm-6 col-xl-3">
-                                                                <div class="pts-clean-card">
-                                                                    <div>
-                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Capaian Target</span>
-                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot @(comp.WeightCapaian)%</span>
-                                                                        </div>
-                                                                        <div class="my-2">
-                                                                            <span class="fw-bold fs-4 text-primary">@comp.ScorePencapaian%</span>
-                                                                        </div>
-                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
-                                                                            @(comp.WeightCapaian)% &times; @comp.ScorePencapaian% = <strong class="text-dark">@comp.PtsPencapaian pts</strong>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
-                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
-                                                                            <span>Realisasi: <strong class="text-dark">@comp.TotalActual</strong></span>
-                                                                            <span>Target: <strong class="text-dark">@comp.TotalTarget</strong></span>
-                                                                        </div>
-                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
-                                                                            <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif seluruh anggota &amp; divisi perusahaan (@comp.MtdAchievementRate%).
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -2603,7 +2605,7 @@
                                                                     <i class="bi bi-info-circle-fill"></i>
                                                                 </div>
                                                                 <div class="text-secondary" style="font-size: 11px; line-height: 1.4;">
-                                                                    <strong class="text-dark">Akumulasi Skor PTS Perusahaan:</strong> (@comp.PtsClose pts) + (@comp.PtsKualitas pts) + (@comp.PtsPencapaian pts) + (@comp.PtsBeban pts) = <strong class="text-primary fs-6">@comp.TotalScore pts (@comp.TotalScore%)</strong>
+                                                                    <strong class="text-dark">Akumulasi Skor PTS Perusahaan:</strong> (@comp.PtsPencapaian pts) + (@comp.PtsClose pts) + (@comp.PtsKualitas pts) + (@comp.PtsBeban pts) = <strong class="text-primary fs-6">@comp.TotalScore pts (@comp.TotalScore%)</strong>
                                                                     <span class="ms-2 text-muted" style="font-size: 10px;">• Hierarki K3: Personal (Karyawan) &rarr; Departemen &rarr; Perusahaan (@comp.TierLabel)</span>
                                                                 </div>
                                                             </div>
@@ -2909,12 +2911,39 @@
 
                                                         <!-- 4 Formula Cards -->
                                                         <div class="row g-2 g-md-3 text-center" style="font-size: 11px;">
-                                                            <!-- 1. Close Rate -->
+                                                            <!-- 1. Capaian Target -->
                                                             <div class="col-12 col-sm-6 col-xl-3">
                                                                 <div class="pts-clean-card">
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Close Rate</span>
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Capaian Target</span>
+                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot @(comp.WeightCapaian)%</span>
+                                                                        </div>
+                                                                        <div class="my-2">
+                                                                            <span class="fw-bold fs-4 text-primary">@comp.ScorePencapaian%</span>
+                                                                        </div>
+                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                            @(comp.WeightCapaian)% &times; @comp.ScorePencapaian% = <strong class="text-dark">@comp.PtsPencapaian pts</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                            <span>Realisasi: <strong class="text-dark">@comp.TotalActual</strong></span>
+                                                                            <span>Target: <strong class="text-dark">@comp.TotalTarget</strong></span>
+                                                                        </div>
+                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                            <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif seluruh anggota &amp; divisi perusahaan (@comp.MtdAchievementRate%).
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- 2. Close Rate -->
+                                                            <div class="col-12 col-sm-6 col-xl-3">
+                                                                <div class="pts-clean-card">
+                                                                    <div>
+                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Close Rate</span>
                                                                             <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot @(comp.WeightClose)%</span>
                                                                         </div>
                                                                         <div class="my-2">
@@ -2936,12 +2965,12 @@
                                                                 </div>
                                                             </div>
 
-                                                            <!-- 2. Kualitas Mutu -->
+                                                            <!-- 3. Kualitas Mutu -->
                                                             <div class="col-12 col-sm-6 col-xl-3">
                                                                 <div class="pts-clean-card">
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Kualitas Mutu</span>
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Kualitas Mutu</span>
                                                                             <span class="badge rounded-pill pts-card-badge" style="background: #fef3c7; color: #b45309;">Bobot @(comp.WeightKualitas)%</span>
                                                                         </div>
                                                                         <div class="my-2">
@@ -2958,33 +2987,6 @@
                                                                         </div>
                                                                         <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
                                                                             <i class="bi bi-patch-check me-1 text-warning"></i>Kualitas validasi data laporan K3 seluruh divisi perusahaan (Baseline 100% tanpa penalti).
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            <!-- 3. Capaian Target -->
-                                                            <div class="col-12 col-sm-6 col-xl-3">
-                                                                <div class="pts-clean-card">
-                                                                    <div>
-                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Capaian Target</span>
-                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot @(comp.WeightCapaian)%</span>
-                                                                        </div>
-                                                                        <div class="my-2">
-                                                                            <span class="fw-bold fs-4 text-primary">@comp.ScorePencapaian%</span>
-                                                                        </div>
-                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
-                                                                            @(comp.WeightCapaian)% &times; @comp.ScorePencapaian% = <strong class="text-dark">@comp.PtsPencapaian pts</strong>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
-                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
-                                                                            <span>Realisasi: <strong class="text-dark">@comp.TotalActual</strong></span>
-                                                                            <span>Target: <strong class="text-dark">@comp.TotalTarget</strong></span>
-                                                                        </div>
-                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
-                                                                            <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif seluruh anggota &amp; divisi perusahaan (@comp.MtdAchievementRate%).
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -3025,7 +3027,7 @@
                                                                     <i class="bi bi-info-circle-fill"></i>
                                                                 </div>
                                                                 <div class="text-secondary" style="font-size: 11px; line-height: 1.4;">
-                                                                    <strong class="text-dark">Akumulasi Skor PTS Perusahaan:</strong> (@comp.PtsClose pts) + (@comp.PtsKualitas pts) + (@comp.PtsPencapaian pts) + (@comp.PtsBeban pts) = <strong class="text-primary fs-6">@comp.TotalScore pts (@comp.TotalScore%)</strong>
+                                                                    <strong class="text-dark">Akumulasi Skor PTS Perusahaan:</strong> (@comp.PtsPencapaian pts) + (@comp.PtsClose pts) + (@comp.PtsKualitas pts) + (@comp.PtsBeban pts) = <strong class="text-primary fs-6">@comp.TotalScore pts (@comp.TotalScore%)</strong>
                                                                     <span class="ms-2 text-muted" style="font-size: 10px;">• Hierarki K3: Personal (Karyawan) &rarr; Departemen &rarr; Perusahaan Inti</span>
                                                                 </div>
                                                             </div>
@@ -3357,12 +3359,39 @@
 
                                                         <!-- 4 Formula Cards -->
                                                         <div class="row g-2 g-md-3 text-center" style="font-size: 11px;">
-                                                            <!-- 1. Close Rate -->
+                                                            <!-- 1. Capaian Target -->
                                                             <div class="col-12 col-sm-6 col-xl-3">
                                                                 <div class="pts-clean-card">
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Close Rate</span>
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Capaian Target</span>
+                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot 35%</span>
+                                                                        </div>
+                                                                        <div class="my-2">
+                                                                            <span class="fw-bold fs-4 text-primary">@dept.ScoreCapaian%</span>
+                                                                        </div>
+                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                            35% &times; @dept.ScoreCapaian% = <strong class="text-dark">@dept.PtsCapaian pts</strong>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                            <span>Realisasi: <strong class="text-dark">@dept.TotalActual</strong></span>
+                                                                            <span>Target: <strong class="text-dark">@dept.TotalTarget</strong></span>
+                                                                        </div>
+                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                            <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif seluruh anggota departemen (@dept.MtdAchievementRate%).
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- 2. Close Rate -->
+                                                            <div class="col-12 col-sm-6 col-xl-3">
+                                                                <div class="pts-clean-card">
+                                                                    <div>
+                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Close Rate</span>
                                                                             <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot 30%</span>
                                                                         </div>
                                                                         <div class="my-2">
@@ -3384,12 +3413,12 @@
                                                                 </div>
                                                             </div>
 
-                                                            <!-- 2. Kualitas Mutu -->
+                                                            <!-- 3. Kualitas Mutu -->
                                                             <div class="col-12 col-sm-6 col-xl-3">
                                                                 <div class="pts-clean-card">
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Kualitas Mutu</span>
+                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Kualitas Mutu</span>
                                                                             <span class="badge rounded-pill pts-card-badge" style="background: #fef3c7; color: #b45309;">Bobot 25%</span>
                                                                         </div>
                                                                         <div class="my-2">
@@ -3406,33 +3435,6 @@
                                                                         </div>
                                                                         <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
                                                                             <i class="bi bi-patch-check me-1 text-warning"></i>Kualitas validasi data laporan K3 departemen (Baseline 100% tanpa penalti).
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            <!-- 3. Capaian Target -->
-                                                            <div class="col-12 col-sm-6 col-xl-3">
-                                                                <div class="pts-clean-card">
-                                                                    <div>
-                                                                        <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                            <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Capaian Target</span>
-                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot 35%</span>
-                                                                        </div>
-                                                                        <div class="my-2">
-                                                                            <span class="fw-bold fs-4 text-primary">@dept.ScoreCapaian%</span>
-                                                                        </div>
-                                                                        <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
-                                                                            35% &times; @dept.ScoreCapaian% = <strong class="text-dark">@dept.PtsCapaian pts</strong>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
-                                                                        <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
-                                                                            <span>Realisasi: <strong class="text-dark">@dept.TotalActual</strong></span>
-                                                                            <span>Target: <strong class="text-dark">@dept.TotalTarget</strong></span>
-                                                                        </div>
-                                                                        <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
-                                                                            <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif seluruh anggota departemen (@dept.MtdAchievementRate%).
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -3473,7 +3475,7 @@
                                                                     <i class="bi bi-info-circle-fill"></i>
                                                                 </div>
                                                                 <div class="text-secondary" style="font-size: 11px; line-height: 1.4;">
-                                                                    <strong class="text-dark">Akumulasi Skor PTS Departemen:</strong> (@dept.PtsClose pts) + (@dept.PtsKualitas pts) + (@dept.PtsCapaian pts) + (@dept.PtsBeban pts) = <strong class="text-primary fs-6">@dept.TotalScore pts (@dept.TotalScore%)</strong>
+                                                                    <strong class="text-dark">Akumulasi Skor PTS Departemen:</strong> (@dept.PtsCapaian pts) + (@dept.PtsClose pts) + (@dept.PtsKualitas pts) + (@dept.PtsBeban pts) = <strong class="text-primary fs-6">@dept.TotalScore pts (@dept.TotalScore%)</strong>
                                                                     <span class="text-muted d-none d-lg-inline ms-2">&bull; Standar penilaian agregat departemen terpadu.</span>
                                                                 </div>
                                                             </div>
@@ -3966,12 +3968,39 @@
 
                                                             <!-- 4 Formula Cards -->
                                                             <div class="row g-2 g-md-3 text-center" style="font-size: 11px;">
-                                                                <!-- 1. Close Rate -->
+                                                                <!-- 1. Capaian Target -->
                                                                 <div class="col-12 col-sm-6 col-xl-3">
                                                                     <div class="pts-clean-card">
                                                                         <div>
                                                                             <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                                <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Close Rate</span>
+                                                                                <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Capaian Target</span>
+                                                                                <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot 35%</span>
+                                                                            </div>
+                                                                            <div class="my-2">
+                                                                                <span class="fw-bold fs-4 text-primary">@emp.scoreCapaian%</span>
+                                                                            </div>
+                                                                            <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
+                                                                                35% &times; @emp.scoreCapaian% = <strong class="text-dark">@emp.ptsCapaian pts</strong>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
+                                                                            <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
+                                                                                <span>Realisasi: <strong class="text-dark">@emp.mtdTotalActual</strong></span>
+                                                                                <span>Target: <strong class="text-dark">@emp.mtdTotalTarget</strong></span>
+                                                                            </div>
+                                                                            <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
+                                                                                <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif 5 program bulanan (@emp.complianceRate%) sesuai hari onsite.
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <!-- 2. Close Rate -->
+                                                                <div class="col-12 col-sm-6 col-xl-3">
+                                                                    <div class="pts-clean-card">
+                                                                        <div>
+                                                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
+                                                                                <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Close Rate</span>
                                                                                 <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot 30%</span>
                                                                             </div>
                                                                             <div class="my-2">
@@ -3993,12 +4022,12 @@
                                                                     </div>
                                                                 </div>
 
-                                                                <!-- 2. Kualitas Mutu -->
+                                                                <!-- 3. Kualitas Mutu -->
                                                                 <div class="col-12 col-sm-6 col-xl-3">
                                                                     <div class="pts-clean-card">
                                                                         <div>
                                                                             <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                                <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">2. Kualitas Mutu</span>
+                                                                                <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Kualitas Mutu</span>
                                                                                 <span class="badge rounded-pill pts-card-badge" style="background: #fef3c7; color: #b45309;">Bobot 25%</span>
                                                                             </div>
                                                                             <div class="my-2">
@@ -4015,33 +4044,6 @@
                                                                             </div>
                                                                             <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
                                                                                 <i class="bi bi-patch-check me-1 text-warning"></i>Mutu deskripsi & bukti validasi SAP (Baseline 100% tanpa penalti).
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                <!-- 3. Capaian Target -->
-                                                                <div class="col-12 col-sm-6 col-xl-3">
-                                                                    <div class="pts-clean-card">
-                                                                        <div>
-                                                                            <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
-                                                                                <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Capaian Target</span>
-                                                                                <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot 35%</span>
-                                                                            </div>
-                                                                            <div class="my-2">
-                                                                                <span class="fw-bold fs-4 text-primary">@emp.scoreCapaian%</span>
-                                                                            </div>
-                                                                            <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
-                                                                                35% &times; @emp.scoreCapaian% = <strong class="text-dark">@emp.ptsCapaian pts</strong>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
-                                                                            <div class="d-flex justify-content-between align-items-center" style="font-size: 9.5px;">
-                                                                                <span>Realisasi: <strong class="text-dark">@emp.mtdTotalActual</strong></span>
-                                                                                <span>Target: <strong class="text-dark">@emp.mtdTotalTarget</strong></span>
-                                                                            </div>
-                                                                            <div class="text-muted text-start mt-1.5" style="font-size: 9px; line-height: 1.35;">
-                                                                                <i class="bi bi-graph-up me-1 text-primary"></i>Kepatuhan kuantitatif 5 program bulanan (@emp.complianceRate%) sesuai hari onsite.
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -4082,7 +4084,7 @@
                                                                         <i class="bi bi-info-circle-fill"></i>
                                                                     </div>
                                                                     <div class="text-secondary" style="font-size: 11px; line-height: 1.4;">
-                                                                        <strong class="text-dark">Akumulasi Skor PTS:</strong> (@emp.ptsClose pts) + (@emp.ptsKualitas pts) + (@emp.ptsCapaian pts) + (@emp.ptsBeban pts) = <strong class="text-primary fs-6">@emp.totalScore pts (@emp.totalScore%)</strong>
+                                                                        <strong class="text-dark">Akumulasi Skor PTS:</strong> (@emp.ptsCapaian pts) + (@emp.ptsClose pts) + (@emp.ptsKualitas pts) + (@emp.ptsBeban pts) = <strong class="text-primary fs-6">@emp.totalScore pts (@emp.totalScore%)</strong>
                                                                         <span class="text-muted d-none d-lg-inline ms-2">&bull; Standar penilaian objektif, akuntabel &amp; terverifikasi sistem.</span>
                                                                     </div>
                                                                 </div>
@@ -4214,16 +4216,39 @@
 
                     <!-- 4 Kartu Pilar Riil -->
                     <div class="row g-2.5 g-md-3">
-                        <!-- Pilar 1: Close Rate -->
+                        <!-- Pilar 1: Capaian -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded p-1.5 text-primary" style="background: #eff6ff;"><i class="bi bi-bullseye fs-5"></i></div>
+                                            <div class="fw-bold text-dark" style="font-size: 13px;">1. Capaian Target (Volume)</div>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill px-3 py-1 shadow-xs" style="font-size: 12px; font-weight: 800;">Bobot 35%</span>
+                                    </div>
+                                    <div class="d-flex align-items-baseline gap-2 mb-2">
+                                        <span class="fw-bold fs-4 text-primary" id="mRealCapaianScore">-</span>
+                                        <span class="text-secondary" style="font-size: 11.5px;">&rarr; 35% &times; <span id="mRealCapaianFormula">-</span> = <strong class="text-dark" id="mRealCapaianPts">-</strong></span>
+                                    </div>
+                                    <div class="p-2 rounded bg-light border text-secondary" style="font-size: 11px; line-height: 1.45;">
+                                        <div id="mRealCapaianDetails" class="mb-1 fw-semibold text-dark">-</div>
+                                        <div class="text-muted" id="mRealKpiStrip" style="font-size: 10px;">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pilar 2: Close Rate -->
                         <div class="col-md-6">
                             <div class="card h-100 border-0 shadow-sm rounded-3">
                                 <div class="card-body p-3">
                                     <div class="d-flex align-items-center justify-content-between mb-2">
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="rounded p-1.5 text-success" style="background: #ecfdf5;"><i class="bi bi-shield-check fs-5"></i></div>
-                                            <div class="fw-bold text-dark" style="font-size: 13px;">1. Close Rate Action Plan</div>
+                                            <div class="fw-bold text-dark" style="font-size: 13px;">2. Close Rate Action Plan</div>
                                         </div>
-                                        <span class="badge bg-success rounded-pill px-2 py-0.5" style="font-size: 10px;">Bobot 30%</span>
+                                        <span class="badge bg-success rounded-pill px-3 py-1 shadow-xs" style="font-size: 12px; font-weight: 800;">Bobot 30%</span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2 mb-2">
                                         <span class="fw-bold fs-4 text-success" id="mRealCrScore">-</span>
@@ -4237,16 +4262,16 @@
                             </div>
                         </div>
 
-                        <!-- Pilar 2: Kualitas -->
+                        <!-- Pilar 3: Kualitas -->
                         <div class="col-md-6">
                             <div class="card h-100 border-0 shadow-sm rounded-3">
                                 <div class="card-body p-3">
                                     <div class="d-flex align-items-center justify-content-between mb-2">
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="rounded p-1.5 text-warning" style="background: #fffbeb;"><i class="bi bi-stars fs-5"></i></div>
-                                            <div class="fw-bold text-dark" style="font-size: 13px;">2. Kualitas Mutu Laporan SAP</div>
+                                            <div class="fw-bold text-dark" style="font-size: 13px;">3. Kualitas Mutu Laporan SAP</div>
                                         </div>
-                                        <span class="badge bg-warning text-dark rounded-pill px-2 py-0.5" style="font-size: 10px;">Bobot 25%</span>
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1 shadow-xs" style="font-size: 12px; font-weight: 800;">Bobot 25%</span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2 mb-2">
                                         <span class="fw-bold fs-4" style="color: #d97706;" id="mRealKualitasScore">-</span>
@@ -4255,29 +4280,6 @@
                                     <div class="p-2 rounded bg-light border text-secondary" style="font-size: 11px; line-height: 1.45;">
                                         <div id="mRealKualitasDetails" class="mb-1 fw-semibold text-dark">-</div>
                                         <div class="text-muted" id="mRealKualitasDesc">-</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Pilar 3: Capaian -->
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 shadow-sm rounded-3">
-                                <div class="card-body p-3">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="rounded p-1.5 text-primary" style="background: #eff6ff;"><i class="bi bi-bullseye fs-5"></i></div>
-                                            <div class="fw-bold text-dark" style="font-size: 13px;">3. Capaian Target (Volume)</div>
-                                        </div>
-                                        <span class="badge bg-primary rounded-pill px-2 py-0.5" style="font-size: 10px;">Bobot 35%</span>
-                                    </div>
-                                    <div class="d-flex align-items-baseline gap-2 mb-2">
-                                        <span class="fw-bold fs-4 text-primary" id="mRealCapaianScore">-</span>
-                                        <span class="text-secondary" style="font-size: 11.5px;">&rarr; 35% &times; <span id="mRealCapaianFormula">-</span> = <strong class="text-dark" id="mRealCapaianPts">-</strong></span>
-                                    </div>
-                                    <div class="p-2 rounded bg-light border text-secondary" style="font-size: 11px; line-height: 1.45;">
-                                        <div id="mRealCapaianDetails" class="mb-1 fw-semibold text-dark">-</div>
-                                        <div class="text-muted" id="mRealKpiStrip" style="font-size: 10px;">-</div>
                                     </div>
                                 </div>
                             </div>
@@ -4292,7 +4294,7 @@
                                             <div class="rounded p-1.5 text-info" style="background: #f0fdfa;"><i class="bi bi-people-fill fs-5"></i></div>
                                             <div class="fw-bold text-dark" style="font-size: 13px;">4. Skala Beban Operasional</div>
                                         </div>
-                                        <span class="badge rounded-pill px-2 py-0.5 text-white" style="background: #4338ca; font-size: 10px;">Bobot 10%</span>
+                                        <span class="badge rounded-pill px-3 py-1 text-white shadow-xs" style="background: #4338ca; font-size: 12px; font-weight: 800;">Bobot 10%</span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2 mb-2">
                                         <span class="fw-bold fs-4" style="color: #4338ca;" id="mRealBebanScore">-</span>
@@ -4333,16 +4335,41 @@
                     </div>
 
                     <div class="row g-3">
-                        <!-- 1. Close Rate -->
+                        <!-- 1. Capaian -->
+                        <div class="col-md-6">
+                            <div class="card h-100 border-0 shadow-sm rounded-3">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded p-2 text-primary" style="background: #eff6ff;"><i class="bi bi-bullseye fs-5"></i></div>
+                                            <div class="fw-bold text-dark" style="font-size: 13.5px;">1. Capaian Target (Volume)</div>
+                                        </div>
+                                        <span class="badge bg-primary rounded-pill px-3 py-1.5 shadow-xs" style="font-size: 12.5px; font-weight: 800;">Bobot 35%</span>
+                                    </div>
+                                    <p class="text-muted mb-2" style="font-size: 12px; line-height: 1.5;">
+                                        Persentase pemenuhan kuota fisik 5 program wajib SAP (Hazard, Inspeksi, Safety Talk, Observasi, Coaching, P5M) dengan batas maksimal 100%.
+                                    </p>
+                                    <div class="p-2 rounded bg-light border" style="font-size: 11px; color: #334155;">
+                                        <div class="fw-bold text-dark mb-1"><i class="bi bi-calendar3-check text-primary me-1"></i>Penyesuaian Hari Kerja (Onsite):</div>
+                                        <ul class="mb-0 ps-3 text-secondary" style="line-height: 1.4;">
+                                            <li>Rumus: <code>(Total Realisasi / Total Target) &times; 100%</code>.</li>
+                                            <li>Target disesuaikan proporsional berdasarkan <strong>Hari Onsite</strong>. Karyawan cuti/off tidak dibebani target saat tidak berada di area kerja.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Close Rate -->
                         <div class="col-md-6">
                             <div class="card h-100 border-0 shadow-sm rounded-3">
                                 <div class="card-body p-3">
                                     <div class="d-flex align-items-center justify-content-between mb-2">
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="rounded p-2 text-success" style="background: #ecfdf5;"><i class="bi bi-shield-check fs-5"></i></div>
-                                            <div class="fw-bold text-dark" style="font-size: 13.5px;">1. Close Rate Action Plan</div>
+                                            <div class="fw-bold text-dark" style="font-size: 13.5px;">2. Close Rate Action Plan</div>
                                         </div>
-                                        <span class="badge bg-success rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 30%</span>
+                                        <span class="badge bg-success rounded-pill px-3 py-1.5 shadow-xs" style="font-size: 12.5px; font-weight: 800;">Bobot 30%</span>
                                     </div>
                                     <p class="text-muted mb-2" style="font-size: 12px; line-height: 1.5;">
                                         Tingkat penyelesaian dan tindak lanjut temuan bahaya/isu K3LH. Merupakan pilar keselamatan kunci dengan bobot 30 pts.
@@ -4359,16 +4386,16 @@
                             </div>
                         </div>
 
-                        <!-- 2. Kualitas -->
+                        <!-- 3. Kualitas -->
                         <div class="col-md-6">
                             <div class="card h-100 border-0 shadow-sm rounded-3">
                                 <div class="card-body p-3">
                                     <div class="d-flex align-items-center justify-content-between mb-2">
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="rounded p-2 text-warning" style="background: #fffbeb;"><i class="bi bi-stars fs-5"></i></div>
-                                            <div class="fw-bold text-dark" style="font-size: 13.5px;">2. Kualitas Input (Mutu)</div>
+                                            <div class="fw-bold text-dark" style="font-size: 13.5px;">3. Kualitas Input (Mutu)</div>
                                         </div>
-                                        <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 25%</span>
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5 shadow-xs" style="font-size: 12.5px; font-weight: 800;">Bobot 25%</span>
                                     </div>
                                     <p class="text-muted mb-2" style="font-size: 12px; line-height: 1.5;">
                                         Validasi objektif atas standar kelengkapan data laporan SAP (deskripsi spesifik, kejelasan tindakan, bukti foto relevan, dan ketepatan level risiko).
@@ -4384,31 +4411,6 @@
                             </div>
                         </div>
 
-                        <!-- 3. Capaian -->
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 shadow-sm rounded-3">
-                                <div class="card-body p-3">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="rounded p-2 text-primary" style="background: #eff6ff;"><i class="bi bi-bullseye fs-5"></i></div>
-                                            <div class="fw-bold text-dark" style="font-size: 13.5px;">3. Capaian Target (Volume)</div>
-                                        </div>
-                                        <span class="badge bg-primary rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 35%</span>
-                                    </div>
-                                    <p class="text-muted mb-2" style="font-size: 12px; line-height: 1.5;">
-                                        Persentase pemenuhan kuota fisik 5 program wajib SAP (Hazard, Inspeksi, Safety Talk, Observasi, Coaching, P5M) dengan batas maksimal 100%.
-                                    </p>
-                                    <div class="p-2 rounded bg-light border" style="font-size: 11px; color: #334155;">
-                                        <div class="fw-bold text-dark mb-1"><i class="bi bi-calendar3-check text-primary me-1"></i>Penyesuaian Hari Kerja (Onsite):</div>
-                                        <ul class="mb-0 ps-3 text-secondary" style="line-height: 1.4;">
-                                            <li>Rumus: <code>(Total Realisasi / Total Target) &times; 100%</code>.</li>
-                                            <li>Target disesuaikan proporsional berdasarkan <strong>Hari Onsite</strong>. Karyawan cuti/off tidak dibebani target saat tidak berada di area kerja.</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- 4. Skala Beban -->
                         <div class="col-md-6">
                             <div class="card h-100 border-0 shadow-sm rounded-3">
@@ -4418,7 +4420,7 @@
                                             <div class="rounded p-2 text-info" style="background: #f0fdfa;"><i class="bi bi-people-fill fs-5"></i></div>
                                             <div class="fw-bold text-dark" style="font-size: 13.5px;">4. Skala Beban Operasional</div>
                                         </div>
-                                        <span class="badge bg-info text-white rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 10%</span>
+                                        <span class="badge bg-info text-white rounded-pill px-3 py-1.5 shadow-xs" style="font-size: 12.5px; font-weight: 800;">Bobot 10%</span>
                                     </div>
                                     <p class="text-muted mb-2" style="font-size: 12px; line-height: 1.5;">
                                         Faktor keadilan operasional yang mengapresiasi pengawas/karyawan yang memikul target tugas lebih tinggi dibanding rekan lain di departemennya.
