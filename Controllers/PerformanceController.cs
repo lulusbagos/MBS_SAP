@@ -3631,8 +3631,8 @@ namespace MBS_SAP.Controllers
                         userDeptName = string.IsNullOrWhiteSpace(dView?.NamaDepartemen) ? "General" : dView.NamaDepartemen;
                     }
 
-                    // Company Employees & Dept Calculation
-                    var companyEmployees = await GetEmployeesComplianceData(myKaryawan.IdPerusahaan, null, null, null, myKaryawan.PerusahaanNodeId);
+                    // Company Employees & Dept Calculation (include all company peers)
+                    var companyEmployees = await GetEmployeesComplianceData(myKaryawan.IdPerusahaan, null, null, null, null);
 
                     // 1. Department rank within their company
                     var deptGroups = companyEmployees
@@ -3790,14 +3790,9 @@ namespace MBS_SAP.Controllers
                 }
                 else
                 {
-                    if (!string.IsNullOrEmpty(userNik))
-                    {
-                        var myKaryawan = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
-                        if (myKaryawan != null && myKaryawan.PerusahaanNodeId.HasValue && myKaryawan.PerusahaanNodeId.Value > 0)
-                        {
-                            effectiveParentScope = myKaryawan.PerusahaanNodeId.Value;
-                        }
-                    }
+                    // User viewing their own company (e.g. Hexindo viewing Hexindo):
+                    // Harus tetap bisa melihat seluruh sesama rekan karyawannya (tidak disekat per node/parent)
+                    effectiveParentScope = null;
                 }
             }
             else
@@ -4602,14 +4597,9 @@ namespace MBS_SAP.Controllers
                 }
                 else
                 {
-                    if (!string.IsNullOrEmpty(userNik))
-                    {
-                        var myKaryawan = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
-                        if (myKaryawan != null && myKaryawan.PerusahaanNodeId.HasValue && myKaryawan.PerusahaanNodeId.Value > 0)
-                        {
-                            effectiveParentScope = myKaryawan.PerusahaanNodeId.Value;
-                        }
-                    }
+                    // User viewing their own company (e.g. Hexindo viewing Hexindo):
+                    // Harus tetap bisa melihat seluruh sesama rekan karyawannya (tidak disekat per node/parent)
+                    effectiveParentScope = null;
                 }
             }
             else
@@ -6045,14 +6035,9 @@ namespace MBS_SAP.Controllers
                 }
                 else
                 {
-                    if (!string.IsNullOrEmpty(userNik))
-                    {
-                        var myKaryawan = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
-                        if (myKaryawan != null && myKaryawan.PerusahaanNodeId.HasValue && myKaryawan.PerusahaanNodeId.Value > 0)
-                        {
-                            effectiveParentScope = myKaryawan.PerusahaanNodeId.Value;
-                        }
-                    }
+                    // User viewing their own company (e.g. Hexindo viewing Hexindo):
+                    // Harus tetap bisa melihat seluruh sesama rekan karyawannya (tidak disekat per node/parent)
+                    effectiveParentScope = null;
                 }
             }
             else
