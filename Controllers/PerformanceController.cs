@@ -3716,7 +3716,11 @@ namespace MBS_SAP.Controllers
             var userCompanyStr = User.FindFirst("CompanyId")?.Value;
             int? loggedInUserCompanyId = int.TryParse(userCompanyStr, out int parsedCid) && parsedCid > 0 ? parsedCid : resolvedCompanyId;
             var isTopCompany = loggedInUserCompanyId.HasValue && loggedInUserCompanyId.Value == 1;
-            var isAdmin = User.IsInRole("Admin") || string.Equals(userNik, "24051940986", StringComparison.OrdinalIgnoreCase);
+            var isAdmin = User.IsInRole("Admin") 
+                          || User.IsInRole("Administrator") 
+                          || string.Equals(roleClaim, "Admin", StringComparison.OrdinalIgnoreCase) 
+                          || string.Equals(roleClaim, "Administrator", StringComparison.OrdinalIgnoreCase) 
+                          || string.Equals(userNik, "24051940986", StringComparison.OrdinalIgnoreCase);
             bool isTopParent = isAdmin || isOwnerRole || isTopCompany;
 
             var jobTitle = User.FindFirst("JobTitle")?.Value;
@@ -4227,10 +4231,20 @@ namespace MBS_SAP.Controllers
 
                 var nonSapSupervisors = employees.Where(e => (bool)e.isPotentialSupervisorNonSap).ToList();
                 var nonStaffTargeted = employees.Where(e => (bool)e.isNonStaffTargetedSap).ToList();
-                ViewBag.NonSapSupervisorsCount = nonSapSupervisors.Count;
-                ViewBag.NonSapSupervisors = nonSapSupervisors;
-                ViewBag.NonStaffTargetedCount = nonStaffTargeted.Count;
-                ViewBag.NonStaffTargeted = nonStaffTargeted;
+                if (isAdmin)
+                {
+                    ViewBag.NonSapSupervisorsCount = nonSapSupervisors.Count;
+                    ViewBag.NonSapSupervisors = nonSapSupervisors;
+                    ViewBag.NonStaffTargetedCount = nonStaffTargeted.Count;
+                    ViewBag.NonStaffTargeted = nonStaffTargeted;
+                }
+                else
+                {
+                    ViewBag.NonSapSupervisorsCount = 0;
+                    ViewBag.NonSapSupervisors = new List<dynamic>();
+                    ViewBag.NonStaffTargetedCount = 0;
+                    ViewBag.NonStaffTargeted = new List<dynamic>();
+                }
                 ViewBag.TargetSapCount = targetEmployees.Count;
                 ViewBag.TotalActiveEmployees = employees.Count;
 
@@ -5673,7 +5687,12 @@ namespace MBS_SAP.Controllers
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
                           ?? User.FindFirst("Nrp")?.Value 
                           ?? User.Identity?.Name;
-            var isAdmin = User.IsInRole("Admin") || string.Equals(userNik, "24051940986", StringComparison.OrdinalIgnoreCase);
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("Role")?.Value ?? "";
+            var isAdmin = User.IsInRole("Admin") 
+                          || User.IsInRole("Administrator") 
+                          || string.Equals(roleClaim, "Admin", StringComparison.OrdinalIgnoreCase) 
+                          || string.Equals(roleClaim, "Administrator", StringComparison.OrdinalIgnoreCase) 
+                          || string.Equals(userNik, "24051940986", StringComparison.OrdinalIgnoreCase);
             if (!isAdmin)
             {
                 return Forbid();

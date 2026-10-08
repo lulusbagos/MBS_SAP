@@ -16,8 +16,15 @@
     var currentUserNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
                          ?? User.FindFirst("Nrp")?.Value 
                          ?? User.Identity?.Name ?? "";
+    var userRole = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value 
+                   ?? User.FindFirst("Role")?.Value ?? "";
     var isTopParent = (ViewBag.IsTopParent as bool? ?? false);
-    var isAdmin = (ViewBag.IsAdmin as bool? ?? false) || User.IsInRole("Admin") || string.Equals(currentUserNik, "24051940986", StringComparison.OrdinalIgnoreCase);
+    var isAdmin = (ViewBag.IsAdmin as bool? ?? false) 
+                  || User.IsInRole("Admin") 
+                  || User.IsInRole("Administrator") 
+                  || string.Equals(userRole, "Admin", StringComparison.OrdinalIgnoreCase) 
+                  || string.Equals(userRole, "Administrator", StringComparison.OrdinalIgnoreCase) 
+                  || string.Equals(currentUserNik, "24051940986", StringComparison.OrdinalIgnoreCase);
     var canDownloadDetail = isAdmin || isSafetyRole;
     var targetFilter = ViewBag.TargetFilter as string ?? "target";
 }
@@ -1220,13 +1227,13 @@
                         </div>
                     </div>
                     <div class="text-muted" style="font-size: 11px;">
-                        @if (targetFilter == "nontarget_pengawas")
+                        @if (isAdmin && targetFilter == "nontarget_pengawas")
                         {
                             <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
                                 <i class="bi bi-person-x-fill me-1"></i>Menampilkan @(ViewBag.NonSapSupervisorsCount ?? 0) pengawas struktural yang target SAP-nya dibuat 0 / NON-SAP
                             </span>
                         }
-                        else if (targetFilter == "nonstaff_targeted")
+                        else if (isAdmin && targetFilter == "nonstaff_targeted")
                         {
                             <span class="badge bg-warning-subtle text-dark border border-warning-subtle px-2 py-1">
                                 <i class="bi bi-person-exclamation me-1"></i>Menampilkan @(ViewBag.NonStaffTargetedCount ?? 0) karyawan non-staf / pelaksana yang terdaftar memiliki target K3 SAP
@@ -3700,7 +3707,7 @@
                                             <td class="align-left">
                                                 <div class="fw-bold d-inline-flex align-items-center flex-wrap gap-1" style="color: #334155; font-size: 13px;">
                                                     <span class="player-name">@emp.name</span>
-                                                    @if (emp.isPotentialSupervisorNonSap == true)
+                                                    @if (isAdmin && emp.isPotentialSupervisorNonSap == true)
                                                     {
                                                         <span class="badge bg-danger text-white py-0 px-1" style="font-size: 9px; font-weight: 700;" title="Karyawan Pengawas yang dimatikan (Status Master: NON-SAP / Target Nol)">
                                                             <i class="bi bi-person-x-fill me-1"></i>Pengawas Non-SAP
@@ -3712,7 +3719,7 @@
                                                             <i class="bi bi-sparkles me-1 text-warning"></i>New Hire
                                                         </span>
                                                     }
-                                                    @if (emp.isNonTarget == true && emp.isPotentialSupervisorNonSap != true)
+                                                    @if ((emp.isNonTarget == true || emp.isPotentialSupervisorNonSap == true) && (!isAdmin || emp.isPotentialSupervisorNonSap != true))
                                                     {
                                                         if (emp.isActivelyReporting == true)
                                                         {
@@ -3744,7 +3751,7 @@
                                                             <i class="bi bi-bullseye me-0.5"></i>Tgt: @emp.mtdTotalTarget
                                                         </span>
                                                     }
-                                                    @if (emp.isPotentialSupervisorNonSap == true)
+                                                    @if (isAdmin && emp.isPotentialSupervisorNonSap == true)
                                                     {
                                                         <div style="font-size: 9.5px; color: #dc2626; font-weight: 600;" class="mt-0.5">
                                                             <i class="bi bi-x-circle me-1"></i>Alasan Target 0: @(emp.alasanTargetZero ?? "Override daftar NIK/jabatan") (Level: NON SAP)
@@ -3769,7 +3776,7 @@
                                                 </div>
                                             </td>
                                             <td class="text-center fw-bold" style="font-size: 13px;">
-                                                @if (emp.isPotentialSupervisorNonSap == true)
+                                                @if (isAdmin && emp.isPotentialSupervisorNonSap == true)
                                                 {
                                                     <span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px;" title="@(emp.alasanTargetZero ?? "Override daftar NIK/jabatan")">
                                                         TARGET DIMATIKAN
@@ -3779,7 +3786,7 @@
                                                         <div style="font-size: 9px; color: #16a34a; font-weight: 600;" class="mt-0.5">Realisasi: @emp.totalActualAll SAP</div>
                                                     }
                                                 }
-                                                else if (emp.isNonTarget == true)
+                                                else if (emp.isNonTarget == true || emp.isPotentialSupervisorNonSap == true)
                                                 {
                                                     if (emp.isActivelyReporting == true)
                                                     {
