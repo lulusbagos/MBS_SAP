@@ -240,10 +240,25 @@ namespace MBS_SAP.Controllers
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
                           ?? User.FindFirst("Nrp")?.Value 
                           ?? User.Identity?.Name;
+
+            // Fallback: Jika claim CompanyId tidak ada atau 0, lakukan lookup berdasarkan NIK pengguna
+            if (!companyId.HasValue || companyId.Value <= 0)
+            {
+                if (!string.IsNullOrEmpty(userNik))
+                {
+                    var myKaryawan = await _context.Karyawans.AsNoTracking().FirstOrDefaultAsync(k => k.NoNik == userNik && k.StatusAktif);
+                    if (myKaryawan != null && myKaryawan.IdPerusahaan > 0)
+                    {
+                        companyId = myKaryawan.IdPerusahaan;
+                    }
+                }
+            }
+
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("Role")?.Value ?? "";
+            var isOwnerRole = string.Equals(roleClaim, "Owner", StringComparison.OrdinalIgnoreCase);
+            var isTopCompany = companyId.HasValue && companyId.Value == 1; // 1 = PT INDEXIM COALINDO (Parent Tertinggi Tambang)
             var isAdmin = User.IsInRole("Admin") || string.Equals(userNik, "24051940986", StringComparison.OrdinalIgnoreCase);
-            var jobTitle = User.FindFirst("JobTitle")?.Value;
-            var department = User.FindFirst("Department")?.Value;
-            bool isSafetyRole = CheckIsSafetyRole(jobTitle, department, isAdmin);
+            bool isTopParent = isAdmin || isOwnerRole || isTopCompany;
 
             if (isAdmin)
             {
@@ -257,7 +272,12 @@ namespace MBS_SAP.Controllers
             var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
 
             var allowedCompanyIds = new HashSet<int>();
-            if (companyId.HasValue)
+            if (isTopParent)
+            {
+                // Top parent (Admin, Role Owner, PT Indexim Coalindo) BISA MELIHAT SELURUH PERUSAHAAN (semua child/mitra)
+                allowedCompanyIds = allCompanies.Select(p => p.PerusahaanId).ToHashSet();
+            }
+            else if (companyId.HasValue)
             {
                 // If the user's own company is excluded, return empty scope
                 if (ExcludedCompanies.IsExcluded(companyId.Value))
@@ -265,6 +285,9 @@ namespace MBS_SAP.Controllers
                     return (companyId, allowedCompanyIds);
                 }
 
+                // Child company / Maincon / Subcon:
+                // Menyesuaikan hierarki: melihat dirinya sendiri dan seluruh descendants (child-nya),
+                // tetapi TIDAK BISA melihat parent di atasnya
                 allowedCompanyIds = BuildCompanyHierarchyScope(companyId.Value, allCompanies, relations);
             }
 
@@ -3688,12 +3711,20 @@ namespace MBS_SAP.Controllers
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
                           ?? User.FindFirst("Nrp")?.Value 
                           ?? User.Identity?.Name;
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("Role")?.Value ?? "";
+            var isOwnerRole = string.Equals(roleClaim, "Owner", StringComparison.OrdinalIgnoreCase);
+            var userCompanyStr = User.FindFirst("CompanyId")?.Value;
+            int? loggedInUserCompanyId = int.TryParse(userCompanyStr, out int parsedCid) && parsedCid > 0 ? parsedCid : resolvedCompanyId;
+            var isTopCompany = loggedInUserCompanyId.HasValue && loggedInUserCompanyId.Value == 1;
             var isAdmin = User.IsInRole("Admin") || string.Equals(userNik, "24051940986", StringComparison.OrdinalIgnoreCase);
+            bool isTopParent = isAdmin || isOwnerRole || isTopCompany;
+
             var jobTitle = User.FindFirst("JobTitle")?.Value;
             var department = User.FindFirst("Department")?.Value;
             bool isSafetyRole = CheckIsSafetyRole(jobTitle, department, isAdmin);
             ViewBag.IsSafetyRole = isSafetyRole;
             ViewBag.IsAdmin = isAdmin;
+            ViewBag.IsTopParent = isTopParent;
 
             if (!isAdmin && (targetFilter == "nontarget_pengawas" || targetFilter == "nonstaff_targeted"))
             {
@@ -3708,14 +3739,14 @@ namespace MBS_SAP.Controllers
                 .ToListAsync();
 
             List<PerusahaanView> allowedCompanies;
-            if (isAdmin)
+            if (isTopParent)
             {
-                allowedCompanies = allCompanies;
+                allowedCompanies = allCompanies.Where(p => !ExcludedCompanies.IsExcluded(p.PerusahaanId)).ToList();
             }
             else
             {
                 allowedCompanies = allCompanies
-                    .Where(p => allowedCompanyIds.Contains(p.PerusahaanId))
+                    .Where(p => allowedCompanyIds.Contains(p.PerusahaanId) && !ExcludedCompanies.IsExcluded(p.PerusahaanId))
                     .ToList();
             }
 
@@ -3725,22 +3756,21 @@ namespace MBS_SAP.Controllers
             }
 
             int defaultCompanyId = 0;
-            var userCompanyStr = User.FindFirst("CompanyId")?.Value;
-            if (int.TryParse(userCompanyStr, out int parsedUserCompanyId) && parsedUserCompanyId > 0)
+            if (isTopParent)
             {
-                defaultCompanyId = parsedUserCompanyId;
+                defaultCompanyId = 1; // Default ke PT INDEXIM COALINDO untuk Top Parent
             }
             else
             {
-                defaultCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
+                defaultCompanyId = loggedInUserCompanyId ?? (allowedCompanies.Any() ? allowedCompanies.First().PerusahaanId : 1);
             }
 
             int selectedCompanyId = companyId ?? defaultCompanyId;
             
-            // Security check: Non-admins cannot inspect other companies' internal dept list unless allowed by scope
-            if (!isAdmin && !allowedCompanyIds.Contains(selectedCompanyId))
+            // Security check: Non-top parent cannot inspect outside their allowed scope
+            if (!isTopParent && !allowedCompanyIds.Contains(selectedCompanyId))
             {
-                selectedCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
+                selectedCompanyId = defaultCompanyId;
             }
 
             var selectedCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? allowedCompanies.First();
@@ -3748,11 +3778,11 @@ namespace MBS_SAP.Controllers
             int? effectiveParentScope = null;
             userNik ??= User.Identity?.Name ?? User.FindFirst("Nrp")?.Value;
 
-            if (!isAdmin)
+            if (!isTopParent)
             {
-                if (resolvedCompanyId.HasValue && selectedCompanyId != resolvedCompanyId.Value)
+                if (loggedInUserCompanyId.HasValue && selectedCompanyId != loggedInUserCompanyId.Value)
                 {
-                    effectiveParentScope = resolvedCompanyId.Value;
+                    effectiveParentScope = loggedInUserCompanyId.Value;
                 }
                 else
                 {
@@ -3774,20 +3804,32 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            // Hierarchy scoping: Selected company and all of its child companies (subcons) + peer parents.
-            // Rule:
-            // 1. Child companies must NEVER see their parent or ancestors (neither in dropdown nor standings).
-            // 2. Parent companies will show themselves, peer parents at the same level (e.g. KPP & UDU), AND all of their descendant child companies.
+            // Hierarchy scoping:
+            // 1. Parent tertinggi (Admin, Owner, Indexim) melihat seluruh perusahaan yang bertanding di Liga (semua childs).
+            // 2. Intermediate parent (Maincon KPP/UDU/MGE) melihat dirinya sendiri dan seluruh anak perusahaannya (childs / subcon).
+            // 3. Child / subcon hanya melihat dirinya sendiri.
             var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
-            var targetCompanyIds = BuildCompanyHierarchyScope(selectedCompany.PerusahaanId, allCompanies, relations);
-            bool isParentCompany = CheckIsCompanyParent(selectedCompany.PerusahaanId, allCompanies, relations);
+            HashSet<int> targetCompanyIds;
+            if (isTopParent)
+            {
+                targetCompanyIds = allCompanies.Select(c => c.PerusahaanId).ToHashSet();
+            }
+            else
+            {
+                int scopeRootId = loggedInUserCompanyId ?? selectedCompany.PerusahaanId;
+                targetCompanyIds = BuildCompanyHierarchyScope(scopeRootId, allCompanies, relations);
+            }
+
+            bool isUserParent = isTopParent || (loggedInUserCompanyId.HasValue && CheckIsCompanyParent(loggedInUserCompanyId.Value, allCompanies, relations));
+            bool isSelectedCompanyParent = CheckIsCompanyParent(selectedCompany.PerusahaanId, allCompanies, relations);
 
             ViewBag.Companies = allowedCompanies;
             ViewBag.SelectedCompanyId = selectedCompany.PerusahaanId;
             ViewBag.CompanyName = selectedCompany.NamaPerusahaan;
-            ViewBag.HasChildCompanies = isParentCompany || targetCompanyIds.Count > 1;
+            ViewBag.HasChildCompanies = isTopParent || isUserParent || isSelectedCompanyParent || targetCompanyIds.Count > 1;
+            ViewBag.IsTopParent = isTopParent;
 
-            if (!isAdmin && !isParentCompany && (mode == "company" || mode == "core"))
+            if (!isTopParent && !isUserParent && (mode == "company" || mode == "core"))
             {
                 mode = "dept";
                 ViewBag.Mode = "dept";
@@ -3835,7 +3877,7 @@ namespace MBS_SAP.Controllers
 
                 foreach (var comp in companiesToCompare)
                 {
-                    int? compParentScope = (mode == "company")
+                    int? compParentScope = (mode == "company" || mode == "core")
                         ? null
                         : ((selectedCompanyId > 0 && selectedCompanyId != comp.PerusahaanId) ? selectedCompanyId : effectiveParentScope);
 
@@ -4493,15 +4535,22 @@ namespace MBS_SAP.Controllers
                 .OrderBy(p => p.NamaPerusahaan)
                 .ToListAsync();
 
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("Role")?.Value ?? "";
+            var isOwnerRole = string.Equals(roleClaim, "Owner", StringComparison.OrdinalIgnoreCase);
+            var userCompanyStr = User.FindFirst("CompanyId")?.Value;
+            int? loggedInUserCompanyId = int.TryParse(userCompanyStr, out int parsedCid) && parsedCid > 0 ? parsedCid : resolvedCompanyId;
+            var isTopCompany = loggedInUserCompanyId.HasValue && loggedInUserCompanyId.Value == 1;
+            bool isTopParent = isAdmin || isOwnerRole || isTopCompany;
+
             List<PerusahaanView> allowedCompanies;
-            if (isAdmin)
+            if (isTopParent)
             {
-                allowedCompanies = allCompanies;
+                allowedCompanies = allCompanies.Where(p => !ExcludedCompanies.IsExcluded(p.PerusahaanId)).ToList();
             }
             else
             {
                 allowedCompanies = allCompanies
-                    .Where(p => allowedCompanyIds.Contains(p.PerusahaanId))
+                    .Where(p => allowedCompanyIds.Contains(p.PerusahaanId) && !ExcludedCompanies.IsExcluded(p.PerusahaanId))
                     .ToList();
             }
 
@@ -4511,20 +4560,19 @@ namespace MBS_SAP.Controllers
             }
 
             int defaultCompanyId = 0;
-            var userCompanyStr = User.FindFirst("CompanyId")?.Value;
-            if (int.TryParse(userCompanyStr, out int parsedUserCompanyId) && parsedUserCompanyId > 0)
+            if (isTopParent)
             {
-                defaultCompanyId = parsedUserCompanyId;
+                defaultCompanyId = 1;
             }
             else
             {
-                defaultCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
+                defaultCompanyId = loggedInUserCompanyId ?? (allowedCompanies.Any() ? allowedCompanies.First().PerusahaanId : 1);
             }
 
             int selectedCompanyId = companyId ?? defaultCompanyId;
-            if (!isAdmin && !allowedCompanyIds.Contains(selectedCompanyId))
+            if (!isTopParent && !allowedCompanyIds.Contains(selectedCompanyId))
             {
-                selectedCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
+                selectedCompanyId = defaultCompanyId;
             }
 
             var selectedCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? allowedCompanies.First();
@@ -4532,11 +4580,11 @@ namespace MBS_SAP.Controllers
             int? effectiveParentScope = null;
             var userNik = User.Identity?.Name ?? User.FindFirst("Nrp")?.Value;
 
-            if (!isAdmin)
+            if (!isTopParent)
             {
-                if (resolvedCompanyId.HasValue && selectedCompanyId != resolvedCompanyId.Value)
+                if (loggedInUserCompanyId.HasValue && selectedCompanyId != loggedInUserCompanyId.Value)
                 {
-                    effectiveParentScope = resolvedCompanyId.Value;
+                    effectiveParentScope = loggedInUserCompanyId.Value;
                 }
                 else
                 {
@@ -4572,7 +4620,16 @@ namespace MBS_SAP.Controllers
             if (mode == "company" || mode == "core")
             {
                 var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
-                var targetCompanyIds = BuildCompanyHierarchyScope(selectedCompany.PerusahaanId, allCompanies, relations);
+                HashSet<int> targetCompanyIds;
+                if (isTopParent)
+                {
+                    targetCompanyIds = allCompanies.Select(c => c.PerusahaanId).ToHashSet();
+                }
+                else
+                {
+                    int scopeRootId = loggedInUserCompanyId ?? selectedCompany.PerusahaanId;
+                    targetCompanyIds = BuildCompanyHierarchyScope(scopeRootId, allCompanies, relations);
+                }
 
                 var companiesToCompare = allowedCompanies
                     .Where(c => targetCompanyIds.Contains(c.PerusahaanId) && !ExcludedCompanies.IsExcluded(c.PerusahaanId))
@@ -4603,7 +4660,7 @@ namespace MBS_SAP.Controllers
 
                 foreach (var comp in companiesToCompare)
                 {
-                    int? compParentScope = (mode == "company")
+                    int? compParentScope = (mode == "company" || mode == "core")
                         ? null
                         : ((selectedCompanyId > 0 && selectedCompanyId != comp.PerusahaanId) ? selectedCompanyId : effectiveParentScope);
 
@@ -5916,15 +5973,22 @@ namespace MBS_SAP.Controllers
                 .OrderBy(p => p.NamaPerusahaan)
                 .ToListAsync();
 
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("Role")?.Value ?? "";
+            var isOwnerRole = string.Equals(roleClaim, "Owner", StringComparison.OrdinalIgnoreCase);
+            var userCompanyStr = User.FindFirst("CompanyId")?.Value;
+            int? loggedInUserCompanyId = int.TryParse(userCompanyStr, out int parsedCid) && parsedCid > 0 ? parsedCid : resolvedCompanyId;
+            var isTopCompany = loggedInUserCompanyId.HasValue && loggedInUserCompanyId.Value == 1;
+            bool isTopParent = isAdmin || isOwnerRole || isTopCompany;
+
             List<PerusahaanView> allowedCompanies;
-            if (isAdmin)
+            if (isTopParent)
             {
-                allowedCompanies = allCompanies;
+                allowedCompanies = allCompanies.Where(p => !ExcludedCompanies.IsExcluded(p.PerusahaanId)).ToList();
             }
             else
             {
                 allowedCompanies = allCompanies
-                    .Where(p => allowedCompanyIds.Contains(p.PerusahaanId))
+                    .Where(p => allowedCompanyIds.Contains(p.PerusahaanId) && !ExcludedCompanies.IsExcluded(p.PerusahaanId))
                     .ToList();
             }
 
@@ -5934,20 +5998,19 @@ namespace MBS_SAP.Controllers
             }
 
             int defaultCompanyId = 0;
-            var userCompanyStr = User.FindFirst("CompanyId")?.Value;
-            if (int.TryParse(userCompanyStr, out int parsedUserCompanyId) && parsedUserCompanyId > 0)
+            if (isTopParent)
             {
-                defaultCompanyId = parsedUserCompanyId;
+                defaultCompanyId = 1;
             }
             else
             {
-                defaultCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
+                defaultCompanyId = loggedInUserCompanyId ?? (allowedCompanies.Any() ? allowedCompanies.First().PerusahaanId : 1);
             }
 
             int selectedCompanyId = companyId ?? defaultCompanyId;
-            if (!isAdmin && !allowedCompanyIds.Contains(selectedCompanyId))
+            if (!isTopParent && !allowedCompanyIds.Contains(selectedCompanyId))
             {
-                selectedCompanyId = resolvedCompanyId ?? allowedCompanies.First().PerusahaanId;
+                selectedCompanyId = defaultCompanyId;
             }
 
             var selectedCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? allowedCompanies.First();
@@ -5955,11 +6018,11 @@ namespace MBS_SAP.Controllers
             int? effectiveParentScope = null;
             var userNik = User.Identity?.Name ?? User.FindFirst("Nrp")?.Value;
 
-            if (!isAdmin)
+            if (!isTopParent)
             {
-                if (resolvedCompanyId.HasValue && selectedCompanyId != resolvedCompanyId.Value)
+                if (loggedInUserCompanyId.HasValue && selectedCompanyId != loggedInUserCompanyId.Value)
                 {
-                    effectiveParentScope = resolvedCompanyId.Value;
+                    effectiveParentScope = loggedInUserCompanyId.Value;
                 }
                 else
                 {
@@ -5982,7 +6045,16 @@ namespace MBS_SAP.Controllers
             }
 
             var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
-            var targetCompanyIds = BuildCompanyHierarchyScope(selectedCompany.PerusahaanId, allCompanies, relations);
+            HashSet<int> targetCompanyIds;
+            if (isTopParent)
+            {
+                targetCompanyIds = allCompanies.Select(c => c.PerusahaanId).ToHashSet();
+            }
+            else
+            {
+                int scopeRootId = loggedInUserCompanyId ?? selectedCompany.PerusahaanId;
+                targetCompanyIds = BuildCompanyHierarchyScope(scopeRootId, allCompanies, relations);
+            }
 
             if (mode == "core")
             {
@@ -6003,7 +6075,9 @@ namespace MBS_SAP.Controllers
             var allEmpsList = new List<dynamic>();
             foreach (var cId in targetCompanyIds)
             {
-                int? cParentScope = (selectedCompanyId > 0 && selectedCompanyId != cId) ? selectedCompanyId : effectiveParentScope;
+                int? cParentScope = (mode == "company" || mode == "core")
+                    ? null
+                    : ((selectedCompanyId > 0 && selectedCompanyId != cId) ? selectedCompanyId : effectiveParentScope);
                 var emps = await GetEmployeesComplianceData(cId, departmentName, selectedYear, selectedMonth, cParentScope, includeNonTarget: includeNonTarget);
                 allEmpsList.AddRange(emps);
             }

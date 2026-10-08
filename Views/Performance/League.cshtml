@@ -16,7 +16,8 @@
     var currentUserNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
                          ?? User.FindFirst("Nrp")?.Value 
                          ?? User.Identity?.Name ?? "";
-    var isAdmin = (ViewBag.IsAdmin as bool? ?? false) || User.IsInRole("Admin") || string.Equals(currentUserNik, "24051940986", StringComparison.OrdinalIgnoreCase);
+    var isTopParent = (ViewBag.IsTopParent as bool? ?? false);
+    var isAdmin = (ViewBag.IsAdmin as bool? ?? false) || User.IsInRole("Admin") || string.Equals(currentUserNik, "24051940986", StringComparison.OrdinalIgnoreCase) || isTopParent;
     var canDownloadDetail = isAdmin || isSafetyRole;
     var targetFilter = ViewBag.TargetFilter as string ?? "target";
 }
@@ -1362,7 +1363,7 @@
             <button class="btn btn-sm @(currentMode == "dept" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=dept&year=@selectedYear&month=@selectedMonth&targetFilter=@targetFilter';">
                 <i class="bi bi-shield-shaded me-1"></i> Klasemen Internal (Klub / Departemen)
             </button>
-            @if ((ViewBag.HasChildCompanies as bool? ?? false) || isAdmin)
+            @if ((ViewBag.HasChildCompanies as bool? ?? false) || isAdmin || isTopParent)
             {
                 <button class="btn btn-sm @(currentMode == "core" ? "btn-primary shadow-sm" : "btn-link text-secondary text-decoration-none") fw-bold" style="border-radius: 8px;" onclick="location.href='?companyId=@selectedCompanyId&mode=core&year=@selectedYear&month=@selectedMonth&targetFilter=@targetFilter';">
                     <i class="bi bi-star-fill me-1"></i> Liga Perusahaan Inti
