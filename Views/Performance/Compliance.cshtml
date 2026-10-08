@@ -981,16 +981,16 @@
                         {
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                                 <span class="fw-bold" style="font-size: 13px; color: #fbbf24;">
-                                    <i class="bi bi-lightning-charge-fill me-1"></i>Tata Letak Kolom Penilaian Performa (Close Rate 50% - Beban Pembuat SAP):
+                                    <i class="bi bi-lightning-charge-fill me-1"></i>Tata Letak Kolom Penilaian Performa (Capaian 35% &bull; Close Rate 30%):
                                 </span>
                                 <span class="badge bg-dark border border-secondary text-warning px-3 py-1.5 shadow-sm" style="font-family: 'Outfit', sans-serif; font-size: 11.5px;">
-                                    Skor = 50% Close Rate + 25% Kualitas + 15% Capaian + 10% Skala Beban
+                                    Skor = 35% Capaian + 30% Close Rate + 25% Kualitas + 10% Skala Beban
                                 </span>
                             </div>
                             <div class="row g-2 pt-1" style="font-size: 11px;">
                                 <div class="col">
                                     <div class="p-2 rounded h-100 text-center" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2);">
-                                        <strong class="text-primary d-block">1. Capaian Target (15%)</strong>
+                                        <strong class="text-primary d-block">1. Capaian Target (35%)</strong>
                                         <span class="text-muted" style="font-size: 10px;">Aktual / Target</span>
                                     </div>
                                 </div>
@@ -1002,7 +1002,7 @@
                                 </div>
                                 <div class="col">
                                     <div class="p-2 rounded h-100 text-center shadow-sm" style="background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.35);" data-bs-toggle="tooltip" title="Beban Pembuat SAP: Rasio penutupan temuan Action Plan yang dibuat oleh perusahaan.">
-                                        <strong class="text-success d-block"><i class="bi bi-star-fill text-warning me-0.5"></i>3. Close Rate (50%)</strong>
+                                        <strong class="text-success d-block"><i class="bi bi-star-fill text-warning me-0.5"></i>3. Close Rate (30%)</strong>
                                         <span class="text-muted" style="font-size: 10px;">Beban Pembuat SAP</span>
                                     </div>
                                 </div>
@@ -1057,14 +1057,14 @@
 
             @if (ViewBag.TopPerformanceList is List<MBS_SAP.Models.CompanyPerformanceViewModel> topPerformance && topPerformance.Any())
             {
-                int pctCapaian = isNewPolicy ? 15 : 20;
+                int pctCapaian = isNewPolicy ? 35 : 20;
                 int pctBeban = isNewPolicy ? 10 : 15;
-                int pctClose = isNewPolicy ? 50 : 40;
+                int pctClose = isNewPolicy ? 30 : 40;
                 int pctKualitas = isNewPolicy ? 25 : 25;
 
-                double wCapaian = isNewPolicy ? 0.15 : 0.20;
+                double wCapaian = isNewPolicy ? 0.35 : 0.20;
                 double wBeban = isNewPolicy ? 0.10 : 0.15;
-                double wClose = isNewPolicy ? 0.50 : 0.40;
+                double wClose = isNewPolicy ? 0.30 : 0.40;
                 double wKualitas = isNewPolicy ? 0.25 : 0.25;
 
                 <div class="table-responsive">
@@ -1279,28 +1279,28 @@
                 {
                     <div class="d-flex align-items-center mb-3 py-2.5 px-3 rounded-3" style="background: rgba(16, 185, 129, 0.18); border: 1px solid rgba(16, 185, 129, 0.4); color: #ffffff; font-size: 12.5px;">
                         <i class="bi bi-check-circle-fill me-2 fs-5 text-success"></i>
-                        <div><strong class="text-white">Periode Berjalan (&ge; September 2026):</strong> Menggunakan Sistem Penilaian Multi-Faktor dengan <strong style="color: #34d399;">Prioritas Utama Close Rate 50% (Beban Pembuat SAP)</strong>.</div>
+                        <div><strong class="text-white">Periode Berjalan (&ge; September 2026):</strong> Menggunakan Sistem Penilaian Multi-Faktor dengan <strong style="color: #60a5fa;">Capaian Target 35%</strong> dan <strong style="color: #34d399;">Close Rate 30% (Beban Pembuat SAP)</strong>.</div>
                     </div>
 
                     <div class="card mb-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;">
                         <div class="card-body p-3">
                             <h6 class="fw-bold mb-2" style="font-size: 13.5px; color: #fbbf24;"><i class="bi bi-code-slash me-1"></i>Rumus Komposisi Skor:</h6>
                             <div class="p-2.5 rounded font-monospace text-center mb-3" style="font-size: 12px; color: #38bdf8; background: #0f172a; border: 1px solid rgba(56, 189, 248, 0.3);">
-                                Total Skor = (50% &times; Close Rate [Beban Pembuat SAP]) + (25% &times; Kualitas) + (15% &times; Capaian) + (10% &times; Skala Beban)
+                                Total Skor = (35% &times; Capaian) + (30% &times; Close Rate [Beban Pembuat SAP]) + (25% &times; Kualitas) + (10% &times; Skala Beban)
                             </div>
 
                             <ul class="list-group list-group-flush mb-0" style="border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
                                 <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(16, 185, 129, 0.12); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
-                                    <div><strong style="color: #34d399;"><i class="bi bi-star-fill text-warning me-1"></i>1. Close Rate Action Plan (50%) - Prioritas Utama (Beban Pembuat SAP)</strong><br><small style="color: #cbd5e1;">Persentase temuan/action plan yang dibuat oleh karyawan perusahaan dan berhasil ditutup (Closed / Total AP &times; 50%).</small></div>
-                                    <span class="badge bg-success rounded-pill px-2.5 py-1.5" style="font-size: 12px;">50%</span>
+                                    <div><strong style="color: #34d399;"><i class="bi bi-star-fill text-warning me-1"></i>1. Close Rate Action Plan (30%) - Beban Pembuat SAP</strong><br><small style="color: #cbd5e1;">Persentase temuan/action plan yang dibuat oleh karyawan perusahaan dan berhasil ditutup (Closed / Total AP &times; 30%).</small></div>
+                                    <span class="badge bg-success rounded-pill px-2.5 py-1.5" style="font-size: 12px;">30%</span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
                                     <div><strong style="color: #fbbf24;">2. Kualitas Pelaporan SAP (25%)</strong><br><small style="color: #cbd5e1;">Standar mutu pelaporan SAP (1-5 Bintang / 5.0 &times; 25%).</small></div>
                                     <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1.5" style="font-size: 12px;">25%</span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
-                                    <div><strong style="color: #60a5fa;">3. Capaian Target Submisi (15%)</strong><br><small style="color: #cbd5e1;">Total Submisi Aktual / Total Target Karyawan (Maks 100% &times; 15%).</small></div>
-                                    <span class="badge bg-primary rounded-pill px-2.5 py-1.5" style="font-size: 12px;">15%</span>
+                                    <div><strong style="color: #60a5fa;">3. Capaian Target Submisi (35%)</strong><br><small style="color: #cbd5e1;">Total Submisi Aktual / Total Target Karyawan (Maks 100% &times; 35%).</small></div>
+                                    <span class="badge bg-primary rounded-pill px-2.5 py-1.5" style="font-size: 12px;">35%</span>
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); color: #f8fafc;">
                                     <div><strong style="color: #22d3ee;">4. Skala Beban / Effort (10%)</strong><br><small style="color: #cbd5e1;">Apresiasi logaritma proporsional terhadap target perusahaan dibandingkan target tertinggi.</small></div>

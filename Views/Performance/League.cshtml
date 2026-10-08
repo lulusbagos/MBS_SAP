@@ -1417,11 +1417,11 @@
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2 px-3 rounded-3 mb-2" style="background: rgba(37, 99, 235, 0.05); border: 1px dashed #93c5fd;">
                         <div class="d-flex align-items-center gap-2 flex-wrap" style="font-size: 11.5px;">
                             <span class="fw-bold text-dark"><i class="bi bi-calculator me-1 text-primary"></i>Rumus Skor Total:</span>
-                            <span class="badge shadow-sm" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 11px;">🛡️ 50% Close Rate AP</span>
+                            <span class="badge shadow-sm" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 11px;">🎯 35% Capaian</span>
+                            <span class="text-muted fw-bold">+</span>
+                            <span class="badge shadow-sm" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 11px;">🛡️ 30% Close Rate AP</span>
                             <span class="text-muted fw-bold">+</span>
                             <span class="badge shadow-sm" style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 11px;">⭐ 25% Kualitas</span>
-                            <span class="text-muted fw-bold">+</span>
-                            <span class="badge shadow-sm" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 11px;">🎯 15% Capaian</span>
                             <span class="text-muted fw-bold">+</span>
                             <span class="badge shadow-sm" style="background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; font-size: 11px;">⚖️ 10% Skala Beban</span>
                         </div>
@@ -3137,7 +3137,7 @@
                                     <th style="width: 65px; cursor: pointer;" onclick="sortDeptTable('skuad');" title="Klik untuk mengurutkan Jumlah Skuad">
                                         Skuad <i id="sortIcon_skuad" class="bi bi-arrow-down-up ms-1" style="font-size: 10px; opacity: 0.6;"></i>
                                     </th>
-                                    <th style="width: 95px; background-color: #0f172a; cursor: pointer;" onclick="sortDeptTable('pts');" title="Klik untuk mengurutkan berdasarkan Total Poin Skor (PTS 4 Pilar: Close Rate 50% + Kualitas AI 25% + Capaian 15% + Beban 10%)">
+                                    <th style="width: 95px; background-color: #0f172a; cursor: pointer;" onclick="sortDeptTable('pts');" title="Klik untuk mengurutkan berdasarkan Total Poin Skor (PTS 4 Pilar: Capaian 35% + Close Rate 30% + Kualitas AI 25% + Beban 10%)">
                                         PTS (Skor) <i id="sortIcon_pts" class="bi bi-sort-numeric-down-alt ms-1 text-warning" style="font-size: 11px;"></i>
                                     </th>
                                     <th style="width: 105px; background-color: #1e3a8a; cursor: pointer;" onclick="sortDeptTable('capaian');" title="Klik untuk mengurutkan berdasarkan Persentase Kepatuhan Capaian Target (%)">
@@ -3363,13 +3363,13 @@
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
                                                                             <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Close Rate</span>
-                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot 50%</span>
+                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot 30%</span>
                                                                         </div>
                                                                         <div class="my-2">
                                                                             <span class="fw-bold fs-4 text-success">@dept.ScoreCloseRate%</span>
                                                                         </div>
                                                                         <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
-                                                                            50% &times; @dept.ScoreCloseRate% = <strong class="text-dark">@dept.PtsClose pts</strong>
+                                                                            30% &times; @dept.ScoreCloseRate% = <strong class="text-dark">@dept.PtsClose pts</strong>
                                                                         </div>
                                                                     </div>
                                                                     <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
@@ -3417,13 +3417,13 @@
                                                                     <div>
                                                                         <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
                                                                             <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Capaian Target</span>
-                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot 15%</span>
+                                                                            <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot 35%</span>
                                                                         </div>
                                                                         <div class="my-2">
                                                                             <span class="fw-bold fs-4 text-primary">@dept.ScoreCapaian%</span>
                                                                         </div>
                                                                         <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
-                                                                            15% &times; @dept.ScoreCapaian% = <strong class="text-dark">@dept.PtsCapaian pts</strong>
+                                                                            35% &times; @dept.ScoreCapaian% = <strong class="text-dark">@dept.PtsCapaian pts</strong>
                                                                         </div>
                                                                     </div>
                                                                     <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
@@ -3813,7 +3813,7 @@
                                                 {
                                                     @if (currentMode == "company" || currentMode == "core")
                                                     {
-                                                        <div class="player-score-main" style="color: @GetRateColor((double)emp.totalScore); font-size: 13.5px; font-weight: 800; cursor: help;" data-bs-toggle="tooltip" data-bs-html="true" title="&lt;b&gt;Rincian 4 Pilar PTS:&lt;/b&gt;&lt;br&gt;&bull; Close Rate (50%): @emp.ptsClose pts (@emp.scoreCloseRate%)&lt;br&gt;&bull; Kualitas (25%): @emp.ptsKualitas pts (@emp.scoreKualitas%)&lt;br&gt;&bull; Capaian (15%): @emp.ptsCapaian pts (@emp.scoreCapaian%)&lt;br&gt;&bull; Beban (10%): @emp.ptsBeban pts (@emp.scoreSkalaBeban%)&lt;br&gt;&lt;b&gt;TOTAL: @emp.totalScore pts&lt;/b&gt;">
+                                                        <div class="player-score-main" style="color: @GetRateColor((double)emp.totalScore); font-size: 13.5px; font-weight: 800; cursor: help;" data-bs-toggle="tooltip" data-bs-html="true" title="&lt;b&gt;Rincian 4 Pilar PTS:&lt;/b&gt;&lt;br&gt;&bull; Capaian (35%): @emp.ptsCapaian pts (@emp.scoreCapaian%)&lt;br&gt;&bull; Close Rate (30%): @emp.ptsClose pts (@emp.scoreCloseRate%)&lt;br&gt;&bull; Kualitas (25%): @emp.ptsKualitas pts (@emp.scoreKualitas%)&lt;br&gt;&bull; Beban (10%): @emp.ptsBeban pts (@emp.scoreSkalaBeban%)&lt;br&gt;&lt;b&gt;TOTAL: @emp.totalScore pts&lt;/b&gt;">
                                                             @(((double)emp.totalScore).ToString("F1")) pts
                                                         </div>
                                                         <div class="player-score-sub" style="font-size: 10px; color: #64748b; font-weight: 600;" title="Kepatuhan Capaian Target SAP & Keaktifan Laporan (Nilai tambah saat skor PTS sama)">
@@ -3972,13 +3972,13 @@
                                                                         <div>
                                                                             <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
                                                                                 <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">1. Close Rate</span>
-                                                                                <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot 50%</span>
+                                                                                <span class="badge rounded-pill pts-card-badge" style="background: #dcfce7; color: #15803d;">Bobot 30%</span>
                                                                             </div>
                                                                             <div class="my-2">
                                                                                 <span class="fw-bold fs-4 text-success">@emp.scoreCloseRate%</span>
                                                                             </div>
                                                                             <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
-                                                                                50% &times; @emp.scoreCloseRate% = <strong class="text-dark">@emp.ptsClose pts</strong>
+                                                                                30% &times; @emp.scoreCloseRate% = <strong class="text-dark">@emp.ptsClose pts</strong>
                                                                             </div>
                                                                         </div>
                                                                         <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
@@ -4026,13 +4026,13 @@
                                                                         <div>
                                                                             <div class="d-flex align-items-center justify-content-between gap-1 mb-2 pb-1.5" style="border-bottom: 1px solid #f1f5f9;">
                                                                                 <span class="fw-bold text-dark text-nowrap" style="font-size: 11.5px;">3. Capaian Target</span>
-                                                                                <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot 15%</span>
+                                                                                <span class="badge rounded-pill pts-card-badge" style="background: #dbeafe; color: #1d4ed8;">Bobot 35%</span>
                                                                             </div>
                                                                             <div class="my-2">
                                                                                 <span class="fw-bold fs-4 text-primary">@emp.scoreCapaian%</span>
                                                                             </div>
                                                                             <div class="py-1 px-2 rounded text-center" style="background: #f8fafc; border: 1px solid #f1f5f9; font-size: 11px; color: #334155; white-space: nowrap;">
-                                                                                15% &times; @emp.scoreCapaian% = <strong class="text-dark">@emp.ptsCapaian pts</strong>
+                                                                                35% &times; @emp.scoreCapaian% = <strong class="text-dark">@emp.ptsCapaian pts</strong>
                                                                             </div>
                                                                         </div>
                                                                         <div class="pt-2 mt-2" style="border-top: 1px solid #f1f5f9; font-size: 10px; color: #475569;">
@@ -4208,7 +4208,7 @@
                     <div class="p-2.5 rounded-3 mb-3 text-center shadow-xs" style="background: #eff6ff; border: 1px dashed #93c5fd; font-size: 11.5px;">
                         <div class="text-primary fw-semibold mb-0.5" style="letter-spacing: 0.3px;">Formula Agregat PTS:</div>
                         <div class="fw-bold text-dark font-monospace" style="font-size: 12px;">
-                            (50% &times; Close Rate) + (25% &times; Kualitas) + (15% &times; Capaian) + (10% &times; Skala Beban)
+                            (35% &times; Capaian) + (30% &times; Close Rate) + (25% &times; Kualitas) + (10% &times; Skala Beban)
                         </div>
                     </div>
 
@@ -4223,11 +4223,11 @@
                                             <div class="rounded p-1.5 text-success" style="background: #ecfdf5;"><i class="bi bi-shield-check fs-5"></i></div>
                                             <div class="fw-bold text-dark" style="font-size: 13px;">1. Close Rate Action Plan</div>
                                         </div>
-                                        <span class="badge bg-success rounded-pill px-2 py-0.5" style="font-size: 10px;">Bobot 50%</span>
+                                        <span class="badge bg-success rounded-pill px-2 py-0.5" style="font-size: 10px;">Bobot 30%</span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2 mb-2">
                                         <span class="fw-bold fs-4 text-success" id="mRealCrScore">-</span>
-                                        <span class="text-secondary" style="font-size: 11.5px;">&rarr; 50% &times; <span id="mRealCrFormula">-</span> = <strong class="text-dark" id="mRealCrPts">-</strong></span>
+                                        <span class="text-secondary" style="font-size: 11.5px;">&rarr; 30% &times; <span id="mRealCrFormula">-</span> = <strong class="text-dark" id="mRealCrPts">-</strong></span>
                                     </div>
                                     <div class="p-2 rounded bg-light border text-secondary" style="font-size: 11px; line-height: 1.45;">
                                         <div id="mRealCrDetails" class="mb-1 fw-semibold text-dark">-</div>
@@ -4269,11 +4269,11 @@
                                             <div class="rounded p-1.5 text-primary" style="background: #eff6ff;"><i class="bi bi-bullseye fs-5"></i></div>
                                             <div class="fw-bold text-dark" style="font-size: 13px;">3. Capaian Target (Volume)</div>
                                         </div>
-                                        <span class="badge bg-primary rounded-pill px-2 py-0.5" style="font-size: 10px;">Bobot 15%</span>
+                                        <span class="badge bg-primary rounded-pill px-2 py-0.5" style="font-size: 10px;">Bobot 35%</span>
                                     </div>
                                     <div class="d-flex align-items-baseline gap-2 mb-2">
                                         <span class="fw-bold fs-4 text-primary" id="mRealCapaianScore">-</span>
-                                        <span class="text-secondary" style="font-size: 11.5px;">&rarr; 15% &times; <span id="mRealCapaianFormula">-</span> = <strong class="text-dark" id="mRealCapaianPts">-</strong></span>
+                                        <span class="text-secondary" style="font-size: 11.5px;">&rarr; 35% &times; <span id="mRealCapaianFormula">-</span> = <strong class="text-dark" id="mRealCapaianPts">-</strong></span>
                                     </div>
                                     <div class="p-2 rounded bg-light border text-secondary" style="font-size: 11px; line-height: 1.45;">
                                         <div id="mRealCapaianDetails" class="mb-1 fw-semibold text-dark">-</div>
@@ -4328,7 +4328,7 @@
                     <div class="p-3 rounded-3 mb-4 text-center shadow-sm" style="background: #ffffff; border: 1px solid #bfdbfe;">
                         <div class="text-muted fw-bold mb-1" style="font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;">Formula Agregat PTS</div>
                         <div class="fw-bold fs-5 text-primary">
-                            Skor = (50% &times; Close Rate) + (25% &times; Kualitas) + (15% &times; Capaian) + (10% &times; Skala Beban)
+                            Skor = (35% &times; Capaian) + (30% &times; Close Rate) + (25% &times; Kualitas) + (10% &times; Skala Beban)
                         </div>
                     </div>
 
@@ -4342,10 +4342,10 @@
                                             <div class="rounded p-2 text-success" style="background: #ecfdf5;"><i class="bi bi-shield-check fs-5"></i></div>
                                             <div class="fw-bold text-dark" style="font-size: 13.5px;">1. Close Rate Action Plan</div>
                                         </div>
-                                        <span class="badge bg-success rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 50%</span>
+                                        <span class="badge bg-success rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 30%</span>
                                     </div>
                                     <p class="text-muted mb-2" style="font-size: 12px; line-height: 1.5;">
-                                        Tingkat penyelesaian dan tindak lanjut temuan bahaya/isu K3LH. Merupakan pilar keselamatan paling kritis dengan bobot tertinggi (50 pts).
+                                        Tingkat penyelesaian dan tindak lanjut temuan bahaya/isu K3LH. Merupakan pilar keselamatan kunci dengan bobot 30 pts.
                                     </p>
                                     <div class="p-2 rounded bg-light border" style="font-size: 11px; color: #334155;">
                                         <div class="fw-bold text-dark mb-1"><i class="bi bi-shield-check text-success me-1"></i>Standar Validasi &amp; Integritas Data (Dual Accountability):</div>
@@ -4393,7 +4393,7 @@
                                             <div class="rounded p-2 text-primary" style="background: #eff6ff;"><i class="bi bi-bullseye fs-5"></i></div>
                                             <div class="fw-bold text-dark" style="font-size: 13.5px;">3. Capaian Target (Volume)</div>
                                         </div>
-                                        <span class="badge bg-primary rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 15%</span>
+                                        <span class="badge bg-primary rounded-pill px-2.5 py-1" style="font-size: 11px;">Bobot 35%</span>
                                     </div>
                                     <p class="text-muted mb-2" style="font-size: 12px; line-height: 1.5;">
                                         Persentase pemenuhan kuota fisik 5 program wajib SAP (Hazard, Inspeksi, Safety Talk, Observasi, Coaching, P5M) dengan batas maksimal 100%.
@@ -4442,11 +4442,11 @@
                             Misalkan seorang pengawas memiliki <strong>Close Rate 100%</strong>, <strong>Kualitas 100%</strong>, <strong>Capaian Target 93.3%</strong> (14 dari 15 tugas), dan memegang <strong>Target Tertinggi di Dept (100%)</strong>:
                         </div>
                         <div class="p-2 rounded bg-light font-monospace text-dark d-flex flex-wrap gap-2 justify-content-between align-items-center" style="font-size: 11px;">
-                            <span>&bull; Close Rate: 50% &times; 100% = <strong>50.0 pts</strong></span>
+                            <span>&bull; Capaian: 35% &times; 93.3% = <strong>32.7 pts</strong></span>
+                            <span>&bull; Close Rate: 30% &times; 100% = <strong>30.0 pts</strong></span>
                             <span>&bull; Kualitas: 25% &times; 100% = <strong>25.0 pts</strong></span>
-                            <span>&bull; Capaian: 15% &times; 93.3% = <strong>14.0 pts</strong></span>
                             <span>&bull; Beban: 10% &times; 100% = <strong>10.0 pts</strong></span>
-                            <span class="text-primary fw-bold">&rarr; Total: <strong>99.0 pts (99%)</strong></span>
+                            <span class="text-primary fw-bold">&rarr; Total: <strong>97.7 pts (97.7%)</strong></span>
                         </div>
                     </div>
                 </div>
@@ -5744,11 +5744,11 @@
                     }
                     if (elCrDesc) {
                         if (parseFloat(scoreClose) === 0) {
-                            elCrDesc.textContent = 'Close Rate 0% terjadi karena terdapat temuan yang dilaporkan atau ditugaskan kepada Anda yang belum berstatus Closed (masih Open). Segera selesaikan action plan tersebut untuk meraih 50 pts penuh.';
+                            elCrDesc.textContent = 'Close Rate 0% terjadi karena terdapat temuan yang dilaporkan atau ditugaskan kepada Anda yang belum berstatus Closed (masih Open). Segera selesaikan action plan tersebut untuk meraih 30 pts penuh.';
                         } else if (parseFloat(scoreClose) < 100) {
                             elCrDesc.textContent = 'Penutupan temuan mandiri dibatasi maks 50% (Dual Accountability) guna validasi silang fakta lapangan. Selesaikan tugas sebagai PIC untuk nilai maksimal.';
                         } else {
-                            elCrDesc.textContent = 'Luar biasa! Seluruh temuan yang dibuat maupun ditugaskan kepada Anda telah tuntas 100% (50.0 pts maksimal).';
+                            elCrDesc.textContent = 'Luar biasa! Seluruh temuan yang dibuat maupun ditugaskan kepada Anda telah tuntas 100% (30.0 pts maksimal).';
                         }
                     }
                 }

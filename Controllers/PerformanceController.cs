@@ -3990,9 +3990,9 @@ namespace MBS_SAP.Controllers
                         ? cQ.ScoreKualitas
                         : ((int)x.TotalActual > 0 ? 100.0 : 0.0);
 
-                    double wClose = isCurrentNewPolicy ? 0.50 : 0.40;
+                    double wClose = isCurrentNewPolicy ? 0.30 : 0.40;
                     double wKualitas = 0.25;
-                    double wCapaian = isCurrentNewPolicy ? 0.15 : 0.20;
+                    double wCapaian = isCurrentNewPolicy ? 0.35 : 0.20;
                     double wBeban = isCurrentNewPolicy ? 0.10 : 0.15;
 
                     double ptsClose = Math.Round(scoreCloseRate * wClose, 2);
@@ -4133,9 +4133,9 @@ namespace MBS_SAP.Controllers
                             ? Math.Min(100.0, Math.Max(0.0, ((double)empTarget / maxTargetPlayerLeague) * 100.0))
                             : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
-                        double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
+                        double ptsClose = Math.Round(scoreCloseRate * 0.30, 2);
                         double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
-                        double ptsCapaian = Math.Round(scoreCapaian * 0.15, 2);
+                        double ptsCapaian = Math.Round(scoreCapaian * 0.35, 2);
                         double ptsBeban = Math.Round(scoreSkalaBeban * 0.10, 2);
                         double totalScore = Math.Round(ptsClose + ptsKualitas + ptsCapaian + ptsBeban, 2);
 
@@ -4319,9 +4319,9 @@ namespace MBS_SAP.Controllers
                         ? (d.TotalTarget >= maxDeptTarget ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(d.TotalTarget + 1) / Math.Log10(maxDeptTarget + 1)) * 100.0)))
                         : 0.0;
 
-                    double ptsClose = Math.Round(scoreClose * 0.50, 2);
+                    double ptsClose = Math.Round(scoreClose * 0.30, 2);
                     double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
-                    double ptsCapaian = Math.Round(scoreCapaian * 0.15, 2);
+                    double ptsCapaian = Math.Round(scoreCapaian * 0.35, 2);
                     double ptsBeban = Math.Round(scoreBeban * 0.10, 2);
                     double totalScore = Math.Round(ptsClose + ptsKualitas + ptsCapaian + ptsBeban, 2);
 
@@ -4418,9 +4418,9 @@ namespace MBS_SAP.Controllers
                         ? Math.Min(100.0, Math.Max(0.0, ((double)empTarget / maxTargetPlayerComp) * 100.0))
                         : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
-                    double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
+                    double ptsClose = Math.Round(scoreCloseRate * 0.30, 2);
                     double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
-                    double ptsCapaian = Math.Round(scoreCapaian * 0.15, 2);
+                    double ptsCapaian = Math.Round(scoreCapaian * 0.35, 2);
                     double ptsBeban = Math.Round(scoreSkalaBeban * 0.10, 2);
                     double totalScore = Math.Round(ptsClose + ptsKualitas + ptsCapaian + ptsBeban, 2);
 
@@ -4763,9 +4763,9 @@ namespace MBS_SAP.Controllers
                         ? cQ.ScoreKualitas
                         : ((int)x.TotalActual > 0 ? 100.0 : 0.0);
 
-                    double wClose = isCurrentNewPolicy ? 0.50 : 0.40;
+                    double wClose = isCurrentNewPolicy ? 0.30 : 0.40;
                     double wKualitas = 0.25;
-                    double wCapaian = isCurrentNewPolicy ? 0.15 : 0.20;
+                    double wCapaian = isCurrentNewPolicy ? 0.35 : 0.20;
                     double wBeban = isCurrentNewPolicy ? 0.10 : 0.15;
 
                     double ptsClose = Math.Round(scoreCloseRate * wClose, 2);
@@ -4910,9 +4910,9 @@ namespace MBS_SAP.Controllers
                         ? (d.TotalTarget >= maxDeptTargetExcel ? 100.0 : Math.Min(100.0, Math.Max(0.0, (Math.Log10(d.TotalTarget + 1) / Math.Log10(maxDeptTargetExcel + 1)) * 100.0)))
                         : 0.0;
 
-                    double ptsClose = Math.Round(scoreClose * 0.50, 2);
+                    double ptsClose = Math.Round(scoreClose * 0.30, 2);
                     double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
-                    double ptsCapaian = Math.Round(scoreCapaian * 0.15, 2);
+                    double ptsCapaian = Math.Round(scoreCapaian * 0.35, 2);
                     double ptsBeban = Math.Round(scoreBeban * 0.10, 2);
                     double totalScore = Math.Round(ptsClose + ptsKualitas + ptsCapaian + ptsBeban, 2);
 
@@ -5009,9 +5009,9 @@ namespace MBS_SAP.Controllers
                         ? Math.Min(100.0, Math.Max(0.0, ((double)empTarget / maxTargetPlayerExcel) * 100.0))
                         : ((bool)e.isActivelyReporting ? 100.0 : 0.0);
 
-                    double ptsClose = Math.Round(scoreCloseRate * 0.50, 2);
+                    double ptsClose = Math.Round(scoreCloseRate * 0.30, 2);
                     double ptsKualitas = Math.Round(scoreKualitas * 0.25, 2);
-                    double ptsCapaian = Math.Round(scoreCapaian * 0.15, 2);
+                    double ptsCapaian = Math.Round(scoreCapaian * 0.35, 2);
                     double ptsBeban = Math.Round(scoreSkalaBeban * 0.10, 2);
                     double totalScore = Math.Round(ptsClose + ptsKualitas + ptsCapaian + ptsBeban, 2);
 
@@ -8502,8 +8502,8 @@ namespace MBS_SAP.Controllers
 
                 if (isCurrentNewPolicy)
                 {
-                    // Kebijakan Baru (Mulai September 2026): Close Rate 50% (Beban Pembuat SAP) + Kualitas SAP 25% + Capaian 15% + Skala Beban 10% (Kecepatan 0%)
-                    p.TotalScore = (p.ScoreCloseRate * 0.50) + (p.ScoreKualitas * 0.25) + (p.ScorePencapaian * 0.15) + (p.ScoreSkalaBeban * 0.10);
+                    // Kebijakan Baru (Mulai September 2026): Capaian 35% + Close Rate 30% + Kualitas SAP 25% + Skala Beban 10% (Kecepatan 0%)
+                    p.TotalScore = (p.ScorePencapaian * 0.35) + (p.ScoreCloseRate * 0.30) + (p.ScoreKualitas * 0.25) + (p.ScoreSkalaBeban * 0.10);
                 }
                 else
                 {
