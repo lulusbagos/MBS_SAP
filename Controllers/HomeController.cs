@@ -148,36 +148,36 @@ namespace MBS_SAP.Controllers
                 int computedOnsiteDays = totalDaysInMonth;
                 bool hasRoster = false;
 
-                int cutiDays = 0;
                 bool isTugasExempt = false;
 
                 if (stats.RosterHistory != null && stats.RosterHistory.Any())
                 {
+                    int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in stats.RosterHistory)
                     {
+                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
                             var ovTStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
                             var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
                             if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue;
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
                         }
 
-                        // Target HANYA berkurang ketika karyawan cuti
-                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= startOfMonth)
+                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
+                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                        if (overlapStart <= overlapEnd)
                         {
-                            var ovCutiStart = r.AwalCuti > startOfMonth ? r.AwalCuti : startOfMonth;
-                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
-                            if (ovCutiStart <= ovCutiEnd)
-                            {
-                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
-                            }
+                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
+                    if (hasAnyRoster)
+                    {
+                        hasRoster = true;
+                        computedOnsiteDays = isTugasExempt ? 0 : computedOnsite;
+                    }
                 }
-
-                computedOnsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonth - cutiDays);
-                hasRoster = (cutiDays > 0 || isTugasExempt);
 
                 double ratio = hasRoster ? (double)computedOnsiteDays / totalDaysInMonth : 1.0;
 
@@ -244,11 +244,8 @@ namespace MBS_SAP.Controllers
 
                 int totalActionPlansCount = await actionPlanQuery.CountAsync();
 
-                var rawMonthSafetyTalks = await safetyTalkQuery.Where(s => s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth).Select(s => s.Tanggal).ToListAsync();
-                int thisMonthSafetyTalksCount = rawMonthSafetyTalks.Select(d => $"{d.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(d)}").Distinct().Count();
-
-                var rawTotalSafetyTalks = await safetyTalkQuery.Select(s => s.Tanggal).ToListAsync();
-                int totalSafetyTalksCount = rawTotalSafetyTalks.Select(d => $"{d.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(d)}").Distinct().Count();
+                int thisMonthSafetyTalksCount = await safetyTalkQuery.Where(s => s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth).Select(s => new { s.Tanggal, s.Waktu }).Distinct().CountAsync();
+                int totalSafetyTalksCount = await safetyTalkQuery.Select(s => new { s.Tanggal, s.Waktu }).Distinct().CountAsync();
 
                 int thisMonthP5msCount = await p5mQuery.Where(p => p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth).Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();
                 int totalP5msCount = await p5mQuery.Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();

@@ -219,6 +219,15 @@ body.light-theme .top-navbar {
     background-color: rgba(255, 255, 255, 0.95) !important;
 }
 
+body.light-theme #mobileNavOffcanvas {
+    background-color: #ffffff !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.light-theme #mobileNavOffcanvas .btn-close {
+    filter: none !important;
+}
+
 body.light-theme .nav-item-bottom {
     color: #94a3b8 !important;
 }
@@ -636,13 +645,14 @@ html, body {
 
 /* Bottom Navigation Bar (Mobile Viewports) */
 .bottom-nav {
-    position: absolute;
+    position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     height: 68px;
     background-color: var(--bg-nav-bottom);
     backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border-top: 1px solid var(--border-color);
     display: flex;
     justify-content: flex-start;
@@ -650,7 +660,7 @@ html, body {
     gap: 2px;
     padding: 0 8px;
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    z-index: 99;
+    z-index: 1030;
     transition: background-color var(--transition-normal), border-color var(--transition-normal);
     overflow-x: auto;
     overflow-y: hidden;
@@ -1740,7 +1750,11 @@ body.light-theme .dropdown-divider {
     
     /* 2. Optimizing spacing for layout containers in HP mode */
     .page-content {
-        padding: 16px 12px !important;
+        padding: 16px 12px 88px 12px !important;
+    }
+
+    .page-content.no-nav {
+        padding-bottom: 16px !important;
     }
     
     .card-sap {

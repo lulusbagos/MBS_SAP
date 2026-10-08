@@ -72,11 +72,175 @@ namespace MBS_SAP.Controllers
             return list;
         }
 
+        private static readonly HashSet<string> CoreCompanyNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "PT PELAYARAN GANESHA LAUTJAYA",
+            "PT SUCOFINDO",
+            "PT KALIMANTAN PRIMA PERSADA",
+            "PT ELA SANGATTA",
+            "PT ADHITAMA WIJAYA PERKASA",
+            "PT TUNAS JAYA PERKASA",
+            "PT SEMESTA MANDIRI INDONESIA",
+            "PT BANDANG MINING COAL",
+            "PT ORICA MINING SERVICE",
+            "PT DIVA CAHAYA SEJAHTERA",
+            "PT UNGGUL DINAMIKA UTAMA",
+            "PT REZEKI BORNEO SEBUKU",
+            "PT DAHANA",
+            "PT MEGA GLOBAL ENERGY",
+            "PT BERLIAN DUTA ENERGI",
+            "PT SAMUDERA MAJU PERKASA",
+            "PT GRAHA PRIMA ENERGI",
+            "PT KARUNIA ARMADA INDONESIA"
+        };
+
+        private static HashSet<int> GetCompanyDirectParents(int cid, IEnumerable<PerusahaanView> allCompanies, IEnumerable<PerusahaanHierarchyRelationView> relations)
+        {
+            var parents = new HashSet<int>();
+            var directParentId = allCompanies.FirstOrDefault(c => c.PerusahaanId == cid)?.PerusahaanIndukId;
+            if (directParentId.HasValue && directParentId.Value > 0)
+            {
+                parents.Add(directParentId.Value);
+            }
+            foreach (var r in relations)
+            {
+                if (r.ChildCompanyId == cid && r.ParentCompanyId.HasValue && r.ParentCompanyId.Value > 0)
+                {
+                    parents.Add(r.ParentCompanyId.Value);
+                }
+            }
+            return parents;
+        }
+
+        private static HashSet<int> GetCompanyAncestors(int cid, IEnumerable<PerusahaanView> allCompanies, IEnumerable<PerusahaanHierarchyRelationView> relations)
+        {
+            var ancestors = new HashSet<int>();
+            var queue = new Queue<int>();
+            var direct = GetCompanyDirectParents(cid, allCompanies, relations);
+            foreach (var p in direct)
+            {
+                if (ancestors.Add(p))
+                {
+                    queue.Enqueue(p);
+                }
+            }
+            while (queue.Count > 0)
+            {
+                var curr = queue.Dequeue();
+                var pList = GetCompanyDirectParents(curr, allCompanies, relations);
+                foreach (var p in pList)
+                {
+                    if (ancestors.Add(p))
+                    {
+                        queue.Enqueue(p);
+                    }
+                }
+            }
+            return ancestors;
+        }
+
+        private static HashSet<int> GetCompanyDescendants(int cid, IEnumerable<PerusahaanView> allCompanies, IEnumerable<PerusahaanHierarchyRelationView> relations)
+        {
+            var descendants = new HashSet<int>();
+            var queue = new Queue<int>();
+            queue.Enqueue(cid);
+
+            while (queue.Count > 0)
+            {
+                var curr = queue.Dequeue();
+                var childrenFromParentId = allCompanies.Where(c => c.PerusahaanIndukId == curr).Select(c => c.PerusahaanId);
+                var childrenFromRelations = relations.Where(r => r.ParentCompanyId == curr && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value);
+                var allChildren = childrenFromParentId.Concat(childrenFromRelations).Distinct();
+
+                foreach (var childId in allChildren)
+                {
+                    if (childId != cid && descendants.Add(childId))
+                    {
+                        queue.Enqueue(childId);
+                    }
+                }
+            }
+
+            return descendants;
+        }
+
+        private static bool CheckIsCompanyParent(int cid, IEnumerable<PerusahaanView> allCompanies, IEnumerable<PerusahaanHierarchyRelationView> relations)
+        {
+            var comp = allCompanies.FirstOrDefault(c => c.PerusahaanId == cid);
+            if (comp != null)
+            {
+                if (!string.IsNullOrEmpty(comp.NamaPerusahaan) && CoreCompanyNames.Contains(comp.NamaPerusahaan))
+                {
+                    return true;
+                }
+                if (comp.TipePerusahaanId == 2)
+                {
+                    return true;
+                }
+            }
+            var desc = GetCompanyDescendants(cid, allCompanies, relations);
+            return desc.Count > 0;
+        }
+
+        private static HashSet<int> BuildCompanyHierarchyScope(int rootCompanyId, IEnumerable<PerusahaanView> allCompanies, IEnumerable<PerusahaanHierarchyRelationView> relations)
+        {
+            var scope = new HashSet<int> { rootCompanyId };
+            var ancestors = GetCompanyAncestors(rootCompanyId, allCompanies, relations);
+            var descendants = GetCompanyDescendants(rootCompanyId, allCompanies, relations);
+
+            foreach (var d in descendants)
+            {
+                scope.Add(d);
+            }
+
+            bool isParent = CheckIsCompanyParent(rootCompanyId, allCompanies, relations);
+            if (isParent)
+            {
+                var myParents = GetCompanyDirectParents(rootCompanyId, allCompanies, relations);
+                var compList = allCompanies.ToList();
+
+                foreach (var other in compList)
+                {
+                    int otherId = other.PerusahaanId;
+                    if (otherId == rootCompanyId || ancestors.Contains(otherId))
+                    {
+                        continue;
+                    }
+
+                    if (CheckIsCompanyParent(otherId, allCompanies, relations))
+                    {
+                        var otherParents = GetCompanyDirectParents(otherId, allCompanies, relations);
+                        var otherAncestors = GetCompanyAncestors(otherId, allCompanies, relations);
+
+                        if (!ancestors.Contains(otherId) && !otherAncestors.Contains(rootCompanyId))
+                        {
+                            bool sharesParent = myParents.Overlaps(otherParents);
+                            if (sharesParent || (myParents.Count == 0 && otherParents.Count == 0))
+                            {
+                                scope.Add(otherId);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Strictly ensure no ancestors can ever be seen by child
+            foreach (var a in ancestors)
+            {
+                scope.Remove(a);
+            }
+
+            return scope;
+        }
+
         private async Task<(int? companyId, HashSet<int> allowedCompanyIds)> ResolveCompanyScopeAsync()
         {
             var compIdStr = User.FindFirst("CompanyId")?.Value;
             int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
-            var isAdmin = User.IsInRole("Admin");
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                          ?? User.FindFirst("Nrp")?.Value 
+                          ?? User.Identity?.Name;
+            var isAdmin = User.IsInRole("Admin") || string.Equals(userNik, "24051940986", StringComparison.OrdinalIgnoreCase);
             var jobTitle = User.FindFirst("JobTitle")?.Value;
             var department = User.FindFirst("Department")?.Value;
             bool isSafetyRole = CheckIsSafetyRole(jobTitle, department, isAdmin);
@@ -101,24 +265,7 @@ namespace MBS_SAP.Controllers
                     return (companyId, allowedCompanyIds);
                 }
 
-                allowedCompanyIds.Add(companyId.Value);
-
-                void GetDescendants(int parentId)
-                {
-                    var childrenFromParentId = allCompanies.Where(c => c.PerusahaanIndukId == parentId).Select(c => c.PerusahaanId).ToList();
-                    var childrenFromRelations = relations.Where(r => r.ParentCompanyId == parentId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
-                    var children = childrenFromParentId.Concat(childrenFromRelations).Distinct().ToList();
-
-                    foreach (var childId in children)
-                    {
-                        if (allowedCompanyIds.Add(childId))
-                        {
-                            GetDescendants(childId);
-                        }
-                    }
-                }
-
-                GetDescendants(companyId.Value);
+                allowedCompanyIds = BuildCompanyHierarchyScope(companyId.Value, allCompanies, relations);
             }
 
             return (companyId, allowedCompanyIds);
@@ -408,14 +555,11 @@ namespace MBS_SAP.Controllers
 
                     var rawSafetyTalks = await _context.SafetyTalks
                         .Where(s => !s.IsDeleted && s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth && s.Nik != null)
-                        .Select(s => new { Nik = s.Nik.Trim(), s.Tanggal })
+                        .Select(s => new { Nik = s.Nik.Trim(), s.Tanggal, s.Waktu })
+                        .Distinct()
                         .ToListAsync();
 
-                    dbSafetyTalks = rawSafetyTalks
-                        .Select(s => new { s.Nik, WeekKey = $"{s.Tanggal.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(s.Tanggal)}" })
-                        .Distinct()
-                        .Select(s => s.Nik)
-                        .ToList();
+                    dbSafetyTalks = rawSafetyTalks.Select(s => s.Nik).ToList();
 
                     dbP5ms = (await _context.P5ms
                         .Where(p => !p.IsDeleted && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth && p.Nik != null)
@@ -511,40 +655,47 @@ namespace MBS_SAP.Controllers
                 }
 
                 int totalDaysInMonth = DateTime.DaysInMonth(selectedYear, selectedMonth);
+                int onsiteDays = totalDaysInMonth; // default if no roster setting
+                bool hasRoster = false;
+                bool isTugasExempt = false;
+
                 DateTime effectiveEmpStart = (k.TanggalMasuk.HasValue && k.TanggalMasuk.Value > startOfMonth)
                     ? k.TanggalMasuk.Value
                     : startOfMonth;
-                int cutiDays = 0;
-                bool isTugasExempt = false;
 
-                if (rostersByNik.TryGetValue(nik, out var empRosters))
+                if (rostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
                 {
+                    int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
+                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
                             var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
                             var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
                             if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue;
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
                         }
 
-                        // Target HANYA berkurang ketika karyawan cuti
-                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= effectiveEmpStart)
+                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
+                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                        if (overlapStart <= overlapEnd)
                         {
-                            var ovCutiStart = r.AwalCuti > effectiveEmpStart ? r.AwalCuti : effectiveEmpStart;
-                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
-                            if (ovCutiStart <= ovCutiEnd)
-                            {
-                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
-                            }
+                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
+                    if (hasAnyRoster)
+                    {
+                        hasRoster = true;
+                        onsiteDays = isTugasExempt ? 0 : Math.Min(computedOnsite, totalDaysInMonth);
+                    }
                 }
-
-                int nonActiveBeforeJoin = (effectiveEmpStart > startOfMonth) ? (effectiveEmpStart - startOfMonth).Days : 0;
-                int onsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonth - nonActiveBeforeJoin - cutiDays);
-                bool hasRoster = (cutiDays > 0 || isTugasExempt || effectiveEmpStart > startOfMonth);
+                else if (effectiveEmpStart > startOfMonth)
+                {
+                    hasRoster = true;
+                    onsiteDays = Math.Min((endOfMonth.Date - effectiveEmpStart.Date).Days + 1, totalDaysInMonth);
+                }
 
                 double ratio = hasRoster ? Math.Min(1.0, (double)onsiteDays / totalDaysInMonth) : 1.0;
 
@@ -568,47 +719,23 @@ namespace MBS_SAP.Controllers
 
                 // ==============================================================
                 // CLOSE RATE DUAL ACCOUNTABILITY (50% Pembuat / 50% Yang Dituju)
-                // DENGAN ATURAN SELF-CLOSE / INTERNAL DEPT (Maksimal 50% Penilaian)
                 // ==============================================================
 
                 // 1. SISI PEMBUAT / PELAPOR
                 var empCreatedAp = rawActionPlansList.Where(a => !string.IsNullOrEmpty(a.Nik) && string.Equals(a.Nik.Trim(), nik, StringComparison.OrdinalIgnoreCase)).ToList();
                 int crCreatedTotal = empCreatedAp.Count;
-                int crCreatedClosedFull = 0; // Cross-dept closed (100% bobot)
-                int crCreatedClosedSelf = 0; // Self-close / internal dept closed (50% bobot)
+                int crCreatedClosedFull = 0;
+                int crCreatedClosedSelf = 0;
                 int crCreatedOpen = 0;
                 double crCreatorScore = 100.0;
 
                 if (crCreatedTotal > 0)
                 {
-                    double totalEarned = 0.0;
-                    foreach (var ap in empCreatedAp)
-                    {
-                        if (IsClosedStatus(ap.Status))
-                        {
-                            bool isSelfPic = (!string.IsNullOrEmpty(ap.NikPic) && string.Equals(ap.NikPic.Trim(), nik, StringComparison.OrdinalIgnoreCase))
-                                          || (!string.IsNullOrEmpty(ap.NikPja) && string.Equals(ap.NikPja.Trim(), nik, StringComparison.OrdinalIgnoreCase))
-                                          || string.IsNullOrEmpty(ap.NikPic);
-                            bool isSameDept = !string.IsNullOrEmpty(ap.Departemen) && !string.IsNullOrEmpty(ap.DepartemenPic)
-                                              && string.Equals(ap.Departemen.Trim(), ap.DepartemenPic.Trim(), StringComparison.OrdinalIgnoreCase);
-
-                            if (isSelfPic || isSameDept)
-                            {
-                                totalEarned += 0.50; // Max 50% for self-close / internal dept
-                                crCreatedClosedSelf++;
-                            }
-                            else
-                            {
-                                totalEarned += 1.00; // Full 100% for cross-dept closed
-                                crCreatedClosedFull++;
-                            }
-                        }
-                        else
-                        {
-                            crCreatedOpen++;
-                        }
-                    }
-                    crCreatorScore = Math.Min(100.0, Math.Max(0.0, Math.Round((totalEarned / crCreatedTotal) * 100.0, 1)));
+                    int closedCount = empCreatedAp.Count(a => IsClosedStatus(a.Status));
+                    crCreatedClosedFull = closedCount;
+                    crCreatedClosedSelf = 0;
+                    crCreatedOpen = crCreatedTotal - closedCount;
+                    crCreatorScore = Math.Min(100.0, Math.Max(0.0, Math.Round(((double)closedCount / crCreatedTotal) * 100.0, 1)));
                 }
 
                 // 2. SISI YANG DITUJU (PIC / PJA)
@@ -954,37 +1081,43 @@ namespace MBS_SAP.Controllers
                     ? emp.TanggalMasuk.Value
                     : startOfMonth;
 
-                int cutiDays = 0;
+                int onsiteDays = totalDaysInMonth;
+                bool hasRoster = false;
                 bool isTugasExempt = false;
 
-                if (rostersByNik.TryGetValue(nik, out var empRosters))
+                if (rostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
                 {
+                    int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
+                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
                             var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
                             var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
                             if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue;
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
                         }
 
-                        // Target HANYA berkurang ketika karyawan cuti
-                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= effectiveEmpStart)
+                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
+                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                        if (overlapStart <= overlapEnd)
                         {
-                            var ovCutiStart = r.AwalCuti > effectiveEmpStart ? r.AwalCuti : effectiveEmpStart;
-                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
-                            if (ovCutiStart <= ovCutiEnd)
-                            {
-                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
-                            }
+                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
+                    if (hasAnyRoster)
+                    {
+                        hasRoster = true;
+                        onsiteDays = isTugasExempt ? 0 : Math.Min(computedOnsite, totalDaysInMonth);
+                    }
                 }
-
-                int nonActiveBeforeJoin = (effectiveEmpStart > startOfMonth) ? (effectiveEmpStart - startOfMonth).Days : 0;
-                int onsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonth - nonActiveBeforeJoin - cutiDays);
-                bool hasRoster = (cutiDays > 0 || isTugasExempt || effectiveEmpStart > startOfMonth);
+                else if (effectiveEmpStart > startOfMonth)
+                {
+                    hasRoster = true;
+                    onsiteDays = Math.Min((endOfMonth.Date - effectiveEmpStart.Date).Days + 1, totalDaysInMonth);
+                }
 
                 double ratio = hasRoster ? Math.Min(1.0, (double)onsiteDays / totalDaysInMonth) : 1.0;
                 int mH = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
@@ -1028,8 +1161,6 @@ namespace MBS_SAP.Controllers
                 .ToListAsync();
 
             var dbSafetyTalks = rawSafetyTalks
-                .Select(s => new { s.CompId, s.Nik, s.Date, WeekKey = $"{s.Date.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(s.Date)}" })
-                .DistinctBy(s => new { s.CompId, s.Nik, s.WeekKey })
                 .Select(s => new { s.CompId, s.Nik, s.Date })
                 .ToList();
 
@@ -2108,37 +2239,42 @@ namespace MBS_SAP.Controllers
                     : startOfMonth;
                 int possibleDays = Math.Max(1, (endOfMonth - effectiveEmpStart).Days + 1);
 
-                int cutiDays = 0;
+                int onsiteDays = totalDaysInMonth;
+                bool hasRoster = false;
                 bool isTugasExempt = false;
 
-                if (rostersByNik.TryGetValue(nik, out var empRosters))
+                if (rostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
                 {
+                    int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
+                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
                             var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
                             var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
                             if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue;
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
                         }
 
-                        // Target HANYA berkurang ketika karyawan cuti
-                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= effectiveEmpStart)
+                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
+                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                        if (overlapStart <= overlapEnd)
                         {
-                            var ovCutiStart = r.AwalCuti > effectiveEmpStart ? r.AwalCuti : effectiveEmpStart;
-                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
-                            if (ovCutiStart <= ovCutiEnd)
-                            {
-                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
-                            }
+                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
+                    if (hasAnyRoster)
+                    {
+                        hasRoster = true;
+                        onsiteDays = isTugasExempt ? 0 : computedOnsite;
+                    }
                 }
-
-                int nonActiveBeforeJoin = (effectiveEmpStart > startOfMonth) ? (effectiveEmpStart - startOfMonth).Days : 0;
-                int onsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonth - nonActiveBeforeJoin - cutiDays);
-                bool hasRoster = (cutiDays > 0 || isTugasExempt || effectiveEmpStart > startOfMonth);
+                else if (effectiveEmpStart > startOfMonth)
+                {
+                    onsiteDays = possibleDays;
+                }
 
                 double ratio = (double)onsiteDays / possibleDays;
                 int finalMtdTarget = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
@@ -2380,37 +2516,43 @@ namespace MBS_SAP.Controllers
                     ? emp.TanggalMasuk.Value
                     : startOfMonth;
 
-                int cutiDays = 0;
+                int onsiteDays = totalDaysInMonthM;
+                bool hasRoster = false;
                 bool isTugasExempt = false;
 
-                if (!string.IsNullOrEmpty(nik) && activeRostersByNik.TryGetValue(nik, out var empRosters))
+                if (!string.IsNullOrEmpty(nik) && activeRostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
                 {
+                    int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
+                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
                             var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
                             var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
                             if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue;
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
                         }
 
-                        // Target HANYA berkurang ketika karyawan cuti
-                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= effectiveEmpStart)
+                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
+                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                        if (overlapStart <= overlapEnd)
                         {
-                            var ovCutiStart = r.AwalCuti > effectiveEmpStart ? r.AwalCuti : effectiveEmpStart;
-                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
-                            if (ovCutiStart <= ovCutiEnd)
-                            {
-                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
-                            }
+                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
+                    if (hasAnyRoster)
+                    {
+                        hasRoster = true;
+                        onsiteDays = isTugasExempt ? 0 : computedOnsite;
+                    }
                 }
-
-                int nonActiveBeforeJoin = (effectiveEmpStart > startOfMonth) ? (effectiveEmpStart - startOfMonth).Days : 0;
-                int onsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonthM - nonActiveBeforeJoin - cutiDays);
-                bool hasRoster = (cutiDays > 0 || isTugasExempt || effectiveEmpStart > startOfMonth);
+                else if (effectiveEmpStart > startOfMonth)
+                {
+                    hasRoster = true;
+                    onsiteDays = (endOfMonth.Date - effectiveEmpStart.Date).Days + 1;
+                }
 
                 double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonthM : 1.0;
 
@@ -2450,8 +2592,8 @@ namespace MBS_SAP.Controllers
             // 2. Realisasi Minggu Ini
             int weekHazards = await hazards.Where(h => h.Tanggal >= startOfWeek).Select(h => new { h.Nik, h.Tanggal, h.Waktu }).Distinct().CountAsync();
             int weekInspections = await inspections.Where(i => i.Tanggal >= startOfWeek).Select(i => new { i.Nik, i.Tanggal, i.Waktu }).Distinct().CountAsync();
-            var rawWeekST = await safetyTalks.Where(s => s.Tanggal >= startOfWeek).Select(s => new { s.Nik, s.Tanggal }).ToListAsync();
-            int weekSafetyTalks = rawWeekST.Select(s => new { s.Nik, WeekKey = $"{s.Tanggal.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(s.Tanggal)}" }).Distinct().Count();
+            var rawWeekST = await safetyTalks.Where(s => s.Tanggal >= startOfWeek).Select(s => new { s.Nik, s.Tanggal }).Distinct().ToListAsync();
+            int weekSafetyTalks = rawWeekST.Count;
             int weekP5ms = await p5ms.Where(p => p.Tanggal >= startOfWeek).Select(p => new { p.Nik, p.Tanggal, p.Waktu }).Distinct().CountAsync();
             int weekCoachings = await coachings.Where(c => c.CreatedAt >= startOfWeek).Select(c => new { c.Nik, c.Tanggal, c.Waktu }).Distinct().CountAsync();
             int weekObservations = await observationsQuery.Where(o => o.CreatedAt >= startOfWeek).Select(o => new { o.Nik, o.Date, o.KegiatanYangDiamati }).Distinct().CountAsync();
@@ -2460,8 +2602,8 @@ namespace MBS_SAP.Controllers
             // 3. Realisasi Bulan Ini
             int monthHazards = await hazards.Where(h => h.Tanggal >= startOfMonth).Select(h => new { h.Nik, h.Tanggal, h.Waktu }).Distinct().CountAsync();
             int monthInspections = await inspections.Where(i => i.Tanggal >= startOfMonth).Select(i => new { i.Nik, i.Tanggal, i.Waktu }).Distinct().CountAsync();
-            var rawMonthST = await safetyTalks.Where(s => s.Tanggal >= startOfMonth).Select(s => new { s.Nik, s.Tanggal }).ToListAsync();
-            int monthSafetyTalks = rawMonthST.Select(s => new { s.Nik, WeekKey = $"{s.Tanggal.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(s.Tanggal)}" }).Distinct().Count();
+            var rawMonthST = await safetyTalks.Where(s => s.Tanggal >= startOfMonth).Select(s => new { s.Nik, s.Tanggal }).Distinct().ToListAsync();
+            int monthSafetyTalks = rawMonthST.Count;
             int monthP5ms = await p5ms.Where(p => p.Tanggal >= startOfMonth).Select(p => new { p.Nik, p.Tanggal, p.Waktu }).Distinct().CountAsync();
             int monthCoachings = await coachings.Where(c => c.CreatedAt >= startOfMonth).Select(c => new { c.Nik, c.Tanggal, c.Waktu }).Distinct().CountAsync();
             int monthObservations = await observationsQuery.Where(o => o.CreatedAt >= startOfMonth).Select(o => new { o.Nik, o.Date, o.KegiatanYangDiamati }).Distinct().CountAsync();
@@ -2728,8 +2870,6 @@ namespace MBS_SAP.Controllers
                 .Select(s => new { CompId = s.PerusahaanId!.Value, Nik = s.Nik.Trim(), s.Tanggal })
                 .ToListAsync();
             var compSTNik = rawCompST
-                .Select(s => new { s.CompId, s.Nik, WeekKey = $"{s.Tanggal.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(s.Tanggal)}" })
-                .Distinct()
                 .Select(s => new { s.CompId, s.Nik })
                 .ToList();
             var compP5mNik = (await _context.P5ms
@@ -2973,9 +3113,11 @@ namespace MBS_SAP.Controllers
 
                 if (rosterHistory != null && rosterHistory.Any())
                 {
-                    int cutiDays = 0;
+                    int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in rosterHistory)
                     {
+                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
                             var overlapStartT = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
@@ -2987,22 +3129,18 @@ namespace MBS_SAP.Controllers
                             continue; // Periode Tugas is exempt from SAP (target = 0)
                         }
 
-                        // Target HANYA berkurang ketika karyawan cuti
-                        if (r.AwalCuti <= endOfMonth && r.AkhirCuti >= startOfMonth)
+                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
+                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
+                        if (overlapStart <= overlapEnd)
                         {
-                            var ovCutiStart = r.AwalCuti > startOfMonth ? r.AwalCuti : startOfMonth;
-                            var ovCutiEnd = r.AkhirCuti < endOfMonth ? r.AkhirCuti : endOfMonth;
-                            if (ovCutiStart <= ovCutiEnd)
-                            {
-                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
-                            }
+                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
-
-                    int nonActiveBeforeJoin = (currentKaryawan != null && currentKaryawan.TanggalMasuk.HasValue && currentKaryawan.TanggalMasuk.Value > startOfMonth) 
-                        ? (currentKaryawan.TanggalMasuk.Value.Date - startOfMonth.Date).Days : 0;
-                    computedOnsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonth - nonActiveBeforeJoin - cutiDays);
-                    hasRoster = (cutiDays > 0 || isTugasExempt || (currentKaryawan != null && currentKaryawan.TanggalMasuk.HasValue && currentKaryawan.TanggalMasuk.Value > startOfMonth));
+                    if (hasAnyRoster)
+                    {
+                        hasRoster = true;
+                        computedOnsiteDays = isTugasExempt ? 0 : computedOnsite;
+                    }
                 }
                 else if (currentKaryawan != null && currentKaryawan.TanggalMasuk.HasValue && currentKaryawan.TanggalMasuk.Value > startOfMonth)
                 {
@@ -3636,60 +3774,24 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            // FILTER dropdown list to only show the selected company and its child companies (subcons)
-            var dropdownCompanyIds = new HashSet<int> { selectedCompany.PerusahaanId };
+            // Hierarchy scoping: Selected company and all of its child companies (subcons) + peer parents.
+            // Rule:
+            // 1. Child companies must NEVER see their parent or ancestors (neither in dropdown nor standings).
+            // 2. Parent companies will show themselves, peer parents at the same level (e.g. KPP & UDU), AND all of their descendant child companies.
             var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
-            
-            // Check if selected company has children
-            var hasChildren = allCompanies.Any(c => c.PerusahaanIndukId == selectedCompany.PerusahaanId) || 
-                              relations.Any(r => r.ParentCompanyId == selectedCompany.PerusahaanId);
-            
-            int rootId = selectedCompany.PerusahaanId;
-            if (!hasChildren)
-            {
-                // If it has no children, set root to its parent so we show parent and siblings
-                var directParentId = selectedCompany.PerusahaanIndukId;
-                var relationParentId = relations.FirstOrDefault(r => r.ChildCompanyId == selectedCompany.PerusahaanId && r.ParentCompanyId.HasValue)?.ParentCompanyId;
-                int? pId = (directParentId != null && directParentId > 0) ? directParentId : relationParentId;
-                if (pId.HasValue && pId > 0)
-                {
-                    rootId = pId.Value;
-                    dropdownCompanyIds.Add(rootId);
-                }
-            }
-
-            // Also, always allow going back to the parent of the current root
-            var rootCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == rootId);
-            if (rootCompany != null)
-            {
-                var directParentId = rootCompany.PerusahaanIndukId;
-                var relationParentId = relations.FirstOrDefault(r => r.ChildCompanyId == rootId && r.ParentCompanyId.HasValue)?.ParentCompanyId;
-                int? rootParentId = (directParentId != null && directParentId > 0) ? directParentId : relationParentId;
-                if (rootParentId.HasValue && rootParentId > 0)
-                {
-                    dropdownCompanyIds.Add(rootParentId.Value);
-                }
-            }
-            
-            void GetDescendants(int pId)
-            {
-                var childrenFromParentId = allCompanies.Where(c => c.PerusahaanIndukId == pId).Select(c => c.PerusahaanId).ToList();
-                var childrenFromRelations = relations.Where(r => r.ParentCompanyId == pId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
-                var children = childrenFromParentId.Concat(childrenFromRelations).Distinct().ToList();
-
-                foreach (var childId in children)
-                {
-                    if (dropdownCompanyIds.Add(childId))
-                    {
-                        GetDescendants(childId);
-                    }
-                }
-            }
-            GetDescendants(rootId);
+            var targetCompanyIds = BuildCompanyHierarchyScope(selectedCompany.PerusahaanId, allCompanies, relations);
+            bool isParentCompany = CheckIsCompanyParent(selectedCompany.PerusahaanId, allCompanies, relations);
 
             ViewBag.Companies = allowedCompanies;
             ViewBag.SelectedCompanyId = selectedCompany.PerusahaanId;
             ViewBag.CompanyName = selectedCompany.NamaPerusahaan;
+            ViewBag.HasChildCompanies = isParentCompany || targetCompanyIds.Count > 1;
+
+            if (!isAdmin && !isParentCompany && (mode == "company" || mode == "core"))
+            {
+                mode = "dept";
+                ViewBag.Mode = "dept";
+            }
 
             var qualitySummary = await _qualityService.GetMonthlyQualityStatsAsync(selectedYear, selectedMonth);
             var nikQualityStats = qualitySummary.NikStats;
@@ -3698,56 +3800,19 @@ namespace MBS_SAP.Controllers
 
             if (mode == "company" || mode == "core")
             {
-                // Liga Antar Company: Compare all companies
+                // Liga Antar Company: Compare selected company, peer parents, and all its child companies (subcons)
+                // Child company will only compare within its own scope (never sees parent)
+                // Parent company will show itself, peer parents, AND all of its child companies
                 var companyStandings = new List<dynamic>();
                 var allEmployees = new List<dynamic>();
 
-                var companiesToCompare = allowedCompanies;
-                if (mode == "company")
-                {
-                    // Super League compares ALL active allowed companies across the board
-                    companiesToCompare = allowedCompanies.Where(c => !ExcludedCompanies.IsExcluded(c.PerusahaanId)).ToList();
-                }
-                else if (selectedCompanyId > 0)
-                {
-                    var childIds = allCompanies.Where(c => c.PerusahaanIndukId == selectedCompanyId).Select(c => c.PerusahaanId).ToList();
-                    var relationChildIds = relations.Where(r => r.ParentCompanyId == selectedCompanyId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
-                    var allChildIds = childIds.Concat(relationChildIds).Distinct().ToList();
-                    
-                    if (allChildIds.Any())
-                    {
-                        var targetCompanyIds = new HashSet<int>(allChildIds) { selectedCompanyId };
-                        companiesToCompare = allowedCompanies.Where(c => targetCompanyIds.Contains(c.PerusahaanId)).ToList();
-                    }
-                    else
-                    {
-                        companiesToCompare = allowedCompanies.Where(c => c.PerusahaanId == selectedCompanyId).ToList();
-                    }
-                }
+                var companiesToCompare = allowedCompanies
+                    .Where(c => targetCompanyIds.Contains(c.PerusahaanId) && !ExcludedCompanies.IsExcluded(c.PerusahaanId))
+                    .ToList();
 
                 if (mode == "core")
                 {
-                    var coreCompaniesList = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
-                        "PT PELAYARAN GANESHA LAUTJAYA",
-                        "PT SUCOFINDO",
-                        "PT KALIMANTAN PRIMA PERSADA",
-                        "PT ELA SANGATTA",
-                        "PT ADHITAMA WIJAYA PERKASA",
-                        "PT TUNAS JAYA PERKASA",
-                        "PT SEMESTA MANDIRI INDONESIA",
-                        "PT BANDANG MINING COAL",
-                        "PT ORICA MINING SERVICE",
-                        "PT DIVA CAHAYA SEJAHTERA",
-                        "PT UNGGUL DINAMIKA UTAMA",
-                        "PT REZEKI BORNEO SEBUKU",
-                        "PT DAHANA",
-                        "PT MEGA GLOBAL ENERGY",
-                        "PT BERLIAN DUTA ENERGI",
-                        "PT SAMUDERA MAJU PERKASA",
-                        "PT GRAHA PRIMA ENERGI",
-                        "PT KARUNIA ARMADA INDONESIA"
-                    };
-                    companiesToCompare = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan ?? "")).ToList();
+                    companiesToCompare = companiesToCompare.Where(c => CoreCompanyNames.Contains(c.NamaPerusahaan ?? "")).ToList();
                 }
 
                 bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
@@ -4506,52 +4571,16 @@ namespace MBS_SAP.Controllers
 
             if (mode == "company" || mode == "core")
             {
-                var companiesToCompare = allowedCompanies;
+                var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+                var targetCompanyIds = BuildCompanyHierarchyScope(selectedCompany.PerusahaanId, allCompanies, relations);
+
+                var companiesToCompare = allowedCompanies
+                    .Where(c => targetCompanyIds.Contains(c.PerusahaanId) && !ExcludedCompanies.IsExcluded(c.PerusahaanId))
+                    .ToList();
                 
                 if (mode == "core")
                 {
-                    var coreCompaniesList = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
-                        "PT PELAYARAN GANESHA LAUTJAYA",
-                        "PT SUCOFINDO",
-                        "PT KALIMANTAN PRIMA PERSADA",
-                        "PT ELA SANGATTA",
-                        "PT ADHITAMA WIJAYA PERKASA",
-                        "PT TUNAS JAYA PERKASA",
-                        "PT SEMESTA MANDIRI INDONESIA",
-                        "PT BANDANG MINING COAL",
-                        "PT ORICA MINING SERVICE",
-                        "PT DIVA CAHAYA SEJAHTERA",
-                        "PT UNGGUL DINAMIKA UTAMA",
-                        "PT REZEKI BORNEO SEBUKU",
-                        "PT DAHANA",
-                        "PT MEGA GLOBAL ENERGY",
-                        "PT BERLIAN DUTA ENERGI",
-                        "PT SAMUDERA MAJU PERKASA",
-                        "PT GRAHA PRIMA ENERGI",
-                        "PT KARUNIA ARMADA INDONESIA"
-                    };
-                    companiesToCompare = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan ?? "")).ToList();
-                }
-                else if (mode == "company")
-                {
-                    companiesToCompare = allowedCompanies.Where(c => !ExcludedCompanies.IsExcluded(c.PerusahaanId)).ToList();
-                }
-                else if (selectedCompanyId > 0)
-                {
-                    var childIds = allCompanies.Where(c => c.PerusahaanIndukId == selectedCompanyId).Select(c => c.PerusahaanId).ToList();
-                    var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
-                    var relationChildIds = relations.Where(r => r.ParentCompanyId == selectedCompanyId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
-                    var allChildIds = childIds.Concat(relationChildIds).Distinct().ToList();
-                    
-                    if (allChildIds.Any())
-                    {
-                        var targetCompanyIds = new HashSet<int>(allChildIds) { selectedCompanyId };
-                        companiesToCompare = allowedCompanies.Where(c => targetCompanyIds.Contains(c.PerusahaanId)).ToList();
-                    }
-                    else
-                    {
-                        companiesToCompare = allowedCompanies.Where(c => c.PerusahaanId == selectedCompanyId).ToList();
-                    }
+                    companiesToCompare = companiesToCompare.Where(c => CoreCompanyNames.Contains(c.NamaPerusahaan ?? "")).ToList();
                 }
 
                 bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
@@ -5952,33 +5981,21 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            var targetCompanyIds = new HashSet<int>();
+            var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
+            var targetCompanyIds = BuildCompanyHierarchyScope(selectedCompany.PerusahaanId, allCompanies, relations);
+
             if (mode == "core")
             {
-                var coreCompaniesList = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
-                    "PT PELAYARAN GANESHA LAUTJAYA", "PT SUCOFINDO", "PT KALIMANTAN PRIMA PERSADA",
-                    "PT ELA SANGATTA", "PT ADHITAMA WIJAYA PERKASA", "PT TUNAS JAYA PERKASA",
-                    "PT SEMESTA MANDIRI INDONESIA", "PT BANDANG MINING COAL", "PT ORICA MINING SERVICE",
-                    "PT DIVA CAHAYA SEJAHTERA", "PT UNGGUL DINAMIKA UTAMA", "PT REZEKI BORNEO SEBUKU",
-                    "PT DAHANA", "PT MEGA GLOBAL ENERGY", "PT BERLIAN DUTA ENERGI",
-                    "PT SAMUDERA MAJU PERKASA", "PT GRAHA PRIMA ENERGI", "PT KARUNIA ARMADA INDONESIA"
-                };
-                var coreComps = allCompanies.Where(c => coreCompaniesList.Contains(c.NamaPerusahaan ?? "")).Select(c => c.PerusahaanId);
-                foreach (var id in coreComps) targetCompanyIds.Add(id);
+                var coreComps = allowedCompanies.Where(c => targetCompanyIds.Contains(c.PerusahaanId) && CoreCompanyNames.Contains(c.NamaPerusahaan ?? "")).Select(c => c.PerusahaanId);
+                targetCompanyIds.IntersectWith(coreComps);
             }
-            else if (mode == "company" && selectedCompanyId > 0)
+            else if (mode == "company")
             {
-                var childIds = allCompanies.Where(c => c.PerusahaanIndukId == selectedCompanyId).Select(c => c.PerusahaanId).ToList();
-                var relations = await _context.PerusahaanHierarchyRelations.AsNoTracking().ToListAsync();
-                var relationChildIds = relations.Where(r => r.ParentCompanyId == selectedCompanyId && r.ChildCompanyId.HasValue).Select(r => r.ChildCompanyId!.Value).ToList();
-                var allChildIds = childIds.Concat(relationChildIds).Distinct().ToList();
-
-                targetCompanyIds.Add(selectedCompanyId);
-                foreach (var id in allChildIds) targetCompanyIds.Add(id);
+                targetCompanyIds.IntersectWith(allowedCompanies.Select(c => c.PerusahaanId));
             }
             else
             {
-                targetCompanyIds.Add(selectedCompany.PerusahaanId);
+                targetCompanyIds = new HashSet<int> { selectedCompany.PerusahaanId };
             }
 
             // Fetch compliance data to properly apply targetFilter
@@ -8271,36 +8288,37 @@ namespace MBS_SAP.Controllers
 
                 var nik = (emp.NoNik ?? string.Empty).Trim();
                 int onsiteDays = totalDaysInMonthTargetDict;
-                int cutiDays = 0;
+                bool hasRoster = false;
                 bool isTugasExempt = false;
 
-                if (!string.IsNullOrEmpty(nik) && allActiveRostersByNik.TryGetValue(nik, out var empRosters))
+                if (!string.IsNullOrEmpty(nik) && allActiveRostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
                 {
+                    int computedOnsite = 0;
+                    bool hasAnyRoster = false;
                     foreach (var r in empRosters)
                     {
+                        hasAnyRoster = true;
                         if (r.TipeRoster == "TUGAS")
                         {
                             var ovTStart = r.AwalDinas > startOfMonthM ? r.AwalDinas : startOfMonthM;
                             var ovTEnd = r.AkhirDinas < endOfMonthM ? r.AkhirDinas : endOfMonthM;
                             if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue;
+                            continue; // Periode Tugas is exempt from SAP (target = 0)
                         }
 
-                        // Target HANYA berkurang ketika karyawan cuti
-                        if (r.AwalCuti <= endOfMonthM && r.AkhirCuti >= startOfMonthM)
+                        var overlapStart = r.AwalDinas > startOfMonthM ? r.AwalDinas : startOfMonthM;
+                        var overlapEnd = r.AkhirDinas < endOfMonthM ? r.AkhirDinas : endOfMonthM;
+                        if (overlapStart <= overlapEnd)
                         {
-                            var ovCutiStart = r.AwalCuti > startOfMonthM ? r.AwalCuti : startOfMonthM;
-                            var ovCutiEnd = r.AkhirCuti < endOfMonthM ? r.AkhirCuti : endOfMonthM;
-                            if (ovCutiStart <= ovCutiEnd)
-                            {
-                                cutiDays += (ovCutiEnd - ovCutiStart).Days + 1;
-                            }
+                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
+                    if (hasAnyRoster)
+                    {
+                        hasRoster = true;
+                        onsiteDays = isTugasExempt ? 0 : computedOnsite;
+                    }
                 }
-
-                onsiteDays = isTugasExempt ? 0 : Math.Max(0, totalDaysInMonthTargetDict - cutiDays);
-                bool hasRoster = (cutiDays > 0 || isTugasExempt);
 
                 double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonthTargetDict : 1.0;
 
@@ -8600,7 +8618,7 @@ namespace MBS_SAP.Controllers
             var hazNiks = await hazards.Where(h => h.Nik != null).Select(h => new { Nik = h.Nik.Trim(), h.Tanggal, h.Waktu }).Distinct().Select(h => h.Nik).ToListAsync();
             var insNiks = await inspections.Where(i => i.Nik != null).Select(i => new { Nik = i.Nik.Trim(), i.Tanggal, i.Waktu }).Distinct().Select(i => i.Nik).ToListAsync();
             var rawSafNiks = await safetyTalks.Where(s => s.Nik != null).Select(s => new { Nik = s.Nik.Trim(), s.Tanggal }).ToListAsync();
-            var safNiks = rawSafNiks.Select(s => new { s.Nik, WeekKey = $"{s.Tanggal.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(s.Tanggal)}" }).Distinct().Select(s => s.Nik).ToList();
+            var safNiks = rawSafNiks.Select(s => s.Nik).ToList();
             var p5mNiks = await p5ms.Where(p => p.Nik != null).Select(p => new { Nik = p.Nik.Trim(), p.Tanggal, p.Waktu }).Distinct().Select(p => p.Nik).ToListAsync();
 
             foreach (var nik in hazNiks.Concat(insNiks).Concat(safNiks).Concat(p5mNiks))

@@ -58,150 +58,7 @@
                     </div>
                 </div>
                 
-                <nav class="sidebar-menu">
-                    <a asp-controller="Home" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Home" ? "active" : "")">
-                        <i class="bi bi-grid-1x2-fill"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    <a asp-controller="Performance" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Performance" ? "active" : "")">
-                        <i class="bi bi-bar-chart-line-fill"></i>
-                        <span>Pencapaian SAP</span>
-                    </a>
-                    <a asp-controller="Performance" asp-action="League" asp-route-mode="dept" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "League" ? "active" : "")">
-                        <i class="bi bi-trophy-fill"></i>
-                        <span>Klasemen League</span>
-                    </a>
-                    <a asp-controller="QrCode" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "QrCode" ? "active" : "")">
-                        <i class="bi bi-qr-code-scan"></i>
-                        <span>QR Code</span>
-                    </a>
-                    <a asp-controller="Timeline" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Timeline" ? "active" : "")">
-                        <i class="bi bi-rss-fill"></i>
-                        <span>SafeFeed</span>
-                    </a>
-                    <a asp-controller="Hazard" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Hazard" ? "active" : "")">
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                        <span>Hazard</span>
-                    </a>
-                    <a asp-controller="Inspection" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Inspection" ? "active" : "")">
-                        <i class="bi bi-clipboard-check-fill"></i>
-                        <span>Inspection</span>
-                    </a>
-                    <a asp-controller="ActionPlan" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "ActionPlan" ? "active" : "")">
-                        <i class="bi bi-calendar-check-fill"></i>
-                        <span>Action Plan</span>
-                    </a>
-                    <a asp-controller="Observation" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Observation" ? "active" : "")">
-                        <i class="bi bi-eye-fill"></i>
-                        <span>Observation</span>
-                    </a>
-                    <a asp-controller="Bbs" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "BBS" ? "active" : "")">
-                        <i class="bi bi-shield-check" style="color: #38bdf8;"></i>
-                        <span>BBS (Perilaku)</span>
-                    </a>
-                    <a asp-controller="SafetyTalk" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "SafetyTalk" ? "active" : "")">
-                        <i class="bi bi-megaphone-fill"></i>
-                        <span>Safety Talk</span>
-                    </a>
-                    <a asp-controller="P5m" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "P5m" ? "active" : "")">
-                        <i class="bi bi-people-fill"></i>
-                        <span>P5M</span>
-                    </a>
-                    <a asp-controller="Coaching" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Coaching" ? "active" : "")">
-                        <i class="bi bi-person-badge-fill" style="color: #a855f7;"></i>
-                        <span>Coaching</span>
-                    </a>
-                    <a asp-controller="P2h" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "P2h" ? "active" : "")">
-                        <i class="bi bi-truck-front-fill"></i>
-                        <span>P2H</span>
-                    </a>
-                    @if (User.FindFirst("CompanyId")?.Value == "1")
-                    {
-                        <a asp-controller="Dpa" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Dpa" ? "active" : "")">
-                            <i class="bi bi-speedometer2"></i>
-                            <span>DPA</span>
-                        </a>
-                    }
-                    @if (isAdminUser)
-                    {
-                        <a asp-controller="Incident" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Incident" ? "active" : "")">
-                            <i class="bi bi-newspaper" style="color: #f43f5e;"></i>
-                            <span>Insiden</span>
-                        </a>
-                        <a asp-controller="BbsMaster" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "BbsMaster" ? "active" : "")">
-                            <i class="bi bi-sliders2-vertical" style="color: #38bdf8;"></i>
-                            <span>Master BBS</span>
-                        </a>
-                    }
-                    @if (canAccessUploadData)
-                    {
-                        <a asp-controller="Admin" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Admin" ? "active" : "")">
-                            <i class="bi bi-cloud-arrow-up-fill text-success"></i>
-                            <span>Upload Data</span>
-                        </a>
-                        <a asp-controller="Admin" asp-action="SapQuality" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "SapQuality" ? "active" : "")">
-                            <i class="bi bi-star-fill text-warning"></i>
-                            <span>Kualitas SAP</span>
-                        </a>
-                    }
-                    @if (isAdminUser)
-                    {
-                        <a asp-controller="EventQr" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "EventQrAdmin" ? "active" : "")">
-                            <i class="bi bi-qr-code-scan" style="color: #22c55e;"></i>
-                            <span>Event QR (Admin)</span>
-                        </a>
-                        <a asp-controller="UserManagement" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "UserMgmt" ? "active" : "")">
-                            <i class="bi bi-person-gear" style="color: #a855f7;"></i>
-                            <span>User Management</span>
-                        </a>
-                    }
-                    @{
-                        var jobTitle = User.FindFirst("JobTitle")?.Value ?? "";
-                        var department = User.FindFirst("Department")?.Value ?? "";
-                        var isSafetyAdmin = isAdminUser || 
-                                            jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase) || 
-                                            jobTitle.Contains("HSE", StringComparison.OrdinalIgnoreCase) || 
-                                            jobTitle.Contains("OHS", StringComparison.OrdinalIgnoreCase) || 
-                                            jobTitle.Contains("SHE", StringComparison.OrdinalIgnoreCase) || 
-                                            department.Contains("Safety", StringComparison.OrdinalIgnoreCase) ||
-                                            department.Contains("HSE", StringComparison.OrdinalIgnoreCase) ||
-                                            department.Contains("OHS", StringComparison.OrdinalIgnoreCase) ||
-                                            department.Contains("SHE", StringComparison.OrdinalIgnoreCase);
-                    }
-                    @if (isSafetyAdmin)
-                    {
-                        <a asp-controller="Roster" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "RosterSap" ? "active" : "")">
-                            <i class="bi bi-calendar2-week-fill" style="color: #38bdf8;"></i>
-                            <span>Roster SAP</span>
-                        </a>
-                        <a asp-controller="UserSupport" asp-action="ResetPassword" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "ResetPassword" ? "active" : "")">
-                            <i class="bi bi-key" style="color: #ef4444;"></i>
-                            <span>Reset Password</span>
-                        </a>
-                        <a asp-controller="SapTarget" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "SapTarget" ? "active" : "")">
-                            <i class="bi bi-sliders text-primary"></i>
-                            <span>Override Target</span>
-                        </a>
-                    }
-                </nav>
-
-                <div class="sidebar-footer">
-                    <a asp-controller="Account" asp-action="Profile"
-                       class="user-profile-sidebar text-decoration-none"
-                       title="Lihat Profil Saya"
-                       style="cursor: pointer; transition: opacity 0.2s; flex: 1;">
-                        <div class="user-avatar-mini" style="background: linear-gradient(135deg, #a855f7, #f43f5e);">
-                            <i class="bi bi-person-fill"></i>
-                        </div>
-                        <div class="user-info-sidebar">
-                            <span class="user-name">@(User.Identity?.IsAuthenticated == true ? User.Identity.Name : "Budi Santoso")</span>
-                            <span class="user-role" style="color: #a855f7;">@(User.FindFirst("JobTitle")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Staff/Operator")</span>
-                        </div>
-                    </a>
-                    <a asp-controller="Account" asp-action="Logout" class="btn-logout-sidebar" title="Log Out">
-                        <i class="bi bi-box-arrow-right"></i>
-                    </a>
-                </div>
+                @await Html.PartialAsync("_SidebarNavPartial")
             </aside>
         }
 
@@ -211,6 +68,12 @@
                 <!-- Top Navbar (Desktop Title & Mobile Header Combined) -->
                 <header class="top-navbar">
                     <div class="navbar-left">
+                        @if (ViewData["HideNav"] == null)
+                        {
+                            <button type="button" class="btn-navbar-action d-lg-none me-2" data-bs-toggle="offcanvas" data-bs-target="#mobileNavOffcanvas" aria-controls="mobileNavOffcanvas" title="Menu Navigasi" style="color: inherit; background: none; border: none; font-size: 20px; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px;">
+                                <i class="bi bi-list"></i>
+                            </button>
+                        }
                         <a asp-controller="Home" asp-action="Index" class="btn-back-nav" title="Kembali ke Home">
                             <i class="bi bi-chevron-left"></i>
                         </a>
@@ -322,6 +185,26 @@
     @if (User?.Identity?.IsAuthenticated == true)
     {
         @await Component.InvokeAsync("IncidentPopup")
+    }
+
+    <!-- Mobile Navigation Sidebar (Offcanvas) -->
+    @if (ViewData["HideNav"] == null)
+    {
+        <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="mobileNavOffcanvas" aria-labelledby="mobileNavOffcanvasLabel" style="width: 290px; background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); z-index: 1045;">
+            <div class="offcanvas-header" style="border-bottom: 1px solid var(--border-color); padding: 18px 20px;">
+                <div class="d-flex align-items-center gap-2">
+                    <img src="~/images/logo_mbs.png" style="width: 32px; height: 32px; object-fit: contain;" alt="INDEXIM MBS Logo" asp-append-version="true" />
+                    <div>
+                        <div style="font-weight: 800; font-size: 14px; color: var(--text-main); line-height: 1.1;">INDEXIM</div>
+                        <div style="font-size: 10px; color: var(--color-primary); font-weight: 600;">Safety Accountability</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close text-reset btn-close-sap" data-bs-dismiss="offcanvas" aria-label="Close" style="filter: invert(1); opacity: 0.8;"></button>
+            </div>
+            <div class="offcanvas-body p-0 d-flex flex-column" style="overflow-y: auto;">
+                @await Html.PartialAsync("_SidebarNavPartial")
+            </div>
+        </div>
     }
 
     <!-- Notification Sidebar (Offcanvas) -->

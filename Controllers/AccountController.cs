@@ -513,8 +513,7 @@ namespace MBS_SAP.Controllers
 
             int myHazards = await _context.HazardReports.Where(h => !h.IsDeleted && h.Nik == nrp && h.CreatedAt >= startOfMonth).Select(h => new { h.Tanggal, h.Waktu, h.Lokasi }).Distinct().CountAsync();
             int myInspections = await _context.Inspections.Where(i => !i.IsDeleted && i.Nik == nrp && i.CreatedAt >= startOfMonth).Select(i => new { i.Tanggal, i.Waktu }).Distinct().CountAsync();
-            var rawMyST = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.Nik == nrp && s.CreatedAt >= startOfMonth).Select(s => s.Tanggal).ToListAsync();
-            int mySafetyTalks = rawMyST.Select(d => $"{d.Year}-W{System.Globalization.ISOWeek.GetWeekOfYear(d)}").Distinct().Count();
+            int mySafetyTalks = await _context.SafetyTalks.Where(s => !s.IsDeleted && s.Nik == nrp && s.CreatedAt >= startOfMonth).Select(s => new { s.Tanggal, s.Waktu }).Distinct().CountAsync();
             int myP5ms = await _context.P5ms.Where(p => !p.IsDeleted && p.Nik == nrp && p.CreatedAt >= startOfMonth).Select(p => new { p.Tanggal, p.Waktu }).Distinct().CountAsync();
 
             int totalSubmissions = myHazards + myInspections + mySafetyTalks + myP5ms;
