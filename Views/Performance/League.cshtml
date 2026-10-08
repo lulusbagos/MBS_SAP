@@ -3127,29 +3127,40 @@
                     </div>
 
                     <div class="table-responsive league-table-wrap mb-3">
-                        <table class="league-table">
+                        <table class="league-table" id="deptLeagueTable">
                             <thead>
                                 <tr>
                                     <th style="width: 50px;">Pos</th>
-                                    <th class="align-left">Klub (Departemen)</th>
-                                    <th style="width: 75px;">Skuad</th>
-                                    <th style="width: 110px; background-color: #1e3a8a;" title="Persentase Kepatuhan Capaian Target K3 Bulanan (Standar SOP)">Capaian Target (%)</th>
-                                    <th style="width: 120px;">Form (5 Laga)</th>
-                                    <th style="width: 55px;">HZ</th>
-                                    <th style="width: 55px;">IP</th>
-                                    <th style="width: 55px;">ST</th>
-                                    <th style="width: 55px;">OB</th>
-                                    <th style="width: 55px;">CC</th>
-                                    <th style="width: 65px; background-color: #78350f;">P5M *</th>
-                                    <th style="width: 75px; background-color: #065f46;">Close Rate</th>
+                                    <th class="align-left" style="cursor: pointer;" onclick="sortDeptTable('dept');" title="Klik untuk mengurutkan Nama Klub/Departemen">
+                                        Klub (Departemen) <i id="sortIcon_dept" class="bi bi-arrow-down-up ms-1" style="font-size: 10px; opacity: 0.6;"></i>
+                                    </th>
+                                    <th style="width: 65px; cursor: pointer;" onclick="sortDeptTable('skuad');" title="Klik untuk mengurutkan Jumlah Skuad">
+                                        Skuad <i id="sortIcon_skuad" class="bi bi-arrow-down-up ms-1" style="font-size: 10px; opacity: 0.6;"></i>
+                                    </th>
+                                    <th style="width: 95px; background-color: #0f172a; cursor: pointer;" onclick="sortDeptTable('pts');" title="Klik untuk mengurutkan berdasarkan Total Poin Skor (PTS 4 Pilar: Close Rate 50% + Kualitas AI 25% + Capaian 15% + Beban 10%)">
+                                        PTS (Skor) <i id="sortIcon_pts" class="bi bi-sort-numeric-down-alt ms-1 text-warning" style="font-size: 11px;"></i>
+                                    </th>
+                                    <th style="width: 105px; background-color: #1e3a8a; cursor: pointer;" onclick="sortDeptTable('capaian');" title="Klik untuk mengurutkan berdasarkan Persentase Kepatuhan Capaian Target (%)">
+                                        Capaian (%) <i id="sortIcon_capaian" class="bi bi-arrow-down-up ms-1" style="font-size: 10px; opacity: 0.6;"></i>
+                                    </th>
+                                    <th style="width: 110px;">Form (5 Laga)</th>
+                                    <th style="width: 50px;">HZ</th>
+                                    <th style="width: 50px;">IP</th>
+                                    <th style="width: 50px;">ST</th>
+                                    <th style="width: 50px;">OB</th>
+                                    <th style="width: 50px;">CC</th>
+                                    <th style="width: 60px; background-color: #78350f;">P5M *</th>
+                                    <th style="width: 80px; background-color: #065f46; cursor: pointer;" onclick="sortDeptTable('close');" title="Klik untuk mengurutkan berdasarkan Close Rate Tindak Lanjut Action Plan (%)">
+                                        Close Rate <i id="sortIcon_close" class="bi bi-arrow-down-up ms-1" style="font-size: 10px; opacity: 0.6;"></i>
+                                    </th>
                                     <th style="width: 65px;">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="deptTableBody">
                                 @if (!deptAchievements.Any())
                                 {
                                     <tr>
-                                        <td colspan="13" class="text-center text-muted py-4">Belum ada data klub terdaftar.</td>
+                                        <td colspan="14" class="text-center text-muted py-4">Belum ada data klub terdaftar.</td>
                                     </tr>
                                 }
                                 else
@@ -3184,7 +3195,18 @@
                                         var shieldColor = GetDeptColor(dept.DepartmentName);
                                         var initials = GetDeptInitials(dept.DepartmentName);
 
-                                        <tr class="@rowClass dept-table-row" data-dept-name="@dept.DepartmentName" title="Klik untuk melihat skuad pemain @dept.DepartmentName" style="cursor: pointer; background-color: @GetRowBgColor(dept.MtdAchievementRate) !important; border-left: 4px solid @GetRowBorderColor(dept.MtdAchievementRate) !important;" onclick="filterPlayerTable('@dept.DepartmentName.Replace("'", "\\'")');">
+                                        <tr class="@rowClass dept-table-row" 
+                                            id="dept-main-row-@idx"
+                                            data-idx="@idx"
+                                            data-dept-name="@dept.DepartmentName" 
+                                            data-pts="@dept.TotalScore.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-capaian="@dept.MtdAchievementRate.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-close="@dept.MtdCloseRate.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-skuad="@dept.EmployeeCount"
+                                            data-detail-id="detail-dept-@idx"
+                                            title="Klik untuk melihat skuad pemain @dept.DepartmentName" 
+                                            style="cursor: pointer; background-color: @GetRowBgColor(dept.MtdAchievementRate) !important; border-left: 4px solid @GetRowBorderColor(dept.MtdAchievementRate) !important;" 
+                                            onclick="filterPlayerTable('@dept.DepartmentName.Replace("'", "\\'")');">
                                             <td class="text-center">
                                                 <div class="league-rank-pill @rankClass">@rankText</div>
                                             </td>
@@ -3193,8 +3215,15 @@
                                                 <span class="fw-bold" style="color: #334155;">@dept.DepartmentName</span>
                                             </td>
                                             <td class="text-center">@dept.EmployeeCount</td>
+                                            <td class="text-center fw-bold" style="background-color: #f8fafc; border-left: 2px solid #3b82f6;">
+                                                <div title="Total Skor: @dept.TotalScore pts (Close Rate: @dept.PtsClose + Kualitas: @dept.PtsKualitas + Capaian: @dept.PtsCapaian + Beban: @dept.PtsBeban)">
+                                                    <span class="badge @(idx <= 3 ? "bg-primary" : "bg-dark-subtle text-dark border") px-2 py-1" style="font-size: 12px; font-weight: 800; border-radius: 6px;">
+                                                        @dept.TotalScore.ToString("F2")
+                                                    </span>
+                                                </div>
+                                            </td>
                                             <td class="text-center fw-bold" style="background-color: rgba(30, 58, 138, 0.04);">
-                                                <div style="color: @GetRateColor(dept.MtdAchievementRate); font-size: 14px; font-weight: 800;">@FormatRate(dept.MtdAchievementRate)</div>
+                                                <div style="color: @GetRateColor(dept.MtdAchievementRate); font-size: 13.5px; font-weight: 800;">@FormatRate(dept.MtdAchievementRate)</div>
                                             </td>
                                             <td class="text-center" style="white-space: nowrap;">
                                                 @GetFormDotsHtml(dept.MtdHazardRate, dept.MtdInspeksiRate, dept.MtdSafetyTalkRate, dept.MtdObservasiRate, dept.MtdCoachingRate)
@@ -3215,7 +3244,7 @@
 
                                         <!-- Collapsible Department Detail Card -->
                                         <tr class="collapse" id="detail-dept-@idx" style="background-color: #f8fafc;">
-                                            <td colspan="13" class="p-2 p-md-3">
+                                            <td colspan="14" class="p-2 p-md-3">
                                                 <div class="player-detail-box">
                                                     <!-- Header Bar Departemen -->
                                                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2" style="border-bottom: 1px solid #e2e8f0;">
@@ -4864,6 +4893,111 @@
             radio.checked = true;
             radio.form.submit();
         }
+    }
+
+    let currentDeptSortCol = 'pts';
+    let currentDeptSortDir = 'desc';
+
+    function sortDeptTable(column) {
+        const tbody = document.getElementById('deptTableBody');
+        if (!tbody) return;
+
+        if (currentDeptSortCol === column) {
+            currentDeptSortDir = (currentDeptSortDir === 'desc') ? 'asc' : 'desc';
+        } else {
+            currentDeptSortCol = column;
+            currentDeptSortDir = 'desc';
+        }
+
+        // Update header icons
+        const iconIds = ['pts', 'capaian', 'close', 'dept', 'skuad'];
+        iconIds.forEach(id => {
+            const icon = document.getElementById('sortIcon_' + id);
+            if (!icon) return;
+            if (id === column) {
+                icon.className = (currentDeptSortDir === 'desc') 
+                    ? 'bi bi-sort-numeric-down-alt ms-1 text-warning' 
+                    : 'bi bi-sort-numeric-up ms-1 text-warning';
+                if (id === 'dept') {
+                    icon.className = (currentDeptSortDir === 'desc') 
+                        ? 'bi bi-sort-alpha-down-alt ms-1 text-warning' 
+                        : 'bi bi-sort-alpha-up ms-1 text-warning';
+                }
+                icon.style.opacity = '1';
+            } else {
+                icon.className = 'bi bi-arrow-down-up ms-1 text-white-50';
+                icon.style.opacity = '0.5';
+                icon.classList.remove('text-warning');
+            }
+        });
+
+        // Collect pairs of [mainRow, detailRow]
+        const mainRows = Array.from(tbody.querySelectorAll('tr.dept-table-row'));
+        const pairs = mainRows.map(row => {
+            const detailId = row.getAttribute('data-detail-id');
+            const detailRow = detailId ? document.getElementById(detailId) : null;
+            return { row, detailRow };
+        });
+
+        pairs.sort((a, b) => {
+            let valA, valB;
+            if (column === 'pts') {
+                valA = parseFloat(a.row.getAttribute('data-pts')) || 0;
+                valB = parseFloat(b.row.getAttribute('data-pts')) || 0;
+            } else if (column === 'capaian') {
+                valA = parseFloat(a.row.getAttribute('data-capaian')) || 0;
+                valB = parseFloat(b.row.getAttribute('data-capaian')) || 0;
+            } else if (column === 'close') {
+                valA = parseFloat(a.row.getAttribute('data-close')) || 0;
+                valB = parseFloat(b.row.getAttribute('data-close')) || 0;
+            } else if (column === 'skuad') {
+                valA = parseInt(a.row.getAttribute('data-skuad')) || 0;
+                valB = parseInt(b.row.getAttribute('data-skuad')) || 0;
+            } else if (column === 'dept') {
+                valA = (a.row.getAttribute('data-dept-name') || '').toLowerCase();
+                valB = (b.row.getAttribute('data-dept-name') || '').toLowerCase();
+                return currentDeptSortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+
+            if (valA < valB) return currentDeptSortDir === 'asc' ? -1 : 1;
+            if (valA > valB) return currentDeptSortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+        // Re-append in sorted order and update rank badges
+        const totalCount = pairs.length;
+        pairs.forEach((pair, index) => {
+            tbody.appendChild(pair.row);
+            if (pair.detailRow) tbody.appendChild(pair.detailRow);
+
+            const rankPill = pair.row.querySelector('.league-rank-pill');
+            if (rankPill) {
+                const rank = index + 1;
+                rankPill.className = 'league-rank-pill';
+                pair.row.classList.remove('league-tr-champions', 'league-tr-relegation', 'league-tr-normal');
+
+                if (rank === 1) {
+                    rankPill.classList.add('league-rank-champions');
+                    pair.row.classList.add('league-tr-champions');
+                    rankPill.innerHTML = '🥇 1';
+                } else if (rank === 2) {
+                    rankPill.classList.add('league-rank-champions');
+                    pair.row.classList.add('league-tr-champions');
+                    rankPill.innerHTML = '🥈 2';
+                } else if (rank === 3) {
+                    rankPill.classList.add('league-rank-champions');
+                    pair.row.classList.add('league-tr-champions');
+                    rankPill.innerHTML = '🥉 3';
+                } else if (rank >= totalCount - 1 && totalCount > 5) {
+                    rankPill.classList.add('league-rank-relegation');
+                    pair.row.classList.add('league-tr-relegation');
+                    rankPill.innerText = rank;
+                } else {
+                    pair.row.classList.add('league-tr-normal');
+                    rankPill.innerText = rank;
+                }
+            }
+        });
     }
 
     function filterPlayerTable(deptName) {

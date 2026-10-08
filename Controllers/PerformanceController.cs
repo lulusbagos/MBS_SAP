@@ -4359,9 +4359,9 @@ namespace MBS_SAP.Controllers
                     };
                 })
                 .OrderBy(d => d.TotalTarget == 0 ? 1 : 0)
-                .ThenByDescending(d => d.MtdAchievementRate)
-                .ThenByDescending(d => d.TotalActual)
                 .ThenByDescending(d => d.TotalScore)
+                .ThenByDescending(d => d.MtdCloseRate)
+                .ThenByDescending(d => d.MtdAchievementRate)
                 .ToList();
 
                 var activeDeptAchievements = deptAchievements.Where(d => d.TotalTarget > 0).ToList();
@@ -4950,9 +4950,9 @@ namespace MBS_SAP.Controllers
                     };
                 })
                 .OrderBy(d => d.TotalTarget == 0 ? 1 : 0)
-                .ThenByDescending(d => d.MtdAchievementRate)
-                .ThenByDescending(d => d.TotalActual)
                 .ThenByDescending(d => d.TotalScore)
+                .ThenByDescending(d => d.MtdCloseRate)
+                .ThenByDescending(d => d.MtdAchievementRate)
                 .ToList();
             }
 
