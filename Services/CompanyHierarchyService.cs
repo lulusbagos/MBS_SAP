@@ -309,10 +309,37 @@ namespace MBS_SAP.Services
             return companyId.Value == 5 || companyId.Value == 88 || companyId.Value == 89 || companyId.Value == 90 || companyId.Value == 192 || companyId.Value == 373;
         }
 
+        public static bool IsAdminUser(System.Security.Claims.ClaimsPrincipal user)
+        {
+            if (user == null) return false;
+            if (user.IsInRole("Admin") || user.IsInRole("Administrator")) return true;
+
+            var role = user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim()
+                       ?? user.FindFirst("Role")?.Value?.Trim()
+                       ?? user.FindFirst("role")?.Value?.Trim()
+                       ?? "";
+
+            if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            var jobTitle = user.FindFirst("JobTitle")?.Value ?? "";
+            if (jobTitle.Contains("Administrator", StringComparison.OrdinalIgnoreCase) ||
+                jobTitle.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public static bool IsMgeGroupUser(System.Security.Claims.ClaimsPrincipal user)
         {
             if (user == null) return false;
-            if (user.IsInRole("Admin")) return true;
+            if (IsAdminUser(user)) return true;
 
             var compIdStr = user.FindFirst("CompanyId")?.Value;
             if (int.TryParse(compIdStr, out int cid) && IsMgeGroupCompanyId(cid))

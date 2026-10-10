@@ -41,7 +41,7 @@ namespace MBS_SAP.Controllers
             ViewData["ActiveTab"] = "Fci";
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim() ?? string.Empty;
-            var isAdmin = User.IsInRole("Admin");
+            var isAdmin = CompanyHierarchyService.IsAdminUser(User);
 
             var query = _context.FciReports.Where(r => !r.IsDeleted);
 
@@ -185,7 +185,7 @@ namespace MBS_SAP.Controllers
                     var existing = await _context.FciReports.FindAsync(id.Value);
                     if (existing == null || existing.IsDeleted) return NotFound();
 
-                    if (existing.Nik != userNik && !User.IsInRole("Admin"))
+                    if (existing.Nik != userNik && !CompanyHierarchyService.IsAdminUser(User))
                     {
                         TempData["ErrorMessage"] = "Anda tidak memiliki hak untuk mengedit data ini.";
                         return RedirectToAction(nameof(Index));
@@ -323,7 +323,7 @@ namespace MBS_SAP.Controllers
             if (item == null || item.IsDeleted) return NotFound();
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim() ?? "";
-            if (item.Nik != userNik && !User.IsInRole("Admin"))
+            if (item.Nik != userNik && !CompanyHierarchyService.IsAdminUser(User))
             {
                 TempData["ErrorMessage"] = "Anda tidak memiliki akses untuk menghapus laporan ini.";
                 return RedirectToAction(nameof(Index));

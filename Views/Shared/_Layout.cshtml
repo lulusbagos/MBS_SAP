@@ -39,7 +39,7 @@
     </script>
 
     @{ 
-        var isAdminUser = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase); 
+        var isAdminUser = MBS_SAP.Services.CompanyHierarchyService.IsAdminUser(User); 
         var userCompany = User.FindFirst("Company")?.Value;
         var isKPPUser = string.Equals(userCompany?.Trim(), "PT KALIMANTAN PRIMA PERSADA", StringComparison.OrdinalIgnoreCase);
         var canAccessUploadData = isAdminUser || isKPPUser;

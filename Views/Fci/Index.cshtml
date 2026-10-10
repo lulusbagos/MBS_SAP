@@ -582,7 +582,7 @@
                                     <button type="button" class="btn btn-sm btn-outline-info" style="font-size: 11px; padding: 2px 8px; border-radius: 6px;" onclick="showDetailFci(@item.Id)">
                                         <i class="bi bi-eye"></i> Detail
                                     </button>
-                                    @if (item.Nik == userNik || User.IsInRole("Admin"))
+                                    @if (item.Nik == userNik || MBS_SAP.Services.CompanyHierarchyService.IsAdminUser(User))
                                     {
                                         <button type="button" class="btn btn-sm btn-outline-warning" style="font-size: 11px; padding: 2px 8px; border-radius: 6px;" onclick="editFci(@item.Id)">
                                             <i class="bi bi-pencil"></i> Edit

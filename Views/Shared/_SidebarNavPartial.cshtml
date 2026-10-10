@@ -1,5 +1,5 @@
 @{
-    var isAdminUser = string.Equals(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value?.Trim(), "Admin", StringComparison.OrdinalIgnoreCase); 
+    var isAdminUser = MBS_SAP.Services.CompanyHierarchyService.IsAdminUser(User); 
     var userCompany = User.FindFirst("Company")?.Value;
     var isKPPUser = string.Equals(userCompany?.Trim(), "PT KALIMANTAN PRIMA PERSADA", StringComparison.OrdinalIgnoreCase);
     var canAccessUploadData = isAdminUser || isKPPUser;
@@ -80,7 +80,7 @@
             <span>DPA</span>
         </a>
     }
-    @if (MBS_SAP.Services.CompanyHierarchyService.IsMgeGroupUser(User))
+    @if (MBS_SAP.Services.CompanyHierarchyService.IsMgeGroupUser(User) || isAdminUser)
     {
         <a asp-controller="Fci" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Fci" ? "active" : "")">
             <i class="bi bi-compass" style="color: #14b8a6;"></i>

@@ -765,7 +765,7 @@
                 <span class="badge" style="background-color: rgba(2, 132, 199, 0.12); color: #0284c7; font-size: 10px; font-weight: 600;">Observasi K3</span>
             </a>
 
-            @if (MBS_SAP.Services.CompanyHierarchyService.IsMgeGroupUser(User))
+            @if (MBS_SAP.Services.CompanyHierarchyService.IsMgeGroupUser(User) || MBS_SAP.Services.CompanyHierarchyService.IsAdminUser(User))
             {
                 <a asp-controller="Fci" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
                     <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0f766e, #14b8a6); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
