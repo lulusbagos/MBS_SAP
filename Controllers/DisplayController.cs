@@ -41,6 +41,317 @@ namespace MBS_SAP.Controllers
             return View();
         }
 
+        [HttpGet("/Display3")]
+        [HttpGet("Display3")]
+        public IActionResult Display3()
+        {
+            ViewData["HideHeader"] = true;
+            ViewData["HideNav"] = true;
+            return View();
+        }
+
+        [HttpGet("GetDisplay3Data")]
+        public async Task<IActionResult> GetDisplay3Data()
+        {
+            try
+            {
+                var now = DateTime.Now;
+                var today = DateTime.Today;
+                var startOfMonth = new DateTime(now.Year, now.Month, 1);
+
+                // 1. RCI DATA
+                var rciQuery = _context.RciReports.AsNoTracking().Where(r => !r.IsDeleted);
+                var allRciList = await rciQuery.OrderByDescending(r => r.Tanggal).ThenByDescending(r => r.CreatedAt).ToListAsync();
+                
+                int totalRci = allRciList.Count;
+                int todayRci = allRciList.Count(r => r.Tanggal >= today || r.CreatedAt >= today);
+                int mtdRci = allRciList.Count(r => r.Tanggal >= startOfMonth);
+                double avgScoreRci = allRciList.Any() ? Math.Round(allRciList.Average(r => r.TotalScore), 1) : 100.0;
+                int rciBaik = allRciList.Count(r => r.KategoriIndex == "Baik");
+                int rciSedang = allRciList.Count(r => r.KategoriIndex == "Sedang");
+                int rciKurang = allRciList.Count(r => r.KategoriIndex == "Kurang");
+                
+                var rciParamAvg = new
+                {
+                    lebar = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorLebarJalan), 1) : 100.0,
+                    grade = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorGradeJalan), 1) : 100.0,
+                    permukaan = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorPermukaanJalan), 1) : 100.0,
+                    berm = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorSafetyBerm), 1) : 100.0,
+                    drainase = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorDrainaseParit), 1) : 100.0,
+                    superelevasi = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorSuperelevasiTikungan), 1) : 100.0,
+                    spillage = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorBebasSpillage), 1) : 100.0,
+                    rambu = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorRambuDebu), 1) : 100.0
+                };
+
+                var topRoads = allRciList.Where(r => !string.IsNullOrEmpty(r.NamaJalan))
+                    .GroupBy(r => r.NamaJalan!)
+                    .Select(g => new { name = g.Key, count = g.Count(), avgScore = Math.Round(g.Average(x => x.TotalScore), 1) })
+                    .OrderByDescending(x => x.count)
+                    .Take(5)
+                    .ToList();
+
+                // 2. FCI DATA
+                var fciQuery = _context.FciReports.AsNoTracking().Where(f => !f.IsDeleted);
+                var allFciList = await fciQuery.OrderByDescending(f => f.Tanggal).ThenByDescending(f => f.CreatedAt).ToListAsync();
+
+                int totalFci = allFciList.Count;
+                int todayFci = allFciList.Count(f => f.Tanggal >= today || f.CreatedAt >= today);
+                int mtdFci = allFciList.Count(f => f.Tanggal >= startOfMonth);
+                double avgScoreFci = allFciList.Any() ? Math.Round(allFciList.Average(f => f.TotalScore), 1) : 100.0;
+                int fciBaik = allFciList.Count(f => f.KategoriIndex == "Baik");
+                int fciSedang = allFciList.Count(f => f.KategoriIndex == "Sedang");
+                int fciKurang = allFciList.Count(f => f.KategoriIndex == "Kurang");
+
+                var fciParamAvg = new
+                {
+                    lantai = allFciList.Any() ? Math.Round(allFciList.Average(f => f.SkorLantaiFront), 1) : 100.0,
+                    manuver = allFciList.Any() ? Math.Round(allFciList.Average(f => f.SkorRuangManuver), 1) : 100.0,
+                    berm = allFciList.Any() ? Math.Round(allFciList.Average(f => f.SkorSafetyBerm), 1) : 100.0,
+                    dinding = allFciList.Any() ? Math.Round(allFciList.Average(f => f.SkorKondisiDinding), 1) : 100.0,
+                    sump = allFciList.Any() ? Math.Round(allFciList.Average(f => f.SkorDrainaseSump), 1) : 100.0,
+                    spillage = allFciList.Any() ? Math.Round(allFciList.Average(f => f.SkorKebersihanSpillage), 1) : 100.0,
+                    posisi = allFciList.Any() ? Math.Round(allFciList.Average(f => f.SkorPosisiAlat), 1) : 100.0,
+                    rambu = allFciList.Any() ? Math.Round(allFciList.Average(f => f.SkorRambuPenerangan), 1) : 100.0
+                };
+
+                var topPits = allFciList.Where(f => !string.IsNullOrEmpty(f.Pit) || !string.IsNullOrEmpty(f.NamaFront))
+                    .GroupBy(f => (!string.IsNullOrEmpty(f.Pit) ? f.Pit! : f.NamaFront!))
+                    .Select(g => new { name = g.Key, count = g.Count(), avgScore = Math.Round(g.Average(x => x.TotalScore), 1) })
+                    .OrderByDescending(x => x.count)
+                    .Take(5)
+                    .ToList();
+
+                // 3. BBS DATA
+                var bbsQuery = _context.BbsObservations.AsNoTracking().Where(b => !b.IsDeleted);
+                var allBbsList = await bbsQuery.OrderByDescending(b => b.Tanggal).ThenByDescending(b => b.CreatedAt).ToListAsync();
+
+                int totalBbs = allBbsList.Count;
+                int todayBbs = allBbsList.Count(b => b.Tanggal >= today || b.CreatedAt >= today);
+                int mtdBbs = allBbsList.Count(b => b.Tanggal >= startOfMonth);
+                int safeCount = allBbsList.Count(b => b.Klasifikasi == "Aman");
+                int atRiskCount = allBbsList.Count(b => b.Klasifikasi == "Berisiko");
+                double safeIndexPct = totalBbs > 0 ? Math.Round((double)safeCount / totalBbs * 100, 1) : 100.0;
+
+                var riskLevels = new
+                {
+                    rendah = allBbsList.Count(b => b.TingkatRisiko == "Rendah"),
+                    sedang = allBbsList.Count(b => b.TingkatRisiko == "Sedang"),
+                    tinggi = allBbsList.Count(b => b.TingkatRisiko == "Tinggi"),
+                    sangatTinggi = allBbsList.Count(b => b.TingkatRisiko == "Sangat Tinggi")
+                };
+
+                var topCategories = allBbsList.Where(b => !string.IsNullOrEmpty(b.CategoryName))
+                    .GroupBy(b => b.CategoryName!)
+                    .Select(g => new { name = g.Key, count = g.Count(), safe = g.Count(x => x.Klasifikasi == "Aman"), atRisk = g.Count(x => x.Klasifikasi == "Berisiko") })
+                    .OrderByDescending(x => x.count)
+                    .Take(6)
+                    .ToList();
+
+                // 4. OVERALL STATS
+                int totalActivities = totalRci + totalFci + totalBbs;
+                int todayActivities = todayRci + todayFci + todayBbs;
+                int totalPhotos = allRciList.Count(r => !string.IsNullOrEmpty(r.FotoUrl))
+                                + allFciList.Count(f => !string.IsNullOrEmpty(f.FotoUrl))
+                                + allBbsList.Count(b => !string.IsNullOrEmpty(b.FotoUrl));
+                double photoComplianceRate = totalActivities > 0 ? Math.Round((double)totalPhotos / totalActivities * 100, 1) : 0;
+
+                var uniqueSurveyors = allRciList.Select(r => r.Nik)
+                    .Concat(allFciList.Select(f => f.Nik))
+                    .Concat(allBbsList.Select(b => b.ObserverNik))
+                    .Where(n => !string.IsNullOrEmpty(n))
+                    .Distinct()
+                    .Count();
+
+                // 5. UNIFIED RECENT ITEMS FEED (with Photos & Details)
+                var feedItems = new List<dynamic>();
+
+                foreach (var r in allRciList.Take(40))
+                {
+                    feedItems.Add(new
+                    {
+                        id = r.Id,
+                        type = "RCI",
+                        typeLabel = "Road Condition Index",
+                        title = !string.IsNullOrEmpty(r.NamaJalan) ? r.NamaJalan : (!string.IsNullOrEmpty(r.Area) ? r.Area : "Inspeksi Jalan"),
+                        subtitle = !string.IsNullOrEmpty(r.SegmentJalan) ? $"Segment: {r.SegmentJalan}" : (r.DetilLokasi ?? r.Lokasi),
+                        area = r.Area ?? "-",
+                        tanggal = r.Tanggal.ToString("dd MMM yyyy"),
+                        waktu = r.Waktu.ToString(@"hh\:mm"),
+                        createdAt = r.CreatedAt,
+                        surveyorNama = r.Nama,
+                        surveyorNik = r.Nik,
+                        surveyorPerusahaan = r.Perusahaan ?? "PT Indexim Coalindo",
+                        score = r.TotalScore,
+                        scoreDisplay = $"{r.TotalScore:F1}/100",
+                        kategori = r.KategoriIndex,
+                        statusBadge = r.KategoriIndex == "Baik" ? "Kondisi Baik" : (r.KategoriIndex == "Sedang" ? "Perlu Perhatian" : "Kondisi Kurang"),
+                        statusColor = r.KategoriIndex == "Baik" ? "#34d399" : (r.KategoriIndex == "Sedang" ? "#fbbf24" : "#f87171"),
+                        fotoUrl = r.FotoUrl,
+                        catatan = r.Catatan,
+                        tindakan = r.TindakanPerbaikan,
+                        pic = r.Pic,
+                        lat = r.Latitude,
+                        lng = r.Longitude,
+                        details = new[]
+                        {
+                            new { label = "Lebar Jalan", val = r.SkorLebarJalan },
+                            new { label = "Grade Jalan", val = r.SkorGradeJalan },
+                            new { label = "Permukaan", val = r.SkorPermukaanJalan },
+                            new { label = "Safety Berm", val = r.SkorSafetyBerm },
+                            new { label = "Drainase", val = r.SkorDrainaseParit },
+                            new { label = "Superelevasi", val = r.SkorSuperelevasiTikungan },
+                            new { label = "Spillage", val = r.SkorBebasSpillage },
+                            new { label = "Rambu & Debu", val = r.SkorRambuDebu }
+                        }
+                    });
+                }
+
+                foreach (var f in allFciList.Take(40))
+                {
+                    feedItems.Add(new
+                    {
+                        id = f.Id,
+                        type = "FCI",
+                        typeLabel = "Front Condition Index",
+                        title = !string.IsNullOrEmpty(f.NamaFront) ? f.NamaFront : (!string.IsNullOrEmpty(f.Pit) ? $"Pit {f.Pit}" : "Inspeksi Front"),
+                        subtitle = !string.IsNullOrEmpty(f.Pit) ? $"Pit: {f.Pit}" : (f.DetilLokasi ?? f.Lokasi),
+                        area = f.Area ?? "-",
+                        tanggal = f.Tanggal.ToString("dd MMM yyyy"),
+                        waktu = f.Waktu.ToString(@"hh\:mm"),
+                        createdAt = f.CreatedAt,
+                        surveyorNama = f.Nama,
+                        surveyorNik = f.Nik,
+                        surveyorPerusahaan = f.Perusahaan ?? "PT Indexim Coalindo",
+                        score = f.TotalScore,
+                        scoreDisplay = $"{f.TotalScore:F1}/100",
+                        kategori = f.KategoriIndex,
+                        statusBadge = f.KategoriIndex == "Baik" ? "Front Aman" : (f.KategoriIndex == "Sedang" ? "Perlu Perhatian" : "Front Kritis"),
+                        statusColor = f.KategoriIndex == "Baik" ? "#38bdf8" : (f.KategoriIndex == "Sedang" ? "#fbbf24" : "#f87171"),
+                        fotoUrl = f.FotoUrl,
+                        catatan = f.Catatan,
+                        tindakan = f.TindakanPerbaikan,
+                        pic = f.Pic,
+                        lat = f.Latitude,
+                        lng = f.Longitude,
+                        details = new[]
+                        {
+                            new { label = "Lantai Front", val = f.SkorLantaiFront },
+                            new { label = "Ruang Manuver", val = f.SkorRuangManuver },
+                            new { label = "Safety Berm", val = f.SkorSafetyBerm },
+                            new { label = "Kondisi Dinding", val = f.SkorKondisiDinding },
+                            new { label = "Drainase Sump", val = f.SkorDrainaseSump },
+                            new { label = "Spillage", val = f.SkorKebersihanSpillage },
+                            new { label = "Posisi Alat", val = f.SkorPosisiAlat },
+                            new { label = "Penerangan", val = f.SkorRambuPenerangan }
+                        }
+                    });
+                }
+
+                foreach (var b in allBbsList.Take(40))
+                {
+                    bool isSafe = b.Klasifikasi == "Aman";
+                    feedItems.Add(new
+                    {
+                        id = b.Id,
+                        type = "BBS",
+                        typeLabel = "Behavior Safety",
+                        title = !string.IsNullOrEmpty(b.CategoryName) ? b.CategoryName : "Observasi BBS",
+                        subtitle = !string.IsNullOrEmpty(b.ObservedNama) ? $"Pekerja: {b.ObservedNama} ({b.ObservedPerusahaan ?? "-"})" : (b.TopicName ?? "Observasi"),
+                        area = b.Area ?? "-",
+                        tanggal = b.Tanggal.ToString("dd MMM yyyy"),
+                        waktu = b.Waktu ?? "-",
+                        createdAt = b.CreatedAt,
+                        surveyorNama = b.ObserverNama,
+                        surveyorNik = b.ObserverNik,
+                        surveyorPerusahaan = b.ObserverPerusahaan ?? "PT Indexim Coalindo",
+                        score = isSafe ? 100.0 : 0.0,
+                        scoreDisplay = isSafe ? "AMAN" : "BERISIKO",
+                        kategori = b.Klasifikasi,
+                        statusBadge = isSafe ? "Perilaku Aman" : $"At-Risk ({b.TingkatRisiko})",
+                        statusColor = isSafe ? "#34d399" : (b.TingkatRisiko == "Sangat Tinggi" ? "#ef4444" : "#f87171"),
+                        fotoUrl = b.FotoUrl,
+                        catatan = b.Deskripsi,
+                        tindakan = b.CatatanCoaching ?? b.TindakanDilakukan,
+                        pic = b.ObservedNama,
+                        lat = (string?)null,
+                        lng = (string?)null,
+                        details = new[]
+                        {
+                            new { label = "Klasifikasi", val = isSafe ? 100 : 0 },
+                            new { label = "Tingkat Risiko", val = b.TingkatRisiko == "Rendah" ? 25 : (b.TingkatRisiko == "Sedang" ? 50 : 85) },
+                            new { label = "Respons", val = b.ResponsPekerja == "Positif" ? 100 : 50 }
+                        }
+                    });
+                }
+
+                // Sort unified feed by CreatedAt descending
+                var orderedFeed = feedItems
+                    .OrderByDescending(x => (DateTime)x.createdAt)
+                    .Take(60)
+                    .ToList();
+
+                // 6. PHOTO HIGHLIGHTS ONLY (for the Hero Showcase)
+                var photoHighlights = orderedFeed
+                    .Where(x => !string.IsNullOrEmpty((string?)x.fotoUrl))
+                    .Take(25)
+                    .ToList();
+
+                // 7. MARQUEE TICKER
+                var marquee = $"📢 RCI, FCI & BBS REAL-TIME RADAR • TOTAL AKTIVITAS: {totalActivities} LAPORAN ({todayActivities} HARI INI) • RCI RATA-RATA: {avgScoreRci}/100 • FCI RATA-RATA: {avgScoreFci}/100 • BBS SAFE BEHAVIOR: {safeIndexPct}% ({safeCount} AMAN, {atRiskCount} AT-RISK) • BUKTI FOTO LAPANGAN: {totalPhotos} DOKUMENTASI TERVERIFIKASI • TETAP UTAMAKAN KESELAMATAN KERJA (SAFETY FIRST)";
+
+                return Ok(new
+                {
+                    totalActivities,
+                    todayActivities,
+                    totalPhotos,
+                    photoComplianceRate,
+                    uniqueSurveyors,
+                    marqueeText = marquee,
+                    rci = new
+                    {
+                        total = totalRci,
+                        today = todayRci,
+                        mtd = mtdRci,
+                        avgScore = avgScoreRci,
+                        baik = rciBaik,
+                        sedang = rciSedang,
+                        kurang = rciKurang,
+                        paramAvg = rciParamAvg,
+                        topRoads
+                    },
+                    fci = new
+                    {
+                        total = totalFci,
+                        today = todayFci,
+                        mtd = mtdFci,
+                        avgScore = avgScoreFci,
+                        baik = fciBaik,
+                        sedang = fciSedang,
+                        kurang = fciKurang,
+                        paramAvg = fciParamAvg,
+                        topPits
+                    },
+                    bbs = new
+                    {
+                        total = totalBbs,
+                        today = todayBbs,
+                        mtd = mtdBbs,
+                        safeCount,
+                        atRiskCount,
+                        safeIndexPct,
+                        riskLevels,
+                        topCategories
+                    },
+                    feed = orderedFeed,
+                    photoHighlights
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
+        }
+
         [HttpGet("GetCompanyPerformance")]
         public async Task<IActionResult> GetCompanyPerformance()
         {

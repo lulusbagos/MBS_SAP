@@ -1,0 +1,1460 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Display 3 &mdash; RCI, FCI & BBS Field Command Center</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Chakra+Petch:wght@500;700;800&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+    :root {
+        --bg:            #050811;
+        --bg-card:       rgba(15, 23, 42, 0.65);
+        --panel:         rgba(10, 18, 32, 0.85);
+        --border:        rgba(56, 189, 248, 0.15);
+        --border-bright: rgba(56, 189, 248, 0.45);
+        --txt:           #ffffff;
+        --muted:         #94a3b8;
+        --blue:          #38bdf8;
+        --cyan:          #00d2ff;
+        --green:         #34d399;
+        --red:           #f87171;
+        --amber:         #fbbf24;
+        --purple:        #a78bfa;
+        --orange:        #fb923c;
+        --r:             16px;
+    }
+
+    html { background: #050811; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+        background: var(--bg);
+        background-image: 
+            radial-gradient(rgba(56, 189, 248, 0.035) 1px, transparent 1px),
+            radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 90% 90%, rgba(52, 211, 153, 0.06) 0%, transparent 40%),
+            radial-gradient(circle at 80% 20%, rgba(251, 191, 36, 0.05) 0%, transparent 35%);
+        background-size: 28px 28px, 100% 100%, 100% 100%, 100% 100%;
+        font-family: 'Outfit', sans-serif;
+        color: var(--txt);
+        height: 100vh;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* ── Top Countdown Progress Bar ── */
+    .top-progress-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.06);
+        z-index: 9999;
+    }
+    .top-progress-inner {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #00d2ff, #38bdf8, #34d399, #fbbf24);
+        box-shadow: 0 0 12px rgba(0, 210, 255, 0.8);
+        transition: width 1s linear;
+    }
+
+    /* ── TV Main Layout ── */
+    .tv-container {
+        display: grid;
+        grid-template-rows: auto auto 1fr auto;
+        height: 100vh;
+        padding: 10px 16px 10px 16px;
+        gap: 10px;
+    }
+
+    /* ── Header ── */
+    .tv-header {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 8px 18px;
+        display: grid;
+        grid-template-columns: auto 1fr auto auto;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.06);
+    }
+
+    .brand-box { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+        width: 44px; height: 44px; border-radius: 12px;
+        background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(52, 211, 153, 0.2));
+        border: 1.5px solid var(--cyan);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 0 15px rgba(0, 210, 255, 0.35);
+    }
+    .brand-title {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 19px; font-weight: 900;
+        letter-spacing: 0.5px;
+        background: linear-gradient(90deg, #ffffff, #38bdf8, #34d399);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .brand-sub {
+        font-size: 11px; color: var(--muted); font-weight: 600;
+        letter-spacing: 0.8px; text-transform: uppercase;
+    }
+
+    /* Mode Switcher Tabs */
+    .view-mode-tabs {
+        display: flex; align-items: center; gap: 6px;
+        background: rgba(0, 0, 0, 0.4);
+        padding: 4px 6px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        justify-self: center;
+    }
+    .mode-btn {
+        background: transparent; border: none;
+        color: var(--muted); font-size: 11.5px; font-weight: 700;
+        padding: 6px 14px; border-radius: 8px;
+        cursor: pointer; transition: all 0.25s ease;
+        display: inline-flex; align-items: center; gap: 6px;
+        font-family: 'Chakra Petch', sans-serif;
+        text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .mode-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
+    .mode-btn.active {
+        background: linear-gradient(135deg, #0284c7, #0369a1);
+        color: #ffffff;
+        box-shadow: 0 0 14px rgba(2, 132, 199, 0.6);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+    .mode-btn.active.rci {
+        background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        box-shadow: 0 0 14px rgba(14, 165, 233, 0.6);
+    }
+    .mode-btn.active.fci {
+        background: linear-gradient(135deg, #d97706, #b45309);
+        box-shadow: 0 0 14px rgba(217, 119, 6, 0.6);
+    }
+    .mode-btn.active.bbs {
+        background: linear-gradient(135deg, #059669, #047857);
+        box-shadow: 0 0 14px rgba(5, 150, 105, 0.6);
+    }
+
+    /* Header Right: Clock & Actions */
+    .hdr-actions { display: flex; align-items: center; gap: 12px; }
+    .clock-widget {
+        display: flex; flex-direction: column; align-items: flex-end;
+        padding: 4px 12px; background: rgba(0, 0, 0, 0.35);
+        border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .clock-time {
+        font-family: 'Orbitron', monospace;
+        font-size: 17px; font-weight: 800;
+        color: #38bdf8; letter-spacing: 1px;
+    }
+    .clock-date { font-size: 10px; color: var(--muted); font-weight: 600; }
+
+    .hdr-ctrl-btn {
+        width: 38px; height: 38px; border-radius: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        color: var(--txt); display: flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: all 0.2s;
+    }
+    .hdr-ctrl-btn:hover { background: rgba(56, 189, 248, 0.2); border-color: var(--blue); color: var(--blue); }
+
+    /* Switch Display Dropdown */
+    .switch-display-btn {
+        padding: 6px 12px; border-radius: 10px;
+        background: rgba(168, 85, 247, 0.15);
+        border: 1px solid rgba(168, 85, 247, 0.4);
+        color: #c084fc; font-weight: 700; font-size: 11px;
+        display: inline-flex; align-items: center; gap: 6px;
+        text-decoration: none; transition: all 0.2s;
+    }
+    .switch-display-btn:hover {
+        background: rgba(168, 85, 247, 0.3); color: #fff;
+        border-color: #c084fc; box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+    }
+
+    /* ── Row 1: KPI HUD Cards (No Targets) ── */
+    .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+    }
+    .kpi-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 12px 16px;
+        backdrop-filter: blur(16px);
+        position: relative; overflow: hidden;
+        transition: transform 0.25s, border-color 0.25s;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--border-bright);
+    }
+    .kpi-card::before {
+        content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+    }
+    .kpi-card.rci::before { background: linear-gradient(180deg, #00d2ff, #0284c7); }
+    .kpi-card.fci::before { background: linear-gradient(180deg, #fbbf24, #d97706); }
+    .kpi-card.bbs::before { background: linear-gradient(180deg, #34d399, #059669); }
+    .kpi-card.photo::before { background: linear-gradient(180deg, #a78bfa, #7c3aed); }
+
+    .kpi-hdr {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 6px;
+    }
+    .kpi-title {
+        font-family: 'Chakra Petch', sans-serif;
+        font-size: 11px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.8px;
+        color: var(--muted); display: flex; align-items: center; gap: 6px;
+    }
+    .kpi-tag {
+        font-size: 9.5px; font-weight: 800; padding: 2px 8px; border-radius: 6px;
+        font-family: 'Orbitron', monospace;
+    }
+    .kpi-body {
+        display: flex; align-items: baseline; justify-content: space-between;
+    }
+    .kpi-num {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 26px; font-weight: 900;
+        line-height: 1.1; letter-spacing: -0.5px;
+    }
+    .kpi-sub { font-size: 11px; color: var(--muted); }
+    .kpi-footer {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-top: 8px; padding-top: 6px;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        font-size: 10.5px; color: #cbd5e1;
+    }
+
+    /* ── Main Workstage Grid ── */
+    .tv-main-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 12px;
+        min-height: 0;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    /* Left Stage: Hero Spotlight & Parameter Radar */
+    .stage-left {
+        display: grid;
+        grid-template-rows: 1fr auto;
+        gap: 10px;
+        min-height: 0;
+        height: 100%;
+    }
+
+    /* Hero Photo Card */
+    .hero-photo-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 12px 35px rgba(0,0,0,0.45);
+    }
+    .hero-photo-wrap {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        min-height: 200px;
+        background: #020617;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .hero-photo-img {
+        width: 100%; height: 100%;
+        object-fit: cover;
+        transition: transform 0.8s ease;
+    }
+    .hero-photo-card:hover .hero-photo-img {
+        transform: scale(1.03);
+    }
+    .hero-photo-gradient {
+        position: absolute; inset: 0;
+        background: linear-gradient(180deg, rgba(5,8,17,0.3) 0%, rgba(5,8,17,0.1) 40%, rgba(5,8,17,0.95) 100%);
+        pointer-events: none;
+    }
+
+    /* Hero Badges & HUD Overlays */
+    .hero-badge-top-left {
+        position: absolute; top: 14px; left: 14px;
+        display: flex; align-items: center; gap: 8px; z-index: 10;
+    }
+    .hero-badge-top-right {
+        position: absolute; top: 14px; right: 14px;
+        display: flex; align-items: center; gap: 8px; z-index: 10;
+    }
+    .hero-badge-type {
+        font-family: 'Orbitron', monospace;
+        font-size: 11px; font-weight: 900;
+        padding: 5px 12px; border-radius: 8px;
+        letter-spacing: 0.5px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.6);
+        display: inline-flex; align-items: center; gap: 6px;
+    }
+    .hero-badge-score {
+        font-family: 'Orbitron', monospace;
+        font-size: 14px; font-weight: 900;
+        padding: 5px 14px; border-radius: 8px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.6);
+    }
+
+    /* Hero Info Overlay (Bottom) */
+    .hero-info-overlay {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        padding: 16px 20px 14px 20px;
+        z-index: 10;
+    }
+    .hero-title {
+        font-size: 20px; font-weight: 800; color: #ffffff;
+        font-family: 'Outfit', sans-serif;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        margin-bottom: 2px;
+        display: flex; align-items: center; gap: 10px;
+    }
+    .hero-subtitle {
+        font-size: 12px; color: #cbd5e1;
+        margin-bottom: 8px; text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    }
+    .hero-meta-row {
+        display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
+        font-size: 11px; color: var(--muted);
+    }
+    .hero-meta-item { display: inline-flex; align-items: center; gap: 5px; }
+
+    /* Hero Navigation Buttons */
+    .hero-nav-btn {
+        position: absolute; top: 50%; transform: translateY(-50%);
+        width: 38px; height: 38px; border-radius: 50%;
+        background: rgba(10, 18, 32, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        color: #fff; display: flex; align-items: center; justify-content: center;
+        cursor: pointer; z-index: 15; transition: all 0.2s;
+    }
+    .hero-nav-btn:hover {
+        background: rgba(56, 189, 248, 0.4);
+        border-color: var(--blue);
+        box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+    }
+    .hero-nav-btn.prev { left: 12px; }
+    .hero-nav-btn.next { right: 12px; }
+
+    /* Parameters Telemetry Matrix Box */
+    .telemetry-box {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 12px 16px;
+        backdrop-filter: blur(16px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .telemetry-hdr {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .telemetry-title {
+        font-family: 'Chakra Petch', sans-serif;
+        font-size: 12px; font-weight: 800;
+        color: var(--txt); text-transform: uppercase; letter-spacing: 0.6px;
+        display: flex; align-items: center; gap: 6px;
+    }
+    .telemetry-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+    .param-bar-item {
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 8px; padding: 6px 10px;
+    }
+    .param-bar-lbl {
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 9.5px; font-weight: 700; color: var(--muted); margin-bottom: 4px;
+        text-transform: uppercase;
+    }
+    .param-bar-val {
+        font-family: 'Orbitron', monospace; font-size: 10.5px; font-weight: 800;
+    }
+    .param-track {
+        height: 5px; width: 100%; background: rgba(255, 255, 255, 0.08);
+        border-radius: 3px; overflow: hidden;
+    }
+    .param-fill {
+        height: 100%; border-radius: 3px;
+        transition: width 0.6s ease;
+    }
+
+    /* Right Stage: Continuous Auto-Scrolling Live Feed */
+    .stage-right {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        backdrop-filter: blur(16px);
+        box-shadow: 0 12px 35px rgba(0,0,0,0.45);
+    }
+    .feed-header {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex; align-items: center; justify-content: space-between;
+        background: rgba(0,0,0,0.25);
+    }
+    .feed-title {
+        font-family: 'Chakra Petch', sans-serif;
+        font-size: 13px; font-weight: 800;
+        text-transform: uppercase; letter-spacing: 0.8px;
+        color: #ffffff; display: flex; align-items: center; gap: 8px;
+    }
+    .feed-badge {
+        font-size: 10px; font-weight: 800;
+        padding: 3px 8px; border-radius: 6px;
+        background: rgba(56, 189, 248, 0.15); color: var(--blue);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        font-family: 'Orbitron', monospace;
+    }
+
+    /* Feed Scroll Box */
+    .feed-scroll-box {
+        flex: 1;
+        overflow-y: hidden;
+        position: relative;
+        padding: 10px 12px;
+    }
+    .feed-items-container {
+        display: flex; flex-direction: column; gap: 8px;
+        transition: transform 0.1s linear;
+    }
+
+    /* Feed Card */
+    .feed-card {
+        background: rgba(15, 23, 42, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 12px;
+        padding: 9px 12px;
+        display: grid;
+        grid-template-columns: 60px 1fr auto;
+        gap: 12px;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .feed-card:hover {
+        background: rgba(30, 41, 59, 0.7);
+        border-color: var(--blue);
+        transform: translateX(3px);
+        box-shadow: 0 4px 15px rgba(0, 210, 255, 0.15);
+    }
+    .feed-thumb-box {
+        width: 60px; height: 50px; border-radius: 8px;
+        overflow: hidden; background: #0b1329;
+        position: relative; border: 1px solid rgba(255,255,255,0.1);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .feed-thumb-img {
+        width: 100%; height: 100%; object-fit: cover;
+    }
+    .feed-thumb-placeholder {
+        font-size: 20px; color: var(--muted);
+    }
+    .feed-info-box { min-width: 0; }
+    .feed-item-hdr {
+        display: flex; align-items: center; gap: 6px; margin-bottom: 2px;
+    }
+    .feed-type-pill {
+        font-size: 8.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px;
+        font-family: 'Orbitron', monospace; text-transform: uppercase;
+    }
+    .feed-item-title {
+        font-size: 12.5px; font-weight: 800; color: #ffffff;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .feed-item-sub {
+        font-size: 10.5px; color: var(--muted);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .feed-meta-row {
+        font-size: 9.5px; color: #64748b; margin-top: 2px;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .feed-score-col {
+        text-align: right; min-width: 75px;
+    }
+    .feed-score-num {
+        font-family: 'Orbitron', monospace;
+        font-size: 13px; font-weight: 900;
+    }
+    .feed-status-pill {
+        font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+        display: inline-block; margin-top: 2px;
+    }
+
+    /* ── Bottom Ticker / Newsflash ── */
+    .tv-footer-ticker {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 6px 14px;
+        display: flex; align-items: center; gap: 12px;
+        overflow: hidden;
+    }
+    .ticker-lbl {
+        background: linear-gradient(135deg, #ef4444, #b91c1c);
+        color: #fff; font-family: 'Orbitron', sans-serif;
+        font-size: 10.5px; font-weight: 900;
+        padding: 4px 10px; border-radius: 6px;
+        white-space: nowrap;
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    }
+    .ticker-scroll-wrap {
+        flex: 1; overflow: hidden; white-space: nowrap; position: relative;
+    }
+    .ticker-text {
+        display: inline-block;
+        padding-left: 100%;
+        animation: marqueeAnim 45s linear infinite;
+        font-size: 12px; font-weight: 600; color: #e2e8f0;
+        letter-spacing: 0.5px;
+    }
+    @@keyframes marqueeAnim {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-100%); }
+    }
+
+    /* ── High-Tech Lightbox Modal ── */
+    .tech-modal-overlay {
+        position: fixed; inset: 0;
+        background: rgba(2, 6, 23, 0.88);
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        z-index: 10000;
+        display: none; align-items: center; justify-content: center;
+        padding: 20px;
+    }
+    .tech-modal-card {
+        background: #090f1e;
+        border: 1px solid var(--border-bright);
+        box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 30px rgba(56, 189, 248, 0.25);
+        border-radius: 20px;
+        max-width: 950px; width: 100%;
+        max-height: 90vh;
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: 1.2fr 1fr;
+        animation: modalFadeIn 0.25s ease-out;
+    }
+    @@keyframes modalFadeIn {
+        from { opacity: 0; transform: scale(0.96); }
+        to { opacity: 1; transform: scale(1); }
+    }
+    .tech-modal-img-wrap {
+        background: #020617;
+        overflow: hidden; position: relative;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .tech-modal-img {
+        width: 100%; height: 100%; object-fit: contain; max-height: 85vh;
+    }
+    .tech-modal-body {
+        padding: 24px;
+        overflow-y: auto;
+        display: flex; flex-direction: column; gap: 14px;
+    }
+    .tech-modal-close {
+        position: absolute; top: 16px; right: 16px;
+        width: 36px; height: 36px; border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff; display: flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: all 0.2s; z-index: 20;
+    }
+    .tech-modal-close:hover { background: #ef4444; border-color: #ef4444; }
+
+    /* Responsive adjustments */
+    @@media (max-width: 1200px) {
+        .kpi-row { grid-template-columns: repeat(2, 1fr); }
+        .tv-main-grid { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+        .telemetry-grid { grid-template-columns: repeat(2, 1fr); }
+        .tech-modal-card { grid-template-columns: 1fr; }
+    }
+    </style>
+</head>
+<body>
+
+    <!-- Top Slide / Countdown Progress Bar -->
+    <div class="top-progress-bar">
+        <div id="topProgressBar" class="top-progress-inner"></div>
+    </div>
+
+    <!-- Main TV Container -->
+    <div class="tv-container">
+
+        <!-- 1. HEADER -->
+        <header class="tv-header">
+            <div class="brand-box">
+                <div class="brand-icon">
+                    <i class="bi bi-shield-check text-cyan" style="font-size: 24px;"></i>
+                </div>
+                <div>
+                    <div class="brand-title">
+                        MBS DISPLAY 3 <span style="font-size:12px; color:var(--muted); font-weight:600;">[RCI &bull; FCI &bull; BBS]</span>
+                    </div>
+                    <div class="brand-sub">
+                        FIELD CONDITION, ROAD & BEHAVIOR OBSERVATION COMMAND CENTER
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mode Switcher Tabs -->
+            <div class="view-mode-tabs">
+                <button type="button" class="mode-btn active" id="tabAllBtn" onclick="switchDisplayMode('all')">
+                    <i class="bi bi-grid-fill"></i> ALL RADAR
+                </button>
+                <button type="button" class="mode-btn rci" id="tabRciBtn" onclick="switchDisplayMode('rci')">
+                    <i class="bi bi-cone-striped"></i> RCI (ROAD)
+                </button>
+                <button type="button" class="mode-btn fci" id="tabFciBtn" onclick="switchDisplayMode('fci')">
+                    <i class="bi bi-truck-front-fill"></i> FCI (FRONT)
+                </button>
+                <button type="button" class="mode-btn bbs" id="tabBbsBtn" onclick="switchDisplayMode('bbs')">
+                    <i class="bi bi-person-check-fill"></i> BBS (BEHAVIOR)
+                </button>
+                <button type="button" class="mode-btn" id="tabPhotoBtn" onclick="switchDisplayMode('photo')">
+                    <i class="bi bi-camera-fill text-warning"></i> FOTO ONLY
+                </button>
+            </div>
+
+            <!-- Actions & Display Switchers -->
+            <div class="hdr-actions">
+                <a href="/Display2" class="switch-display-btn" title="Buka Display 2 (F1 Safety & Liga)">
+                    <i class="bi bi-flag-fill"></i> DISPLAY 2
+                </a>
+                <a href="/Display1" class="switch-display-btn" style="background:rgba(56,189,248,0.15); border-color:rgba(56,189,248,0.4); color:#38bdf8;" title="Buka Display 1 (SAP Summary)">
+                    <i class="bi bi-speedometer2"></i> DISPLAY 1
+                </a>
+                <button type="button" class="hdr-ctrl-btn" id="btnPlayPause" onclick="toggleAutoRotation()" title="Play / Pause Auto-Slide">
+                    <i class="bi bi-pause-fill" id="playPauseIcon" style="font-size: 18px;"></i>
+                </button>
+                <button type="button" class="hdr-ctrl-btn" onclick="toggleFullScreen()" title="Fullscreen Mode">
+                    <i class="bi bi-arrows-fullscreen" style="font-size: 16px;"></i>
+                </button>
+            </div>
+
+            <!-- Live Digital Clock -->
+            <div class="clock-widget">
+                <div class="clock-time" id="liveClock">00:00:00</div>
+                <div class="clock-date" id="liveDate">WITA &bull; 11 OKT 2026</div>
+            </div>
+        </header>
+
+        <!-- 2. KPI HUD CARDS (NO TARGETS - DATA METRICS & QUALITY RADAR) -->
+        <div class="kpi-row">
+            <!-- Card 1: RCI Road Condition -->
+            <div class="kpi-card rci">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-signpost-split-fill text-info"></i> ROAD CONDITION INDEX (RCI)</span>
+                    <span class="kpi-tag" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8;" id="rciScoreBadge">SKOR: --</span>
+                </div>
+                <div class="kpi-body">
+                    <div>
+                        <span class="kpi-num text-white" id="rciAvgScore">--</span>
+                        <span style="font-size: 12px; color: var(--muted); font-weight: 700;"> / 100</span>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold" style="font-size: 13px; color: #38bdf8;" id="rciTotalCount">-- LAPORAN</div>
+                        <div class="kpi-sub" id="rciTodayCount">-- hari ini</div>
+                    </div>
+                </div>
+                <div class="kpi-footer">
+                    <span><i class="bi bi-check-circle text-success me-1"></i>Baik: <strong id="rciBaikCount">0</strong></span>
+                    <span><i class="bi bi-exclamation-triangle text-warning me-1"></i>Sedang: <strong id="rciSedangCount">0</strong></span>
+                    <span><i class="bi bi-x-circle text-danger me-1"></i>Kurang: <strong id="rciKurangCount">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Card 2: FCI Front Condition -->
+            <div class="kpi-card fci">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-geo-alt-fill text-warning"></i> FRONT CONDITION INDEX (FCI)</span>
+                    <span class="kpi-tag" style="background: rgba(251, 191, 36, 0.2); color: #fbbf24;" id="fciScoreBadge">SKOR: --</span>
+                </div>
+                <div class="kpi-body">
+                    <div>
+                        <span class="kpi-num text-white" id="fciAvgScore">--</span>
+                        <span style="font-size: 12px; color: var(--muted); font-weight: 700;"> / 100</span>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold" style="font-size: 13px; color: #fbbf24;" id="fciTotalCount">-- LAPORAN</div>
+                        <div class="kpi-sub" id="fciTodayCount">-- hari ini</div>
+                    </div>
+                </div>
+                <div class="kpi-footer">
+                    <span><i class="bi bi-check-circle text-success me-1"></i>Aman: <strong id="fciBaikCount">0</strong></span>
+                    <span><i class="bi bi-exclamation-triangle text-warning me-1"></i>Waspada: <strong id="fciSedangCount">0</strong></span>
+                    <span><i class="bi bi-x-circle text-danger me-1"></i>Kritis: <strong id="fciKurangCount">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Card 3: BBS Safe Behavior -->
+            <div class="kpi-card bbs">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-shield-check text-success"></i> BEHAVIOR-BASED SAFETY (BBS)</span>
+                    <span class="kpi-tag" style="background: rgba(52, 211, 153, 0.2); color: #34d399;" id="bbsSafeBadge">--% AMAN</span>
+                </div>
+                <div class="kpi-body">
+                    <div>
+                        <span class="kpi-num text-white" id="bbsSafePct">--%</span>
+                        <span style="font-size: 11px; color: #34d399; font-weight: 700;"> SAFE INDEX</span>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold" style="font-size: 13px; color: #34d399;" id="bbsTotalCount">-- OBSERVASI</div>
+                        <div class="kpi-sub" id="bbsTodayCount">-- hari ini</div>
+                    </div>
+                </div>
+                <div class="kpi-footer">
+                    <span><i class="bi bi-hand-thumbs-up text-success me-1"></i>Safe: <strong id="bbsSafeCount">0</strong></span>
+                    <span><i class="bi bi-hand-thumbs-down text-danger me-1"></i>At-Risk: <strong id="bbsAtRiskCount">0</strong></span>
+                    <span id="bbsHighRiskBadge" class="badge bg-danger py-0.5 px-1.5" style="font-size:9.5px; display:none;">0 High</span>
+                </div>
+            </div>
+
+            <!-- Card 4: Field Visual Evidence -->
+            <div class="kpi-card photo">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-camera-fill text-purple"></i> BUKTI FOTO & KEPATUHAN</span>
+                    <span class="kpi-tag" style="background: rgba(167, 139, 250, 0.2); color: #c084fc;" id="photoRateBadge">--% BERFOTO</span>
+                </div>
+                <div class="kpi-body">
+                    <div>
+                        <span class="kpi-num text-white" id="totalPhotosCount">--</span>
+                        <span style="font-size: 11px; color: #c084fc; font-weight: 700;"> FOTO TERUNGGAH</span>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold" style="font-size: 13px; color: #c084fc;" id="totalActivitiesCount">-- AKTIVITAS</div>
+                        <div class="kpi-sub" id="uniqueSurveyorsCount">-- surveyor aktif</div>
+                    </div>
+                </div>
+                <div class="kpi-footer">
+                    <span><i class="bi bi-camera me-1 text-purple"></i>Dokumentasi Lapangan Visual Terverifikasi</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. MAIN WORKSTAGE GRID -->
+        <main class="tv-main-grid">
+
+            <!-- LEFT STAGE: HERO PHOTO SPOTLIGHT & PARAMETER RADAR -->
+            <div class="stage-left">
+
+                <!-- Hero Photo Card -->
+                <div class="hero-photo-card" id="heroPhotoCard">
+                    <!-- Navigation Arrows -->
+                    <button type="button" class="hero-nav-btn prev" onclick="prevHeroSlide()" title="Foto Sebelumnya">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <button type="button" class="hero-nav-btn next" onclick="nextHeroSlide()" title="Foto Selanjutnya">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+
+                    <!-- Top Floating Badges -->
+                    <div class="hero-badge-top-left">
+                        <span class="hero-badge-type" id="heroTypeBadge" style="background: #0284c7; color: #fff;">
+                            <i class="bi bi-cone-striped"></i> RCI ROAD INSPECTION
+                        </span>
+                        <span class="badge bg-dark border border-secondary" id="heroAreaBadge" style="font-size:11px; padding: 6px 12px;">
+                            <i class="bi bi-geo-alt-fill text-warning me-1"></i> Area Utama
+                        </span>
+                    </div>
+
+                    <div class="hero-badge-top-right">
+                        <span class="hero-badge-score" id="heroScoreBadge" style="background: #059669; color: #fff;">
+                            SCORE: 95/100
+                        </span>
+                    </div>
+
+                    <!-- Image Display Wrap -->
+                    <div class="hero-photo-wrap" onclick="openHeroInLightbox()" style="cursor: pointer;">
+                        <img id="heroImg" src="" alt="Bukti Foto Lapangan" class="hero-photo-img" onerror="handleHeroImgError()" />
+                        <div id="heroFallbackPlaceholder" style="display:none; text-align:center; padding: 40px;">
+                            <i class="bi bi-image text-muted" style="font-size: 64px;"></i>
+                            <div class="text-muted mt-2 fw-bold" style="font-size: 14px;">DOKUMENTASI FOTO DALAM PROSES VERIFIKASI</div>
+                        </div>
+                        <div class="hero-photo-gradient"></div>
+                    </div>
+
+                    <!-- Hero Info Bottom Overlay -->
+                    <div class="hero-info-overlay">
+                        <div class="hero-title">
+                            <span id="heroTitle">Memuat data inspeksi...</span>
+                            <span class="badge bg-secondary" id="heroStatusText" style="font-size:11px;">Status</span>
+                        </div>
+                        <div class="hero-subtitle" id="heroSubtitle">
+                            Menyiapkan detail lokasi dan parameter pengamatan...
+                        </div>
+                        <div class="hero-meta-row">
+                            <span class="hero-meta-item"><i class="bi bi-person-circle text-primary"></i> <span id="heroSurveyor">Surveyor</span></span>
+                            <span class="hero-meta-item"><i class="bi bi-building text-info"></i> <span id="heroCompany">Perusahaan</span></span>
+                            <span class="hero-meta-item"><i class="bi bi-calendar3 text-warning"></i> <span id="heroDate">Tanggal</span></span>
+                            <span class="hero-meta-item"><i class="bi bi-clock text-cyan"></i> <span id="heroTime">Waktu</span></span>
+                            <span class="hero-meta-item ms-auto text-info" style="cursor:pointer;" onclick="openHeroInLightbox()"><i class="bi bi-arrows-angle-expand me-1"></i>Perbesar Foto</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parameters Telemetry Matrix Box -->
+                <div class="telemetry-box" id="telemetryBox">
+                    <div class="telemetry-hdr">
+                        <span class="telemetry-title" id="telemetryTitle">
+                            <i class="bi bi-bar-chart-steps text-info"></i> 8 PARAMETER PENILAIAN TEKNIS
+                        </span>
+                        <span class="text-muted" style="font-size: 10px; font-weight:700;" id="telemetryCategoryName">
+                            RATA-RATA SKOR KONDISI KESELURUHAN
+                        </span>
+                    </div>
+
+                    <div class="telemetry-grid" id="telemetryGrid">
+                        <!-- Dynamically filled with 8 parameter bars -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT STAGE: CONTINUOUS AUTO-SCROLLING LIVE FEED -->
+            <div class="stage-right">
+                <div class="feed-header">
+                    <div class="feed-title">
+                        <i class="bi bi-broadcast text-danger"></i> LIVE FIELD FEED
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="feed-badge" id="feedCounter">0 LAPORAN</span>
+                    </div>
+                </div>
+
+                <div class="feed-scroll-box" id="feedScrollBox" onmouseenter="pauseFeedScroll()" onmouseleave="resumeFeedScroll()">
+                    <div class="feed-items-container" id="feedContainer">
+                        <div class="p-4 text-center text-muted" style="font-size: 13px;">
+                            <div class="spinner-border spinner-border-sm text-primary mb-2"></div>
+                            <div>Menghubungkan ke server real-time...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- 4. BOTTOM TICKER / NEWSFLASH -->
+        <footer class="tv-footer-ticker">
+            <div class="ticker-lbl">
+                <i class="bi bi-activity me-1"></i> FIELD RADAR
+            </div>
+            <div class="ticker-scroll-wrap">
+                <div class="ticker-text" id="tickerText">
+                    MEMUAT INFORMASI TERKINI INSPEKSI JALAN (RCI), KONDISI FRONT (FCI), DAN OBSERVASI PERILAKU PEKERJA (BBS)...
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- 5. LIGHTBOX / HIGH-TECH DETAIL MODAL -->
+    <div class="tech-modal-overlay" id="techModal" onclick="closeLightbox(event)">
+        <div class="tech-modal-card" onclick="event.stopPropagation()">
+            <button type="button" class="tech-modal-close" onclick="closeLightbox()" title="Tutup">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <div class="tech-modal-img-wrap">
+                <img id="modalImg" src="" alt="Bukti Foto" class="tech-modal-img" onerror="this.src='/img/placeholder-photo.png'" />
+            </div>
+            <div class="tech-modal-body">
+                <div>
+                    <span class="badge" id="modalTypeBadge" style="font-size:11px; font-family:'Orbitron', monospace;">TYPE</span>
+                    <span class="badge ms-1" id="modalScoreBadge" style="font-size:11px; font-family:'Orbitron', monospace;">SCORE</span>
+                </div>
+                <h4 class="fw-bold mb-1 text-white" id="modalTitle">Judul Inspeksi</h4>
+                <div class="text-muted" style="font-size: 13px;" id="modalSubtitle">Sub judul detail</div>
+
+                <div class="p-3 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); font-size: 12.5px;">
+                    <div class="mb-1"><strong>Area / Lokasi:</strong> <span id="modalArea">-</span></div>
+                    <div class="mb-1"><strong>Surveyor:</strong> <span id="modalSurveyor">-</span> (<span id="modalCompany">-</span>)</div>
+                    <div class="mb-1"><strong>Waktu:</strong> <span id="modalDateTime">-</span></div>
+                    <div id="modalGpsWrap" class="d-none"><strong>GPS:</strong> <span id="modalGps">-</span></div>
+                </div>
+
+                <div id="modalParamsBox">
+                    <h6 class="fw-bold text-info mb-2" style="font-size: 12.5px;"><i class="bi bi-list-check me-1"></i>Parameter Penilaian:</h6>
+                    <div id="modalParamsList" class="d-flex flex-column gap-1.5"></div>
+                </div>
+
+                <div id="modalCatatanBox" class="p-3 rounded-3" style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2);">
+                    <div class="fw-bold text-primary mb-1" style="font-size: 12px;">Catatan & Temuan:</div>
+                    <div class="text-muted" style="font-size: 12px;" id="modalCatatan">-</div>
+                </div>
+
+                <div id="modalTindakanBox" class="p-3 rounded-3" style="background: rgba(52, 211, 153, 0.05); border: 1px solid rgba(52, 211, 153, 0.2);">
+                    <div class="fw-bold text-success mb-1" style="font-size: 12px;">Tindakan Perbaikan / Coaching:</div>
+                    <div class="text-muted" style="font-size: 12px;" id="modalTindakan">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC & REAL-TIME AUTO-ROTATION -->
+    <script>
+    /* ──────────────────────────────────────────────────────────────────────────
+       1. STATE & GLOBAL CONFIGURATION
+       ────────────────────────────────────────────────────────────────────────── */
+    let currentData = null;
+    let currentMode = 'all'; // 'all', 'rci', 'fci', 'bbs', 'photo'
+    let isAutoRotating = true;
+    let currentHeroIndex = 0;
+    let heroSlides = [];
+
+    const REFRESH_INTERVAL_SECONDS = 30; // Data refresh
+    const HERO_SLIDE_SECONDS = 7;       // Hero photo slide duration
+    let slideTimer = null;
+    let progressTimer = null;
+    let slideProgress = 0;
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       2. LIVE DIGITAL CLOCK
+       ────────────────────────────────────────────────────────────────────────── */
+    function updateLiveClock() {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('liveClock').textContent = `${hh}:${mm}:${ss}`;
+
+        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+        const day = now.getDate();
+        const mon = months[now.getMonth()];
+        const yr = now.getFullYear();
+        document.getElementById('liveDate').textContent = `WITA \u2022 ${day} ${mon} ${yr}`;
+    }
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock();
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       3. FETCH DISPLAY 3 DATA (RCI, FCI & BBS)
+       ────────────────────────────────────────────────────────────────────────── */
+    async function fetchDisplay3Data() {
+        try {
+            const res = await fetch('/Display/GetDisplay3Data');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            currentData = data;
+
+            renderKPIs(data);
+            prepareHeroSlides(data);
+            renderFeed(data);
+            renderTelemetry(data);
+            renderTicker(data.marqueeText);
+        } catch (err) {
+            console.error('Error fetching Display 3 data:', err);
+        }
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       4. RENDER KPI CARDS (NO TARGETS)
+       ────────────────────────────────────────────────────────────────────────── */
+    function renderKPIs(d) {
+        if (!d) return;
+
+        // RCI
+        if (d.rci) {
+            document.getElementById('rciAvgScore').textContent = Number(d.rci.avgScore || 0).toFixed(1);
+            document.getElementById('rciTotalCount').textContent = `${d.rci.total || 0} LAPORAN`;
+            document.getElementById('rciTodayCount').textContent = `${d.rci.today || 0} hari ini`;
+            document.getElementById('rciScoreBadge').textContent = d.rci.avgScore >= 85 ? 'KONDISI BAIK' : (d.rci.avgScore >= 70 ? 'SEDANG' : 'PERHATIAN');
+            document.getElementById('rciBaikCount').textContent = d.rci.baik || 0;
+            document.getElementById('rciSedangCount').textContent = d.rci.sedang || 0;
+            document.getElementById('rciKurangCount').textContent = d.rci.kurang || 0;
+        }
+
+        // FCI
+        if (d.fci) {
+            document.getElementById('fciAvgScore').textContent = Number(d.fci.avgScore || 0).toFixed(1);
+            document.getElementById('fciTotalCount').textContent = `${d.fci.total || 0} LAPORAN`;
+            document.getElementById('fciTodayCount').textContent = `${d.fci.today || 0} hari ini`;
+            document.getElementById('fciScoreBadge').textContent = d.fci.avgScore >= 85 ? 'FRONT AMAN' : (d.fci.avgScore >= 70 ? 'WASPADA' : 'KRITIS');
+            document.getElementById('fciBaikCount').textContent = d.fci.baik || 0;
+            document.getElementById('fciSedangCount').textContent = d.fci.sedang || 0;
+            document.getElementById('fciKurangCount').textContent = d.fci.kurang || 0;
+        }
+
+        // BBS
+        if (d.bbs) {
+            const safePct = Number(d.bbs.safeIndexPct || 0).toFixed(1);
+            document.getElementById('bbsSafePct').textContent = `${safePct}%`;
+            document.getElementById('bbsSafeBadge').textContent = `${safePct}% AMAN`;
+            document.getElementById('bbsTotalCount').textContent = `${d.bbs.total || 0} OBSERVASI`;
+            document.getElementById('bbsTodayCount').textContent = `${d.bbs.today || 0} hari ini`;
+            document.getElementById('bbsSafeCount').textContent = d.bbs.safeCount || 0;
+            document.getElementById('bbsAtRiskCount').textContent = d.bbs.atRiskCount || 0;
+            
+            const highRisk = (d.bbs.riskLevels?.tinggi || 0) + (d.bbs.riskLevels?.sangatTinggi || 0);
+            const badge = document.getElementById('bbsHighRiskBadge');
+            if (highRisk > 0) {
+                badge.textContent = `${highRisk} High Risk`;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        // Photo compliance
+        document.getElementById('totalPhotosCount').textContent = d.totalPhotos || 0;
+        document.getElementById('totalActivitiesCount').textContent = `${d.totalActivities || 0} TOTAL`;
+        document.getElementById('photoRateBadge').textContent = `${Number(d.photoComplianceRate || 0).toFixed(1)}% BERFOTO`;
+        document.getElementById('uniqueSurveyorsCount').textContent = `${d.uniqueSurveyors || 0} surveyor aktif`;
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       5. PREPARE & RENDER HERO PHOTO SPOTLIGHT
+       ────────────────────────────────────────────────────────────────────────── */
+    function prepareHeroSlides(d) {
+        if (!d) return;
+
+        let items = [];
+        if (currentMode === 'all') {
+            items = (d.photoHighlights && d.photoHighlights.length > 0) ? d.photoHighlights : (d.feed || []);
+        } else if (currentMode === 'photo') {
+            items = d.photoHighlights || [];
+        } else {
+            const feed = d.feed || [];
+            items = feed.filter(x => x.type && x.type.toLowerCase() === currentMode.toLowerCase());
+            // prioritize those with photos
+            items.sort((a,b) => (b.fotoUrl ? 1 : 0) - (a.fotoUrl ? 1 : 0));
+        }
+
+        heroSlides = items.length > 0 ? items : (d.feed || []);
+        if (currentHeroIndex >= heroSlides.length) currentHeroIndex = 0;
+        renderHeroSlide(currentHeroIndex);
+    }
+
+    function renderHeroSlide(idx) {
+        if (!heroSlides || heroSlides.length === 0) return;
+        const item = heroSlides[idx];
+        if (!item) return;
+
+        // Image
+        const imgEl = document.getElementById('heroImg');
+        const fallbackEl = document.getElementById('heroFallbackPlaceholder');
+
+        if (item.fotoUrl) {
+            imgEl.src = item.fotoUrl;
+            imgEl.style.display = 'block';
+            fallbackEl.style.display = 'none';
+        } else {
+            imgEl.style.display = 'none';
+            fallbackEl.style.display = 'block';
+        }
+
+        // Badges
+        const typeEl = document.getElementById('heroTypeBadge');
+        typeEl.textContent = `${item.type} ${item.typeLabel || ''}`.trim();
+        typeEl.style.background = item.type === 'RCI' ? '#0284c7' : (item.type === 'FCI' ? '#d97706' : (item.kategori === 'Aman' ? '#059669' : '#dc2626'));
+
+        document.getElementById('heroAreaBadge').innerHTML = `<i class="bi bi-geo-alt-fill text-warning me-1"></i>${item.area || 'Area Lapangan'}`;
+        
+        const scoreEl = document.getElementById('heroScoreBadge');
+        scoreEl.textContent = item.scoreDisplay || `${item.score}/100`;
+        scoreEl.style.background = item.statusColor || '#0284c7';
+
+        // Titles
+        document.getElementById('heroTitle').textContent = item.title || 'Laporan Pengamatan';
+        document.getElementById('heroSubtitle').textContent = item.subtitle || (item.catatan || 'Detail hasil inspeksi visual di area kerja');
+        
+        const statusText = document.getElementById('heroStatusText');
+        statusText.textContent = item.statusBadge || item.kategori;
+        statusText.style.background = item.statusColor || '#475569';
+
+        // Meta
+        document.getElementById('heroSurveyor').textContent = item.surveyorNama || item.surveyorNik || 'Observer';
+        document.getElementById('heroCompany').textContent = item.surveyorPerusahaan || 'PT Indexim Coalindo';
+        document.getElementById('heroDate').textContent = item.tanggal || '-';
+        document.getElementById('heroTime').textContent = item.waktu || '-';
+    }
+
+    function nextHeroSlide() {
+        if (heroSlides.length === 0) return;
+        currentHeroIndex = (currentHeroIndex + 1) % heroSlides.length;
+        renderHeroSlide(currentHeroIndex);
+        resetSlideProgressBar();
+    }
+
+    function prevHeroSlide() {
+        if (heroSlides.length === 0) return;
+        currentHeroIndex = (currentHeroIndex - 1 + heroSlides.length) % heroSlides.length;
+        renderHeroSlide(currentHeroIndex);
+        resetSlideProgressBar();
+    }
+
+    function handleHeroImgError() {
+        document.getElementById('heroImg').style.display = 'none';
+        document.getElementById('heroFallbackPlaceholder').style.display = 'block';
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       6. RENDER DYNAMIC PARAMETER TELEMETRY (RADAR)
+       ────────────────────────────────────────────────────────────────────────── */
+    function renderTelemetry(d) {
+        if (!d) return;
+
+        const container = document.getElementById('telemetryGrid');
+        const titleEl = document.getElementById('telemetryTitle');
+        const catEl = document.getElementById('telemetryCategoryName');
+
+        let params = [];
+        let colorGrad = 'linear-gradient(90deg, #0284c7, #38bdf8)';
+
+        if (currentMode === 'rci' || (currentMode === 'all' && heroSlides[currentHeroIndex]?.type === 'RCI')) {
+            titleEl.innerHTML = `<i class="bi bi-cone-striped text-info"></i> 8 PARAMETER ROAD CONDITION INDEX`;
+            catEl.textContent = `RATA-RATA EVALUASI KONDISI JALAN HAULING & TAMBANG`;
+            colorGrad = 'linear-gradient(90deg, #0284c7, #38bdf8)';
+            const p = d.rci?.paramAvg || {};
+            params = [
+                { name: 'Lebar Jalan', val: p.lebar || 100 },
+                { name: 'Grade Jalan', val: p.grade || 100 },
+                { name: 'Permukaan', val: p.permukaan || 100 },
+                { name: 'Safety Berm', val: p.berm || 100 },
+                { name: 'Drainase Parit', val: p.drainase || 100 },
+                { name: 'Superelevasi', val: p.superelevasi || 100 },
+                { name: 'Bebas Spillage', val: p.spillage || 100 },
+                { name: 'Rambu & Debu', val: p.rambu || 100 }
+            ];
+        } else if (currentMode === 'fci' || (currentMode === 'all' && heroSlides[currentHeroIndex]?.type === 'FCI')) {
+            titleEl.innerHTML = `<i class="bi bi-truck-front-fill text-warning"></i> 8 PARAMETER FRONT CONDITION INDEX`;
+            catEl.textContent = `RATA-RATA EVALUASI KONDISI FRONT LOADING TAMBANG`;
+            colorGrad = 'linear-gradient(90deg, #d97706, #fbbf24)';
+            const p = d.fci?.paramAvg || {};
+            params = [
+                { name: 'Lantai Front', val: p.lantai || 100 },
+                { name: 'Ruang Manuver', val: p.manuver || 100 },
+                { name: 'Safety Berm', val: p.berm || 100 },
+                { name: 'Kondisi Dinding', val: p.dinding || 100 },
+                { name: 'Drainase Sump', val: p.sump || 100 },
+                { name: 'Kebersihan', val: p.spillage || 100 },
+                { name: 'Posisi Alat', val: p.posisi || 100 },
+                { name: 'Penerangan', val: p.rambu || 100 }
+            ];
+        } else {
+            titleEl.innerHTML = `<i class="bi bi-person-check-fill text-success"></i> TELEMETRI PERILAKU BBS (SAFE VS AT-RISK)`;
+            catEl.textContent = `DISTRIBUSI TINGKAT RISIKO & KATEGORI PERILAKU`;
+            colorGrad = 'linear-gradient(90deg, #059669, #34d399)';
+            const b = d.bbs || {};
+            const r = b.riskLevels || {};
+            params = [
+                { name: 'Safe Index', val: b.safeIndexPct || 100 },
+                { name: 'Risiko Rendah', val: r.rendah || 0, max: Math.max(1, b.total || 1), suffix: ' Kasus' },
+                { name: 'Risiko Sedang', val: r.sedang || 0, max: Math.max(1, b.total || 1), suffix: ' Kasus' },
+                { name: 'Risiko Tinggi', val: r.tinggi || 0, max: Math.max(1, b.total || 1), suffix: ' Kasus' },
+                { name: 'Sangat Tinggi', val: r.sangatTinggi || 0, max: Math.max(1, b.total || 1), suffix: ' Kasus' },
+                { name: 'Observasi Aman', val: b.safeCount || 0, max: Math.max(1, b.total || 1), suffix: ' Orang' },
+                { name: 'At-Risk Terbina', val: b.atRiskCount || 0, max: Math.max(1, b.total || 1), suffix: ' Orang' },
+                { name: 'Total Evaluasi', val: b.total || 0, max: Math.max(1, b.total || 1), suffix: ' Giat' }
+            ];
+        }
+
+        container.innerHTML = params.map(item => {
+            const num = Number(item.val || 0);
+            const pct = item.max ? Math.min(100, Math.round((num / item.max) * 100)) : Math.min(100, num);
+            const disp = item.suffix ? `${num}${item.suffix}` : `${num.toFixed(1)}%`;
+            return `
+            <div class="param-bar-item">
+                <div class="param-bar-lbl">
+                    <span>${item.name}</span>
+                    <span class="param-bar-val" style="color: #38bdf8;">${disp}</span>
+                </div>
+                <div class="param-track">
+                    <div class="param-fill" style="width: ${pct}%; background: ${colorGrad};"></div>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       7. RENDER LIVE CARDS STREAM FEED & AUTO-SCROLL
+       ────────────────────────────────────────────────────────────────────────── */
+    function renderFeed(d) {
+        if (!d) return;
+
+        let items = d.feed || [];
+        if (currentMode === 'rci') items = items.filter(x => x.type === 'RCI');
+        else if (currentMode === 'fci') items = items.filter(x => x.type === 'FCI');
+        else if (currentMode === 'bbs') items = items.filter(x => x.type === 'BBS');
+        else if (currentMode === 'photo') items = items.filter(x => !stringIsNullOrEmpty(x.fotoUrl));
+
+        document.getElementById('feedCounter').textContent = `${items.length} LAPORAN`;
+
+        const container = document.getElementById('feedContainer');
+        if (items.length === 0) {
+            container.innerHTML = `<div class="p-4 text-center text-muted" style="font-size:12.5px;">Belum ada laporan pada kategori ini.</div>`;
+            return;
+        }
+
+        container.innerHTML = items.map((item, index) => {
+            const hasPhoto = Boolean(item.fotoUrl);
+            const thumbHtml = hasPhoto
+                ? `<img src="${item.fotoUrl}" class="feed-thumb-img" alt="Foto" onerror="this.src='/img/placeholder-photo.png'" />`
+                : `<i class="bi ${item.type === 'RCI' ? 'bi-cone-striped text-info' : (item.type === 'FCI' ? 'bi-truck-front-fill text-warning' : 'bi-shield-check text-success')} feed-thumb-placeholder"></i>`;
+
+            const pillBg = item.type === 'RCI' ? 'rgba(14, 165, 233, 0.2); color:#38bdf8;' : (item.type === 'FCI' ? 'rgba(217, 119, 6, 0.2); color:#fbbf24;' : 'rgba(5, 150, 105, 0.2); color:#34d399;');
+
+            return `
+            <div class="feed-card" onclick='openModalWithItem(${JSON.stringify(item).replace(/'/g, "&#39;")})'>
+                <div class="feed-thumb-box">
+                    ${thumbHtml}
+                </div>
+                <div class="feed-info-box">
+                    <div class="feed-item-hdr">
+                        <span class="feed-type-pill" style="background:${pillBg}">${item.type}</span>
+                        <div class="feed-item-title" title="${item.title}">${item.title}</div>
+                    </div>
+                    <div class="feed-item-sub" title="${item.subtitle}">${item.subtitle}</div>
+                    <div class="feed-meta-row">
+                        <span><i class="bi bi-person me-1"></i>${item.surveyorNama || item.surveyorNik}</span>
+                        <span><i class="bi bi-geo-alt me-1"></i>${item.area}</span>
+                        <span><i class="bi bi-clock me-1"></i>${item.waktu}</span>
+                        ${hasPhoto ? '<span class="text-warning"><i class="bi bi-camera-fill me-0.5"></i>Foto</span>' : ''}
+                    </div>
+                </div>
+                <div class="feed-score-col">
+                    <div class="feed-score-num" style="color:${item.statusColor};">${item.scoreDisplay}</div>
+                    <div class="feed-status-pill" style="background:${item.statusColor}22; color:${item.statusColor}; border:1px solid ${item.statusColor}44;">
+                        ${item.statusBadge}
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
+    }
+
+    function stringIsNullOrEmpty(str) {
+        return !str || str.trim() === '';
+    }
+
+    /* ── Smooth Auto-Scroll Feed Loop ── */
+    let isFeedPaused = false;
+    let feedScrollPos = 0;
+
+    function runFeedAutoScroll() {
+        if (!isFeedPaused) {
+            const box = document.getElementById('feedScrollBox');
+            const content = document.getElementById('feedContainer');
+            if (box && content) {
+                const maxScroll = content.scrollHeight - box.clientHeight;
+                if (maxScroll > 15) {
+                    feedScrollPos += 0.45;
+                    if (feedScrollPos >= maxScroll) {
+                        feedScrollPos = maxScroll;
+                        isFeedPaused = true;
+                        setTimeout(() => {
+                            feedScrollPos = 0;
+                            content.style.transform = `translateY(-${feedScrollPos}px)`;
+                            setTimeout(() => { isFeedPaused = false; }, 2000);
+                        }, 4000);
+                    }
+                    content.style.transform = `translateY(-${feedScrollPos}px)`;
+                }
+            }
+        }
+        requestAnimationFrame(runFeedAutoScroll);
+    }
+    requestAnimationFrame(runFeedAutoScroll);
+
+    function pauseFeedScroll() { isFeedPaused = true; }
+    function resumeFeedScroll() { isFeedPaused = false; }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       8. MARQUEE TICKER
+       ────────────────────────────────────────────────────────────────────────── */
+    function renderTicker(text) {
+        if (text) {
+            document.getElementById('tickerText').textContent = text;
+        }
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       9. MODE SWITCHER & AUTO-ROTATION
+       ────────────────────────────────────────────────────────────────────────── */
+    function switchDisplayMode(mode) {
+        currentMode = mode;
+        ['All', 'Rci', 'Fci', 'Bbs', 'Photo'].forEach(m => {
+            const btn = document.getElementById(`tab${m}Btn`);
+            if (btn) btn.classList.toggle('active', m.toLowerCase() === mode.toLowerCase());
+        });
+
+        if (currentData) {
+            prepareHeroSlides(currentData);
+            renderFeed(currentData);
+            renderTelemetry(currentData);
+        }
+        resetSlideProgressBar();
+    }
+
+    function toggleAutoRotation() {
+        isAutoRotating = !isAutoRotating;
+        const icon = document.getElementById('playPauseIcon');
+        if (isAutoRotating) {
+            icon.className = 'bi bi-pause-fill';
+            startSlideLoop();
+        } else {
+            icon.className = 'bi bi-play-fill';
+            stopSlideLoop();
+        }
+    }
+
+    function startSlideLoop() {
+        stopSlideLoop();
+        slideProgress = 0;
+        progressTimer = setInterval(() => {
+            if (!isAutoRotating) return;
+            slideProgress += 100 / (HERO_SLIDE_SECONDS * 10);
+            const bar = document.getElementById('topProgressBar');
+            if (bar) bar.style.width = `${Math.min(100, slideProgress)}%`;
+
+            if (slideProgress >= 100) {
+                slideProgress = 0;
+                nextHeroSlide();
+            }
+        }, 100);
+    }
+
+    function stopSlideLoop() {
+        if (progressTimer) clearInterval(progressTimer);
+        const bar = document.getElementById('topProgressBar');
+        if (bar) bar.style.width = '0%';
+    }
+
+    function resetSlideProgressBar() {
+        slideProgress = 0;
+        const bar = document.getElementById('topProgressBar');
+        if (bar) bar.style.width = '0%';
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       10. LIGHTBOX MODAL WITH FULL AUDIT DETAILS
+       ────────────────────────────────────────────────────────────────────────── */
+    function openHeroInLightbox() {
+        if (!heroSlides || heroSlides.length === 0) return;
+        const item = heroSlides[currentHeroIndex];
+        if (item) openModalWithItem(item);
+    }
+
+    function openModalWithItem(item) {
+        const modal = document.getElementById('techModal');
+        document.getElementById('modalImg').src = item.fotoUrl || '/img/placeholder-photo.png';
+        
+        const typeBadge = document.getElementById('modalTypeBadge');
+        typeBadge.textContent = `${item.type} - ${item.typeLabel || ''}`;
+        typeBadge.style.background = item.type === 'RCI' ? '#0284c7' : (item.type === 'FCI' ? '#d97706' : (item.kategori === 'Aman' ? '#059669' : '#dc2626'));
+
+        const scoreBadge = document.getElementById('modalScoreBadge');
+        scoreBadge.textContent = item.scoreDisplay || `${item.score}/100`;
+        scoreBadge.style.background = item.statusColor || '#0284c7';
+
+        document.getElementById('modalTitle').textContent = item.title || 'Laporan Lapangan';
+        document.getElementById('modalSubtitle').textContent = item.subtitle || '-';
+        document.getElementById('modalArea').textContent = item.area || '-';
+        document.getElementById('modalSurveyor').textContent = item.surveyorNama || item.surveyorNik;
+        document.getElementById('modalCompany').textContent = item.surveyorPerusahaan || 'PT Indexim Coalindo';
+        document.getElementById('modalDateTime').textContent = `${item.tanggal} \u2022 ${item.waktu} WITA`;
+
+        const gpsWrap = document.getElementById('modalGpsWrap');
+        if (item.lat && item.lng) {
+            document.getElementById('modalGps').textContent = `${item.lat}, ${item.lng}`;
+            gpsWrap.classList.remove('d-none');
+        } else {
+            gpsWrap.classList.add('d-none');
+        }
+
+        // Details / Parameters List
+        const listEl = document.getElementById('modalParamsList');
+        if (item.details && item.details.length > 0) {
+            listEl.innerHTML = item.details.map(d => `
+                <div class="d-flex justify-content-between align-items-center py-1 border-bottom" style="border-color: rgba(255,255,255,0.06) !important; font-size: 12px;">
+                    <span class="text-muted">${d.label}</span>
+                    <span class="fw-bold text-white">${d.val}/100</span>
+                </div>
+            `).join('');
+            document.getElementById('modalParamsBox').style.display = 'block';
+        } else {
+            document.getElementById('modalParamsBox').style.display = 'none';
+        }
+
+        // Catatan
+        const catBox = document.getElementById('modalCatatanBox');
+        if (item.catatan && item.catatan !== '-') {
+            document.getElementById('modalCatatan').textContent = item.catatan;
+            catBox.style.display = 'block';
+        } else {
+            catBox.style.display = 'none';
+        }
+
+        // Tindakan
+        const tinBox = document.getElementById('modalTindakanBox');
+        if (item.tindakan && item.tindakan !== '-') {
+            document.getElementById('modalTindakan').textContent = item.tindakan;
+            tinBox.style.display = 'block';
+        } else {
+            tinBox.style.display = 'none';
+        }
+
+        modal.style.display = 'flex';
+    }
+
+    function closeLightbox() {
+        document.getElementById('techModal').style.display = 'none';
+    }
+
+    // Fullscreen Toggle
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => console.log(err));
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       11. INITIALIZATION & RECURRING DATA REFRESH
+       ────────────────────────────────────────────────────────────────────────── */
+    fetchDisplay3Data();
+    startSlideLoop();
+    setInterval(fetchDisplay3Data, REFRESH_INTERVAL_SECONDS * 1000);
+    </script>
+</body>
+</html>
