@@ -383,16 +383,25 @@
 
                 <div class="row">
                     <div class="col-12 col-md-6 form-group-sap">
-                        <label class="form-label-sap" for="selectObservedCompany">Perusahaan / Kontraktor</label>
-                        <div class="input-sap-wrapper">
-                            <i class="bi bi-building input-sap-icon"></i>
-                            <select id="selectObservedCompany" class="input-sap" onchange="syncCompanyChange(this)">
+                        <label class="form-label-sap" for="companySearch">Perusahaan / Kontraktor</label>
+                        <div class="position-relative mb-0">
+                            <div class="input-sap-wrapper mb-0">
+                                <i class="bi bi-building input-sap-icon"></i>
+                                @{
+                                    var currentCompName = obs.ObservedPerusahaan ?? (companyList.FirstOrDefault(c => c.Id == obs.ObservedPerusahaanId)?.Nama ?? "");
+                                }
+                                <input type="text" id="companySearch" class="input-sap" placeholder="Ketik untuk mencari perusahaan / kontraktor..." autocomplete="off" style="padding-right: 36px;" value="@currentCompName" />
+                                <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleCompanyDropdown" title="Buka daftar perusahaan"></i>
+                            </div>
+                            <select id="selectObservedCompany" class="d-none">
                                 <option value="">-- Pilih Perusahaan --</option>
                                 @foreach (var c in companyList)
                                 {
                                     <option value="@c.Id" data-name="@c.Nama" selected="@(c.Id == obs.ObservedPerusahaanId)">@c.Nama</option>
                                 }
                             </select>
+                            <div id="companyDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:260px; overflow-y:auto; border-radius:10px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+                            </div>
                         </div>
                     </div>
 
@@ -1202,17 +1211,91 @@
     }
 
     // 7. Perusahaan & Pencarian Pekerja
-    function syncCompanyChange(sel) {
-        const opt = sel.options[sel.selectedIndex];
-        const compId = sel.value;
-        const compName = opt ? (opt.getAttribute('data-name') || opt.text) : '';
-        document.getElementById('inputObservedPerusahaanId').value = compId;
-        document.getElementById('inputObservedPerusahaan').value = compName;
+    var globalCompaniesList = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(companyList ?? new List<MBS_SAP.Models.CompanyDropdownItem>()));
+
+    function renderCompanyDropdown(filterText) {
+        var menu = $('#companyDropdownMenu');
+        menu.empty();
+        var clean = (filterText || '').trim().toLowerCase();
+        var filtered = (globalCompaniesList || []).filter(function(c) {
+            var name = (c.nama || c.Nama || '').toLowerCase();
+            var code = (c.kode || c.Kode || '').toLowerCase();
+            return !clean || name.indexOf(clean) !== -1 || code.indexOf(clean) !== -1;
+        });
+
+        // Add clear button
+        var clearBtn = $('<button type="button"></button>')
+            .addClass('d-block w-100 text-start py-2 px-3 border-0 company-option-btn text-muted')
+            .css({
+                background: 'none',
+                fontSize: '12px',
+                borderBottom: '1px solid var(--border-color)',
+                cursor: 'pointer'
+            })
+            .html('<i class="bi bi-x-circle me-2 text-danger"></i>-- Kosongkan / Semua Perusahaan --')
+            .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
+            .on('mouseleave', function() { $(this).css('background', 'none'); })
+            .on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                selectCompany('', '');
+            });
+        menu.append(clearBtn);
+
+        if (filtered.length > 0) {
+            filtered.forEach(function(item) {
+                var compId = item.id || item.Id;
+                var compName = item.nama || item.Nama || '';
+                var btn = $('<button type="button"></button>')
+                    .addClass('d-block w-100 text-start py-2 px-3 border-0 company-option-btn')
+                    .css({
+                        background: 'none',
+                        color: 'var(--text-main)',
+                        fontSize: '13px',
+                        borderBottom: '1px solid var(--border-color)',
+                        cursor: 'pointer'
+                    })
+                    .html('<i class="bi bi-building me-2 text-primary"></i>' + escapeHtml(compName))
+                    .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
+                    .on('mouseleave', function() { $(this).css('background', 'none'); })
+                    .on('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectCompany(compId, compName);
+                    });
+                menu.append(btn);
+            });
+        } else if (clean.length > 0) {
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Perusahaan "' + escapeHtml(filterText) + '" tidak ditemukan</div>');
+        } else {
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada daftar perusahaan.</div>');
+        }
+
+        menu.show();
+    }
+
+    function selectCompany(compId, compName) {
+        $('#companySearch').val(compName || '');
+        $('#inputObservedPerusahaanId').val(compId || '');
+        $('#inputObservedPerusahaan').val(compName || '');
+        $('#companyDropdownMenu').hide();
+
+        const compSelect = document.getElementById('selectObservedCompany');
+        if (compSelect) {
+            compSelect.value = compId || '';
+        }
 
         const currentQ = document.getElementById('searchWorkerInput')?.value || '';
         if (currentQ.trim().length >= 2) {
             searchWorkerDebounced(currentQ);
         }
+    }
+
+    function syncCompanyChange(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        const compId = sel.value;
+        const compName = opt ? (opt.getAttribute('data-name') || opt.text) : '';
+        selectCompany(compId, compName);
     }
 
     function searchWorkerDebounced(q) {
@@ -1282,6 +1365,10 @@
         document.getElementById('selectedWorkerCard').classList.add('d-flex');
         document.getElementById('workerSearchResults').classList.add('d-none');
         document.getElementById('searchWorkerInput').value = '';
+
+        if (w.perusahaan) {
+            $('#companySearch').val(w.perusahaan);
+        }
 
         if (w.perusahaanId) {
             const compSelect = document.getElementById('selectObservedCompany');
@@ -1835,12 +1922,33 @@
             }
         });
 
+        $('#toggleCompanyDropdown').on('click', function(e) {
+            e.stopPropagation();
+            var menu = $('#companyDropdownMenu');
+            if (menu.is(':visible')) {
+                menu.hide();
+            } else {
+                renderCompanyDropdown('');
+            }
+        });
+
+        $('#companySearch').on('input keyup', function() {
+            renderCompanyDropdown($(this).val());
+        });
+
+        $('#companySearch').on('focus', function() {
+            renderCompanyDropdown('');
+        });
+
         $(document).on('click', function(e) {
             if (!$(e.target).closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown').length) {
                 $('#benchmarkDropdownMenu').hide();
             }
             if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
                 $('#areaDropdownMenu').hide();
+            }
+            if (!$(e.target).closest('#companySearch, #companyDropdownMenu, #toggleCompanyDropdown').length) {
+                $('#companyDropdownMenu').hide();
             }
             if (!$(e.target).closest('#searchWorkerInput, #workerSearchResults').length) {
                 $('#workerSearchResults').addClass('d-none');
