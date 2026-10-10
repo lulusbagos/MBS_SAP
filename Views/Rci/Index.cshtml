@@ -296,124 +296,397 @@
                     <!-- Section 2: Assessment Parameters -->
                     <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="text-white font-weight-bold" style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <i class="bi bi-check2-square me-1" style="color: #3b82f6;"></i> 2. Penilaian 8 Parameter Jalan
+                            <div class="text-white font-weight-bold" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i class="bi bi-cone-striped me-1" style="color: #3b82f6;"></i> 2. Penilaian 8 Parameter Jalan
                             </div>
-                            <div class="badge px-3 py-1.5 shadow-sm" id="liveScoreBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 13px; font-weight: 700;">
+                            <div class="badge px-3 py-1.5 shadow-sm" id="liveScoreBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 13px; font-weight: 700; border-radius: 10px;">
                                 Skor RCI: <span id="liveScoreVal">100.0</span>% (Baik)
                             </div>
                         </div>
 
                         <!-- Param 1 -->
-                        <div class="mb-3 p-2 rounded-2" style="background: rgba(0,0,0,0.15);">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label-sap mb-0">1. Lebar Jalan Angkut (Road Width) <span class="badge bg-secondary" style="font-size: 9px;">Bobot 15%</span></label>
-                                <small class="text-muted" style="font-size: 10px;">Standar &ge; 3.5x lebar unit terbesar (2 arah)</small>
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+                                        <i class="bi bi-arrows-expand"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">1. Lebar Jalan Angkut (Road Width)</span>
+                                        <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Standar &ge; 3.5x lebar unit terbesar (2 arah)
+                                </div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-rci-score active flex-fill" data-param="skorLebarJalan" data-val="100">100 - &ge; 3.5x Lebar Unit</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorLebarJalan" data-val="70">70 - Pas 3x Lebar Unit</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorLebarJalan" data-val="40">40 - Sempit / &lt; 3x</button>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorLebarJalan" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">&ge; 3.5x Lebar Unit</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorLebarJalan" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Pas 3x Lebar Unit</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorLebarJalan" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Sempit (&lt; 3x)</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
                             </div>
                             <input type="hidden" id="skorLebarJalan" name="skorLebarJalan" value="100" />
                         </div>
 
                         <!-- Param 2 -->
-                        <div class="mb-3 p-2 rounded-2" style="background: rgba(0,0,0,0.15);">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label-sap mb-0">2. Kemiringan Jalan (Grade / Slope) <span class="badge bg-secondary" style="font-size: 9px;">Bobot 10%</span></label>
-                                <small class="text-muted" style="font-size: 10px;">Grade maksimal aman 8% - 10%</small>
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(147, 51, 234, 0.15); color: #a855f7;">
+                                        <i class="bi bi-graph-up-arrow"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">2. Kemiringan Jalan (Grade / Slope)</span>
+                                        <span class="badge" style="background: rgba(147, 51, 234, 0.15); color: #a855f7; border: 1px solid rgba(147, 51, 234, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Grade maksimal aman 8% - 10%
+                                </div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-rci-score active flex-fill" data-param="skorGradeJalan" data-val="100">100 - Grade Standar (&le; 8%)</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorGradeJalan" data-val="70">70 - Agak Curam (8 - 10%)</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorGradeJalan" data-val="40">40 - Terlalu Curam (&gt; 10%)</button>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorGradeJalan" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Standar (&le; 8%)</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorGradeJalan" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Agak Curam (8 - 10%)</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorGradeJalan" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Terlalu Curam (&gt; 10%)</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
                             </div>
                             <input type="hidden" id="skorGradeJalan" name="skorGradeJalan" value="100" />
                         </div>
 
                         <!-- Param 3 -->
-                        <div class="mb-3 p-2 rounded-2" style="background: rgba(0,0,0,0.15);">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label-sap mb-0">3. Kondisi Permukaan Jalan (Surface) <span class="badge bg-secondary" style="font-size: 9px;">Bobot 15%</span></label>
-                                <small class="text-muted" style="font-size: 10px;">Rata, tidak bergelombang (corrugation), bebas lubang/potholes</small>
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                                        <i class="bi bi-layers-half"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">3. Kondisi Permukaan Jalan (Surface)</span>
+                                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Rata, padat, bebas lubang &amp; amblas
+                                </div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-rci-score active flex-fill" data-param="skorPermukaanJalan" data-val="100">100 - Mulus &amp; Padat</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorPermukaanJalan" data-val="70">70 - Bergelombang / Lubang Kecil</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorPermukaanJalan" data-val="40">40 - Lubang Dalam / Amblas</button>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorPermukaanJalan" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Mulus &amp; Padat</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorPermukaanJalan" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Bergelombang / Lubang Kecil</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorPermukaanJalan" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Lubang Dalam / Amblas</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
                             </div>
                             <input type="hidden" id="skorPermukaanJalan" name="skorPermukaanJalan" value="100" />
                         </div>
 
                         <!-- Param 4 -->
-                        <div class="mb-3 p-2 rounded-2" style="background: rgba(0,0,0,0.15);">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label-sap mb-0">4. Tanggul Pengaman Jalan (Safety Berm) <span class="badge bg-secondary" style="font-size: 9px;">Bobot 15%</span></label>
-                                <small class="text-muted" style="font-size: 10px;">Tinggi minimal 3/4 diameter ban unit terbesar, padat</small>
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                        <i class="bi bi-shield-check"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">4. Tanggul Pengaman Jalan (Safety Berm)</span>
+                                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Tinggi &ge; 3/4 diameter roda unit terbesar
+                                </div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-rci-score active flex-fill" data-param="skorSafetyBerm" data-val="100">100 - &ge; 3/4 Ban &amp; Kokoh</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorSafetyBerm" data-val="70">70 - Ada Bagian Rendah</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorSafetyBerm" data-val="40">40 - Terputus / Tidak Ada</button>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorSafetyBerm" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">&ge; 3/4 Roda &amp; Kokoh</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Ada Bagian Rendah</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Terputus / Tidak Ada</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
                             </div>
                             <input type="hidden" id="skorSafetyBerm" name="skorSafetyBerm" value="100" />
                         </div>
 
                         <!-- Param 5 -->
-                        <div class="mb-3 p-2 rounded-2" style="background: rgba(0,0,0,0.15);">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label-sap mb-0">5. Kemiringan Melintang &amp; Parit (Drainase) <span class="badge bg-secondary" style="font-size: 9px;">Bobot 15%</span></label>
-                                <small class="text-muted" style="font-size: 10px;">Camber 2-3%, parit bersih dan air mengalir bebas</small>
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">
+                                        <i class="bi bi-water"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">5. Kemiringan Melintang &amp; Parit (Drainase)</span>
+                                        <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Camber 2-3%, parit bersih &amp; aliran lancar
+                                </div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-rci-score active flex-fill" data-param="skorDrainaseParit" data-val="100">100 - Parit Bersih &amp; Kering</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorDrainaseParit" data-val="70">70 - Parit Tersumbat Sebagian</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorDrainaseParit" data-val="40">40 - Air Meluap ke Jalan</button>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorDrainaseParit" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Parit Bersih &amp; Kering</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorDrainaseParit" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Tersumbat Sebagian</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorDrainaseParit" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Air Meluap ke Jalan</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
                             </div>
                             <input type="hidden" id="skorDrainaseParit" name="skorDrainaseParit" value="100" />
                         </div>
 
                         <!-- Param 6 -->
-                        <div class="mb-3 p-2 rounded-2" style="background: rgba(0,0,0,0.15);">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label-sap mb-0">6. Superelevasi &amp; Tikungan (Curvature) <span class="badge bg-secondary" style="font-size: 9px;">Bobot 10%</span></label>
-                                <small class="text-muted" style="font-size: 10px;">Kemiringan tikungan memadai, jarak pandang luas</small>
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">
+                                        <i class="bi bi-bezier2"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">6. Superelevasi &amp; Tikungan (Curvature)</span>
+                                        <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Kemiringan memadai, jarak pandang luas
+                                </div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-rci-score active flex-fill" data-param="skorSuperelevasiTikungan" data-val="100">100 - Radius &amp; Miring Pas</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorSuperelevasiTikungan" data-val="70">70 - Agak Tajam / Pandang Terhalang</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorSuperelevasiTikungan" data-val="40">40 - Miring Terbalik / Rawan Terbalik</button>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorSuperelevasiTikungan" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Radius &amp; Miring Pas</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSuperelevasiTikungan" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Agak Tajam / Pandang Terhalang</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSuperelevasiTikungan" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Miring Terbalik / Rawan</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
                             </div>
                             <input type="hidden" id="skorSuperelevasiTikungan" name="skorSuperelevasiTikungan" value="100" />
                         </div>
 
                         <!-- Param 7 -->
-                        <div class="mb-3 p-2 rounded-2" style="background: rgba(0,0,0,0.15);">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label-sap mb-0">7. Bebas Batu Lepas / Spillage <span class="badge bg-secondary" style="font-size: 9px;">Bobot 10%</span></label>
-                                <small class="text-muted" style="font-size: 10px;">Bebas batu tajam / bongkahan yang merusak ban alat</small>
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e;">
+                                        <i class="bi bi-gem"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">7. Bebas Batu Lepas / Spillage</span>
+                                        <span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Bebas batu tajam yang merusak ban alat
+                                </div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-rci-score active flex-fill" data-param="skorBebasSpillage" data-val="100">100 - Bersih dari Batu</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorBebasSpillage" data-val="70">70 - Ada Kerikil / Spillage Sedikit</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorBebasSpillage" data-val="40">40 - Batu Tajam / Ceceran Banyak</button>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorBebasSpillage" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Bersih dari Batu</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorBebasSpillage" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Spillage Sedikit</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorBebasSpillage" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Batu Tajam / Ceceran Banyak</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
                             </div>
                             <input type="hidden" id="skorBebasSpillage" name="skorBebasSpillage" value="100" />
                         </div>
 
                         <!-- Param 8 -->
-                        <div class="mb-2 p-2 rounded-2" style="background: rgba(0,0,0,0.15);">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label-sap mb-0">8. Rambu, Patok Pandu &amp; Debu <span class="badge bg-secondary" style="font-size: 9px;">Bobot 10%</span></label>
-                                <small class="text-muted" style="font-size: 10px;">Delineator reflektif lengkap, penyiraman debu teratur</small>
+                        <div class="param-box-premium mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(234, 88, 12, 0.15); color: #ea580c;">
+                                        <i class="bi bi-sign-stop-fill"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">8. Rambu, Patok Pandu &amp; Debu</span>
+                                        <span class="badge" style="background: rgba(234, 88, 12, 0.15); color: #ea580c; border: 1px solid rgba(234, 88, 12, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Delineator reflektif &amp; penyiraman debu teratur
+                                </div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-sm btn-rci-score active flex-fill" data-param="skorRambuDebu" data-val="100">100 - Rambu Jelas &amp; Minim Debu</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorRambuDebu" data-val="70">70 - Berdebu Sedang / Perlu Water Truck</button>
-                                <button type="button" class="btn btn-sm btn-rci-score flex-fill" data-param="skorRambuDebu" data-val="40">40 - Debu Tebal / Rambu Rusak</button>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorRambuDebu" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Rambu Jelas &amp; Minim Debu</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorRambuDebu" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Berdebu Sedang (Perlu WT)</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorRambuDebu" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Debu Tebal / Rambu Rusak</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
                             </div>
                             <input type="hidden" id="skorRambuDebu" name="skorRambuDebu" value="100" />
+                        </div>
+
+                        <!-- LIVE DYNAMIC CONCLUSION & SHARE CARD -->
+                        <div class="card-sap p-3 p-md-4 mb-2 rounded-4 shadow-sm" id="conclusionCard" style="border: 2px solid rgba(16, 185, 129, 0.4); background: linear-gradient(145deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.04));">
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div style="width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, #10b981, #06b6d4); display: flex; align-items: center; justify-content: center; color: white;">
+                                        <i class="bi bi-award-fill" style="font-size: 19px;"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold text-white" style="font-size: 14px;">KESIMPULAN HASIL PENILAIAN JALAN</h6>
+                                        <small class="text-muted" style="font-size: 11px;">Analisis kelayakan teknis otomatis &amp; opsi bagikan laporan</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="text-end">
+                                        <div class="text-muted" style="font-size: 10px; text-transform: uppercase;">Skor Indeks</div>
+                                        <div class="display-6 fw-bold mb-0" id="summaryScoreVal" style="color: #10b981; line-height: 1; font-size: 26px;">100.0%</div>
+                                    </div>
+                                    <div class="badge px-3 py-2" id="summaryCategoryBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 12px; font-weight: 700; border-radius: 10px;">
+                                        <i class="bi bi-check-circle-fill me-1"></i> BAIK
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Status Feasibility Banner -->
+                            <div class="p-3 rounded-3 mb-3" id="feasibilityBanner" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-shield-fill-check" id="feasibilityIcon" style="font-size: 24px;"></i>
+                                    <div>
+                                        <strong id="feasibilityTitle" style="font-size: 13px;">STATUS: LAYAK OPERASIONAL (OPTIMAL)</strong>
+                                        <div id="feasibilityDesc" class="mt-0.5" style="font-size: 11.5px; opacity: 0.9;">Seluruh 8 parameter memenuhi standar teknis jalan hauling tambang. Kondisi prima dan aman.</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Parameter Breakdown Stats -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-4">
+                                    <div class="p-2 rounded-3 text-center" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);">
+                                        <div class="fw-bold" id="cntStandar" style="font-size: 17px; color: #10b981;">8</div>
+                                        <div class="text-muted" style="font-size: 10px;">Standar (100)</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 rounded-3 text-center" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2);">
+                                        <div class="fw-bold" id="cntPerhatian" style="font-size: 17px; color: #f59e0b;">0</div>
+                                        <div class="text-muted" style="font-size: 10px;">Perhatian (70)</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 rounded-3 text-center" style="background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2);">
+                                        <div class="fw-bold" id="cntKritis" style="font-size: 17px; color: #f43f5e;">0</div>
+                                        <div class="text-muted" style="font-size: 10px;">Kritis (40)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Findings Deficit List -->
+                            <div class="mb-3 p-2.5 rounded-3" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="text-white" style="font-size: 11.5px;"><i class="bi bi-search me-1"></i> Rincian Parameter Defisit / Perlu Perhatian:</strong>
+                                    <span class="badge bg-secondary" id="findingsCountBadge" style="font-size: 9px;">0 Temuan</span>
+                                </div>
+                                <div id="findingsList" style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
+                                    <i class="bi bi-check2-circle text-success me-1"></i> Semua parameter berada dalam batas optimal.
+                                </div>
+                            </div>
+
+                            <!-- Auto-Generated Recommendation Box -->
+                            <div class="mb-3 p-2.5 rounded-3" id="autoRecBox" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong style="font-size: 11.5px; color: #3b82f6;"><i class="bi bi-lightning-charge-fill me-1"></i> Rekomendasi Tindakan Otomatis:</strong>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 10px; border-radius: 6px;" onclick="applyAutoRecommendationRci()">
+                                        <i class="bi bi-arrow-down-left me-1"></i> Terapkan ke Form Rekomendasi
+                                    </button>
+                                </div>
+                                <div id="autoRecText" style="font-size: 11px; color: var(--text-main);">
+                                    Pertahankan pemeliharaan rutin jalan angkut.
+                                </div>
+                            </div>
+
+                            <!-- SHARE BUTTONS -->
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-sm btn-success flex-fill py-2.5 d-flex align-items-center justify-content-center gap-1 font-weight-bold shadow-sm" style="background: #25D366; border: none; border-radius: 12px; color: white;" onclick="shareRciToWhatsApp()">
+                                    <i class="bi bi-whatsapp" style="font-size: 16px;"></i>
+                                    <span>Bagikan ke WhatsApp</span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info flex-fill py-2.5 d-flex align-items-center justify-content-center gap-1 font-weight-bold" style="border-radius: 12px;" onclick="shareRciNative()">
+                                    <i class="bi bi-share-fill"></i>
+                                    <span>Share Laporan</span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-2.5 px-3 d-flex align-items-center justify-content-center gap-1" style="border-radius: 12px;" onclick="copyRciSummaryToClipboard()" title="Salin Ringkasan">
+                                    <i class="bi bi-clipboard-check"></i>
+                                    <span>Salin</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -585,6 +858,9 @@
                                     <button type="button" class="btn btn-sm btn-outline-info" style="font-size: 11px; padding: 2px 8px; border-radius: 6px;" onclick="showDetailRci(@item.Id)">
                                         <i class="bi bi-eye"></i> Detail
                                     </button>
+                                    <button type="button" class="btn btn-sm btn-outline-success" style="font-size: 11px; padding: 2px 8px; border-radius: 6px;" onclick="shareSavedRci(@item.Id)" title="Bagikan Laporan">
+                                        <i class="bi bi-share"></i> Share
+                                    </button>
                                     @if (item.Nik == userNik || MBS_SAP.Services.CompanyHierarchyService.IsAdminUser(User))
                                     {
                                         <button type="button" class="btn btn-sm btn-outline-warning" style="font-size: 11px; padding: 2px 8px; border-radius: 6px;" onclick="editRci(@item.Id)">
@@ -620,41 +896,167 @@
 </div>
 
 <style>
-    .btn-rci-score {
-        background: rgba(255, 255, 255, 0.05);
-        color: var(--text-muted);
-        border: 1px solid var(--border-color);
+    /* Ultra-Premium Parameter Rating System */
+    .param-box-premium {
+        background: var(--bg-card, #ffffff);
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 14px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+        transition: all 0.25s ease;
+    }
+    .param-box-premium:hover {
+        border-color: rgba(59, 130, 246, 0.4);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+    }
+    .param-icon-badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+    }
+    .param-header-title {
+        font-size: 13.5px;
+        font-weight: 800;
+        color: var(--text-main, #0f172a);
+        letter-spacing: -0.2px;
+    }
+    .param-guideline-badge {
         font-size: 11px;
-        padding: 5px 8px;
-        border-radius: 8px;
-        transition: all 0.2s ease;
+        font-weight: 500;
+        color: var(--text-muted, #64748b);
+        background: rgba(148, 163, 184, 0.1);
+        padding: 4px 10px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
     }
-    .btn-rci-score:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
+
+    /* Score Selector 3-Way Grid */
+    .score-btn-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
     }
-    .btn-rci-score.active[data-val="100"] {
-        background: rgba(16, 185, 129, 0.25);
+    @@media (max-width: 576px) {
+        .score-btn-grid {
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+    }
+    .btn-score-card {
+        border-radius: 12px;
+        padding: 9px 10px;
+        width: 100%;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1.5px solid var(--border-color, #e2e8f0);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-main, #1e293b);
+        font-size: 11.5px;
+        position: relative;
+    }
+    .btn-score-card:hover {
+        transform: translateY(-1.5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .btn-score-pill {
+        font-size: 11px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 6px;
+        flex-shrink: 0;
+        line-height: 1.3;
+    }
+    .btn-score-text {
+        font-weight: 600;
+        flex-grow: 1;
+        line-height: 1.25;
+    }
+    .btn-score-icon {
+        font-size: 13px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    /* Unselected visual pills */
+    .btn-score-card[data-val="100"] .btn-score-pill {
+        background: rgba(16, 185, 129, 0.15);
         color: #10b981;
-        border-color: #10b981;
-        font-weight: 700;
     }
-    .btn-rci-score.active[data-val="70"] {
-        background: rgba(245, 158, 11, 0.25);
+    .btn-score-card[data-val="70"] .btn-score-pill {
+        background: rgba(245, 158, 11, 0.15);
         color: #f59e0b;
-        border-color: #f59e0b;
-        font-weight: 700;
     }
-    .btn-rci-score.active[data-val="40"] {
-        background: rgba(244, 63, 94, 0.25);
+    .btn-score-card[data-val="40"] .btn-score-pill {
+        background: rgba(244, 63, 94, 0.15);
         color: #f43f5e;
-        border-color: #f43f5e;
-        font-weight: 700;
+    }
+
+    /* Active Selected States */
+    .btn-score-card.active[data-val="100"] {
+        background: linear-gradient(135deg, #059669, #10b981) !important;
+        border-color: #10b981 !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35) !important;
+        transform: translateY(-1px);
+    }
+    .btn-score-card.active[data-val="100"] .btn-score-pill {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+    }
+    .btn-score-card.active[data-val="100"] .btn-score-icon {
+        opacity: 1;
+        color: #ffffff;
+    }
+
+    .btn-score-card.active[data-val="70"] {
+        background: linear-gradient(135deg, #d97706, #f59e0b) !important;
+        border-color: #f59e0b !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35) !important;
+        transform: translateY(-1px);
+    }
+    .btn-score-card.active[data-val="70"] .btn-score-pill {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+    }
+    .btn-score-card.active[data-val="70"] .btn-score-icon {
+        opacity: 1;
+        color: #ffffff;
+    }
+
+    .btn-score-card.active[data-val="40"] {
+        background: linear-gradient(135deg, #e11d48, #f43f5e) !important;
+        border-color: #f43f5e !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 18px rgba(244, 63, 94, 0.35) !important;
+        transform: translateY(-1px);
+    }
+    .btn-score-card.active[data-val="40"] .btn-score-pill {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+    }
+    .btn-score-card.active[data-val="40"] .btn-score-icon {
+        opacity: 1;
+        color: #ffffff;
     }
 </style>
 
 @section Scripts {
 <script>
+    let currentRciSummaryData = {};
+
     $(document).ready(function() {
         @if (TempData["SuccessMessage"] != null)
         {
@@ -670,6 +1072,8 @@
             if (eElem) { new bootstrap.Modal(eElem).show(); }
             </text>
         }
+
+        calculateRciScore();
     });
 
     function confirmDeleteRci(id) {
@@ -693,7 +1097,7 @@
         }
     });
 
-    // Live Score Calculator
+    // Live Score Calculator & Dynamic Conclusion Analysis
     function calculateRciScore() {
         const p1 = parseInt($('#skorLebarJalan').val()) || 100;
         const p2 = parseInt($('#skorGradeJalan').val()) || 100;
@@ -707,43 +1111,238 @@
         const total = (p1 * 0.15) + (p2 * 0.10) + (p3 * 0.15) + (p4 * 0.15) + (p5 * 0.15) + (p6 * 0.10) + (p7 * 0.10) + (p8 * 0.10);
         const rounded = total.toFixed(1);
 
+        const paramsList = [
+            { name: "Lebar Jalan Angkut", val: p1, desc100: ">= 3.5x Lebar Unit", desc70: "Pas 3x Lebar Unit (Sempit berpapasan)", desc40: "Sempit (< 3x Lebar Unit - Rawan senggolan)" },
+            { name: "Kemiringan Jalan (Grade)", val: p2, desc100: "Standar (<= 8%)", desc70: "Agak Curam (8 - 10%)", desc40: "Terlalu Curam (> 10% - Rawan amblas/meluncur)" },
+            { name: "Kondisi Permukaan (Surface)", val: p3, desc100: "Mulus & Padat", desc70: "Bergelombang / Lubang Kecil", desc40: "Lubang Dalam / Amblas (Rawan patah as)" },
+            { name: "Tanggul Pengaman (Safety Berm)", val: p4, desc100: ">= 3/4 Roda & Kokoh", desc70: "Ada Bagian Rendah / Kurang Padat", desc40: "Terputus / Tidak Ada Tanggul" },
+            { name: "Kemiringan Melintang & Parit", val: p5, desc100: "Parit Bersih, Aliran Lancar", desc70: "Tersumbat Sebagian", desc40: "Buntu / Air Meluap ke Jalan" },
+            { name: "Superelevasi & Tikungan", val: p6, desc100: "Radius & Miring Pas", desc70: "Agak Tajam / Pandang Terhalang", desc40: "Miring Terbalik (Negative Camber - Rawan Terguling)" },
+            { name: "Bebas Batu Lepas / Spillage", val: p7, desc100: "Bersih Total dari Batu", desc70: "Ada Kerikil / Spillage Tipis", desc40: "Bongkahan Batu Tajam / Ceceran Banyak (Merusak Ban)" },
+            { name: "Rambu, Patok Pandu & Debu", val: p8, desc100: "Rambu Jelas & Minim Debu", desc70: "Berdebu Sedang (Perlu Water Truck)", desc40: "Debu Sangat Tebal / Rambu Rusak" }
+        ];
+
+        let cnt100 = 0, cnt70 = 0, cnt40 = 0;
+        let findings = [];
+        let autoActions = [];
+
+        paramsList.forEach(p => {
+            if (p.val === 100) cnt100++;
+            else if (p.val === 70) {
+                cnt70++;
+                findings.push(`<b>${p.name}</b>: Skor 70 (${p.desc70})`);
+                if (p.name.includes("Parit") || p.name.includes("Drainase")) autoActions.push("Normalisasi dan pembersihan parit drainase");
+                else if (p.name.includes("Permukaan")) autoActions.push("Scraping & perataan jalan dengan motor grader");
+                else if (p.name.includes("Berm")) autoActions.push("Peninggian dan pemadatan tanggul pengaman (safety berm)");
+                else if (p.name.includes("Debu")) autoActions.push("Tingkatkan frekuensi penyiraman jalan dengan water truck");
+                else if (p.name.includes("Spillage")) autoActions.push("Pembersihan ceceran batu lepas di jalur aktif");
+                else autoActions.push(`Penyesuaian perbaikan pada ${p.name}`);
+            } else if (p.val === 40) {
+                cnt40++;
+                findings.push(`<span class="text-danger"><b>${p.name}</b>: Skor 40 (${p.desc40}) [KRITIS]</span>`);
+                if (p.name.includes("Permukaan") || p.name.includes("Grade")) autoActions.push("URGENT: Grading ulang lapis pondasi & pemadatan compactor");
+                else if (p.name.includes("Berm")) autoActions.push("URGENT: Rekonstruksi tanggul pengaman minimal 3/4 tinggi roda alat");
+                else if (p.name.includes("Parit") || p.name.includes("Drainase")) autoActions.push("URGENT: Penggalian kembali parit buntu & sodetan darurat");
+                else if (p.name.includes("Spillage")) autoActions.push("URGENT: Singkirkan bongkahan batu besar dengan wheel loader");
+                else autoActions.push(`URGENT: Rekayasa penanganan keselamatan pada ${p.name}`);
+            }
+        });
+
+        $('#cntStandar').text(cnt100);
+        $('#cntPerhatian').text(cnt70);
+        $('#cntKritis').text(cnt40);
+
         let label = "Baik";
         let color = "#10b981";
-        let bg = "rgba(16, 185, 129, 0.2)";
+        let bg = "rgba(16, 185, 129, 0.15)";
         let border = "rgba(16, 185, 129, 0.4)";
+        let statusTitle = "STATUS: LAYAK OPERASIONAL (OPTIMAL)";
+        let statusDesc = "Seluruh 8 parameter memenuhi standar teknis jalan hauling tambang. Kondisi prima dan aman.";
+        let statusIcon = "bi-shield-fill-check";
 
         if (total < 70) {
             label = "Kurang";
             color = "#f43f5e";
-            bg = "rgba(244, 63, 94, 0.2)";
+            bg = "rgba(244, 63, 94, 0.15)";
             border = "rgba(244, 63, 94, 0.4)";
+            statusTitle = "STATUS: TIDAK LAYAK / RAWAN BAHAYA (PERBAIKAN SEGERA)";
+            statusDesc = "Ditemukan parameter kritis di bawah standar keselamatan tambang. Batasi muatan & segera lakukan perbaikan.";
+            statusIcon = "bi-x-octagon-fill";
         } else if (total < 85) {
             label = "Sedang";
             color = "#f59e0b";
-            bg = "rgba(245, 158, 11, 0.2)";
+            bg = "rgba(245, 158, 11, 0.15)";
             border = "rgba(245, 158, 11, 0.4)";
+            statusTitle = "STATUS: LAYAK DENGAN PENGAWASAN & CATATAN";
+            statusDesc = "Jalan dapat dilalui dengan kewaspadaan. Terdapat parameter yang memerlukan pemeliharaan rutin.";
+            statusIcon = "bi-exclamation-triangle-fill";
         }
 
         $('#liveScoreVal').text(rounded);
-        $('#liveScoreBadge').html(`Skor RCI: <span>${rounded}</span>% (${label})`);
-        $('#liveScoreBadge').css({
-            'background': bg,
-            'color': color,
-            'border-color': border
-        });
+        $('#liveScoreBadge').html(`Skor RCI: <span>${rounded}</span>% (${label})`).css({ 'background': bg, 'color': color, 'border-color': border });
+
+        $('#summaryScoreVal').text(rounded + '%').css('color', color);
+        $('#summaryCategoryBadge').html(`<i class="bi ${statusIcon} me-1"></i> ${label.toUpperCase()}`).css({ 'background': bg, 'color': color });
+
+        $('#feasibilityBanner').css({ 'background': bg, 'border-color': border, 'color': color });
+        $('#feasibilityIcon').attr('class', `bi ${statusIcon}`);
+        $('#feasibilityTitle').text(statusTitle);
+        $('#feasibilityDesc').text(statusDesc);
+
+        // Update findings list
+        if (findings.length === 0) {
+            $('#findingsCountBadge').text('0 Defisit').attr('class', 'badge bg-success');
+            $('#findingsList').html('<i class="bi bi-check2-circle text-success me-1"></i> Semua parameter berada dalam batas optimal.');
+            $('#autoRecText').text('Pertahankan pemeliharaan rutin jalan angkut.');
+        } else {
+            $('#findingsCountBadge').text(`${findings.length} Temuan Defisit`).attr('class', 'badge bg-warning text-dark');
+            let listHtml = '<ul class="mb-0 ps-3">' + findings.map(f => `<li class="mb-1">${f}</li>`).join('') + '</ul>';
+            $('#findingsList').html(listHtml);
+            let recText = autoActions.length > 0 ? autoActions.join("; ") + "." : "Lakukan pemeliharaan dan perbaikan terarah pada parameter defisit.";
+            $('#autoRecText').text(recText);
+        }
+
+        // Store summary for sharing
+        currentRciSummaryData = {
+            totalScore: rounded,
+            kategori: label,
+            statusTitle: statusTitle,
+            cnt100: cnt100,
+            cnt70: cnt70,
+            cnt40: cnt40,
+            findings: findings,
+            autoRec: $('#autoRecText').text()
+        };
     }
 
-    // Button Score Selector
-    $(document).on('click', '.btn-rci-score', function() {
+    // Button Score Selector (Supports both classes)
+    $(document).on('click', '.btn-score-card, .btn-rci-score', function() {
         const param = $(this).data('param');
         const val = $(this).data('val');
 
-        $(`.btn-rci-score[data-param="${param}"]`).removeClass('active');
+        $(`.btn-score-card[data-param="${param}"], .btn-rci-score[data-param="${param}"]`).removeClass('active');
         $(this).addClass('active');
 
         $(`#${param}`).val(val);
         calculateRciScore();
     });
+
+    function applyAutoRecommendationRci() {
+        const rec = $('#autoRecText').text().trim();
+        if (rec) {
+            $('#tindakanPerbaikan').val(rec);
+            $('#clientAlertTitle').text('Rekomendasi Diterapkan');
+            $('#clientAlertMsg').text('Rekomendasi tindakan otomatis telah disalin ke formulir rekomendasi perbaikan.');
+            new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+        }
+    }
+
+    function generateRciShareText() {
+        const tgl = $('#tanggal').val() || '';
+        const wkt = $('#waktuStr').val() || '';
+        const area = $('#area').val() || '-';
+        const namaJalan = $('#namaJalan').val() || $('#lokasi').val() || '-';
+        const seg = $('#segmentJalan').val() || '';
+        const shift = $('#shift').val() || '';
+        const loc = $('#lokasi').val() || '';
+        const pic = $('#pic').val() || '-';
+        const perbaikan = $('#tindakanPerbaikan').val() || currentRciSummaryData.autoRec || '-';
+
+        let text = `🚧 *LAPORAN INSPEKSI ROAD CONDITION INDEX (RCI)* 🚧\n`;
+        text += `*PT MEGA GLOBAL ENERGY GROUP*\n\n`;
+        text += `📅 Tanggal: ${tgl} ${wkt} (${shift})\n`;
+        text += `📍 Ruas Jalan: ${namaJalan} ${seg ? `[${seg}]` : ''}\n`;
+        text += `📌 Area / Lokasi: ${area} | ${loc}\n\n`;
+        text += `⭐ *SKOR AKHIR: ${currentRciSummaryData.totalScore || '100'}% (${currentRciSummaryData.kategori || 'Baik'})*\n`;
+        text += `📋 *${currentRciSummaryData.statusTitle || 'STATUS: LAYAK OPERASIONAL'}*\n\n`;
+        text += `📊 *Komposisi Parameter:*\n`;
+        text += `• Sesuai Standar (100): ${currentRciSummaryData.cnt100 || 8}\n`;
+        text += `• Perlu Perhatian (70): ${currentRciSummaryData.cnt70 || 0}\n`;
+        text += `• Kritis / Substandard (40): ${currentRciSummaryData.cnt40 || 0}\n\n`;
+
+        if (currentRciSummaryData.findings && currentRciSummaryData.findings.length > 0) {
+            text += `🔍 *Temuan Defisit:*\n`;
+            currentRciSummaryData.findings.forEach(f => {
+                text += `• ${f.replace(/<[^>]*>/g, '')}\n`;
+            });
+            text += `\n`;
+        } else {
+            text += `🔍 *Temuan:* Seluruh parameter sesuai standar teknis operasional.\n\n`;
+        }
+
+        text += `🛠️ *Rekomendasi Tindakan:*\n${perbaikan}\n`;
+        text += `👷 PIC: ${pic}\n`;
+        return text;
+    }
+
+    function shareRciToWhatsApp() {
+        const text = encodeURIComponent(generateRciShareText());
+        window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+    }
+
+    function shareRciNative() {
+        const text = generateRciShareText();
+        if (navigator.share) {
+            navigator.share({
+                title: 'Laporan Road Condition Index (RCI)',
+                text: text
+            }).catch(err => {
+                console.log('Share dismissed', err);
+            });
+        } else {
+            shareRciToWhatsApp();
+        }
+    }
+
+    function copyRciSummaryToClipboard() {
+        const text = generateRciShareText();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                $('#clientAlertTitle').text('Berhasil Disalin!');
+                $('#clientAlertMsg').text('Ringkasan laporan RCI telah disalin ke clipboard. Anda dapat menempelkannya di chat WhatsApp atau dokumen lain.');
+                new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+            });
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            $('#clientAlertTitle').text('Berhasil Disalin!');
+            $('#clientAlertMsg').text('Ringkasan laporan RCI telah disalin ke clipboard.');
+            new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+        }
+    }
+
+    function shareSavedRci(id) {
+        $.getJSON('/Rci/GetDetail/' + id, function(d) {
+            let text = `🚧 *LAPORAN INSPEKSI ROAD CONDITION INDEX (RCI)* 🚧\n`;
+            text += `*PT MEGA GLOBAL ENERGY GROUP*\n\n`;
+            text += `📅 Tanggal: ${d.tanggal} ${d.waktu} (${d.shift || '-'})\n`;
+            text += `📍 Ruas Jalan: ${d.namaJalan || d.lokasi} ${d.segmentJalan ? `[${d.segmentJalan}]` : ''}\n`;
+            text += `📌 Area / Lokasi: ${d.area} | ${d.lokasi}\n`;
+            text += `👮 Inspector: ${d.nama} (${d.nik})\n\n`;
+            text += `⭐ *SKOR AKHIR: ${d.totalScore}% (${d.kategoriIndex})*\n\n`;
+            text += `📊 *Rincian Nilai 8 Parameter:*\n`;
+            text += `• Lebar Jalan: ${d.skorLebarJalan}/100\n`;
+            text += `• Grade Jalan: ${d.skorGradeJalan}/100\n`;
+            text += `• Permukaan: ${d.skorPermukaanJalan}/100\n`;
+            text += `• Safety Berm: ${d.skorSafetyBerm}/100\n`;
+            text += `• Drainase Parit: ${d.skorDrainaseParit}/100\n`;
+            text += `• Superelevasi: ${d.skorSuperelevasiTikungan}/100\n`;
+            text += `• Bebas Spillage: ${d.skorBebasSpillage}/100\n`;
+            text += `• Rambu & Debu: ${d.skorRambuDebu}/100\n\n`;
+            if (d.catatan) text += `📝 Catatan: ${d.catatan}\n`;
+            if (d.tindakanPerbaikan) text += `🛠️ Rekomendasi: ${d.tindakanPerbaikan} (PIC: ${d.pic || '-'})\n`;
+
+            if (navigator.share) {
+                navigator.share({ title: 'Laporan RCI #' + d.id, text: text }).catch(() => {});
+            } else {
+                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+            }
+        });
+    }
 
     // Auto GPS Location
     function getLocationRci() {
@@ -793,8 +1392,8 @@
         $('#formTitle').html('<i class="bi bi-pencil-square" style="color: #3b82f6;"></i> <span>Form Penilaian RCI</span>');
         $('#btnCancelEdit').addClass('d-none');
 
-        $('.btn-rci-score').removeClass('active');
-        $('.btn-rci-score[data-val="100"]').addClass('active');
+        $('.btn-score-card, .btn-rci-score').removeClass('active');
+        $('.btn-score-card[data-val="100"], .btn-rci-score[data-val="100"]').addClass('active');
         $('input[id^="skor"]').val('100');
         calculateRciScore();
     }
@@ -823,8 +1422,8 @@
             params.forEach(p => {
                 const val = data[p];
                 $(`#${p}`).val(val);
-                $(`.btn-rci-score[data-param="${p}"]`).removeClass('active');
-                $(`.btn-rci-score[data-param="${p}"][data-val="${val}"]`).addClass('active');
+                $(`.btn-score-card[data-param="${p}"], .btn-rci-score[data-param="${p}"]`).removeClass('active');
+                $(`.btn-score-card[data-param="${p}"][data-val="${val}"], .btn-rci-score[data-param="${p}"][data-val="${val}"]`).addClass('active');
             });
 
             calculateRciScore();
@@ -902,6 +1501,12 @@
                         <img src="${d.fotoUrl}" class="img-fluid rounded-3 shadow-sm" style="max-height: 380px; object-fit: contain;" alt="Foto Jalan" />
                     </div>
                 ` : ''}
+
+                <div class="mt-3 text-end">
+                    <button type="button" class="btn btn-sm btn-success px-3 py-1.5" onclick="shareSavedRci(${d.id})" style="border-radius: 8px;">
+                        <i class="bi bi-whatsapp me-1"></i> Bagikan Laporan ke WhatsApp
+                    </button>
+                </div>
             `;
 
             $('#detailModalBody').html(html);
