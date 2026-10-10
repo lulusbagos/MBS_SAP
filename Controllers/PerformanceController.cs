@@ -612,7 +612,7 @@ namespace MBS_SAP.Controllers
 
                     dbObservations = (await _context.Observations
                         .Where(o => !o.IsDeleted && o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth && o.Nik != null)
-                        .Select(o => new { Nik = o.Nik.Trim(), Date = o.Date.Date, o.KegiatanYangDiamati })
+                        .Select(o => new { Nik = o.Nik.Trim(), Date = o.Date, o.KegiatanYangDiamati })
                         .Distinct()
                         .ToListAsync())
                         .Select(o => o.Nik)
@@ -2912,7 +2912,7 @@ namespace MBS_SAP.Controllers
             var compObsNik = (await (from o in _context.Observations
                                      join k in _context.Karyawans on o.Nik equals k.NoNik
                                      where !o.IsDeleted && o.CreatedAt >= startOfMonth && !ExcludedCompanies.Ids.Contains(k.IdPerusahaan) && o.Nik != null
-                                     select new { CompId = k.IdPerusahaan, Nik = o.Nik.Trim(), Date = o.Date.Date, o.KegiatanYangDiamati })
+                                     select new { CompId = k.IdPerusahaan, Nik = o.Nik.Trim(), Date = o.Date, o.KegiatanYangDiamati })
                                     .Distinct()
                                     .ToListAsync())
                                     .Select(o => new { o.CompId, o.Nik })

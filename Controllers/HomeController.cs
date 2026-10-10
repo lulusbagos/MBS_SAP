@@ -274,8 +274,8 @@ namespace MBS_SAP.Controllers
                     .CountAsync();
                 int totalCoachingsCount = totalCoachingAsCreator + totalCoachingAsParticipant;
 
-                int thisMonthObservationsCount = await observationQuery.Where(o => o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth).Select(o => new { o.Date.Date, o.KegiatanYangDiamati }).Distinct().CountAsync();
-                int totalObservationsCount = await observationQuery.Select(o => new { o.Date.Date, o.KegiatanYangDiamati }).Distinct().CountAsync();
+                int thisMonthObservationsCount = await observationQuery.Where(o => o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth).Select(o => new { o.Date, o.KegiatanYangDiamati }).Distinct().CountAsync();
+                int totalObservationsCount = await observationQuery.Select(o => new { o.Date, o.KegiatanYangDiamati }).Distinct().CountAsync();
 
                 // [FIX] Hapus kredit action plan agar konsisten dengan perhitungan Liga
                 // Sebelumnya ThisMonthHazards dan ThisMonthInspections ditambah closedAssignedCredits
