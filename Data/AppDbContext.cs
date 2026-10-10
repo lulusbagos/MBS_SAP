@@ -45,6 +45,10 @@ namespace MBS_SAP.Data
         public DbSet<BbsBehavior> BbsBehaviors { get; set; } = null!;
         public DbSet<BbsObservation> BbsObservations { get; set; } = null!;
 
+        // FCI & RCI (Mega Global Energy Group)
+        public DbSet<FciReport> FciReports { get; set; } = null!;
+        public DbSet<RciReport> RciReports { get; set; } = null!;
+
         // View entities
         public DbSet<KaryawanView> Karyawans { get; set; } = null!;
         public DbSet<PersonalView> Personals { get; set; } = null!;
@@ -188,6 +192,13 @@ namespace MBS_SAP.Data
                 .ToTable("tbl_t_bbs_observation")
                 .HasIndex(b => b.ObservationNo)
                 .IsUnique();
+
+            // FCI & RCI mappings
+            modelBuilder.Entity<FciReport>()
+                .ToTable("tbl_t_fci_report");
+
+            modelBuilder.Entity<RciReport>()
+                .ToTable("tbl_t_rci_report");
 
             // View mappings
             modelBuilder.Entity<KaryawanView>()

@@ -765,6 +765,25 @@
                 <span class="badge" style="background-color: rgba(2, 132, 199, 0.12); color: #0284c7; font-size: 10px; font-weight: 600;">Observasi K3</span>
             </a>
 
+            @if (MBS_SAP.Services.CompanyHierarchyService.IsMgeGroupUser(User))
+            {
+                <a asp-controller="Fci" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0f766e, #14b8a6); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
+                        <i class="bi bi-compass" style="font-size: 22px; color: white;"></i>
+                    </div>
+                    <span style="font-weight: 700; font-size: 13px;">FCI Front</span>
+                    <span class="badge" style="background-color: rgba(20, 184, 166, 0.12); color: #14b8a6; font-size: 10px; font-weight: 600;">Front Index</span>
+                </a>
+
+                <a asp-controller="Rci" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #1e3a8a, #3b82f6); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
+                        <i class="bi bi-cone-striped" style="font-size: 22px; color: white;"></i>
+                    </div>
+                    <span style="font-weight: 700; font-size: 13px;">RCI Road</span>
+                    <span class="badge" style="background-color: rgba(59, 130, 246, 0.12); color: #3b82f6; font-size: 10px; font-weight: 600;">Road Index</span>
+                </a>
+            }
+
             @*
             @if (User.IsInRole("Admin"))
             {

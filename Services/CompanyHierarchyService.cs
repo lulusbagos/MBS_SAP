@@ -276,5 +276,62 @@ namespace MBS_SAP.Services
 
             return new List<CompanyDropdownItem>();
         }
+
+        public const int MgeRootCompanyId = 5;
+        private static HashSet<int>? _mgeGroupCompanyIdsCache;
+        private static DateTime _mgeGroupCacheTime = DateTime.MinValue;
+
+        public async Task<HashSet<int>> GetMgeGroupCompanyIdsAsync()
+        {
+            if (_mgeGroupCompanyIdsCache != null && (DateTime.UtcNow - _mgeGroupCacheTime).TotalMinutes < 30)
+            {
+                return _mgeGroupCompanyIdsCache;
+            }
+
+            var ids = await GetAccessibleCompanyIdsAsync(MgeRootCompanyId);
+            var set = new HashSet<int>(ids)
+            {
+                5, 88, 89, 90, 192, 373
+            };
+
+            _mgeGroupCompanyIdsCache = set;
+            _mgeGroupCacheTime = DateTime.UtcNow;
+            return set;
+        }
+
+        public static bool IsMgeGroupCompanyId(int? companyId)
+        {
+            if (!companyId.HasValue) return false;
+            if (_mgeGroupCompanyIdsCache != null && _mgeGroupCompanyIdsCache.Contains(companyId.Value))
+            {
+                return true;
+            }
+            return companyId.Value == 5 || companyId.Value == 88 || companyId.Value == 89 || companyId.Value == 90 || companyId.Value == 192 || companyId.Value == 373;
+        }
+
+        public static bool IsMgeGroupUser(System.Security.Claims.ClaimsPrincipal user)
+        {
+            if (user == null) return false;
+            if (user.IsInRole("Admin")) return true;
+
+            var compIdStr = user.FindFirst("CompanyId")?.Value;
+            if (int.TryParse(compIdStr, out int cid) && IsMgeGroupCompanyId(cid))
+            {
+                return true;
+            }
+
+            var compName = user.FindFirst("Company")?.Value?.ToUpperInvariant() ?? "";
+            if (compName.Contains("MEGA GLOBAL ENERGY") ||
+                compName.Contains("BERLIAN DUTA ENERGI") ||
+                compName.Contains("GRAHA PRIMA ENERGI") ||
+                compName.Contains("SAMUDERA MAJU PERKASA") ||
+                compName.Contains("KARUNIA ARMADA INDONESIA") ||
+                compName.Contains("HD CONSTRUCTION"))
+            {
+                return true;
+            }
+
+            return false;
+        }
     }
 }

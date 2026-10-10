@@ -80,6 +80,17 @@
             <span>DPA</span>
         </a>
     }
+    @if (MBS_SAP.Services.CompanyHierarchyService.IsMgeGroupUser(User))
+    {
+        <a asp-controller="Fci" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Fci" ? "active" : "")">
+            <i class="bi bi-compass" style="color: #14b8a6;"></i>
+            <span>FCI (Front)</span>
+        </a>
+        <a asp-controller="Rci" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Rci" ? "active" : "")">
+            <i class="bi bi-cone-striped" style="color: #38bdf8;"></i>
+            <span>RCI (Road)</span>
+        </a>
+    }
     @if (isAdminUser)
     {
         <a asp-controller="Incident" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Incident" ? "active" : "")">
