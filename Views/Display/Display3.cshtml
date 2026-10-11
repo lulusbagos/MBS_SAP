@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Chakra+Petch:wght@500;700;800&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap" rel="stylesheet">
 
     <style>
     :root {
@@ -33,7 +33,7 @@
     }
 
     html { background: #050811; }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; font-family: inherit; }
 
     body {
         background: var(--bg);
@@ -43,7 +43,7 @@
             radial-gradient(circle at 90% 90%, rgba(52, 211, 153, 0.06) 0%, transparent 40%),
             radial-gradient(circle at 80% 20%, rgba(251, 191, 36, 0.05) 0%, transparent 35%);
         background-size: 28px 28px, 100% 100%, 100% 100%, 100% 100%;
-        font-family: 'Outfit', sans-serif;
+        font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         color: var(--txt);
         height: 100vh;
         overflow: hidden;
@@ -101,17 +101,17 @@
         box-shadow: 0 0 15px rgba(0, 210, 255, 0.35);
     }
     .brand-title {
-        font-family: 'Orbitron', sans-serif;
-        font-size: 19px; font-weight: 900;
-        letter-spacing: 0.5px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 19px; font-weight: 800;
+        letter-spacing: 0.2px;
         background: linear-gradient(90deg, #ffffff, #38bdf8, #34d399);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         display: flex; align-items: center; gap: 8px;
     }
     .brand-sub {
-        font-size: 11px; color: var(--muted); font-weight: 600;
-        letter-spacing: 0.8px; text-transform: uppercase;
+        font-size: 11px; color: var(--muted); font-weight: 500;
+        letter-spacing: 0.6px; text-transform: uppercase;
     }
 
     /* Mode Switcher Tabs */
@@ -125,11 +125,11 @@
     }
     .mode-btn {
         background: transparent; border: none;
-        color: var(--muted); font-size: 11.5px; font-weight: 700;
+        color: var(--muted); font-size: 11.5px; font-weight: 600;
         padding: 6px 14px; border-radius: 8px;
         cursor: pointer; transition: all 0.25s ease;
         display: inline-flex; align-items: center; gap: 6px;
-        font-family: 'Chakra Petch', sans-serif;
+        font-family: 'Poppins', sans-serif;
         text-transform: uppercase; letter-spacing: 0.5px;
     }
     .mode-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.06); }
@@ -160,11 +160,12 @@
         border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06);
     }
     .clock-time {
-        font-family: 'Orbitron', monospace;
-        font-size: 17px; font-weight: 800;
-        color: #38bdf8; letter-spacing: 1px;
+        font-family: 'Poppins', sans-serif;
+        font-size: 18px; font-weight: 800;
+        color: #38bdf8; letter-spacing: 0.5px;
+        font-variant-numeric: tabular-nums;
     }
-    .clock-date { font-size: 10px; color: var(--muted); font-weight: 600; }
+    .clock-date { font-size: 10px; color: var(--muted); font-weight: 500; }
 
     .hdr-ctrl-btn {
         width: 38px; height: 38px; border-radius: 10px;
@@ -271,29 +272,31 @@
         margin-bottom: 6px;
     }
     .kpi-title {
-        font-family: 'Chakra Petch', sans-serif;
+        font-family: 'Poppins', sans-serif;
         font-size: 11px; font-weight: 700;
-        text-transform: uppercase; letter-spacing: 0.8px;
+        text-transform: uppercase; letter-spacing: 0.5px;
         color: var(--muted); display: flex; align-items: center; gap: 6px;
     }
     .kpi-tag {
-        font-size: 9.5px; font-weight: 800; padding: 2px 8px; border-radius: 6px;
-        font-family: 'Orbitron', monospace;
+        font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+        font-family: 'Poppins', sans-serif;
     }
     .kpi-body {
         display: flex; align-items: baseline; justify-content: space-between;
     }
     .kpi-num {
-        font-family: 'Orbitron', sans-serif;
-        font-size: 26px; font-weight: 900;
+        font-family: 'Poppins', sans-serif;
+        font-size: 26px; font-weight: 800;
         line-height: 1.1; letter-spacing: -0.5px;
+        font-variant-numeric: tabular-nums;
     }
-    .kpi-sub { font-size: 11px; color: var(--muted); }
+    .kpi-sub { font-size: 11px; color: var(--muted); font-weight: 500; }
     .kpi-footer {
         display: flex; align-items: center; justify-content: space-between;
         margin-top: 8px; padding-top: 6px;
         border-top: 1px solid rgba(255, 255, 255, 0.06);
         font-size: 10.5px; color: #cbd5e1;
+        font-weight: 500;
     }
 
     /* ── Main Workstage Grid ── */
@@ -361,18 +364,19 @@
         display: flex; align-items: center; gap: 8px; z-index: 10;
     }
     .hero-badge-type {
-        font-family: 'Orbitron', monospace;
-        font-size: 11px; font-weight: 900;
+        font-family: 'Poppins', sans-serif;
+        font-size: 11px; font-weight: 800;
         padding: 5px 12px; border-radius: 8px;
         letter-spacing: 0.5px;
         box-shadow: 0 0 15px rgba(0,0,0,0.6);
         display: inline-flex; align-items: center; gap: 6px;
     }
     .hero-badge-score {
-        font-family: 'Orbitron', monospace;
-        font-size: 14px; font-weight: 900;
+        font-family: 'Poppins', sans-serif;
+        font-size: 14px; font-weight: 800;
         padding: 5px 14px; border-radius: 8px;
         box-shadow: 0 0 15px rgba(0,0,0,0.6);
+        font-variant-numeric: tabular-nums;
     }
 
     /* Hero Info Overlay (Bottom) */
@@ -383,13 +387,13 @@
     }
     .hero-title {
         font-size: 20px; font-weight: 800; color: #ffffff;
-        font-family: 'Outfit', sans-serif;
+        font-family: 'Poppins', sans-serif;
         text-shadow: 0 2px 8px rgba(0,0,0,0.8);
         margin-bottom: 2px;
         display: flex; align-items: center; gap: 10px;
     }
     .hero-subtitle {
-        font-size: 12px; color: #cbd5e1;
+        font-size: 12px; color: #cbd5e1; font-weight: 500;
         margin-bottom: 8px; text-shadow: 0 1px 4px rgba(0,0,0,0.8);
     }
     .hero-meta-row {
@@ -429,7 +433,7 @@
         margin-bottom: 10px;
     }
     .telemetry-title {
-        font-family: 'Chakra Petch', sans-serif;
+        font-family: 'Poppins', sans-serif;
         font-size: 12px; font-weight: 800;
         color: var(--txt); text-transform: uppercase; letter-spacing: 0.6px;
         display: flex; align-items: center; gap: 6px;
@@ -450,7 +454,7 @@
         text-transform: uppercase;
     }
     .param-bar-val {
-        font-family: 'Orbitron', monospace; font-size: 10.5px; font-weight: 800;
+        font-family: 'Poppins', sans-serif; font-variant-numeric: tabular-nums; font-size: 11px; font-weight: 800;
     }
     .param-track {
         height: 5px; width: 100%; background: rgba(255, 255, 255, 0.08);
@@ -479,7 +483,7 @@
         background: rgba(0,0,0,0.25);
     }
     .feed-title {
-        font-family: 'Chakra Petch', sans-serif;
+        font-family: 'Poppins', sans-serif;
         font-size: 13px; font-weight: 800;
         text-transform: uppercase; letter-spacing: 0.8px;
         color: #ffffff; display: flex; align-items: center; gap: 8px;
@@ -489,7 +493,7 @@
         padding: 3px 8px; border-radius: 6px;
         background: rgba(56, 189, 248, 0.15); color: var(--blue);
         border: 1px solid rgba(56, 189, 248, 0.3);
-        font-family: 'Orbitron', monospace;
+        font-family: 'Poppins', sans-serif;
     }
 
     /* Feed Scroll Box */
@@ -541,7 +545,7 @@
     }
     .feed-type-pill {
         font-size: 8.5px; font-weight: 800; padding: 1px 6px; border-radius: 4px;
-        font-family: 'Orbitron', monospace; text-transform: uppercase;
+        font-family: 'Poppins', sans-serif; text-transform: uppercase; letter-spacing: 0.4px;
     }
     .feed-item-title {
         font-size: 12.5px; font-weight: 800; color: #ffffff;
@@ -559,7 +563,7 @@
         text-align: right; min-width: 75px;
     }
     .feed-score-num {
-        font-family: 'Orbitron', monospace;
+        font-family: 'Poppins', sans-serif; font-variant-numeric: tabular-nums;
         font-size: 13px; font-weight: 900;
     }
     .feed-status-pill {
@@ -578,8 +582,8 @@
     }
     .ticker-lbl {
         background: linear-gradient(135deg, #ef4444, #b91c1c);
-        color: #fff; font-family: 'Orbitron', sans-serif;
-        font-size: 10.5px; font-weight: 900;
+        color: #fff; font-family: 'Poppins', sans-serif;
+        font-size: 11px; font-weight: 800;
         padding: 4px 10px; border-radius: 6px;
         white-space: nowrap;
         box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
@@ -958,8 +962,8 @@
             </div>
             <div class="tech-modal-body">
                 <div>
-                    <span class="badge" id="modalTypeBadge" style="font-size:11px; font-family:'Orbitron', monospace;">TYPE</span>
-                    <span class="badge ms-1" id="modalScoreBadge" style="font-size:11px; font-family:'Orbitron', monospace;">SCORE</span>
+                    <span class="badge" id="modalTypeBadge" style="font-size:11px; font-family:'Poppins', sans-serif; font-weight:700;">TYPE</span>
+                    <span class="badge ms-1" id="modalScoreBadge" style="font-size:11px; font-family:'Poppins', sans-serif; font-weight:700;">SCORE</span>
                 </div>
                 <h4 class="fw-bold mb-1 text-white" id="modalTitle">Judul Inspeksi</h4>
                 <div class="text-muted" style="font-size: 13px;" id="modalSubtitle">Sub judul detail</div>
