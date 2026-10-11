@@ -8,7 +8,7 @@
     var areaList = ViewBag.AreaList as List<string> ?? new List<string>();
     var jalanList = ViewBag.JalanList as List<string> ?? new List<string>();
     var totalReports = ViewBag.TotalReports as int? ?? 0;
-    var avgScore = ViewBag.AvgScore as double? ?? 100.0;
+    var avgScore = ViewBag.AvgScore as double? ?? 4.0;
     var goodCount = ViewBag.GoodCount as int? ?? 0;
     var fairCount = ViewBag.FairCount as int? ?? 0;
     var poorCount = ViewBag.PoorCount as int? ?? 0;
@@ -21,12 +21,12 @@
             <div class="screen-title d-flex align-items-center gap-2">
                 <i class="bi bi-cone-striped text-primary" style="color: #3b82f6;"></i>
                 <span>Road Condition Index (RCI)</span>
-                <span class="badge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 10px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(244, 63, 94, 0.4); display: inline-flex; align-items: center; gap: 2px;">
-                    <i class="bi bi-stars" style="font-size: 9px;"></i> NEW
+                <span class="badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-size: 10px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 2px;">
+                    <i class="bi bi-rulers" style="font-size: 9px;"></i> STANDAR SEGMEN (1-4)
                 </span>
                 <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 11px; padding: 4px 10px; border-radius: 8px;">Road Assessment</span>
             </div>
-            <p class="screen-subtitle mb-0">Inspeksi & Penilaian Standar Kualitas Jalan Hauling & Tambang.</p>
+            <p class="screen-subtitle mb-0">Inspeksi & Penilaian Standar Teknis Jalan Hauling & Tambang Berbasis Segmen.</p>
         </div>
         <div class="d-flex gap-2">
             <a asp-action="ExportExcel" asp-route-startDate="@ViewBag.StartDate" asp-route-endDate="@ViewBag.EndDate" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 shadow-sm" style="border-radius: 10px; padding: 8px 14px; font-weight: 600;">
@@ -131,13 +131,15 @@
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <div class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Rata-rata Skor RCI</div>
-                        <h3 class="mb-0 mt-1 font-weight-bold" style="color: @(avgScore >= 85 ? "#10b981" : (avgScore >= 70 ? "#f59e0b" : "#f43f5e"));">@avgScore%</h3>
+                        <h3 class="mb-0 mt-1 font-weight-bold" style="color: @(avgScore >= 3.6 ? "#10b981" : (avgScore >= 3.0 ? "#06b6d4" : "#f59e0b"));">
+                            @(avgScore > 4.0 ? (avgScore / 25.0).ToString("F2") : avgScore.ToString("F2")) / 4.00
+                        </h3>
                     </div>
                     <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(6, 182, 212, 0.15); display: flex; align-items: center; justify-content: center;">
                         <i class="bi bi-speedometer2" style="color: #06b6d4; font-size: 20px;"></i>
                     </div>
                 </div>
-                <div class="text-muted mt-2" style="font-size: 11px;">Target Operasi: &gt;= 85%</div>
+                <div class="text-muted mt-2" style="font-size: 11px;">Target Operasi: 4.00 (100%)</div>
             </div>
         </div>
 
@@ -149,10 +151,10 @@
                         <h3 class="mb-0 mt-1 font-weight-bold text-success">@goodCount</h3>
                     </div>
                     <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center;">
-                        <i class="bi bi-check-circle-fill text-success" style="font-size: 20px;"></i>
+                        <i class="bi bi-shield-check" style="color: #10b981; font-size: 20px;"></i>
                     </div>
                 </div>
-                <div class="text-muted mt-2" style="font-size: 11px;">Skor Index &gt;= 85%</div>
+                <div class="text-muted mt-2" style="font-size: 11px;">Skor 3.6 - 4.0 (&ge; 90%)</div>
             </div>
         </div>
 
@@ -160,82 +162,80 @@
             <div class="card-sap p-3 h-100" style="border-left: 4px solid #f43f5e;">
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
-                        <div class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Perlu Grader / Perbaikan</div>
+                        <div class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Perlu Perbaikan</div>
                         <h3 class="mb-0 mt-1 font-weight-bold text-danger">@(fairCount + poorCount)</h3>
                     </div>
                     <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(244, 63, 94, 0.15); display: flex; align-items: center; justify-content: center;">
-                        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 20px;"></i>
+                        <i class="bi bi-exclamation-octagon-fill" style="color: #f43f5e; font-size: 20px;"></i>
                     </div>
                 </div>
-                <div class="text-muted mt-2" style="font-size: 11px;">@poorCount Rusak, @fairCount Perawatan</div>
+                <div class="text-muted mt-2" style="font-size: 11px;">Skor &lt; 3.0 (&lt; 75%)</div>
             </div>
         </div>
     </div>
 
-    <!-- Main Layout Grid: Form (Left) & Riwayat (Right) -->
+    <!-- MAIN TWO COLUMN LAYOUT: DIRECT ASSESSMENT FORM (LEFT) & HISTORY FEED (RIGHT) -->
     <div class="row g-4">
-        <!-- FORM COLUMN -->
+        <!-- FORM COLUMN (LANGSUNG DIBUKA) -->
         <div class="col-lg-6">
-            <div class="card-sap border-primary-accent" style="border-top: 4px solid #3b82f6;">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="card-sap p-3 p-md-4 mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary border-opacity-25">
                     <h5 class="mb-0 text-white font-weight-bold d-flex align-items-center gap-2" id="formTitle">
                         <i class="bi bi-pencil-square" style="color: #3b82f6;"></i>
                         <span>Form Penilaian RCI</span>
-                        <span class="badge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(244, 63, 94, 0.4); display: inline-flex; align-items: center; gap: 2px;">
-                            <i class="bi bi-stars" style="font-size: 9px;"></i> NEW
+                        <span class="badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 2px;">
+                            <i class="bi bi-stars" style="font-size: 9px;"></i> OPSI B
                         </span>
                     </h5>
-                    <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnCancelEdit" onclick="resetForm()">
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnCancelEdit" onclick="resetRciForm()">
                         <i class="bi bi-x-circle me-1"></i> Batal Edit
                     </button>
                 </div>
 
-                <form asp-action="Submit" method="post" id="rciForm" enctype="multipart/form-data">
+                <form id="formRci" asp-action="Submit" method="post" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
                     <input type="hidden" id="rciId" name="id" value="" />
 
-                    <!-- Section 1: Basic Info -->
+                    <!-- Section 1: Informasi Lokasi & Segmen Jalan -->
                     <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
-                        <div class="text-white mb-2 font-weight-bold" style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <i class="bi bi-info-circle me-1" style="color: #3b82f6;"></i> 1. Informasi Lokasi &amp; Ruas Jalan
+                        <div class="text-white font-weight-bold mb-3" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="bi bi-geo-alt me-1" style="color: #3b82f6;"></i> 1. Identitas Lokasi &amp; Segmen Jalan
                         </div>
 
                         <div class="row g-2 mb-2">
                             <div class="col-md-6 form-group-sap">
-                                <label class="form-label-sap" for="tanggal">Tanggal</label>
+                                <label class="form-label-sap" for="tanggal">Tanggal Inspeksi</label>
                                 <div class="input-sap-wrapper">
-                                    <i class="bi bi-calendar-event-fill input-sap-icon"></i>
+                                    <i class="bi bi-calendar-event input-sap-icon"></i>
                                     <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
                                 </div>
                             </div>
                             <div class="col-md-6 form-group-sap">
-                                <label class="form-label-sap" for="waktuStr">Waktu</label>
+                                <label class="form-label-sap" for="waktuStr">Waktu Inspeksi</label>
                                 <div class="input-sap-wrapper">
-                                    <i class="bi bi-clock-fill input-sap-icon"></i>
+                                    <i class="bi bi-clock input-sap-icon"></i>
                                     <input type="time" id="waktuStr" name="waktuStr" class="input-sap" value="@DateTime.Now.ToString("HH:mm")" required />
                                 </div>
                             </div>
                         </div>
 
+                        <!-- Area Utama (Searchable Ala P5M) -->
                         <div class="row g-2 mb-2">
                             <div class="col-md-6 form-group-sap">
                                 <label class="form-label-sap" for="areaSearch">Area Utama</label>
-                                <div class="position-relative mb-0">
+                                <div class="position-relative">
                                     <div class="input-sap-wrapper mb-0">
                                         <i class="bi bi-geo-alt-fill input-sap-icon"></i>
-                                        <input type="text" id="areaSearch" class="input-sap text-uppercase" placeholder="Ketik untuk mencari area..." autocomplete="off" style="padding-right: 36px;" />
+                                        <input type="text" id="areaSearch" class="input-sap text-uppercase" placeholder="Ketik atau pilih Area Utama..." autocomplete="off" style="padding-right: 36px;" required />
                                         <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleAreaDropdown"></i>
                                     </div>
-                                    <!-- Hidden select for actual form submission -->
-                                    <select id="area" name="area" required style="display:none;">
-                                        <option value="" disabled selected></option>
-                                    </select>
-                                    <!-- Dropdown list -->
+                                    <input type="hidden" id="area" name="area" value="" required />
                                     <div id="areaDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
-                                        <!-- Populated by JS -->
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Detail Lokasi / Benchmark Cascading -->
                             <div class="col-md-6 form-group-sap">
                                 <label class="form-label-sap" for="benchmarkSearch">Detail Lokasi / Benchmark</label>
                                 <div class="d-flex align-items-center gap-2">
@@ -245,11 +245,8 @@
                                             <input type="text" id="benchmarkSearch" class="input-sap text-uppercase" placeholder="Pilih Area Utama dulu..." autocomplete="off" style="padding-right: 36px;" disabled />
                                             <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleBenchmarkDropdown"></i>
                                         </div>
-                                        <!-- Hidden input for actual form submission -->
                                         <input type="hidden" id="detilLokasi" name="detilLokasi" value="" />
-                                        <!-- Dropdown list -->
                                         <div id="benchmarkDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
-                                            <!-- Populated by JS -->
                                         </div>
                                     </div>
                                     <button type="button" class="btn btn-primary shadow-sm" style="height: 46px; border-radius: 12px; padding: 0 16px; background-color: var(--color-primary); border: none;" onclick="$('#addBenchmarkModal').modal('show')" title="Tambah Benchmark Baru" id="btnAddBenchmark" disabled>
@@ -264,7 +261,7 @@
                                 <label class="form-label-sap" for="namaJalan">Nama Jalan / Jalur Hauling</label>
                                 <div class="input-sap-wrapper">
                                     <i class="bi bi-signpost-fill input-sap-icon"></i>
-                                    <input type="text" id="namaJalan" name="namaJalan" class="input-sap text-uppercase" placeholder="Misal: Hauling KM 0 - KM 5, Ramp Barat" required />
+                                    <input type="text" id="namaJalan" name="namaJalan" class="input-sap text-uppercase" placeholder="Misal: Hauling CPP33 - Exit Pit, Jl. Anggrek" required />
                                 </div>
                             </div>
                             <div class="col-md-6 form-group-sap">
@@ -301,142 +298,233 @@
 
                         <div class="row g-2">
                             <div class="col-md-6 form-group-sap mb-0">
-                                <label class="form-label-sap" for="detilLokasi">Detail Lokasi / Patok Pandu</label>
-                                <div class="input-sap-wrapper mb-0">
-                                    <i class="bi bi-compass-fill input-sap-icon"></i>
-                                    <input type="text" id="detilLokasi" name="detilLokasi" class="input-sap" placeholder="Misal: Dekat Simpang 3, Pos Pantau" />
-                                </div>
+                                <label class="form-label-sap">GPS Latitude</label>
+                                <input type="text" id="latitude" name="latitude" class="input-sap" placeholder="Latitude" style="font-size: 11px;" readonly />
                             </div>
                             <div class="col-md-6 form-group-sap mb-0">
-                                <label class="form-label-sap">GPS Lat / Long</label>
-                                <div class="d-flex gap-1">
-                                    <input type="text" id="latitude" name="latitude" class="input-sap" placeholder="Latitude" style="font-size: 11px;" readonly />
-                                    <input type="text" id="longitude" name="longitude" class="input-sap" placeholder="Longitude" style="font-size: 11px;" readonly />
-                                </div>
+                                <label class="form-label-sap">GPS Longitude</label>
+                                <input type="text" id="longitude" name="longitude" class="input-sap" placeholder="Longitude" style="font-size: 11px;" readonly />
                             </div>
                         </div>
                     </div>
 
-                    <!-- Section 2: Assessment Parameters -->
+                    <!-- Section 2: Kalkulator Segmen & Penilaian 8 Parameter -->
                     <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div class="text-white font-weight-bold" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <i class="bi bi-cone-striped me-1" style="color: #3b82f6;"></i> 2. Penilaian 8 Parameter Jalan
+                                <i class="bi bi-rulers me-1" style="color: #3b82f6;"></i> 2. Penilaian 8 Parameter Segmen
                             </div>
                             <div class="badge px-3 py-1.5 shadow-sm" id="liveScoreBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 13px; font-weight: 700; border-radius: 10px;">
-                                Skor RCI: <span id="liveScoreVal">100.0</span>% (Baik)
+                                Skor: <span id="liveScoreVal">4.00</span> / 4.00 (<span id="liveAchVal">100.0</span>%)
                             </div>
                         </div>
 
-                        <!-- Param 1 -->
+                        <!-- Global Panjang Segmen Input -->
+                        <div class="row g-2 mb-3 align-items-center p-3 rounded-3 shadow-sm" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.08)); border: 1.5px solid rgba(59, 130, 246, 0.35);">
+                            <div class="col-md-7">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div style="width: 34px; height: 34px; border-radius: 8px; background: rgba(59, 130, 246, 0.25); display: flex; align-items: center; justify-content: center; color: #60a5fa;">
+                                        <i class="bi bi-rulers" style="font-size: 18px;"></i>
+                                    </div>
+                                    <div>
+                                        <label class="form-label-sap mb-0" for="panjangSegment" style="color: #93c5fd; font-weight: 700; font-size: 13px;">
+                                            Panjang Segmen Jalan (Meter)
+                                        </label>
+                                        <div class="text-muted" style="font-size: 11px;">Dasar rumus: (Panjang Segmen - Total Defisit) / Panjang Segmen</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="input-group">
+                                    <input type="number" id="panjangSegment" name="panjangSegment" class="form-control text-end font-weight-bold" value="100" min="1" step="any" required style="border-radius: 10px 0 0 10px; font-size: 15px; background: var(--bg-card); color: #ffffff; border: 1.5px solid rgba(59, 130, 246, 0.4); height: 44px;" oninput="onPanjangSegmentChange()" />
+                                    <span class="input-group-text font-weight-bold" style="background: rgba(59, 130, 246, 0.25); color: #93c5fd; border: 1.5px solid rgba(59, 130, 246, 0.4); border-radius: 0 10px 10px 0; font-size: 13px;">Meter</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PARAMETER 1: SURFACING AND MATERIAL (BOBOT 30%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="param-icon-badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
-                                        <i class="bi bi-arrows-expand"></i>
+                                        <i class="bi bi-layers-half"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">1. Lebar Jalan Angkut (Road Width)</span>
-                                        <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                        <span class="param-header-title">1. Surfacing and Material</span>
+                                        <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35); font-size: 10px; margin-left: 6px;">Bobot 30%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Standar &ge; 3.5x lebar unit terbesar (2 arah)
+                                    <i class="bi bi-info-circle me-1"></i> Surface batu split &amp; tidak terkupas
                                 </div>
                             </div>
-                            <div class="score-btn-grid">
-                                <button type="button" class="btn-score-card active" data-param="skorLebarJalan" data-val="100">
-                                    <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">&ge; 3.5x Lebar Unit</span>
+
+                            <!-- Input Defisit Meter -->
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="col-8 col-sm-8">
+                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Bukan Split / Terkelupas (m)
+                                    </span>
+                                </div>
+                                <div class="col-4 col-sm-4">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="defisitSurfacing" name="defisitSurfacing" class="form-control text-end font-weight-bold param-defisit-input" data-param="Surfacing" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Surfacing')" />
+                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenSurfacing">Ketercapaian: 100.0%</span>
+                                </div>
+                            </div>
+
+                            <!-- 4 Score Buttons Grid (Skala 1 - 4) -->
+                            <div class="score-btn-grid-4">
+                                <button type="button" class="btn-score-card active" data-param="skorSurfacing" data-val="4" onclick="selectScoreManual('Surfacing', 4)">
+                                    <span class="btn-score-pill">4</span>
+                                    <span class="btn-score-text">90% - 100%</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorLebarJalan" data-val="70">
-                                    <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Pas 3x Lebar Unit</span>
+                                <button type="button" class="btn-score-card" data-param="skorSurfacing" data-val="3" onclick="selectScoreManual('Surfacing', 3)">
+                                    <span class="btn-score-pill">3</span>
+                                    <span class="btn-score-text">71% - 90%</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSurfacing" data-val="2" onclick="selectScoreManual('Surfacing', 2)">
+                                    <span class="btn-score-pill">2</span>
+                                    <span class="btn-score-text">41% - 70%</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorLebarJalan" data-val="40">
-                                    <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Sempit (&lt; 3x)</span>
+                                <button type="button" class="btn-score-card" data-param="skorSurfacing" data-val="1" onclick="selectScoreManual('Surfacing', 1)">
+                                    <span class="btn-score-pill">1</span>
+                                    <span class="btn-score-text">0% - 40%</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorLebarJalan" name="skorLebarJalan" value="100" />
+                            <input type="hidden" id="skorSurfacing" name="skorSurfacing" value="4" />
                         </div>
 
-                        <!-- Param 2 -->
+                        <!-- PARAMETER 2: UNDULATION / CORRUGATION (BOBOT 25%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="param-icon-badge" style="background: rgba(147, 51, 234, 0.15); color: #a855f7;">
-                                        <i class="bi bi-graph-up-arrow"></i>
+                                        <i class="bi bi-activity"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">2. Kemiringan Jalan (Grade / Slope)</span>
-                                        <span class="badge" style="background: rgba(147, 51, 234, 0.15); color: #a855f7; border: 1px solid rgba(147, 51, 234, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                        <span class="param-header-title">2. Undulation / Corrugation</span>
+                                        <span class="badge" style="background: rgba(147, 51, 234, 0.2); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.35); font-size: 10px; margin-left: 6px;">Bobot 25%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Grade maksimal aman 8% - 10%
+                                    <i class="bi bi-info-circle me-1"></i> Bebas lendutan &amp; jalan keriting
                                 </div>
                             </div>
-                            <div class="score-btn-grid">
-                                <button type="button" class="btn-score-card active" data-param="skorGradeJalan" data-val="100">
-                                    <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Standar (&le; 8%)</span>
+
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="col-8 col-sm-8">
+                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Terdapat Lendutan / Keriting (m)
+                                    </span>
+                                </div>
+                                <div class="col-4 col-sm-4">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="defisitUndulation" name="defisitUndulation" class="form-control text-end font-weight-bold param-defisit-input" data-param="Undulation" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Undulation')" />
+                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenUndulation">Ketercapaian: 100.0%</span>
+                                </div>
+                            </div>
+
+                            <div class="score-btn-grid-4">
+                                <button type="button" class="btn-score-card active" data-param="skorUndulation" data-val="4" onclick="selectScoreManual('Undulation', 4)">
+                                    <span class="btn-score-pill">4</span>
+                                    <span class="btn-score-text">90% - 100%</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorGradeJalan" data-val="70">
-                                    <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Agak Curam (8 - 10%)</span>
+                                <button type="button" class="btn-score-card" data-param="skorUndulation" data-val="3" onclick="selectScoreManual('Undulation', 3)">
+                                    <span class="btn-score-pill">3</span>
+                                    <span class="btn-score-text">71% - 90%</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorUndulation" data-val="2" onclick="selectScoreManual('Undulation', 2)">
+                                    <span class="btn-score-pill">2</span>
+                                    <span class="btn-score-text">41% - 70%</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorGradeJalan" data-val="40">
-                                    <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Terlalu Curam (&gt; 10%)</span>
+                                <button type="button" class="btn-score-card" data-param="skorUndulation" data-val="1" onclick="selectScoreManual('Undulation', 1)">
+                                    <span class="btn-score-pill">1</span>
+                                    <span class="btn-score-text">0% - 40%</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorGradeJalan" name="skorGradeJalan" value="100" />
+                            <input type="hidden" id="skorUndulation" name="skorUndulation" value="4" />
                         </div>
 
-                        <!-- Param 3 -->
+                        <!-- PARAMETER 3: SPOIL (BOBOT 20%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="param-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
-                                        <i class="bi bi-layers-half"></i>
+                                        <i class="bi bi-arrows-expand"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">3. Kondisi Permukaan Jalan (Surface)</span>
-                                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                        <span class="param-header-title">3. Spoil &amp; Lebar Efektif (18m)</span>
+                                        <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 10px; margin-left: 6px;">Bobot 20%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Rata, padat, bebas lubang &amp; amblas
+                                    <i class="bi bi-info-circle me-1"></i> Lebar &ge;18m, bebas penyempitan mud &amp; batubara
                                 </div>
                             </div>
-                            <div class="score-btn-grid">
-                                <button type="button" class="btn-score-card active" data-param="skorPermukaanJalan" data-val="100">
-                                    <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Mulus &amp; Padat</span>
+
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="col-8 col-sm-8">
+                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Terdapat Spoil / Menyempit (m)
+                                    </span>
+                                </div>
+                                <div class="col-4 col-sm-4">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="defisitSpoil" name="defisitSpoil" class="form-control text-end font-weight-bold param-defisit-input" data-param="Spoil" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Spoil')" />
+                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenSpoil">Ketercapaian: 100.0%</span>
+                                </div>
+                            </div>
+
+                            <div class="score-btn-grid-4">
+                                <button type="button" class="btn-score-card active" data-param="skorSpoil" data-val="4" onclick="selectScoreManual('Spoil', 4)">
+                                    <span class="btn-score-pill">4</span>
+                                    <span class="btn-score-text">90% - 100%</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorPermukaanJalan" data-val="70">
-                                    <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Bergelombang / Lubang Kecil</span>
+                                <button type="button" class="btn-score-card" data-param="skorSpoil" data-val="3" onclick="selectScoreManual('Spoil', 3)">
+                                    <span class="btn-score-pill">3</span>
+                                    <span class="btn-score-text">71% - 90%</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSpoil" data-val="2" onclick="selectScoreManual('Spoil', 2)">
+                                    <span class="btn-score-pill">2</span>
+                                    <span class="btn-score-text">41% - 70%</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorPermukaanJalan" data-val="40">
-                                    <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Lubang Dalam / Amblas</span>
+                                <button type="button" class="btn-score-card" data-param="skorSpoil" data-val="1" onclick="selectScoreManual('Spoil', 1)">
+                                    <span class="btn-score-pill">1</span>
+                                    <span class="btn-score-text">0% - 40%</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorPermukaanJalan" name="skorPermukaanJalan" value="100" />
+                            <input type="hidden" id="skorSpoil" name="skorSpoil" value="4" />
                         </div>
 
-                        <!-- Param 4 -->
+                        <!-- PARAMETER 4: SAFETY BERM (BOBOT 5%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
@@ -444,176 +532,296 @@
                                         <i class="bi bi-shield-check"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">4. Tanggul Pengaman Jalan (Safety Berm)</span>
-                                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                        <span class="param-header-title">4. Safety Berm</span>
+                                        <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Tinggi &ge; 3/4 diameter roda unit terbesar
+                                    <i class="bi bi-info-circle me-1"></i> Standar &ge;3/4 tinggi ban &amp; bebas tanaman
                                 </div>
                             </div>
-                            <div class="score-btn-grid">
-                                <button type="button" class="btn-score-card active" data-param="skorSafetyBerm" data-val="100">
-                                    <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">&ge; 3/4 Roda &amp; Kokoh</span>
+
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="col-8 col-sm-8">
+                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Berm Substandar / Tertutup Tanaman (m)
+                                    </span>
+                                </div>
+                                <div class="col-4 col-sm-4">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="defisitSafetyBerm" name="defisitSafetyBerm" class="form-control text-end font-weight-bold param-defisit-input" data-param="SafetyBerm" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('SafetyBerm')" />
+                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenSafetyBerm">Ketercapaian: 100.0%</span>
+                                </div>
+                            </div>
+
+                            <div class="score-btn-grid-4">
+                                <button type="button" class="btn-score-card active" data-param="skorSafetyBerm" data-val="4" onclick="selectScoreManual('SafetyBerm', 4)">
+                                    <span class="btn-score-pill">4</span>
+                                    <span class="btn-score-text">90% - 100%</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="70">
-                                    <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Ada Bagian Rendah</span>
+                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="3" onclick="selectScoreManual('SafetyBerm', 3)">
+                                    <span class="btn-score-pill">3</span>
+                                    <span class="btn-score-text">71% - 90%</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="2" onclick="selectScoreManual('SafetyBerm', 2)">
+                                    <span class="btn-score-pill">2</span>
+                                    <span class="btn-score-text">41% - 70%</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="40">
-                                    <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Terputus / Tidak Ada</span>
+                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="1" onclick="selectScoreManual('SafetyBerm', 1)">
+                                    <span class="btn-score-pill">1</span>
+                                    <span class="btn-score-text">0% - 40%</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorSafetyBerm" name="skorSafetyBerm" value="100" />
+                            <input type="hidden" id="skorSafetyBerm" name="skorSafetyBerm" value="4" />
                         </div>
 
-                        <!-- Param 5 -->
+                        <!-- PARAMETER 5: CROSSFALL (BOBOT 5%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="param-icon-badge" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">
-                                        <i class="bi bi-water"></i>
-                                    </div>
-                                    <div>
-                                        <span class="param-header-title">5. Kemiringan Melintang &amp; Parit (Drainase)</span>
-                                        <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
-                                    </div>
-                                </div>
-                                <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Camber 2-3%, parit bersih &amp; aliran lancar
-                                </div>
-                            </div>
-                            <div class="score-btn-grid">
-                                <button type="button" class="btn-score-card active" data-param="skorDrainaseParit" data-val="100">
-                                    <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Parit Bersih &amp; Kering</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
-                                </button>
-                                <button type="button" class="btn-score-card" data-param="skorDrainaseParit" data-val="70">
-                                    <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Tersumbat Sebagian</span>
-                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
-                                </button>
-                                <button type="button" class="btn-score-card" data-param="skorDrainaseParit" data-val="40">
-                                    <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Air Meluap ke Jalan</span>
-                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
-                                </button>
-                            </div>
-                            <input type="hidden" id="skorDrainaseParit" name="skorDrainaseParit" value="100" />
-                        </div>
-
-                        <!-- Param 6 -->
-                        <div class="param-box-premium">
-                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(99, 102, 241, 0.15); color: #6366f1;">
                                         <i class="bi bi-bezier2"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">6. Superelevasi &amp; Tikungan (Curvature)</span>
-                                        <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                        <span class="param-header-title">5. Crossfall (Grade 0.5% - 1%)</span>
+                                        <span class="badge" style="background: rgba(6, 182, 212, 0.2); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Kemiringan memadai, jarak pandang luas
+                                    <i class="bi bi-info-circle me-1"></i> Kemiringan punggung jalan 0.5% - 1%
                                 </div>
                             </div>
-                            <div class="score-btn-grid">
-                                <button type="button" class="btn-score-card active" data-param="skorSuperelevasiTikungan" data-val="100">
-                                    <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Radius &amp; Miring Pas</span>
+
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="col-8 col-sm-8">
+                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Crossfall Tidak Standar / Rata (m)
+                                    </span>
+                                </div>
+                                <div class="col-4 col-sm-4">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="defisitCrossfall" name="defisitCrossfall" class="form-control text-end font-weight-bold param-defisit-input" data-param="Crossfall" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Crossfall')" />
+                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenCrossfall">Ketercapaian: 100.0%</span>
+                                </div>
+                            </div>
+
+                            <div class="score-btn-grid-4">
+                                <button type="button" class="btn-score-card active" data-param="skorCrossfall" data-val="4" onclick="selectScoreManual('Crossfall', 4)">
+                                    <span class="btn-score-pill">4</span>
+                                    <span class="btn-score-text">90% - 100%</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSuperelevasiTikungan" data-val="70">
-                                    <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Agak Tajam / Pandang Terhalang</span>
+                                <button type="button" class="btn-score-card" data-param="skorCrossfall" data-val="3" onclick="selectScoreManual('Crossfall', 3)">
+                                    <span class="btn-score-pill">3</span>
+                                    <span class="btn-score-text">71% - 90%</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorCrossfall" data-val="2" onclick="selectScoreManual('Crossfall', 2)">
+                                    <span class="btn-score-pill">2</span>
+                                    <span class="btn-score-text">41% - 70%</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSuperelevasiTikungan" data-val="40">
-                                    <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Miring Terbalik / Rawan</span>
+                                <button type="button" class="btn-score-card" data-param="skorCrossfall" data-val="1" onclick="selectScoreManual('Crossfall', 1)">
+                                    <span class="btn-score-pill">1</span>
+                                    <span class="btn-score-text">0% - 40%</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorSuperelevasiTikungan" name="skorSuperelevasiTikungan" value="100" />
+                            <input type="hidden" id="skorCrossfall" name="skorCrossfall" value="4" />
                         </div>
 
-                        <!-- Param 7 -->
+                        <!-- PARAMETER 6: DUST (BOBOT 5%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e;">
-                                        <i class="bi bi-gem"></i>
+                                    <div class="param-icon-badge" style="background: rgba(234, 88, 12, 0.15); color: #ea580c;">
+                                        <i class="bi bi-wind"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">7. Bebas Batu Lepas / Spillage</span>
-                                        <span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                        <span class="param-header-title">6. Dust (Pengendalian Debu)</span>
+                                        <span class="badge" style="background: rgba(234, 88, 12, 0.2); color: #fb923c; border: 1px solid rgba(234, 88, 12, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Bebas batu tajam yang merusak ban alat
+                                    <i class="bi bi-info-circle me-1"></i> Debu tidak mengganggu jarak pandang DT
                                 </div>
                             </div>
-                            <div class="score-btn-grid">
-                                <button type="button" class="btn-score-card active" data-param="skorBebasSpillage" data-val="100">
-                                    <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Bersih dari Batu</span>
+
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="col-8 col-sm-8">
+                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Segmen Berdebu Tebal (m)
+                                    </span>
+                                </div>
+                                <div class="col-4 col-sm-4">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="defisitDust" name="defisitDust" class="form-control text-end font-weight-bold param-defisit-input" data-param="Dust" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Dust')" />
+                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenDust">Ketercapaian: 100.0%</span>
+                                </div>
+                            </div>
+
+                            <div class="score-btn-grid-4">
+                                <button type="button" class="btn-score-card active" data-param="skorDust" data-val="4" onclick="selectScoreManual('Dust', 4)">
+                                    <span class="btn-score-pill">4</span>
+                                    <span class="btn-score-text">90% - 100%</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorBebasSpillage" data-val="70">
-                                    <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Spillage Sedikit</span>
+                                <button type="button" class="btn-score-card" data-param="skorDust" data-val="3" onclick="selectScoreManual('Dust', 3)">
+                                    <span class="btn-score-pill">3</span>
+                                    <span class="btn-score-text">71% - 90%</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorDust" data-val="2" onclick="selectScoreManual('Dust', 2)">
+                                    <span class="btn-score-pill">2</span>
+                                    <span class="btn-score-text">41% - 70%</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorBebasSpillage" data-val="40">
-                                    <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Batu Tajam / Ceceran Banyak</span>
+                                <button type="button" class="btn-score-card" data-param="skorDust" data-val="1" onclick="selectScoreManual('Dust', 1)">
+                                    <span class="btn-score-pill">1</span>
+                                    <span class="btn-score-text">0% - 40%</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorBebasSpillage" name="skorBebasSpillage" value="100" />
+                            <input type="hidden" id="skorDust" name="skorDust" value="4" />
                         </div>
 
-                        <!-- Param 8 -->
+                        <!-- PARAMETER 7: DRAINAGE (BOBOT 5%) -->
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9;">
+                                        <i class="bi bi-water"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">7. Drainage (Saluran &amp; Genangan)</span>
+                                        <span class="badge" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Bebas genangan, aliran terarah &amp; gorong2 bersih
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="col-8 col-sm-8">
+                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Terdapat Genangan Air (m)
+                                    </span>
+                                </div>
+                                <div class="col-4 col-sm-4">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="defisitDrainage" name="defisitDrainage" class="form-control text-end font-weight-bold param-defisit-input" data-param="Drainage" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Drainage')" />
+                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenDrainage">Ketercapaian: 100.0%</span>
+                                </div>
+                            </div>
+
+                            <div class="score-btn-grid-4">
+                                <button type="button" class="btn-score-card active" data-param="skorDrainage" data-val="4" onclick="selectScoreManual('Drainage', 4)">
+                                    <span class="btn-score-pill">4</span>
+                                    <span class="btn-score-text">90% - 100%</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorDrainage" data-val="3" onclick="selectScoreManual('Drainage', 3)">
+                                    <span class="btn-score-pill">3</span>
+                                    <span class="btn-score-text">71% - 90%</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorDrainage" data-val="2" onclick="selectScoreManual('Drainage', 2)">
+                                    <span class="btn-score-pill">2</span>
+                                    <span class="btn-score-text">41% - 70%</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorDrainage" data-val="1" onclick="selectScoreManual('Drainage', 1)">
+                                    <span class="btn-score-pill">1</span>
+                                    <span class="btn-score-text">0% - 40%</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="skorDrainage" name="skorDrainage" value="4" />
+                        </div>
+
+                        <!-- PARAMETER 8: ROAD ATTACHMENT (BOBOT 5%) -->
                         <div class="param-box-premium mb-3">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(234, 88, 12, 0.15); color: #ea580c;">
-                                        <i class="bi bi-sign-stop-fill"></i>
+                                    <div class="param-icon-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                                        <i class="bi bi-signpost-2"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">8. Rambu, Patok Pandu &amp; Debu</span>
-                                        <span class="badge" style="background: rgba(234, 88, 12, 0.15); color: #ea580c; border: 1px solid rgba(234, 88, 12, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                        <span class="param-header-title">8. Road Attachment (Delineator &amp; Rambu)</span>
+                                        <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Delineator reflektif &amp; penyiraman debu teratur
+                                    <i class="bi bi-info-circle me-1"></i> Delineator per 35m &amp; rambu jalan lengkap
                                 </div>
                             </div>
-                            <div class="score-btn-grid">
-                                <button type="button" class="btn-score-card active" data-param="skorRambuDebu" data-val="100">
-                                    <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Rambu Jelas &amp; Minim Debu</span>
+
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="col-8 col-sm-8">
+                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Tanpa Delineator / Rambu Rusak (m)
+                                    </span>
+                                </div>
+                                <div class="col-4 col-sm-4">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="defisitRoadAttachment" name="defisitRoadAttachment" class="form-control text-end font-weight-bold param-defisit-input" data-param="RoadAttachment" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('RoadAttachment')" />
+                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenRoadAttachment">Ketercapaian: 100.0%</span>
+                                </div>
+                            </div>
+
+                            <div class="score-btn-grid-4">
+                                <button type="button" class="btn-score-card active" data-param="skorRoadAttachment" data-val="4" onclick="selectScoreManual('RoadAttachment', 4)">
+                                    <span class="btn-score-pill">4</span>
+                                    <span class="btn-score-text">90% - 100%</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorRambuDebu" data-val="70">
-                                    <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Berdebu Sedang (Perlu WT)</span>
+                                <button type="button" class="btn-score-card" data-param="skorRoadAttachment" data-val="3" onclick="selectScoreManual('RoadAttachment', 3)">
+                                    <span class="btn-score-pill">3</span>
+                                    <span class="btn-score-text">71% - 90%</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorRoadAttachment" data-val="2" onclick="selectScoreManual('RoadAttachment', 2)">
+                                    <span class="btn-score-pill">2</span>
+                                    <span class="btn-score-text">41% - 70%</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorRambuDebu" data-val="40">
-                                    <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Debu Tebal / Rambu Rusak</span>
+                                <button type="button" class="btn-score-card" data-param="skorRoadAttachment" data-val="1" onclick="selectScoreManual('RoadAttachment', 1)">
+                                    <span class="btn-score-pill">1</span>
+                                    <span class="btn-score-text">0% - 40%</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorRambuDebu" name="skorRambuDebu" value="100" />
+                            <input type="hidden" id="skorRoadAttachment" name="skorRoadAttachment" value="4" />
                         </div>
 
                         <!-- LIVE DYNAMIC CONCLUSION & SHARE CARD -->
@@ -624,19 +832,47 @@
                                         <i class="bi bi-award-fill" style="font-size: 19px;"></i>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0 fw-bold text-white" style="font-size: 14px;">KESIMPULAN HASIL PENILAIAN JALAN</h6>
-                                        <small class="text-muted" style="font-size: 11px;">Analisis kelayakan teknis otomatis &amp; opsi bagikan laporan</small>
+                                        <h6 class="mb-0 fw-bold text-white" style="font-size: 14px;">HASIL EVALUASI JALAN (RCI)</h6>
+                                        <small class="text-muted" style="font-size: 11px;">Skor Aktual vs Target 4.00 &amp; Analisis Ketercapaian</small>
                                     </div>
                                 </div>
-                                <div class="d-flex align-items-center gap-2">
+                                <div class="d-flex align-items-center gap-3">
                                     <div class="text-end">
-                                        <div class="text-muted" style="font-size: 10px; text-transform: uppercase;">Skor Indeks</div>
-                                        <div class="display-6 fw-bold mb-0" id="summaryScoreVal" style="color: #10b981; line-height: 1; font-size: 26px;">100.0%</div>
+                                        <div class="text-muted" style="font-size: 10px; text-transform: uppercase;">Actual Road Score</div>
+                                        <div class="display-6 fw-bold mb-0" id="summaryScoreVal" style="color: #10b981; line-height: 1; font-size: 26px;">4.00</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="text-muted" style="font-size: 10px; text-transform: uppercase;">Achievement</div>
+                                        <div class="display-6 fw-bold mb-0" id="summaryAchVal" style="color: #10b981; line-height: 1; font-size: 26px;">100.0%</div>
                                     </div>
                                     <div class="badge px-3 py-2" id="summaryCategoryBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 12px; font-weight: 700; border-radius: 10px;">
-                                        <i class="bi bi-check-circle-fill me-1"></i> BAIK
+                                        <i class="bi bi-check-circle-fill me-1"></i> PRIMA / BAIK
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- 3-Group Parameter Summary Table (Format Gambar 3) -->
+                            <div class="table-responsive mb-3 rounded-2" style="border: 1px solid rgba(255,255,255,0.08);">
+                                <table class="table table-sm table-bordered text-center mb-0" style="font-size: 11.5px; background: rgba(0,0,0,0.2);">
+                                    <thead class="text-white" style="background: rgba(255,255,255,0.05);">
+                                        <tr>
+                                            <th>Permukaan Jalan (75%)</th>
+                                            <th>Safety Berm (5%)</th>
+                                            <th>Drainase &amp; Lainnya (20%)</th>
+                                            <th>TOTAL SCORE</th>
+                                            <th>ACHIEVEMENT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-white font-weight-bold">
+                                        <tr>
+                                            <td id="grpPermukaanVal" style="color: #60a5fa;">4.00</td>
+                                            <td id="grpBermVal" style="color: #34d399;">4.00</td>
+                                            <td id="grpDrainaseVal" style="color: #38bdf8;">4.00</td>
+                                            <td id="grpTotalVal" style="color: #10b981;">4.00 / 4.00</td>
+                                            <td id="grpAchVal" style="color: #10b981;">100.0%</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
 
                             <!-- Status Feasibility Banner -->
@@ -650,73 +886,53 @@
                                 </div>
                             </div>
 
-                            <!-- Parameter Breakdown Stats -->
-                            <div class="row g-2 mb-3">
-                                <div class="col-4">
-                                    <div class="p-2 rounded-3 text-center" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);">
-                                        <div class="fw-bold" id="cntStandar" style="font-size: 17px; color: #10b981;">8</div>
-                                        <div class="text-muted" style="font-size: 10px;">Standar (100)</div>
-                                    </div>
+                            <!-- Deficit Breakdown & Action Auto-Recommendation -->
+                            <div class="p-2.5 rounded-3 mb-3" style="background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="text-muted" style="font-size: 11px; text-transform: uppercase; font-weight: 700;">
+                                        <i class="bi bi-list-check me-1 text-primary"></i> Temuan Defisit Segmen:
+                                    </span>
+                                    <span class="badge bg-success" id="findingsCountBadge" style="font-size: 10px;">0 Defisit</span>
                                 </div>
-                                <div class="col-4">
-                                    <div class="p-2 rounded-3 text-center" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2);">
-                                        <div class="fw-bold" id="cntPerhatian" style="font-size: 17px; color: #f59e0b;">0</div>
-                                        <div class="text-muted" style="font-size: 10px;">Perhatian (70)</div>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="p-2 rounded-3 text-center" style="background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2);">
-                                        <div class="fw-bold" id="cntKritis" style="font-size: 17px; color: #f43f5e;">0</div>
-                                        <div class="text-muted" style="font-size: 10px;">Kritis (40)</div>
-                                    </div>
+                                <div id="findingsList" class="text-white mt-1" style="font-size: 12px; line-height: 1.4;">
+                                    <i class="bi bi-check2-circle text-success me-1"></i> Seluruh parameter segmen berada dalam kondisi optimal (100%).
                                 </div>
                             </div>
 
-                            <!-- Findings Deficit List -->
-                            <div class="mb-3 p-2.5 rounded-3" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color);">
+                            <div class="p-2.5 rounded-3 mb-3" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2);">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong class="text-white" style="font-size: 11.5px;"><i class="bi bi-search me-1"></i> Rincian Parameter Defisit / Perlu Perhatian:</strong>
-                                    <span class="badge bg-secondary" id="findingsCountBadge" style="font-size: 9px;">0 Temuan</span>
-                                </div>
-                                <div id="findingsList" style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
-                                    <i class="bi bi-check2-circle text-success me-1"></i> Semua parameter berada dalam batas optimal.
-                                </div>
-                            </div>
-
-                            <!-- Auto-Generated Recommendation Box -->
-                            <div class="mb-3 p-2.5 rounded-3" id="autoRecBox" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25);">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <strong style="font-size: 11.5px; color: #3b82f6;"><i class="bi bi-lightning-charge-fill me-1"></i> Rekomendasi Tindakan Otomatis:</strong>
+                                    <span style="color: #60a5fa; font-size: 11px; text-transform: uppercase; font-weight: 700;">
+                                        <i class="bi bi-lightbulb-fill me-1 text-warning"></i> Rekomendasi Tindakan Otomatis:
+                                    </span>
                                     <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 10px; border-radius: 6px;" onclick="applyAutoRecommendationRci()">
-                                        <i class="bi bi-arrow-down-left me-1"></i> Terapkan ke Form Rekomendasi
+                                        Salin ke Form
                                     </button>
                                 </div>
-                                <div id="autoRecText" style="font-size: 11px; color: var(--text-main);">
+                                <div id="autoRecText" class="text-white" style="font-size: 12px; font-style: italic;">
                                     Pertahankan pemeliharaan rutin jalan angkut.
                                 </div>
                             </div>
 
-                            <!-- SHARE BUTTONS -->
+                            <!-- Quick Action Buttons -->
                             <div class="d-flex gap-2 flex-wrap">
                                 <button type="button" class="btn btn-sm btn-success flex-fill py-2.5 d-flex align-items-center justify-content-center gap-1 font-weight-bold shadow-sm" style="background: #25D366; border: none; border-radius: 12px; color: white;" onclick="shareRciToWhatsApp()">
-                                    <i class="bi bi-whatsapp" style="font-size: 16px;"></i>
+                                    <i class="bi bi-whatsapp" style="font-size: 15px;"></i>
                                     <span>Bagikan ke WhatsApp</span>
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-info flex-fill py-2.5 d-flex align-items-center justify-content-center gap-1 font-weight-bold" style="border-radius: 12px;" onclick="shareRciNative()">
-                                    <i class="bi bi-share-fill"></i>
-                                    <span>Share Laporan</span>
+                                    <i class="bi bi-share"></i>
+                                    <span>Share System</span>
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary py-2.5 px-3 d-flex align-items-center justify-content-center gap-1" style="border-radius: 12px;" onclick="copyRciSummaryToClipboard()" title="Salin Ringkasan">
-                                    <i class="bi bi-clipboard-check"></i>
-                                    <span>Salin</span>
+                                    <i class="bi bi-clipboard"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Section 3: Notes, Photos & Actions -->
+                    <!-- Section 3: Dokumentasi Foto & Tindakan Perbaikan -->
                     <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
-                        <div class="text-white mb-2 font-weight-bold" style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <div class="text-white font-weight-bold mb-3" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
                             <i class="bi bi-camera me-1" style="color: #3b82f6;"></i> 3. Foto Dokumentasi &amp; Tindakan
                         </div>
 
@@ -763,7 +979,7 @@
             </div>
         </div>
 
-        <!-- RIWAYAT & FILTER COLUMN -->
+        <!-- RIWAYAT & FILTER COLUMN (RIGHT) -->
         <div class="col-lg-6">
             <!-- Filter Bar -->
             <div class="card-sap mb-3 p-3">
@@ -787,9 +1003,9 @@
                             <label class="form-label-sap" style="font-size: 11px;">Kategori Skor</label>
                             <select name="kategori" class="input-sap">
                                 <option value="">Semua Skor</option>
-                                <option value="Baik" selected="@(ViewBag.CurrentKategori == "Baik" ? "selected" : null)">Baik (&ge; 85%)</option>
-                                <option value="Sedang" selected="@(ViewBag.CurrentKategori == "Sedang" ? "selected" : null)">Sedang (70 - 84%)</option>
-                                <option value="Kurang" selected="@(ViewBag.CurrentKategori == "Kurang" ? "selected" : null)">Kurang (&lt; 70%)</option>
+                                <option value="Baik" selected="@(ViewBag.CurrentKategori == "Baik" ? "selected" : null)">Baik (&ge; 3.6 / &ge; 85%)</option>
+                                <option value="Sedang" selected="@(ViewBag.CurrentKategori == "Sedang" ? "selected" : null)">Sedang (3.0 - 3.5)</option>
+                                <option value="Kurang" selected="@(ViewBag.CurrentKategori == "Kurang" ? "selected" : null)">Kurang (&lt; 3.0)</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -817,12 +1033,17 @@
             }
             else
             {
-                <div class="d-flex flex-column gap-3" style="max-height: 800px; overflow-y: auto; padding-right: 4px;">
+                <div class="d-flex flex-column gap-3" style="max-height: 850px; overflow-y: auto; padding-right: 4px;">
                     @foreach (var item in Model)
                     {
-                        var badgeBg = item.TotalScore >= 85 ? "rgba(16, 185, 129, 0.15)" : (item.TotalScore >= 70 ? "rgba(245, 158, 11, 0.15)" : "rgba(244, 63, 94, 0.15)");
-                        var badgeColor = item.TotalScore >= 85 ? "#10b981" : (item.TotalScore >= 70 ? "#f59e0b" : "#f43f5e");
-                        var borderAccent = item.TotalScore >= 85 ? "#10b981" : (item.TotalScore >= 70 ? "#f59e0b" : "#f43f5e");
+                        var actual = item.ActualRoadScore > 0 ? item.ActualRoadScore : (item.TotalScore > 4 ? Math.Round(item.TotalScore / 25.0, 2) : item.TotalScore);
+                        var ach = item.Achievement > 0 ? item.Achievement : (actual / 4.0 * 100.0);
+                        var isGood = ach >= 85;
+                        var isFair = ach >= 70 && ach < 85;
+
+                        var badgeBg = isGood ? "rgba(16, 185, 129, 0.15)" : (isFair ? "rgba(245, 158, 11, 0.15)" : "rgba(244, 63, 94, 0.15)");
+                        var badgeColor = isGood ? "#10b981" : (isFair ? "#f59e0b" : "#f43f5e");
+                        var borderAccent = isGood ? "#10b981" : (isFair ? "#f59e0b" : "#f43f5e");
 
                         <div class="card-sap p-3 position-relative animate-fade-in" style="border-left: 4px solid @borderAccent;">
                             <div class="d-flex justify-content-between align-items-start mb-2">
@@ -837,26 +1058,32 @@
                                     </div>
                                     <div class="text-muted mt-1" style="font-size: 11px;">
                                         <i class="bi bi-geo-alt me-1"></i> @item.Area | @item.Lokasi @(!string.IsNullOrEmpty(item.DetilLokasi) ? $"({item.DetilLokasi})" : "")
+                                        @if (item.PanjangSegment.HasValue && item.PanjangSegment.Value > 0)
+                                        {
+                                            <span class="badge bg-secondary ms-1" style="font-size: 9.5px;">Segmen: @item.PanjangSegment.Value m</span>
+                                        }
                                     </div>
                                 </div>
                                 <div class="text-end">
-                                    <span class="badge px-2 py-1" style="background: @badgeBg; color: @badgeColor; font-size: 13px; font-weight: 800; border-radius: 8px;">
-                                        @item.TotalScore%
+                                    <span class="badge px-2.5 py-1" style="background: @badgeBg; color: @badgeColor; font-size: 13.5px; font-weight: 800; border-radius: 8px;">
+                                        @actual.ToString("F2") / 4.00
                                     </span>
-                                    <div style="font-size: 10px; font-weight: 600; color: @badgeColor; margin-top: 2px;">@item.KategoriIndex</div>
+                                    <div style="font-size: 10px; font-weight: 600; color: @badgeColor; margin-top: 2px;">
+                                        @ach.ToString("F1")% (@item.KategoriIndex)
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Score Pills Summary -->
+                            <!-- 8 New Standard Parameters Score Pills -->
                             <div class="d-flex flex-wrap gap-1 mb-2 pt-1 border-top border-secondary border-opacity-25" style="font-size: 10.5px;">
-                                <span class="badge bg-dark text-muted">Lebar: @item.SkorLebarJalan</span>
-                                <span class="badge bg-dark text-muted">Grade: @item.SkorGradeJalan</span>
-                                <span class="badge bg-dark text-muted">Surface: @item.SkorPermukaanJalan</span>
+                                <span class="badge bg-dark text-muted">Surfacing: @item.SkorSurfacing</span>
+                                <span class="badge bg-dark text-muted">Undulation: @item.SkorUndulation</span>
+                                <span class="badge bg-dark text-muted">Spoil: @item.SkorSpoil</span>
                                 <span class="badge bg-dark text-muted">Berm: @item.SkorSafetyBerm</span>
-                                <span class="badge bg-dark text-muted">Drainase: @item.SkorDrainaseParit</span>
-                                <span class="badge bg-dark text-muted">Tikungan: @item.SkorSuperelevasiTikungan</span>
-                                <span class="badge bg-dark text-muted">Spillage: @item.SkorBebasSpillage</span>
-                                <span class="badge bg-dark text-muted">Rambu: @item.SkorRambuDebu</span>
+                                <span class="badge bg-dark text-muted">Crossfall: @item.SkorCrossfall</span>
+                                <span class="badge bg-dark text-muted">Dust: @item.SkorDust</span>
+                                <span class="badge bg-dark text-muted">Drainage: @item.SkorDrainage</span>
+                                <span class="badge bg-dark text-muted">Attachment: @item.SkorRoadAttachment</span>
                             </div>
 
                             @if (!string.IsNullOrEmpty(item.Catatan))
@@ -996,27 +1223,27 @@
         align-items: center;
     }
 
-    /* Score Selector 3-Way Grid */
-    .score-btn-grid {
+    /* Score Selector 4-Way Grid (Propose: 4, 3, 2, 1) */
+    .score-btn-grid-4 {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 8px;
     }
-    @@media (max-width: 576px) {
-        .score-btn-grid {
-            grid-template-columns: 1fr;
+    @@media (max-width: 768px) {
+        .score-btn-grid-4 {
+            grid-template-columns: repeat(2, 1fr);
             gap: 6px;
         }
     }
     .btn-score-card {
         border-radius: 12px;
-        padding: 9px 10px;
+        padding: 8px 10px;
         width: 100%;
         text-align: left;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 8px;
+        gap: 6px;
         cursor: pointer;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         border: 1.5px solid var(--border-color, #e2e8f0);
@@ -1041,6 +1268,7 @@
         font-weight: 600;
         flex-grow: 1;
         line-height: 1.25;
+        font-size: 11px;
     }
     .btn-score-icon {
         font-size: 13px;
@@ -1050,64 +1278,84 @@
     }
 
     /* Unselected visual pills */
-    .btn-score-card[data-val="100"] .btn-score-pill {
+    .btn-score-card[data-val="4"] .btn-score-pill {
         background: rgba(16, 185, 129, 0.15);
         color: #10b981;
     }
-    .btn-score-card[data-val="70"] .btn-score-pill {
+    .btn-score-card[data-val="3"] .btn-score-pill {
+        background: rgba(6, 182, 212, 0.15);
+        color: #06b6d4;
+    }
+    .btn-score-card[data-val="2"] .btn-score-pill {
         background: rgba(245, 158, 11, 0.15);
         color: #f59e0b;
     }
-    .btn-score-card[data-val="40"] .btn-score-pill {
+    .btn-score-card[data-val="1"] .btn-score-pill {
         background: rgba(244, 63, 94, 0.15);
         color: #f43f5e;
     }
 
     /* Active Selected States */
-    .btn-score-card.active[data-val="100"] {
+    .btn-score-card.active[data-val="4"] {
         background: linear-gradient(135deg, #059669, #10b981) !important;
         border-color: #10b981 !important;
         color: #ffffff !important;
         box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35) !important;
         transform: translateY(-1px);
     }
-    .btn-score-card.active[data-val="100"] .btn-score-pill {
+    .btn-score-card.active[data-val="4"] .btn-score-pill {
         background: rgba(255, 255, 255, 0.25) !important;
         color: #ffffff !important;
     }
-    .btn-score-card.active[data-val="100"] .btn-score-icon {
+    .btn-score-card.active[data-val="4"] .btn-score-icon {
         opacity: 1;
         color: #ffffff;
     }
 
-    .btn-score-card.active[data-val="70"] {
+    .btn-score-card.active[data-val="3"] {
+        background: linear-gradient(135deg, #0891b2, #06b6d4) !important;
+        border-color: #06b6d4 !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 18px rgba(6, 182, 212, 0.35) !important;
+        transform: translateY(-1px);
+    }
+    .btn-score-card.active[data-val="3"] .btn-score-pill {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+    }
+    .btn-score-card.active[data-val="3"] .btn-score-icon {
+        opacity: 1;
+        color: #ffffff;
+    }
+
+    .btn-score-card.active[data-val="2"] {
         background: linear-gradient(135deg, #d97706, #f59e0b) !important;
         border-color: #f59e0b !important;
         color: #ffffff !important;
         box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35) !important;
         transform: translateY(-1px);
     }
-    .btn-score-card.active[data-val="70"] .btn-score-pill {
+    .btn-score-card.active[data-val="2"] .btn-score-pill {
         background: rgba(255, 255, 255, 0.25) !important;
         color: #ffffff !important;
     }
-    .btn-score-card.active[data-val="70"] .btn-score-icon {
+    .btn-score-card.active[data-val="2"] .btn-score-icon {
         opacity: 1;
         color: #ffffff;
     }
 
-    .btn-score-card.active[data-val="40"] {
+    .btn-score-card.active[data-val="1"] {
         background: linear-gradient(135deg, #e11d48, #f43f5e) !important;
         border-color: #f43f5e !important;
         color: #ffffff !important;
         box-shadow: 0 6px 18px rgba(244, 63, 94, 0.35) !important;
         transform: translateY(-1px);
     }
-    .btn-score-card.active[data-val="40"] .btn-score-pill {
+    .btn-score-card.active[data-val="1"] .btn-score-pill {
         background: rgba(255, 255, 255, 0.25) !important;
         color: #ffffff !important;
     }
-    .btn-score-card.active[data-val="40"] .btn-score-icon {
+    .btn-score-card.active[data-val="1"] .btn-score-icon {
         opacity: 1;
         color: #ffffff;
     }
@@ -1150,363 +1398,315 @@
     {
         <text>
         var serverAreas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(areaList));
-        serverAreas.forEach(function(sa) {
-            if (sa && !globalAreasList.some(function(a) { return a.namaArea.toLowerCase() === sa.toLowerCase(); })) {
-                globalAreasList.push({ id: globalAreasList.length + 1, namaArea: sa });
-            }
-        });
+        if (serverAreas && serverAreas.length > 0) {
+            globalAreasList = serverAreas.map((a, i) => ({ id: i + 1, namaArea: a }));
+        }
         </text>
     }
 
-    var globalBenchmarksList = [];
-
-    window.loadAreas = function() {
-        var select = $('#area');
-        select.empty();
-        select.append('<option value="" disabled selected></option>');
-        globalAreasList.forEach(function(item) {
-            select.append('<option value="' + item.namaArea + '">' + item.namaArea + '</option>');
-        });
-        renderAreaDropdown('');
-        $('#areaDropdownMenu').hide();
-    };
-
-    window.renderAreaDropdown = function(filterText) {
-        var menu = $('#areaDropdownMenu');
-        menu.empty();
-        var clean = (filterText || '').trim().toLowerCase();
-        var filtered = globalAreasList.filter(function(a) {
-            return a.namaArea.toLowerCase().includes(clean);
-        });
-
-        if (filtered.length > 0) {
-            filtered.forEach(function(item) {
-                var btn = $('<button type="button"></button>')
-                    .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
-                    .css({
-                        background: 'none',
-                        color: 'var(--text-main, #f8fafc)',
-                        fontSize: '13px',
-                        borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))',
-                        cursor: 'pointer'
-                    })
-                    .html('<i class="bi bi-geo-alt-fill me-2 text-primary"></i>' + item.namaArea)
-                    .on('mouseenter', function() { $(this).css('background', 'rgba(59, 130, 246, 0.15)'); })
-                    .on('mouseleave', function() { $(this).css('background', 'none'); })
-                    .on('click', function() {
-                        selectArea(item.namaArea);
-                    });
-                menu.append(btn);
-            });
-        } else if (clean.length > 0) {
-            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Area "' + filterText + '" tidak ditemukan</div>');
-        } else {
-            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada Area Utama.</div>');
-        }
-
-        if (menu.children().length > 0) menu.show(); else menu.hide();
-    };
-
-    window.selectArea = function(namaArea) {
-        $('#areaSearch').val(namaArea);
-        $('#area').val(namaArea);
-        $('#areaDropdownMenu').hide();
-        $('#areaSearch').removeClass('is-invalid');
-
-        // Load Benchmarks for this area
-        loadBenchmarks(namaArea);
-
-        // Auto-fill Lokasi Spesifik if blank
-        var currentLokasi = $('#lokasi').val().trim();
-        if (currentLokasi === '') {
-            $('#lokasi').val(namaArea + ' - ');
-            $('#lokasi').focus();
-        } else if (currentLokasi.indexOf(' - ') !== -1) {
-            var parts = currentLokasi.split(' - ');
-            parts[0] = namaArea;
-            $('#lokasi').val(parts.join(' - '));
-        } else {
-            $('#lokasi').val(namaArea + ' - ' + currentLokasi);
-        }
-    };
-
-    window.loadBenchmarks = function(areaUtama, preselectBenchmark) {
-        if (!areaUtama) return;
-        $('#benchmarkSearch').prop('disabled', true).val('Memuat benchmark...');
-        $('#btnAddBenchmark').prop('disabled', true);
-
-        $.ajax({
-            url: '/Api/GetBenchmarks',
-            type: 'GET',
-            data: { areaUtama: areaUtama },
-            success: function(response) {
-                globalBenchmarksList = response || [];
-                $('#benchmarkSearch').prop('disabled', false).val('');
-                $('#btnAddBenchmark').prop('disabled', false);
-
-                if (preselectBenchmark) {
-                    selectBenchmark(preselectBenchmark);
-                } else {
-                    $('#detilLokasi').val('');
-                    renderBenchmarkDropdown('');
-                }
-            },
-            error: function() {
-                $('#benchmarkSearch').prop('disabled', false).val('');
-                $('#btnAddBenchmark').prop('disabled', false);
-            }
-        });
-    };
-
-    window.renderBenchmarkDropdown = function(filterText) {
-        var menu = $('#benchmarkDropdownMenu');
-        menu.empty();
-        var clean = (filterText || '').trim().toLowerCase();
-        var filtered = globalBenchmarksList.filter(function(b) {
-            return b.namaBenchmark.toLowerCase().includes(clean);
-        });
-
-        if (filtered.length > 0) {
-            filtered.forEach(function(item) {
-                var btn = $('<button type="button"></button>')
-                    .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
-                    .css({
-                        background: 'none',
-                        color: 'var(--text-main, #f8fafc)',
-                        fontSize: '13px',
-                        borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))',
-                        cursor: 'pointer'
-                    })
-                    .html('<i class="bi bi-compass-fill me-2 text-primary"></i>' + item.namaBenchmark)
-                    .on('mouseenter', function() { $(this).css('background', 'rgba(59, 130, 246, 0.15)'); })
-                    .on('mouseleave', function() { $(this).css('background', 'none'); })
-                    .on('click', function() {
-                        selectBenchmark(item.namaBenchmark);
-                    });
-                menu.append(btn);
-            });
-        } else if (clean.length > 0) {
-            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Benchmark "' + filterText + '" tidak ditemukan</div>');
-        } else {
-            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada benchmark di area ini. Klik + untuk tambah.</div>');
-        }
-
-        if (menu.children().length > 0) menu.show(); else menu.hide();
-    };
-
-    window.selectBenchmark = function(namaBenchmark) {
-        $('#benchmarkSearch').val(namaBenchmark);
-        $('#detilLokasi').val(namaBenchmark);
-        $('#benchmarkDropdownMenu').hide();
-        $('#benchmarkSearch').removeClass('is-invalid');
-    };
-
-    window.saveNewBenchmark = function() {
-        var btn = $('#btnSaveBenchmark');
-        var errorDiv = $('#addBenchmarkError');
-        var benchmarkName = $('#newBenchmarkName').val();
-        var areaUtama = $('#area').val();
-
-        if (!areaUtama) {
-            errorDiv.text('Area utama belum dipilih!').show();
-            return;
-        }
-
-        if (!benchmarkName || benchmarkName.trim() === '') {
-            errorDiv.text('Nama benchmark tidak boleh kosong').show();
-            return;
-        }
-
-        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...');
-        errorDiv.hide();
-
-        $.ajax({
-            url: '/Api/AddBenchmark',
-            type: 'POST',
-            dataType: 'json',
-            data: { areaUtama: areaUtama, namaBenchmark: benchmarkName },
-            success: function(response) {
-                $('#addBenchmarkModal').modal('hide');
-                $('#newBenchmarkName').val('');
-                var benchmarkToSelect = (response && response.data) ? response.data.namaBenchmark : null;
-                loadBenchmarks(areaUtama, benchmarkToSelect);
-                btn.prop('disabled', false).text('Simpan Benchmark');
-            },
-            error: function(xhr) {
-                errorDiv.text(xhr.responseText || 'Terjadi kesalahan saat menyimpan benchmark').show();
-                btn.prop('disabled', false).text('Simpan Benchmark');
-            }
-        });
-    };
+    const rciParamsMetadata = [
+        { key: "Surfacing", name: "Surfacing and Material", weight: 0.30, desc: "Material Surface batu split & tidak terkupas" },
+        { key: "Undulation", name: "Undulation / Corrugation", weight: 0.25, desc: "Bebas lendutan & jalan keriting" },
+        { key: "Spoil", name: "Spoil & Lebar Jalan (18m)", weight: 0.20, desc: "Lebar jalan 18m, tidak ada penyempitan mud spoil/batubara" },
+        { key: "SafetyBerm", name: "Safety Berm", weight: 0.05, desc: "Tinggi >= 3/4 ban, bersih tanaman" },
+        { key: "Crossfall", name: "Crossfall (0.5% - 1%)", weight: 0.05, desc: "Grade crossfall penirisan jalan 0.5% - 1%" },
+        { key: "Dust", name: "Dust Control", weight: 0.05, desc: "Debu tidak mengurangi jarak pandang dumptruck" },
+        { key: "Drainage", name: "Drainage (Saluran)", weight: 0.05, desc: "Bebas genangan air badan jalan & parit lancar" },
+        { key: "RoadAttachment", name: "Road Attachment", weight: 0.05, desc: "Delineator per 35m & rambu terpasang" }
+    ];
 
     $(document).ready(function() {
-        loadAreas();
-
-        $('#addBenchmarkModal').on('show.bs.modal', function () {
-            var area = $('#area').val();
-            if(!area) {
-                alert('Pilih Area Utama terlebih dahulu!');
-                return false;
-            }
-            $('#newBenchmarkArea').val(area);
-            $('#newBenchmarkName').val('');
-            $('#addBenchmarkError').hide();
-
-            var list = $('#existingBenchmarksList');
-            list.empty();
-            if(globalBenchmarksList.length > 0) {
-                globalBenchmarksList.forEach(function(b) {
-                    list.append('<div class="list-group-item" style="font-size: 13px; background: rgba(0,0,0,0.1); border-color: var(--border-color); color: var(--text-main);"><i class="bi bi-compass me-2 text-muted"></i>' + b.namaBenchmark + '</div>');
-                });
-            } else {
-                list.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">Belum ada benchmark di area ini</div>');
-            }
-        });
-
-        // Toggle area dropdown on chevron click
-        $('#toggleAreaDropdown').on('click', function() {
-            var menu = $('#areaDropdownMenu');
-            if (menu.is(':visible')) {
-                menu.hide();
-            } else {
-                renderAreaDropdown($('#areaSearch').val());
-                menu.show();
-            }
-        });
-
-        $('#areaSearch').on('input keyup', function() {
-            renderAreaDropdown($(this).val());
-        });
-
-        $('#areaSearch').on('focus', function() {
-            renderAreaDropdown($(this).val());
-        });
-
-        // Toggle benchmark dropdown on chevron click
-        $('#toggleBenchmarkDropdown').on('click', function() {
-            if ($('#benchmarkSearch').prop('disabled')) return;
-            var menu = $('#benchmarkDropdownMenu');
-            if (menu.is(':visible')) {
-                menu.hide();
-            } else {
-                renderBenchmarkDropdown($('#benchmarkSearch').val());
-                menu.show();
-            }
-        });
-
-        $('#benchmarkSearch').on('input keyup', function() {
-            renderBenchmarkDropdown($(this).val());
-            if($(this).val() === '') $('#detilLokasi').val('');
-        });
-
-        $('#benchmarkSearch').on('focus', function() {
-            if ($('#benchmarkSearch').prop('disabled')) return;
-            renderBenchmarkDropdown($(this).val());
-        });
-
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown').length) {
-                $('#benchmarkDropdownMenu').hide();
-            }
-            if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
-                $('#areaDropdownMenu').hide();
-            }
-        });
-
         @if (TempData["SuccessMessage"] != null)
         {
             <text>
-            var sElem = document.getElementById('statusSuccessModal');
-            if (sElem) { new bootstrap.Modal(sElem).show(); }
+            var successModal = new bootstrap.Modal(document.getElementById('statusSuccessModal'));
+            successModal.show();
             </text>
         }
         @if (TempData["ErrorMessage"] != null)
         {
             <text>
-            var eElem = document.getElementById('statusErrorModal');
-            if (eElem) { new bootstrap.Modal(eElem).show(); }
+            var errorModal = new bootstrap.Modal(document.getElementById('statusErrorModal'));
+            errorModal.show();
             </text>
         }
 
+        initAreaDropdown();
+        initBenchmarkDropdown();
         calculateRciScore();
     });
 
-    function confirmDeleteRci(id) {
-        $('#deleteForm').attr('action', '/Rci/Delete/' + id);
-        var delModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-        delModal.show();
+    // Area Dropdown Functionality
+    function initAreaDropdown() {
+        const input = $('#areaSearch');
+        const menu = $('#areaDropdownMenu');
+        const hidden = $('#area');
+
+        function renderList(filter = '') {
+            menu.empty();
+            const filtered = globalAreasList.filter(a => a.namaArea.toLowerCase().includes(filter.toLowerCase()));
+            if (filtered.length === 0) {
+                menu.append('<div class="p-2 text-muted text-center" style="font-size:12px;">Tidak ditemukan</div>');
+            } else {
+                filtered.forEach(a => {
+                    const item = $(`<div class="p-2 border-bottom border-secondary border-opacity-10 area-item" style="cursor:pointer; font-size:12px; color:var(--text-main);">${a.namaArea}</div>`);
+                    item.hover(
+                        function() { $(this).css('background', 'rgba(59, 130, 246, 0.15)'); },
+                        function() { $(this).css('background', 'transparent'); }
+                    );
+                    item.on('click', function() {
+                        input.val(a.namaArea);
+                        hidden.val(a.namaArea);
+                        menu.hide();
+                        onAreaSelected(a.namaArea);
+                    });
+                    menu.append(item);
+                });
+            }
+        }
+
+        input.on('focus input', function() {
+            renderList($(this).val());
+            menu.show();
+        });
+
+        $('#toggleAreaDropdown').on('click', function(e) {
+            e.stopPropagation();
+            if (menu.is(':visible')) menu.hide();
+            else { renderList(input.val()); menu.show(); }
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
+                menu.hide();
+            }
+        });
     }
 
-    $('#rciForm').on('submit', function(e) {
-        const area = $('#area').val();
-        const namaJalan = ($('#namaJalan').val() || '').trim();
-        const lokasi = ($('#lokasi').val() || '').trim();
+    function onAreaSelected(areaName) {
+        $('#newBenchmarkArea').val(areaName);
+        $('#benchmarkSearch').prop('disabled', false).val('').attr('placeholder', 'Pilih atau ketik Benchmark...');
+        $('#detilLokasi').val('');
+        $('#btnAddBenchmark').prop('disabled', false);
+        loadBenchmarks(areaName);
+    }
 
-        if (!area || !namaJalan || !lokasi) {
-            e.preventDefault();
-            $('#clientAlertTitle').text('Data Belum Lengkap');
-            $('#clientAlertMsg').text('Mohon lengkapi Area Utama, Nama Jalan / Jalur Hauling, dan Lokasi Spesifik sebelum menyimpan.');
-            var alertModal = new bootstrap.Modal(document.getElementById('clientAlertModal'));
-            alertModal.show();
-            return false;
+    // Benchmark Cascading
+    let currentBenchmarks = [];
+    function loadBenchmarks(areaName, selectValue = '') {
+        $.getJSON('/P5m/GetBenchmarks?areaUtama=' + encodeURIComponent(areaName), function(data) {
+            currentBenchmarks = data || [];
+            renderBenchmarkMenu();
+            if (selectValue) {
+                $('#benchmarkSearch').val(selectValue);
+                $('#detilLokasi').val(selectValue);
+            }
+        });
+    }
+
+    function renderBenchmarkMenu(filter = '') {
+        const menu = $('#benchmarkDropdownMenu');
+        menu.empty();
+        const filtered = currentBenchmarks.filter(b => b.namaBenchmark.toLowerCase().includes(filter.toLowerCase()));
+        if (filtered.length === 0) {
+            menu.append('<div class="p-2 text-muted text-center" style="font-size:12px;">Belum ada benchmark terdaftar.</div>');
+        } else {
+            filtered.forEach(b => {
+                const item = $(`<div class="p-2 border-bottom border-secondary border-opacity-10" style="cursor:pointer; font-size:12px; color:var(--text-main);">${b.namaBenchmark}</div>`);
+                item.hover(
+                    function() { $(this).css('background', 'rgba(59, 130, 246, 0.15)'); },
+                    function() { $(this).css('background', 'transparent'); }
+                );
+                item.on('click', function() {
+                    $('#benchmarkSearch').val(b.namaBenchmark);
+                    $('#detilLokasi').val(b.namaBenchmark);
+                    menu.hide();
+                });
+                menu.append(item);
+            });
         }
-    });
+    }
 
-    // Live Score Calculator & Dynamic Conclusion Analysis
+    function initBenchmarkDropdown() {
+        const input = $('#benchmarkSearch');
+        const menu = $('#benchmarkDropdownMenu');
+
+        input.on('focus input', function() {
+            renderBenchmarkMenu($(this).val());
+            menu.show();
+        });
+
+        input.on('change', function() {
+            $('#detilLokasi').val($(this).val());
+        });
+
+        $('#toggleBenchmarkDropdown').on('click', function(e) {
+            e.stopPropagation();
+            if (input.prop('disabled')) return;
+            if (menu.is(':visible')) menu.hide();
+            else { renderBenchmarkMenu(input.val()); menu.show(); }
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown').length) {
+                menu.hide();
+            }
+        });
+    }
+
+    function saveNewBenchmark() {
+        const area = $('#area').val();
+        const name = $('#newBenchmarkName').val().trim();
+        if (!name) {
+            $('#addBenchmarkError').text('Nama benchmark tidak boleh kosong').show();
+            return;
+        }
+
+        $.ajax({
+            url: '/P5m/AddBenchmark',
+            type: 'POST',
+            data: {
+                areaUtama: area,
+                namaBenchmark: name,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function(resp) {
+                if (resp.success) {
+                    $('#addBenchmarkModal').modal('hide');
+                    $('#newBenchmarkName').val('');
+                    loadBenchmarks(area, name);
+                } else {
+                    $('#addBenchmarkError').text(resp.message || 'Gagal menyimpan').show();
+                }
+            },
+            error: function() {
+                $('#addBenchmarkError').text('Terjadi kesalahan sistem').show();
+            }
+        });
+    }
+
+    // Segmen Length & Defisit Live Calculation (OPSI B)
+    function onPanjangSegmentChange() {
+        const p = parseFloat($('#panjangSegment').val()) || 100;
+        if (p <= 0) return;
+        rciParamsMetadata.forEach(meta => {
+            calcParamFromDeficit(meta.key);
+        });
+    }
+
+    function calcParamFromDeficit(paramKey) {
+        const totalPanjang = parseFloat($('#panjangSegment').val()) || 100;
+        const defisitInput = parseFloat($(`#defisit${paramKey}`).val()) || 0;
+
+        // Persentase Ketercapaian = (Panjang - Defisit) / Panjang * 100%
+        let ketercapaian = 100.0;
+        if (totalPanjang > 0) {
+            ketercapaian = Math.max(0, Math.min(100, ((totalPanjang - defisitInput) / totalPanjang) * 100));
+        }
+
+        $(`#badgePersen${paramKey}`).text(`Ketercapaian: ${ketercapaian.toFixed(1)}%`);
+
+        // Konversi Otomatis ke Skor (Skala Propose: 1 - 4)
+        // 4: 90% - 100%
+        // 3: 71% - 90%
+        // 2: 41% - 70%
+        // 1: 0% - 40%
+        let score = 4;
+        if (ketercapaian > 90.0) {
+            score = 4;
+        } else if (ketercapaian > 70.0) {
+            score = 3;
+        } else if (ketercapaian > 40.0) {
+            score = 2;
+        } else {
+            score = 1;
+        }
+
+        // Update score button active
+        $(`.btn-score-card[data-param="skor${paramKey}"]`).removeClass('active');
+        $(`.btn-score-card[data-param="skor${paramKey}"][data-val="${score}"]`).addClass('active');
+        $(`#skor${paramKey}`).val(score);
+
+        calculateRciScore();
+    }
+
+    function selectScoreManual(paramKey, val) {
+        $(`.btn-score-card[data-param="skor${paramKey}"]`).removeClass('active');
+        $(`.btn-score-card[data-param="skor${paramKey}"][data-val="${val}"]`).addClass('active');
+        $(`#skor${paramKey}`).val(val);
+
+        calculateRciScore();
+    }
+
+    // Live Total RCI Calculator (OPSI B: Skala 1 - 4, Target 4.00, Bobot Propose)
     function calculateRciScore() {
-        const p1 = parseInt($('#skorLebarJalan').val()) || 100;
-        const p2 = parseInt($('#skorGradeJalan').val()) || 100;
-        const p3 = parseInt($('#skorPermukaanJalan').val()) || 100;
-        const p4 = parseInt($('#skorSafetyBerm').val()) || 100;
-        const p5 = parseInt($('#skorDrainaseParit').val()) || 100;
-        const p6 = parseInt($('#skorSuperelevasiTikungan').val()) || 100;
-        const p7 = parseInt($('#skorBebasSpillage').val()) || 100;
-        const p8 = parseInt($('#skorRambuDebu').val()) || 100;
+        const p1 = parseInt($('#skorSurfacing').val()) || 4;
+        const p2 = parseInt($('#skorUndulation').val()) || 4;
+        const p3 = parseInt($('#skorSpoil').val()) || 4;
+        const p4 = parseInt($('#skorSafetyBerm').val()) || 4;
+        const p5 = parseInt($('#skorCrossfall').val()) || 4;
+        const p6 = parseInt($('#skorDust').val()) || 4;
+        const p7 = parseInt($('#skorDrainage').val()) || 4;
+        const p8 = parseInt($('#skorRoadAttachment').val()) || 4;
 
-        const total = (p1 * 0.15) + (p2 * 0.10) + (p3 * 0.15) + (p4 * 0.15) + (p5 * 0.15) + (p6 * 0.10) + (p7 * 0.10) + (p8 * 0.10);
-        const rounded = total.toFixed(1);
+        // Bobot Propose:
+        // Surfacing 30%, Undulation 25%, Spoil 20%, Safety Berm 5%, Crossfall 5%, Dust 5%, Drainage 5%, Road Attachment 5%
+        const actualScore = (p1 * 0.30) + (p2 * 0.25) + (p3 * 0.20) + (p4 * 0.05) + (p5 * 0.05) + (p6 * 0.05) + (p7 * 0.05) + (p8 * 0.05);
+        const actualRounded = actualScore.toFixed(2);
+        const target = 4.00;
+        const achievement = ((actualScore / target) * 100.0).toFixed(1);
 
-        const paramsList = [
-            { name: "Lebar Jalan Angkut", val: p1, desc100: ">= 3.5x Lebar Unit", desc70: "Pas 3x Lebar Unit (Sempit berpapasan)", desc40: "Sempit (< 3x Lebar Unit - Rawan senggolan)" },
-            { name: "Kemiringan Jalan (Grade)", val: p2, desc100: "Standar (<= 8%)", desc70: "Agak Curam (8 - 10%)", desc40: "Terlalu Curam (> 10% - Rawan amblas/meluncur)" },
-            { name: "Kondisi Permukaan (Surface)", val: p3, desc100: "Mulus & Padat", desc70: "Bergelombang / Lubang Kecil", desc40: "Lubang Dalam / Amblas (Rawan patah as)" },
-            { name: "Tanggul Pengaman (Safety Berm)", val: p4, desc100: ">= 3/4 Roda & Kokoh", desc70: "Ada Bagian Rendah / Kurang Padat", desc40: "Terputus / Tidak Ada Tanggul" },
-            { name: "Kemiringan Melintang & Parit", val: p5, desc100: "Parit Bersih, Aliran Lancar", desc70: "Tersumbat Sebagian", desc40: "Buntu / Air Meluap ke Jalan" },
-            { name: "Superelevasi & Tikungan", val: p6, desc100: "Radius & Miring Pas", desc70: "Agak Tajam / Pandang Terhalang", desc40: "Miring Terbalik (Negative Camber - Rawan Terguling)" },
-            { name: "Bebas Batu Lepas / Spillage", val: p7, desc100: "Bersih Total dari Batu", desc70: "Ada Kerikil / Spillage Tipis", desc40: "Bongkahan Batu Tajam / Ceceran Banyak (Merusak Ban)" },
-            { name: "Rambu, Patok Pandu & Debu", val: p8, desc100: "Rambu Jelas & Minim Debu", desc70: "Berdebu Sedang (Perlu Water Truck)", desc40: "Debu Sangat Tebal / Rambu Rusak" }
-        ];
+        // Grouping Table (Gambar 3 Format)
+        // Permukaan Jalan (Surfacing 30% + Undulation 25% + Spoil 20% -> bobot total 75%)
+        const grpPermukaan = ((p1 * 0.30) + (p2 * 0.25) + (p3 * 0.20)) / 0.75;
+        // Safety Berm (5%)
+        const grpBerm = p4;
+        // Drainase & Lainnya (Crossfall 5% + Dust 5% + Drainage 5% + Road Attachment 5% -> bobot total 20%)
+        const grpDrainase = ((p5 * 0.05) + (p6 * 0.05) + (p7 * 0.05) + (p8 * 0.05)) / 0.20;
 
-        let cnt100 = 0, cnt70 = 0, cnt40 = 0;
+        $('#grpPermukaanVal').text(grpPermukaan.toFixed(2));
+        $('#grpBermVal').text(grpBerm.toFixed(2));
+        $('#grpDrainaseVal').text(grpDrainase.toFixed(2));
+        $('#grpTotalVal').text(`${actualRounded} / 4.00`);
+        $('#grpAchVal').text(`${achievement}%`);
+
+        // Defisit Findings & Action Recommendations
         let findings = [];
         let autoActions = [];
+        let cnt4 = 0, cnt3 = 0, cnt2 = 0, cnt1 = 0;
 
-        paramsList.forEach(p => {
-            if (p.val === 100) cnt100++;
-            else if (p.val === 70) {
-                cnt70++;
-                findings.push(`<b>${p.name}</b>: Skor 70 (${p.desc70})`);
-                if (p.name.includes("Parit") || p.name.includes("Drainase")) autoActions.push("Normalisasi dan pembersihan parit drainase");
-                else if (p.name.includes("Permukaan")) autoActions.push("Scraping & perataan jalan dengan motor grader");
-                else if (p.name.includes("Berm")) autoActions.push("Peninggian dan pemadatan tanggul pengaman (safety berm)");
-                else if (p.name.includes("Debu")) autoActions.push("Tingkatkan frekuensi penyiraman jalan dengan water truck");
-                else if (p.name.includes("Spillage")) autoActions.push("Pembersihan ceceran batu lepas di jalur aktif");
-                else autoActions.push(`Penyesuaian perbaikan pada ${p.name}`);
-            } else if (p.val === 40) {
-                cnt40++;
-                findings.push(`<span class="text-danger"><b>${p.name}</b>: Skor 40 (${p.desc40}) [KRITIS]</span>`);
-                if (p.name.includes("Permukaan") || p.name.includes("Grade")) autoActions.push("URGENT: Grading ulang lapis pondasi & pemadatan compactor");
-                else if (p.name.includes("Berm")) autoActions.push("URGENT: Rekonstruksi tanggul pengaman minimal 3/4 tinggi roda alat");
-                else if (p.name.includes("Parit") || p.name.includes("Drainase")) autoActions.push("URGENT: Penggalian kembali parit buntu & sodetan darurat");
-                else if (p.name.includes("Spillage")) autoActions.push("URGENT: Singkirkan bongkahan batu besar dengan wheel loader");
-                else autoActions.push(`URGENT: Rekayasa penanganan keselamatan pada ${p.name}`);
+        rciParamsMetadata.forEach(m => {
+            const val = parseInt($(`#skor${m.key}`).val()) || 4;
+            const defM = parseFloat($(`#defisit${m.key}`).val()) || 0;
+
+            if (val === 4) cnt4++;
+            else if (val === 3) {
+                cnt3++;
+                findings.push(`<b>${m.name}</b>: Skor 3 (Defisit ${defM}m / 71%-90%)`);
+                if (m.key === "Surfacing") autoActions.push("Scraping ringan & penambahan batu split di area aus");
+                else if (m.key === "Undulation") autoActions.push("Perataan gelombang permukaan jalan dengan motor grader");
+                else if (m.key === "Spoil") autoActions.push("Pembersihan ceceran spoil & pelebaran jalan sesuai standar 18m");
+                else if (m.key === "SafetyBerm") autoActions.push("Perapihan tanggul & pembersihan gulma/tanaman penutup");
+                else if (m.key === "Dust") autoActions.push("Jadwalkan penyiraman rutin tambahan unit water truck");
+                else if (m.key === "Drainage") autoActions.push("Pembersihan parit dan pembuangan endapan lumpur");
+                else autoActions.push(`Pemeliharaan rutin pada parameter ${m.name}`);
+            } else if (val === 2) {
+                cnt2++;
+                findings.push(`<span class="text-warning"><b>${m.name}</b>: Skor 2 (Defisit ${defM}m / 41%-70%) [PERHATIAN]</span>`);
+                if (m.key === "Surfacing") autoActions.push("URGENT: Re-sheeting batu split lapis aus & pemadatan compactor");
+                else if (m.key === "Undulation") autoActions.push("URGENT: Grading mendalam menghilangkan lendutan keriting");
+                else if (m.key === "Spoil") autoActions.push("URGENT: Singkirkan tumpukan spoil / batubara penyebab penyempitan");
+                else if (m.key === "SafetyBerm") autoActions.push("URGENT: Peninggian tanggul pengaman minimum 3/4 tinggi ban alat");
+                else if (m.key === "Drainage") autoActions.push("URGENT: Penggalian kembali parit yang tersumbat / buat sodetan");
+                else autoActions.push(`Perbaikan terarah pada parameter ${m.name}`);
+            } else if (val === 1) {
+                cnt1++;
+                findings.push(`<span class="text-danger"><b>${m.name}</b>: Skor 1 (Defisit ${defM}m / &le;40%) [KRITIS]</span>`);
+                autoActions.push(`TINDAKAN DARURAT: Rekonstruksi & perbaikan mendesak pada ${m.name}`);
             }
         });
 
-        $('#cntStandar').text(cnt100);
-        $('#cntPerhatian').text(cnt70);
-        $('#cntKritis').text(cnt40);
-
+        // Determine Status & Colors
         let label = "Baik";
         let color = "#10b981";
         let bg = "rgba(16, 185, 129, 0.15)";
@@ -1515,28 +1715,31 @@
         let statusDesc = "Seluruh 8 parameter memenuhi standar teknis jalan hauling tambang. Kondisi prima dan aman.";
         let statusIcon = "bi-shield-fill-check";
 
-        if (total < 70) {
+        const achNum = parseFloat(achievement);
+        if (achNum < 70) {
             label = "Kurang";
             color = "#f43f5e";
             bg = "rgba(244, 63, 94, 0.15)";
             border = "rgba(244, 63, 94, 0.4)";
             statusTitle = "STATUS: TIDAK LAYAK / RAWAN BAHAYA (PERBAIKAN SEGERA)";
-            statusDesc = "Ditemukan parameter kritis di bawah standar keselamatan tambang. Batasi muatan & segera lakukan perbaikan.";
+            statusDesc = "Kondisi jalan berada di bawah standar keselamatan tambang. Batasi muatan & segera lakukan perbaikan grader/compactor.";
             statusIcon = "bi-x-octagon-fill";
-        } else if (total < 85) {
+        } else if (achNum < 85) {
             label = "Sedang";
             color = "#f59e0b";
             bg = "rgba(245, 158, 11, 0.15)";
             border = "rgba(245, 158, 11, 0.4)";
             statusTitle = "STATUS: LAYAK DENGAN PENGAWASAN & CATATAN";
-            statusDesc = "Jalan dapat dilalui dengan kewaspadaan. Terdapat parameter yang memerlukan pemeliharaan rutin.";
+            statusDesc = "Jalan dapat dilalui dengan kewaspadaan pengawas. Terdapat parameter yang memerlukan pemeliharaan terarah.";
             statusIcon = "bi-exclamation-triangle-fill";
         }
 
-        $('#liveScoreVal').text(rounded);
-        $('#liveScoreBadge').html(`Skor RCI: <span>${rounded}</span>% (${label})`).css({ 'background': bg, 'color': color, 'border-color': border });
+        $('#liveScoreVal').text(actualRounded);
+        $('#liveAchVal').text(achievement);
+        $('#liveScoreBadge').html(`Skor: <span>${actualRounded}</span>/4.00 (<span>${achievement}%</span> - ${label})`).css({ 'background': bg, 'color': color, 'border-color': border });
 
-        $('#summaryScoreVal').text(rounded + '%').css('color', color);
+        $('#summaryScoreVal').text(actualRounded).css('color', color);
+        $('#summaryAchVal').text(achievement + '%').css('color', color);
         $('#summaryCategoryBadge').html(`<i class="bi ${statusIcon} me-1"></i> ${label.toUpperCase()}`).css({ 'background': bg, 'color': color });
 
         $('#feasibilityBanner').css({ 'background': bg, 'border-color': border, 'color': color });
@@ -1547,7 +1750,7 @@
         // Update findings list
         if (findings.length === 0) {
             $('#findingsCountBadge').text('0 Defisit').attr('class', 'badge bg-success');
-            $('#findingsList').html('<i class="bi bi-check2-circle text-success me-1"></i> Semua parameter berada dalam batas optimal.');
+            $('#findingsList').html('<i class="bi bi-check2-circle text-success me-1"></i> Seluruh parameter segmen berada dalam kondisi optimal (100%).');
             $('#autoRecText').text('Pertahankan pemeliharaan rutin jalan angkut.');
         } else {
             $('#findingsCountBadge').text(`${findings.length} Temuan Defisit`).attr('class', 'badge bg-warning text-dark');
@@ -1559,35 +1762,26 @@
 
         // Store summary for sharing
         currentRciSummaryData = {
-            totalScore: rounded,
+            actualScore: actualRounded,
+            achievement: achievement,
             kategori: label,
             statusTitle: statusTitle,
-            cnt100: cnt100,
-            cnt70: cnt70,
-            cnt40: cnt40,
+            panjangSegment: $('#panjangSegment').val() || 100,
+            cnt4: cnt4,
+            cnt3: cnt3,
+            cnt2: cnt2,
+            cnt1: cnt1,
             findings: findings,
             autoRec: $('#autoRecText').text()
         };
     }
-
-    // Button Score Selector (Supports both classes)
-    $(document).on('click', '.btn-score-card, .btn-rci-score', function() {
-        const param = $(this).data('param');
-        const val = $(this).data('val');
-
-        $(`.btn-score-card[data-param="${param}"], .btn-rci-score[data-param="${param}"]`).removeClass('active');
-        $(this).addClass('active');
-
-        $(`#${param}`).val(val);
-        calculateRciScore();
-    });
 
     function applyAutoRecommendationRci() {
         const rec = $('#autoRecText').text().trim();
         if (rec) {
             $('#tindakanPerbaikan').val(rec);
             $('#clientAlertTitle').text('Rekomendasi Diterapkan');
-            $('#clientAlertMsg').text('Rekomendasi tindakan otomatis telah disalin ke formulir rekomendasi perbaikan.');
+            $('#clientAlertMsg').text('Rekomendasi tindakan otomatis telah disalin ke formulir tindakan perbaikan.');
             new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
         }
     }
@@ -1598,35 +1792,37 @@
         const area = $('#area').val() || '-';
         const namaJalan = $('#namaJalan').val() || $('#lokasi').val() || '-';
         const seg = $('#segmentJalan').val() || '';
-        const shift = $('#shift').val() || '';
-        const loc = $('#lokasi').val() || '';
-        const pic = $('#pic').val() || '-';
+        const panjang = $('#panjangSegment').val() || '100';
         const perbaikan = $('#tindakanPerbaikan').val() || currentRciSummaryData.autoRec || '-';
 
-        let text = `🚧 *LAPORAN INSPEKSI ROAD CONDITION INDEX (RCI)* 🚧\n`;
-        text += `*PT MEGA GLOBAL ENERGY GROUP*\n\n`;
-        text += `📅 Tanggal: ${tgl} ${wkt} (${shift})\n`;
-        text += `📍 Ruas Jalan: ${namaJalan} ${seg ? `[${seg}]` : ''}\n`;
-        text += `📌 Area / Lokasi: ${area} | ${loc}\n\n`;
-        text += `⭐ *SKOR AKHIR: ${currentRciSummaryData.totalScore || '100'}% (${currentRciSummaryData.kategori || 'Baik'})*\n`;
+        let text = `🚨 *LAPORAN ROAD CONDITION INDEX (RCI)*\n`;
+        text += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `📍 *Area:* ${area}\n`;
+        text += `🛣️ *Jalan:* ${namaJalan} ${seg ? `(${seg})` : ''}\n`;
+        text += `📏 *Panjang Segmen:* ${panjang} Meter\n`;
+        text += `📅 *Waktu:* ${tgl} ${wkt}\n`;
+        text += `👷 *Inspector:* @userNama (@userNik)\n\n`;
+
+        text += `⭐ *SKOR AKHIR: ${currentRciSummaryData.actualScore || '4.00'} / 4.00 (${currentRciSummaryData.achievement || '100'}% - ${currentRciSummaryData.kategori || 'Baik'})*\n`;
         text += `📋 *${currentRciSummaryData.statusTitle || 'STATUS: LAYAK OPERASIONAL'}*\n\n`;
-        text += `📊 *Komposisi Parameter:*\n`;
-        text += `• Sesuai Standar (100): ${currentRciSummaryData.cnt100 || 8}\n`;
-        text += `• Perlu Perhatian (70): ${currentRciSummaryData.cnt70 || 0}\n`;
-        text += `• Kritis / Substandard (40): ${currentRciSummaryData.cnt40 || 0}\n\n`;
+
+        text += `• Skor 4 (90-100%): ${currentRciSummaryData.cnt4 || 8}\n`;
+        text += `• Skor 3 (71-90%): ${currentRciSummaryData.cnt3 || 0}\n`;
+        text += `• Skor 2 (41-70%): ${currentRciSummaryData.cnt2 || 0}\n`;
+        text += `• Skor 1 (0-40%): ${currentRciSummaryData.cnt1 || 0}\n\n`;
 
         if (currentRciSummaryData.findings && currentRciSummaryData.findings.length > 0) {
-            text += `🔍 *Temuan Defisit:*\n`;
+            text += `⚠️ *Temuan Defisit Segmen:*\n`;
             currentRciSummaryData.findings.forEach(f => {
-                text += `• ${f.replace(/<[^>]*>/g, '')}\n`;
+                const plain = f.replace(/<[^>]*>?/gm, '');
+                text += `• ${plain}\n`;
             });
             text += `\n`;
-        } else {
-            text += `🔍 *Temuan:* Seluruh parameter sesuai standar teknis operasional.\n\n`;
         }
 
-        text += `🛠️ *Rekomendasi Tindakan:*\n${perbaikan}\n`;
-        text += `👷 PIC: ${pic}\n`;
+        text += `🔧 *Rekomendasi Tindakan:*\n${perbaikan}\n`;
+        text += `━━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `_Sistem Keselamatan Pertambangan & SAP Road Assessment_`;
         return text;
     }
 
@@ -1639,10 +1835,10 @@
         const text = generateRciShareText();
         if (navigator.share) {
             navigator.share({
-                title: 'Laporan Road Condition Index (RCI)',
+                title: 'Laporan RCI - Kondisi Jalan Tambang',
                 text: text
-            }).catch(err => {
-                console.log('Share dismissed', err);
+            }).catch(() => {
+                shareRciToWhatsApp();
             });
         } else {
             shareRciToWhatsApp();
@@ -1651,111 +1847,134 @@
 
     function copyRciSummaryToClipboard() {
         const text = generateRciShareText();
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(() => {
-                $('#clientAlertTitle').text('Berhasil Disalin!');
-                $('#clientAlertMsg').text('Ringkasan laporan RCI telah disalin ke clipboard. Anda dapat menempelkannya di chat WhatsApp atau dokumen lain.');
-                new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
-            });
-        } else {
-            const ta = document.createElement('textarea');
-            ta.value = text;
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            document.body.removeChild(ta);
+        navigator.clipboard.writeText(text).then(() => {
             $('#clientAlertTitle').text('Berhasil Disalin!');
-            $('#clientAlertMsg').text('Ringkasan laporan RCI telah disalin ke clipboard.');
+            $('#clientAlertMsg').text('Ringkasan laporan inspeksi RCI telah disalin ke clipboard.');
             new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
-        }
+        }).catch(() => {
+            $('#clientAlertTitle').text('Gagal Menyalin');
+            $('#clientAlertMsg').text('Tidak dapat menyalin ke clipboard secara otomatis.');
+            new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+        });
     }
 
     function shareSavedRci(id) {
         $.getJSON('/Rci/GetDetail/' + id, function(d) {
-            let text = `🚧 *LAPORAN INSPEKSI ROAD CONDITION INDEX (RCI)* 🚧\n`;
-            text += `*PT MEGA GLOBAL ENERGY GROUP*\n\n`;
-            text += `📅 Tanggal: ${d.tanggal} ${d.waktu} (${d.shift || '-'})\n`;
-            text += `📍 Ruas Jalan: ${d.namaJalan || d.lokasi} ${d.segmentJalan ? `[${d.segmentJalan}]` : ''}\n`;
-            text += `📌 Area / Lokasi: ${d.area} | ${d.lokasi}\n`;
-            text += `👮 Inspector: ${d.nama} (${d.nik})\n\n`;
-            text += `⭐ *SKOR AKHIR: ${d.totalScore}% (${d.kategoriIndex})*\n\n`;
-            text += `📊 *Rincian Nilai 8 Parameter:*\n`;
-            text += `• Lebar Jalan: ${d.skorLebarJalan}/100\n`;
-            text += `• Grade Jalan: ${d.skorGradeJalan}/100\n`;
-            text += `• Permukaan: ${d.skorPermukaanJalan}/100\n`;
-            text += `• Safety Berm: ${d.skorSafetyBerm}/100\n`;
-            text += `• Drainase Parit: ${d.skorDrainaseParit}/100\n`;
-            text += `• Superelevasi: ${d.skorSuperelevasiTikungan}/100\n`;
-            text += `• Bebas Spillage: ${d.skorBebasSpillage}/100\n`;
-            text += `• Rambu & Debu: ${d.skorRambuDebu}/100\n\n`;
-            if (d.catatan) text += `📝 Catatan: ${d.catatan}\n`;
-            if (d.tindakanPerbaikan) text += `🛠️ Rekomendasi: ${d.tindakanPerbaikan} (PIC: ${d.pic || '-'})\n`;
+            const actual = d.actualRoadScore > 0 ? d.actualRoadScore : (d.totalScore > 4 ? (d.totalScore / 25.0).toFixed(2) : d.totalScore);
+            const ach = d.achievement > 0 ? d.achievement : (actual / 4.0 * 100.0).toFixed(1);
 
-            if (navigator.share) {
-                navigator.share({ title: 'Laporan RCI #' + d.id, text: text }).catch(() => {});
-            } else {
-                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
-            }
+            let text = `🚨 *LAPORAN ROAD CONDITION INDEX (RCI)*\n`;
+            text += `━━━━━━━━━━━━━━━━━━━━━\n`;
+            text += `📍 *Area:* ${d.area}\n`;
+            text += `🛣️ *Jalan:* ${d.namaJalan || d.lokasi} ${d.segmentJalan ? `(${d.segmentJalan})` : ''}\n`;
+            text += `📏 *Panjang Segmen:* ${d.panjangSegment || 100} Meter\n`;
+            text += `📅 *Waktu:* ${d.tanggal} ${d.waktu}\n`;
+            text += `👷 *Inspector:* ${d.nama} (${d.nik})\n\n`;
+
+            text += `⭐ *SKOR AKHIR: ${actual} / 4.00 (${ach}% - ${d.kategoriIndex})*\n`;
+            text += `• Surfacing: ${d.skorSurfacing}/4 (Defisit: ${d.defisitSurfacing || 0}m)\n`;
+            text += `• Undulation: ${d.skorUndulation}/4 (Defisit: ${d.defisitUndulation || 0}m)\n`;
+            text += `• Spoil (18m): ${d.skorSpoil}/4 (Defisit: ${d.defisitSpoil || 0}m)\n`;
+            text += `• Safety Berm: ${d.skorSafetyBerm}/4 (Defisit: ${d.defisitSafetyBerm || 0}m)\n`;
+            text += `• Crossfall: ${d.skorCrossfall}/4 (Defisit: ${d.defisitCrossfall || 0}m)\n`;
+            text += `• Dust: ${d.skorDust}/4 (Defisit: ${d.defisitDust || 0}m)\n`;
+            text += `• Drainage: ${d.skorDrainage}/4 (Defisit: ${d.defisitDrainage || 0}m)\n`;
+            text += `• Attachment: ${d.skorRoadAttachment}/4 (Defisit: ${d.defisitRoadAttachment || 0}m)\n\n`;
+
+            if (d.catatan) text += `📝 *Catatan:* ${d.catatan}\n`;
+            if (d.tindakanPerbaikan) text += `🔧 *Perbaikan:* ${d.tindakanPerbaikan} ${d.pic ? `(PIC: ${d.pic})` : ''}\n`;
+            text += `━━━━━━━━━━━━━━━━━━━━━\n`;
+            text += `_Sistem Keselamatan Pertambangan & SAP Road Assessment_`;
+
+            const encoded = encodeURIComponent(text);
+            window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
         });
     }
 
-    // Auto GPS Location
+    // Geolocation GPS
     function getLocationRci() {
-        if (!navigator.geolocation) {
-            $('#clientAlertTitle').text('GPS Tidak Didukung');
-            $('#clientAlertMsg').text('Browser atau perangkat Anda tidak mendukung fitur Geolocation.');
-            new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
-            return;
-        }
-
         const btn = $('#btnGetLocation');
-        btn.html('<span class="spinner-border spinner-border-sm" role="status"></span>');
+        btn.html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
 
-        navigator.geolocation.getCurrentPosition(
-            function(pos) {
-                const lat = pos.coords.latitude.toFixed(6);
-                const lng = pos.coords.longitude.toFixed(6);
-                $('#latitude').val(lat);
-                $('#longitude').val(lng);
-
-                const currentLoc = $('#lokasi').val().trim();
-                if (!currentLoc) {
-                    $('#lokasi').val(`Koordinat: ${lat}, ${lng}`);
-                } else if (!currentLoc.includes(lat)) {
-                    $('#lokasi').val(`${currentLoc} (${lat}, ${lng})`);
-                }
-
-                btn.html('<i class="bi bi-check-circle-fill text-success" style="font-size: 18px;"></i>');
-                setTimeout(() => {
-                    btn.html('<i class="bi bi-crosshair" style="font-size: 18px;"></i>');
-                }, 2000);
-            },
-            function(err) {
-                btn.html('<i class="bi bi-crosshair" style="font-size: 18px;"></i>');
-                $('#clientAlertTitle').text('Gagal Mengambil GPS');
-                $('#clientAlertMsg').text('Tidak dapat mendeteksi koordinat lokasi: ' + err.message + '. Silakan isi lokasi secara manual.');
-                new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    const lat = position.coords.latitude.toFixed(6);
+                    const lon = position.coords.longitude.toFixed(6);
+                    $('#latitude').val(lat);
+                    $('#longitude').val(lon);
+                    const currentLoc = $('#lokasi').val();
+                    if (!currentLoc || currentLoc.startsWith('GPS:')) {
+                        $('#lokasi').val(`GPS: ${lat}, ${lon}`);
+                    }
+                    btn.html('<i class="bi bi-crosshair text-success" style="font-size: 18px;"></i>');
+                },
+                function(error) {
+                    btn.html('<i class="bi bi-crosshair text-danger" style="font-size: 18px;"></i>');
+                    $('#clientAlertTitle').text('GPS Gagal Diambil');
+                    $('#clientAlertMsg').text('Pastikan izin lokasi browser Anda aktif: ' + error.message);
+                    new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        } else {
+            btn.html('<i class="bi bi-crosshair" style="font-size: 18px;"></i>');
+            $('#clientAlertTitle').text('Browser Tidak Mendukung');
+            $('#clientAlertMsg').text('Perangkat atau browser tidak mendukung fitur Geolocation.');
+            new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+        }
     }
 
-    // Reset Form
-    function resetForm() {
-        $('#rciForm')[0].reset();
+    // Form Client Validation
+    $('#formRci').on('submit', function(e) {
+        if (!$('#area').val()) {
+            e.preventDefault();
+            $('#clientAlertTitle').text('Area Belum Dipilih');
+            $('#clientAlertMsg').text('Silakan pilih Area Utama dari daftar yang tersedia.');
+            new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+            $('#areaSearch').focus();
+            return false;
+        }
+
+        const p = parseFloat($('#panjangSegment').val()) || 0;
+        if (p <= 0) {
+            e.preventDefault();
+            $('#clientAlertTitle').text('Panjang Segmen Tidak Valid');
+            $('#clientAlertMsg').text('Panjang segmen penilaian jalan harus lebih besar dari 0 meter.');
+            new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+            $('#panjangSegment').focus();
+            return false;
+        }
+    });
+
+    function resetRciForm() {
         $('#rciId').val('');
-        $('#areaSearch').val('');
+        $('#formRci')[0].reset();
+        $('#tanggal').val('@DateTime.Today.ToString("yyyy-MM-dd")');
+        $('#waktuStr').val('@DateTime.Now.ToString("HH:mm")');
         $('#area').val('');
+        $('#areaSearch').val('');
         $('#benchmarkSearch').prop('disabled', true).val('Pilih Area Utama dulu...');
         $('#detilLokasi').val('');
         $('#btnAddBenchmark').prop('disabled', true);
-        $('#formTitle').html('<i class="bi bi-pencil-square" style="color: #3b82f6;"></i> <span>Form Penilaian RCI</span> <span class="badge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(244, 63, 94, 0.4); display: inline-flex; align-items: center; gap: 2px;"><i class="bi bi-stars" style="font-size: 9px;"></i> NEW</span>');
+        $('#formTitle').html('<i class="bi bi-pencil-square" style="color: #3b82f6;"></i> <span>Form Penilaian RCI</span> <span class="badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 2px;"><i class="bi bi-stars" style="font-size: 9px;"></i> OPSI B</span>');
         $('#btnCancelEdit').addClass('d-none');
 
-        $('.btn-score-card, .btn-rci-score').removeClass('active');
-        $('.btn-score-card[data-val="100"], .btn-rci-score[data-val="100"]').addClass('active');
-        $('input[id^="skor"]').val('100');
+        $('#panjangSegment').val(100);
+        rciParamsMetadata.forEach(m => {
+            $(`#defisit${m.key}`).val(0);
+            $(`#skor${m.key}`).val(4);
+            $(`.btn-score-card[data-param="skor${m.key}"]`).removeClass('active');
+            $(`.btn-score-card[data-param="skor${m.key}"][data-val="4"]`).addClass('active');
+            $(`#badgePersen${m.key}`).text('Ketercapaian: 100.0%');
+        });
+
         calculateRciScore();
+    }
+
+    function confirmDeleteRci(id) {
+        $('#deleteForm').attr('action', '/Rci/Delete/' + id);
+        new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
     }
 
     // Edit RCI
@@ -1783,14 +2002,19 @@
             $('#tindakanPerbaikan').val(data.tindakanPerbaikan);
             $('#pic').val(data.pic);
 
-            const params = ['skorLebarJalan', 'skorGradeJalan', 'skorPermukaanJalan', 'skorSafetyBerm',
-                            'skorDrainaseParit', 'skorSuperelevasiTikungan', 'skorBebasSpillage', 'skorRambuDebu'];
+            $('#panjangSegment').val(data.panjangSegment || 100);
 
-            params.forEach(p => {
-                const val = data[p];
-                $(`#${p}`).val(val);
-                $(`.btn-score-card[data-param="${p}"], .btn-rci-score[data-param="${p}"]`).removeClass('active');
-                $(`.btn-score-card[data-param="${p}"][data-val="${val}"], .btn-rci-score[data-param="${p}"][data-val="${val}"]`).addClass('active');
+            rciParamsMetadata.forEach(m => {
+                const defVal = data[`defisit${m.key}`] || 0;
+                const scoreVal = data[`skor${m.key}`] || 4;
+                $(`#defisit${m.key}`).val(defVal);
+                $(`#skor${m.key}`).val(scoreVal);
+                $(`.btn-score-card[data-param="skor${m.key}"]`).removeClass('active');
+                $(`.btn-score-card[data-param="skor${m.key}"][data-val="${scoreVal}"]`).addClass('active');
+
+                const totalP = parseFloat(data.panjangSegment) || 100;
+                const pct = totalP > 0 ? Math.max(0, Math.min(100, ((totalP - defVal) / totalP) * 100)) : 100;
+                $(`#badgePersen${m.key}`).text(`Ketercapaian: ${pct.toFixed(1)}%`);
             });
 
             calculateRciScore();
@@ -1804,6 +2028,13 @@
     // Show Detail Modal
     function showDetailRci(id) {
         $.getJSON('/Rci/GetDetail/' + id, function(d) {
+            const actual = d.actualRoadScore > 0 ? d.actualRoadScore : (d.totalScore > 4 ? (d.totalScore / 25.0).toFixed(2) : d.totalScore);
+            const ach = d.achievement > 0 ? d.achievement : (actual / 4.0 * 100.0).toFixed(1);
+            const isGood = ach >= 85;
+            const isFair = ach >= 70 && ach < 85;
+
+            const color = isGood ? '#10b981' : (isFair ? '#f59e0b' : '#f43f5e');
+
             let html = `
                 <div class="row g-3">
                     <div class="col-md-6">
@@ -1812,6 +2043,7 @@
                             <table class="table table-sm table-borderless text-white mb-0" style="font-size: 12px;">
                                 <tr><td class="text-muted" style="width: 130px;">Nama Jalan</td><td>: <strong>${d.namaJalan || '-'}</strong></td></tr>
                                 <tr><td class="text-muted">Segment / KM</td><td>: ${d.segmentJalan || '-'}</td></tr>
+                                <tr><td class="text-muted">Panjang Segmen</td><td>: <strong>${d.panjangSegment || 100} Meter</strong></td></tr>
                                 <tr><td class="text-muted">Area Utama</td><td>: ${d.area || '-'}</td></tr>
                                 <tr><td class="text-muted">Lokasi</td><td>: ${d.lokasi || '-'}</td></tr>
                                 <tr><td class="text-muted">Detail Patok</td><td>: ${d.detilLokasi || '-'}</td></tr>
@@ -1824,9 +2056,10 @@
                     </div>
                     <div class="col-md-6">
                         <div class="p-3 rounded-3 text-center" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
-                            <div class="text-muted mb-1" style="font-size: 12px;">SKOR INDEKS KONDISI JALAN</div>
-                            <h1 class="display-4 font-weight-bold mb-0" style="color: ${d.totalScore >= 85 ? '#10b981' : (d.totalScore >= 70 ? '#f59e0b' : '#f43f5e')};">${d.totalScore}%</h1>
-                            <span class="badge px-3 py-1 mt-1" style="font-size: 12px; background: ${d.totalScore >= 85 ? 'rgba(16,185,129,0.2)' : (d.totalScore >= 70 ? 'rgba(245,158,11,0.2)' : 'rgba(244,63,94,0.2)')}; color: ${d.totalScore >= 85 ? '#10b981' : (d.totalScore >= 70 ? '#f59e0b' : '#f43f5e')};">
+                            <div class="text-muted mb-1" style="font-size: 12px;">SKOR INDEKS &amp; KETERCAPAIAN</div>
+                            <h1 class="display-5 font-weight-bold mb-0" style="color: ${color};">${actual} / 4.00</h1>
+                            <div class="h5 mb-1 font-weight-bold" style="color: ${color};">Pencapaian: ${ach}%</div>
+                            <span class="badge px-3 py-1 mt-1" style="font-size: 12px; background: rgba(255,255,255,0.08); color: ${color};">
                                 Kategori: ${d.kategoriIndex}
                             </span>
                         </div>
@@ -1834,16 +2067,28 @@
                 </div>
 
                 <div class="mt-3 p-3 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
-                    <h6 class="text-white font-weight-bold mb-2">Rincian Nilai 8 Parameter</h6>
-                    <div class="row g-2" style="font-size: 12px;">
-                        <div class="col-md-6">1. Lebar Jalan: <strong>${d.skorLebarJalan}</strong>/100</div>
-                        <div class="col-md-6">2. Grade / Kemiringan: <strong>${d.skorGradeJalan}</strong>/100</div>
-                        <div class="col-md-6">3. Permukaan Jalan: <strong>${d.skorPermukaanJalan}</strong>/100</div>
-                        <div class="col-md-6">4. Tanggul Berm: <strong>${d.skorSafetyBerm}</strong>/100</div>
-                        <div class="col-md-6">5. Drainase Parit: <strong>${d.skorDrainaseParit}</strong>/100</div>
-                        <div class="col-md-6">6. Superelevasi: <strong>${d.skorSuperelevasiTikungan}</strong>/100</div>
-                        <div class="col-md-6">7. Bebas Spillage: <strong>${d.skorBebasSpillage}</strong>/100</div>
-                        <div class="col-md-6">8. Rambu & Debu: <strong>${d.skorRambuDebu}</strong>/100</div>
+                    <h6 class="text-white font-weight-bold mb-2">Rincian Nilai 8 Parameter Standar RCI (Opsi B)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered text-white mb-0" style="font-size: 11.5px;">
+                            <thead style="background: rgba(255,255,255,0.08);">
+                                <tr>
+                                    <th>Parameter</th>
+                                    <th>Bobot</th>
+                                    <th>Defisit (m)</th>
+                                    <th>Skor (1-4)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>1. Surfacing and Material</td><td>30%</td><td>${d.defisitSurfacing || 0} m</td><td><span class="badge bg-primary">${d.skorSurfacing}/4</span></td></tr>
+                                <tr><td>2. Undulation / Corrugation</td><td>25%</td><td>${d.defisitUndulation || 0} m</td><td><span class="badge bg-primary">${d.skorUndulation}/4</span></td></tr>
+                                <tr><td>3. Spoil & Lebar Efektif (18m)</td><td>20%</td><td>${d.defisitSpoil || 0} m</td><td><span class="badge bg-primary">${d.skorSpoil}/4</span></td></tr>
+                                <tr><td>4. Safety Berm</td><td>5%</td><td>${d.defisitSafetyBerm || 0} m</td><td><span class="badge bg-info text-dark">${d.skorSafetyBerm}/4</span></td></tr>
+                                <tr><td>5. Crossfall (0.5% - 1%)</td><td>5%</td><td>${d.defisitCrossfall || 0} m</td><td><span class="badge bg-info text-dark">${d.skorCrossfall}/4</span></td></tr>
+                                <tr><td>6. Dust (Debu)</td><td>5%</td><td>${d.defisitDust || 0} m</td><td><span class="badge bg-info text-dark">${d.skorDust}/4</span></td></tr>
+                                <tr><td>7. Drainage (Saluran/Genangan)</td><td>5%</td><td>${d.defisitDrainage || 0} m</td><td><span class="badge bg-info text-dark">${d.skorDrainage}/4</span></td></tr>
+                                <tr><td>8. Road Attachment</td><td>5%</td><td>${d.defisitRoadAttachment || 0} m</td><td><span class="badge bg-info text-dark">${d.skorRoadAttachment}/4</span></td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

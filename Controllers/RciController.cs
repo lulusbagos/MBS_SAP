@@ -117,18 +117,34 @@ namespace MBS_SAP.Controllers
             string? shift,
             string? latitude,
             string? longitude,
-            int skorLebarJalan,
-            int skorGradeJalan,
-            int skorPermukaanJalan,
-            int skorSafetyBerm,
-            int skorDrainaseParit,
-            int skorSuperelevasiTikungan,
-            int skorBebasSpillage,
-            int skorRambuDebu,
-            string? catatan,
-            string? tindakanPerbaikan,
-            string? pic,
-            IFormFile? foto)
+            double? panjangSegment,
+            double? defisitSurfacing,
+            double? defisitUndulation,
+            double? defisitSpoil,
+            double? defisitSafetyBerm,
+            double? defisitCrossfall,
+            double? defisitDust,
+            double? defisitDrainage,
+            double? defisitRoadAttachment,
+            int skorSurfacing = 4,
+            int skorUndulation = 4,
+            int skorSpoil = 4,
+            int skorSafetyBerm = 4,
+            int skorCrossfall = 4,
+            int skorDust = 4,
+            int skorDrainage = 4,
+            int skorRoadAttachment = 4,
+            int? skorLebarJalan = null,
+            int? skorGradeJalan = null,
+            int? skorPermukaanJalan = null,
+            int? skorDrainaseParit = null,
+            int? skorSuperelevasiTikungan = null,
+            int? skorBebasSpillage = null,
+            int? skorRambuDebu = null,
+            string? catatan = null,
+            string? tindakanPerbaikan = null,
+            string? pic = null,
+            IFormFile? foto = null)
         {
             try
             {
@@ -144,20 +160,30 @@ namespace MBS_SAP.Controllers
                     waktu = parsedWaktu;
                 }
 
-                // Weighted calculation:
-                // Lebar Jalan (15%), Grade Jalan (10%), Permukaan Jalan (15%), Safety Berm (15%),
-                // Drainase Parit (15%), Superelevasi Tikungan (10%), Bebas Spillage (10%), Rambu & Debu (10%)
-                double totalScore = (skorLebarJalan * 0.15) +
-                                    (skorGradeJalan * 0.10) +
-                                    (skorPermukaanJalan * 0.15) +
-                                    (skorSafetyBerm * 0.15) +
-                                    (skorDrainaseParit * 0.15) +
-                                    (skorSuperelevasiTikungan * 0.10) +
-                                    (skorBebasSpillage * 0.10) +
-                                    (skorRambuDebu * 0.10);
-                totalScore = Math.Round(totalScore, 1);
+                // Standard Baru RCI (Bobot Propose: Total 100%, Skala 1 - 4, Target 4.00)
+                // 1. Surfacing and Material (30%)
+                // 2. Undulation / Corrugation (25%)
+                // 3. Spoil (20%)
+                // 4. Safety Berm (5%)
+                // 5. Crossfall (5%)
+                // 6. Dust (5%)
+                // 7. Drainage (5%)
+                // 8. Road Attachment (5%)
+                double actualRoadScore = (skorSurfacing * 0.30) +
+                                         (skorUndulation * 0.25) +
+                                         (skorSpoil * 0.20) +
+                                         (skorSafetyBerm * 0.05) +
+                                         (skorCrossfall * 0.05) +
+                                         (skorDust * 0.05) +
+                                         (skorDrainage * 0.05) +
+                                         (skorRoadAttachment * 0.05);
+                actualRoadScore = Math.Round(actualRoadScore, 2);
 
-                string kategoriIndex = totalScore >= 85 ? "Baik" : (totalScore >= 70 ? "Sedang" : "Kurang");
+                double targetScore = 4.00;
+                double achievement = Math.Round((actualRoadScore / targetScore) * 100.0, 2);
+
+                // Kategori: Baik (>= 85%), Sedang (70% - 84.9%), Kurang (< 70%)
+                string kategoriIndex = achievement >= 85 ? "Baik" : (achievement >= 70 ? "Sedang" : "Kurang");
 
                 string? fotoUrl = null;
                 if (foto != null && foto.Length > 0)
@@ -186,16 +212,41 @@ namespace MBS_SAP.Controllers
                     existing.Shift = shift;
                     existing.Latitude = latitude;
                     existing.Longitude = longitude;
-                    existing.SkorLebarJalan = skorLebarJalan;
-                    existing.SkorGradeJalan = skorGradeJalan;
-                    existing.SkorPermukaanJalan = skorPermukaanJalan;
+
+                    existing.PanjangSegment = panjangSegment ?? 100;
+                    existing.DefisitSurfacing = defisitSurfacing ?? 0;
+                    existing.DefisitUndulation = defisitUndulation ?? 0;
+                    existing.DefisitSpoil = defisitSpoil ?? 0;
+                    existing.DefisitSafetyBerm = defisitSafetyBerm ?? 0;
+                    existing.DefisitCrossfall = defisitCrossfall ?? 0;
+                    existing.DefisitDust = defisitDust ?? 0;
+                    existing.DefisitDrainage = defisitDrainage ?? 0;
+                    existing.DefisitRoadAttachment = defisitRoadAttachment ?? 0;
+
+                    existing.SkorSurfacing = skorSurfacing;
+                    existing.SkorUndulation = skorUndulation;
+                    existing.SkorSpoil = skorSpoil;
                     existing.SkorSafetyBerm = skorSafetyBerm;
-                    existing.SkorDrainaseParit = skorDrainaseParit;
-                    existing.SkorSuperelevasiTikungan = skorSuperelevasiTikungan;
-                    existing.SkorBebasSpillage = skorBebasSpillage;
-                    existing.SkorRambuDebu = skorRambuDebu;
-                    existing.TotalScore = totalScore;
+                    existing.SkorCrossfall = skorCrossfall;
+                    existing.SkorDust = skorDust;
+                    existing.SkorDrainage = skorDrainage;
+                    existing.SkorRoadAttachment = skorRoadAttachment;
+
+                    existing.ActualRoadScore = actualRoadScore;
+                    existing.TargetScore = targetScore;
+                    existing.Achievement = achievement;
+                    existing.TotalScore = achievement; // stored as % for compatibility
                     existing.KategoriIndex = kategoriIndex;
+
+                    // Legacy mappings
+                    existing.SkorPermukaanJalan = skorSurfacing * 25;
+                    existing.SkorGradeJalan = skorUndulation * 25;
+                    existing.SkorLebarJalan = skorSpoil * 25;
+                    existing.SkorDrainaseParit = skorDrainage * 25;
+                    existing.SkorSuperelevasiTikungan = skorCrossfall * 25;
+                    existing.SkorBebasSpillage = skorDust * 25;
+                    existing.SkorRambuDebu = skorRoadAttachment * 25;
+
                     existing.Catatan = catatan;
                     existing.TindakanPerbaikan = tindakanPerbaikan;
                     existing.Pic = pic;
@@ -208,7 +259,7 @@ namespace MBS_SAP.Controllers
 
                     _context.RciReports.Update(existing);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"Laporan RCI di {namaJalan ?? lokasi} berhasil diperbarui! Skor Index: {totalScore}% ({kategoriIndex})";
+                    TempData["SuccessMessage"] = $"Laporan RCI di {namaJalan ?? lokasi} berhasil diperbarui! Skor: {actualRoadScore}/4.00 ({achievement}%) [{kategoriIndex}]";
                 }
                 else
                 {
@@ -229,16 +280,41 @@ namespace MBS_SAP.Controllers
                         Shift = shift,
                         Latitude = latitude,
                         Longitude = longitude,
-                        SkorLebarJalan = skorLebarJalan,
-                        SkorGradeJalan = skorGradeJalan,
-                        SkorPermukaanJalan = skorPermukaanJalan,
+
+                        PanjangSegment = panjangSegment ?? 100,
+                        DefisitSurfacing = defisitSurfacing ?? 0,
+                        DefisitUndulation = defisitUndulation ?? 0,
+                        DefisitSpoil = defisitSpoil ?? 0,
+                        DefisitSafetyBerm = defisitSafetyBerm ?? 0,
+                        DefisitCrossfall = defisitCrossfall ?? 0,
+                        DefisitDust = defisitDust ?? 0,
+                        DefisitDrainage = defisitDrainage ?? 0,
+                        DefisitRoadAttachment = defisitRoadAttachment ?? 0,
+
+                        SkorSurfacing = skorSurfacing,
+                        SkorUndulation = skorUndulation,
+                        SkorSpoil = skorSpoil,
                         SkorSafetyBerm = skorSafetyBerm,
-                        SkorDrainaseParit = skorDrainaseParit,
-                        SkorSuperelevasiTikungan = skorSuperelevasiTikungan,
-                        SkorBebasSpillage = skorBebasSpillage,
-                        SkorRambuDebu = skorRambuDebu,
-                        TotalScore = totalScore,
+                        SkorCrossfall = skorCrossfall,
+                        SkorDust = skorDust,
+                        SkorDrainage = skorDrainage,
+                        SkorRoadAttachment = skorRoadAttachment,
+
+                        ActualRoadScore = actualRoadScore,
+                        TargetScore = targetScore,
+                        Achievement = achievement,
+                        TotalScore = achievement,
                         KategoriIndex = kategoriIndex,
+
+                        // Legacy mappings
+                        SkorPermukaanJalan = skorSurfacing * 25,
+                        SkorGradeJalan = skorUndulation * 25,
+                        SkorLebarJalan = skorSpoil * 25,
+                        SkorDrainaseParit = skorDrainage * 25,
+                        SkorSuperelevasiTikungan = skorCrossfall * 25,
+                        SkorBebasSpillage = skorDust * 25,
+                        SkorRambuDebu = skorRoadAttachment * 25,
+
                         Catatan = catatan,
                         TindakanPerbaikan = tindakanPerbaikan,
                         Pic = pic,
@@ -248,7 +324,7 @@ namespace MBS_SAP.Controllers
 
                     _context.RciReports.Add(report);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"Inspeksi RCI berhasil disimpan! Skor Index: {totalScore}% ({kategoriIndex})";
+                    TempData["SuccessMessage"] = $"Inspeksi RCI berhasil disimpan! Skor: {actualRoadScore}/4.00 ({achievement}%) [{kategoriIndex}]";
                 }
 
                 return RedirectToAction(nameof(Index));
@@ -283,14 +359,26 @@ namespace MBS_SAP.Controllers
                 shift = item.Shift,
                 latitude = item.Latitude,
                 longitude = item.Longitude,
-                skorLebarJalan = item.SkorLebarJalan,
-                skorGradeJalan = item.SkorGradeJalan,
-                skorPermukaanJalan = item.SkorPermukaanJalan,
+                panjangSegment = item.PanjangSegment ?? 100,
+                defisitSurfacing = item.DefisitSurfacing ?? 0,
+                defisitUndulation = item.DefisitUndulation ?? 0,
+                defisitSpoil = item.DefisitSpoil ?? 0,
+                defisitSafetyBerm = item.DefisitSafetyBerm ?? 0,
+                defisitCrossfall = item.DefisitCrossfall ?? 0,
+                defisitDust = item.DefisitDust ?? 0,
+                defisitDrainage = item.DefisitDrainage ?? 0,
+                defisitRoadAttachment = item.DefisitRoadAttachment ?? 0,
+                skorSurfacing = item.SkorSurfacing,
+                skorUndulation = item.SkorUndulation,
+                skorSpoil = item.SkorSpoil,
                 skorSafetyBerm = item.SkorSafetyBerm,
-                skorDrainaseParit = item.SkorDrainaseParit,
-                skorSuperelevasiTikungan = item.SkorSuperelevasiTikungan,
-                skorBebasSpillage = item.SkorBebasSpillage,
-                skorRambuDebu = item.SkorRambuDebu,
+                skorCrossfall = item.SkorCrossfall,
+                skorDust = item.SkorDust,
+                skorDrainage = item.SkorDrainage,
+                skorRoadAttachment = item.SkorRoadAttachment,
+                actualRoadScore = item.ActualRoadScore > 0 ? item.ActualRoadScore : Math.Round(item.TotalScore / 25.0, 2),
+                targetScore = item.TargetScore > 0 ? item.TargetScore : 4.0,
+                achievement = item.Achievement > 0 ? item.Achievement : item.TotalScore,
                 totalScore = item.TotalScore,
                 kategoriIndex = item.KategoriIndex,
                 catatan = item.Catatan,
@@ -348,8 +436,17 @@ namespace MBS_SAP.Controllers
             string[] headers = new[]
             {
                 "No", "Tanggal", "Waktu", "NIK", "Inspector", "Departemen", "Perusahaan", "Area", "Lokasi", "Detil Lokasi",
-                "Nama Jalan", "Segment", "Shift", "Lebar Jalan", "Grade Jalan", "Permukaan Jalan", "Safety Berm", "Drainase/Parit",
-                "Superelevasi/Tikungan", "Bebas Spillage", "Rambu & Debu", "Skor Index (%)", "Kategori", "Catatan", "Tindakan Perbaikan", "PIC"
+                "Nama Jalan", "Segment", "Panjang Segmen (m)", "Shift",
+                "Surfacing (30%)", "Defisit Surfacing (m)",
+                "Undulation (25%)", "Defisit Undulation (m)",
+                "Spoil (20%)", "Defisit Spoil (m)",
+                "Safety Berm (5%)", "Defisit Berm (m)",
+                "Crossfall (5%)", "Defisit Crossfall (m)",
+                "Dust (5%)", "Defisit Dust (m)",
+                "Drainage (5%)", "Defisit Drainage (m)",
+                "Road Attachment (5%)", "Defisit Attachment (m)",
+                "Actual Score (1-4)", "Target", "Achievement (%)", "Kategori",
+                "Catatan", "Tindakan Perbaikan", "PIC"
             };
 
             for (int i = 0; i < headers.Length; i++)
@@ -366,6 +463,9 @@ namespace MBS_SAP.Controllers
             for (int idx = 0; idx < list.Count; idx++)
             {
                 var r = list[idx];
+                var actual = r.ActualRoadScore > 0 ? r.ActualRoadScore : (r.TotalScore > 4 ? Math.Round(r.TotalScore / 25.0, 2) : r.TotalScore);
+                var ach = r.Achievement > 0 ? r.Achievement : (actual / 4.0 * 100.0);
+
                 ws.Cell(row, 1).Value = idx + 1;
                 ws.Cell(row, 2).Value = r.Tanggal.ToString("yyyy-MM-dd");
                 ws.Cell(row, 3).Value = r.Waktu.ToString(@"hh\:mm");
@@ -378,20 +478,31 @@ namespace MBS_SAP.Controllers
                 ws.Cell(row, 10).Value = r.DetilLokasi ?? "-";
                 ws.Cell(row, 11).Value = r.NamaJalan ?? "-";
                 ws.Cell(row, 12).Value = r.SegmentJalan ?? "-";
-                ws.Cell(row, 13).Value = r.Shift ?? "-";
-                ws.Cell(row, 14).Value = r.SkorLebarJalan;
-                ws.Cell(row, 15).Value = r.SkorGradeJalan;
-                ws.Cell(row, 16).Value = r.SkorPermukaanJalan;
-                ws.Cell(row, 17).Value = r.SkorSafetyBerm;
-                ws.Cell(row, 18).Value = r.SkorDrainaseParit;
-                ws.Cell(row, 19).Value = r.SkorSuperelevasiTikungan;
-                ws.Cell(row, 20).Value = r.SkorBebasSpillage;
-                ws.Cell(row, 21).Value = r.SkorRambuDebu;
-                ws.Cell(row, 22).Value = r.TotalScore;
-                ws.Cell(row, 23).Value = r.KategoriIndex;
-                ws.Cell(row, 24).Value = r.Catatan ?? "-";
-                ws.Cell(row, 25).Value = r.TindakanPerbaikan ?? "-";
-                ws.Cell(row, 26).Value = r.Pic ?? "-";
+                ws.Cell(row, 13).Value = r.PanjangSegment ?? 100;
+                ws.Cell(row, 14).Value = r.Shift ?? "-";
+                ws.Cell(row, 15).Value = r.SkorSurfacing;
+                ws.Cell(row, 16).Value = r.DefisitSurfacing ?? 0;
+                ws.Cell(row, 17).Value = r.SkorUndulation;
+                ws.Cell(row, 18).Value = r.DefisitUndulation ?? 0;
+                ws.Cell(row, 19).Value = r.SkorSpoil;
+                ws.Cell(row, 20).Value = r.DefisitSpoil ?? 0;
+                ws.Cell(row, 21).Value = r.SkorSafetyBerm;
+                ws.Cell(row, 22).Value = r.DefisitSafetyBerm ?? 0;
+                ws.Cell(row, 23).Value = r.SkorCrossfall;
+                ws.Cell(row, 24).Value = r.DefisitCrossfall ?? 0;
+                ws.Cell(row, 25).Value = r.SkorDust;
+                ws.Cell(row, 26).Value = r.DefisitDust ?? 0;
+                ws.Cell(row, 27).Value = r.SkorDrainage;
+                ws.Cell(row, 28).Value = r.DefisitDrainage ?? 0;
+                ws.Cell(row, 29).Value = r.SkorRoadAttachment;
+                ws.Cell(row, 30).Value = r.DefisitRoadAttachment ?? 0;
+                ws.Cell(row, 31).Value = actual;
+                ws.Cell(row, 32).Value = 4.0;
+                ws.Cell(row, 33).Value = ach;
+                ws.Cell(row, 34).Value = r.KategoriIndex;
+                ws.Cell(row, 35).Value = r.Catatan ?? "-";
+                ws.Cell(row, 36).Value = r.TindakanPerbaikan ?? "-";
+                ws.Cell(row, 37).Value = r.Pic ?? "-";
 
                 row++;
             }

@@ -52,11 +52,34 @@ namespace MBS_SAP.Models
         [MaxLength(50)]
         public string? Longitude { get; set; }
 
-        // Parameter Penilaian Road Condition Index (Skor 0 - 100)
+        // Standard Parameter RCI Baru (Skala 1 - 4 & Segmen Jalan)
+        public double? PanjangSegment { get; set; } = 100;
+        public double? DefisitSurfacing { get; set; } = 0;
+        public double? DefisitUndulation { get; set; } = 0;
+        public double? DefisitSpoil { get; set; } = 0;
+        public double? DefisitSafetyBerm { get; set; } = 0;
+        public double? DefisitCrossfall { get; set; } = 0;
+        public double? DefisitDust { get; set; } = 0;
+        public double? DefisitDrainage { get; set; } = 0;
+        public double? DefisitRoadAttachment { get; set; } = 0;
+
+        public int SkorSurfacing { get; set; } = 4;
+        public int SkorUndulation { get; set; } = 4;
+        public int SkorSpoil { get; set; } = 4;
+        public int SkorSafetyBerm { get; set; } = 4;
+        public int SkorCrossfall { get; set; } = 4;
+        public int SkorDust { get; set; } = 4;
+        public int SkorDrainage { get; set; } = 4;
+        public int SkorRoadAttachment { get; set; } = 4;
+
+        public double ActualRoadScore { get; set; } = 4.0;
+        public double TargetScore { get; set; } = 4.0;
+        public double Achievement { get; set; } = 100.0;
+
+        // Legacy / Backward-compatibility fields
         public int SkorLebarJalan { get; set; } = 100;
         public int SkorGradeJalan { get; set; } = 100;
         public int SkorPermukaanJalan { get; set; } = 100;
-        public int SkorSafetyBerm { get; set; } = 100;
         public int SkorDrainaseParit { get; set; } = 100;
         public int SkorSuperelevasiTikungan { get; set; } = 100;
         public int SkorBebasSpillage { get; set; } = 100;
