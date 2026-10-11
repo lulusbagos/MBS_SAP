@@ -6,14 +6,14 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Display 4 &mdash; 3D Mine Digital Twin &amp; Spatial Radar Command Center</title>
+    <title>Display 4 &mdash; 3D Achievement Citadel &amp; Executive Milestone Center</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
 
-    <!-- Three.js 3D Engine & OrbitControls (Local offline with CDN fallback) -->
+    <!-- Three.js 3D Engine & OrbitControls -->
     <script src="~/lib/three/three.min.js"></script>
     <script src="~/lib/three/OrbitControls.js"></script>
     <script>
@@ -26,16 +26,15 @@
     <style>
     :root {
         --bg-space: #030712;
-        --hud-bg: rgba(10, 17, 34, 0.82);
-        --hud-border: rgba(56, 189, 248, 0.22);
-        --hud-border-glow: rgba(56, 189, 248, 0.6);
-        --neon-blue: #38bdf8;
-        --neon-cyan: #06b6d4;
+        --hud-bg: rgba(11, 19, 43, 0.85);
+        --hud-border: rgba(245, 158, 11, 0.25);
+        --hud-border-cyan: rgba(56, 189, 248, 0.35);
+        --gold-main: #f59e0b;
+        --gold-bright: #fbbf24;
         --neon-green: #10b981;
-        --neon-amber: #f59e0b;
+        --neon-cyan: #38bdf8;
         --neon-red: #f43f5e;
-        --neon-purple: #8b5cf6;
-        --text-primary: #f8fafc;
+        --text-white: #ffffff;
         --text-muted: #94a3b8;
     }
 
@@ -46,7 +45,7 @@
         overflow: hidden;
         background-color: var(--bg-space);
         font-family: 'Poppins', sans-serif;
-        color: var(--text-primary);
+        color: var(--text-white);
         user-select: none;
     }
 
@@ -83,12 +82,12 @@
         justify-content: space-between;
         align-items: center;
         background: var(--hud-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
         border: 1px solid var(--hud-border);
         border-radius: 14px;
         padding: 8px 18px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(245, 158, 11, 0.2);
     }
 
     .hud-brand {
@@ -96,18 +95,18 @@
         align-items: center;
         gap: 12px;
     }
-    .hud-badge-3d {
-        background: linear-gradient(135deg, #0284c7, #2563eb);
+    .hud-badge-gold {
+        background: linear-gradient(135deg, #d97706, #b45309);
         color: #fff;
         font-size: 11px;
         font-weight: 800;
-        padding: 4px 8px;
+        padding: 4px 10px;
         border-radius: 6px;
         letter-spacing: 1px;
-        box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 5px;
     }
     .hud-title {
         font-size: 16px;
@@ -118,7 +117,7 @@
     }
     .hud-subtitle {
         font-size: 10.5px;
-        color: var(--neon-cyan);
+        color: var(--gold-bright);
         letter-spacing: 0.5px;
         font-family: 'JetBrains Mono', monospace;
     }
@@ -144,16 +143,29 @@
         cursor: pointer;
     }
     .nav-btn:hover {
-        background: rgba(56, 189, 248, 0.18);
-        border-color: var(--neon-blue);
+        background: rgba(245, 158, 11, 0.2);
+        border-color: var(--gold-main);
         color: #ffffff;
         transform: translateY(-1px);
     }
     .nav-btn.active {
-        background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(2, 132, 199, 0.4));
-        border-color: var(--neon-cyan);
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(180, 83, 9, 0.45));
+        border-color: var(--gold-bright);
         color: #ffffff;
-        box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+        box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+    }
+
+    .slide-timer-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        color: var(--gold-bright);
+        font-family: 'JetBrains Mono', monospace;
     }
 
     .hud-clock {
@@ -183,8 +195,8 @@
     }
 
     .hud-col {
-        width: 320px;
-        max-width: 320px;
+        width: 330px;
+        max-width: 330px;
         display: flex;
         flex-direction: column;
         gap: 10px;
@@ -203,7 +215,7 @@
         border: 1px solid var(--hud-border);
         border-radius: 12px;
         padding: 12px 14px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         position: relative;
         overflow: hidden;
     }
@@ -212,7 +224,7 @@
         position: absolute;
         top: 0; left: 0; right: 0;
         height: 2px;
-        background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+        background: linear-gradient(90deg, transparent, var(--gold-bright), transparent);
     }
 
     .hud-card-header {
@@ -239,6 +251,32 @@
         font-family: 'JetBrains Mono', monospace;
     }
 
+    /* Trophy Hero Banner */
+    .trophy-hero-box {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.05));
+        border: 1.5px solid rgba(245, 158, 11, 0.35);
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+        margin-bottom: 8px;
+    }
+    .trophy-score-big {
+        font-size: 30px;
+        font-weight: 900;
+        color: #ffffff;
+        font-family: 'JetBrains Mono', monospace;
+        text-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
+        line-height: 1;
+    }
+    .trophy-score-label {
+        font-size: 10.5px;
+        color: var(--gold-bright);
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        margin-top: 4px;
+    }
+
     /* KPI Grid & Items */
     .kpi-row {
         display: grid;
@@ -253,7 +291,7 @@
         text-align: center;
     }
     .kpi-label {
-        font-size: 9.5px;
+        font-size: 9px;
         color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -266,70 +304,41 @@
         line-height: 1;
     }
 
-    /* Mini Progress Bar */
-    .hud-prog-item { margin-bottom: 6px; }
-    .hud-prog-meta {
-        display: flex;
-        justify-content: space-between;
-        font-size: 10px;
-        color: var(--text-muted);
-        margin-bottom: 2px;
-    }
-    .hud-prog-bar {
-        height: 5px;
-        background: rgba(255, 255, 255, 0.08);
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    .hud-prog-fill {
-        height: 100%;
-        border-radius: 4px;
-        transition: width 0.6s ease;
-    }
-
-    /* Hazard Radar List */
-    .hazard-radar-item {
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 8px;
-        padding: 7px 10px;
-        margin-bottom: 6px;
+    /* 3D Pillar Legend Table */
+    .pillar-legend-item {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 8px;
+        padding: 6px 8px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 6px;
+        margin-bottom: 5px;
+        cursor: pointer;
         transition: all 0.2s;
     }
-    .hazard-radar-item:hover {
-        background: rgba(56, 189, 248, 0.08);
-        border-color: rgba(56, 189, 248, 0.4);
+    .pillar-legend-item:hover {
+        background: rgba(245, 158, 11, 0.12);
+        border-color: rgba(245, 158, 11, 0.4);
         transform: translateX(3px);
     }
-    .hazard-radar-title {
+    .pillar-color-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        display: inline-block;
+        margin-right: 6px;
+        box-shadow: 0 0 6px currentColor;
+    }
+    .pillar-name {
         font-size: 11px;
-        font-weight: 700;
-        color: #ffffff;
-        line-height: 1.2;
-    }
-    .hazard-radar-sub {
-        font-size: 9.5px;
-        color: var(--text-muted);
-    }
-    .btn-focus-cam {
-        background: rgba(56, 189, 248, 0.15);
-        border: 1px solid rgba(56, 189, 248, 0.4);
-        color: var(--neon-blue);
-        border-radius: 6px;
-        padding: 3px 8px;
-        font-size: 10px;
         font-weight: 600;
-        cursor: pointer;
-        transition: all 0.15s;
-        flex-shrink: 0;
+        color: #ffffff;
     }
-    .btn-focus-cam:hover {
-        background: var(--neon-blue);
-        color: #000000;
+    .pillar-val {
+        font-size: 11px;
+        font-weight: 800;
+        font-family: 'JetBrains Mono', monospace;
     }
 
     /* Bottom HUD Toolbar */
@@ -338,12 +347,12 @@
         justify-content: space-between;
         align-items: center;
         background: var(--hud-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
         border: 1px solid var(--hud-border);
         border-radius: 12px;
         padding: 8px 16px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
     .cam-modes {
         display: flex;
@@ -365,14 +374,14 @@
         transition: all 0.2s;
     }
     .cam-btn:hover {
-        background: rgba(56, 189, 248, 0.15);
+        background: rgba(245, 158, 11, 0.2);
         color: #ffffff;
     }
     .cam-btn.active {
-        background: linear-gradient(135deg, #0284c7, #2563eb);
+        background: linear-gradient(135deg, #d97706, #b45309);
         color: #ffffff;
-        border-color: var(--neon-cyan);
-        box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+        border-color: var(--gold-bright);
+        box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
     }
 
     .ticker-bar {
@@ -383,59 +392,46 @@
         gap: 12px;
         font-family: 'JetBrains Mono', monospace;
     }
-    .sonar-ping {
+    .sonar-ping-gold {
         width: 8px;
         height: 8px;
-        background-color: var(--neon-green);
+        background-color: var(--gold-bright);
         border-radius: 50%;
         display: inline-block;
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-        animation: pulseSonar 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+        animation: pulseGold 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
     }
-    @@keyframes pulseSonar {
-        to { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    @@keyframes pulseGold {
+        to { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
     }
 
-    /* 3D Object Label Hover Tooltip */
+    /* 3D Tooltip */
     #objTooltip {
         position: absolute;
         display: none;
-        background: rgba(15, 23, 42, 0.95);
+        background: rgba(11, 19, 43, 0.95);
         backdrop-filter: blur(8px);
-        border: 1px solid var(--neon-cyan);
+        border: 1px solid var(--gold-bright);
         border-radius: 8px;
         padding: 8px 12px;
         font-size: 11px;
         color: #ffffff;
         pointer-events: none;
         z-index: 100;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 0 12px rgba(6, 182, 212, 0.3);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 0 14px rgba(245, 158, 11, 0.4);
         transform: translate(-50%, -120%);
-    }
-
-    /* Slide Pause Pill */
-    .slide-timer-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-family: 'JetBrains Mono', monospace;
     }
     </style>
 </head>
 <body>
 
-    <!-- 3D WEBGL OPENGL CANVAS -->
+    <!-- 3D WEBGL CANVAS -->
     <canvas id="webglCanvas"></canvas>
 
     <!-- 3D OBJECT HOVER TOOLTIP -->
     <div id="objTooltip">
-        <div id="tooltipTitle" style="font-weight:700; color:var(--neon-cyan);">Segment Info</div>
-        <div id="tooltipBody" style="font-size:10px; color:#cbd5e1;">Skor: 4.00 / 4.00</div>
+        <div id="tooltipTitle" style="font-weight:700; color:var(--gold-bright);">Parameter 3D</div>
+        <div id="tooltipBody" style="font-size:10px; color:#cbd5e1;">Skor Ketercapaian: 100%</div>
     </div>
 
     <!-- HUD OVERLAY LAYER -->
@@ -444,10 +440,10 @@
         <!-- ── TOP HUD HEADER ── -->
         <header class="hud-header interactive">
             <div class="hud-brand">
-                <span class="hud-badge-3d"><i class="bi bi-box"></i> OPENGL 3D</span>
+                <span class="hud-badge-gold"><i class="bi bi-trophy-fill"></i> ACHIEVEMENT 3D</span>
                 <div>
-                    <div class="hud-title">MBS COMMAND CENTER &bull; DIGITAL TWIN</div>
-                    <div class="hud-subtitle">SPATIAL RADAR &bull; RCI ROAD PROFILE &bull; PIT FLEET TELEMETRY</div>
+                    <div class="hud-title">THE 3D ACHIEVEMENT CITADEL</div>
+                    <div class="hud-subtitle">MONUMEN PENCAPAIAN PRESTASI &bull; K3, OPERASIONAL &bull; RCI PRIMA</div>
                 </div>
             </div>
 
@@ -461,12 +457,12 @@
                 <a href="/Display3" class="nav-btn" title="Display 3: RCI, FCI &amp; BBS Live Photo Center">
                     <i class="bi bi-camera-fill text-info"></i> Display 3
                 </a>
-                <a href="/Display4" class="nav-btn active" title="Display 4: 3D Mine Spatial Digital Twin">
-                    <i class="bi bi-globe text-cyan"></i> Display 4 🌐
+                <a href="/Display4" class="nav-btn active" title="Display 4: 3D Achievement Citadel">
+                    <i class="bi bi-trophy-fill text-warning"></i> Display 4 🏆
                 </a>
 
                 <div class="slide-timer-pill">
-                    <span class="sonar-ping"></span>
+                    <span class="sonar-ping-gold"></span>
                     <span id="slideCountdown">05:00</span>
                     <button type="button" class="btn btn-sm p-0 text-muted ms-1" onclick="togglePauseSlide()" id="btnPauseSlide" title="Jeda rotasi slide">
                         <i class="bi bi-pause-fill" id="pauseIcon"></i>
@@ -487,137 +483,181 @@
         <!-- ── MAIN HUD MIDDLE (COLUMNS LEFT & RIGHT) ── -->
         <div class="hud-middle">
             
-            <!-- LEFT COLUMN: DISPLAY 1 & 2 SAFETY, HAZARD & P2H -->
+            <!-- LEFT COLUMN: ACHIEVEMENT SUMMARY & DISPLAY 1 & 2 -->
             <aside class="hud-col interactive">
                 
+                <!-- Main Achievement Trophy Banner -->
+                <div class="hud-card">
+                    <div class="trophy-hero-box">
+                        <i class="bi bi-award-fill text-warning" style="font-size: 28px;"></i>
+                        <div class="trophy-score-big" id="overallAchievementVal">98.2%</div>
+                        <div class="trophy-score-label">OVERALL OPERATIONAL INDEX</div>
+                        <div class="badge rounded-pill bg-warning text-dark fw-bold px-3 py-1 mt-1" style="font-size: 10px;">
+                            <i class="bi bi-star-fill me-1"></i>PREDIKAT: EXCELLENT / PRIMA
+                        </div>
+                    </div>
+
+                    <div class="kpi-row">
+                        <div class="kpi-box">
+                            <div class="kpi-label">RCI Road Quality</div>
+                            <div class="kpi-number text-success" id="kpiRciScore">3.92</div>
+                        </div>
+                        <div class="kpi-box">
+                            <div class="kpi-label">P2H Readiness</div>
+                            <div class="kpi-number text-info" id="kpiP2hScore">94.2%</div>
+                        </div>
+                        <div class="kpi-box">
+                            <div class="kpi-label">Safe Behavior (BBS)</div>
+                            <div class="kpi-number text-warning" id="kpiBbsScore">95.4%</div>
+                        </div>
+                        <div class="kpi-box">
+                            <div class="kpi-label">Settling Pond (SPI)</div>
+                            <div class="kpi-number text-primary" id="kpiSpiScore">98.2%</div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Safety Health Pulse Card -->
                 <div class="hud-card">
                     <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-heart-pulse-fill text-danger"></i> Safety Pulse (K3)</span>
-                        <span class="hud-badge-val" style="background: rgba(16, 185, 129, 0.2); color: var(--neon-green);" id="safeIndexVal">98.6%</span>
+                        <span class="hud-card-title"><i class="bi bi-shield-fill-check text-success"></i> Kepatuhan K3 &amp; Hazard</span>
+                        <span class="hud-badge-val" style="background: rgba(16, 185, 129, 0.2); color: var(--neon-green);" id="safeComplianceVal">98.6%</span>
                     </div>
-                    <div class="kpi-row">
-                        <div class="kpi-box">
-                            <div class="kpi-label">Open Hazard</div>
-                            <div class="kpi-number text-warning" id="kpiOpenHazard">0</div>
-                        </div>
-                        <div class="kpi-box">
-                            <div class="kpi-label">Closed Hazard</div>
-                            <div class="kpi-number text-success" id="kpiClosedHazard">0</div>
-                        </div>
-                        <div class="kpi-box">
-                            <div class="kpi-label">P5M Hari Ini</div>
-                            <div class="kpi-number text-info" id="kpiP5m">0</div>
-                        </div>
-                        <div class="kpi-box">
-                            <div class="kpi-label">Critical / KTA</div>
-                            <div class="kpi-number text-danger" id="kpiCriticalHazard">0</div>
-                        </div>
+                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25" style="font-size:11px;">
+                        <span><i class="bi bi-check2-circle text-success me-1"></i>Rasio Penyelesaian Hazard</span>
+                        <strong class="text-white" id="hazardCloseRatio">96.5% Closed</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25" style="font-size:11px;">
+                        <span><i class="bi bi-people-fill text-info me-1"></i>P5M Safety Briefing</span>
+                        <strong class="text-white" id="kpiP5mCount">18 Sesi Hari Ini</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center py-1" style="font-size:11px;">
+                        <span><i class="bi bi-activity text-warning me-1"></i>Zero Incident Streak</span>
+                        <strong class="text-warning">AMAN TERKENDALI</strong>
                     </div>
                 </div>
 
-                <!-- P2H Fleet Readiness Card -->
+                <!-- 3D Graph Legend Selector -->
                 <div class="hud-card">
                     <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-truck-front-fill text-primary"></i> Armada P2H Aktif</span>
-                        <span class="hud-badge-val" style="background: rgba(56, 189, 248, 0.2); color: var(--neon-blue);" id="p2hRateVal">94.2%</span>
+                        <span class="hud-card-title"><i class="bi bi-bar-chart-fill text-warning"></i> Navigasi Grafik 3D</span>
+                        <span class="badge bg-secondary" style="font-size:9px;">KLIK UNTUK FOKUS</span>
                     </div>
-                    <div class="hud-prog-item">
-                        <div class="hud-prog-meta">
-                            <span>Unit Siap Operasi</span>
-                            <span id="p2hReadyLabel">49 / 52 Unit</span>
+                    <div class="pillar-legend-item" onclick="focusPillar(0)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
+                            <span class="pillar-name">RCI Permukaan (Surfacing)</span>
                         </div>
-                        <div class="hud-prog-bar">
-                            <div class="hud-prog-fill" style="width: 94%; background: linear-gradient(90deg, #0284c7, #10b981);" id="p2hFill"></div>
+                        <span class="pillar-val text-success" id="legSurfacing">3.9 / 4.0</span>
+                    </div>
+                    <div class="pillar-legend-item" onclick="focusPillar(1)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
+                            <span class="pillar-name">RCI Undulation (Gelombang)</span>
                         </div>
+                        <span class="pillar-val text-success" id="legUndulation">3.8 / 4.0</span>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center mt-2" style="font-size:10px; color:var(--text-muted);">
-                        <span><i class="bi bi-check-circle-fill text-success me-1"></i>Layak Jalan: <strong class="text-white" id="p2hReadyCount">49</strong></span>
-                        <span><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>Defect: <strong class="text-white" id="p2hDefectCount">3</strong></span>
+                    <div class="pillar-legend-item" onclick="focusPillar(2)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
+                            <span class="pillar-name">RCI Tanggul (Safety Berm)</span>
+                        </div>
+                        <span class="pillar-val text-success" id="legBerm">3.9 / 4.0</span>
                     </div>
-                </div>
-
-                <!-- 3D Spatial Hazard Radar List -->
-                <div class="hud-card">
-                    <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-radar text-cyan"></i> Hazard Spatial Radar</span>
-                        <span class="badge rounded-pill bg-danger" style="font-size:9px;" id="badgeHazardCount">0 PINS</span>
-                    </div>
-                    <div id="hazardRadarContainer" style="max-height: 200px; overflow-y: auto;">
-                        <!-- Rendered via JS -->
+                    <div class="pillar-legend-item" onclick="focusPillar(3)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#38bdf8; color:#38bdf8;"></span>
+                            <span class="pillar-name">RCI Drainase &amp; Crossfall</span>
+                        </div>
+                        <span class="pillar-val text-info" id="legDrainage">4.0 / 4.0</span>
                     </div>
                 </div>
 
             </aside>
 
-            <!-- RIGHT COLUMN: DISPLAY 3 RCI HAULING ROAD, 8 PARAMETERS & INFRASTRUCTURE -->
+            <!-- RIGHT COLUMN: 3D SKYSCRAPER PILLARS SPECIFICATION -->
             <aside class="hud-col interactive">
                 
-                <!-- RCI Road Condition Card -->
+                <!-- 8 RCI Parameter Skyscraper Detail -->
                 <div class="hud-card">
                     <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-cone-striped text-warning"></i> RCI Road Index</span>
-                        <span class="hud-badge-val" style="background: rgba(16, 185, 129, 0.25); color: var(--neon-green);" id="rciAvgScoreBadge">3.92 / 4.00</span>
+                        <span class="hud-card-title"><i class="bi bi-cone-striped text-warning"></i> 8 Pilar Standar SP3 (RCI)</span>
+                        <span class="hud-badge-val" style="background: rgba(245, 158, 11, 0.2); color: var(--gold-bright);">SKALA 4.0</span>
                     </div>
-                    <div class="kpi-row">
-                        <div class="kpi-box">
-                            <div class="kpi-label">Pita Segmen Baik</div>
-                            <div class="kpi-number text-success" id="kpiRciBaik">0</div>
+                    
+                    <div class="pillar-legend-item" onclick="focusPillar(4)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#38bdf8; color:#38bdf8;"></span>
+                            <span class="pillar-name">Spoil Berm Removal</span>
                         </div>
-                        <div class="kpi-box">
-                            <div class="kpi-label">Segmen Perhatian</div>
-                            <div class="kpi-number text-warning" id="kpiRciSedang">0</div>
-                        </div>
+                        <span class="pillar-val text-info" id="legSpoil">3.9 / 4.0</span>
                     </div>
-
-                    <!-- 8 Parameter Mini Gauges -->
-                    <div class="mt-3">
-                        <div class="hud-prog-item">
-                            <div class="hud-prog-meta"><span>Surfacing (Batu Lepas)</span><span id="valSurfacing">3.9 / 4</span></div>
-                            <div class="hud-prog-bar"><div class="hud-prog-fill" style="width: 98%; background: #10b981;" id="barSurfacing"></div></div>
+                    <div class="pillar-legend-item" onclick="focusPillar(5)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#f59e0b; color:#f59e0b;"></span>
+                            <span class="pillar-name">Dust Suppression (Debu)</span>
                         </div>
-                        <div class="hud-prog-item">
-                            <div class="hud-prog-meta"><span>Undulation (Bergelombang)</span><span id="valUndulation">3.8 / 4</span></div>
-                            <div class="hud-prog-bar"><div class="hud-prog-fill" style="width: 95%; background: #10b981;" id="barUndulation"></div></div>
+                        <span class="pillar-val text-warning" id="legDust">3.8 / 4.0</span>
+                    </div>
+                    <div class="pillar-legend-item" onclick="focusPillar(6)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
+                            <span class="pillar-name">Road Attachment (Rambu)</span>
                         </div>
-                        <div class="hud-prog-item">
-                            <div class="hud-prog-meta"><span>Safety Berm (Tanggul)</span><span id="valBerm">3.9 / 4</span></div>
-                            <div class="hud-prog-bar"><div class="hud-prog-fill" style="width: 98%; background: #10b981;" id="barBerm"></div></div>
+                        <span class="pillar-val text-success" id="legAttachment">4.0 / 4.0</span>
+                    </div>
+                    <div class="pillar-legend-item" onclick="focusPillar(7)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
+                            <span class="pillar-name">Crossfall Kemiringan</span>
                         </div>
-                        <div class="hud-prog-item">
-                            <div class="hud-prog-meta"><span>Drainage &amp; Crossfall</span><span id="valDrainage">4.0 / 4</span></div>
-                            <div class="hud-prog-bar"><div class="hud-prog-fill" style="width: 100%; background: #10b981;" id="barDrainage"></div></div>
-                        </div>
+                        <span class="pillar-val text-success" id="legCrossfall">3.9 / 4.0</span>
                     </div>
                 </div>
 
-                <!-- Field Infrastructure Compliance (FCI, BBS, SPI) -->
+                <!-- Fleet & Infrastructure Readiness -->
                 <div class="hud-card">
                     <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-buildings-fill text-info"></i> Fasilitas &amp; Lingkungan</span>
-                        <span class="hud-badge-val" style="background: rgba(56, 189, 248, 0.2); color: var(--neon-blue);">SP3 AKTIF</span>
+                        <span class="hud-card-title"><i class="bi bi-truck-front-fill text-primary"></i> Armada &amp; Fasilitas</span>
+                        <span class="hud-badge-val" style="background: rgba(56, 189, 248, 0.2); color: var(--neon-cyan);">LIVE P2H</span>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25" style="font-size:11px;">
-                        <span><i class="bi bi-fuel-pump text-primary me-1"></i>FCI Fuel Readiness</span>
-                        <strong class="text-white" id="fciVal">96.8%</strong>
+                    <div class="pillar-legend-item" onclick="focusPillar(8)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#8b5cf6; color:#8b5cf6;"></span>
+                            <span class="pillar-name">Kesiapan Unit P2H</span>
+                        </div>
+                        <span class="pillar-val text-purple" id="legP2h">94.2% (49 Unit)</span>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25" style="font-size:11px;">
-                        <span><i class="bi bi-person-check-fill text-success me-1"></i>BBS Perilaku Selamat</span>
-                        <strong class="text-white" id="bbsVal">95.4%</strong>
+                    <div class="pillar-legend-item" onclick="focusPillar(9)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#06b6d4; color:#06b6d4;"></span>
+                            <span class="pillar-name">FCI Fuel Station Readiness</span>
+                        </div>
+                        <span class="pillar-val text-cyan" id="legFci">96.8%</span>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center py-1" style="font-size:11px;">
-                        <span><i class="bi bi-droplet-half text-cyan me-1"></i>Settling Pond (SPI)</span>
-                        <strong class="text-white" id="spiVal">98.2%</strong>
+                    <div class="pillar-legend-item" onclick="focusPillar(10)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
+                            <span class="pillar-name">BBS Safe Behavior Index</span>
+                        </div>
+                        <span class="pillar-val text-success" id="legBbs">95.4%</span>
+                    </div>
+                    <div class="pillar-legend-item" onclick="focusPillar(11)">
+                        <div>
+                            <span class="pillar-color-indicator" style="background:#38bdf8; color:#38bdf8;"></span>
+                            <span class="pillar-name">Settling Pond Compliance</span>
+                        </div>
+                        <span class="pillar-val text-info" id="legSpi">98.2%</span>
                     </div>
                 </div>
 
-                <!-- Hauling Road Segments Interactive List -->
+                <!-- Segmen Jalan Prestasi Tertinggi -->
                 <div class="hud-card">
                     <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-signpost-split text-warning"></i> Segmen Jalan 3D</span>
-                        <span class="badge bg-secondary" style="font-size:9px;" id="badgeSegmentCount">0 STA</span>
+                        <span class="hud-card-title"><i class="bi bi-star-fill text-warning"></i> Segmen Jalan Prestasi</span>
+                        <span class="badge bg-success" style="font-size:9px;">100% PRIMA</span>
                     </div>
-                    <div id="segmentListContainer" style="max-height: 180px; overflow-y: auto;">
+                    <div id="topSegmentsContainer" style="max-height: 150px; overflow-y: auto;">
                         <!-- Rendered via JS -->
                     </div>
                 </div>
@@ -629,68 +669,64 @@
         <!-- ── BOTTOM HUD TOOLBAR ── -->
         <footer class="hud-bottom interactive">
             <div class="cam-modes">
-                <span style="font-size:11px; font-weight:700; color:var(--text-muted); margin-right:4px;">KAMERA:</span>
-                <button type="button" class="cam-btn active" id="btnCamDrone" onclick="setCameraMode('drone')">
-                    <i class="bi bi-compass"></i> Drone Patrol
+                <span style="font-size:11px; font-weight:700; color:var(--text-muted); margin-right:4px;">VIEW PRESET:</span>
+                <button type="button" class="cam-btn active" id="btnCamHero" onclick="setCameraPreset('hero')">
+                    <i class="bi bi-compass"></i> Hero Flyover
                 </button>
-                <button type="button" class="cam-btn" id="btnCamSat" onclick="setCameraMode('satellite')">
-                    <i class="bi bi-map"></i> Top-Down GIS
+                <button type="button" class="cam-btn" id="btnCamChart" onclick="setCameraPreset('chart')">
+                    <i class="bi bi-bar-chart-steps"></i> Frontal 3D Chart
                 </button>
-                <button type="button" class="cam-btn" id="btnCamPov" onclick="setCameraMode('pov')">
-                    <i class="bi bi-truck"></i> Haul Road POV
+                <button type="button" class="cam-btn" id="btnCamTrophy" onclick="setCameraPreset('trophy')">
+                    <i class="bi bi-award"></i> Trophy Focus
                 </button>
-                <button type="button" class="cam-btn" id="btnCamReset" onclick="resetCamera()">
-                    <i class="bi bi-arrow-counterclockwise"></i> Reset View
+                <button type="button" class="cam-btn" id="btnCamOrbit" onclick="setCameraPreset('orbit')">
+                    <i class="bi bi-arrows-move"></i> Free Orbit
                 </button>
-                <button type="button" class="cam-btn" id="btnToggleWireframe" onclick="toggleWireframe()">
-                    <i class="bi bi-grid-3x3"></i> Wireframe
+                <button type="button" class="cam-btn" id="btnToggleBeams" onclick="toggleVictoryBeams()">
+                    <i class="bi bi-lightning-charge"></i> Laser Beams
                 </button>
             </div>
 
             <div class="ticker-bar">
-                <span><i class="bi bi-geo-alt-fill text-danger me-1"></i>CPP33 - EXIT PIT HAUL ROUTE</span>
+                <span><i class="bi bi-award-fill text-warning me-1"></i>MBS EXCELLENCE DASHBOARD</span>
                 <span>&bull;</span>
-                <span>ELEVASI: <strong class="text-white">RL +45m s/d +110m</strong></span>
+                <span>STATUS: <strong class="text-white">PENCAPAIAN TARGET TERCAPAI (&gt; 95%)</strong></span>
                 <span>&bull;</span>
-                <span id="fleetStatusText"><i class="bi bi-truck text-primary me-1"></i>5 DUMP TRUCK AKTIF BERGERAK</span>
+                <span>TOTAL 12 PILAR PRESTASI 3 DIMENSI</span>
             </div>
         </footer>
 
     </div>
 
     <!-- ═════════════════════════════════════════════════════════════════════════
-         THREE.JS 3D ENGINE & CONTROLLER SCRIPT
+         THREE.JS 3D ACHIEVEMENT CITADEL ENGINE SCRIPT
          ═════════════════════════════════════════════════════════════════════════ -->
     <script>
     /* ──────────────────────────────────────────────────────────────────────────
-       1. GLOBAL STATE & CONFIGURATION
+       1. GLOBAL STATE & THREE.JS SETUP
        ────────────────────────────────────────────────────────────────────────── */
     let scene, camera, renderer, controls;
-    let terrainMesh, roadGroup, hazardGroup, trucksGroup, radarBeamMesh;
-    let cameraMode = 'drone'; // 'drone', 'satellite', 'pov', 'manual'
-    let isWireframe = false;
     let clock = new THREE.Clock();
+    let trophyMesh, trophyRingGroup;
+    let pillarsGroup, beamsGroup, particlesGroup;
+    let cameraMode = 'hero'; // 'hero', 'chart', 'trophy', 'orbit'
+    let showVictoryBeams = true;
     let display4Data = null;
 
-    // Haul Road Spline Curve in 3D Mine Coordinates
-    const roadPoints = [
-        new THREE.Vector3(-180, 22, -140), // CPP33 ROM Stockpile
-        new THREE.Vector3(-120, 18, -100),
-        new THREE.Vector3(-60,  15, -60),
-        new THREE.Vector3(-10,  12, -20),
-        new THREE.Vector3(30,   9,  30),
-        new THREE.Vector3(80,   7,  70),
-        new THREE.Vector3(130,  5,  110),
-        new THREE.Vector3(170,  3,  150),  // Exit Pit / Port
-    ];
-    const roadCurve = new THREE.CatmullRomCurve3(roadPoints);
-
-    // Fleet Trucks Moving on Road
-    const trucks = [
-        { id: 'HD-777-01', t: 0.10, speed: 0.022, mesh: null, color: 0xf59e0b },
-        { id: 'HD-777-02', t: 0.35, speed: 0.025, mesh: null, color: 0x38bdf8 },
-        { id: 'HD-777-03', t: 0.65, speed: 0.020, mesh: null, color: 0x10b981 },
-        { id: 'WT-02-WATER', t: 0.85, speed: 0.015, mesh: null, color: 0x06b6d4 },
+    // 12 Skyscraper Pillar Definitions (Heights and Parameters)
+    const pillarDefs = [
+        { id: 0,  name: 'RCI Surfacing', score: 3.9, max: 4.0, color: 0x10b981, category: 'RCI' },
+        { id: 1,  name: 'RCI Undulation', score: 3.8, max: 4.0, color: 0x10b981, category: 'RCI' },
+        { id: 2,  name: 'RCI Safety Berm', score: 3.9, max: 4.0, color: 0x10b981, category: 'RCI' },
+        { id: 3,  name: 'RCI Drainage', score: 4.0, max: 4.0, color: 0x38bdf8, category: 'RCI' },
+        { id: 4,  name: 'RCI Spoil Berm', score: 3.9, max: 4.0, color: 0x38bdf8, category: 'RCI' },
+        { id: 5,  name: 'RCI Dust Suppression', score: 3.8, max: 4.0, color: 0xf59e0b, category: 'RCI' },
+        { id: 6,  name: 'RCI Road Attachment', score: 4.0, max: 4.0, color: 0x10b981, category: 'RCI' },
+        { id: 7,  name: 'RCI Crossfall', score: 3.9, max: 4.0, color: 0x10b981, category: 'RCI' },
+        { id: 8,  name: 'P2H Fleet Readiness', score: 94.2, max: 100.0, color: 0x8b5cf6, category: 'FLEET' },
+        { id: 9,  name: 'FCI Fuel Readiness', score: 96.8, max: 100.0, color: 0x06b6d4, category: 'FACILITY' },
+        { id: 10, name: 'BBS Safe Behavior', score: 95.4, max: 100.0, color: 0x10b981, category: 'SAFETY' },
+        { id: 11, name: 'Settling Pond (SPI)', score: 98.2, max: 100.0, color: 0x38bdf8, category: 'SPI' }
     ];
 
     /* ──────────────────────────────────────────────────────────────────────────
@@ -701,14 +737,14 @@
         const width = window.innerWidth;
         const height = window.innerHeight;
 
-        // Scene with Atmospheric Fog
+        // Scene with Cyberpunk Deep Space Fog
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050a17);
-        scene.fog = new THREE.FogExp2(0x050a17, 0.0028);
+        scene.background = new THREE.Color(0x030712);
+        scene.fog = new THREE.FogExp2(0x030712, 0.0035);
 
         // Perspective Camera
-        camera = new THREE.PerspectiveCamera(45, width / height, 1, 2500);
-        camera.position.set(220, 160, 260);
+        camera = new THREE.PerspectiveCamera(45, width / height, 1, 3000);
+        camera.position.set(0, 140, 260);
 
         // WebGL Renderer
         renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
@@ -721,372 +757,259 @@
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.maxPolarAngle = Math.PI / 2 - 0.05; // Don't clip underground
-        controls.minDistance = 30;
-        controls.maxDistance = 650;
-        controls.target.set(0, 10, 0);
+        controls.maxPolarAngle = Math.PI / 2 - 0.02;
+        controls.minDistance = 40;
+        controls.maxDistance = 600;
+        controls.target.set(0, 30, 0);
 
         // Lighting
         setupLighting();
 
-        // 3D Elements
-        createTerrain();
-        createSettlingPond();
-        createHaulRoad();
-        createRadarScanner();
-        createTrucks();
-        createAtmosphereParticles();
+        // Scene Components
+        createReflectiveGridFloor();
+        createCentralAchievementMonument();
+        createSkyscraperBarPillars();
+        createVictoryBeams();
+        createGoldenParticles();
 
         // Event Listeners
         window.addEventListener('resize', onWindowResize);
         setupRaycaster();
 
-        // Start Animation Loop
+        // Start 60 FPS Loop
         animate();
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       3. LIGHTING & ATMOSPHERE
+       3. LIGHTING (CYBERPUNK NEON & WARM GOLDEN ACCENTS)
        ────────────────────────────────────────────────────────────────────────── */
     function setupLighting() {
-        const ambientLight = new THREE.AmbientLight(0x38bdf8, 0.45);
+        const ambientLight = new THREE.AmbientLight(0x1e293b, 1.2);
         scene.add(ambientLight);
 
-        // Main Sun Light (warm industrial sunlight)
-        const sunLight = new THREE.DirectionalLight(0xfff7ed, 1.2);
-        sunLight.position.set(150, 300, 120);
+        // Main Golden Directional Light
+        const sunLight = new THREE.DirectionalLight(0xfef3c7, 1.5);
+        sunLight.position.set(120, 250, 100);
         sunLight.castShadow = true;
         sunLight.shadow.mapSize.width = 2048;
         sunLight.shadow.mapSize.height = 2048;
-        sunLight.shadow.camera.near = 10;
-        sunLight.shadow.camera.far = 800;
-        const d = 250;
-        sunLight.shadow.camera.left = -d;
-        sunLight.shadow.camera.right = d;
-        sunLight.shadow.camera.top = d;
-        sunLight.shadow.camera.bottom = -d;
         scene.add(sunLight);
 
-        // Cyan Accent Light for Pit Bottom
-        const pitLight = new THREE.PointLight(0x06b6d4, 1.5, 300);
-        pitLight.position.set(0, 10, 0);
-        scene.add(pitLight);
+        // Central Trophy Point Light (Gold Glow)
+        const trophyLight = new THREE.PointLight(0xf59e0b, 3.0, 180);
+        trophyLight.position.set(0, 40, 0);
+        scene.add(trophyLight);
+
+        // Blue / Cyan Floor Uplights
+        const floorLight = new THREE.PointLight(0x0284c7, 2.0, 250);
+        floorLight.position.set(0, 5, 0);
+        scene.add(floorLight);
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       4. PROCEDURAL TOPOGRAPHICAL MINE TERRAIN & BENCHES
+       4. DIGITAL REFLECTIVE GRID FLOOR
        ────────────────────────────────────────────────────────────────────────── */
-    function createTerrain() {
-        const size = 500;
-        const segments = 100;
-        const geom = new THREE.PlaneGeometry(size, size, segments, segments);
-        geom.rotateX(-Math.PI / 2);
+    function createReflectiveGridFloor() {
+        const floorSize = 400;
+        const floorGeom = new THREE.PlaneGeometry(floorSize, floorSize);
+        floorGeom.rotateX(-Math.PI / 2);
 
-        const pos = geom.attributes.position;
-        for (let i = 0; i < pos.count; i++) {
-            const x = pos.getX(i);
-            const z = pos.getZ(i);
-            const dist = Math.sqrt(x * x + z * z);
-
-            // Stepped Pit Benches
-            let height = 0;
-            if (dist < 70) {
-                height = 2; // Pit Bottom
-            } else if (dist < 140) {
-                height = 12 + Math.sin(dist * 0.15) * 2; // Bench 1
-            } else if (dist < 200) {
-                height = 26 + Math.sin(dist * 0.12) * 3; // Bench 2
-            } else {
-                height = 42 + Math.sin(x * 0.05) * 4 + Math.cos(z * 0.05) * 4; // Highwall & Natural Ridge
-            }
-
-            // Hauling Road Valley cut
-            const roadDist = Math.abs(z - (x * 0.9));
-            if (roadDist < 25) {
-                height = Math.min(height, 10 + (x + 180) * 0.04);
-            }
-
-            pos.setY(i, height);
-        }
-        geom.computeVertexNormals();
-
-        // Custom Mine Soil & Rock Material
-        const mat = new THREE.MeshStandardMaterial({
-            color: 0x1e293b,
-            roughness: 0.85,
-            metalness: 0.15,
-            flatShading: true,
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: 0x050b18,
+            roughness: 0.2,
+            metalness: 0.8
         });
+        const floorMesh = new THREE.Mesh(floorGeom, floorMat);
+        floorMesh.receiveShadow = true;
+        scene.add(floorMesh);
 
-        terrainMesh = new THREE.Mesh(geom, mat);
-        terrainMesh.receiveShadow = true;
-        scene.add(terrainMesh);
-
-        // Contour Grid Lines (Digital Twin Wireframe Effect)
-        const wireframeMat = new THREE.MeshBasicMaterial({
-            color: 0x0284c7,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.12
-        });
-        const wireMesh = new THREE.Mesh(geom, wireframeMat);
-        wireMesh.position.y += 0.2;
-        scene.add(wireMesh);
+        // Hexagonal / Grid Lines
+        const gridHelper = new THREE.GridHelper(floorSize, 50, 0xf59e0b, 0x1e293b);
+        gridHelper.position.y = 0.2;
+        scene.add(gridHelper);
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       5. SETTLING POND WATER BODY (SPI REFLECTION)
+       5. CENTRAL ACHIEVEMENT MONUMENT (GOLDEN TROPHY & CRYSTAL STAR)
        ────────────────────────────────────────────────────────────────────────── */
-    function createSettlingPond() {
-        const pondGeom = new THREE.CircleGeometry(45, 32);
-        pondGeom.rotateX(-Math.PI / 2);
-        const pondMat = new THREE.MeshStandardMaterial({
-            color: 0x0284c7,
-            metalness: 0.8,
+    function createCentralAchievementMonument() {
+        const monumentGroup = new THREE.Group();
+
+        // 1. Layered Hexagonal Pedestal
+        const p1Geom = new THREE.CylinderGeometry(20, 24, 4, 6);
+        const p1Mat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.2 });
+        const p1 = new THREE.Mesh(p1Geom, p1Mat);
+        p1.position.y = 2;
+        monumentGroup.add(p1);
+
+        const p2Geom = new THREE.CylinderGeometry(14, 18, 5, 6);
+        const p2Mat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.1 });
+        const p2 = new THREE.Mesh(p2Geom, p2Mat);
+        p2.position.y = 6.5;
+        monumentGroup.add(p2);
+
+        // 2. Spinning Crystalline Trophy Star (Icosahedron / Diamond)
+        const trophyGeom = new THREE.IcosahedronGeometry(9, 0);
+        const trophyMat = new THREE.MeshStandardMaterial({
+            color: 0xfbbf24,
+            metalness: 0.95,
             roughness: 0.1,
-            transparent: true,
-            opacity: 0.75
+            flatShading: true,
+            emissive: 0xd97706,
+            emissiveIntensity: 0.3
         });
-        const pond = new THREE.Mesh(pondGeom, pondMat);
-        pond.position.set(-60, 3.2, 50);
-        scene.add(pond);
+        trophyMesh = new THREE.Mesh(trophyGeom, trophyMat);
+        trophyMesh.position.y = 24;
+        trophyMesh.castShadow = true;
+        monumentGroup.add(trophyMesh);
+
+        // 3. Orbiting Holographic Rings
+        trophyRingGroup = new THREE.Group();
+        trophyRingGroup.position.y = 24;
+
+        const ringGeom1 = new THREE.TorusGeometry(15, 0.4, 16, 64);
+        const ringMat1 = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.8 });
+        const ring1 = new THREE.Mesh(ringGeom1, ringMat1);
+        ring1.rotateX(Math.PI / 4);
+        trophyRingGroup.add(ring1);
+
+        const ringGeom2 = new THREE.TorusGeometry(19, 0.4, 16, 64);
+        const ringMat2 = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7 });
+        const ring2 = new THREE.Mesh(ringGeom2, ringMat2);
+        ring2.rotateY(Math.PI / 3);
+        trophyRingGroup.add(ring2);
+
+        monumentGroup.add(trophyRingGroup);
+        scene.add(monumentGroup);
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       6. 3D HAULING ROAD RIBBON (COLOR-CODED RCI SEGMENTS)
+       6. SKYSCRAPER 3D BAR PILLARS (GRAFIK BALOK 3 DIMENSI)
        ────────────────────────────────────────────────────────────────────────── */
-    function createHaulRoad() {
-        if (roadGroup) scene.remove(roadGroup);
-        roadGroup = new THREE.Group();
+    function createSkyscraperBarPillars() {
+        if (pillarsGroup) scene.remove(pillarsGroup);
+        pillarsGroup = new THREE.Group();
 
-        const numSegments = 16;
-        const roadWidth = 10;
+        const radius = 95; // Radius of circular arrangement
+        const total = pillarDefs.length;
 
-        for (let i = 0; i < numSegments; i++) {
-            const tStart = i / numSegments;
-            const tEnd = (i + 1) / numSegments;
+        pillarDefs.forEach((p, i) => {
+            const angle = (i / total) * Math.PI * 2;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
 
-            const p1 = roadCurve.getPointAt(tStart);
-            const p2 = roadCurve.getPointAt(tEnd);
+            // Height normalized to percentage (Max height = 75 units)
+            const pct = (p.score / p.max);
+            const height = Math.max(10, pct * 75);
 
-            const dir = new THREE.Vector3().subVectors(p2, p1).normalize();
-            const normal = new THREE.Vector3(-dir.z, 0, dir.x).normalize().multiplyScalar(roadWidth / 2);
+            // 1. Skyscraper Pillar Geometry
+            const barGeom = new THREE.BoxGeometry(10, height, 10);
+            barGeom.translate(0, height / 2, 0); // Origin at base
 
-            // Plane for this road segment
-            const segGeom = new THREE.BufferGeometry();
-            const vertices = new Float32Array([
-                p1.x - normal.x, p1.y + 0.3, p1.z - normal.z,
-                p1.x + normal.x, p1.y + 0.3, p1.z + normal.z,
-                p2.x - normal.x, p2.y + 0.3, p2.z - normal.z,
-
-                p1.x + normal.x, p1.y + 0.3, p1.z + normal.z,
-                p2.x + normal.x, p2.y + 0.3, p2.z + normal.z,
-                p2.x - normal.x, p2.y + 0.3, p2.z - normal.z,
-            ]);
-            segGeom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-            segGeom.computeVertexNormals();
-
-            // Default color emerald, updated dynamically by RCI scores
-            const segMat = new THREE.MeshStandardMaterial({
-                color: (i === 4 || i === 9) ? 0xf59e0b : 0x10b981, // sample highlights
-                roughness: 0.6,
-                metalness: 0.2,
-                side: THREE.DoubleSide
+            const barMat = new THREE.MeshStandardMaterial({
+                color: p.color,
+                metalness: 0.7,
+                roughness: 0.2,
+                transparent: true,
+                opacity: 0.9,
+                emissive: p.color,
+                emissiveIntensity: 0.25
             });
+            const bar = new THREE.Mesh(barGeom, barMat);
+            bar.position.set(x, 0, z);
+            bar.castShadow = true;
+            bar.receiveShadow = true;
 
-            const segMesh = new THREE.Mesh(segGeom, segMat);
-            segMesh.userData = {
-                segmentIndex: i,
-                name: `Sta ${i * 100}+000 - ${(i + 1) * 100}+000`,
-                score: (i === 4 || i === 9) ? 3.45 : 3.95,
-                kategori: (i === 4 || i === 9) ? 'Sedang' : 'Baik'
+            bar.userData = {
+                pillarId: p.id,
+                name: p.name,
+                score: p.score,
+                max: p.max,
+                pct: Math.round(pct * 100),
+                pos: new THREE.Vector3(x, height, z)
             };
-            roadGroup.add(segMesh);
 
-            // Guard Berm Wall on Road Shoulder
-            const bermGeom = new THREE.BoxGeometry(0.8, 1.4, p1.distanceTo(p2));
-            const bermMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 });
-            const berm = new THREE.Mesh(bermGeom, bermMat);
-            berm.position.copy(p1).add(p2).multiplyScalar(0.5);
-            berm.position.add(normal);
-            berm.position.y += 0.8;
-            berm.lookAt(p2.clone().add(normal));
-            roadGroup.add(berm);
-        }
+            // 2. Glowing Halo Cap on top of pillar
+            const capGeom = new THREE.BoxGeometry(11, 1.2, 11);
+            const capMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const cap = new THREE.Mesh(capGeom, capMat);
+            cap.position.set(0, height + 0.6, 0);
+            bar.add(cap);
 
-        scene.add(roadGroup);
-    }
+            // 3. Ground Pedestal Frame
+            const baseGeom = new THREE.BoxGeometry(13, 2, 13);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.5 });
+            const base = new THREE.Mesh(baseGeom, baseMat);
+            base.position.set(0, 1, 0);
+            bar.add(base);
 
-    /* ──────────────────────────────────────────────────────────────────────────
-       7. 3D GEOTECHNICAL SSR RADAR SCANNER (ROTATING CONE)
-       ────────────────────────────────────────────────────────────────────────── */
-    function createRadarScanner() {
-        const radarGroup = new THREE.Group();
-        radarGroup.position.set(-110, 32, -60); // Placed on top of highwall overlooking the pit
-
-        // Radar Dish Base Tower
-        const baseGeom = new THREE.CylinderGeometry(1.5, 2.5, 8, 8);
-        const baseMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.5 });
-        const baseMesh = new THREE.Mesh(baseGeom, baseMat);
-        radarGroup.add(baseMesh);
-
-        // Radar Sweeping Cone (Transparent glowing beam)
-        const coneGeom = new THREE.ConeGeometry(90, 160, 32, 1, true);
-        coneGeom.rotateX(Math.PI / 2);
-        const coneMat = new THREE.MeshBasicMaterial({
-            color: 0x06b6d4,
-            transparent: true,
-            opacity: 0.08,
-            side: THREE.DoubleSide,
-            wireframe: false
-        });
-        radarBeamMesh = new THREE.Mesh(coneGeom, coneMat);
-        radarBeamMesh.position.set(0, 4, 0);
-        radarGroup.add(radarBeamMesh);
-
-        scene.add(radarGroup);
-    }
-
-    /* ──────────────────────────────────────────────────────────────────────────
-       8. 3D FLEET HAUL TRUCKS (MOVING ON ROAD)
-       ────────────────────────────────────────────────────────────────────────── */
-    function createTrucks() {
-        trucksGroup = new THREE.Group();
-
-        trucks.forEach(t => {
-            const truckMesh = new THREE.Group();
-
-            // Truck Body (Dump Bed)
-            const bedGeom = new THREE.BoxGeometry(5.5, 3.2, 8.5);
-            const bedMat = new THREE.MeshStandardMaterial({ color: t.color, roughness: 0.4, metalness: 0.6 });
-            const bed = new THREE.Mesh(bedGeom, bedMat);
-            bed.position.y = 2.8;
-            bed.castShadow = true;
-            truckMesh.add(bed);
-
-            // Truck Cabin
-            const cabGeom = new THREE.BoxGeometry(4.2, 2.4, 3.2);
-            const cabMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
-            const cab = new THREE.Mesh(cabGeom, cabMat);
-            cab.position.set(0, 3.8, 3.2);
-            truckMesh.add(cab);
-
-            // Headlights
-            const lightL = new THREE.PointLight(0xfef08a, 1.2, 25);
-            lightL.position.set(-1.8, 2.8, 5.0);
-            truckMesh.add(lightL);
-            const lightR = new THREE.PointLight(0xfef08a, 1.2, 25);
-            lightR.position.set(1.8, 2.8, 5.0);
-            truckMesh.add(lightR);
-
-            // Big Mining Wheels
-            const wheelGeom = new THREE.CylinderGeometry(1.4, 1.4, 1.2, 16);
-            wheelGeom.rotateZ(Math.PI / 2);
-            const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.9 });
-            const wPositions = [
-                [-2.8, 1.4, 2.6], [2.8, 1.4, 2.6],
-                [-2.8, 1.4, -2.6], [2.8, 1.4, -2.6]
-            ];
-            wPositions.forEach(wp => {
-                const w = new THREE.Mesh(wheelGeom, wheelMat);
-                w.position.set(...wp);
-                truckMesh.add(w);
-            });
-
-            t.mesh = truckMesh;
-            trucksGroup.add(truckMesh);
+            pillarsGroup.add(bar);
         });
 
-        scene.add(trucksGroup);
+        scene.add(pillarsGroup);
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       9. 3D ATMOSPHERIC DUST & SPARK PARTICLES
+       7. VICTORY LASER BEAMS SHOOTING TO THE SKY
        ────────────────────────────────────────────────────────────────────────── */
-    function createAtmosphereParticles() {
-        const pCount = 350;
+    function createVictoryBeams() {
+        if (beamsGroup) scene.remove(beamsGroup);
+        beamsGroup = new THREE.Group();
+
+        pillarDefs.forEach((p, i) => {
+            const pct = (p.score / p.max);
+            if (pct >= 0.90) { // Only high achievement pillars get victory beams
+                const angle = (i / pillarDefs.length) * Math.PI * 2;
+                const x = Math.cos(angle) * 95;
+                const z = Math.sin(angle) * 95;
+                const height = Math.max(10, pct * 75);
+
+                const beamGeom = new THREE.CylinderGeometry(0.6, 1.4, 250, 16);
+                beamGeom.translate(0, 125, 0);
+                const beamMat = new THREE.MeshBasicMaterial({
+                    color: p.color,
+                    transparent: true,
+                    opacity: 0.35,
+                    blending: THREE.AdditiveBlending
+                });
+                const beam = new THREE.Mesh(beamGeom, beamMat);
+                beam.position.set(x, height, z);
+                beamsGroup.add(beam);
+            }
+        });
+
+        scene.add(beamsGroup);
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       8. FLOATING GOLDEN PARTICLES (AURA OF ACHIEVEMENT)
+       ────────────────────────────────────────────────────────────────────────── */
+    function createGoldenParticles() {
+        const count = 400;
         const geom = new THREE.BufferGeometry();
-        const positions = new Float32Array(pCount * 3);
+        const positions = new Float32Array(count * 3);
 
-        for (let i = 0; i < pCount * 3; i += 3) {
-            positions[i] = (Math.random() - 0.5) * 500;
-            positions[i + 1] = Math.random() * 80 + 5;
-            positions[i + 2] = (Math.random() - 0.5) * 500;
+        for (let i = 0; i < count * 3; i += 3) {
+            positions[i] = (Math.random() - 0.5) * 350;
+            positions[i + 1] = Math.random() * 140 + 2;
+            positions[i + 2] = (Math.random() - 0.5) * 350;
         }
         geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
         const mat = new THREE.PointsMaterial({
-            color: 0x38bdf8,
-            size: 1.8,
+            color: 0xfbbf24,
+            size: 2.2,
             transparent: true,
-            opacity: 0.45,
+            opacity: 0.6,
             blending: THREE.AdditiveBlending
         });
 
-        const particles = new THREE.Points(geom, mat);
-        scene.add(particles);
+        particlesGroup = new THREE.Points(geom, mat);
+        scene.add(particlesGroup);
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       10. 3D HAZARD RADAR BEACONS (PULSING PILLARS & SONAR RINGS)
-       ────────────────────────────────────────────────────────────────────────── */
-    function renderHazard3DBeacons(hazards) {
-        if (hazardGroup) scene.remove(hazardGroup);
-        hazardGroup = new THREE.Group();
-
-        if (!hazards || hazards.length === 0) return;
-
-        hazards.slice(0, 15).forEach((h, idx) => {
-            // Position spaced along the pit and road corridor
-            const tPos = (idx * 0.065) % 0.95;
-            const roadPoint = roadCurve.getPointAt(tPos);
-            const offsetX = (idx % 2 === 0 ? 1 : -1) * (14 + (idx % 4) * 5);
-            const pos = new THREE.Vector3(roadPoint.x + offsetX, roadPoint.y, roadPoint.z);
-
-            const isCritical = h.resiko === 'High' || h.resiko === 'Tinggi';
-            const colorHex = isCritical ? 0xf43f5e : 0xf59e0b;
-
-            // 1. Holographic Laser Cylinder
-            const cylGeom = new THREE.CylinderGeometry(0.5, 0.5, 45, 12);
-            cylGeom.translate(0, 22.5, 0);
-            const cylMat = new THREE.MeshBasicMaterial({
-                color: colorHex,
-                transparent: true,
-                opacity: 0.65
-            });
-            const cyl = new THREE.Mesh(cylGeom, cylMat);
-            cyl.position.copy(pos);
-
-            // 2. Sonar Ground Ping Ring
-            const ringGeom = new THREE.RingGeometry(2, 6, 32);
-            ringGeom.rotateX(-Math.PI / 2);
-            const ringMat = new THREE.MeshBasicMaterial({
-                color: colorHex,
-                side: THREE.DoubleSide,
-                transparent: true,
-                opacity: 0.5
-            });
-            const ring = new THREE.Mesh(ringGeom, ringMat);
-            ring.position.copy(pos);
-            ring.position.y += 0.2;
-
-            // Group
-            const pinGroup = new THREE.Group();
-            pinGroup.add(cyl);
-            pinGroup.add(ring);
-            pinGroup.userData = {
-                hazardData: h,
-                pos: pos
-            };
-
-            hazardGroup.add(pinGroup);
-        });
-
-        scene.add(hazardGroup);
-    }
-
-    /* ──────────────────────────────────────────────────────────────────────────
-       11. INTERACTIVE RAYCASTER (HOVER & CLICK DETECTION)
+       9. RAYCASTER & INTERACTIVE TOOLTIP
        ────────────────────────────────────────────────────────────────────────── */
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
@@ -1102,13 +1025,12 @@
 
             raycaster.setFromCamera(mouse, camera);
 
-            // Check road segments
-            if (roadGroup) {
-                const intersects = raycaster.intersectObjects(roadGroup.children);
+            if (pillarsGroup) {
+                const intersects = raycaster.intersectObjects(pillarsGroup.children);
                 if (intersects.length > 0 && intersects[0].object.userData.name) {
                     const d = intersects[0].object.userData;
-                    tooltipTitle.innerText = d.name;
-                    tooltipBody.innerHTML = `Skor RCI: <strong>${d.score} / 4.00</strong> (${d.kategori})`;
+                    tooltipTitle.innerText = `🏆 ${d.name}`;
+                    tooltipBody.innerHTML = `Skor: <strong>${d.score} / ${d.max}</strong> &bull; Ketercapaian: <strong class="text-success">${d.pct}%</strong>`;
                     tooltip.style.left = `${e.clientX}px`;
                     tooltip.style.top = `${e.clientY}px`;
                     tooltip.style.display = 'block';
@@ -1121,7 +1043,7 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       12. ANIMATION LOOP & CAMERA PATROLS
+       10. ANIMATION LOOP (60 FPS)
        ────────────────────────────────────────────────────────────────────────── */
     function animate() {
         requestAnimationFrame(animate);
@@ -1129,53 +1051,37 @@
         const delta = clock.getDelta();
         const time = clock.getElapsedTime();
 
-        // 1. Move Haul Trucks along road curve
-        trucks.forEach(t => {
-            if (t.mesh) {
-                t.t = (t.t + t.speed * delta) % 1.0;
-                const pos = roadCurve.getPointAt(t.t);
-                t.mesh.position.copy(pos);
-
-                // Look at next point ahead
-                const nextPos = roadCurve.getPointAt((t.t + 0.01) % 1.0);
-                t.mesh.lookAt(nextPos);
-            }
-        });
-
-        // 2. Rotate Radar Scanner Beam
-        if (radarBeamMesh) {
-            radarBeamMesh.rotation.z += delta * 1.2;
+        // 1. Rotate Trophy & Rings
+        if (trophyMesh) {
+            trophyMesh.rotation.y += delta * 0.8;
+            trophyMesh.rotation.x = Math.sin(time * 0.5) * 0.2;
+        }
+        if (trophyRingGroup) {
+            trophyRingGroup.children[0].rotation.z += delta * 0.6;
+            trophyRingGroup.children[1].rotation.x += delta * 0.5;
         }
 
-        // 3. Pulse Hazard Beacons
-        if (hazardGroup) {
-            hazardGroup.children.forEach((hg, i) => {
-                const ring = hg.children[1];
-                if (ring) {
-                    const scale = 1.0 + Math.sin(time * 3 + i) * 0.4;
-                    ring.scale.set(scale, scale, scale);
-                }
+        // 2. Pulse Victory Beams
+        if (beamsGroup && showVictoryBeams) {
+            beamsGroup.children.forEach((b, idx) => {
+                const scale = 1.0 + Math.sin(time * 4 + idx) * 0.15;
+                b.scale.set(scale, 1.0, scale);
             });
         }
 
+        // 3. Float Particles Slowly
+        if (particlesGroup) {
+            particlesGroup.rotation.y = time * 0.02;
+        }
+
         // 4. Camera Modes
-        if (cameraMode === 'drone') {
-            const radius = 280;
-            const camSpeed = 0.05;
-            camera.position.x = Math.cos(time * camSpeed) * radius;
-            camera.position.z = Math.sin(time * camSpeed) * radius;
-            camera.position.y = 140 + Math.sin(time * 0.1) * 20;
-            camera.lookAt(0, 15, 0);
-        } else if (cameraMode === 'pov' && trucks[0].mesh) {
-            // Chase camera behind Truck 0
-            const truckPos = trucks[0].mesh.position;
-            const truckRot = trucks[0].mesh.rotation.y;
-            camera.position.set(
-                truckPos.x - Math.sin(truckRot) * 25,
-                truckPos.y + 12,
-                truckPos.z - Math.cos(truckRot) * 25
-            );
-            camera.lookAt(truckPos.x, truckPos.y + 3, truckPos.z);
+        if (cameraMode === 'hero') {
+            const radius = 240;
+            const speed = 0.06;
+            camera.position.x = Math.cos(time * speed) * radius;
+            camera.position.z = Math.sin(time * speed) * radius;
+            camera.position.y = 110 + Math.sin(time * 0.2) * 15;
+            camera.lookAt(0, 35, 0);
         } else {
             controls.update();
         }
@@ -1190,59 +1096,48 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       13. CAMERA & DISPLAY CONTROLS
+       11. CAMERA PRESETS & CONTROLS
        ────────────────────────────────────────────────────────────────────────── */
-    function setCameraMode(mode) {
-        cameraMode = mode;
+    function setCameraPreset(preset) {
+        cameraMode = preset;
         document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
 
-        if (mode === 'drone') {
-            document.getElementById('btnCamDrone').classList.add('active');
+        if (preset === 'hero') {
+            document.getElementById('btnCamHero').classList.add('active');
             controls.enabled = false;
-        } else if (mode === 'satellite') {
-            document.getElementById('btnCamSat').classList.add('active');
+        } else if (preset === 'chart') {
+            document.getElementById('btnCamChart').classList.add('active');
             controls.enabled = true;
-            camera.position.set(0, 380, 10);
-            camera.lookAt(0, 0, 0);
-            controls.target.set(0, 0, 0);
-        } else if (mode === 'pov') {
-            document.getElementById('btnCamPov').classList.add('active');
-            controls.enabled = false;
+            camera.position.set(0, 95, 230);
+            controls.target.set(0, 45, 0);
+        } else if (preset === 'trophy') {
+            document.getElementById('btnCamTrophy').classList.add('active');
+            controls.enabled = true;
+            camera.position.set(0, 42, 60);
+            controls.target.set(0, 24, 0);
+        } else if (preset === 'orbit') {
+            document.getElementById('btnCamOrbit').classList.add('active');
+            controls.enabled = true;
         }
     }
 
-    function resetCamera() {
-        cameraMode = 'manual';
+    function focusPillar(id) {
+        cameraMode = 'orbit';
         document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btnCamOrbit').classList.add('active');
         controls.enabled = true;
-        camera.position.set(220, 160, 260);
-        controls.target.set(0, 10, 0);
-    }
 
-    function toggleWireframe() {
-        isWireframe = !isWireframe;
-        if (terrainMesh) {
-            terrainMesh.material.wireframe = isWireframe;
-        }
-        const btn = document.getElementById('btnToggleWireframe');
-        if (isWireframe) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
+        if (pillarsGroup && pillarsGroup.children[id]) {
+            const p = pillarsGroup.children[id].userData.pos;
+            camera.position.set(p.x * 1.35, p.y + 20, p.z * 1.35);
+            controls.target.set(p.x, p.y * 0.6, p.z);
         }
     }
 
-    function focusHazard(hazardId) {
-        if (!hazardGroup) return;
-        const target = hazardGroup.children.find(h => h.userData.hazardData && h.userData.hazardData.id === hazardId);
-        if (target) {
-            cameraMode = 'manual';
-            document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
-            controls.enabled = true;
-            const p = target.userData.pos;
-            camera.position.set(p.x + 35, p.y + 30, p.z + 35);
-            controls.target.copy(p);
-        }
+    function toggleVictoryBeams() {
+        showVictoryBeams = !showVictoryBeams;
+        if (beamsGroup) beamsGroup.visible = showVictoryBeams;
+        document.getElementById('btnToggleBeams').classList.toggle('active', showVictoryBeams);
     }
 
     function toggleFullscreen() {
@@ -1254,97 +1149,41 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       14. FETCH DISPLAY 4 INTEGRATED DATA (RCI, HAZARD, P2H, OPERATIONS)
+       12. FETCH DATA & DYNAMIC PILLAR HEIGHT UPDATES
        ────────────────────────────────────────────────────────────────────────── */
     function fetchDisplay4Data() {
         fetch('/Display/GetDisplay4Data')
             .then(res => res.json())
             .then(data => {
                 display4Data = data;
-                updateHudUI(data);
-                if (data.hazard && data.hazard.points) {
-                    renderHazard3DBeacons(data.hazard.points);
-                }
+                updateAchievementUI(data);
             })
             .catch(err => console.warn('Error fetching Display 4 data:', err));
     }
 
-    function updateHudUI(data) {
-        // 1. Safety Pulse & Hazards (Display 1)
-        if (data.hazard) {
-            document.getElementById('kpiOpenHazard').innerText = data.hazard.open || 0;
-            document.getElementById('kpiClosedHazard').innerText = data.hazard.closed || 0;
-            document.getElementById('kpiCriticalHazard').innerText = data.hazard.critical || 0;
-            document.getElementById('badgeHazardCount').innerText = `${data.hazard.points ? data.hazard.points.length : 0} PINS`;
+    function updateAchievementUI(data) {
+        if (!data) return;
 
-            // Hazard List Container
-            const hzBox = document.getElementById('hazardRadarContainer');
-            hzBox.innerHTML = '';
-            if (data.hazard.points && data.hazard.points.length > 0) {
-                data.hazard.points.slice(0, 8).forEach(h => {
-                    const isHigh = h.resiko === 'High' || h.resiko === 'Tinggi';
-                    const el = document.createElement('div');
-                    el.className = 'hazard-radar-item';
-                    el.innerHTML = `
-                        <div class="text-truncate">
-                            <div class="hazard-radar-title text-truncate">
-                                <span class="badge ${isHigh ? 'bg-danger' : 'bg-warning text-dark'} py-0 px-1 me-1" style="font-size:8.5px;">${h.resiko}</span>
-                                ${h.temuan || h.lokasi}
-                            </div>
-                            <div class="hazard-radar-sub text-truncate">📍 ${h.lokasi} &bull; ${h.status}</div>
-                        </div>
-                        <button type="button" class="btn-focus-cam" onclick="focusHazard(${h.id})">
-                            <i class="bi bi-crosshair"></i> Fokus
-                        </button>
-                    `;
-                    hzBox.appendChild(el);
-                });
-            } else {
-                hzBox.innerHTML = '<div class="text-muted p-2 text-center" style="font-size:10px;">Semua area hauling aman. Zero open hazard.</div>';
-            }
-        }
-
-        if (data.safetyPulse) {
-            document.getElementById('kpiP5m').innerText = data.safetyPulse.p5mCount || 0;
-            document.getElementById('safeIndexVal').innerText = `${data.safetyPulse.safeIndex || 98.6}%`;
-        }
-
-        // 2. P2H Fleet Readiness (Display 1)
-        if (data.fleetP2h) {
-            const ready = data.fleetP2h.readyCount || 0;
-            const total = data.fleetP2h.todayCount || 0;
-            const defects = data.fleetP2h.breakdownCount || 0;
-            const pct = data.fleetP2h.readinessPct || 94.2;
-
-            document.getElementById('p2hRateVal').innerText = `${pct}%`;
-            document.getElementById('p2hReadyLabel').innerText = `${ready} / ${total} Unit`;
-            document.getElementById('p2hReadyCount').innerText = ready;
-            document.getElementById('p2hDefectCount').innerText = defects;
-            document.getElementById('p2hFill').style.width = `${pct}%`;
-        }
-
-        // 3. RCI Road Index (Display 3)
+        // 1. RCI Road Quality (Display 3)
         if (data.rci) {
-            document.getElementById('rciAvgScoreBadge').innerText = `${data.rci.avgScore} / 4.00`;
-            document.getElementById('kpiRciBaik').innerText = data.rci.baik || 0;
-            document.getElementById('kpiRciSedang').innerText = data.rci.sedang || 0;
+            const rciScore = data.rci.avgScore || 3.92;
+            document.getElementById('kpiRciScore').innerText = `${rciScore} / 4.0`;
 
-            const segBox = document.getElementById('segmentListContainer');
+            // Top Segments List
+            const segBox = document.getElementById('topSegmentsContainer');
             segBox.innerHTML = '';
             if (data.rci.segments && data.rci.segments.length > 0) {
-                document.getElementById('badgeSegmentCount').innerText = `${data.rci.segments.length} STA`;
-                data.rci.segments.slice(0, 10).forEach(s => {
-                    const isGood = s.score >= 3.8;
+                data.rci.segments.slice(0, 5).forEach(s => {
                     const el = document.createElement('div');
                     el.className = 'd-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25';
                     el.style.fontSize = '10.5px';
                     el.innerHTML = `
                         <div class="text-truncate">
-                            <strong>${s.segment || s.namaJalan}</strong>
+                            <strong class="text-white">${s.segment || s.namaJalan}</strong>
                             <div class="text-muted" style="font-size:9.5px;">${s.namaJalan}</div>
                         </div>
-                        <span class="badge ${isGood ? 'bg-success' : 'bg-warning text-dark'}" style="font-family:'JetBrains Mono', monospace; font-size:9.5px;">
-                            ${s.score} / 4
+                        <span class="badge bg-success" style="font-family:'JetBrains Mono', monospace; font-size:9.5px;">
+                            ${s.score} / 4.0
                         </span>
                     `;
                     segBox.appendChild(el);
@@ -1352,16 +1191,37 @@
             }
         }
 
-        // 4. Infrastructure & Facility (Display 3)
+        // 2. P2H Fleet (Display 1)
+        if (data.fleetP2h) {
+            const p2hRate = data.fleetP2h.readinessPct || 94.2;
+            document.getElementById('kpiP2hScore').innerText = `${p2hRate}%`;
+            document.getElementById('legP2h').innerText = `${p2hRate}% (${data.fleetP2h.readyCount || 49} Unit)`;
+        }
+
+        // 3. Safety Pulse (Display 1 & 2)
+        if (data.safetyPulse) {
+            document.getElementById('safeComplianceVal').innerText = `${data.safetyPulse.safeIndex || 98.6}%`;
+            document.getElementById('kpiP5mCount').innerText = `${data.safetyPulse.p5mCount || 18} Sesi Hari Ini`;
+        }
+        if (data.hazard) {
+            const closed = data.hazard.closed || 0;
+            const total = data.hazard.total || 1;
+            const ratio = Math.round((closed / total) * 100);
+            document.getElementById('hazardCloseRatio').innerText = `${ratio}% Closed`;
+        }
+
+        // 4. Infrastructure & BBS (Display 3)
         if (data.facility) {
-            document.getElementById('fciVal').innerText = `${data.facility.fciScore}%`;
-            document.getElementById('bbsVal').innerText = `${data.facility.bbsSafePct}%`;
-            document.getElementById('spiVal').innerText = `${data.facility.spiPondCompliance}%`;
+            document.getElementById('kpiBbsScore').innerText = `${data.facility.bbsSafePct}%`;
+            document.getElementById('kpiSpiScore').innerText = `${data.facility.spiPondCompliance}%`;
+            document.getElementById('legFci').innerText = `${data.facility.fciScore}%`;
+            document.getElementById('legBbs').innerText = `${data.facility.bbsSafePct}%`;
+            document.getElementById('legSpi').innerText = `${data.facility.spiPondCompliance}%`;
         }
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       15. CLOCK & 5-MINUTE AUTO SLIDE ROTATION (DISPLAY 4 -> DISPLAY 1)
+       13. CLOCK & 5-MINUTE AUTO SLIDE ROTATION (DISPLAY 4 -> DISPLAY 1)
        ────────────────────────────────────────────────────────────────────────── */
     function updateClock() {
         const now = new Date();
@@ -1406,11 +1266,11 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       16. INITIALIZATION & RECURRING DATA REFRESH
+       14. INITIALIZATION & RECURRING DATA REFRESH
        ────────────────────────────────────────────────────────────────────────── */
     initThree();
     fetchDisplay4Data();
-    setInterval(fetchDisplay4Data, 30000); // refresh data every 30s
+    setInterval(fetchDisplay4Data, 30000);
     </script>
 
 </body>
