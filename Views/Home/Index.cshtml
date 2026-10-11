@@ -768,49 +768,16 @@
                 <span class="badge" style="background-color: rgba(2, 132, 199, 0.12); color: #0284c7; font-size: 10px; font-weight: 600;">Observasi K3</span>
             </a>
 
-            <!-- Field Condition Assessments (RCI, FCI, DCI) - Open to All Users -->
-            <a asp-controller="Rci" asp-action="Index" class="btn-action-card animate-pop-in delay-6 position-relative">
+            <!-- Field Condition Assessments (FCI, DCI, SPI, RCI) - Grouped Card -->
+            <a href="javascript:void(0)" class="btn-action-card animate-pop-in delay-6 position-relative" data-bs-toggle="modal" data-bs-target="#fieldIndexModal">
                 <span class="badge position-absolute" style="top: 10px; right: 10px; background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 8px; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(244, 63, 94, 0.45); display: inline-flex; align-items: center; gap: 3px;">
-                    <i class="bi bi-stars" style="font-size: 10px;"></i> NEW
+                    <i class="bi bi-stars" style="font-size: 10px;"></i> 4 MENU
                 </span>
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #1e3a8a, #3b82f6); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
-                    <i class="bi bi-cone-striped" style="font-size: 22px; color: white;"></i>
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0ea5e9, #6366f1); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);">
+                    <i class="bi bi-speedometer2" style="font-size: 22px; color: white;"></i>
                 </div>
-                <span style="font-weight: 700; font-size: 13px;">RCI Road</span>
-                <span class="badge" style="background-color: rgba(59, 130, 246, 0.12); color: #3b82f6; font-size: 10px; font-weight: 600;">Road Index</span>
-            </a>
-
-            <a asp-controller="Fci" asp-action="Index" class="btn-action-card animate-pop-in delay-6 position-relative">
-                <span class="badge position-absolute" style="top: 10px; right: 10px; background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 8px; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(244, 63, 94, 0.45); display: inline-flex; align-items: center; gap: 3px;">
-                    <i class="bi bi-stars" style="font-size: 10px;"></i> NEW
-                </span>
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0f766e, #14b8a6); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
-                    <i class="bi bi-compass" style="font-size: 22px; color: white;"></i>
-                </div>
-                <span style="font-weight: 700; font-size: 13px;">FCI Front</span>
-                <span class="badge" style="background-color: rgba(20, 184, 166, 0.12); color: #14b8a6; font-size: 10px; font-weight: 600;">Front Index</span>
-            </a>
-
-            <a asp-controller="Dci" asp-action="Index" class="btn-action-card animate-pop-in delay-6 position-relative">
-                <span class="badge position-absolute" style="top: 10px; right: 10px; background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 8px; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(244, 63, 94, 0.45); display: inline-flex; align-items: center; gap: 3px;">
-                    <i class="bi bi-stars" style="font-size: 10px;"></i> NEW
-                </span>
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #c2410c, #f97316); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
-                    <i class="bi bi-layers-fill" style="font-size: 22px; color: white;"></i>
-                </div>
-                <span style="font-weight: 700; font-size: 13px;">DCI Dump</span>
-                <span class="badge" style="background-color: rgba(249, 115, 22, 0.12); color: #ea580c; font-size: 10px; font-weight: 600;">Dump Index</span>
-            </a>
-
-            <a asp-controller="Spi" asp-action="Index" class="btn-action-card animate-pop-in delay-6 position-relative">
-                <span class="badge position-absolute" style="top: 10px; right: 10px; background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 8px; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(244, 63, 94, 0.45); display: inline-flex; align-items: center; gap: 3px;">
-                    <i class="bi bi-stars" style="font-size: 10px;"></i> NEW
-                </span>
-                <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #059669, #10b981); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
-                    <i class="bi bi-droplet-half" style="font-size: 22px; color: white;"></i>
-                </div>
-                <span style="font-weight: 700; font-size: 13px;">SPI Kolam</span>
-                <span class="badge" style="background-color: rgba(16, 185, 129, 0.12); color: #059669; font-size: 10px; font-weight: 600;">Sediment Pond</span>
+                <span style="font-weight: 700; font-size: 13px;">Indeks Lapangan</span>
+                <span class="badge" style="background-color: rgba(14, 165, 233, 0.12); color: #0284c7; font-size: 10px; font-weight: 600;">FCI • DCI • SPI • RCI</span>
             </a>
 
             @*
@@ -899,6 +866,168 @@
 </div>
 
 </div>
+    <!-- Field Index Assessment Selection Modal -->
+    <style>
+        .field-index-select-card {
+            border: 1.5px solid var(--border-color) !important;
+            background: rgba(255, 255, 255, 0.02) !important;
+            border-radius: 18px !important;
+            padding: 18px 20px !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none !important;
+            display: block;
+        }
+        .field-index-select-card:hover {
+            border-color: rgba(56, 189, 248, 0.7) !important;
+            background: rgba(56, 189, 248, 0.05) !important;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+        }
+        .field-index-select-card:hover .field-index-arrow {
+            transform: translateX(4px);
+        }
+        .field-index-arrow {
+            transition: transform 0.2s ease;
+        }
+        body.light-theme .field-index-select-card {
+            background: #ffffff !important;
+            border-color: #e2e8f0 !important;
+        }
+        body.light-theme .field-index-select-card:hover {
+            border-color: #0284c7 !important;
+            background: #f0f9ff !important;
+            box-shadow: 0 12px 28px rgba(2, 132, 199, 0.12);
+        }
+    </style>
+
+    <div class="modal fade" id="fieldIndexModal" tabindex="-1" aria-labelledby="fieldIndexModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="background: var(--bg-card); backdrop-filter: blur(20px) saturate(180%); border: 1px solid var(--border-color); border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
+                <!-- Modal Header -->
+                <div style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(99, 102, 241, 0.15)); border-bottom: 1px solid var(--border-color); padding: 22px 24px 18px; position: relative;">
+                    <button type="button" class="btn-close position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 20px; right: 20px; filter: invert(var(--text-contrast));"></button>
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width: 50px; height: 50px; border-radius: 16px; background: linear-gradient(135deg, #0ea5e9, #6366f1); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 8px 20px rgba(14, 165, 233, 0.35); flex-shrink: 0;">
+                            <i class="bi bi-speedometer2"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h5 class="mb-0 fw-bold" style="color: var(--text-main); font-size: 18px;">Penilaian Indeks Lapangan</h5>
+                                <span class="badge" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); font-size: 10px; font-weight: 700; border-radius: 6px;">4 Modul</span>
+                            </div>
+                            <p class="mb-0 text-muted" style="font-size: 12px;">Pilih modul indeks kondisi dan kelayakan operasional untuk membuka form inspeksi:</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Body (4 Selection Cards) -->
+                <div class="modal-body p-3 p-md-4">
+                    <div class="row g-3">
+                        <!-- 1. FCI -->
+                        <div class="col-12 col-md-6">
+                            <a asp-controller="Fci" asp-action="Index" class="field-index-select-card h-100">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #0f766e, #14b8a6); display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; box-shadow: 0 4px 14px rgba(20, 184, 166, 0.35); flex-shrink: 0;">
+                                        <i class="bi bi-compass"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="mb-0 fw-bold" style="color: var(--text-main); font-size: 14px;">FCI (Front Condition)</h6>
+                                            <span class="badge" style="background: rgba(20, 184, 166, 0.15); color: #14b8a6; font-size: 9.5px; font-weight: 700; border-radius: 6px;">Front Tambang</span>
+                                        </div>
+                                        <p class="mb-2 text-muted" style="font-size: 11.5px; line-height: 1.4;">Inspeksi front penambangan, loading point, safety berm, floor, kestabilan lereng &amp; penerangan.</p>
+                                        <div class="d-flex align-items-center gap-1 fw-bold" style="color: #14b8a6; font-size: 12px;">
+                                            <span>Buka Form FCI</span>
+                                            <i class="bi bi-arrow-right-short field-index-arrow" style="font-size: 18px;"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- 2. DCI -->
+                        <div class="col-12 col-md-6">
+                            <a asp-controller="Dci" asp-action="Index" class="field-index-select-card h-100">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #c2410c, #f97316); display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; box-shadow: 0 4px 14px rgba(249, 115, 22, 0.35); flex-shrink: 0;">
+                                        <i class="bi bi-layers-fill"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="mb-0 fw-bold" style="color: var(--text-main); font-size: 14px;">DCI (Dump Condition)</h6>
+                                            <span class="badge" style="background: rgba(249, 115, 22, 0.15); color: #f97316; font-size: 9.5px; font-weight: 700; border-radius: 6px;">Disposal Area</span>
+                                        </div>
+                                        <p class="mb-2 text-muted" style="font-size: 11.5px; line-height: 1.4;">Penilaian kelayakan area dumping, tanggul pengaman, kerataan lantai, jarak buang &amp; dumping pad.</p>
+                                        <div class="d-flex align-items-center gap-1 fw-bold" style="color: #f97316; font-size: 12px;">
+                                            <span>Buka Form DCI</span>
+                                            <i class="bi bi-arrow-right-short field-index-arrow" style="font-size: 18px;"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- 3. SPI -->
+                        <div class="col-12 col-md-6">
+                            <a asp-controller="Spi" asp-action="Index" class="field-index-select-card h-100">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #059669, #10b981); display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); flex-shrink: 0;">
+                                        <i class="bi bi-droplet-half"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="mb-0 fw-bold" style="color: var(--text-main); font-size: 14px;">SPI (Sediment Pond)</h6>
+                                            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 9.5px; font-weight: 700; border-radius: 6px;">Kolam Sedimen</span>
+                                        </div>
+                                        <p class="mb-2 text-muted" style="font-size: 11.5px; line-height: 1.4;">Inspeksi kapasitas sedimen, tanggul kolam, sekat baffle, pelimpah spillway &amp; titik penaatan air.</p>
+                                        <div class="d-flex align-items-center gap-1 fw-bold" style="color: #10b981; font-size: 12px;">
+                                            <span>Buka Form SPI</span>
+                                            <i class="bi bi-arrow-right-short field-index-arrow" style="font-size: 18px;"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- 4. RCI -->
+                        <div class="col-12 col-md-6">
+                            <a asp-controller="Rci" asp-action="Index" class="field-index-select-card h-100">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #1e3a8a, #3b82f6); display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35); flex-shrink: 0;">
+                                        <i class="bi bi-cone-striped"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="mb-0 fw-bold" style="color: var(--text-main); font-size: 14px;">RCI (Road Condition)</h6>
+                                            <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; font-size: 9.5px; font-weight: 700; border-radius: 6px;">Jalan Hauling</span>
+                                        </div>
+                                        <p class="mb-2 text-muted" style="font-size: 11.5px; line-height: 1.4;">Kelayakan jalan tambang/hauling, crossfall, superelevasi, grade jalan, drainase &amp; rambu K3.</p>
+                                        <div class="d-flex align-items-center gap-1 fw-bold" style="color: #3b82f6; font-size: 12px;">
+                                            <span>Buka Form RCI</span>
+                                            <i class="bi bi-arrow-right-short field-index-arrow" style="font-size: 18px;"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer border-top px-4 py-3" style="border-color: var(--border-color) !important; background: rgba(0,0,0,0.05);">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <span class="text-muted" style="font-size: 11.5px;">
+                            <i class="bi bi-info-circle me-1 text-info"></i>Hasil penilaian langsung masuk ke Display Monitor &amp; evaluasi berkala.
+                        </span>
+                        <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal" style="border-radius: 10px; font-size: 12px; font-weight: 600;">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <!-- Roster Settings Modal -->
     <style>
         /* Custom modal backdrop overrides to prevent darkening the screen too much */
