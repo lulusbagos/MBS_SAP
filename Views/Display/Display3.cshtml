@@ -1100,9 +1100,7 @@
     let slideProgress = 0;
 
     function resetSlideProgressBar() {
-        slideTimeRemaining = typeof SLIDE_DURATION_SECONDS !== 'undefined' ? SLIDE_DURATION_SECONDS : 300;
-        const progressEl = document.getElementById('topProgressBar');
-        if (progressEl) progressEl.style.width = '0%';
+        // Hero photo slide transition does NOT reset the 5-minute display rotation timer
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
@@ -1430,14 +1428,12 @@
         if (heroSlides.length === 0) return;
         currentHeroIndex = (currentHeroIndex + 1) % heroSlides.length;
         renderHeroSlide(currentHeroIndex);
-        resetSlideProgressBar();
     }
 
     function prevHeroSlide() {
         if (heroSlides.length === 0) return;
         currentHeroIndex = (currentHeroIndex - 1 + heroSlides.length) % heroSlides.length;
         renderHeroSlide(currentHeroIndex);
-        resetSlideProgressBar();
     }
 
     function handleHeroImgError() {
@@ -1752,7 +1748,6 @@
             renderFeed(currentData);
             renderTelemetry(currentData);
         }
-        resetSlideProgressBar();
     }
 
     function updateMenuRotateTimer() {
@@ -1934,31 +1929,18 @@
        11. 5-MINUTE AUTO SLIDE TRANSITION (DISPLAY 3 -> DISPLAY 1 ROTATION LOOP)
        ────────────────────────────────────────────────────────────────────────── */
     const SLIDE_DURATION_SECONDS = 300; // 5 minutes = 300 seconds
-    const KIOSK_STAY_KEY = 'mbs_display3_kiosk_stay';
     let slideTimeRemaining = SLIDE_DURATION_SECONDS;
-    let isSlidePaused = (localStorage.getItem(KIOSK_STAY_KEY) === 'true');
+    let isSlidePaused = false;
 
-    // Update initial pause button UI if persisted as paused
-    if (isSlidePaused) {
-        setTimeout(() => {
-            const icon = document.getElementById('pauseIcon');
-            const text = document.getElementById('pauseText');
-            const btn = document.getElementById('togglePauseBtn');
-            if (icon) icon.className = 'bi bi-play-fill';
-            if (text) text.innerText = 'Lanjut';
-            if (btn) {
-                btn.style.background = 'rgba(239, 68, 68, 0.3)';
-                btn.style.borderColor = '#ef4444';
-            }
-        }, 150);
-    }
+    // Clear any previous stay lock so rotation back to Display 1 is active
+    try { localStorage.removeItem('mbs_display3_kiosk_stay'); } catch (e) { }
 
     function updateSlideTimer() {
         if (isSlidePaused) return;
 
         slideTimeRemaining--;
-        if (slideTimeRemaining < 0) {
-            // Transition back to Display 1 (creating continuous 3-display rotation)
+        if (slideTimeRemaining <= 0) {
+            // Transition back to Display 1 (creating continuous 3-display rotation: Display 1 -> 2 -> 3 -> 1)
             window.location.href = '/Display';
             return;
         }
@@ -1969,19 +1951,11 @@
         if (countdownEl) {
             countdownEl.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
         }
-
-        const progressPct = ((SLIDE_DURATION_SECONDS - slideTimeRemaining) / SLIDE_DURATION_SECONDS) * 100;
-        const progressEl = document.getElementById('topProgressBar');
-        if (progressEl) {
-            progressEl.style.width = `${progressPct}%`;
-        }
     }
     setInterval(updateSlideTimer, 1000);
 
     function togglePauseSlide() {
         isSlidePaused = !isSlidePaused;
-        try { localStorage.setItem(KIOSK_STAY_KEY, isSlidePaused ? 'true' : 'false'); } catch (e) { }
-
         const icon = document.getElementById('pauseIcon');
         const text = document.getElementById('pauseText');
         const btn = document.getElementById('togglePauseBtn');
