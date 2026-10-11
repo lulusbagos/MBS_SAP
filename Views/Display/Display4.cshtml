@@ -6,12 +6,12 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Display 4 &mdash; 3D Achievement Citadel &amp; Executive Milestone Center</title>
+    <title>Display 4 &mdash; Analisis 3D Hazard: TTA vs KTA &amp; MTD vs YTD</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=JetBrains+Mono:wght@400;600;800;900&display=swap" rel="stylesheet">
 
     <!-- Three.js 3D Engine & OrbitControls -->
     <script src="~/lib/three/three.min.js"></script>
@@ -26,14 +26,14 @@
     <style>
     :root {
         --bg-space: #030712;
-        --hud-bg: rgba(11, 19, 43, 0.85);
-        --hud-border: rgba(245, 158, 11, 0.25);
-        --hud-border-cyan: rgba(56, 189, 248, 0.35);
-        --gold-main: #f59e0b;
-        --gold-bright: #fbbf24;
-        --neon-green: #10b981;
+        --hud-bg: rgba(10, 16, 35, 0.88);
+        --hud-border: rgba(56, 189, 248, 0.28);
         --neon-cyan: #38bdf8;
+        --neon-amber: #f59e0b;
+        --neon-emerald: #10b981;
+        --neon-purple: #a855f7;
         --neon-red: #f43f5e;
+        --gold-bright: #fbbf24;
         --text-white: #ffffff;
         --text-muted: #94a3b8;
     }
@@ -71,7 +71,7 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        padding: 12px 18px;
+        padding: 14px 20px;
     }
 
     .interactive { pointer-events: auto; }
@@ -86,8 +86,8 @@
         -webkit-backdrop-filter: blur(14px);
         border: 1px solid var(--hud-border);
         border-radius: 14px;
-        padding: 8px 18px;
-        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(245, 158, 11, 0.2);
+        padding: 10px 20px;
+        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(56, 189, 248, 0.25);
     }
 
     .hud-brand {
@@ -95,29 +95,29 @@
         align-items: center;
         gap: 12px;
     }
-    .hud-badge-gold {
-        background: linear-gradient(135deg, #d97706, #b45309);
+    .hud-badge-k3 {
+        background: linear-gradient(135deg, #0284c7, #2563eb);
         color: #fff;
         font-size: 11px;
         font-weight: 800;
-        padding: 4px 10px;
+        padding: 5px 10px;
         border-radius: 6px;
         letter-spacing: 1px;
-        box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+        box-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
         display: inline-flex;
         align-items: center;
         gap: 5px;
     }
     .hud-title {
-        font-size: 16px;
+        font-size: 17px;
         font-weight: 800;
         letter-spacing: 0.5px;
         color: #ffffff;
         line-height: 1.1;
     }
     .hud-subtitle {
-        font-size: 10.5px;
-        color: var(--gold-bright);
+        font-size: 11px;
+        color: var(--neon-cyan);
         letter-spacing: 0.5px;
         font-family: 'JetBrains Mono', monospace;
     }
@@ -143,29 +143,41 @@
         cursor: pointer;
     }
     .nav-btn:hover {
-        background: rgba(245, 158, 11, 0.2);
-        border-color: var(--gold-main);
+        background: rgba(56, 189, 248, 0.2);
+        border-color: var(--neon-cyan);
         color: #ffffff;
         transform: translateY(-1px);
     }
     .nav-btn.active {
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(180, 83, 9, 0.45));
-        border-color: var(--gold-bright);
+        background: linear-gradient(135deg, rgba(2, 132, 199, 0.4), rgba(37, 99, 235, 0.5));
+        border-color: var(--neon-cyan);
         color: #ffffff;
-        box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+        box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
     }
 
     .slide-timer-pill {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid rgba(245, 158, 11, 0.3);
-        padding: 4px 10px;
+        background: rgba(56, 189, 248, 0.1);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        padding: 5px 12px;
         border-radius: 20px;
-        font-size: 11px;
-        color: var(--gold-bright);
+        font-size: 11.5px;
+        color: var(--neon-cyan);
         font-family: 'JetBrains Mono', monospace;
+    }
+    .sonar-ping {
+        width: 8px;
+        height: 8px;
+        background-color: var(--neon-cyan);
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7);
+        animation: pulseCyan 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+    }
+    @@keyframes pulseCyan {
+        to { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
     }
 
     .hud-clock {
@@ -183,24 +195,24 @@
         color: var(--text-muted);
     }
 
-    /* Main HUD Middle Area (Left & Right Columns) */
+    /* Main HUD Middle Area */
     .hud-middle {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
         gap: 16px;
         flex-grow: 1;
-        margin: 10px 0;
+        margin: 12px 0;
         overflow: hidden;
     }
 
     .hud-col {
-        width: 330px;
-        max-width: 330px;
+        width: 340px;
+        max-width: 340px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        max-height: calc(100vh - 145px);
+        gap: 12px;
+        max-height: calc(100vh - 150px);
         overflow-y: auto;
         scrollbar-width: thin;
         scrollbar-color: var(--hud-border) transparent;
@@ -214,31 +226,38 @@
         -webkit-backdrop-filter: blur(14px);
         border: 1px solid var(--hud-border);
         border-radius: 12px;
-        padding: 12px 14px;
+        padding: 14px 16px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         position: relative;
         overflow: hidden;
     }
-    .hud-card::before {
+    .hud-card.card-cyan::before {
         content: '';
         position: absolute;
         top: 0; left: 0; right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, var(--gold-bright), transparent);
+        height: 3px;
+        background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+    }
+    .hud-card.card-amber::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, var(--neon-amber), transparent);
     }
 
     .hud-card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
     }
     .hud-card-title {
-        font-size: 11.5px;
-        font-weight: 700;
+        font-size: 12px;
+        font-weight: 800;
         letter-spacing: 0.5px;
         text-transform: uppercase;
-        color: #cbd5e1;
+        color: #f1f5f9;
         display: flex;
         align-items: center;
         gap: 6px;
@@ -246,38 +265,12 @@
     .hud-badge-val {
         font-size: 11px;
         font-weight: 800;
-        padding: 2px 7px;
+        padding: 3px 8px;
         border-radius: 6px;
         font-family: 'JetBrains Mono', monospace;
     }
 
-    /* Trophy Hero Banner */
-    .trophy-hero-box {
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.05));
-        border: 1.5px solid rgba(245, 158, 11, 0.35);
-        border-radius: 10px;
-        padding: 12px;
-        text-align: center;
-        margin-bottom: 8px;
-    }
-    .trophy-score-big {
-        font-size: 30px;
-        font-weight: 900;
-        color: #ffffff;
-        font-family: 'JetBrains Mono', monospace;
-        text-shadow: 0 0 20px rgba(245, 158, 11, 0.6);
-        line-height: 1;
-    }
-    .trophy-score-label {
-        font-size: 10.5px;
-        color: var(--gold-bright);
-        font-weight: 700;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        margin-top: 4px;
-    }
-
-    /* KPI Grid & Items */
+    /* KPI Row & Box */
     .kpi-row {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -287,58 +280,48 @@
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 8px;
-        padding: 8px;
+        padding: 9px;
         text-align: center;
     }
     .kpi-label {
-        font-size: 9px;
+        font-size: 9.5px;
         color: var(--text-muted);
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: 2px;
+        margin-bottom: 3px;
     }
     .kpi-number {
-        font-size: 18px;
-        font-weight: 800;
+        font-size: 20px;
+        font-weight: 900;
         font-family: 'JetBrains Mono', monospace;
         line-height: 1;
     }
+    .kpi-sub {
+        font-size: 10px;
+        color: var(--text-muted);
+        margin-top: 3px;
+    }
 
-    /* 3D Pillar Legend Table */
-    .pillar-legend-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 6px 8px;
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.06);
+    /* Ratio Progress Bar */
+    .ratio-bar-wrap {
+        margin-top: 10px;
+        background: rgba(255, 255, 255, 0.05);
         border-radius: 6px;
-        margin-bottom: 5px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .pillar-legend-item:hover {
-        background: rgba(245, 158, 11, 0.12);
-        border-color: rgba(245, 158, 11, 0.4);
-        transform: translateX(3px);
-    }
-    .pillar-color-indicator {
-        width: 10px;
+        overflow: hidden;
         height: 10px;
-        border-radius: 3px;
-        display: inline-block;
-        margin-right: 6px;
-        box-shadow: 0 0 6px currentColor;
+        display: flex;
     }
-    .pillar-name {
-        font-size: 11px;
-        font-weight: 600;
-        color: #ffffff;
+    .ratio-bar-kta {
+        background: var(--neon-cyan);
+        height: 100%;
+        transition: width 0.6s ease;
+        box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
     }
-    .pillar-val {
-        font-size: 11px;
-        font-weight: 800;
-        font-family: 'JetBrains Mono', monospace;
+    .ratio-bar-tta {
+        background: var(--neon-amber);
+        height: 100%;
+        transition: width 0.6s ease;
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
     }
 
     /* Bottom HUD Toolbar */
@@ -351,37 +334,28 @@
         -webkit-backdrop-filter: blur(14px);
         border: 1px solid var(--hud-border);
         border-radius: 12px;
-        padding: 8px 16px;
+        padding: 9px 18px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
-    .cam-modes {
+
+    .legend-indicators {
         display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 11.5px;
+        font-weight: 600;
+    }
+    .legend-pill {
+        display: inline-flex;
         align-items: center;
         gap: 6px;
     }
-    .cam-btn {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        color: #cbd5e1;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 5px 12px;
-        border-radius: 8px;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        transition: all 0.2s;
-    }
-    .cam-btn:hover {
-        background: rgba(245, 158, 11, 0.2);
-        color: #ffffff;
-    }
-    .cam-btn.active {
-        background: linear-gradient(135deg, #d97706, #b45309);
-        color: #ffffff;
-        border-color: var(--gold-bright);
-        box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+    .color-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        display: inline-block;
+        box-shadow: 0 0 8px currentColor;
     }
 
     .ticker-bar {
@@ -392,47 +366,12 @@
         gap: 12px;
         font-family: 'JetBrains Mono', monospace;
     }
-    .sonar-ping-gold {
-        width: 8px;
-        height: 8px;
-        background-color: var(--gold-bright);
-        border-radius: 50%;
-        display: inline-block;
-        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
-        animation: pulseGold 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
-    }
-    @@keyframes pulseGold {
-        to { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
-    }
-
-    /* 3D Tooltip */
-    #objTooltip {
-        position: absolute;
-        display: none;
-        background: rgba(11, 19, 43, 0.95);
-        backdrop-filter: blur(8px);
-        border: 1px solid var(--gold-bright);
-        border-radius: 8px;
-        padding: 8px 12px;
-        font-size: 11px;
-        color: #ffffff;
-        pointer-events: none;
-        z-index: 100;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 0 14px rgba(245, 158, 11, 0.4);
-        transform: translate(-50%, -120%);
-    }
     </style>
 </head>
 <body>
 
-    <!-- 3D WEBGL CANVAS -->
+    <!-- 3D WEBGL OPENGL CANVAS -->
     <canvas id="webglCanvas"></canvas>
-
-    <!-- 3D OBJECT HOVER TOOLTIP -->
-    <div id="objTooltip">
-        <div id="tooltipTitle" style="font-weight:700; color:var(--gold-bright);">Parameter 3D</div>
-        <div id="tooltipBody" style="font-size:10px; color:#cbd5e1;">Skor Ketercapaian: 100%</div>
-    </div>
 
     <!-- HUD OVERLAY LAYER -->
     <div class="hud-layer">
@@ -440,10 +379,10 @@
         <!-- ── TOP HUD HEADER ── -->
         <header class="hud-header interactive">
             <div class="hud-brand">
-                <span class="hud-badge-gold"><i class="bi bi-trophy-fill"></i> ACHIEVEMENT 3D</span>
+                <span class="hud-badge-k3"><i class="bi bi-shield-shaded"></i> 3D HAZARD RADAR</span>
                 <div>
-                    <div class="hud-title">THE 3D ACHIEVEMENT CITADEL</div>
-                    <div class="hud-subtitle">MONUMEN PENCAPAIAN PRESTASI &bull; K3, OPERASIONAL &bull; RCI PRIMA</div>
+                    <div class="hud-title">ANALISIS KATEGORI HAZARD &amp; KOMPARASI WAKTU</div>
+                    <div class="hud-subtitle">GRAFIK 3 DIMENSI &bull; UNSAFE ACTION (TTA) vs UNSAFE CONDITION (KTA) &bull; MTD vs YTD</div>
                 </div>
             </div>
 
@@ -457,12 +396,12 @@
                 <a href="/Display3" class="nav-btn" title="Display 3: RCI, FCI &amp; BBS Live Photo Center">
                     <i class="bi bi-camera-fill text-info"></i> Display 3
                 </a>
-                <a href="/Display4" class="nav-btn active" title="Display 4: 3D Achievement Citadel">
-                    <i class="bi bi-trophy-fill text-warning"></i> Display 4 🏆
+                <a href="/Display4" class="nav-btn active" title="Display 4: 3D Hazard Analytics">
+                    <i class="bi bi-bar-chart-fill text-cyan"></i> Display 4 📊
                 </a>
 
                 <div class="slide-timer-pill">
-                    <span class="sonar-ping-gold"></span>
+                    <span class="sonar-ping"></span>
                     <span id="slideCountdown">05:00</span>
                     <button type="button" class="btn btn-sm p-0 text-muted ms-1" onclick="togglePauseSlide()" id="btnPauseSlide" title="Jeda rotasi slide">
                         <i class="bi bi-pause-fill" id="pauseIcon"></i>
@@ -483,182 +422,101 @@
         <!-- ── MAIN HUD MIDDLE (COLUMNS LEFT & RIGHT) ── -->
         <div class="hud-middle">
             
-            <!-- LEFT COLUMN: ACHIEVEMENT SUMMARY & DISPLAY 1 & 2 -->
+            <!-- LEFT COLUMN: REPORT 1 - ANALISIS KATEGORI (TTA VS KTA) -->
             <aside class="hud-col interactive">
                 
-                <!-- Main Achievement Trophy Banner -->
-                <div class="hud-card">
-                    <div class="trophy-hero-box">
-                        <i class="bi bi-award-fill text-warning" style="font-size: 28px;"></i>
-                        <div class="trophy-score-big" id="overallAchievementVal">98.2%</div>
-                        <div class="trophy-score-label">OVERALL OPERATIONAL INDEX</div>
-                        <div class="badge rounded-pill bg-warning text-dark fw-bold px-3 py-1 mt-1" style="font-size: 10px;">
-                            <i class="bi bi-star-fill me-1"></i>PREDIKAT: EXCELLENT / PRIMA
-                        </div>
+                <div class="hud-card card-cyan">
+                    <div class="hud-card-header">
+                        <span class="hud-card-title"><i class="bi bi-pie-chart-fill text-cyan"></i> GRAFIK 1: KATEGORI HAZARD</span>
+                        <span class="hud-badge-val" style="background: rgba(56, 189, 248, 0.2); color: var(--neon-cyan);">PROPORSI TOTAL</span>
                     </div>
 
                     <div class="kpi-row">
-                        <div class="kpi-box">
-                            <div class="kpi-label">RCI Road Quality</div>
-                            <div class="kpi-number text-success" id="kpiRciScore">3.92</div>
+                        <div class="kpi-box" style="border-top: 3px solid var(--neon-cyan);">
+                            <div class="kpi-label">Kondisi Tdk Aman (KTA)</div>
+                            <div class="kpi-number text-cyan" id="kpiKtaTotal">--</div>
+                            <div class="kpi-sub" id="kpiKtaPct">--% dari total</div>
                         </div>
-                        <div class="kpi-box">
-                            <div class="kpi-label">P2H Readiness</div>
-                            <div class="kpi-number text-info" id="kpiP2hScore">94.2%</div>
+                        <div class="kpi-box" style="border-top: 3px solid var(--neon-amber);">
+                            <div class="kpi-label">Tindakan Tdk Aman (TTA)</div>
+                            <div class="kpi-number text-warning" id="kpiTtaTotal">--</div>
+                            <div class="kpi-sub" id="kpiTtaPct">--% dari total</div>
                         </div>
-                        <div class="kpi-box">
-                            <div class="kpi-label">Safe Behavior (BBS)</div>
-                            <div class="kpi-number text-warning" id="kpiBbsScore">95.4%</div>
-                        </div>
-                        <div class="kpi-box">
-                            <div class="kpi-label">Settling Pond (SPI)</div>
-                            <div class="kpi-number text-primary" id="kpiSpiScore">98.2%</div>
-                        </div>
+                    </div>
+
+                    <!-- Visual Ratio Bar -->
+                    <div class="ratio-bar-wrap" title="Rasio KTA vs TTA">
+                        <div class="ratio-bar-kta" id="ratioBarKta" style="width: 65%;"></div>
+                        <div class="ratio-bar-tta" id="ratioBarTta" style="width: 35%;"></div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2" style="font-size:10px; color:var(--text-muted);">
+                        <span><span class="color-dot" style="background:var(--neon-cyan); color:var(--neon-cyan);"></span> KTA (Unsafe Condition)</span>
+                        <span><span class="color-dot" style="background:var(--neon-amber); color:var(--neon-amber);"></span> TTA (Unsafe Action)</span>
                     </div>
                 </div>
 
-                <!-- Safety Health Pulse Card -->
+                <!-- Detail Kategori MTD -->
                 <div class="hud-card">
                     <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-shield-fill-check text-success"></i> Kepatuhan K3 &amp; Hazard</span>
-                        <span class="hud-badge-val" style="background: rgba(16, 185, 129, 0.2); color: var(--neon-green);" id="safeComplianceVal">98.6%</span>
+                        <span class="hud-card-title"><i class="bi bi-calendar2-month text-primary"></i> Rincian Bulan Ini (MTD)</span>
+                        <span class="badge bg-secondary" style="font-size:9.5px;" id="badgeBulanNama">Bulan Berjalan</span>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25" style="font-size:11px;">
-                        <span><i class="bi bi-check2-circle text-success me-1"></i>Rasio Penyelesaian Hazard</span>
-                        <strong class="text-white" id="hazardCloseRatio">96.5% Closed</strong>
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary border-opacity-25" style="font-size:11.5px;">
+                        <span><i class="bi bi-cone text-cyan me-1"></i>KTA (Kondisi Tidak Aman)</span>
+                        <strong class="text-white" id="mtdKtaDetail">-- Laporan (--%)</strong>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25" style="font-size:11px;">
-                        <span><i class="bi bi-people-fill text-info me-1"></i>P5M Safety Briefing</span>
-                        <strong class="text-white" id="kpiP5mCount">18 Sesi Hari Ini</strong>
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary border-opacity-25" style="font-size:11.5px;">
+                        <span><i class="bi bi-person-exclamation text-warning me-1"></i>TTA (Tindakan Tidak Aman)</span>
+                        <strong class="text-white" id="mtdTtaDetail">-- Laporan (--%)</strong>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center py-1" style="font-size:11px;">
-                        <span><i class="bi bi-activity text-warning me-1"></i>Zero Incident Streak</span>
-                        <strong class="text-warning">AMAN TERKENDALI</strong>
-                    </div>
-                </div>
-
-                <!-- 3D Graph Legend Selector -->
-                <div class="hud-card">
-                    <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-bar-chart-fill text-warning"></i> Navigasi Grafik 3D</span>
-                        <span class="badge bg-secondary" style="font-size:9px;">KLIK UNTUK FOKUS</span>
-                    </div>
-                    <div class="pillar-legend-item" onclick="focusPillar(0)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
-                            <span class="pillar-name">RCI Permukaan (Surfacing)</span>
-                        </div>
-                        <span class="pillar-val text-success" id="legSurfacing">3.9 / 4.0</span>
-                    </div>
-                    <div class="pillar-legend-item" onclick="focusPillar(1)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
-                            <span class="pillar-name">RCI Undulation (Gelombang)</span>
-                        </div>
-                        <span class="pillar-val text-success" id="legUndulation">3.8 / 4.0</span>
-                    </div>
-                    <div class="pillar-legend-item" onclick="focusPillar(2)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
-                            <span class="pillar-name">RCI Tanggul (Safety Berm)</span>
-                        </div>
-                        <span class="pillar-val text-success" id="legBerm">3.9 / 4.0</span>
-                    </div>
-                    <div class="pillar-legend-item" onclick="focusPillar(3)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#38bdf8; color:#38bdf8;"></span>
-                            <span class="pillar-name">RCI Drainase &amp; Crossfall</span>
-                        </div>
-                        <span class="pillar-val text-info" id="legDrainage">4.0 / 4.0</span>
+                    <div class="d-flex justify-content-between align-items-center py-2" style="font-size:11.5px;">
+                        <span><i class="bi bi-clipboard2-check text-success me-1"></i>Total Hazard Bulan Ini</span>
+                        <strong class="text-cyan" id="mtdTotalDetail">-- Laporan</strong>
                     </div>
                 </div>
 
             </aside>
 
-            <!-- RIGHT COLUMN: 3D SKYSCRAPER PILLARS SPECIFICATION -->
+            <!-- RIGHT COLUMN: REPORT 2 - KOMPARASI WAKTU (MTD VS YTD) -->
             <aside class="hud-col interactive">
                 
-                <!-- 8 RCI Parameter Skyscraper Detail -->
-                <div class="hud-card">
+                <div class="hud-card card-amber">
                     <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-cone-striped text-warning"></i> 8 Pilar Standar SP3 (RCI)</span>
-                        <span class="hud-badge-val" style="background: rgba(245, 158, 11, 0.2); color: var(--gold-bright);">SKALA 4.0</span>
+                        <span class="hud-card-title"><i class="bi bi-bar-chart-steps text-warning"></i> GRAFIK 2: KOMPARASI PERIODE</span>
+                        <span class="hud-badge-val" style="background: rgba(245, 158, 11, 0.2); color: var(--gold-bright);">MTD vs YTD</span>
                     </div>
-                    
-                    <div class="pillar-legend-item" onclick="focusPillar(4)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#38bdf8; color:#38bdf8;"></span>
-                            <span class="pillar-name">Spoil Berm Removal</span>
+
+                    <div class="kpi-row">
+                        <div class="kpi-box" style="border-top: 3px solid var(--neon-emerald);">
+                            <div class="kpi-label">MTD (Bulan Ini)</div>
+                            <div class="kpi-number text-success" id="kpiMtdTotal">--</div>
+                            <div class="kpi-sub" id="kpiMtdClosedRate">--% Closed</div>
                         </div>
-                        <span class="pillar-val text-info" id="legSpoil">3.9 / 4.0</span>
-                    </div>
-                    <div class="pillar-legend-item" onclick="focusPillar(5)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#f59e0b; color:#f59e0b;"></span>
-                            <span class="pillar-name">Dust Suppression (Debu)</span>
+                        <div class="kpi-box" style="border-top: 3px solid var(--neon-purple);">
+                            <div class="kpi-label">YTD (Tahun Berjalan)</div>
+                            <div class="kpi-number" style="color: var(--neon-purple);" id="kpiYtdTotal">--</div>
+                            <div class="kpi-sub" id="kpiYtdClosedRate">--% Closed</div>
                         </div>
-                        <span class="pillar-val text-warning" id="legDust">3.8 / 4.0</span>
-                    </div>
-                    <div class="pillar-legend-item" onclick="focusPillar(6)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
-                            <span class="pillar-name">Road Attachment (Rambu)</span>
-                        </div>
-                        <span class="pillar-val text-success" id="legAttachment">4.0 / 4.0</span>
-                    </div>
-                    <div class="pillar-legend-item" onclick="focusPillar(7)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
-                            <span class="pillar-name">Crossfall Kemiringan</span>
-                        </div>
-                        <span class="pillar-val text-success" id="legCrossfall">3.9 / 4.0</span>
                     </div>
                 </div>
 
-                <!-- Fleet & Infrastructure Readiness -->
+                <!-- Status Penyelesaian MTD & YTD -->
                 <div class="hud-card">
                     <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-truck-front-fill text-primary"></i> Armada &amp; Fasilitas</span>
-                        <span class="hud-badge-val" style="background: rgba(56, 189, 248, 0.2); color: var(--neon-cyan);">LIVE P2H</span>
+                        <span class="hud-card-title"><i class="bi bi-check2-circle text-success"></i> Status Penyelesaian (Closed)</span>
+                        <span class="badge bg-success" style="font-size:9.5px;">TARGET &ge; 90%</span>
                     </div>
-                    <div class="pillar-legend-item" onclick="focusPillar(8)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#8b5cf6; color:#8b5cf6;"></span>
-                            <span class="pillar-name">Kesiapan Unit P2H</span>
-                        </div>
-                        <span class="pillar-val text-purple" id="legP2h">94.2% (49 Unit)</span>
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary border-opacity-25" style="font-size:11.5px;">
+                        <span><i class="bi bi-check-all text-success me-1"></i>Closed Hazard MTD</span>
+                        <strong class="text-white" id="mtdClosedDetail">-- Temuan (--%)</strong>
                     </div>
-                    <div class="pillar-legend-item" onclick="focusPillar(9)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#06b6d4; color:#06b6d4;"></span>
-                            <span class="pillar-name">FCI Fuel Station Readiness</span>
-                        </div>
-                        <span class="pillar-val text-cyan" id="legFci">96.8%</span>
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary border-opacity-25" style="font-size:11.5px;">
+                        <span><i class="bi bi-check-all text-success me-1"></i>Closed Hazard YTD</span>
+                        <strong class="text-white" id="ytdClosedDetail">-- Temuan (--%)</strong>
                     </div>
-                    <div class="pillar-legend-item" onclick="focusPillar(10)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#10b981; color:#10b981;"></span>
-                            <span class="pillar-name">BBS Safe Behavior Index</span>
-                        </div>
-                        <span class="pillar-val text-success" id="legBbs">95.4%</span>
-                    </div>
-                    <div class="pillar-legend-item" onclick="focusPillar(11)">
-                        <div>
-                            <span class="pillar-color-indicator" style="background:#38bdf8; color:#38bdf8;"></span>
-                            <span class="pillar-name">Settling Pond Compliance</span>
-                        </div>
-                        <span class="pillar-val text-info" id="legSpi">98.2%</span>
-                    </div>
-                </div>
-
-                <!-- Segmen Jalan Prestasi Tertinggi -->
-                <div class="hud-card">
-                    <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-star-fill text-warning"></i> Segmen Jalan Prestasi</span>
-                        <span class="badge bg-success" style="font-size:9px;">100% PRIMA</span>
-                    </div>
-                    <div id="topSegmentsContainer" style="max-height: 150px; overflow-y: auto;">
-                        <!-- Rendered via JS -->
+                    <div class="d-flex justify-content-between align-items-center py-2" style="font-size:11.5px;">
+                        <span><i class="bi bi-clock-history text-danger me-1"></i>Sisa Temuan Open (MTD)</span>
+                        <strong class="text-danger" id="mtdOpenDetail">-- Temuan Aktif</strong>
                     </div>
                 </div>
 
@@ -668,422 +526,413 @@
 
         <!-- ── BOTTOM HUD TOOLBAR ── -->
         <footer class="hud-bottom interactive">
-            <div class="cam-modes">
-                <span style="font-size:11px; font-weight:700; color:var(--text-muted); margin-right:4px;">VIEW PRESET:</span>
-                <button type="button" class="cam-btn active" id="btnCamHero" onclick="setCameraPreset('hero')">
-                    <i class="bi bi-compass"></i> Hero Flyover
-                </button>
-                <button type="button" class="cam-btn" id="btnCamChart" onclick="setCameraPreset('chart')">
-                    <i class="bi bi-bar-chart-steps"></i> Frontal 3D Chart
-                </button>
-                <button type="button" class="cam-btn" id="btnCamTrophy" onclick="setCameraPreset('trophy')">
-                    <i class="bi bi-award"></i> Trophy Focus
-                </button>
-                <button type="button" class="cam-btn" id="btnCamOrbit" onclick="setCameraPreset('orbit')">
-                    <i class="bi bi-arrows-move"></i> Free Orbit
-                </button>
-                <button type="button" class="cam-btn" id="btnToggleBeams" onclick="toggleVictoryBeams()">
-                    <i class="bi bi-lightning-charge"></i> Laser Beams
-                </button>
+            <div class="legend-indicators">
+                <span style="color:var(--text-muted); font-size:11px; text-transform:uppercase;">KETERANGAN GRAFIK 3D:</span>
+                <span class="legend-pill"><span class="color-dot" style="background:var(--neon-cyan); color:var(--neon-cyan);"></span> KTA (Kondisi Tidak Aman)</span>
+                <span class="legend-pill"><span class="color-dot" style="background:var(--neon-amber); color:var(--neon-amber);"></span> TTA (Tindakan Tidak Aman)</span>
+                <span class="legend-pill"><span class="color-dot" style="background:var(--neon-emerald); color:var(--neon-emerald);"></span> MTD (Bulan Ini)</span>
+                <span class="legend-pill"><span class="color-dot" style="background:var(--neon-purple); color:var(--neon-purple);"></span> YTD (Tahun Berjalan)</span>
             </div>
 
             <div class="ticker-bar">
-                <span><i class="bi bi-award-fill text-warning me-1"></i>MBS EXCELLENCE DASHBOARD</span>
+                <span><i class="bi bi-display text-cyan me-1"></i>WALL DISPLAY MODE</span>
                 <span>&bull;</span>
-                <span>STATUS: <strong class="text-white">PENCAPAIAN TARGET TERCAPAI (&gt; 95%)</strong></span>
-                <span>&bull;</span>
-                <span>TOTAL 12 PILAR PRESTASI 3 DIMENSI</span>
+                <span>SEMUA LABEL &amp; ANGKA TAMPIL PERMANEN TANPA PERLU MOUSE</span>
             </div>
         </footer>
 
     </div>
 
     <!-- ═════════════════════════════════════════════════════════════════════════
-         THREE.JS 3D ACHIEVEMENT CITADEL ENGINE SCRIPT
+         THREE.JS 3D ENGINE SCRIPT (PERMANENT FLOATING 3D BILLBOARDS)
          ═════════════════════════════════════════════════════════════════════════ -->
     <script>
-    /* ──────────────────────────────────────────────────────────────────────────
-       1. GLOBAL STATE & THREE.JS SETUP
-       ────────────────────────────────────────────────────────────────────────── */
     let scene, camera, renderer, controls;
     let clock = new THREE.Clock();
-    let trophyMesh, trophyRingGroup;
-    let pillarsGroup, beamsGroup, particlesGroup;
-    let cameraMode = 'hero'; // 'hero', 'chart', 'trophy', 'orbit'
-    let showVictoryBeams = true;
+    let chartGroup1, chartGroup2, lasersGroup, particlesGroup;
     let display4Data = null;
 
-    // 12 Skyscraper Pillar Definitions (Heights and Parameters)
-    const pillarDefs = [
-        { id: 0,  name: 'RCI Surfacing', score: 3.9, max: 4.0, color: 0x10b981, category: 'RCI' },
-        { id: 1,  name: 'RCI Undulation', score: 3.8, max: 4.0, color: 0x10b981, category: 'RCI' },
-        { id: 2,  name: 'RCI Safety Berm', score: 3.9, max: 4.0, color: 0x10b981, category: 'RCI' },
-        { id: 3,  name: 'RCI Drainage', score: 4.0, max: 4.0, color: 0x38bdf8, category: 'RCI' },
-        { id: 4,  name: 'RCI Spoil Berm', score: 3.9, max: 4.0, color: 0x38bdf8, category: 'RCI' },
-        { id: 5,  name: 'RCI Dust Suppression', score: 3.8, max: 4.0, color: 0xf59e0b, category: 'RCI' },
-        { id: 6,  name: 'RCI Road Attachment', score: 4.0, max: 4.0, color: 0x10b981, category: 'RCI' },
-        { id: 7,  name: 'RCI Crossfall', score: 3.9, max: 4.0, color: 0x10b981, category: 'RCI' },
-        { id: 8,  name: 'P2H Fleet Readiness', score: 94.2, max: 100.0, color: 0x8b5cf6, category: 'FLEET' },
-        { id: 9,  name: 'FCI Fuel Readiness', score: 96.8, max: 100.0, color: 0x06b6d4, category: 'FACILITY' },
-        { id: 10, name: 'BBS Safe Behavior', score: 95.4, max: 100.0, color: 0x10b981, category: 'SAFETY' },
-        { id: 11, name: 'Settling Pond (SPI)', score: 98.2, max: 100.0, color: 0x38bdf8, category: 'SPI' }
-    ];
-
     /* ──────────────────────────────────────────────────────────────────────────
-       2. THREE.JS INITIALIZATION
+       1. INITIALIZE THREE.JS SCENE
        ────────────────────────────────────────────────────────────────────────── */
     function initThree() {
         const canvas = document.getElementById('webglCanvas');
         const width = window.innerWidth;
         const height = window.innerHeight;
 
-        // Scene with Cyberpunk Deep Space Fog
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x030712);
-        scene.fog = new THREE.FogExp2(0x030712, 0.0035);
+        scene.fog = new THREE.FogExp2(0x030712, 0.0032);
 
-        // Perspective Camera
         camera = new THREE.PerspectiveCamera(45, width / height, 1, 3000);
-        camera.position.set(0, 140, 260);
+        camera.position.set(0, 110, 280);
 
-        // WebGL Renderer
         renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(width, height);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        // OrbitControls
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         controls.maxPolarAngle = Math.PI / 2 - 0.02;
-        controls.minDistance = 40;
-        controls.maxDistance = 600;
-        controls.target.set(0, 30, 0);
+        controls.minDistance = 60;
+        controls.maxDistance = 650;
+        controls.target.set(0, 45, 0);
 
-        // Lighting
         setupLighting();
-
-        // Scene Components
         createReflectiveGridFloor();
-        createCentralAchievementMonument();
-        createSkyscraperBarPillars();
-        createVictoryBeams();
         createGoldenParticles();
 
-        // Event Listeners
         window.addEventListener('resize', onWindowResize);
-        setupRaycaster();
-
-        // Start 60 FPS Loop
         animate();
     }
 
-    /* ──────────────────────────────────────────────────────────────────────────
-       3. LIGHTING (CYBERPUNK NEON & WARM GOLDEN ACCENTS)
-       ────────────────────────────────────────────────────────────────────────── */
     function setupLighting() {
-        const ambientLight = new THREE.AmbientLight(0x1e293b, 1.2);
+        const ambientLight = new THREE.AmbientLight(0x1e293b, 1.4);
         scene.add(ambientLight);
 
-        // Main Golden Directional Light
-        const sunLight = new THREE.DirectionalLight(0xfef3c7, 1.5);
-        sunLight.position.set(120, 250, 100);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.6);
+        sunLight.position.set(100, 220, 150);
         sunLight.castShadow = true;
-        sunLight.shadow.mapSize.width = 2048;
-        sunLight.shadow.mapSize.height = 2048;
         scene.add(sunLight);
 
-        // Central Trophy Point Light (Gold Glow)
-        const trophyLight = new THREE.PointLight(0xf59e0b, 3.0, 180);
-        trophyLight.position.set(0, 40, 0);
-        scene.add(trophyLight);
+        // Cyan uplight for Left Pod
+        const light1 = new THREE.PointLight(0x38bdf8, 2.5, 200);
+        light1.position.set(-80, 20, 0);
+        scene.add(light1);
 
-        // Blue / Cyan Floor Uplights
-        const floorLight = new THREE.PointLight(0x0284c7, 2.0, 250);
-        floorLight.position.set(0, 5, 0);
-        scene.add(floorLight);
+        // Purple uplight for Right Pod
+        const light2 = new THREE.PointLight(0xa855f7, 2.5, 200);
+        light2.position.set(80, 20, 0);
+        scene.add(light2);
     }
 
-    /* ──────────────────────────────────────────────────────────────────────────
-       4. DIGITAL REFLECTIVE GRID FLOOR
-       ────────────────────────────────────────────────────────────────────────── */
     function createReflectiveGridFloor() {
-        const floorSize = 400;
-        const floorGeom = new THREE.PlaneGeometry(floorSize, floorSize);
+        const floorGeom = new THREE.PlaneGeometry(500, 500);
         floorGeom.rotateX(-Math.PI / 2);
-
         const floorMat = new THREE.MeshStandardMaterial({
             color: 0x050b18,
-            roughness: 0.2,
-            metalness: 0.8
+            roughness: 0.15,
+            metalness: 0.85
         });
-        const floorMesh = new THREE.Mesh(floorGeom, floorMat);
-        floorMesh.receiveShadow = true;
-        scene.add(floorMesh);
+        const floor = new THREE.Mesh(floorGeom, floorMat);
+        floor.receiveShadow = true;
+        scene.add(floor);
 
-        // Hexagonal / Grid Lines
-        const gridHelper = new THREE.GridHelper(floorSize, 50, 0xf59e0b, 0x1e293b);
-        gridHelper.position.y = 0.2;
+        const gridHelper = new THREE.GridHelper(500, 60, 0x38bdf8, 0x1e293b);
+        gridHelper.position.y = 0.1;
         scene.add(gridHelper);
     }
 
-    /* ──────────────────────────────────────────────────────────────────────────
-       5. CENTRAL ACHIEVEMENT MONUMENT (GOLDEN TROPHY & CRYSTAL STAR)
-       ────────────────────────────────────────────────────────────────────────── */
-    function createCentralAchievementMonument() {
-        const monumentGroup = new THREE.Group();
-
-        // 1. Layered Hexagonal Pedestal
-        const p1Geom = new THREE.CylinderGeometry(20, 24, 4, 6);
-        const p1Mat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.2 });
-        const p1 = new THREE.Mesh(p1Geom, p1Mat);
-        p1.position.y = 2;
-        monumentGroup.add(p1);
-
-        const p2Geom = new THREE.CylinderGeometry(14, 18, 5, 6);
-        const p2Mat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.9, roughness: 0.1 });
-        const p2 = new THREE.Mesh(p2Geom, p2Mat);
-        p2.position.y = 6.5;
-        monumentGroup.add(p2);
-
-        // 2. Spinning Crystalline Trophy Star (Icosahedron / Diamond)
-        const trophyGeom = new THREE.IcosahedronGeometry(9, 0);
-        const trophyMat = new THREE.MeshStandardMaterial({
-            color: 0xfbbf24,
-            metalness: 0.95,
-            roughness: 0.1,
-            flatShading: true,
-            emissive: 0xd97706,
-            emissiveIntensity: 0.3
-        });
-        trophyMesh = new THREE.Mesh(trophyGeom, trophyMat);
-        trophyMesh.position.y = 24;
-        trophyMesh.castShadow = true;
-        monumentGroup.add(trophyMesh);
-
-        // 3. Orbiting Holographic Rings
-        trophyRingGroup = new THREE.Group();
-        trophyRingGroup.position.y = 24;
-
-        const ringGeom1 = new THREE.TorusGeometry(15, 0.4, 16, 64);
-        const ringMat1 = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.8 });
-        const ring1 = new THREE.Mesh(ringGeom1, ringMat1);
-        ring1.rotateX(Math.PI / 4);
-        trophyRingGroup.add(ring1);
-
-        const ringGeom2 = new THREE.TorusGeometry(19, 0.4, 16, 64);
-        const ringMat2 = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.7 });
-        const ring2 = new THREE.Mesh(ringGeom2, ringMat2);
-        ring2.rotateY(Math.PI / 3);
-        trophyRingGroup.add(ring2);
-
-        monumentGroup.add(trophyRingGroup);
-        scene.add(monumentGroup);
-    }
-
-    /* ──────────────────────────────────────────────────────────────────────────
-       6. SKYSCRAPER 3D BAR PILLARS (GRAFIK BALOK 3 DIMENSI)
-       ────────────────────────────────────────────────────────────────────────── */
-    function createSkyscraperBarPillars() {
-        if (pillarsGroup) scene.remove(pillarsGroup);
-        pillarsGroup = new THREE.Group();
-
-        const radius = 95; // Radius of circular arrangement
-        const total = pillarDefs.length;
-
-        pillarDefs.forEach((p, i) => {
-            const angle = (i / total) * Math.PI * 2;
-            const x = Math.cos(angle) * radius;
-            const z = Math.sin(angle) * radius;
-
-            // Height normalized to percentage (Max height = 75 units)
-            const pct = (p.score / p.max);
-            const height = Math.max(10, pct * 75);
-
-            // 1. Skyscraper Pillar Geometry
-            const barGeom = new THREE.BoxGeometry(10, height, 10);
-            barGeom.translate(0, height / 2, 0); // Origin at base
-
-            const barMat = new THREE.MeshStandardMaterial({
-                color: p.color,
-                metalness: 0.7,
-                roughness: 0.2,
-                transparent: true,
-                opacity: 0.9,
-                emissive: p.color,
-                emissiveIntensity: 0.25
-            });
-            const bar = new THREE.Mesh(barGeom, barMat);
-            bar.position.set(x, 0, z);
-            bar.castShadow = true;
-            bar.receiveShadow = true;
-
-            bar.userData = {
-                pillarId: p.id,
-                name: p.name,
-                score: p.score,
-                max: p.max,
-                pct: Math.round(pct * 100),
-                pos: new THREE.Vector3(x, height, z)
-            };
-
-            // 2. Glowing Halo Cap on top of pillar
-            const capGeom = new THREE.BoxGeometry(11, 1.2, 11);
-            const capMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            const cap = new THREE.Mesh(capGeom, capMat);
-            cap.position.set(0, height + 0.6, 0);
-            bar.add(cap);
-
-            // 3. Ground Pedestal Frame
-            const baseGeom = new THREE.BoxGeometry(13, 2, 13);
-            const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.5 });
-            const base = new THREE.Mesh(baseGeom, baseMat);
-            base.position.set(0, 1, 0);
-            bar.add(base);
-
-            pillarsGroup.add(bar);
-        });
-
-        scene.add(pillarsGroup);
-    }
-
-    /* ──────────────────────────────────────────────────────────────────────────
-       7. VICTORY LASER BEAMS SHOOTING TO THE SKY
-       ────────────────────────────────────────────────────────────────────────── */
-    function createVictoryBeams() {
-        if (beamsGroup) scene.remove(beamsGroup);
-        beamsGroup = new THREE.Group();
-
-        pillarDefs.forEach((p, i) => {
-            const pct = (p.score / p.max);
-            if (pct >= 0.90) { // Only high achievement pillars get victory beams
-                const angle = (i / pillarDefs.length) * Math.PI * 2;
-                const x = Math.cos(angle) * 95;
-                const z = Math.sin(angle) * 95;
-                const height = Math.max(10, pct * 75);
-
-                const beamGeom = new THREE.CylinderGeometry(0.6, 1.4, 250, 16);
-                beamGeom.translate(0, 125, 0);
-                const beamMat = new THREE.MeshBasicMaterial({
-                    color: p.color,
-                    transparent: true,
-                    opacity: 0.35,
-                    blending: THREE.AdditiveBlending
-                });
-                const beam = new THREE.Mesh(beamGeom, beamMat);
-                beam.position.set(x, height, z);
-                beamsGroup.add(beam);
-            }
-        });
-
-        scene.add(beamsGroup);
-    }
-
-    /* ──────────────────────────────────────────────────────────────────────────
-       8. FLOATING GOLDEN PARTICLES (AURA OF ACHIEVEMENT)
-       ────────────────────────────────────────────────────────────────────────── */
     function createGoldenParticles() {
-        const count = 400;
+        const count = 350;
         const geom = new THREE.BufferGeometry();
         const positions = new Float32Array(count * 3);
-
         for (let i = 0; i < count * 3; i += 3) {
-            positions[i] = (Math.random() - 0.5) * 350;
-            positions[i + 1] = Math.random() * 140 + 2;
-            positions[i + 2] = (Math.random() - 0.5) * 350;
+            positions[i] = (Math.random() - 0.5) * 400;
+            positions[i + 1] = Math.random() * 150 + 5;
+            positions[i + 2] = (Math.random() - 0.5) * 400;
         }
         geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
         const mat = new THREE.PointsMaterial({
-            color: 0xfbbf24,
-            size: 2.2,
+            color: 0x38bdf8,
+            size: 2.0,
             transparent: true,
-            opacity: 0.6,
+            opacity: 0.5,
             blending: THREE.AdditiveBlending
         });
-
         particlesGroup = new THREE.Points(geom, mat);
         scene.add(particlesGroup);
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       9. RAYCASTER & INTERACTIVE TOOLTIP
+       2. HIGH-RES BILLBOARD TEXT SPRITE GENERATOR (NO-MOUSE WALL TV)
        ────────────────────────────────────────────────────────────────────────── */
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
+    function createBillboardSprite(lines, options = {}) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 256;
+        const ctx = canvas.getContext('2d');
 
-    function setupRaycaster() {
-        const tooltip = document.getElementById('objTooltip');
-        const tooltipTitle = document.getElementById('tooltipTitle');
-        const tooltipBody = document.getElementById('tooltipBody');
+        const bgColor = options.bgColor || 'rgba(11, 19, 43, 0.92)';
+        const borderColor = options.borderColor || '#38bdf8';
+        const titleColor = options.titleColor || '#ffffff';
 
-        window.addEventListener('mousemove', (e) => {
-            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        // Draw Rounded Card Background
+        ctx.fillStyle = bgColor;
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 6;
+        roundRect(ctx, 10, 10, 492, 236, 20);
+        ctx.fill();
+        ctx.stroke();
 
-            raycaster.setFromCamera(mouse, camera);
+        // Top Accent Line
+        ctx.fillStyle = borderColor;
+        ctx.fillRect(20, 16, 472, 6);
 
-            if (pillarsGroup) {
-                const intersects = raycaster.intersectObjects(pillarsGroup.children);
-                if (intersects.length > 0 && intersects[0].object.userData.name) {
-                    const d = intersects[0].object.userData;
-                    tooltipTitle.innerText = `🏆 ${d.name}`;
-                    tooltipBody.innerHTML = `Skor: <strong>${d.score} / ${d.max}</strong> &bull; Ketercapaian: <strong class="text-success">${d.pct}%</strong>`;
-                    tooltip.style.left = `${e.clientX}px`;
-                    tooltip.style.top = `${e.clientY}px`;
-                    tooltip.style.display = 'block';
-                    return;
-                }
-            }
+        // Header / Category Title
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 26px Poppins, sans-serif';
+        ctx.fillStyle = titleColor;
+        ctx.fillText(lines[0] || '', 256, 60);
 
-            tooltip.style.display = 'none';
-        });
+        // Subtitle (e.g. Unsafe Condition)
+        ctx.font = '600 18px Poppins, sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(lines[1] || '', 256, 92);
+
+        // Big Main Value (e.g. 68.4% • 184 Laporan)
+        ctx.font = '900 36px "JetBrains Mono", monospace';
+        ctx.fillStyle = borderColor;
+        ctx.fillText(lines[2] || '', 256, 150);
+
+        // Secondary Metric (e.g. YTD: 1,420 • Closed: 96%)
+        ctx.font = '600 20px "JetBrains Mono", monospace';
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillText(lines[3] || '', 256, 195);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+
+        const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(spriteMat);
+        sprite.scale.set(38, 19, 1);
+        return sprite;
+    }
+
+    function createHeaderSignSprite(text, color) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        roundRect(ctx, 10, 10, 492, 108, 14);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 24px Poppins, sans-serif';
+        ctx.fillStyle = color;
+        ctx.fillText(text, 256, 72);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(spriteMat);
+        sprite.scale.set(45, 11, 1);
+        return sprite;
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       10. ANIMATION LOOP (60 FPS)
+       3. BUILD 3D BARS FOR REPORT 1 (TTA VS KTA) & REPORT 2 (MTD VS YTD)
+       ────────────────────────────────────────────────────────────────────────── */
+    function build3DCharts(data) {
+        if (chartGroup1) scene.remove(chartGroup1);
+        if (chartGroup2) scene.remove(chartGroup2);
+        if (lasersGroup) scene.remove(lasersGroup);
+
+        chartGroup1 = new THREE.Group();
+        chartGroup2 = new THREE.Group();
+        lasersGroup = new THREE.Group();
+
+        const kat = data.kategori || {};
+        const kom = data.komparasi || {};
+        const mtd = kom.mtd || {};
+        const ytd = kom.ytd || {};
+
+        // ═════════════════════════════════════════════════════════════════════
+        // PODIUM 1 (LEFT): KATEGORI HAZARD (KTA vs TTA)
+        // ═════════════════════════════════════════════════════════════════════
+        chartGroup1.position.set(-80, 0, 0);
+
+        // Pedestal Platform Left
+        const ped1Geom = new THREE.BoxGeometry(60, 4, 35);
+        const ped1Mat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.6 });
+        const ped1 = new THREE.Mesh(ped1Geom, ped1Mat);
+        ped1.position.y = 2;
+        chartGroup1.add(ped1);
+
+        // Header Title Sign Left
+        const sign1 = createHeaderSignSprite('GRAFIK 1: KATEGORI HAZARD (KTA vs TTA)', '#38bdf8');
+        sign1.position.set(0, 78, 0);
+        chartGroup1.add(sign1);
+
+        // Bar 1: KTA (Unsafe Condition) - Cyan
+        const ktaVal = kat.ktaAll || 68;
+        const ktaPct = kat.ktaAllPct || 68.0;
+        const ktaHeight = Math.max(20, (ktaPct / 100) * 65);
+
+        const ktaBarGeom = new THREE.BoxGeometry(16, ktaHeight, 16);
+        ktaBarGeom.translate(0, ktaHeight / 2, 0);
+        const ktaBarMat = new THREE.MeshStandardMaterial({
+            color: 0x0284c7,
+            metalness: 0.7,
+            roughness: 0.2,
+            transparent: true,
+            opacity: 0.9,
+            emissive: 0x0284c7,
+            emissiveIntensity: 0.35
+        });
+        const ktaBar = new THREE.Mesh(ktaBarGeom, ktaBarMat);
+        ktaBar.position.set(-15, 4, 0);
+        chartGroup1.add(ktaBar);
+
+        // Permanent Label Sprite on top of KTA Bar
+        const ktaSprite = createBillboardSprite([
+            'KONDISI TIDAK AMAN (KTA)',
+            'UNSAFE CONDITION',
+            `${ktaPct}% • ${ktaVal} LAPORAN`,
+            `MTD: ${kat.ktaMtd || 0}  |  YTD: ${kat.ktaYtd || 0}`
+        ], { borderColor: '#38bdf8', titleColor: '#ffffff' });
+        ktaSprite.position.set(-15, ktaHeight + 16, 0);
+        chartGroup1.add(ktaSprite);
+
+        // Bar 2: TTA (Unsafe Action) - Amber
+        const ttaVal = kat.ttaAll || 32;
+        const ttaPct = kat.ttaAllPct || 32.0;
+        const ttaHeight = Math.max(20, (ttaPct / 100) * 65);
+
+        const ttaBarGeom = new THREE.BoxGeometry(16, ttaHeight, 16);
+        ttaBarGeom.translate(0, ttaHeight / 2, 0);
+        const ttaBarMat = new THREE.MeshStandardMaterial({
+            color: 0xd97706,
+            metalness: 0.7,
+            roughness: 0.2,
+            transparent: true,
+            opacity: 0.9,
+            emissive: 0xd97706,
+            emissiveIntensity: 0.35
+        });
+        const ttaBar = new THREE.Mesh(ttaBarGeom, ttaBarMat);
+        ttaBar.position.set(15, 4, 0);
+        chartGroup1.add(ttaBar);
+
+        // Permanent Label Sprite on top of TTA Bar
+        const ttaSprite = createBillboardSprite([
+            'TINDAKAN TIDAK AMAN (TTA)',
+            'UNSAFE ACTION',
+            `${ttaPct}% • ${ttaVal} LAPORAN`,
+            `MTD: ${kat.ttaMtd || 0}  |  YTD: ${kat.ttaYtd || 0}`
+        ], { borderColor: '#f59e0b', titleColor: '#ffffff' });
+        ttaSprite.position.set(15, ttaHeight + 16, 0);
+        chartGroup1.add(ttaSprite);
+
+        // ═════════════════════════════════════════════════════════════════════
+        // PODIUM 2 (RIGHT): KOMPARASI WAKTU (MTD vs YTD)
+        // ═════════════════════════════════════════════════════════════════════
+        chartGroup2.position.set(80, 0, 0);
+
+        // Pedestal Platform Right
+        const ped2Geom = new THREE.BoxGeometry(60, 4, 35);
+        const ped2Mat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.6 });
+        const ped2 = new THREE.Mesh(ped2Geom, ped2Mat);
+        ped2.position.y = 2;
+        chartGroup2.add(ped2);
+
+        // Header Title Sign Right
+        const sign2 = createHeaderSignSprite('GRAFIK 2: KOMPARASI PERIODE (MTD vs YTD)', '#10b981');
+        sign2.position.set(0, 78, 0);
+        chartGroup2.add(sign2);
+
+        // Bar 3: MTD (Bulan Berjalan) - Emerald
+        const mtdTotal = mtd.total || 140;
+        const mtdClosed = mtd.closed || 135;
+        const mtdClosedPct = mtd.closedPct || 96.4;
+        const mtdHeight = 36; // Scaled display height
+
+        const mtdBarGeom = new THREE.BoxGeometry(16, mtdHeight, 16);
+        mtdBarGeom.translate(0, mtdHeight / 2, 0);
+        const mtdBarMat = new THREE.MeshStandardMaterial({
+            color: 0x059669,
+            metalness: 0.7,
+            roughness: 0.2,
+            transparent: true,
+            opacity: 0.9,
+            emissive: 0x059669,
+            emissiveIntensity: 0.35
+        });
+        const mtdBar = new THREE.Mesh(mtdBarGeom, mtdBarMat);
+        mtdBar.position.set(-15, 4, 0);
+        chartGroup2.add(mtdBar);
+
+        // Permanent Label Sprite on top of MTD Bar
+        const mtdSprite = createBillboardSprite([
+            'MTD (BULAN INI)',
+            data.periode ? data.periode.bulanNama : 'Bulan Berjalan',
+            `${mtdTotal} TOTAL HAZARD`,
+            `Closed: ${mtdClosedPct}% (${mtdClosed} Selesai)`
+        ], { borderColor: '#10b981', titleColor: '#ffffff' });
+        mtdSprite.position.set(-15, mtdHeight + 16, 0);
+        chartGroup2.add(mtdSprite);
+
+        // Bar 4: YTD (Tahun Berjalan) - Purple / Gold
+        const ytdTotal = ytd.total || 1450;
+        const ytdClosed = ytd.closed || 1410;
+        const ytdClosedPct = ytd.closedPct || 97.2;
+        const ytdHeight = 58; // Higher skyscraper reflecting year accumulation
+
+        const ytdBarGeom = new THREE.BoxGeometry(16, ytdHeight, 16);
+        ytdBarGeom.translate(0, ytdHeight / 2, 0);
+        const ytdBarMat = new THREE.MeshStandardMaterial({
+            color: 0x7c3aed,
+            metalness: 0.8,
+            roughness: 0.15,
+            transparent: true,
+            opacity: 0.9,
+            emissive: 0x7c3aed,
+            emissiveIntensity: 0.4
+        });
+        const ytdBar = new THREE.Mesh(ytdBarGeom, ytdBarMat);
+        ytdBar.position.set(15, 4, 0);
+        chartGroup2.add(ytdBar);
+
+        // Permanent Label Sprite on top of YTD Bar
+        const ytdSprite = createBillboardSprite([
+            'YTD (TAHUN BERJALAN)',
+            `Akumulasi Tahun ${data.periode ? data.periode.tahun : 2026}`,
+            `${ytdTotal} TOTAL HAZARD`,
+            `Closed: ${ytdClosedPct}% (${ytdClosed} Selesai)`
+        ], { borderColor: '#a855f7', titleColor: '#ffffff' });
+        ytdSprite.position.set(15, ytdHeight + 16, 0);
+        chartGroup2.add(ytdSprite);
+
+        // Add Groups to Scene
+        scene.add(chartGroup1);
+        scene.add(chartGroup2);
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       4. ANIMATION LOOP & AUTOMATIC SMOOTH CAMERA GLIDE
        ────────────────────────────────────────────────────────────────────────── */
     function animate() {
         requestAnimationFrame(animate);
 
-        const delta = clock.getDelta();
         const time = clock.getElapsedTime();
 
-        // 1. Rotate Trophy & Rings
-        if (trophyMesh) {
-            trophyMesh.rotation.y += delta * 0.8;
-            trophyMesh.rotation.x = Math.sin(time * 0.5) * 0.2;
-        }
-        if (trophyRingGroup) {
-            trophyRingGroup.children[0].rotation.z += delta * 0.6;
-            trophyRingGroup.children[1].rotation.x += delta * 0.5;
-        }
+        // Smooth subtle cinematic floating camera for TV Wall (no mouse needed)
+        // Camera glides gently left-to-right to give depth to the 3D bars and labels
+        camera.position.x = Math.sin(time * 0.15) * 45;
+        camera.position.y = 85 + Math.cos(time * 0.2) * 8;
+        camera.position.z = 240 + Math.sin(time * 0.1) * 12;
+        camera.lookAt(0, 42, 0);
 
-        // 2. Pulse Victory Beams
-        if (beamsGroup && showVictoryBeams) {
-            beamsGroup.children.forEach((b, idx) => {
-                const scale = 1.0 + Math.sin(time * 4 + idx) * 0.15;
-                b.scale.set(scale, 1.0, scale);
-            });
-        }
-
-        // 3. Float Particles Slowly
         if (particlesGroup) {
-            particlesGroup.rotation.y = time * 0.02;
-        }
-
-        // 4. Camera Modes
-        if (cameraMode === 'hero') {
-            const radius = 240;
-            const speed = 0.06;
-            camera.position.x = Math.cos(time * speed) * radius;
-            camera.position.z = Math.sin(time * speed) * radius;
-            camera.position.y = 110 + Math.sin(time * 0.2) * 15;
-            camera.lookAt(0, 35, 0);
-        } else {
-            controls.update();
+            particlesGroup.rotation.y = time * 0.03;
         }
 
         renderer.render(scene, camera);
@@ -1095,51 +944,6 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
-    /* ──────────────────────────────────────────────────────────────────────────
-       11. CAMERA PRESETS & CONTROLS
-       ────────────────────────────────────────────────────────────────────────── */
-    function setCameraPreset(preset) {
-        cameraMode = preset;
-        document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
-
-        if (preset === 'hero') {
-            document.getElementById('btnCamHero').classList.add('active');
-            controls.enabled = false;
-        } else if (preset === 'chart') {
-            document.getElementById('btnCamChart').classList.add('active');
-            controls.enabled = true;
-            camera.position.set(0, 95, 230);
-            controls.target.set(0, 45, 0);
-        } else if (preset === 'trophy') {
-            document.getElementById('btnCamTrophy').classList.add('active');
-            controls.enabled = true;
-            camera.position.set(0, 42, 60);
-            controls.target.set(0, 24, 0);
-        } else if (preset === 'orbit') {
-            document.getElementById('btnCamOrbit').classList.add('active');
-            controls.enabled = true;
-        }
-    }
-
-    function focusPillar(id) {
-        cameraMode = 'orbit';
-        document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('btnCamOrbit').classList.add('active');
-        controls.enabled = true;
-
-        if (pillarsGroup && pillarsGroup.children[id]) {
-            const p = pillarsGroup.children[id].userData.pos;
-            camera.position.set(p.x * 1.35, p.y + 20, p.z * 1.35);
-            controls.target.set(p.x, p.y * 0.6, p.z);
-        }
-    }
-
-    function toggleVictoryBeams() {
-        showVictoryBeams = !showVictoryBeams;
-        if (beamsGroup) beamsGroup.visible = showVictoryBeams;
-        document.getElementById('btnToggleBeams').classList.toggle('active', showVictoryBeams);
-    }
-
     function toggleFullscreen() {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(err => console.log(err));
@@ -1149,79 +953,54 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       12. FETCH DATA & DYNAMIC PILLAR HEIGHT UPDATES
+       5. FETCH DATA & UPDATE HUD & 3D BILLBOARDS
        ────────────────────────────────────────────────────────────────────────── */
     function fetchDisplay4Data() {
         fetch('/Display/GetDisplay4Data')
             .then(res => res.json())
             .then(data => {
                 display4Data = data;
-                updateAchievementUI(data);
+                updateHud(data);
+                build3DCharts(data);
             })
             .catch(err => console.warn('Error fetching Display 4 data:', err));
     }
 
-    function updateAchievementUI(data) {
+    function updateHud(data) {
         if (!data) return;
 
-        // 1. RCI Road Quality (Display 3)
-        if (data.rci) {
-            const rciScore = data.rci.avgScore || 3.92;
-            document.getElementById('kpiRciScore').innerText = `${rciScore} / 4.0`;
+        const kat = data.kategori || {};
+        const kom = data.komparasi || {};
+        const mtd = kom.mtd || {};
+        const ytd = kom.ytd || {};
 
-            // Top Segments List
-            const segBox = document.getElementById('topSegmentsContainer');
-            segBox.innerHTML = '';
-            if (data.rci.segments && data.rci.segments.length > 0) {
-                data.rci.segments.slice(0, 5).forEach(s => {
-                    const el = document.createElement('div');
-                    el.className = 'd-flex justify-content-between align-items-center py-1 border-bottom border-secondary border-opacity-25';
-                    el.style.fontSize = '10.5px';
-                    el.innerHTML = `
-                        <div class="text-truncate">
-                            <strong class="text-white">${s.segment || s.namaJalan}</strong>
-                            <div class="text-muted" style="font-size:9.5px;">${s.namaJalan}</div>
-                        </div>
-                        <span class="badge bg-success" style="font-family:'JetBrains Mono', monospace; font-size:9.5px;">
-                            ${s.score} / 4.0
-                        </span>
-                    `;
-                    segBox.appendChild(el);
-                });
-            }
-        }
+        // 1. Report 1 (KTA vs TTA)
+        document.getElementById('kpiKtaTotal').innerText = kat.ktaAll || 0;
+        document.getElementById('kpiTtaTotal').innerText = kat.ttaAll || 0;
+        document.getElementById('kpiKtaPct').innerText = `${kat.ktaAllPct || 0}% dari total`;
+        document.getElementById('kpiTtaPct').innerText = `${kat.ttaAllPct || 0}% dari total`;
 
-        // 2. P2H Fleet (Display 1)
-        if (data.fleetP2h) {
-            const p2hRate = data.fleetP2h.readinessPct || 94.2;
-            document.getElementById('kpiP2hScore').innerText = `${p2hRate}%`;
-            document.getElementById('legP2h').innerText = `${p2hRate}% (${data.fleetP2h.readyCount || 49} Unit)`;
-        }
+        document.getElementById('ratioBarKta').style.width = `${kat.ktaAllPct || 50}%`;
+        document.getElementById('ratioBarTta').style.width = `${kat.ttaAllPct || 50}%`;
 
-        // 3. Safety Pulse (Display 1 & 2)
-        if (data.safetyPulse) {
-            document.getElementById('safeComplianceVal').innerText = `${data.safetyPulse.safeIndex || 98.6}%`;
-            document.getElementById('kpiP5mCount').innerText = `${data.safetyPulse.p5mCount || 18} Sesi Hari Ini`;
-        }
-        if (data.hazard) {
-            const closed = data.hazard.closed || 0;
-            const total = data.hazard.total || 1;
-            const ratio = Math.round((closed / total) * 100);
-            document.getElementById('hazardCloseRatio').innerText = `${ratio}% Closed`;
-        }
+        document.getElementById('badgeBulanNama').innerText = data.periode ? data.periode.bulanNama : 'Bulan Berjalan';
+        document.getElementById('mtdKtaDetail').innerText = `${kat.ktaMtd || 0} Laporan (${kat.ktaMtdPct || 0}%)`;
+        document.getElementById('mtdTtaDetail').innerText = `${kat.ttaMtd || 0} Laporan (${kat.ttaMtdPct || 0}%)`;
+        document.getElementById('mtdTotalDetail').innerText = `${mtd.total || 0} Laporan`;
 
-        // 4. Infrastructure & BBS (Display 3)
-        if (data.facility) {
-            document.getElementById('kpiBbsScore').innerText = `${data.facility.bbsSafePct}%`;
-            document.getElementById('kpiSpiScore').innerText = `${data.facility.spiPondCompliance}%`;
-            document.getElementById('legFci').innerText = `${data.facility.fciScore}%`;
-            document.getElementById('legBbs').innerText = `${data.facility.bbsSafePct}%`;
-            document.getElementById('legSpi').innerText = `${data.facility.spiPondCompliance}%`;
-        }
+        // 2. Report 2 (MTD vs YTD)
+        document.getElementById('kpiMtdTotal').innerText = mtd.total || 0;
+        document.getElementById('kpiYtdTotal').innerText = ytd.total || 0;
+        document.getElementById('kpiMtdClosedRate').innerText = `${mtd.closedPct || 0}% Closed`;
+        document.getElementById('kpiYtdClosedRate').innerText = `${ytd.closedPct || 0}% Closed`;
+
+        document.getElementById('mtdClosedDetail').innerText = `${mtd.closed || 0} Temuan (${mtd.closedPct || 0}%)`;
+        document.getElementById('ytdClosedDetail').innerText = `${ytd.closed || 0} Temuan (${ytd.closedPct || 0}%)`;
+        document.getElementById('mtdOpenDetail').innerText = `${mtd.open || 0} Temuan Aktif`;
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       13. CLOCK & 5-MINUTE AUTO SLIDE ROTATION (DISPLAY 4 -> DISPLAY 1)
+       6. CLOCK & 5-MINUTE AUTO SLIDE ROTATION (DISPLAY 4 -> DISPLAY 1)
        ────────────────────────────────────────────────────────────────────────── */
     function updateClock() {
         const now = new Date();
@@ -1241,7 +1020,6 @@
         if (isSlidePaused) return;
         slideTimeRemaining--;
         if (slideTimeRemaining <= 0) {
-            // Completed 4-display rotation loop: Display 1 -> 2 -> 3 -> 4 -> 1
             window.location.href = '/Display';
             return;
         }
@@ -1266,7 +1044,7 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       14. INITIALIZATION & RECURRING DATA REFRESH
+       7. INITIALIZATION
        ────────────────────────────────────────────────────────────────────────── */
     initThree();
     fetchDisplay4Data();
