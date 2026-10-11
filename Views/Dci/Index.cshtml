@@ -172,425 +172,306 @@
         </div>
     </div>
 
-    <!-- Filter & Action Bar -->
-    <div class="card-sap p-3 mb-4">
-        <form method="get" class="row g-2 align-items-end">
-            <div class="col-12 col-md-3">
-                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">PENCARIAN</label>
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" name="search" value="@ViewBag.CurrentSearch" class="form-control border-start-0" placeholder="Nama, NIK, Dump, Lokasi..." />
+    <!-- Main Layout Grid: Form (Left) & Riwayat (Right) -->
+    <div class="row g-4">
+        <!-- FORM COLUMN -->
+        <div class="col-lg-6">
+            <div class="card-sap border-primary-accent" style="border-top: 4px solid #f97316;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0 text-white font-weight-bold d-flex align-items-center gap-2" id="formTitle">
+                        <i class="bi bi-pencil-square" style="color: #f97316;"></i>
+                        <span>Form Penilaian DCI</span>
+                        <span class="badge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(244, 63, 94, 0.4); display: inline-flex; align-items: center; gap: 2px;">
+                            <i class="bi bi-stars" style="font-size: 9px;"></i> NEW
+                        </span>
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnCancelEdit" onclick="resetForm()">
+                        <i class="bi bi-x-circle me-1"></i> Batal Edit
+                    </button>
                 </div>
-            </div>
 
-            <div class="col-6 col-md-2">
-                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">DISPOSAL</label>
-                <select name="disposal" class="form-select form-select-sm">
-                    <option value="">Semua Disposal</option>
-                    @foreach (var d in disposalList)
-                    {
-                        <option value="@d" selected="@(d == ViewBag.CurrentDisposal)">@d</option>
-                    }
-                </select>
-            </div>
-
-            <div class="col-6 col-md-2">
-                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">KATEGORI</label>
-                <select name="kategori" class="form-select form-select-sm">
-                    <option value="">Semua Kategori</option>
-                    <option value="Baik" selected="@("Baik" == ViewBag.CurrentKategori)">Baik (>=85%)</option>
-                    <option value="Sedang" selected="@("Sedang" == ViewBag.CurrentKategori)">Sedang (70-84%)</option>
-                    <option value="Kurang" selected="@("Kurang" == ViewBag.CurrentKategori)">Kurang (<70%)</option>
-                </select>
-            </div>
-
-            <div class="col-6 col-md-3">
-                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">PERIODE TANGGAL</label>
-                <div class="input-group input-group-sm">
-                    <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control" />
-                    <span class="input-group-text">-</span>
-                    <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control" />
-                </div>
-            </div>
-
-            <div class="col-6 col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-sm btn-primary flex-fill" style="background: #ea580c; border: none; border-radius: 8px;">
-                    <i class="bi bi-funnel-fill me-1"></i> Filter
-                </button>
-                <button type="button" class="btn btn-sm btn-success flex-fill d-flex align-items-center justify-content-center gap-1" style="background: linear-gradient(135deg, #ea580c, #f97316); border: none; border-radius: 8px; font-weight: 600;" onclick="openInputModal()">
-                    <i class="bi bi-plus-lg"></i>
-                    <span>Baru</span>
-                    <span class="badge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 8.5px; font-weight: 800; padding: 1.5px 4.5px; border-radius: 4px; letter-spacing: 0.5px;">NEW</span>
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Main List Table / Cards -->
-    <div class="card-sap p-0 mb-4 overflow-hidden">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" style="font-size: 13px;">
-                <thead style="background: rgba(249, 115, 22, 0.05); border-bottom: 1px solid var(--border-color);">
-                    <tr class="text-muted" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">
-                        <th class="ps-3 py-3" style="width: 50px;">Foto</th>
-                        <th class="py-3">Tanggal &amp; Waktu</th>
-                        <th class="py-3">Disposal &amp; Nama Dump</th>
-                        <th class="py-3">Lokasi / Area</th>
-                        <th class="py-3">Surveyor</th>
-                        <th class="py-3 text-center">Skor DCI</th>
-                        <th class="py-3 text-center">Status</th>
-                        <th class="pe-3 py-3 text-end" style="width: 140px;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model == null || !Model.Any())
-                    {
-                        <tr>
-                            <td colspan="8" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox d-block mb-2" style="font-size: 32px; color: var(--text-muted);"></i>
-                                Belum ada laporan Dump Condition Index (DCI) untuk kriteria ini.
-                            </td>
-                        </tr>
-                    }
-                    else
-                    {
-                        foreach (var item in Model)
-                        {
-                            <tr>
-                                <td class="ps-3">
-                                    @if (!string.IsNullOrEmpty(item.FotoUrl))
-                                    {
-                                        <div style="width: 44px; height: 44px; border-radius: 8px; overflow: hidden; background: #000; cursor: pointer; border: 1px solid rgba(255,255,255,0.1);" onclick="openDetailModal(@item.Id)">
-                                            <img src="@item.FotoUrl" alt="Foto DCI" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/img/placeholder-photo.png'" />
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div style="width: 44px; height: 44px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 18px;">
-                                            <i class="bi bi-camera"></i>
-                                        </div>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="font-weight-bold" style="color: var(--text-main);">@item.Tanggal.ToString("dd MMM yyyy")</div>
-                                    <small class="text-muted">@item.Waktu.ToString(@"hh\:mm") | Shift: @(item.Shift ?? "-")</small>
-                                </td>
-                                <td>
-                                    <div class="font-weight-bold" style="color: #ea580c;">@(item.NamaDump ?? item.Disposal ?? "Dump Disposal")</div>
-                                    <small class="text-muted"><i class="bi bi-layers me-1"></i>@(item.Disposal ?? "Disposal Area")</small>
-                                </td>
-                                <td>
-                                    <div style="color: var(--text-main);">@item.Lokasi</div>
-                                    <small class="text-muted">@item.Area @(!string.IsNullOrEmpty(item.DetilLokasi) ? $"• {item.DetilLokasi}" : "")</small>
-                                </td>
-                                <td>
-                                    <div class="font-weight-bold" style="color: var(--text-main);">@item.Nama</div>
-                                    <small class="text-muted">@item.Nik • @(item.Departemen ?? "-")</small>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge px-2.5 py-1.5" style="font-size: 12px; font-weight: 800; border-radius: 8px; background: @(item.TotalScore >= 85 ? "rgba(16, 185, 129, 0.15)" : (item.TotalScore >= 70 ? "rgba(245, 158, 11, 0.15)" : "rgba(244, 63, 94, 0.15)")); color: @(item.TotalScore >= 85 ? "#10b981" : (item.TotalScore >= 70 ? "#f59e0b" : "#f43f5e")); border: 1px solid @(item.TotalScore >= 85 ? "rgba(16, 185, 129, 0.3)" : (item.TotalScore >= 70 ? "rgba(245, 158, 11, 0.3)" : "rgba(244, 63, 94, 0.3)"));">
-                                        @item.TotalScore%
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    @if (item.KategoriIndex == "Baik")
-                                    {
-                                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; font-size: 11px;">Baik</span>
-                                    }
-                                    else if (item.KategoriIndex == "Sedang")
-                                    {
-                                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 11px;">Sedang</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 6px; font-size: 11px;">Kurang</span>
-                                    }
-                                </td>
-                                <td class="pe-3 text-end">
-                                    <div class="btn-group btn-group-sm">
-                                        <button type="button" class="btn btn-outline-info" title="Lihat Detail" onclick="openDetailModal(@item.Id)">
-                                            <i class="bi bi-eye"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-outline-primary" title="Edit Laporan" onclick="editReport(@item.Id)">
-                                            <i class="bi bi-pencil-square"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-outline-danger" title="Hapus Laporan" onclick="confirmDelete(@item.Id)">
-                                            <i class="bi bi-trash3"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Input / Edit Modal -->
-<div class="modal fade" id="dciInputModal" tabindex="-1" aria-labelledby="dciInputModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content" style="background: var(--bg-card); border: 1px solid rgba(249, 115, 22, 0.3); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 24px;">
-                <h5 class="modal-title font-weight-bold d-flex align-items-center gap-2" id="dciInputModalLabel" style="color: var(--text-main);">
-                    <i class="bi bi-layers-fill" style="color: #ea580c;"></i>
-                    <span id="modalFormTitle">Form Inspeksi Dump Condition Index (DCI)</span>
-                    <span class="badge" id="modalNewBadge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(244, 63, 94, 0.4); display: inline-flex; align-items: center; gap: 2px;">
-                        <i class="bi bi-stars" style="font-size: 9px;"></i> NEW
-                    </span>
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" style="padding: 24px;">
-                <form id="dciForm" method="post" asp-action="Submit" enctype="multipart/form-data">
+                <form asp-action="Submit" method="post" id="dciForm" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
-                    <input type="hidden" id="reportId" name="id" value="" />
+                    <input type="hidden" id="dciId" name="id" value="" />
 
                     <!-- Section 1: Data Lokasi & Waktu -->
-                    <div class="mb-4">
-                        <div class="text-muted font-weight-bold mb-3" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <i class="bi bi-geo-alt-fill text-warning me-1"></i> 1. Informasi Umum &amp; Lokasi
+                    <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                        <div class="text-white mb-2 font-weight-bold" style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="bi bi-geo-alt-fill text-warning me-1"></i> 1. Informasi Lokasi &amp; Disposal
                         </div>
-                        <div class="row g-3">
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">TANGGAL *</label>
-                                <input type="date" id="inputTanggal" name="tanggal" class="form-control form-control-sm" required value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6 form-group-sap">
+                                <label class="form-label-sap" for="tanggal">Tanggal</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-calendar-event-fill input-sap-icon"></i>
+                                    <input type="date" id="tanggal" name="tanggal" class="input-sap" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                                </div>
                             </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">WAKTU *</label>
-                                <input type="time" id="inputWaktu" name="waktuStr" class="form-control form-control-sm" required value="@DateTime.Now.ToString("HH:mm")" />
+                            <div class="col-md-6 form-group-sap">
+                                <label class="form-label-sap" for="waktuStr">Waktu</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-clock-fill input-sap-icon"></i>
+                                    <input type="time" id="waktuStr" name="waktuStr" class="input-sap" value="@DateTime.Now.ToString("HH:mm")" required />
+                                </div>
                             </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">SHIFT</label>
-                                <select id="inputShift" name="shift" class="form-select form-select-sm">
-                                    <option value="Day">Day Shift</option>
-                                    <option value="Night">Night Shift</option>
-                                </select>
-                            </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">AREA UTAMA *</label>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6 form-group-sap">
+                                <label class="form-label-sap" for="areaSearch">Area Utama</label>
                                 <div class="position-relative mb-0">
-                                    <div class="input-group input-group-sm mb-0">
-                                        <span class="input-group-text bg-dark border-secondary text-warning"><i class="bi bi-geo-alt-fill"></i></span>
-                                        <input type="text" id="areaSearch" class="form-control form-control-sm text-uppercase" placeholder="Ketik untuk mencari area..." autocomplete="off" />
-                                        <button type="button" class="btn btn-outline-secondary" id="toggleAreaDropdown"><i class="bi bi-chevron-down"></i></button>
+                                    <div class="input-sap-wrapper mb-0">
+                                        <i class="bi bi-geo-alt-fill input-sap-icon"></i>
+                                        <input type="text" id="areaSearch" class="input-sap text-uppercase" placeholder="Ketik untuk mencari area..." autocomplete="off" style="padding-right: 36px;" />
+                                        <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleAreaDropdown"></i>
                                     </div>
-                                    <select id="inputArea" name="area" required style="display:none;">
+                                    <!-- Hidden select for actual form submission -->
+                                    <select id="area" name="area" required style="display:none;">
                                         <option value="" disabled selected></option>
                                     </select>
-                                    <div id="areaDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1060; background: var(--bg-card, #1e293b); border:1px solid rgba(255,255,255,0.15); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+                                    <!-- Dropdown list -->
+                                    <div id="areaDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
                                         <!-- Populated by JS -->
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">DETAIL LOKASI / BENCHMARK</label>
-                                <div class="d-flex align-items-center gap-1">
+                            <div class="col-md-6 form-group-sap">
+                                <label class="form-label-sap" for="benchmarkSearch">Detail Lokasi / Benchmark</label>
+                                <div class="d-flex align-items-center gap-2">
                                     <div class="position-relative flex-grow-1 mb-0">
-                                        <div class="input-group input-group-sm mb-0">
-                                            <span class="input-group-text bg-dark border-secondary text-warning"><i class="bi bi-compass-fill"></i></span>
-                                            <input type="text" id="benchmarkSearch" class="form-control form-control-sm text-uppercase" placeholder="Pilih Area Utama dulu..." autocomplete="off" disabled />
-                                            <button type="button" class="btn btn-outline-secondary" id="toggleBenchmarkDropdown"><i class="bi bi-chevron-down"></i></button>
+                                        <div class="input-sap-wrapper mb-0">
+                                            <i class="bi bi-compass-fill input-sap-icon"></i>
+                                            <input type="text" id="benchmarkSearch" class="input-sap text-uppercase" placeholder="Pilih Area Utama dulu..." autocomplete="off" style="padding-right: 36px;" disabled />
+                                            <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleBenchmarkDropdown"></i>
                                         </div>
-                                        <input type="hidden" id="inputDetilLokasi" name="detilLokasi" value="" />
-                                        <div id="benchmarkDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1060; background: var(--bg-card, #1e293b); border:1px solid rgba(255,255,255,0.15); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+                                        <!-- Hidden input for actual form submission -->
+                                        <input type="hidden" id="detilLokasi" name="detilLokasi" value="" />
+                                        <!-- Dropdown list -->
+                                        <div id="benchmarkDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; background: var(--bg-card); border:1px solid var(--border-color); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);">
                                             <!-- Populated by JS -->
                                         </div>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="$('#addBenchmarkModal').modal('show')" title="Tambah Benchmark Baru" id="btnAddBenchmark" disabled style="height: 31px; border-radius: 6px;">
+                                    <button type="button" class="btn btn-primary shadow-sm" style="height: 46px; border-radius: 12px; padding: 0 16px; background-color: #ea580c; border: none;" onclick="$('#addBenchmarkModal').modal('show')" title="Tambah Benchmark Baru" id="btnAddBenchmark" disabled>
                                         <i class="bi bi-plus-lg"></i>
                                     </button>
                                 </div>
                             </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">DISPOSAL</label>
-                                <input type="text" id="inputDisposal" name="disposal" class="form-control form-control-sm" placeholder="Contoh: Disposal Utama, In-pit Dump" list="disposalDatalist" />
-                                <datalist id="disposalDatalist">
-                                    @foreach (var d in disposalList)
-                                    {
-                                        <option value="@d" />
-                                    }
-                                </datalist>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6 form-group-sap">
+                                <label class="form-label-sap" for="disposal">Disposal</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-layers-fill input-sap-icon"></i>
+                                    <input type="text" id="disposal" name="disposal" class="input-sap text-uppercase" placeholder="Misal: Disposal Utama, In-pit" list="disposalDatalist" />
+                                    <datalist id="disposalDatalist">
+                                        @foreach (var d in disposalList)
+                                        {
+                                            <option value="@d" />
+                                        }
+                                    </datalist>
+                                </div>
                             </div>
-                            <div class="col-6 col-md-4">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">NAMA DUMP / PAD</label>
-                                <input type="text" id="inputNamaDump" name="namaDump" class="form-control form-control-sm" placeholder="Contoh: Pad 2B, Dump RL 45" />
+                            <div class="col-md-6 form-group-sap">
+                                <label class="form-label-sap" for="namaDump">Nama Dump / Pad</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-cone-striped input-sap-icon"></i>
+                                    <input type="text" id="namaDump" name="namaDump" class="input-sap text-uppercase" placeholder="Misal: Pad 2B, Dump RL 45" />
+                                </div>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">LOKASI UMUM *</label>
-                                <input type="text" id="inputLokasi" name="lokasi" class="form-control form-control-sm" required placeholder="Contoh: Disposal North KM 8" />
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6 form-group-sap">
+                                <label class="form-label-sap" for="shift">Shift</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-sun-fill input-sap-icon"></i>
+                                    <select id="shift" name="shift" class="input-sap">
+                                        <option value="Day">Day Shift</option>
+                                        <option value="Night">Night Shift</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="col-12 col-md-12">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">GPS COORDINATES</label>
-                                <div class="input-group input-group-sm">
-                                    <input type="text" id="inputGps" class="form-control" placeholder="Tekan tombol GPS untuk deteksi otomatis" readonly />
-                                    <button type="button" class="btn btn-outline-warning" onclick="getLocation()" title="Ambil GPS Otomatis">
-                                        <i class="bi bi-geo-alt me-1"></i> Ambil GPS
+                            <div class="col-md-6 form-group-sap">
+                                <label class="form-label-sap" for="lokasi">Lokasi Spesifik &amp; GPS</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-geo-fill input-sap-icon"></i>
+                                    <input type="text" id="lokasi" name="lokasi" class="input-sap" placeholder="Lokasi spesifik / Klik tombol GPS di kanan..." style="padding-right: 44px;" required />
+                                    <button type="button" class="btn btn-link p-0 position-absolute" id="btnGetLocation" style="right: 12px; top: 10px; color: #ea580c;" onclick="getLocationDci()" title="Ambil Lokasi Aktual GPS">
+                                        <i class="bi bi-crosshair" style="font-size: 18px;"></i>
                                     </button>
                                 </div>
-                                <input type="hidden" id="inputLat" name="latitude" />
-                                <input type="hidden" id="inputLong" name="longitude" />
+                            </div>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-md-12 form-group-sap mb-0">
+                                <label class="form-label-sap">Koordinat GPS Lat / Long</label>
+                                <div class="d-flex gap-1">
+                                    <input type="text" id="latitude" name="latitude" class="input-sap" placeholder="Latitude" style="font-size: 11px;" readonly />
+                                    <input type="text" id="longitude" name="longitude" class="input-sap" placeholder="Longitude" style="font-size: 11px;" readonly />
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Section 2: Penilaian 8 Parameter DCI -->
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="text-muted font-weight-bold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <i class="bi bi-layers-fill text-warning me-1"></i> 2. Penilaian 8 Parameter Dump Condition
+                    <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="text-white font-weight-bold" style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i class="bi bi-speedometer2 me-1" style="color: #ea580c;"></i> 2. Penilaian 8 Parameter Dump Condition
                             </div>
-                            <div class="badge px-3 py-1.5 shadow-sm" id="liveScoreBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 13px; font-weight: 700; border-radius: 10px;">
-                                Skor DCI: <span id="liveScoreVal">100.0</span>% (Baik)
+                            <div class="badge px-3 py-1.5 shadow-sm" id="liveScoreBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 12px; font-weight: 700; border-radius: 10px;">
+                                Skor DCI: <span id="liveScoreVal">100.0</span>% (BAIK)
                             </div>
                         </div>
 
-                        <!-- Param 1 -->
+                        <!-- Param 1: Lantai Dump & Daya Dukung (15%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(249, 115, 22, 0.15); color: #f97316;">
-                                        <i class="bi bi-grid-1x2-fill"></i>
+                                    <div class="param-icon-badge" style="background: rgba(249, 115, 22, 0.15); color: #ea580c;">
+                                        <i class="bi bi-square-half"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">1. Lantai Dump &amp; Pad Stability</span>
+                                        <span class="param-header-title">1. Daya Dukung &amp; Kerataan Lantai Dump</span>
                                         <span class="badge" style="background: rgba(249, 115, 22, 0.15); color: #ea580c; border: 1px solid rgba(249, 115, 22, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Rata, padat, bebas amblas &amp; lumpur
+                                    <i class="bi bi-info-circle me-1"></i> Rata, padat, tidak amblas/becek
                                 </div>
                             </div>
                             <div class="score-btn-grid">
                                 <button type="button" class="btn-score-card active" data-param="skorLantaiDump" data-val="100">
                                     <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Standar (Rata &amp; Padat)</span>
+                                    <span class="btn-score-text">Rata, Kering &amp; Padat Kuat</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorLantaiDump" data-val="70">
                                     <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Bergelombang / Lembek Sebagian</span>
+                                    <span class="btn-score-text">Bergelombang / Lembek Sedang</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorLantaiDump" data-val="40">
                                     <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Amblas Parah / Lumpur / Unit Terjebak</span>
+                                    <span class="btn-score-text">Amblas Parah / Lumpur / Becek</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
                             <input type="hidden" id="skorLantaiDump" name="skorLantaiDump" value="100" />
                         </div>
 
-                        <!-- Param 2 -->
+                        <!-- Param 2: Tanggul Pengaman (Safety Berm) (15%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
-                                        <i class="bi bi-shield-check"></i>
+                                    <div class="param-icon-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                        <i class="bi bi-shield-shaded"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">2. Safety Berm / Tanggul Penahan Dump</span>
-                                        <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                        <span class="param-header-title">2. Tanggul Pengaman (Safety Berm)</span>
+                                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Tinggi &ge; 1/2 diameter roda unit terbesar &amp; kokoh
+                                    <i class="bi bi-info-circle me-1"></i> Tinggi ≥ 3/4 diameter roda alat terbesar
                                 </div>
                             </div>
                             <div class="score-btn-grid">
                                 <button type="button" class="btn-score-card active" data-param="skorSafetyBerm" data-val="100">
                                     <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">&ge; 1/2 Roda &amp; Padat Kokoh</span>
+                                    <span class="btn-score-text">≥ 3/4 Roda, Padat &amp; Kokoh</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="70">
                                     <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Kurang Tinggi (&lt; 1/2 Roda)</span>
+                                    <span class="btn-score-text">1/2 - 3/4 Roda / Agak Tipis</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="40">
                                     <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Tanggul Jebol / Tanpa Tanggul</span>
+                                    <span class="btn-score-text">&lt; 1/2 Roda / Tanggul Putus</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
                             <input type="hidden" id="skorSafetyBerm" name="skorSafetyBerm" value="100" />
                         </div>
 
-                        <!-- Param 3 -->
+                        <!-- Param 3: Kondisi Crest & Kestabilan Tepi (15%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e;">
-                                        <i class="bi bi-border-width"></i>
+                                    <div class="param-icon-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                                        <i class="bi bi-exclamation-triangle"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">3. Kondisi Crest &amp; Edge Disposal</span>
-                                        <span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                        <span class="param-header-title">3. Kondisi Crest &amp; Tepi Dumping</span>
+                                        <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Garis tepi lurus, bebas retakan tarik (tension crack)
+                                    <i class="bi bi-info-circle me-1"></i> Bebas retakan tarik / slumping
                                 </div>
                             </div>
                             <div class="score-btn-grid">
                                 <button type="button" class="btn-score-card active" data-param="skorKondisiCrest" data-val="100">
                                     <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Crest Lurus &amp; Bebas Retakan</span>
+                                    <span class="btn-score-text">Stabil, Rapat &amp; Bebas Retakan</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorKondisiCrest" data-val="70">
                                     <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Retak Tarik Halus (Awal)</span>
+                                    <span class="btn-score-text">Retak Rambut / Penurunan Ringan</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorKondisiCrest" data-val="40">
                                     <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Slumping / Retak Parah / Longsor</span>
+                                    <span class="btn-score-text">Retak Lebar / Slump / Longsor</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
                             <input type="hidden" id="skorKondisiCrest" name="skorKondisiCrest" value="100" />
                         </div>
 
-                        <!-- Param 4 -->
+                        <!-- Param 4: Counter Grade / Kemiringan Lantai (15%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
-                                        <i class="bi bi-triangle-half"></i>
+                                    <div class="param-icon-badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+                                        <i class="bi bi-graph-up-arrow"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">4. Grade &amp; Kemiringan Dumping</span>
-                                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                        <span class="param-header-title">4. Counter Grade Lantai Dump</span>
+                                        <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Adverse grade 1-2% mengarah ke dalam tebing
+                                    <i class="bi bi-info-circle me-1"></i> Naik 2-3% ke arah crest dumping
                                 </div>
                             </div>
                             <div class="score-btn-grid">
                                 <button type="button" class="btn-score-card active" data-param="skorGradeDumping" data-val="100">
                                     <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Adverse Grade (1-2% ke Dalam)</span>
+                                    <span class="btn-score-text">Counter Grade 2-3% Sempurna</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorGradeDumping" data-val="70">
                                     <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Rata / Netral (0%)</span>
+                                    <span class="btn-score-text">Datar (Flat / Kurang Tanjakan)</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorGradeDumping" data-val="40">
                                     <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Miring ke Arah Tebing / Jurang</span>
+                                    <span class="btn-score-text">Turun ke Luar Crest (Bahaya)</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
                             <input type="hidden" id="skorGradeDumping" name="skorGradeDumping" value="100" />
                         </div>
 
-                        <!-- Param 5 -->
+                        <!-- Param 5: Drainase & Pencegahan Genangan (10%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
@@ -598,179 +479,414 @@
                                         <i class="bi bi-water"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">5. Drainase &amp; Aliran Air Dump</span>
+                                        <span class="param-header-title">5. Drainase &amp; Saluran Air Dump</span>
                                         <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Parit keliling lancar, tidak ada genangan air di pad
+                                    <i class="bi bi-info-circle me-1"></i> Bebas genangan air menuju crest
                                 </div>
                             </div>
                             <div class="score-btn-grid">
                                 <button type="button" class="btn-score-card active" data-param="skorDrainaseDump" data-val="100">
                                     <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Kering &amp; Drainase Lancar</span>
+                                    <span class="btn-score-text">Kering, Air Mengalir Lancar</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorDrainaseDump" data-val="70">
                                     <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Genangan Air Lokal Kecil</span>
+                                    <span class="btn-score-text">Ada Genangan Lokal Minor</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorDrainaseDump" data-val="40">
                                     <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Banjir / Parit Tertutup Total</span>
+                                    <span class="btn-score-text">Tergenang Air Masif / Saluran Rusak</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
                             <input type="hidden" id="skorDrainaseDump" name="skorDrainaseDump" value="100" />
                         </div>
 
-                        <!-- Param 6 -->
+                        <!-- Param 6: Penataan Spillage & Ceceran (10%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
-                                        <i class="bi bi-stack"></i>
+                                    <div class="param-icon-badge" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">
+                                        <i class="bi bi-cone"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">6. Penataan Material &amp; Spreading Dozer</span>
-                                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                        <span class="param-header-title">6. Penataan Spillage &amp; Kebersihan</span>
+                                        <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Dozer spreading aktif, tidak menumpuk liar
+                                    <i class="bi bi-info-circle me-1"></i> Rapi, didorong dozer berkala
                                 </div>
                             </div>
                             <div class="score-btn-grid">
                                 <button type="button" class="btn-score-card active" data-param="skorPenataanSpillage" data-val="100">
                                     <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Terhampar Rata &amp; Rapih</span>
+                                    <span class="btn-score-text">Bersih, Dozer Aktif Merapikan</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorPenataanSpillage" data-val="70">
                                     <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Tumpukan Belum Diratakan</span>
+                                    <span class="btn-score-text">Tumpukan Belum Rata / Lambat Dozer</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorPenataanSpillage" data-val="40">
                                     <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Tumpukan Liar Halangi Akses</span>
+                                    <span class="btn-score-text">Menumpuk Berantakan / Jalur Macet</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
                             <input type="hidden" id="skorPenataanSpillage" name="skorPenataanSpillage" value="100" />
                         </div>
 
-                        <!-- Param 7 -->
+                        <!-- Param 7: Penerangan & Rambu Disposal (10%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">
+                                    <div class="param-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
                                         <i class="bi bi-lightbulb-fill"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">7. Rambu &amp; Penerangan Disposal</span>
-                                        <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                        <span class="param-header-title">7. Rambu K3 &amp; Lampu Penerangan</span>
+                                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Rambu batas dumping jelas, tower lamp memadai
+                                    <i class="bi bi-info-circle me-1"></i> Terang & rambu batas dumping jelas
                                 </div>
                             </div>
                             <div class="score-btn-grid">
                                 <button type="button" class="btn-score-card active" data-param="skorRambuPenerangan" data-val="100">
                                     <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Terang &amp; Rambu Lengkap</span>
+                                    <span class="btn-score-text">Tower Lamp Terang &amp; Rambu Lengkap</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorRambuPenerangan" data-val="70">
                                     <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Penerangan Kurang / Rambu Rusak</span>
+                                    <span class="btn-score-text">Lampu Kurang / Rambu Kusam</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorRambuPenerangan" data-val="40">
                                     <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Gelap Total / Tanpa Rambu</span>
+                                    <span class="btn-score-text">Gelap Total / Tanpa Rambu Batas</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
                             <input type="hidden" id="skorRambuPenerangan" name="skorRambuPenerangan" value="100" />
                         </div>
 
-                        <!-- Param 8 -->
+                        <!-- Param 8: Spotter & Pola Manuver Dumping (10%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9;">
+                                    <div class="param-icon-badge" style="background: rgba(20, 184, 166, 0.15); color: #14b8a6;">
                                         <i class="bi bi-person-badge-fill"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">8. Petugas Spotter &amp; Manuver Unit</span>
-                                        <span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                        <span class="param-header-title">8. Spotter &amp; Pola Manuver Unit</span>
+                                        <span class="badge" style="background: rgba(20, 184, 166, 0.15); color: #14b8a6; border: 1px solid rgba(20, 184, 166, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Spotter aktif, radio jelas, jalur manuver hauler aman
+                                    <i class="bi bi-info-circle me-1"></i> Spotter aktif, jarak dumping aman
                                 </div>
                             </div>
                             <div class="score-btn-grid">
                                 <button type="button" class="btn-score-card active" data-param="skorSpotterManuver" data-val="100">
                                     <span class="btn-score-pill">100</span>
-                                    <span class="btn-score-text">Spotter Aktif &amp; Manuver Aman</span>
+                                    <span class="btn-score-text">Spotter Standby, Manuver Tertib</span>
                                     <i class="bi bi-check-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorSpotterManuver" data-val="70">
                                     <span class="btn-score-pill">70</span>
-                                    <span class="btn-score-text">Spotter Pasif / Visibilitas Kurang</span>
+                                    <span class="btn-score-text">Spotter Kurang Fokus / Manuver Mepet</span>
                                     <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
                                 </button>
                                 <button type="button" class="btn-score-card" data-param="skorSpotterManuver" data-val="40">
                                     <span class="btn-score-pill">40</span>
-                                    <span class="btn-score-text">Tanpa Spotter / Bahaya Senggolan</span>
+                                    <span class="btn-score-text">Tanpa Spotter / Manuver Semrawut</span>
                                     <i class="bi bi-x-circle-fill btn-score-icon"></i>
                                 </button>
                             </div>
                             <input type="hidden" id="skorSpotterManuver" name="skorSpotterManuver" value="100" />
                         </div>
-                    </div>
 
-                    <!-- Section 3: Dokumentasi & Tindakan Perbaikan -->
-                    <div class="mb-3">
-                        <div class="text-muted font-weight-bold mb-3" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <i class="bi bi-camera-fill text-warning me-1"></i> 3. Dokumentasi Foto &amp; Rekomendasi
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-12 col-md-6">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">UPLOAD BUKTI FOTO KONDISI DUMP</label>
-                                <input type="file" id="inputFoto" name="foto" class="form-control form-control-sm" accept="image/*" onchange="previewPhoto(this)" />
-                                <div id="photoPreviewWrap" class="mt-2 d-none">
-                                    <img id="photoPreviewImg" src="" alt="Preview" style="max-height: 140px; border-radius: 10px; border: 1px solid var(--border-color); object-fit: cover;" />
+                        <!-- Assessment Summary & Insights Box -->
+                        <div class="p-3 rounded-3 mt-3" style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color);">
+                            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                <div>
+                                    <span class="text-white fw-bold" style="font-size: 13px;">Ringkasan Kelayakan Dumping</span>
+                                    <div class="text-muted" style="font-size: 11px;">Evaluasi kelayakan operasional disposal</div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="text-end">
+                                        <div class="text-muted" style="font-size: 10px; text-transform: uppercase;">Skor Indeks</div>
+                                        <div class="display-6 fw-bold mb-0" id="summaryScoreVal" style="color: #ea580c; line-height: 1; font-size: 26px;">100.0%</div>
+                                    </div>
+                                    <div class="badge px-3 py-2" id="summaryCategoryBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 12px; font-weight: 700; border-radius: 10px;">
+                                        <i class="bi bi-check-circle-fill me-1"></i> BAIK
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">PIC / PENGAWAS DISPOSAL</label>
-                                <input type="text" id="inputPic" name="pic" class="form-control form-control-sm" placeholder="Contoh: Budi Santoso (Foreman Dump)" />
+
+                            <!-- Status Feasibility Banner -->
+                            <div class="p-3 rounded-3 mb-3" id="feasibilityBanner" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981;">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-shield-fill-check" id="feasibilityIcon" style="font-size: 24px;"></i>
+                                    <div>
+                                        <strong id="feasibilityTitle" style="font-size: 13px;">STATUS: DISPOSAL LAYAK OPERASI PENUH (OPTIMAL)</strong>
+                                        <div id="feasibilityDesc" class="mt-0.5" style="font-size: 11.5px; opacity: 0.9;">Seluruh 8 parameter dumping memenuhi standar keselamatan disposal tambang.</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">CATATAN TEMUAN LAPANGAN</label>
-                                <textarea id="inputCatatan" name="catatan" rows="3" class="form-control form-control-sm" placeholder="Jelaskan temuan kondisi dump di lapangan..."></textarea>
+
+                            <!-- Parameter Breakdown Stats -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-4">
+                                    <div class="p-2 rounded-3 text-center" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);">
+                                        <div class="fw-bold" id="cntStandar" style="font-size: 17px; color: #10b981;">8</div>
+                                        <div class="text-muted" style="font-size: 10px;">Standar (100)</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 rounded-3 text-center" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2);">
+                                        <div class="fw-bold" id="cntPerhatian" style="font-size: 17px; color: #f59e0b;">0</div>
+                                        <div class="text-muted" style="font-size: 10px;">Perhatian (70)</div>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="p-2 rounded-3 text-center" style="background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2);">
+                                        <div class="fw-bold" id="cntKritis" style="font-size: 17px; color: #f43f5e;">0</div>
+                                        <div class="text-muted" style="font-size: 10px;">Kritis (40)</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">TINDAKAN PERBAIKAN / REKOMENDASI</label>
-                                <textarea id="inputTindakan" name="tindakanPerbaikan" rows="3" class="form-control form-control-sm" placeholder="Tindakan yang segera dilakukan (e.g. Dozer dorong crest, perbaikan bundwall)..."></textarea>
+
+                            <!-- Findings Deficit List -->
+                            <div class="mb-3 p-2.5 rounded-3" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong class="text-white" style="font-size: 11.5px;"><i class="bi bi-search me-1"></i> Rincian Parameter Defisit / Perlu Perbaikan:</strong>
+                                    <span class="badge bg-secondary" id="findingsCountBadge" style="font-size: 9px;">0 Temuan</span>
+                                </div>
+                                <div id="findingsList" style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
+                                    <i class="bi bi-check2-circle text-success me-1"></i> Semua parameter dumping berada dalam batas optimal.
+                                </div>
+                            </div>
+
+                            <!-- Auto-Generated Recommendation Box -->
+                            <div class="mb-3 p-2.5 rounded-3" id="autoRecBox" style="background: rgba(249, 115, 22, 0.08); border: 1px solid rgba(249, 115, 22, 0.25);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <strong style="font-size: 11.5px; color: #ea580c;"><i class="bi bi-lightning-charge-fill me-1"></i> Rekomendasi Tindakan Otomatis:</strong>
+                                    <button type="button" class="btn btn-sm btn-outline-warning py-0 px-2" style="font-size: 10px; border-radius: 6px;" onclick="applyAutoRecommendationDci()">
+                                        <i class="bi bi-arrow-down-left me-1"></i> Terapkan ke Form Rekomendasi
+                                    </button>
+                                </div>
+                                <div id="autoRecText" style="font-size: 11px; color: var(--text-main);">
+                                    Pertahankan kondisi standar kerja di area dumping.
+                                </div>
+                            </div>
+
+                            <!-- SHARE BUTTONS -->
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-sm btn-success flex-fill py-2.5 d-flex align-items-center justify-content-center gap-1 font-weight-bold shadow-sm" style="background: #25D366; border: none; border-radius: 12px; color: white;" onclick="shareDciToWhatsApp()">
+                                    <i class="bi bi-whatsapp" style="font-size: 16px;"></i>
+                                    <span>Bagikan ke WhatsApp</span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-info flex-fill py-2.5 d-flex align-items-center justify-content-center gap-1 font-weight-bold" style="border-radius: 12px;" onclick="shareDciNative()">
+                                    <i class="bi bi-share-fill"></i>
+                                    <span>Share Laporan</span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-2.5 px-3 d-flex align-items-center justify-content-center gap-1" style="border-radius: 12px;" onclick="copyDciSummaryToClipboard()" title="Salin Ringkasan">
+                                    <i class="bi bi-clipboard-check"></i>
+                                    <span>Salin</span>
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2 pt-3" style="border-top: 1px solid var(--border-color);">
-                        <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-sm btn-primary px-4 font-weight-bold" style="background: linear-gradient(135deg, #c2410c, #ea580c); border: none;">
-                            <i class="bi bi-save me-1"></i> Simpan Laporan DCI
+                    <!-- Section 3: Notes, Photos & Actions -->
+                    <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                        <div class="text-white mb-2 font-weight-bold" style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="bi bi-camera me-1" style="color: #ea580c;"></i> 3. Foto Dokumentasi &amp; Tindakan
+                        </div>
+
+                        <div class="form-group-sap mb-2">
+                            <label class="form-label-sap" for="catatan">Catatan Observasi Kondisi Disposal</label>
+                            <div class="input-sap-wrapper">
+                                <i class="bi bi-card-text input-sap-icon" style="top: 14px;"></i>
+                                <textarea id="catatan" name="catatan" class="input-sap" rows="2" placeholder="Tuliskan temuan atau catatan kondisi aktual di area dumping..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-7 form-group-sap">
+                                <label class="form-label-sap" for="tindakanPerbaikan">Rekomendasi / Tindakan Perbaikan</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-tools input-sap-icon" style="top: 14px;"></i>
+                                    <textarea id="tindakanPerbaikan" name="tindakanPerbaikan" class="input-sap" rows="2" placeholder="Rekomendasi tindak lanjut (support dozer, peninggian tanggul, dll)..."></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-5 form-group-sap">
+                                <label class="form-label-sap" for="pic">PIC Tindak Lanjut</label>
+                                <div class="input-sap-wrapper">
+                                    <i class="bi bi-person-fill input-sap-icon"></i>
+                                    <input type="text" id="pic" name="pic" class="input-sap" placeholder="Misal: Spv Pit / GL Dozer" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group-sap mb-0">
+                            <label class="form-label-sap" for="foto">Foto Kondisi Disposal</label>
+                            <div class="input-sap-wrapper">
+                                <i class="bi bi-camera-fill input-sap-icon"></i>
+                                <input type="file" id="foto" name="foto" class="input-sap" accept="image/*" onchange="previewPhotoDci(this)" />
+                            </div>
+                            <div id="photoPreviewWrap" class="mt-2 d-none">
+                                <img id="photoPreviewImg" src="" alt="Preview" style="max-height: 180px; border-radius: 12px; border: 1px solid var(--border-color); object-fit: cover;" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUBMIT BUTTON -->
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-fill py-3 font-weight-bold shadow-sm" style="background: linear-gradient(135deg, #c2410c, #ea580c); border: none; border-radius: 14px; font-size: 14px;">
+                            <i class="bi bi-check2-circle me-1"></i> Simpan Laporan DCI
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary py-3 px-4 font-weight-bold" style="border-radius: 14px;" onclick="resetForm()">
+                            <i class="bi bi-arrow-counterclockwise"></i> Reset
                         </button>
                     </div>
                 </form>
             </div>
+        </div>
+
+        <!-- RIWAYAT COLUMN -->
+        <div class="col-lg-6">
+            <!-- Filter Bar -->
+            <div class="card-sap p-3 mb-3">
+                <form method="get" asp-action="Index">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label class="form-label-sap" style="font-size: 11px;">Cari Lokasi / Dump / NIK</label>
+                            <input type="text" name="search" class="input-sap" value="@ViewBag.CurrentSearch" placeholder="Ketik kata kunci..." />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label-sap" style="font-size: 11px;">Filter Disposal</label>
+                            <select name="disposal" class="input-sap">
+                                <option value="">Semua Disposal</option>
+                                @foreach (var d in disposalList)
+                                {
+                                    <option value="@d" selected="@(ViewBag.CurrentDisposal == d ? "selected" : null)">@d</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label-sap" style="font-size: 11px;">Kategori Skor</label>
+                            <select name="kategori" class="input-sap">
+                                <option value="">Semua Skor</option>
+                                <option value="Baik" selected="@(ViewBag.CurrentKategori == "Baik" ? "selected" : null)">Baik (&ge; 85%)</option>
+                                <option value="Sedang" selected="@(ViewBag.CurrentKategori == "Sedang" ? "selected" : null)">Sedang (70 - 84%)</option>
+                                <option value="Kurang" selected="@(ViewBag.CurrentKategori == "Kurang" ? "selected" : null)">Kurang (&lt; 70%)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100 shadow-sm" style="height: 44px; border-radius: 10px; background: #ea580c; border: none;">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- List of Reports -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0 text-white font-weight-bold" style="font-size: 13px;">
+                    <i class="bi bi-clock-history me-1 text-warning"></i> Riwayat Inspeksi DCI (@Model.Count())
+                </h6>
+            </div>
+
+            @if (!Model.Any())
+            {
+                <div class="card-sap p-5 text-center text-muted">
+                    <i class="bi bi-inbox" style="font-size: 40px; color: var(--text-muted);"></i>
+                    <p class="mt-2 mb-0" style="font-size: 13px;">Belum ada data inspeksi DCI pada periode ini.</p>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex flex-column gap-3" style="max-height: 800px; overflow-y: auto; padding-right: 4px;">
+                    @foreach (var item in Model)
+                    {
+                        var badgeBg = item.TotalScore >= 85 ? "rgba(16, 185, 129, 0.15)" : (item.TotalScore >= 70 ? "rgba(245, 158, 11, 0.15)" : "rgba(244, 63, 94, 0.15)");
+                        var badgeColor = item.TotalScore >= 85 ? "#10b981" : (item.TotalScore >= 70 ? "#f59e0b" : "#f43f5e");
+                        var borderAccent = item.TotalScore >= 85 ? "#10b981" : (item.TotalScore >= 70 ? "#f59e0b" : "#f43f5e");
+
+                        <div class="card-sap p-3 position-relative animate-fade-in" style="border-left: 4px solid @borderAccent;">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <h6 class="mb-0 font-weight-bold text-white">@(item.NamaDump ?? item.Lokasi)</h6>
+                                        <span class="badge" style="background: rgba(255,255,255,0.08); font-size: 10px; color: var(--text-muted);">@item.Disposal</span>
+                                        <span class="badge" style="background: rgba(255,255,255,0.08); font-size: 10px; color: var(--text-muted);">@item.Shift</span>
+                                    </div>
+                                    <div class="text-muted mt-1" style="font-size: 11px;">
+                                        <i class="bi bi-geo-alt me-1"></i> @item.Area | @item.Lokasi @(!string.IsNullOrEmpty(item.DetilLokasi) ? $"({item.DetilLokasi})" : "")
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge px-2 py-1" style="background: @badgeBg; color: @badgeColor; font-size: 13px; font-weight: 800; border-radius: 8px;">
+                                        @item.TotalScore%
+                                    </span>
+                                    <div style="font-size: 10px; font-weight: 600; color: @badgeColor; margin-top: 2px;">@item.KategoriIndex</div>
+                                </div>
+                            </div>
+
+                            <!-- Score Pills Summary -->
+                            <div class="d-flex flex-wrap gap-1 mb-2 pt-1 border-top border-secondary border-opacity-25" style="font-size: 10.5px;">
+                                <span class="badge bg-dark text-muted">Lantai: @item.SkorLantaiDump</span>
+                                <span class="badge bg-dark text-muted">Berm: @item.SkorSafetyBerm</span>
+                                <span class="badge bg-dark text-muted">Crest: @item.SkorKondisiCrest</span>
+                                <span class="badge bg-dark text-muted">Grade: @item.SkorGradeDumping</span>
+                                <span class="badge bg-dark text-muted">Drainase: @item.SkorDrainaseDump</span>
+                                <span class="badge bg-dark text-muted">Spillage: @item.SkorPenataanSpillage</span>
+                                <span class="badge bg-dark text-muted">Rambu: @item.SkorRambuPenerangan</span>
+                                <span class="badge bg-dark text-muted">Spotter: @item.SkorSpotterManuver</span>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(item.Catatan))
+                            {
+                                <div class="text-muted mb-2" style="font-size: 11px; font-style: italic;">
+                                    <i class="bi bi-chat-left-text me-1"></i> "@item.Catatan"
+                                </div>
+                            }
+
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-25">
+                                <div class="text-muted" style="font-size: 11px;">
+                                    <i class="bi bi-person me-1"></i> @item.Nama &bull; @item.Tanggal.ToString("dd MMM yyyy") @item.Waktu.ToString(@"hh\:mm")
+                                </div>
+                                <div class="d-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-info py-1 px-2" style="font-size: 11px; border-radius: 6px;" onclick="showDetailDci(@item.Id)" title="Lihat Detail">
+                                        <i class="bi bi-eye"></i> Detail
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-success py-1 px-2" style="font-size: 11px; border-radius: 6px;" onclick="shareSavedDci(@item.Id)" title="Share WhatsApp">
+                                        <i class="bi bi-whatsapp"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning py-1 px-2" style="font-size: 11px; border-radius: 6px;" onclick="editDci(@item.Id)" title="Edit Laporan">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 11px; border-radius: 6px;" onclick="confirmDeleteDci(@item.Id)" title="Hapus Laporan">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -778,192 +894,217 @@
 <!-- Detail Modal -->
 <div class="modal fade" id="dciDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content" style="background: var(--bg-card); border: 1px solid rgba(249, 115, 22, 0.4); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 24px;">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px;">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
                 <h5 class="modal-title font-weight-bold text-white d-flex align-items-center gap-2">
-                    <i class="bi bi-layers-fill" style="color: #ea580c;"></i>
-                    <span>Detail Laporan Dump Condition Index (DCI)</span>
+                    <i class="bi bi-info-circle text-warning"></i>
+                    <span id="detailModalTitle">Detail Laporan DCI</span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" style="padding: 24px;">
-                <div class="row g-4">
-                    <div class="col-12 col-md-5">
-                        <div id="detailImgWrap" style="width: 100%; height: 260px; border-radius: 14px; overflow: hidden; background: #000; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
-                            <img id="detailImg" src="" alt="Foto DCI" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/img/placeholder-photo.png'" />
-                        </div>
-                        <div class="mt-3 p-3 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="text-muted" style="font-size: 12px;">Skor Akhir DCI:</span>
-                                <span class="font-weight-bold" id="detailSkor" style="font-size: 14px;">-</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="text-muted" style="font-size: 12px;">Status Kategori:</span>
-                                <span class="font-weight-bold" id="detailKategori" style="font-size: 12px;">-</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="text-muted" style="font-size: 12px;">Disposal / Dump:</span>
-                                <span class="font-weight-bold text-white" id="detailNamaDump" style="font-size: 12px;">-</span>
-                            </div>
-                            <div class="d-flex justify-content-between">
-                                <span class="text-muted" style="font-size: 12px;">Surveyor:</span>
-                                <span class="font-weight-bold text-white" id="detailSurveyor" style="font-size: 12px;">-</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-7">
-                        <h6 class="text-white font-weight-bold mb-3" style="font-size: 13px;">Breakdown 8 Parameter Penilaian:</h6>
-                        <div class="d-flex flex-column gap-2" id="detailParamsList">
-                            <!-- Injected by JS -->
-                        </div>
-
-                        <div class="mt-3 p-3 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); font-size: 12px;">
-                            <div class="mb-2"><strong>Catatan:</strong> <span id="detailCatatan" class="text-muted">-</span></div>
-                            <div class="mb-2"><strong>Tindakan Perbaikan:</strong> <span id="detailTindakan" class="text-muted">-</span></div>
-                            <div><strong>PIC:</strong> <span id="detailPic" class="text-muted">-</span></div>
-                        </div>
-                    </div>
-                </div>
+            <div class="modal-body" id="detailModalBody" style="padding: 24px;">
+                <!-- Populated by JS -->
             </div>
             <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
-                <button type="button" class="btn btn-sm btn-success me-auto" id="btnShareWa" onclick="shareWhatsApp()">
-                    <i class="bi bi-whatsapp me-1"></i> Bagikan WhatsApp
+                <button type="button" class="btn btn-sm btn-success" id="btnShareDetailWa">
+                    <i class="bi bi-whatsapp me-1"></i> Share WhatsApp
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Tutup</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Add Benchmark -->
+<!-- Modal Tambah Benchmark Baru -->
 <div class="modal fade" id="addBenchmarkModal" tabindex="-1" aria-labelledby="addBenchmarkModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title text-white fw-bold" id="addBenchmarkModalLabel"><i class="bi bi-plus-square-fill text-warning me-2"></i>Tambah Benchmark Baru</h5>
+        <div class="modal-content" style="background: var(--bg-card, #1e293b); border: 1px solid var(--border-color); border-radius: 16px;">
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title fs-6 font-weight-bold text-white" id="addBenchmarkModalLabel">
+                    <i class="bi bi-plus-circle me-1 text-warning"></i> Tambah Benchmark Baru
+                </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body pt-4">
-                <div class="alert alert-info py-2" style="font-size: 12px; border-radius: 8px;">
-                    <i class="bi bi-info-circle me-1"></i> Benchmark yang Anda tambahkan hanya akan terlihat oleh karyawan di perusahaan Anda untuk area yang sedang dipilih.
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted" style="font-size: 12px; font-weight: 600;">Area Utama</label>
+                    <input type="text" class="form-control form-control-sm text-uppercase" id="newBenchmarkArea" readonly style="background: rgba(0,0,0,0.2);" />
                 </div>
-                <div class="form-group mb-3">
-                    <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">Area Utama</label>
-                    <input type="text" id="newBenchmarkArea" class="form-control form-control-sm" disabled />
+                <div class="mb-3">
+                    <label class="form-label text-muted" style="font-size: 12px; font-weight: 600;">Nama Benchmark / Detail Lokasi *</label>
+                    <input type="text" class="form-control form-control-sm text-uppercase" id="newBenchmarkName" placeholder="Contoh: RL 50, BM-08, DISPOSAL TIMUR" />
+                    <div class="text-danger mt-1" id="addBenchmarkError" style="display:none; font-size:11px;"></div>
                 </div>
-                <div class="form-group mb-3">
-                    <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">Nama Benchmark / Detail Lokasi</label>
-                    <input type="text" id="newBenchmarkName" class="form-control form-control-sm text-uppercase" placeholder="Misal: DEPAN POS SECURITY KM 3" />
-                    <div id="addBenchmarkError" class="text-danger mt-2" style="font-size: 12px; display: none;"></div>
-                </div>
-                <div class="mt-3">
-                    <h6 class="text-white fw-bold mb-2" style="font-size: 13px;"><i class="bi bi-list-task me-1 text-warning"></i>Daftar Benchmark Terdaftar (di area ini)</h6>
-                    <div id="existingBenchmarksList" class="list-group" style="max-height: 180px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2);">
-                        <div class="p-3 text-center text-muted" style="font-size: 12px;">Memuat daftar benchmark...</div>
+                <div class="mb-2">
+                    <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">Benchmark yang Sudah Ada di Area Ini:</label>
+                    <div id="existingBenchmarksList" class="list-group list-group-flush border rounded" style="max-height: 140px; overflow-y: auto; background: rgba(0,0,0,0.1);">
+                        <!-- Loaded dynamically -->
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Tutup</button>
-                <button type="button" class="btn btn-warning" id="btnSaveBenchmark" onclick="saveNewBenchmark()" style="border-radius: 8px; font-weight: 600;">Simpan Benchmark</button>
+            <div class="modal-footer border-top border-secondary">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-sm btn-primary" id="btnSaveBenchmark" onclick="saveNewBenchmark()" style="background: #ea580c; border: none;">Simpan Benchmark</button>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-.param-box-premium {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--border-color);
-    border-radius: 14px;
-    padding: 12px 14px;
-    margin-bottom: 10px;
-    transition: all 0.2s ease;
-}
-.param-box-premium:hover {
-    background: rgba(249, 115, 22, 0.03);
-    border-color: rgba(249, 115, 22, 0.3);
-}
-.param-icon-badge {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-}
-.param-header-title {
-    font-size: 12.5px;
-    font-weight: 700;
-    color: var(--text-main);
-}
-.param-guideline-badge {
-    font-size: 11px;
-    color: var(--text-muted);
-}
-.score-btn-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-}
-.btn-score-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 10px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1.5px solid rgba(255, 255, 255, 0.08);
-    color: var(--text-muted);
-    font-size: 11px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-align: left;
-}
-.btn-score-card:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(249, 115, 22, 0.4);
-    color: #fff;
-}
-.btn-score-card.active {
-    background: rgba(249, 115, 22, 0.15);
-    border-color: #f97316;
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
-}
-.btn-score-pill {
-    font-weight: 800;
-    font-size: 12px;
-    padding: 2px 6px;
-    border-radius: 6px;
-    background: rgba(0, 0, 0, 0.3);
-    margin-right: 6px;
-}
-.btn-score-text {
-    flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-weight: 600;
-}
-.btn-score-icon {
-    font-size: 14px;
-    margin-left: 6px;
-    opacity: 0.3;
-}
-.btn-score-card.active .btn-score-icon {
-    opacity: 1;
-    color: #ea580c;
-}
-@@media (max-width: 768px) {
-    .score-btn-grid {
-        grid-template-columns: 1fr;
+    .param-box-premium {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+        transition: all 0.2s ease;
     }
-}
+    .param-box-premium:hover {
+        border-color: rgba(249, 115, 22, 0.3);
+        background: rgba(255, 255, 255, 0.035);
+    }
+    .param-icon-badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+    .param-header-title {
+        font-weight: 700;
+        font-size: 13px;
+        color: var(--text-main);
+    }
+    .param-guideline-badge {
+        font-size: 11px;
+        color: var(--text-muted);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 3px 8px;
+        border-radius: 6px;
+    }
+    .score-btn-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    @@media (max-width: 576px) {
+        .score-btn-grid {
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+    }
+    .btn-score-card {
+        border-radius: 12px;
+        padding: 9px 10px;
+        width: 100%;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1.5px solid var(--border-color, #e2e8f0);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-main, #1e293b);
+        font-size: 11.5px;
+        position: relative;
+    }
+    .btn-score-card:hover {
+        transform: translateY(-1.5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .btn-score-pill {
+        font-size: 11px;
+        font-weight: 800;
+        padding: 2px 7px;
+        border-radius: 6px;
+        flex-shrink: 0;
+        line-height: 1.3;
+    }
+    .btn-score-text {
+        font-weight: 600;
+        flex-grow: 1;
+        line-height: 1.25;
+    }
+    .btn-score-icon {
+        font-size: 13px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    /* Unselected visual pills */
+    .btn-score-card[data-val="100"] .btn-score-pill {
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+    }
+    .btn-score-card[data-val="70"] .btn-score-pill {
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
+    }
+    .btn-score-card[data-val="40"] .btn-score-pill {
+        background: rgba(244, 63, 94, 0.15);
+        color: #f43f5e;
+    }
+
+    /* Active Selected States */
+    .btn-score-card.active[data-val="100"] {
+        background: linear-gradient(135deg, #059669, #10b981) !important;
+        border-color: #10b981 !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35) !important;
+        transform: translateY(-1px);
+    }
+    .btn-score-card.active[data-val="100"] .btn-score-pill {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+    }
+    .btn-score-card.active[data-val="100"] .btn-score-icon {
+        opacity: 1;
+        color: #ffffff;
+    }
+
+    .btn-score-card.active[data-val="70"] {
+        background: linear-gradient(135deg, #d97706, #f59e0b) !important;
+        border-color: #f59e0b !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35) !important;
+        transform: translateY(-1px);
+    }
+    .btn-score-card.active[data-val="70"] .btn-score-pill {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+    }
+    .btn-score-card.active[data-val="70"] .btn-score-icon {
+        opacity: 1;
+        color: #ffffff;
+    }
+
+    .btn-score-card.active[data-val="40"] {
+        background: linear-gradient(135deg, #e11d48, #f43f5e) !important;
+        border-color: #f43f5e !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 18px rgba(244, 63, 94, 0.35) !important;
+        transform: translateY(-1px);
+    }
+    .btn-score-card.active[data-val="40"] .btn-score-pill {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+    }
+    .btn-score-card.active[data-val="40"] .btn-score-icon {
+        opacity: 1;
+        color: #ffffff;
+    }
 </style>
 
+@section Scripts {
 <script>
+    let currentDciSummaryData = {};
+
     var globalAreasList = [
         { id: 1, namaArea: "Port/Jetty - Indexim" },
         { id: 2, namaArea: "CPP-33 & ROM - Indexim" },
@@ -1007,520 +1148,676 @@
 
     var globalBenchmarksList = [];
 
-    function loadAreas() {
-        var select = document.getElementById('inputArea');
-        if (select) {
-            select.innerHTML = '<option value="" disabled selected></option>';
-            globalAreasList.forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item.namaArea;
-                opt.textContent = item.namaArea;
-                select.appendChild(opt);
-            });
-        }
+    window.loadAreas = function() {
+        var select = $('#area');
+        select.empty();
+        select.append('<option value="" disabled selected></option>');
+        globalAreasList.forEach(function(item) {
+            select.append('<option value="' + item.namaArea + '">' + item.namaArea + '</option>');
+        });
         renderAreaDropdown('');
-    }
+    };
 
-    function renderAreaDropdown(filterText) {
-        var menu = document.getElementById('areaDropdownMenu');
-        if (!menu) return;
-        menu.innerHTML = '';
+    window.renderAreaDropdown = function(filterText) {
+        var menu = $('#areaDropdownMenu');
+        menu.empty();
         var clean = (filterText || '').trim().toLowerCase();
-        var filtered = globalAreasList.filter(a => a.namaArea.toLowerCase().includes(clean));
+        var filtered = globalAreasList.filter(function(a) {
+            return a.namaArea.toLowerCase().includes(clean);
+        });
 
         if (filtered.length > 0) {
-            filtered.forEach(item => {
-                var btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'd-block w-100 text-start py-2 px-3 border-0';
-                btn.style.background = 'none';
-                btn.style.color = '#f8fafc';
-                btn.style.fontSize = '12px';
-                btn.style.borderBottom = '1px solid rgba(255,255,255,0.08)';
-                btn.style.cursor = 'pointer';
-                btn.innerHTML = `<i class="bi bi-geo-alt-fill me-2 text-warning"></i>${item.namaArea}`;
-                btn.onmouseenter = () => btn.style.background = 'rgba(249, 115, 22, 0.15)';
-                btn.onmouseleave = () => btn.style.background = 'none';
-                btn.onclick = () => selectArea(item.namaArea);
-                menu.appendChild(btn);
+            filtered.forEach(function(item) {
+                var btn = $('<button type="button"></button>')
+                    .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
+                    .css({
+                        background: 'none',
+                        color: 'var(--text-main, #f8fafc)',
+                        fontSize: '13px',
+                        borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))',
+                        cursor: 'pointer'
+                    })
+                    .html('<i class="bi bi-geo-alt-fill me-2 text-warning"></i>' + item.namaArea)
+                    .on('mouseenter', function() { $(this).css('background', 'rgba(249, 115, 22, 0.15)'); })
+                    .on('mouseleave', function() { $(this).css('background', 'none'); })
+                    .on('click', function() {
+                        selectArea(item.namaArea);
+                    });
+                menu.append(btn);
             });
         } else if (clean.length > 0) {
-            menu.innerHTML = `<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Area "${filterText}" tidak ditemukan</div>`;
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Area "' + filterText + '" tidak ditemukan</div>');
         } else {
-            menu.innerHTML = '<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada Area Utama.</div>';
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada Area Utama.</div>');
         }
-    }
 
-    function selectArea(namaArea) {
-        document.getElementById('areaSearch').value = namaArea;
-        document.getElementById('inputArea').value = namaArea;
-        document.getElementById('areaDropdownMenu').style.display = 'none';
+        if (menu.children().length > 0) menu.show(); else menu.hide();
+    };
+
+    window.selectArea = function(namaArea) {
+        $('#areaSearch').val(namaArea);
+        $('#area').val(namaArea);
+        $('#areaDropdownMenu').hide();
+        $('#areaSearch').removeClass('is-invalid');
 
         loadBenchmarks(namaArea);
 
-        var curLokasi = document.getElementById('inputLokasi').value.trim();
+        var curLokasi = $('#lokasi').val().trim();
         if (curLokasi === '') {
-            document.getElementById('inputLokasi').value = namaArea + ' - ';
-            document.getElementById('inputLokasi').focus();
+            $('#lokasi').val(namaArea + ' - ');
+            $('#lokasi').focus();
         } else if (curLokasi.indexOf(' - ') !== -1) {
             var parts = curLokasi.split(' - ');
             parts[0] = namaArea;
-            document.getElementById('inputLokasi').value = parts.join(' - ');
+            $('#lokasi').val(parts.join(' - '));
         }
-    }
+    };
 
-    function loadBenchmarks(areaUtama, preselectBenchmark) {
+    window.loadBenchmarks = function(areaUtama, preselectBenchmark) {
         if (!areaUtama) return;
-        const bInput = document.getElementById('benchmarkSearch');
-        const bBtn = document.getElementById('btnAddBenchmark');
-        if (bInput) { bInput.disabled = true; bInput.value = 'Memuat benchmark...'; }
-        if (bBtn) bBtn.disabled = true;
+        var bInput = $('#benchmarkSearch');
+        var bBtn = $('#btnAddBenchmark');
+        bInput.prop('disabled', true).val('Memuat benchmark...');
+        bBtn.prop('disabled', true);
 
-        fetch(`/Api/GetBenchmarks?areaUtama=${encodeURIComponent(areaUtama)}`)
-            .then(res => res.json())
-            .then(response => {
+        $.ajax({
+            url: '/Api/GetBenchmarks',
+            type: 'GET',
+            data: { areaUtama: areaUtama },
+            dataType: 'json',
+            success: function(response) {
                 globalBenchmarksList = response || [];
-                if (bInput) { bInput.disabled = false; bInput.value = ''; }
-                if (bBtn) bBtn.disabled = false;
+                bInput.prop('disabled', false).val('');
+                bBtn.prop('disabled', false);
 
                 if (preselectBenchmark) {
                     selectBenchmark(preselectBenchmark);
                 } else {
-                    document.getElementById('inputDetilLokasi').value = '';
+                    $('#detilLokasi').val('');
                     renderBenchmarkDropdown('');
                 }
-            })
-            .catch(() => {
-                if (bInput) { bInput.disabled = false; bInput.value = ''; }
-                if (bBtn) bBtn.disabled = false;
-            });
-    }
+            },
+            error: function() {
+                bInput.prop('disabled', false).val('');
+                bBtn.prop('disabled', false);
+            }
+        });
+    };
 
-    function renderBenchmarkDropdown(filterText) {
-        var menu = document.getElementById('benchmarkDropdownMenu');
-        if (!menu) return;
-        menu.innerHTML = '';
+    window.renderBenchmarkDropdown = function(filterText) {
+        var menu = $('#benchmarkDropdownMenu');
+        menu.empty();
         var clean = (filterText || '').trim().toLowerCase();
-        var filtered = globalBenchmarksList.filter(b => b.namaBenchmark.toLowerCase().includes(clean));
+        var filtered = globalBenchmarksList.filter(function(b) {
+            return b.namaBenchmark.toLowerCase().includes(clean);
+        });
 
         if (filtered.length > 0) {
-            filtered.forEach(item => {
-                var btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'd-block w-100 text-start py-2 px-3 border-0';
-                btn.style.background = 'none';
-                btn.style.color = '#f8fafc';
-                btn.style.fontSize = '12px';
-                btn.style.borderBottom = '1px solid rgba(255,255,255,0.08)';
-                btn.style.cursor = 'pointer';
-                btn.innerHTML = `<i class="bi bi-compass-fill me-2 text-warning"></i>${item.namaBenchmark}`;
-                btn.onmouseenter = () => btn.style.background = 'rgba(249, 115, 22, 0.15)';
-                btn.onmouseleave = () => btn.style.background = 'none';
-                btn.onclick = () => selectBenchmark(item.namaBenchmark);
-                menu.appendChild(btn);
+            filtered.forEach(function(item) {
+                var btn = $('<button type="button"></button>')
+                    .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
+                    .css({
+                        background: 'none',
+                        color: 'var(--text-main, #f8fafc)',
+                        fontSize: '13px',
+                        borderBottom: '1px solid var(--border-color, rgba(255,255,255,0.08))',
+                        cursor: 'pointer'
+                    })
+                    .html('<i class="bi bi-compass-fill me-2 text-warning"></i>' + item.namaBenchmark)
+                    .on('mouseenter', function() { $(this).css('background', 'rgba(249, 115, 22, 0.15)'); })
+                    .on('mouseleave', function() { $(this).css('background', 'none'); })
+                    .on('click', function() {
+                        selectBenchmark(item.namaBenchmark);
+                    });
+                menu.append(btn);
             });
         } else if (clean.length > 0) {
-            menu.innerHTML = `<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Benchmark "${filterText}" tidak ditemukan</div>`;
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Benchmark "' + filterText + '" tidak ditemukan</div>');
         } else {
-            menu.innerHTML = '<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada benchmark di area ini. Klik + untuk tambah.</div>';
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada benchmark di area ini. Klik + untuk tambah.</div>');
         }
-    }
 
-    function selectBenchmark(namaBenchmark) {
-        document.getElementById('benchmarkSearch').value = namaBenchmark;
-        document.getElementById('inputDetilLokasi').value = namaBenchmark;
-        document.getElementById('benchmarkDropdownMenu').style.display = 'none';
-    }
+        if (menu.children().length > 0) menu.show(); else menu.hide();
+    };
 
-    function saveNewBenchmark() {
-        var btn = document.getElementById('btnSaveBenchmark');
-        var errorDiv = document.getElementById('addBenchmarkError');
-        var benchmarkName = document.getElementById('newBenchmarkName').value;
-        var areaUtama = document.getElementById('inputArea').value;
+    window.selectBenchmark = function(namaBenchmark) {
+        $('#benchmarkSearch').val(namaBenchmark);
+        $('#detilLokasi').val(namaBenchmark);
+        $('#benchmarkDropdownMenu').hide();
+        $('#benchmarkSearch').removeClass('is-invalid');
+    };
+
+    window.saveNewBenchmark = function() {
+        var btn = $('#btnSaveBenchmark');
+        var errorDiv = $('#addBenchmarkError');
+        var benchmarkName = $('#newBenchmarkName').val();
+        var areaUtama = $('#area').val();
 
         if (!areaUtama) {
-            errorDiv.innerText = 'Area utama belum dipilih!';
-            errorDiv.style.display = 'block';
+            errorDiv.text('Area utama belum dipilih!').show();
             return;
         }
 
         if (!benchmarkName || benchmarkName.trim() === '') {
-            errorDiv.innerText = 'Nama benchmark tidak boleh kosong';
-            errorDiv.style.display = 'block';
+            errorDiv.text('Nama benchmark tidak boleh kosong').show();
             return;
         }
 
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Menyimpan...';
-        errorDiv.style.display = 'none';
+        btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Menyimpan...');
+        errorDiv.hide();
 
-        const formData = new FormData();
-        formData.append('areaUtama', areaUtama);
-        formData.append('namaBenchmark', benchmarkName);
-
-        fetch('/Api/AddBenchmark', {
-            method: 'POST',
-            body: formData
-        })
-        .then(async res => {
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || 'Gagal menyimpan benchmark');
+        $.ajax({
+            url: '/Api/AddBenchmark',
+            type: 'POST',
+            dataType: 'json',
+            data: { areaUtama: areaUtama, namaBenchmark: benchmarkName },
+            success: function(response) {
+                $('#addBenchmarkModal').modal('hide');
+                $('#newBenchmarkName').val('');
+                var benchmarkToSelect = (response && response.data) ? response.data.namaBenchmark : null;
+                loadBenchmarks(areaUtama, benchmarkToSelect);
+                btn.prop('disabled', false).text('Simpan Benchmark');
+            },
+            error: function(xhr) {
+                errorDiv.text(xhr.responseText || 'Terjadi kesalahan saat menyimpan benchmark').show();
+                btn.prop('disabled', false).text('Simpan Benchmark');
             }
-            return res.json();
-        })
-        .then(response => {
-            const modalEl = document.getElementById('addBenchmarkModal');
-            bootstrap.Modal.getInstance(modalEl)?.hide();
-            document.getElementById('newBenchmarkName').value = '';
-            var toSelect = (response && response.data) ? response.data.namaBenchmark : null;
-            loadBenchmarks(areaUtama, toSelect);
-            btn.disabled = false;
-            btn.innerText = 'Simpan Benchmark';
-        })
-        .catch(err => {
-            errorDiv.innerText = err.message;
-            errorDiv.style.display = 'block';
-            btn.disabled = false;
-            btn.innerText = 'Simpan Benchmark';
         });
-    }
+    };
 
-    document.addEventListener('DOMContentLoaded', function () {
+    $(document).ready(function() {
         loadAreas();
 
-        // Area & Benchmark Dropdown Events
-        const areaSearch = document.getElementById('areaSearch');
-        const areaMenu = document.getElementById('areaDropdownMenu');
-        const toggleAreaBtn = document.getElementById('toggleAreaDropdown');
-
-        if (toggleAreaBtn && areaMenu && areaSearch) {
-            toggleAreaBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                if (areaMenu.style.display === 'block') {
-                    areaMenu.style.display = 'none';
-                } else {
-                    renderAreaDropdown(areaSearch.value);
-                    areaMenu.style.display = 'block';
-                }
-            });
-            areaSearch.addEventListener('input', function() {
-                renderAreaDropdown(this.value);
-                areaMenu.style.display = 'block';
-            });
-            areaSearch.addEventListener('focus', function() {
-                renderAreaDropdown(this.value);
-                areaMenu.style.display = 'block';
-            });
-        }
-
-        const bSearch = document.getElementById('benchmarkSearch');
-        const bMenu = document.getElementById('benchmarkDropdownMenu');
-        const toggleBBtn = document.getElementById('toggleBenchmarkDropdown');
-
-        if (toggleBBtn && bMenu && bSearch) {
-            toggleBBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                if (bSearch.disabled) return;
-                if (bMenu.style.display === 'block') {
-                    bMenu.style.display = 'none';
-                } else {
-                    renderBenchmarkDropdown(bSearch.value);
-                    bMenu.style.display = 'block';
-                }
-            });
-            bSearch.addEventListener('input', function() {
-                renderBenchmarkDropdown(this.value);
-                if (this.value === '') document.getElementById('inputDetilLokasi').value = '';
-                bMenu.style.display = 'block';
-            });
-            bSearch.addEventListener('focus', function() {
-                if (this.disabled) return;
-                renderBenchmarkDropdown(this.value);
-                bMenu.style.display = 'block';
-            });
-        }
-
-        document.addEventListener('click', function(e) {
-            if (bMenu && !e.target.closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown')) {
-                bMenu.style.display = 'none';
+        $('#addBenchmarkModal').on('show.bs.modal', function () {
+            var area = $('#area').val();
+            if(!area) {
+                alert('Pilih Area Utama terlebih dahulu!');
+                return false;
             }
-            if (areaMenu && !e.target.closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown')) {
-                areaMenu.style.display = 'none';
+            $('#newBenchmarkArea').val(area);
+            $('#newBenchmarkName').val('');
+            $('#addBenchmarkError').hide();
+
+            var list = $('#existingBenchmarksList');
+            list.empty();
+            if(globalBenchmarksList.length > 0) {
+                globalBenchmarksList.forEach(function(b) {
+                    list.append('<div class="list-group-item" style="font-size: 13px; background: rgba(0,0,0,0.1); border-color: var(--border-color); color: var(--text-main);"><i class="bi bi-compass me-2 text-warning"></i>' + b.namaBenchmark + '</div>');
+                });
+            } else {
+                list.append('<div class="p-3 text-center text-muted" style="font-size: 12px;">Belum ada benchmark di area ini</div>');
             }
         });
 
-        const addModalEl = document.getElementById('addBenchmarkModal');
-        if (addModalEl) {
-            addModalEl.addEventListener('show.bs.modal', function(e) {
-                const area = document.getElementById('inputArea')?.value;
-                if (!area) {
-                    alert('Pilih Area Utama terlebih dahulu!');
-                    e.preventDefault();
-                    return;
-                }
-                document.getElementById('newBenchmarkArea').value = area;
-                document.getElementById('newBenchmarkName').value = '';
-                document.getElementById('addBenchmarkError').style.display = 'none';
-
-                const list = document.getElementById('existingBenchmarksList');
-                list.innerHTML = '';
-                if (globalBenchmarksList.length > 0) {
-                    globalBenchmarksList.forEach(b => {
-                        const item = document.createElement('div');
-                        item.className = 'list-group-item';
-                        item.style.fontSize = '12px';
-                        item.style.background = 'rgba(0,0,0,0.2)';
-                        item.style.borderColor = 'var(--border-color)';
-                        item.style.color = '#f8fafc';
-                        item.innerHTML = `<i class="bi bi-compass me-2 text-warning"></i>${b.namaBenchmark}`;
-                        list.appendChild(item);
-                    });
-                } else {
-                    list.innerHTML = '<div class="p-3 text-center text-muted" style="font-size: 12px;">Belum ada benchmark di area ini</div>';
-                }
-            });
-        }
-
-        // Init score button click handlers
-        document.querySelectorAll('.btn-score-card').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const param = this.dataset.param;
-                const val = parseInt(this.dataset.val);
-
-                document.querySelectorAll(`.btn-score-card[data-param="${param}"]`).forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                document.getElementById(param).value = val;
-                calcLiveScore();
-            });
+        // Toggle area dropdown on chevron click
+        $('#toggleAreaDropdown').on('click', function() {
+            var menu = $('#areaDropdownMenu');
+            if (menu.is(':visible')) {
+                menu.hide();
+            } else {
+                renderAreaDropdown($('#areaSearch').val());
+                menu.show();
+            }
         });
 
-        const successModal = document.getElementById('statusSuccessModal');
-        if (successModal) { new bootstrap.Modal(successModal).show(); }
-        const errorModal = document.getElementById('statusErrorModal');
-        if (errorModal) { new bootstrap.Modal(errorModal).show(); }
+        $('#areaSearch').on('input keyup', function() {
+            renderAreaDropdown($(this).val());
+        });
 
-        calcLiveScore();
+        $('#areaSearch').on('focus', function() {
+            renderAreaDropdown($(this).val());
+        });
+
+        // Toggle benchmark dropdown on chevron click
+        $('#toggleBenchmarkDropdown').on('click', function() {
+            if ($('#benchmarkSearch').prop('disabled')) return;
+            var menu = $('#benchmarkDropdownMenu');
+            if (menu.is(':visible')) {
+                menu.hide();
+            } else {
+                renderBenchmarkDropdown($('#benchmarkSearch').val());
+                menu.show();
+            }
+        });
+
+        $('#benchmarkSearch').on('input keyup', function() {
+            renderBenchmarkDropdown($(this).val());
+            if ($(this).val() === '') $('#detilLokasi').val('');
+        });
+
+        $('#benchmarkSearch').on('focus', function() {
+            if ($(this).prop('disabled')) return;
+            renderBenchmarkDropdown($(this).val());
+        });
+
+        // Hide dropdown on click outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
+                $('#areaDropdownMenu').hide();
+            }
+            if (!$(e.target).closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown').length) {
+                $('#benchmarkDropdownMenu').hide();
+            }
+        });
+
+        // Score card buttons click
+        $('.btn-score-card').on('click', function() {
+            const param = $(this).data('param');
+            const val = parseInt($(this).data('val'));
+            $(`.btn-score-card[data-param="${param}"]`).removeClass('active');
+            $(this).addClass('active');
+            $(`#${param}`).val(val);
+            calculateDciScore();
+        });
+
+        calculateDciScore();
+
+        // Status Modals
+        if ($('#statusSuccessModal').length) new bootstrap.Modal(document.getElementById('statusSuccessModal')).show();
+        if ($('#statusErrorModal').length) new bootstrap.Modal(document.getElementById('statusErrorModal')).show();
     });
 
-    function calcLiveScore() {
-        const p1 = parseInt(document.getElementById('skorLantaiDump').value) || 100;
-        const p2 = parseInt(document.getElementById('skorSafetyBerm').value) || 100;
-        const p3 = parseInt(document.getElementById('skorKondisiCrest').value) || 100;
-        const p4 = parseInt(document.getElementById('skorGradeDumping').value) || 100;
-        const p5 = parseInt(document.getElementById('skorDrainaseDump').value) || 100;
-        const p6 = parseInt(document.getElementById('skorPenataanSpillage').value) || 100;
-        const p7 = parseInt(document.getElementById('skorRambuPenerangan').value) || 100;
-        const p8 = parseInt(document.getElementById('skorSpotterManuver').value) || 100;
+    // Score Calculation
+    function calculateDciScore() {
+        const p1 = parseInt($('#skorLantaiDump').val()) || 100;
+        const p2 = parseInt($('#skorSafetyBerm').val()) || 100;
+        const p3 = parseInt($('#skorKondisiCrest').val()) || 100;
+        const p4 = parseInt($('#skorGradeDumping').val()) || 100;
+        const p5 = parseInt($('#skorDrainaseDump').val()) || 100;
+        const p6 = parseInt($('#skorPenataanSpillage').val()) || 100;
+        const p7 = parseInt($('#skorRambuPenerangan').val()) || 100;
+        const p8 = parseInt($('#skorSpotterManuver').val()) || 100;
 
         let total = (p1 * 0.15) + (p2 * 0.15) + (p3 * 0.15) + (p4 * 0.15) +
                     (p5 * 0.10) + (p6 * 0.10) + (p7 * 0.10) + (p8 * 0.10);
-        total = Math.round(total * 10) / 10;
 
-        let kat = total >= 85 ? "Baik" : (total >= 70 ? "Sedang" : "Kurang");
-        let color = total >= 85 ? "#10b981" : (total >= 70 ? "#f59e0b" : "#f43f5e");
-        let bg = total >= 85 ? "rgba(16, 185, 129, 0.2)" : (total >= 70 ? "rgba(245, 158, 11, 0.2)" : "rgba(244, 63, 94, 0.2)");
+        let rounded = (Math.round(total * 10) / 10).toFixed(1);
 
-        const scoreValEl = document.getElementById('liveScoreVal');
-        const badgeEl = document.getElementById('liveScoreBadge');
-        if (scoreValEl && badgeEl) {
-            scoreValEl.innerText = total.toFixed(1);
-            badgeEl.innerHTML = `Skor DCI: <span id="liveScoreVal">${total.toFixed(1)}</span>% (${kat})`;
-            badgeEl.style.color = color;
-            badgeEl.style.backgroundColor = bg;
-            badgeEl.style.borderColor = color;
+        const paramsList = [
+            { name: "Lantai Dump & Daya Dukung", val: p1, desc100: "Rata & Padat Kuat", desc70: "Bergelombang / Lembek", desc40: "Amblas Parah / Lumpur" },
+            { name: "Tanggul Pengaman (Safety Berm)", val: p2, desc100: "≥ 3/4 Roda & Kokoh", desc70: "1/2 - 3/4 Roda / Tipis", desc40: "< 1/2 Roda / Putus" },
+            { name: "Kondisi Crest & Tepi Dumping", val: p3, desc100: "Stabil & Rapat", desc70: "Retak Rambut / Penurunan", desc40: "Retak Lebar / Slump" },
+            { name: "Counter Grade Lantai", val: p4, desc100: "Naik 2-3% ke Crest", desc70: "Datar Tanpa Counter Grade", desc40: "Turun ke Luar Crest" },
+            { name: "Drainase & Saluran Dump", val: p5, desc100: "Kering & Mengalir", desc70: "Ada Genangan Lokal", desc40: "Tergenang Masif / Bahaya" },
+            { name: "Penataan Spillage & Material", val: p6, desc100: "Bersih & Dozer Aktif", desc70: "Tumpukan Belum Rata", desc40: "Menumpuk Berantakan" },
+            { name: "Rambu & Penerangan Malam", val: p7, desc100: "Lampu Terang & Lengkap", desc70: "Remang / Rambu Kusam", desc40: "Gelap Total / Tanpa Rambu" },
+            { name: "Spotter & Pola Manuver Unit", val: p8, desc100: "Spotter Aktif & Tertib", desc70: "Kurang Fokus / Mepet", desc40: "Tanpa Spotter / Semrawut" }
+        ];
+
+        let cnt100 = 0, cnt70 = 0, cnt40 = 0;
+        let findings = [];
+        let autoActions = [];
+
+        paramsList.forEach(p => {
+            if (p.val === 100) cnt100++;
+            else if (p.val === 70) {
+                cnt70++;
+                findings.push(`<b>${p.name}</b>: Skor 70 (${p.desc70})`);
+                if (p.name.includes("Lantai")) autoActions.push("Dukungan dozer memadatkan dan meratakan lantai dump");
+                else if (p.name.includes("Berm")) autoActions.push("Peninggian safety berm minimal 3/4 tinggi roda unit terbesar");
+                else if (p.name.includes("Crest")) autoActions.push("Monitoring retakan crest dan penataan mundur titik buang");
+                else if (p.name.includes("Grade")) autoActions.push("Rekayasa counter grade menanjak 2-3% ke arah crest");
+                else if (p.name.includes("Drainase")) autoActions.push("Pembuatan parit drainase pembuang air di disposal");
+                else if (p.name.includes("Spillage")) autoActions.push("Pembersihan dan perataan ceceran material oleh dozer");
+                else if (p.name.includes("Rambu")) autoActions.push("Optimalisasi tower lamp dan perbaikan rambu batas dumping");
+                else if (p.name.includes("Spotter")) autoActions.push("Penempatan spotter aktif dan penertiban jarak dumping unit");
+            } else if (p.val === 40) {
+                cnt40++;
+                findings.push(`<span class="text-danger"><b>${p.name}</b>: Skor 40 (${p.desc40}) [KRITIS]</span>`);
+                if (p.name.includes("Crest")) autoActions.push("URGENT / STOP: Penutupan sementara area crest retak/slump dan inspeksi Geotek");
+                else if (p.name.includes("Berm")) autoActions.push("URGENT: Rekonstruksi segera tanggul pengaman sebelum dumping dilanjutkan");
+                else if (p.name.includes("Grade")) autoActions.push("URGENT: Dozer wajib segera membuat counter grade tanjakan");
+                else if (p.name.includes("Lantai")) autoActions.push("URGENT: Re-sheeting material kering dan pengalihan ke pad alternatif");
+                else if (p.name.includes("Spotter")) autoActions.push("URGENT: Wajib tempatkan spotter sebelum unit diizinkan manuver");
+                else autoActions.push(`URGENT: Penanganan segera pada ${p.name}`);
+            }
+        });
+
+        $('#cntStandar').text(cnt100);
+        $('#cntPerhatian').text(cnt70);
+        $('#cntKritis').text(cnt40);
+
+        let label = "Baik";
+        let color = "#10b981";
+        let bg = "rgba(16, 185, 129, 0.15)";
+        let border = "rgba(16, 185, 129, 0.4)";
+        let statusTitle = "STATUS: DISPOSAL LAYAK OPERASI PENUH (OPTIMAL)";
+        let statusDesc = "Seluruh 8 parameter dumping memenuhi standar keselamatan disposal tambang.";
+        let statusIcon = "bi-shield-fill-check";
+
+        if (total < 70) {
+            label = "Kurang";
+            color = "#f43f5e";
+            bg = "rgba(244, 63, 94, 0.15)";
+            border = "rgba(244, 63, 94, 0.4)";
+            statusTitle = "STATUS: DISPOSAL RAWAN / PERLU PERBAIKAN SEGERA";
+            statusDesc = "Ditemukan parameter kritis di bawah standar keselamatan disposal. Batasi/tutup dumping pad hingga direkayasa aman.";
+            statusIcon = "bi-x-octagon-fill";
+        } else if (total < 85) {
+            label = "Sedang";
+            color = "#f59e0b";
+            bg = "rgba(245, 158, 11, 0.15)";
+            border = "rgba(245, 158, 11, 0.4)";
+            statusTitle = "STATUS: DISPOSAL LAYAK DENGAN PENGAWASAN & CATATAN";
+            statusDesc = "Operasi dumping berjalan dengan perhatian khusus pada parameter yang perlu perbaikan/dozer support.";
+            statusIcon = "bi-exclamation-triangle-fill";
+        }
+
+        $('#liveScoreVal').text(rounded);
+        $('#liveScoreBadge').html(`Skor DCI: <span>${rounded}</span>% (${label})`).css({ 'background': bg, 'color': color, 'border-color': border });
+
+        $('#summaryScoreVal').text(rounded + '%').css('color', color);
+        $('#summaryCategoryBadge').html(`<i class="bi ${statusIcon} me-1"></i> ${label.toUpperCase()}`).css({ 'background': bg, 'color': color });
+
+        $('#feasibilityBanner').css({ 'background': bg, 'border-color': border, 'color': color });
+        $('#feasibilityIcon').attr('class', `bi ${statusIcon}`);
+        $('#feasibilityTitle').text(statusTitle);
+        $('#feasibilityDesc').text(statusDesc);
+
+        // Update findings list
+        if (findings.length === 0) {
+            $('#findingsCountBadge').text('0 Defisit').attr('class', 'badge bg-success');
+            $('#findingsList').html('<i class="bi bi-check2-circle text-success me-1"></i> Semua parameter berada dalam batas optimal.');
+            $('#autoRecText').text('Pertahankan kondisi standar kerja di area dumping.');
+        } else {
+            $('#findingsCountBadge').text(`${findings.length} Temuan Defisit`).attr('class', 'badge bg-warning text-dark');
+            let listHtml = '<ul class="mb-0 ps-3">' + findings.map(f => `<li class="mb-1">${f}</li>`).join('') + '</ul>';
+            $('#findingsList').html(listHtml);
+            let recText = autoActions.length > 0 ? autoActions.join("; ") + "." : "Lakukan perbaikan terarah pada parameter defisit.";
+            $('#autoRecText').text(recText);
+        }
+
+        currentDciSummaryData = {
+            totalScore: rounded,
+            kategori: label,
+            statusTitle: statusTitle,
+            cnt100: cnt100,
+            cnt70: cnt70,
+            cnt40: cnt40,
+            findings: findings,
+            autoActions: autoActions
+        };
+    }
+
+    function applyAutoRecommendationDci() {
+        const text = $('#autoRecText').text().trim();
+        if (text) {
+            const current = $('#tindakanPerbaikan').val().trim();
+            if (current === "") {
+                $('#tindakanPerbaikan').val(text);
+            } else if (!current.includes(text)) {
+                $('#tindakanPerbaikan').val(current + "\n" + text);
+            }
+            $('#tindakanPerbaikan').focus();
         }
     }
 
-    function openInputModal() {
-        document.getElementById('dciForm').reset();
-        document.getElementById('reportId').value = '';
-        document.getElementById('areaSearch').value = '';
-        document.getElementById('inputArea').value = '';
-        document.getElementById('benchmarkSearch').disabled = true;
-        document.getElementById('benchmarkSearch').value = 'Pilih Area Utama dulu...';
-        document.getElementById('inputDetilLokasi').value = '';
-        document.getElementById('btnAddBenchmark').disabled = true;
-        document.getElementById('modalFormTitle').innerText = 'Form Inspeksi Dump Condition Index (DCI)';
-        const newBadge = document.getElementById('modalNewBadge');
-        if (newBadge) newBadge.classList.remove('d-none');
-        document.getElementById('inputTanggal').value = new Date().toISOString().substring(0, 10);
-        document.getElementById('inputWaktu').value = new Date().toTimeString().substring(0, 5);
-        document.getElementById('photoPreviewWrap').classList.add('d-none');
-
-        ['skorLantaiDump', 'skorSafetyBerm', 'skorKondisiCrest', 'skorGradeDumping',
-         'skorDrainaseDump', 'skorPenataanSpillage', 'skorRambuPenerangan', 'skorSpotterManuver'].forEach(param => {
-            document.getElementById(param).value = 100;
-            document.querySelectorAll(`.btn-score-card[data-param="${param}"]`).forEach(b => {
-                if (b.dataset.val === "100") b.classList.add('active');
-                else b.classList.remove('active');
-            });
-        });
-
-        calcLiveScore();
-        new bootstrap.Modal(document.getElementById('dciInputModal')).show();
-    }
-
-    function editReport(id) {
-        fetch(`/Dci/GetDetail?id=${id}`)
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('reportId').value = data.id;
-                document.getElementById('modalFormTitle').innerText = 'Edit Laporan DCI #' + data.id;
-                const newBadge = document.getElementById('modalNewBadge');
-                if (newBadge) newBadge.classList.add('d-none');
-                document.getElementById('inputTanggal').value = data.tanggal;
-                document.getElementById('inputWaktu').value = data.waktu;
-                document.getElementById('inputShift').value = data.shift || 'Day';
-                document.getElementById('inputArea').value = data.area || '';
-                document.getElementById('areaSearch').value = data.area || '';
-                document.getElementById('inputLokasi').value = data.lokasi || '';
-                document.getElementById('inputDisposal').value = data.disposal || '';
-                document.getElementById('inputNamaDump').value = data.namaDump || '';
-                document.getElementById('inputDetilLokasi').value = data.detilLokasi || '';
-                if (data.area) {
-                    loadBenchmarks(data.area, data.detilLokasi);
-                } else {
-                    document.getElementById('benchmarkSearch').disabled = true;
-                    document.getElementById('benchmarkSearch').value = 'Pilih Area Utama dulu...';
-                    document.getElementById('btnAddBenchmark').disabled = true;
-                }
-                document.getElementById('inputLat').value = data.latitude || '';
-                document.getElementById('inputLong').value = data.longitude || '';
-                if (data.latitude && data.longitude) {
-                    document.getElementById('inputGps').value = `${data.latitude}, ${data.longitude}`;
-                } else {
-                    document.getElementById('inputGps').value = '';
-                }
-
-                document.getElementById('inputCatatan').value = data.catatan || '';
-                document.getElementById('inputTindakan').value = data.tindakanPerbaikan || '';
-                document.getElementById('inputPic').value = data.pic || '';
-
-                if (data.fotoUrl) {
-                    document.getElementById('photoPreviewImg').src = data.fotoUrl;
-                    document.getElementById('photoPreviewWrap').classList.remove('d-none');
-                } else {
-                    document.getElementById('photoPreviewWrap').classList.add('d-none');
-                }
-
-                // Set score values
-                const scoreMap = {
-                    'skorLantaiDump': data.skorLantaiDump,
-                    'skorSafetyBerm': data.skorSafetyBerm,
-                    'skorKondisiCrest': data.skorKondisiCrest,
-                    'skorGradeDumping': data.skorGradeDumping,
-                    'skorDrainaseDump': data.skorDrainaseDump,
-                    'skorPenataanSpillage': data.skorPenataanSpillage,
-                    'skorRambuPenerangan': data.skorRambuPenerangan,
-                    'skorSpotterManuver': data.skorSpotterManuver
-                };
-
-                for (let param in scoreMap) {
-                    const val = scoreMap[param] || 100;
-                    document.getElementById(param).value = val;
-                    document.querySelectorAll(`.btn-score-card[data-param="${param}"]`).forEach(b => {
-                        if (parseInt(b.dataset.val) === val) b.classList.add('active');
-                        else b.classList.remove('active');
-                    });
-                }
-
-                calcLiveScore();
-                new bootstrap.Modal(document.getElementById('dciInputModal')).show();
-            })
-            .catch(err => alert('Gagal memuat data laporan: ' + err));
-    }
-
-    let currentDetailData = null;
-
-    function openDetailModal(id) {
-        fetch(`/Dci/GetDetail?id=${id}`)
-            .then(res => res.json())
-            .then(data => {
-                currentDetailData = data;
-                document.getElementById('detailImg').src = data.fotoUrl || '/img/placeholder-photo.png';
-                document.getElementById('detailSkor').innerText = data.totalScore + '%';
-                document.getElementById('detailKategori').innerText = data.kategoriIndex;
-                document.getElementById('detailKategori').style.color = data.totalScore >= 85 ? '#10b981' : (data.totalScore >= 70 ? '#f59e0b' : '#f43f5e');
-                document.getElementById('detailNamaDump').innerText = data.namaDump || data.disposal || data.lokasi;
-                document.getElementById('detailSurveyor').innerText = `${data.nama} (${data.nik})`;
-                document.getElementById('detailCatatan').innerText = data.catatan || '-';
-                document.getElementById('detailTindakan').innerText = data.tindakanPerbaikan || '-';
-                document.getElementById('detailPic').innerText = data.pic || '-';
-
-                const params = [
-                    { name: '1. Lantai Dump & Pad Stability', val: data.skorLantaiDump, weight: '15%' },
-                    { name: '2. Safety Berm / Tanggul Penahan', val: data.skorSafetyBerm, weight: '15%' },
-                    { name: '3. Kondisi Crest & Edge Disposal', val: data.skorKondisiCrest, weight: '15%' },
-                    { name: '4. Grade & Kemiringan Dumping', val: data.skorGradeDumping, weight: '15%' },
-                    { name: '5. Drainase & Aliran Air Dump', val: data.skorDrainaseDump, weight: '10%' },
-                    { name: '6. Penataan Material & Spillage', val: data.skorPenataanSpillage, weight: '10%' },
-                    { name: '7. Rambu & Penerangan Disposal', val: data.skorRambuPenerangan, weight: '10%' },
-                    { name: '8. Petugas Spotter & Manuver Unit', val: data.skorSpotterManuver, weight: '10%' }
-                ];
-
-                let html = '';
-                params.forEach(p => {
-                    let col = p.val === 100 ? '#10b981' : (p.val === 70 ? '#f59e0b' : '#f43f5e');
-                    html += `
-                        <div class="d-flex align-items-center justify-content-between p-2 rounded-2" style="background: rgba(255,255,255,0.03); font-size: 11.5px;">
-                            <span class="text-white">${p.name} <small class="text-muted">(${p.weight})</small></span>
-                            <span class="badge" style="background: ${col}20; color: ${col}; border: 1px solid ${col}40; font-weight: 700;">${p.val}</span>
-                        </div>
-                    `;
-                });
-                document.getElementById('detailParamsList').innerHTML = html;
-
-                new bootstrap.Modal(document.getElementById('dciDetailModal')).show();
-            })
-            .catch(err => alert('Gagal memuat detail laporan: ' + err));
-    }
-
-    function shareWhatsApp() {
-        if (!currentDetailData) return;
-        const d = currentDetailData;
-        const text = `*LAPORAN DUMP CONDITION INDEX (DCI)*%0A` +
-                     `*Tanggal:* ${d.tanggal} (${d.waktu})%0A` +
-                     `*Lokasi:* ${d.lokasi} - ${d.area}%0A` +
-                     `*Disposal/Dump:* ${d.namaDump || d.disposal || '-'}%0A` +
-                     `*Surveyor:* ${d.nama} (${d.nik})%0A` +
-                     `*Total Skor DCI:* ${d.totalScore}% (${d.kategoriIndex})%0A` +
-                     `-------------------------%0A` +
-                     `*Catatan:* ${d.catatan || '-'}%0A` +
-                     `*Tindakan Perbaikan:* ${d.tindakanPerbaikan || '-'}%0A` +
-                     `*PIC:* ${d.pic || '-'}`;
-        window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
-    }
-
-    function confirmDelete(id) {
-        document.getElementById('deleteForm').action = `/Dci/Delete?id=${id}`;
-        new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
-    }
-
-    function previewPhoto(input) {
+    function previewPhotoDci(input) {
         if (input.files && input.files[0]) {
             const reader = new FileReader();
-            reader.onload = function (e) {
-                document.getElementById('photoPreviewImg').src = e.target.result;
-                document.getElementById('photoPreviewWrap').classList.remove('d-none');
-            }
+            reader.onload = function(e) {
+                $('#photoPreviewImg').attr('src', e.target.result);
+                $('#photoPreviewWrap').removeClass('d-none');
+            };
             reader.readAsDataURL(input.files[0]);
         }
     }
 
-    function getLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-                const lat = position.coords.latitude.toFixed(6);
-                const long = position.coords.longitude.toFixed(6);
-                document.getElementById('inputLat').value = lat;
-                document.getElementById('inputLong').value = long;
-                document.getElementById('inputGps').value = `${lat}, ${long}`;
-            }, err => {
-                alert('Gagal mengambil GPS: ' + err.message);
+    function shareDciToWhatsApp() {
+        const d = currentDciSummaryData;
+        const area = $('#area').val() || '-';
+        const dump = $('#namaDump').val() || $('#lokasi').val() || 'Disposal Tambang';
+        const surveyor = '@userNama';
+        const tanggal = $('#tanggal').val() + ' ' + $('#waktuStr').val();
+
+        let text = `*LAPORAN DUMP CONDITION INDEX (DCI)*%0A`;
+        text += `*Area:* ${encodeURIComponent(area)}%0A`;
+        text += `*Dump/Pad:* ${encodeURIComponent(dump)}%0A`;
+        text += `*Tanggal:* ${encodeURIComponent(tanggal)}%0A`;
+        text += `*Surveyor:* ${encodeURIComponent(surveyor)}%0A%0A`;
+        text += `*Skor Akhir:* *${d.totalScore}%* (${d.kategori})%0A`;
+        text += `*Status:* ${encodeURIComponent(d.statusTitle)}%0A%0A`;
+
+        if (d.findings && d.findings.length > 0) {
+            text += `*Temuan Parameter:*%0A`;
+            d.findings.forEach(f => {
+                let clean = f.replace(/<[^>]*>/g, '');
+                text += `• ${encodeURIComponent(clean)}%0A`;
             });
+            text += `%0A`;
+        }
+
+        const rec = $('#tindakanPerbaikan').val().trim();
+        if (rec) text += `*Rekomendasi:* ${encodeURIComponent(rec)}%0A`;
+
+        window.open(`https://wa.me/?text=${text}`, '_blank');
+    }
+
+    function shareDciNative() {
+        const d = currentDciSummaryData;
+        const dump = $('#namaDump').val() || $('#lokasi').val() || 'Disposal Tambang';
+        const text = `Laporan DCI: ${dump} - Skor: ${d.totalScore}% (${d.kategori})`;
+        if (navigator.share) {
+            navigator.share({ title: 'Laporan DCI', text: text, url: window.location.href }).catch(() => {});
         } else {
-            alert('Geolocation tidak didukung pada browser ini.');
+            shareDciToWhatsApp();
         }
     }
+
+    function copyDciSummaryToClipboard() {
+        const d = currentDciSummaryData;
+        const area = $('#area').val() || '-';
+        const dump = $('#namaDump').val() || $('#lokasi').val() || 'Disposal Tambang';
+        const text = `LAPORAN DUMP CONDITION INDEX (DCI)\nArea: ${area}\nDump: ${dump}\nSkor: ${d.totalScore}% (${d.kategori})\nStatus: ${d.statusTitle}`;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+                $('#clientAlertTitle').text('Berhasil Disalin!');
+                $('#clientAlertMsg').text('Ringkasan laporan DCI telah disalin ke clipboard.');
+                new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+            });
+        }
+    }
+
+    function shareSavedDci(id) {
+        $.getJSON('/Dci/GetDetail?id=' + id, function(d) {
+            let text = `*LAPORAN DUMP CONDITION INDEX (DCI)*%0A%0A`;
+            text += `*Dump/Pad:* ${encodeURIComponent(d.namaDump || d.lokasi)}%0A`;
+            text += `*Disposal:* ${encodeURIComponent(d.disposal || '-')}%0A`;
+            text += `*Area:* ${encodeURIComponent(d.area || '-')}%0A`;
+            text += `*Tanggal:* ${encodeURIComponent(d.tanggal + ' ' + d.waktu)}%0A`;
+            text += `*Surveyor:* ${encodeURIComponent(d.nama + ' (' + d.nik + ')')}%0A%0A`;
+            text += `*Skor DCI:* *${d.totalScore}%* (${d.kategoriIndex})%0A`;
+            text += `1. Lantai Dump: ${d.skorLantaiDump}/100%0A`;
+            text += `2. Safety Berm: ${d.skorSafetyBerm}/100%0A`;
+            text += `3. Kondisi Crest: ${d.skorKondisiCrest}/100%0A`;
+            text += `4. Grade Dumping: ${d.skorGradeDumping}/100%0A`;
+            text += `5. Drainase Dump: ${d.skorDrainaseDump}/100%0A`;
+            text += `6. Penataan Spillage: ${d.skorPenataanSpillage}/100%0A`;
+            text += `7. Rambu & Lampu: ${d.skorRambuPenerangan}/100%0A`;
+            text += `8. Spotter & Manuver: ${d.skorSpotterManuver}/100%0A%0A`;
+            if (d.catatan) text += `*Catatan:* ${encodeURIComponent(d.catatan)}%0A`;
+            if (d.tindakanPerbaikan) text += `*Rekomendasi:* ${encodeURIComponent(d.tindakanPerbaikan)}%0A`;
+            if (d.pic) text += `*PIC:* ${encodeURIComponent(d.pic)}`;
+
+            window.open(`https://wa.me/?text=${text}`, '_blank');
+        });
+    }
+
+    function getLocationDci() {
+        if (!navigator.geolocation) {
+            $('#clientAlertTitle').text('GPS Tidak Didukung');
+            $('#clientAlertMsg').text('Browser perangkat Anda tidak mendukung fitur Geolocation.');
+            new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+            return;
+        }
+
+        const btn = $('#btnGetLocation');
+        btn.html('<span class="spinner-border spinner-border-sm" role="status"></span>');
+
+        navigator.geolocation.getCurrentPosition(
+            function(pos) {
+                const lat = pos.coords.latitude.toFixed(6);
+                const lng = pos.coords.longitude.toFixed(6);
+                $('#latitude').val(lat);
+                $('#longitude').val(lng);
+
+                const currentLoc = $('#lokasi').val().trim();
+                if (!currentLoc) {
+                    $('#lokasi').val(`Koordinat: ${lat}, ${lng}`);
+                } else if (!currentLoc.includes(lat)) {
+                    $('#lokasi').val(`${currentLoc} (${lat}, ${lng})`);
+                }
+
+                btn.html('<i class="bi bi-check-circle-fill text-success" style="font-size: 18px;"></i>');
+                setTimeout(() => {
+                    btn.html('<i class="bi bi-crosshair" style="font-size: 18px;"></i>');
+                }, 2000);
+            },
+            function(err) {
+                btn.html('<i class="bi bi-crosshair" style="font-size: 18px;"></i>');
+                $('#clientAlertTitle').text('Gagal Mengambil GPS');
+                $('#clientAlertMsg').text('Tidak dapat mendeteksi koordinat: ' + err.message);
+                new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+
+    function resetForm() {
+        $('#dciForm')[0].reset();
+        $('#dciId').val('');
+        $('#areaSearch').val('');
+        $('#area').val('');
+        $('#benchmarkSearch').prop('disabled', true).val('Pilih Area Utama dulu...');
+        $('#detilLokasi').val('');
+        $('#btnAddBenchmark').prop('disabled', true);
+        $('#photoPreviewWrap').addClass('d-none');
+        $('#formTitle').html('<i class="bi bi-pencil-square" style="color: #f97316;"></i> <span>Form Penilaian DCI</span> <span class="badge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(244, 63, 94, 0.4); display: inline-flex; align-items: center; gap: 2px;"><i class="bi bi-stars" style="font-size: 9px;"></i> NEW</span>');
+        $('#btnCancelEdit').addClass('d-none');
+
+        $('.btn-score-card').removeClass('active');
+        $('.btn-score-card[data-val="100"]').addClass('active');
+        $('input[id^="skor"]').val('100');
+        calculateDciScore();
+    }
+
+    function editDci(id) {
+        $.getJSON('/Dci/GetDetail?id=' + id, function(data) {
+            $('#dciId').val(data.id);
+            $('#tanggal').val(data.tanggal);
+            $('#waktuStr').val(data.waktu);
+            $('#area').val(data.area);
+            $('#areaSearch').val(data.area);
+            $('#disposal').val(data.disposal);
+            $('#namaDump').val(data.namaDump);
+            $('#shift').val(data.shift);
+            $('#lokasi').val(data.lokasi);
+            $('#detilLokasi').val(data.detilLokasi);
+            if (data.area) {
+                loadBenchmarks(data.area, data.detilLokasi);
+            } else {
+                $('#benchmarkSearch').prop('disabled', true).val('Pilih Area Utama dulu...');
+                $('#btnAddBenchmark').prop('disabled', true);
+            }
+            $('#latitude').val(data.latitude);
+            $('#longitude').val(data.longitude);
+            $('#catatan').val(data.catatan);
+            $('#tindakanPerbaikan').val(data.tindakanPerbaikan);
+            $('#pic').val(data.pic);
+
+            const params = ['skorLantaiDump', 'skorSafetyBerm', 'skorKondisiCrest', 'skorGradeDumping',
+                            'skorDrainaseDump', 'skorPenataanSpillage', 'skorRambuPenerangan', 'skorSpotterManuver'];
+
+            params.forEach(p => {
+                const val = data[p] || 100;
+                $(`#${p}`).val(val);
+                $(`.btn-score-card[data-param="${p}"]`).removeClass('active');
+                $(`.btn-score-card[data-param="${p}"][data-val="${val}"]`).addClass('active');
+            });
+
+            if (data.fotoUrl) {
+                $('#photoPreviewImg').attr('src', data.fotoUrl);
+                $('#photoPreviewWrap').removeClass('d-none');
+            } else {
+                $('#photoPreviewWrap').addClass('d-none');
+            }
+
+            calculateDciScore();
+
+            $('#formTitle').html(`<i class="bi bi-pencil-square text-warning"></i> <span>Edit Penilaian DCI #${data.id}</span>`);
+            $('#btnCancelEdit').removeClass('d-none');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    let currentDetailData = null;
+
+    function showDetailDci(id) {
+        $.getJSON('/Dci/GetDetail?id=' + id, function(data) {
+            currentDetailData = data;
+            $('#detailModalTitle').text(`Detail Inspeksi DCI: ${data.namaDump || data.lokasi} (#${data.id})`);
+
+            let katBadge = data.kategoriIndex === "Baik" ? "badge bg-success" : (data.kategoriIndex === "Sedang" ? "badge bg-warning text-dark" : "badge bg-danger");
+
+            let html = `
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        ${data.fotoUrl ? `<div style="max-height:260px; overflow:hidden; border-radius:12px; margin-bottom:12px;"><img src="${data.fotoUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='/img/placeholder-photo.png'"/></div>` : ''}
+                        <div class="card p-3 bg-dark border-0">
+                            <h6 class="text-white font-weight-bold mb-2">Informasi Umum</h6>
+                            <p class="mb-1 text-muted" style="font-size:12px;">Tanggal: <span class="text-white">${data.tanggal} ${data.waktu}</span></p>
+                            <p class="mb-1 text-muted" style="font-size:12px;">Disposal: <span class="text-white font-weight-bold">${data.disposal || '-'}</span></p>
+                            <p class="mb-1 text-muted" style="font-size:12px;">Nama Dump: <span class="text-white">${data.namaDump || '-'}</span></p>
+                            <p class="mb-1 text-muted" style="font-size:12px;">Lokasi / Area: <span class="text-white">${data.lokasi} (${data.area})</span></p>
+                            <p class="mb-1 text-muted" style="font-size:12px;">Shift: <span class="text-white">${data.shift || '-'}</span></p>
+                            <p class="mb-1 text-muted" style="font-size:12px;">Surveyor: <span class="text-white">${data.nama} (${data.nik})</span></p>
+                            <p class="mb-1 text-muted" style="font-size:12px;">Perusahaan: <span class="text-white">${data.perusahaan || '-'}</span></p>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="card p-3 bg-dark border-0 mb-3 text-center">
+                            <div class="text-muted" style="font-size:11px; text-transform:uppercase;">Skor Dump Condition Index</div>
+                            <h2 class="mb-1 mt-1 font-weight-bold" style="color: ${data.totalScore >= 85 ? '#10b981' : (data.totalScore >= 70 ? '#f59e0b' : '#f43f5e')};">${data.totalScore}%</h2>
+                            <div><span class="${katBadge}">${data.kategoriIndex}</span></div>
+                        </div>
+                        <div class="card p-3 bg-dark border-0">
+                            <h6 class="text-white font-weight-bold mb-2">Rincian 8 Parameter</h6>
+                            <div style="font-size:11.5px;">
+                                <div class="d-flex justify-content-between py-1 border-bottom border-secondary"><span>1. Lantai Dump (15%):</span> <strong>${data.skorLantaiDump}/100</strong></div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-secondary"><span>2. Safety Berm (15%):</span> <strong>${data.skorSafetyBerm}/100</strong></div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-secondary"><span>3. Kondisi Crest (15%):</span> <strong>${data.skorKondisiCrest}/100</strong></div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-secondary"><span>4. Grade Dumping (15%):</span> <strong>${data.skorGradeDumping}/100</strong></div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-secondary"><span>5. Drainase Dump (10%):</span> <strong>${data.skorDrainaseDump}/100</strong></div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-secondary"><span>6. Penataan Spillage (10%):</span> <strong>${data.skorPenataanSpillage}/100</strong></div>
+                                <div class="d-flex justify-content-between py-1 border-bottom border-secondary"><span>7. Rambu &amp; Lampu (10%):</span> <strong>${data.skorRambuPenerangan}/100</strong></div>
+                                <div class="d-flex justify-content-between py-1"><span>8. Spotter &amp; Manuver (10%):</span> <strong>${data.skorSpotterManuver}/100</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="card p-3 bg-dark border-0">
+                            <h6 class="text-white font-weight-bold mb-1">Catatan &amp; Rekomendasi</h6>
+                            <p class="mb-1 text-muted" style="font-size:12px;">Catatan: <span class="text-white">${data.catatan || '-'}</span></p>
+                            <p class="mb-1 text-muted" style="font-size:12px;">Rekomendasi: <span class="text-white">${data.tindakanPerbaikan || '-'}</span></p>
+                            <p class="mb-0 text-muted" style="font-size:12px;">PIC: <span class="text-white">${data.pic || '-'}</span></p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            $('#detailModalBody').html(html);
+            new bootstrap.Modal(document.getElementById('dciDetailModal')).show();
+        });
+    }
+
+    $('#btnShareDetailWa').on('click', function() {
+        if (!currentDetailData) return;
+        shareSavedDci(currentDetailData.id);
+    });
+
+    function confirmDeleteDci(id) {
+        $('#deleteForm').attr('action', '/Dci/Delete/' + id);
+        new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
+    }
 </script>
+}
