@@ -197,7 +197,7 @@
         color: var(--text-muted);
     }
 
-    /* ── VIEWPORT HUD SUMMARY CARDS (Top Left & Top Right) ── */
+    /* ── VIEWPORT FLOATING KPI CHIPS ── */
     .viewport-overlay-kpi {
         display: flex;
         justify-content: space-between;
@@ -421,11 +421,16 @@
                 <span class="hud-badge-k3"><i class="bi bi-shield-shaded"></i> 3D HAZARD RADAR</span>
                 <div>
                     <div class="hud-title">ANALISIS KATEGORI HAZARD &amp; KOMPARASI WAKTU</div>
-                    <div class="hud-subtitle">3D SKYSCRAPER BARS &bull; TOP 5 KONDISI TIDAK AMAN (KTA) vs TINDAKAN TIDAK AMAN (TTA) &bull; MTD vs YTD</div>
+                    <div class="hud-subtitle">3D CAROUSEL BARS &bull; TOP 5 KONDISI TIDAK AMAN (KTA) vs TINDAKAN TIDAK AMAN (TTA) &bull; MTD vs YTD</div>
                 </div>
             </div>
 
             <div class="hud-nav-buttons">
+                <!-- Rotate Control Button -->
+                <button type="button" class="nav-btn" onclick="toggleAutoRotate()" id="btnAutoRotate" title="Jeda / Putar Animasi 3D">
+                    <i class="bi bi-arrow-repeat text-info" id="rotateIcon"></i> <span id="rotateStatus">Rotasi: Aktif</span>
+                </button>
+
                 <a href="/Display" class="nav-btn" title="Display 1: Safety Command Center">
                     <i class="bi bi-shield-check text-primary"></i> Display 1
                 </a>
@@ -462,7 +467,7 @@
         <div class="viewport-overlay-kpi interactive">
             <div class="floating-mini-card" style="border-left: 4px solid var(--neon-cyan);">
                 <div>
-                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Podium Kiri</div>
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Podium Kiri &bull; Berputar 360&deg;</div>
                     <div style="font-size: 13px; font-weight: 800; color: var(--neon-cyan);">TOP 5 KONDISI TIDAK AMAN (KTA)</div>
                 </div>
                 <div style="text-align: right; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px;">
@@ -483,7 +488,7 @@
 
             <div class="floating-mini-card" style="border-left: 4px solid var(--neon-amber);">
                 <div>
-                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Podium Kanan</div>
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Podium Kanan &bull; Berputar 360&deg;</div>
                     <div style="font-size: 13px; font-weight: 800; color: var(--neon-amber);">TOP 5 TINDAKAN TIDAK AMAN (TTA)</div>
                 </div>
                 <div style="text-align: right; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px;">
@@ -590,7 +595,7 @@
                 </div>
 
                 <div style="font-family:'JetBrains Mono', monospace; color:var(--text-muted); font-size:10.5px;">
-                    <i class="bi bi-tv me-1 text-cyan"></i>WALL DISPLAY AUTO-KIOSK &bull; SEMUA LABEL TERANG PERMANEN &bull; TANPA PERLU MOUSE
+                    <i class="bi bi-tv me-1 text-cyan"></i>WALL DISPLAY AUTO-KIOSK &bull; GRAFIK BERPUTAR 360&deg; AKTIF &bull; ZERO-OVERLAP BILLBOARDS
                 </div>
             </div>
         </section>
@@ -598,13 +603,22 @@
     </div>
 
     <!-- ═════════════════════════════════════════════════════════════════════════
-         THREE.JS 3D ENGINE SCRIPT (HIGH CONTRAST & LUMINOUS 3D SKYSCRAPERS)
+         THREE.JS 3D ENGINE SCRIPT (ROTATING 3D CAROUSELS & ZERO OVERLAP BILLBOARDS)
          ═════════════════════════════════════════════════════════════════════════ -->
     <script>
     let scene, camera, renderer, controls;
     let clock = new THREE.Clock();
-    let ktaGroup, ttaGroup, komparasiGroup, particlesGroup;
+    let ktaCarousel, ttaCarousel, komparasiGroup, particlesGroup;
+    let radarRingLeft, radarRingRight;
+    let animatedSprites = [];
+    let barMeshes = [];
     let display4Data = null;
+
+    // Rotation & Orbit Controls State
+    let isAutoRotate = true;
+    let orbitAngle = 0;
+    let isUserInteracting = false;
+    let userInteractTimer = null;
 
     /* ──────────────────────────────────────────────────────────────────────────
        1. INITIALIZE THREE.JS SCENE
@@ -616,11 +630,10 @@
 
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x020617);
-        scene.fog = new THREE.FogExp2(0x020617, 0.0028);
+        scene.fog = new THREE.FogExp2(0x020617, 0.0024);
 
-        // Perspective camera angled to view all 3 pedestals
         camera = new THREE.PerspectiveCamera(45, width / height, 1, 3000);
-        camera.position.set(0, 115, 275);
+        camera.position.set(0, 110, 260);
 
         renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(width, height);
@@ -634,7 +647,16 @@
         controls.maxPolarAngle = Math.PI / 2 - 0.02;
         controls.minDistance = 60;
         controls.maxDistance = 650;
-        controls.target.set(0, 40, 0);
+        controls.target.set(0, 35, 0);
+
+        // Resume auto-orbit 5s after user stops dragging
+        controls.addEventListener('start', () => {
+            isUserInteracting = true;
+            if (userInteractTimer) clearTimeout(userInteractTimer);
+        });
+        controls.addEventListener('end', () => {
+            userInteractTimer = setTimeout(() => { isUserInteracting = false; }, 4000);
+        });
 
         setupLighting();
         createReflectiveGridFloor();
@@ -645,34 +667,30 @@
     }
 
     function setupLighting() {
-        // Crisp Ambient
-        const ambientLight = new THREE.AmbientLight(0x334155, 1.8);
+        const ambientLight = new THREE.AmbientLight(0x334155, 2.0);
         scene.add(ambientLight);
 
-        // High Intensity Directional Sunlight
-        const sunLight = new THREE.DirectionalLight(0xffffff, 2.4);
+        const sunLight = new THREE.DirectionalLight(0xffffff, 2.6);
         sunLight.position.set(80, 240, 160);
         sunLight.castShadow = true;
         scene.add(sunLight);
 
-        // Vibrant Cyan Uplight for KTA Podium (Left)
-        const lightKta = new THREE.PointLight(0x00f0ff, 4.0, 260);
+        // Vibrant Pointlights
+        const lightKta = new THREE.PointLight(0x00f0ff, 4.5, 260);
         lightKta.position.set(-80, 45, 10);
         scene.add(lightKta);
 
-        // Vibrant Amber/Gold Uplight for TTA Podium (Right)
-        const lightTta = new THREE.PointLight(0xff9e00, 4.0, 260);
+        const lightTta = new THREE.PointLight(0xff9e00, 4.5, 260);
         lightTta.position.set(80, 45, 10);
         scene.add(lightTta);
 
-        // Vibrant Emerald/Purple Light for Center Komparasi Podium
-        const lightKomparasi = new THREE.PointLight(0x00e676, 3.0, 200);
+        const lightKomparasi = new THREE.PointLight(0x00e676, 3.2, 200);
         lightKomparasi.position.set(0, 50, -40);
         scene.add(lightKomparasi);
     }
 
     function createReflectiveGridFloor() {
-        const floorGeom = new THREE.PlaneGeometry(600, 600);
+        const floorGeom = new THREE.PlaneGeometry(650, 650);
         floorGeom.rotateX(-Math.PI / 2);
         const floorMat = new THREE.MeshStandardMaterial({
             color: 0x050b18,
@@ -683,27 +701,26 @@
         floor.receiveShadow = true;
         scene.add(floor);
 
-        // Vibrant Grid Lines
-        const gridHelper = new THREE.GridHelper(600, 60, 0x00f0ff, 0x1e293b);
+        const gridHelper = new THREE.GridHelper(650, 65, 0x00f0ff, 0x1e293b);
         gridHelper.position.y = 0.15;
         scene.add(gridHelper);
     }
 
     function createCyberDustParticles() {
-        const count = 400;
+        const count = 450;
         const geom = new THREE.BufferGeometry();
         const positions = new Float32Array(count * 3);
         for (let i = 0; i < count * 3; i += 3) {
-            positions[i] = (Math.random() - 0.5) * 450;
+            positions[i] = (Math.random() - 0.5) * 480;
             positions[i + 1] = Math.random() * 160 + 5;
-            positions[i + 2] = (Math.random() - 0.5) * 450;
+            positions[i + 2] = (Math.random() - 0.5) * 480;
         }
         geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         const mat = new THREE.PointsMaterial({
             color: 0x38bdf8,
             size: 2.2,
             transparent: true,
-            opacity: 0.6,
+            opacity: 0.65,
             blending: THREE.AdditiveBlending
         });
         particlesGroup = new THREE.Points(geom, mat);
@@ -711,7 +728,7 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       2. ULTRA HIGH-CONTRAST 3D BILLBOARD SPRITE GENERATOR (1024x512)
+       2. ULTRA HIGH-CONTRAST 3D BILLBOARD SPRITE GENERATOR (NO HORIZONTAL OVERLAP)
        ────────────────────────────────────────────────────────────────────────── */
     function createHighContrastBillboard(options) {
         const canvas = document.createElement('canvas');
@@ -724,63 +741,61 @@
         const titleText = options.titleText || 'Kategori';
         const valueText = options.valueText || '0 Laporan';
         const subText = options.subText || '';
-        const trendArrow = options.trendArrow || '▼';
         const isTrendUp = options.isTrendUp || false;
 
-        // 1. Solid High Contrast Background (No Transparency blur so it's 100% crisp)
-        ctx.fillStyle = '#060d1f';
+        // 1. Solid High Contrast Deep Space Navy Background
+        ctx.fillStyle = '#050e24';
         ctx.fillRect(0, 0, 1024, 512);
 
         // 2. Thick Glowing Neon Border
         ctx.strokeStyle = borderColor;
-        ctx.lineWidth = 12;
-        roundRect(ctx, 10, 10, 1004, 492, 28);
+        ctx.lineWidth = 14;
+        roundRect(ctx, 12, 12, 1000, 488, 28);
         ctx.stroke();
 
         // 3. Top Accent Header Banner
         ctx.fillStyle = borderColor;
-        ctx.fillRect(10, 10, 1004, 80);
+        ctx.fillRect(12, 12, 1000, 84);
 
-        // Rank Badge & Header Text
+        // Rank Badge
         ctx.fillStyle = '#000000';
-        ctx.font = '900 42px "Poppins", sans-serif';
+        ctx.font = '900 44px "Poppins", sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(rankText, 40, 68);
+        ctx.fillText(rankText, 40, 70);
 
         ctx.textAlign = 'right';
         ctx.font = '800 32px "Poppins", sans-serif';
-        ctx.fillText(options.categoryType || 'HAZARD REPORT', 980, 64);
+        ctx.fillText(options.categoryType || 'HAZARD REPORT', 980, 68);
 
-        // 4. Main Category Name (Pure White, Bold, Crisp)
+        // 4. Main Category Name (Pure White, Bold 46px)
         ctx.textAlign = 'center';
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 48px "Poppins", sans-serif';
-        // Truncate if too long
+        ctx.font = '900 46px "Poppins", sans-serif';
         let displayTitle = titleText;
-        if (displayTitle.length > 26) {
-            displayTitle = displayTitle.substring(0, 24) + '...';
+        if (displayTitle.length > 25) {
+            displayTitle = displayTitle.substring(0, 23) + '...';
         }
         ctx.fillText(displayTitle, 512, 175);
 
         // 5. Huge Bright Number Value
         ctx.fillStyle = borderColor;
-        ctx.font = '900 70px "JetBrains Mono", monospace';
+        ctx.font = '900 68px "JetBrains Mono", monospace';
         ctx.fillText(valueText, 512, 275);
 
         // 6. Subtitle / 3-Month Breakdown Text
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '700 36px "JetBrains Mono", monospace';
+        ctx.font = '700 34px "JetBrains Mono", monospace';
         ctx.fillText(subText, 512, 365);
 
         // 7. Trend Tag Pill at Bottom
         const trendBg = isTrendUp ? '#dc2626' : '#16a34a';
         ctx.fillStyle = trendBg;
-        roundRect(ctx, 360, 410, 304, 60, 16);
+        roundRect(ctx, 350, 412, 324, 60, 16);
         ctx.fill();
 
         ctx.fillStyle = '#ffffff';
         ctx.font = '800 32px "Poppins", sans-serif';
-        ctx.fillText(isTrendUp ? '▲ TREN NAIK' : '▼ TREN TURUN', 512, 452);
+        ctx.fillText(isTrendUp ? '▲ TREN NAIK' : '▼ TREN TURUN', 512, 454);
 
         const texture = new THREE.CanvasTexture(canvas);
         texture.minFilter = THREE.LinearFilter;
@@ -788,7 +803,8 @@
 
         const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: false });
         const sprite = new THREE.Sprite(spriteMat);
-        sprite.scale.set(30, 15, 1);
+        // Compact proportion with ZERO overlap along circular placement
+        sprite.scale.set(22, 11, 1);
         return sprite;
     }
 
@@ -798,11 +814,11 @@
         canvas.height = 256;
         const ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = '#060d1f';
+        ctx.fillStyle = '#050e24';
         ctx.fillRect(0, 0, 1024, 256);
 
         ctx.strokeStyle = color;
-        ctx.lineWidth = 8;
+        ctx.lineWidth = 10;
         roundRect(ctx, 8, 8, 1008, 240, 24);
         ctx.stroke();
 
@@ -814,8 +830,15 @@
         const texture = new THREE.CanvasTexture(canvas);
         const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: false });
         const sprite = new THREE.Sprite(spriteMat);
-        sprite.scale.set(45, 11.2, 1);
+        sprite.scale.set(40, 10, 1);
         return sprite;
+    }
+
+    function createRadarRingMesh(radius, color) {
+        const ringGeom = new THREE.RingGeometry(radius - 0.8, radius + 0.8, 64);
+        ringGeom.rotateX(-Math.PI / 2);
+        const ringMat = new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide });
+        return new THREE.Mesh(ringGeom, ringMat);
     }
 
     function roundRect(ctx, x, y, w, h, r) {
@@ -829,16 +852,18 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       3. BUILD 3D BARS (TOP 5 KTA, TOP 5 TTA & KOMPARASI MTD vs YTD)
+       3. BUILD 3D ROTATING CAROUSELS (TOP 5 KTA & TOP 5 TTA)
        ────────────────────────────────────────────────────────────────────────── */
     function build3DCharts(data) {
-        if (ktaGroup) scene.remove(ktaGroup);
-        if (ttaGroup) scene.remove(ttaGroup);
+        if (ktaCarousel) scene.remove(ktaCarousel);
+        if (ttaCarousel) scene.remove(ttaCarousel);
         if (komparasiGroup) scene.remove(komparasiGroup);
 
-        ktaGroup = new THREE.Group();
-        ttaGroup = new THREE.Group();
+        ktaCarousel = new THREE.Group();
+        ttaCarousel = new THREE.Group();
         komparasiGroup = new THREE.Group();
+        animatedSprites = [];
+        barMeshes = [];
 
         const months = data.months || ['M1', 'M2', 'M3'];
         const top5Kta = data.top5Kta || [];
@@ -848,45 +873,50 @@
         const ytd = kom.ytd || {};
 
         // ═════════════════════════════════════════════════════════════════════
-        // PODIUM 1 (LEFT): TOP 5 KONDISI TIDAK AMAN (KTA) - ELECTRIC CYAN
+        // PODIUM 1 (LEFT): 3D ROTATING CAROUSEL TOP 5 KTA
         // ═════════════════════════════════════════════════════════════════════
-        ktaGroup.position.set(-82, 0, 0);
+        ktaCarousel.position.set(-78, 0, 0);
 
-        // Pedestal Platform Left
-        const pedKtaGeom = new THREE.BoxGeometry(95, 4, 45);
+        // Cylindrical Base Podium
+        const pedKtaGeom = new THREE.CylinderGeometry(44, 46, 4, 48);
         const pedKtaMat = new THREE.MeshStandardMaterial({
             color: 0x07152b,
             roughness: 0.25,
-            metalness: 0.8
+            metalness: 0.85
         });
         const pedKta = new THREE.Mesh(pedKtaGeom, pedKtaMat);
         pedKta.position.y = 2;
         pedKta.receiveShadow = true;
-        ktaGroup.add(pedKta);
+        ktaCarousel.add(pedKta);
 
-        // Glowing Footing Frame
-        const pedKtaEdge = new THREE.BoxGeometry(97, 1, 47);
-        const pedKtaEdgeMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
-        const edgeKta = new THREE.Mesh(pedKtaEdge, pedKtaEdgeMat);
-        edgeKta.position.y = 0.5;
-        ktaGroup.add(edgeKta);
+        // Glowing Footing Ring
+        const ringKta1 = createRadarRingMesh(45, 0x00f0ff);
+        ringKta1.position.y = 4.1;
+        ktaCarousel.add(ringKta1);
 
-        // Title Sign
+        radarRingLeft = createRadarRingMesh(40, 0x0284c7);
+        radarRingLeft.position.y = 4.15;
+        ktaCarousel.add(radarRingLeft);
+
+        // Header Title Sign
         const titleKta = createPodiumTitleSprite('TOP 5 KONDISI TIDAK AMAN (KTA)', '#00f0ff');
-        titleKta.position.set(0, 85, 0);
-        ktaGroup.add(titleKta);
+        titleKta.position.set(0, 80, 0);
+        ktaCarousel.add(titleKta);
 
-        // Render 5 Skyscraper Bars for KTA
+        // 5 Circular Placed Skyscraper Bars (Radius 30 -> Zero Horizontal Overlap)
         const maxKtaTotal = top5Kta.length > 0 ? Math.max(...top5Kta.map(x => x.total || 1)) : 100;
         const ktaColors = [0x00f0ff, 0x00d4ff, 0x0284c7, 0x0369a1, 0x075985];
+        const circleRadius = 29;
 
         top5Kta.forEach((item, index) => {
-            const posX = -36 + (index * 18);
-            const rawHeight = (item.total / maxKtaTotal) * 58;
+            const angle = (index / 5) * Math.PI * 2;
+            const posX = Math.cos(angle) * circleRadius;
+            const posZ = Math.sin(angle) * circleRadius;
+            const rawHeight = (item.total / maxKtaTotal) * 54;
             const barHeight = Math.max(16, rawHeight);
 
             // Bar Mesh
-            const barGeom = new THREE.BoxGeometry(13, barHeight, 13);
+            const barGeom = new THREE.BoxGeometry(11, barHeight, 11);
             barGeom.translate(0, barHeight / 2, 0);
             const barMat = new THREE.MeshStandardMaterial({
                 color: ktaColors[index] || 0x00f0ff,
@@ -896,9 +926,19 @@
                 emissiveIntensity: 0.55
             });
             const bar = new THREE.Mesh(barGeom, barMat);
-            bar.position.set(posX, 4, 0);
+            bar.position.set(posX, 4, posZ);
             bar.castShadow = true;
-            ktaGroup.add(bar);
+            bar.scale.y = 0.05; // for growth animation
+            ktaCarousel.add(bar);
+            barMeshes.push({ mesh: bar, targetScaleY: 1.0 });
+
+            // Glowing Beacon Antenna connecting Bar to Card
+            const beaconGeom = new THREE.CylinderGeometry(0.3, 0.3, 10, 8);
+            beaconGeom.translate(0, 5, 0);
+            const beaconMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+            const beacon = new THREE.Mesh(beaconGeom, beaconMat);
+            beacon.position.set(posX, barHeight + 4, posZ);
+            ktaCarousel.add(beacon);
 
             // Floating Billboard Card Directly Above Bar
             const sprite = createHighContrastBillboard({
@@ -910,50 +950,61 @@
                 subText: `${months[0]}:${item.m1}  ${months[1]}:${item.m2}  ${months[2]}:${item.m3}`,
                 isTrendUp: item.trend === 'up'
             });
-            sprite.position.set(posX, barHeight + 14, 0);
-            ktaGroup.add(sprite);
+            const spriteBaseY = barHeight + 15;
+            sprite.position.set(posX, spriteBaseY, posZ);
+            ktaCarousel.add(sprite);
+
+            animatedSprites.push({
+                sprite: sprite,
+                baseY: spriteBaseY,
+                index: index
+            });
         });
 
         // ═════════════════════════════════════════════════════════════════════
-        // PODIUM 2 (RIGHT): TOP 5 TINDAKAN TIDAK AMAN (TTA) - VIVID AMBER/GOLD
+        // PODIUM 2 (RIGHT): 3D ROTATING CAROUSEL TOP 5 TTA
         // ═════════════════════════════════════════════════════════════════════
-        ttaGroup.position.set(82, 0, 0);
+        ttaCarousel.position.set(78, 0, 0);
 
-        // Pedestal Platform Right
-        const pedTtaGeom = new THREE.BoxGeometry(95, 4, 45);
+        // Cylindrical Base Podium
+        const pedTtaGeom = new THREE.CylinderGeometry(44, 46, 4, 48);
         const pedTtaMat = new THREE.MeshStandardMaterial({
             color: 0x1f1406,
             roughness: 0.25,
-            metalness: 0.8
+            metalness: 0.85
         });
         const pedTta = new THREE.Mesh(pedTtaGeom, pedTtaMat);
         pedTta.position.y = 2;
         pedTta.receiveShadow = true;
-        ttaGroup.add(pedTta);
+        ttaCarousel.add(pedTta);
 
-        // Glowing Footing Frame
-        const pedTtaEdge = new THREE.BoxGeometry(97, 1, 47);
-        const pedTtaEdgeMat = new THREE.MeshBasicMaterial({ color: 0xff9e00 });
-        const edgeTta = new THREE.Mesh(pedTtaEdge, pedTtaEdgeMat);
-        edgeTta.position.y = 0.5;
-        ttaGroup.add(edgeTta);
+        // Glowing Footing Ring
+        const ringTta1 = createRadarRingMesh(45, 0xff9e00);
+        ringTta1.position.y = 4.1;
+        ttaCarousel.add(ringTta1);
 
-        // Title Sign
+        radarRingRight = createRadarRingMesh(40, 0xf59e0b);
+        radarRingRight.position.y = 4.15;
+        ttaCarousel.add(radarRingRight);
+
+        // Header Title Sign
         const titleTta = createPodiumTitleSprite('TOP 5 TINDAKAN TIDAK AMAN (TTA)', '#ff9e00');
-        titleTta.position.set(0, 85, 0);
-        ttaGroup.add(titleTta);
+        titleTta.position.set(0, 80, 0);
+        ttaCarousel.add(titleTta);
 
-        // Render 5 Skyscraper Bars for TTA
+        // 5 Circular Placed Skyscraper Bars (Radius 30 -> Zero Horizontal Overlap)
         const maxTtaTotal = top5Tta.length > 0 ? Math.max(...top5Tta.map(x => x.total || 1)) : 100;
         const ttaColors = [0xffb703, 0xfb8500, 0xf59e0b, 0xd97706, 0xb45309];
 
         top5Tta.forEach((item, index) => {
-            const posX = -36 + (index * 18);
-            const rawHeight = (item.total / maxTtaTotal) * 58;
+            const angle = (index / 5) * Math.PI * 2;
+            const posX = Math.cos(angle) * circleRadius;
+            const posZ = Math.sin(angle) * circleRadius;
+            const rawHeight = (item.total / maxTtaTotal) * 54;
             const barHeight = Math.max(16, rawHeight);
 
             // Bar Mesh
-            const barGeom = new THREE.BoxGeometry(13, barHeight, 13);
+            const barGeom = new THREE.BoxGeometry(11, barHeight, 11);
             barGeom.translate(0, barHeight / 2, 0);
             const barMat = new THREE.MeshStandardMaterial({
                 color: ttaColors[index] || 0xff9e00,
@@ -963,9 +1014,19 @@
                 emissiveIntensity: 0.55
             });
             const bar = new THREE.Mesh(barGeom, barMat);
-            bar.position.set(posX, 4, 0);
+            bar.position.set(posX, 4, posZ);
             bar.castShadow = true;
-            ttaGroup.add(bar);
+            bar.scale.y = 0.05; // for growth animation
+            ttaCarousel.add(bar);
+            barMeshes.push({ mesh: bar, targetScaleY: 1.0 });
+
+            // Glowing Beacon Antenna
+            const beaconGeom = new THREE.CylinderGeometry(0.3, 0.3, 10, 8);
+            beaconGeom.translate(0, 5, 0);
+            const beaconMat = new THREE.MeshBasicMaterial({ color: 0xff9e00 });
+            const beacon = new THREE.Mesh(beaconGeom, beaconMat);
+            beacon.position.set(posX, barHeight + 4, posZ);
+            ttaCarousel.add(beacon);
 
             // Floating Billboard Card Directly Above Bar
             const sprite = createHighContrastBillboard({
@@ -977,16 +1038,23 @@
                 subText: `${months[0]}:${item.m1}  ${months[1]}:${item.m2}  ${months[2]}:${item.m3}`,
                 isTrendUp: item.trend === 'up'
             });
-            sprite.position.set(posX, barHeight + 14, 0);
-            ttaGroup.add(sprite);
+            const spriteBaseY = barHeight + 15;
+            sprite.position.set(posX, spriteBaseY, posZ);
+            ttaCarousel.add(sprite);
+
+            animatedSprites.push({
+                sprite: sprite,
+                baseY: spriteBaseY,
+                index: index + 5
+            });
         });
 
         // ═════════════════════════════════════════════════════════════════════
         // PODIUM 3 (CENTER BACKDROP): KOMPARASI MTD vs YTD
         // ═════════════════════════════════════════════════════════════════════
-        komparasiGroup.position.set(0, 0, -50);
+        komparasiGroup.position.set(0, 0, -42);
 
-        const pedKomGeom = new THREE.BoxGeometry(50, 4, 28);
+        const pedKomGeom = new THREE.BoxGeometry(48, 4, 26);
         const pedKomMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.7 });
         const pedKom = new THREE.Mesh(pedKomGeom, pedKomMat);
         pedKom.position.y = 2;
@@ -997,8 +1065,8 @@
         komparasiGroup.add(titleKom);
 
         // MTD Bar (Emerald Green)
-        const mtdBarGeom = new THREE.BoxGeometry(14, 34, 14);
-        mtdBarGeom.translate(0, 17, 0);
+        const mtdBarGeom = new THREE.BoxGeometry(13, 32, 13);
+        mtdBarGeom.translate(0, 16, 0);
         const mtdBarMat = new THREE.MeshStandardMaterial({
             color: 0x00e676,
             metalness: 0.8,
@@ -1007,7 +1075,7 @@
             emissiveIntensity: 0.5
         });
         const mtdBar = new THREE.Mesh(mtdBarGeom, mtdBarMat);
-        mtdBar.position.set(-13, 4, 0);
+        mtdBar.position.set(-12, 4, 0);
         komparasiGroup.add(mtdBar);
 
         const mtdSprite = createHighContrastBillboard({
@@ -1019,12 +1087,12 @@
             subText: `Selesai: ${mtd.closedPct || 0}% (${mtd.closed || 0} Closed)`,
             isTrendUp: false
         });
-        mtdSprite.position.set(-13, 48, 0);
+        mtdSprite.position.set(-12, 46, 0);
         komparasiGroup.add(mtdSprite);
 
         // YTD Bar (Vivid Purple)
-        const ytdBarGeom = new THREE.BoxGeometry(14, 50, 14);
-        ytdBarGeom.translate(0, 25, 0);
+        const ytdBarGeom = new THREE.BoxGeometry(13, 48, 13);
+        ytdBarGeom.translate(0, 24, 0);
         const ytdBarMat = new THREE.MeshStandardMaterial({
             color: 0xc084fc,
             metalness: 0.8,
@@ -1033,7 +1101,7 @@
             emissiveIntensity: 0.5
         });
         const ytdBar = new THREE.Mesh(ytdBarGeom, ytdBarMat);
-        ytdBar.position.set(13, 4, 0);
+        ytdBar.position.set(12, 4, 0);
         komparasiGroup.add(ytdBar);
 
         const ytdSprite = createHighContrastBillboard({
@@ -1045,34 +1113,74 @@
             subText: `Selesai: ${ytd.closedPct || 0}% (${ytd.closed || 0} Closed)`,
             isTrendUp: false
         });
-        ytdSprite.position.set(13, 64, 0);
+        ytdSprite.position.set(12, 62, 0);
         komparasiGroup.add(ytdSprite);
 
         // Add All Groups to Scene
-        scene.add(ktaGroup);
-        scene.add(ttaGroup);
+        scene.add(ktaCarousel);
+        scene.add(ttaCarousel);
         scene.add(komparasiGroup);
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       4. ANIMATION LOOP & SMOOTH GLIDE (NO-MOUSE TV)
+       4. ANIMATION LOOP: ACTIVE ROTATION, FLOATING BOBBING & TURNTABLE GLIDE
        ────────────────────────────────────────────────────────────────────────── */
     function animate() {
         requestAnimationFrame(animate);
 
         const time = clock.getElapsedTime();
+        const delta = clock.getDelta();
 
-        // Subtle panoramic floating camera for rich 3D perspective
-        camera.position.x = Math.sin(time * 0.12) * 35;
-        camera.position.y = 110 + Math.cos(time * 0.15) * 6;
-        camera.position.z = 270 + Math.sin(time * 0.08) * 10;
-        camera.lookAt(0, 42, 0);
+        // 1. Continuous Carousel 360 Rotation for Both Podiums
+        if (isAutoRotate) {
+            if (ktaCarousel) ktaCarousel.rotation.y += 0.005;
+            if (ttaCarousel) ttaCarousel.rotation.y -= 0.005;
+
+            if (radarRingLeft) radarRingLeft.rotation.z += 0.008;
+            if (radarRingRight) radarRingRight.rotation.z -= 0.008;
+
+            // 2. Smooth Cinematic Camera Glide (Turntable Orbit)
+            if (!isUserInteracting) {
+                orbitAngle += 0.0025;
+                camera.position.x = Math.sin(orbitAngle) * 230;
+                camera.position.z = Math.cos(orbitAngle) * 230;
+                camera.position.y = 105 + Math.sin(time * 0.3) * 10;
+                camera.lookAt(0, 34, 0);
+            }
+        }
+
+        // 3. Floating Levitation Breathing Animation for Billboard Cards
+        for (let i = 0; i < animatedSprites.length; i++) {
+            const item = animatedSprites[i];
+            item.sprite.position.y = item.baseY + Math.sin(time * 2.4 + item.index) * 1.5;
+        }
+
+        // 4. Smooth Bar Growth Lerp on Load
+        for (let i = 0; i < barMeshes.length; i++) {
+            const b = barMeshes[i];
+            if (b.mesh.scale.y < b.targetScaleY) {
+                b.mesh.scale.y += (b.targetScaleY - b.mesh.scale.y) * 0.08;
+            }
+        }
 
         if (particlesGroup) {
             particlesGroup.rotation.y = time * 0.025;
         }
 
         renderer.render(scene, camera);
+    }
+
+    function toggleAutoRotate() {
+        isAutoRotate = !isAutoRotate;
+        const icon = document.getElementById('rotateIcon');
+        const text = document.getElementById('rotateStatus');
+        if (isAutoRotate) {
+            if (icon) icon.className = 'bi bi-arrow-repeat text-info';
+            if (text) text.innerText = 'Rotasi: Aktif';
+        } else {
+            if (icon) icon.className = 'bi bi-pause-circle text-warning';
+            if (text) text.innerText = 'Rotasi: Jeda';
+        }
     }
 
     function onWindowResize() {
