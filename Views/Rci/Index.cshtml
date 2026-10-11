@@ -12,6 +12,11 @@
     var goodCount = ViewBag.GoodCount as int? ?? 0;
     var fairCount = ViewBag.FairCount as int? ?? 0;
     var poorCount = ViewBag.PoorCount as int? ?? 0;
+    var pendingCount = ViewBag.PendingCount as int? ?? 0;
+    var approvedCount = ViewBag.ApprovedCount as int? ?? 0;
+    var myPendingApprovalsCount = ViewBag.MyPendingApprovalsCount as int? ?? 0;
+    var myJointCount = ViewBag.MyJointCount as int? ?? 0;
+    var currentStatus = ViewBag.CurrentStatus as string ?? "";
 }
 
 <div class="animate-fade-in">
@@ -35,6 +40,27 @@
             </a>
         </div>
     </div>
+
+    @if (myPendingApprovalsCount > 0)
+    {
+        <!-- Prominent Notification Banner for Pending Approvals -->
+        <div class="alert alert-warning d-flex align-items-center justify-content-between p-3 rounded-4 shadow-sm mb-3 animate-fade-in" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(234, 88, 12, 0.08)); border: 1.5px solid rgba(245, 158, 11, 0.4);">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(245, 158, 11, 0.25); display: flex; align-items: center; justify-content: center; color: #f59e0b; flex-shrink: 0;">
+                    <i class="bi bi-bell-fill" style="font-size: 22px;"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold" style="color: var(--text-main);">Pemberitahuan Persetujuan RCI!</h6>
+                    <div style="font-size: 12.5px; color: var(--text-muted);">
+                        Anda ditunjuk sebagai penyetuju pada <strong>@myPendingApprovalsCount laporan RCI</strong> yang masih berstatus <em>Pending</em>.
+                    </div>
+                </div>
+            </div>
+            <a href="@Url.Action("Index", new { statusFilter = "MyApprovals" })" class="btn btn-sm btn-warning fw-bold px-3 py-2 shadow-sm text-nowrap" style="border-radius: 10px; color: #000;">
+                <i class="bi bi-shield-check me-1"></i> Lihat &amp; Setujui Sekarang (@myPendingApprovalsCount)
+            </a>
+        </div>
+    }
 
     <!-- Status Feedback Popup Modal (Desktop & Mobile) -->
     @if (TempData["SuccessMessage"] != null)
@@ -304,6 +330,70 @@
                             <div class="col-md-6 form-group-sap mb-0">
                                 <label class="form-label-sap">GPS Longitude</label>
                                 <input type="text" id="longitude" name="longitude" class="input-sap" placeholder="Longitude" style="font-size: 11px;" readonly />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 1.b: Tim Pelaksana Sidak & Penyetujuan (Standar SP3) -->
+                    <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                        <div class="text-white font-weight-bold mb-3" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="bi bi-people-fill me-1" style="color: #3b82f6;"></i> 1.b Tim Sidak &amp; Penyetujuan (Format SP3)
+                        </div>
+
+                        <!-- 1. DIBUAT OLEH (TIM INSPEKSI / PEMBUAT BERSAMA) -->
+                        <div class="mb-3 p-3 rounded-3" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.25);">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label-sap mb-0 font-weight-bold" style="color: #60a5fa; font-size: 12.5px;">
+                                    <i class="bi bi-pen-fill me-1"></i> Dibuat oleh, (Tim Pembuat / Sidak Bersama)
+                                </label>
+                                <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; font-size: 10px;">Bisa Tag Multi Orang</span>
+                            </div>
+                            <div class="text-muted mb-2" style="font-size: 11px;">
+                                Anda otomatis terdaftar sebagai pembuat utama. Cari dan tambahkan rekan inspeksi dari view karyawan (PT KPP / PT IC / Mitra):
+                            </div>
+
+                            <!-- Autocomplete Search Input Karyawan -->
+                            <div class="position-relative mb-2">
+                                <div class="input-sap-wrapper mb-0">
+                                    <i class="bi bi-search input-sap-icon"></i>
+                                    <input type="text" id="creatorSearchInput" class="input-sap" placeholder="Ketik nama atau NIK rekan tim sidak..." autocomplete="off" style="font-size: 12px;" />
+                                    <span id="creatorSearchSpinner" class="spinner-border spinner-border-sm position-absolute d-none" style="right: 14px; top: 14px; color: #3b82f6;"></span>
+                                </div>
+                                <div id="creatorSuggestions" class="suggestions-dropdown d-none position-absolute w-100" style="top: 100%; left: 0; right: 0; z-index: 1060;"></div>
+                            </div>
+
+                            <!-- Container Chips Pembuat Terpilih -->
+                            <div id="selectedCreatorsContainer" class="d-flex flex-wrap gap-1.5 p-2 rounded-2" style="min-height: 44px; background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.15);">
+                                <!-- Chips loaded via JS -->
+                            </div>
+                        </div>
+
+                        <!-- 2. DISETUJUI OLEH (PENYETUJU / APPROVER) - WAJIB DIISI! -->
+                        <div class="p-3 rounded-3" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25);">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label-sap mb-0 font-weight-bold" style="color: #34d399; font-size: 12.5px;">
+                                    <i class="bi bi-shield-check me-1"></i> Disetujui Oleh, (Approver)
+                                    <span class="badge bg-danger ms-1" style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.5px;">* WAJIB DIISI</span>
+                                </label>
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; font-size: 10px;">Bisa Multi Penyetuju</span>
+                            </div>
+                            <div class="text-muted mb-2" style="font-size: 11px;">
+                                Pilih minimal 1 orang atasan / perwakilan penyetuju (contoh: Dept Head KPP, Mine Operation Spt IC, Engineering Spt IC):
+                            </div>
+
+                            <!-- Autocomplete Search Input Penyetuju -->
+                            <div class="position-relative mb-2">
+                                <div class="input-sap-wrapper mb-0">
+                                    <i class="bi bi-person-check-fill input-sap-icon"></i>
+                                    <input type="text" id="approverSearchInput" class="input-sap" placeholder="Ketik nama atau NIK penyetuju..." autocomplete="off" style="font-size: 12px;" />
+                                    <span id="approverSearchSpinner" class="spinner-border spinner-border-sm position-absolute d-none" style="right: 14px; top: 14px; color: #10b981;"></span>
+                                </div>
+                                <div id="approverSuggestions" class="suggestions-dropdown d-none position-absolute w-100" style="top: 100%; left: 0; right: 0; z-index: 1060;"></div>
+                            </div>
+
+                            <!-- Container Chips Penyetuju Terpilih -->
+                            <div id="selectedApproversContainer" class="d-flex flex-wrap gap-1.5 p-2 rounded-2" style="min-height: 44px; background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.15);">
+                                <!-- Chips loaded via JS -->
                             </div>
                         </div>
                     </div>
@@ -995,12 +1085,38 @@
 
         <!-- RIWAYAT & FILTER COLUMN (RIGHT) -->
         <div class="col-lg-6">
+            <!-- Quick Status Filter Pills -->
+            <div class="d-flex gap-1.5 flex-wrap mb-2">
+                <a href="@Url.Action("Index", new { search = ViewBag.CurrentSearch, namaJalan = ViewBag.CurrentJalan, kategori = ViewBag.CurrentKategori })" class="btn btn-sm @(string.IsNullOrEmpty(currentStatus) ? "btn-primary" : "btn-outline-secondary")" style="border-radius: 8px; font-size: 11px; font-weight: 600;">
+                    Semua (@Model.Count())
+                </a>
+                <a href="@Url.Action("Index", new { statusFilter = "Pending", search = ViewBag.CurrentSearch, namaJalan = ViewBag.CurrentJalan, kategori = ViewBag.CurrentKategori })" class="btn btn-sm @(currentStatus == "Pending" ? "btn-warning text-dark font-weight-bold" : "btn-outline-warning")" style="border-radius: 8px; font-size: 11px;">
+                    <i class="bi bi-hourglass-split"></i> Pending (@pendingCount)
+                </a>
+                <a href="@Url.Action("Index", new { statusFilter = "Approved", search = ViewBag.CurrentSearch, namaJalan = ViewBag.CurrentJalan, kategori = ViewBag.CurrentKategori })" class="btn btn-sm @(currentStatus == "Approved" ? "btn-success font-weight-bold" : "btn-outline-success")" style="border-radius: 8px; font-size: 11px;">
+                    <i class="bi bi-check-circle-fill"></i> Approved (@approvedCount)
+                </a>
+                @if (myPendingApprovalsCount > 0)
+                {
+                    <a href="@Url.Action("Index", new { statusFilter = "MyApprovals", search = ViewBag.CurrentSearch, namaJalan = ViewBag.CurrentJalan, kategori = ViewBag.CurrentKategori })" class="btn btn-sm @(currentStatus == "MyApprovals" ? "btn-warning text-dark font-weight-bold" : "btn-outline-warning font-weight-bold") shadow-sm" style="border-radius: 8px; font-size: 11px; border: 1.5px solid #f59e0b;">
+                        <i class="bi bi-bell-fill text-warning"></i> Perlu Persetujuan Saya (@myPendingApprovalsCount)
+                    </a>
+                }
+                @if (myJointCount > 0)
+                {
+                    <a href="@Url.Action("Index", new { statusFilter = "MyJoints", search = ViewBag.CurrentSearch, namaJalan = ViewBag.CurrentJalan, kategori = ViewBag.CurrentKategori })" class="btn btn-sm @(currentStatus == "MyJoints" ? "btn-info text-white font-weight-bold" : "btn-outline-info")" style="border-radius: 8px; font-size: 11px;">
+                        <i class="bi bi-people-fill"></i> Sidak Saya (@myJointCount)
+                    </a>
+                }
+            </div>
+
             <!-- Filter Bar -->
             <div class="card-sap mb-3 p-3">
                 <form method="get" asp-action="Index">
+                    <input type="hidden" name="statusFilter" value="@currentStatus" />
                     <div class="row g-2 align-items-end">
                         <div class="col-md-4">
-                            <label class="form-label-sap" style="font-size: 11px;">Cari Lokasi / Jalan / NIK</label>
+                            <label class="form-label-sap" style="font-size: 11px;">Cari Lokasi / Jalan / Tim</label>
                             <input type="text" name="search" class="input-sap" value="@ViewBag.CurrentSearch" placeholder="Ketik kata kunci..." />
                         </div>
                         <div class="col-md-3">
@@ -1042,7 +1158,7 @@
             {
                 <div class="card-sap p-5 text-center text-muted">
                     <i class="bi bi-inbox" style="font-size: 40px; color: var(--text-muted);"></i>
-                    <p class="mt-2 mb-0" style="font-size: 13px;">Belum ada data inspeksi RCI pada periode ini.</p>
+                    <p class="mt-2 mb-0" style="font-size: 13px;">Belum ada data inspeksi RCI pada filter ini.</p>
                 </div>
             }
             else
@@ -1057,13 +1173,30 @@
 
                         var badgeBg = isGood ? "rgba(16, 185, 129, 0.15)" : (isFair ? "rgba(245, 158, 11, 0.15)" : "rgba(244, 63, 94, 0.15)");
                         var badgeColor = isGood ? "#10b981" : (isFair ? "#f59e0b" : "#f43f5e");
-                        var borderAccent = isGood ? "#10b981" : (isFair ? "#f59e0b" : "#f43f5e");
+                        var borderAccent = item.Status == "Approved" ? "#10b981" : "#f59e0b";
+
+                        var isPendingApprover = item.Members.Any(m => m.Role == "Approver" && m.Nik == userNik && m.Status == "Pending");
+                        var isAdmin = MBS_SAP.Services.CompanyHierarchyService.IsAdminUser(User);
 
                         <div class="card-sap p-3 position-relative animate-fade-in" style="border-left: 4px solid @borderAccent;">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
-                                    <div class="d-flex align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
                                         <h6 class="mb-0 font-weight-bold text-white">@(item.NamaJalan ?? item.Lokasi)</h6>
+                                        @if (item.Status == "Approved")
+                                        {
+                                            <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 10px; font-weight: 700;">
+                                                <i class="bi bi-check2-all me-1"></i> APPROVED
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            var appCount = item.Members.Count(m => m.Role == "Approver" && m.Status == "Approved");
+                                            var totalApp = item.Members.Count(m => m.Role == "Approver");
+                                            <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 10px; font-weight: 700;">
+                                                <i class="bi bi-hourglass-split me-1"></i> PENDING (@(totalApp > 0 ? $"{appCount}/{totalApp} Disetujui" : "Menunggu"))
+                                            </span>
+                                        }
                                         @if (!string.IsNullOrEmpty(item.SegmentJalan))
                                         {
                                             <span class="badge" style="background: rgba(255,255,255,0.08); font-size: 10px; color: var(--text-muted);">@item.SegmentJalan</span>
@@ -1095,16 +1228,18 @@
                                 <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-25">Drainage (20%): @(item.SkorDrainageGroup > 0 ? item.SkorDrainageGroup.ToString("F2") : "-")</span>
                             </div>
 
-                            <!-- 8 Parameters Pills -->
-                            <div class="d-flex flex-wrap gap-1 mb-2" style="font-size: 10px;">
-                                <span class="badge bg-dark text-muted">Surfacing: @item.SkorSurfacing.ToString("0.#")</span>
-                                <span class="badge bg-dark text-muted">Undulation: @item.SkorUndulation.ToString("0.#")</span>
-                                <span class="badge bg-dark text-muted">Spoil: @item.SkorSpoil.ToString("0.#")</span>
-                                <span class="badge bg-dark text-muted">Berm: @item.SkorSafetyBerm.ToString("0.#")</span>
-                                <span class="badge bg-dark text-muted">Attachment: @item.SkorRoadAttachment.ToString("0.#")</span>
-                                <span class="badge bg-dark text-muted">Dust: @item.SkorDust.ToString("0.#")</span>
-                                <span class="badge bg-dark text-muted">Crossfall: @item.SkorCrossfall.ToString("0.#")</span>
-                                <span class="badge bg-dark text-muted">Drainage: @item.SkorDrainage.ToString("0.#")</span>
+                            <!-- Team Signature Summary (Dibuat & Disetujui) -->
+                            <div class="p-2 rounded mb-2" style="background: rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.06); font-size: 11px;">
+                                <div class="d-flex align-items-center gap-1.5 text-truncate mb-1">
+                                    <i class="bi bi-people-fill text-primary" style="font-size: 12px;"></i>
+                                    <strong class="text-white">Dibuat oleh:</strong>
+                                    <span class="text-muted">@(item.CreatorsSummary ?? item.Nama)</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1.5 text-truncate">
+                                    <i class="bi bi-shield-check text-success" style="font-size: 12px;"></i>
+                                    <strong class="text-white">Penyetuju:</strong>
+                                    <span class="text-muted">@(item.ApproversSummary ?? "Wajib disetujui")</span>
+                                </div>
                             </div>
 
                             @if (!string.IsNullOrEmpty(item.Catatan))
@@ -1118,6 +1253,15 @@
                             {
                                 <div class="p-2 rounded mb-2" style="background: rgba(245, 158, 11, 0.08); border-left: 2px solid #f59e0b; font-size: 11px; color: #f59e0b;">
                                     <strong><i class="bi bi-tools me-1"></i> Perbaikan:</strong> @item.TindakanPerbaikan @(!string.IsNullOrEmpty(item.Pic) ? $"(PIC: {item.Pic})" : "")
+                                </div>
+                            }
+
+                            @if ((isPendingApprover || (isAdmin && item.Status == "Pending")))
+                            {
+                                <div class="mb-2">
+                                    <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-1.5 shadow-sm d-flex align-items-center justify-content-center gap-1.5" style="border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); border: none;" onclick="openApprovalModal(@item.Id, '@(item.NamaJalan ?? item.Lokasi)', '@item.Nama')">
+                                        <i class="bi bi-check-circle-fill"></i> Setujui Laporan Ini (Anda Ditunjuk Sebagai Penyetuju)
+                                    </button>
                                 </div>
                             }
 
@@ -1163,6 +1307,41 @@
             <div class="modal-body" id="detailModalBody" style="font-size: 13px;">
                 <!-- Loaded via JS -->
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Approve RCI -->
+<div class="modal fade" id="rciApproveModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content p-4" style="background: var(--bg-card); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 22px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center; color: #10b981; flex-shrink: 0; border: 1.5px solid #10b981;">
+                    <i class="bi bi-shield-check" style="font-size: 28px;"></i>
+                </div>
+                <div>
+                    <h5 class="text-white fw-bold mb-0">Persetujuan Laporan RCI</h5>
+                    <small class="text-muted" id="approveModalSub">Road Assessment SP3 Approval</small>
+                </div>
+            </div>
+            <form method="post" asp-action="ApproveReport" id="approveForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="approveId" name="id" value="" />
+                <div class="p-3 rounded-3 mb-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); font-size: 12.5px;">
+                    <div class="d-flex justify-content-between mb-1.5"><span class="text-muted">Ruas Jalan:</span> <strong class="text-white" id="approveRoadName">-</strong></div>
+                    <div class="d-flex justify-content-between"><span class="text-muted">Pembuat Laporan:</span> <strong class="text-white" id="approveCreatorName">-</strong></div>
+                </div>
+                <div class="form-group-sap mb-3">
+                    <label class="form-label-sap" for="approveCatatan">Catatan Persetujuan (Opsional)</label>
+                    <textarea class="input-sap" id="approveCatatan" name="catatan" rows="2" placeholder="Tuliskan catatan atau rekomendasi jika ada..."></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary flex-fill py-2" data-bs-dismiss="modal" style="border-radius: 12px;">Batal</button>
+                    <button type="submit" class="btn btn-success flex-fill py-2 fw-bold shadow-sm" style="border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); border: none;">
+                        <i class="bi bi-check2-circle me-1"></i> Ya, Setujui
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -1463,11 +1642,106 @@
         background: rgba(255, 255, 255, 0.25) !important;
         color: #ffffff !important;
     }
+
+    /* Multi-creator & Multi-approver Chips & Suggestions */
+    .rci-member-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 11.5px;
+        font-weight: 600;
+        transition: all 0.2s;
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.35);
+        color: var(--text-main);
+    }
+    .rci-member-chip.approver-chip {
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+    .rci-member-chip .btn-remove-chip {
+        cursor: pointer;
+        color: #f43f5e;
+        font-size: 14px;
+        margin-left: 2px;
+        transition: transform 0.15s;
+    }
+    .rci-member-chip .btn-remove-chip:hover {
+        transform: scale(1.25);
+    }
+    .suggestions-dropdown {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        max-height: 220px;
+        overflow-y: auto;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    .suggestion-emp-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-color);
+        transition: background 0.15s;
+    }
+    .suggestion-emp-item:hover {
+        background: rgba(59, 130, 246, 0.12);
+    }
+    .sp3-sig-box {
+        border: 1.5px solid var(--border-color);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.02);
+        padding: 10px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 125px;
+    }
+    .sp3-sig-header {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        border-bottom: 1px dashed var(--border-color);
+        padding-bottom: 6px;
+        margin-bottom: 8px;
+    }
+    .sp3-sig-body {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .sp3-sig-name {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+    .sp3-sig-nik {
+        font-size: 11px;
+        color: var(--text-muted);
+    }
 </style>
 
 @section Scripts {
 <script>
     let currentRciSummaryData = {};
+
+    // Inisialisasi Anggota Sidak (Creators) & Penyetuju (Approvers)
+    let selectedCreators = [
+        {
+            nik: '@userNik',
+            nama: '@userNama',
+            jabatan: '@userDept',
+            perusahaan: '@userCompany',
+            isPrimary: true
+        }
+    ];
+    let selectedApprovers = [];
+    let creatorDebounceTimer, approverDebounceTimer;
 
     // 26 Area Utama Standar SAP (Persis Form Observasi & Hazard)
     var globalAreasList = [
@@ -1532,6 +1806,9 @@
             </text>
         }
 
+        renderCreatorChips();
+        renderApproverChips();
+        initMemberAutocomplete();
         initAreaDropdown();
         initBenchmarkDropdown();
         calculateRciScore();
@@ -2095,6 +2372,187 @@
         }
     }
 
+    // Autocomplete & Chips for Creators and Approvers
+    function initMemberAutocomplete() {
+        $('#creatorSearchInput').on('input', function() {
+            clearTimeout(creatorDebounceTimer);
+            const q = $(this).val().trim();
+            const suggestions = $('#creatorSuggestions');
+            if (q.length < 2) {
+                suggestions.addClass('d-none').empty();
+                return;
+            }
+            $('#creatorSearchSpinner').removeClass('d-none');
+            creatorDebounceTimer = setTimeout(() => {
+                $.getJSON('/Rci/SearchEmployees?q=' + encodeURIComponent(q), function(data) {
+                    $('#creatorSearchSpinner').addClass('d-none');
+                    suggestions.empty();
+                    if (!data || data.length === 0) {
+                        suggestions.html('<div class="p-2 text-muted text-center" style="font-size:12px;">Karyawan tidak ditemukan</div>');
+                    } else {
+                        data.forEach(emp => {
+                            const el = $(`
+                                <div class="suggestion-emp-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-person me-1 text-primary"></i>
+                                        <strong>${escapeHtml(emp.nama)}</strong> <span class="text-muted" style="font-size:11px;">(${escapeHtml(emp.nik)})</span>
+                                        <div class="text-muted" style="font-size:10.5px;">${escapeHtml(emp.jabatan)} | ${escapeHtml(emp.perusahaan)}</div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:11px;">+ Pilih</button>
+                                </div>
+                            `);
+                            el.on('click', () => addCreator(emp));
+                            suggestions.append(el);
+                        });
+                    }
+                    suggestions.removeClass('d-none');
+                }).fail(() => $('#creatorSearchSpinner').addClass('d-none'));
+            }, 300);
+        });
+
+        $('#approverSearchInput').on('input', function() {
+            clearTimeout(approverDebounceTimer);
+            const q = $(this).val().trim();
+            const suggestions = $('#approverSuggestions');
+            if (q.length < 2) {
+                suggestions.addClass('d-none').empty();
+                return;
+            }
+            $('#approverSearchSpinner').removeClass('d-none');
+            approverDebounceTimer = setTimeout(() => {
+                $.getJSON('/Rci/SearchEmployees?q=' + encodeURIComponent(q), function(data) {
+                    $('#approverSearchSpinner').addClass('d-none');
+                    suggestions.empty();
+                    if (!data || data.length === 0) {
+                        suggestions.html('<div class="p-2 text-muted text-center" style="font-size:12px;">Karyawan tidak ditemukan</div>');
+                    } else {
+                        data.forEach(emp => {
+                            const el = $(`
+                                <div class="suggestion-emp-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="bi bi-shield-check me-1 text-success"></i>
+                                        <strong>${escapeHtml(emp.nama)}</strong> <span class="text-muted" style="font-size:11px;">(${escapeHtml(emp.nik)})</span>
+                                        <div class="text-muted" style="font-size:10.5px;">${escapeHtml(emp.jabatan)} | ${escapeHtml(emp.perusahaan)}</div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" style="font-size:11px;">+ Pilih Penyetuju</button>
+                                </div>
+                            `);
+                            el.on('click', () => addApprover(emp));
+                            suggestions.append(el);
+                        });
+                    }
+                    suggestions.removeClass('d-none');
+                }).fail(() => $('#approverSearchSpinner').addClass('d-none'));
+            }, 300);
+        });
+
+        // Close dropdowns on outside click
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#creatorSearchInput, #creatorSuggestions').length) {
+                $('#creatorSuggestions').addClass('d-none');
+            }
+            if (!$(e.target).closest('#approverSearchInput, #approverSuggestions').length) {
+                $('#approverSuggestions').addClass('d-none');
+            }
+        });
+    }
+
+    function renderCreatorChips() {
+        const c = $('#selectedCreatorsContainer');
+        c.empty();
+        if (selectedCreators.length === 0) {
+            c.html('<span class="text-muted" style="font-size:11.5px;">Belum ada tim pembuat dipilih.</span>');
+            return;
+        }
+        selectedCreators.forEach(item => {
+            const isMe = item.nik === '@userNik' || item.isPrimary;
+            const chip = $(`
+                <div class="rci-member-chip animate-fade-in">
+                    <i class="bi bi-person-fill text-primary"></i>
+                    <span><strong>${escapeHtml(item.nama)}</strong> (${escapeHtml(item.nik)}) - <span class="text-muted">${escapeHtml(item.jabatan || item.perusahaan || '-')}</span></span>
+                    ${isMe ? '<span class="badge bg-primary ms-1" style="font-size:9px;">Utama (Anda)</span>' : `<i class="bi bi-x-circle-fill btn-remove-chip" title="Hapus" onclick="removeCreator('${escapeHtml(item.nik)}')"></i>`}
+                    <input type="hidden" name="creatorNiks" value="${escapeHtml(item.nik)}" />
+                </div>
+            `);
+            c.append(chip);
+        });
+    }
+
+    function renderApproverChips() {
+        const c = $('#selectedApproversContainer');
+        c.empty();
+        if (selectedApprovers.length === 0) {
+            c.html('<span class="text-danger fw-bold" style="font-size:11.5px;"><i class="bi bi-exclamation-circle me-1"></i>Belum ada penyetuju dipilih (* Wajib minimal 1 orang penyetuju).</span>');
+            return;
+        }
+        selectedApprovers.forEach(item => {
+            const chip = $(`
+                <div class="rci-member-chip approver-chip animate-fade-in">
+                    <i class="bi bi-shield-check text-success"></i>
+                    <span><strong>${escapeHtml(item.nama)}</strong> (${escapeHtml(item.nik)}) - <span class="text-muted">${escapeHtml(item.jabatan || item.perusahaan || '-')}</span></span>
+                    <span class="badge bg-warning text-dark ms-1" style="font-size:9px;">Pending</span>
+                    <i class="bi bi-x-circle-fill btn-remove-chip" title="Hapus" onclick="removeApprover('${escapeHtml(item.nik)}')"></i>
+                    <input type="hidden" name="approverNiks" value="${escapeHtml(item.nik)}" />
+                </div>
+            `);
+            c.append(chip);
+        });
+    }
+
+    function addCreator(emp) {
+        if (!selectedCreators.some(x => x.nik === emp.nik)) {
+            selectedCreators.push({
+                nik: emp.nik,
+                nama: emp.nama,
+                jabatan: emp.jabatan,
+                perusahaan: emp.perusahaan,
+                isPrimary: false
+            });
+            renderCreatorChips();
+        }
+        $('#creatorSearchInput').val('');
+        $('#creatorSuggestions').addClass('d-none').empty();
+    }
+
+    function removeCreator(nik) {
+        if (nik === '@userNik') return; // Pembuat utama tidak bisa dihapus
+        selectedCreators = selectedCreators.filter(x => x.nik !== nik);
+        renderCreatorChips();
+    }
+
+    function addApprover(emp) {
+        if (!selectedApprovers.some(x => x.nik === emp.nik)) {
+            selectedApprovers.push({
+                nik: emp.nik,
+                nama: emp.nama,
+                jabatan: emp.jabatan,
+                perusahaan: emp.perusahaan,
+                status: 'Pending'
+            });
+            renderApproverChips();
+        }
+        $('#approverSearchInput').val('');
+        $('#approverSuggestions').addClass('d-none').empty();
+    }
+
+    function removeApprover(nik) {
+        selectedApprovers = selectedApprovers.filter(x => x.nik !== nik);
+        renderApproverChips();
+    }
+
+    function openApprovalModal(id, roadName, creatorName) {
+        $('#approveId').val(id);
+        $('#approveRoadName').text(roadName || '-');
+        $('#approveCreatorName').text(creatorName || '-');
+        $('#approveCatatan').val('');
+        new bootstrap.Modal(document.getElementById('rciApproveModal')).show();
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return $('<div>').text(text).html();
+    }
+
     // Form Client Validation
     $('#formRci').on('submit', function(e) {
         if (!$('#area').val()) {
@@ -2115,6 +2573,16 @@
             $('#panjangSegment').focus();
             return false;
         }
+
+        // Validasi Wajib Penyetuju (Sesuai User Request)
+        if (selectedApprovers.length === 0) {
+            e.preventDefault();
+            $('#clientAlertTitle').text('Penyetuju Wajib Dipilih');
+            $('#clientAlertMsg').text('Wajib mengisi minimal 1 orang Penyetuju (Approver) untuk laporan RCI ini!');
+            new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+            $('#approverSearchInput').focus();
+            return false;
+        }
     });
 
     function resetRciForm() {
@@ -2129,6 +2597,20 @@
         $('#btnAddBenchmark').prop('disabled', true);
         $('#formTitle').html('<i class="bi bi-pencil-square" style="color: #3b82f6;"></i> <span>Form Penilaian RCI</span> <span class="badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 2px;"><i class="bi bi-stars" style="font-size: 9px;"></i> SP3 EXCEL</span>');
         $('#btnCancelEdit').addClass('d-none');
+
+        // Reset tim pembuat & penyetuju
+        selectedCreators = [
+            {
+                nik: '@userNik',
+                nama: '@userNama',
+                jabatan: '@userDept',
+                perusahaan: '@userCompany',
+                isPrimary: true
+            }
+        ];
+        selectedApprovers = [];
+        renderCreatorChips();
+        renderApproverChips();
 
         $('#panjangSegment').val(100);
         rciParamsMetadata.forEach(m => {
@@ -2172,6 +2654,39 @@
             $('#tindakanPerbaikan').val(data.tindakanPerbaikan);
             $('#pic').val(data.pic);
 
+            // Populate Creators & Approvers
+            if (data.creators && data.creators.length > 0) {
+                selectedCreators = data.creators.map(c => ({
+                    nik: c.nik,
+                    nama: c.nama,
+                    jabatan: c.jabatan,
+                    perusahaan: c.perusahaan,
+                    isPrimary: c.nik === data.nik
+                }));
+            } else {
+                selectedCreators = [{
+                    nik: data.nik,
+                    nama: data.nama,
+                    jabatan: data.departemen,
+                    perusahaan: data.perusahaan,
+                    isPrimary: true
+                }];
+            }
+            renderCreatorChips();
+
+            if (data.approvers && data.approvers.length > 0) {
+                selectedApprovers = data.approvers.map(a => ({
+                    nik: a.nik,
+                    nama: a.nama,
+                    jabatan: a.jabatan,
+                    perusahaan: a.perusahaan,
+                    status: a.status
+                }));
+            } else {
+                selectedApprovers = [];
+            }
+            renderApproverChips();
+
             $('#panjangSegment').val(data.panjangSegment || 100);
 
             rciParamsMetadata.forEach(m => {
@@ -2195,7 +2710,7 @@
         });
     }
 
-    // Show Detail Modal
+    // Show Detail Modal (Format SP3 Signatures & Full Breakdown)
     function showDetailRci(id) {
         $.getJSON('/Rci/GetDetail/' + id, function(d) {
             const actual = d.actualRoadScore > 0 ? d.actualRoadScore : (d.totalScore > 4 ? (d.totalScore / 25.0).toFixed(2) : d.totalScore);
@@ -2209,18 +2724,23 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <div class="p-3 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
-                            <h6 class="text-white font-weight-bold mb-2">Informasi Ruas Jalan</h6>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="text-white font-weight-bold mb-0">Informasi Ruas Jalan</h6>
+                                <span class="badge ${d.status === 'Approved' ? 'bg-success' : 'bg-warning text-dark'} px-2.5 py-1 font-weight-bold" style="font-size: 11px;">
+                                    ${d.status === 'Approved' ? '<i class="bi bi-check2-all me-1"></i>APPROVED' : '<i class="bi bi-hourglass-split me-1"></i>PENDING APPROVAL'}
+                                </span>
+                            </div>
                             <table class="table table-sm table-borderless text-white mb-0" style="font-size: 12px;">
-                                <tr><td class="text-muted" style="width: 130px;">Nama Jalan</td><td>: <strong>${d.namaJalan || '-'}</strong></td></tr>
-                                <tr><td class="text-muted">Segment / KM</td><td>: ${d.segmentJalan || '-'}</td></tr>
+                                <tr><td class="text-muted" style="width: 130px;">Nama Jalan</td><td>: <strong>${escapeHtml(d.namaJalan || '-')}</strong></td></tr>
+                                <tr><td class="text-muted">Segment / KM</td><td>: ${escapeHtml(d.segmentJalan || '-')}</td></tr>
                                 <tr><td class="text-muted">Panjang Segmen</td><td>: <strong>${d.panjangSegment || 100} Meter</strong></td></tr>
-                                <tr><td class="text-muted">Area Utama</td><td>: ${d.area || '-'}</td></tr>
-                                <tr><td class="text-muted">Lokasi</td><td>: ${d.lokasi || '-'}</td></tr>
-                                <tr><td class="text-muted">Detail Patok</td><td>: ${d.detilLokasi || '-'}</td></tr>
-                                <tr><td class="text-muted">Shift</td><td>: ${d.shift || '-'}</td></tr>
+                                <tr><td class="text-muted">Area Utama</td><td>: ${escapeHtml(d.area || '-')}</td></tr>
+                                <tr><td class="text-muted">Lokasi</td><td>: ${escapeHtml(d.lokasi || '-')}</td></tr>
+                                <tr><td class="text-muted">Detail Patok</td><td>: ${escapeHtml(d.detilLokasi || '-')}</td></tr>
+                                <tr><td class="text-muted">Shift</td><td>: ${escapeHtml(d.shift || '-')}</td></tr>
                                 <tr><td class="text-muted">Waktu Inspeksi</td><td>: ${d.tanggal} ${d.waktu}</td></tr>
-                                <tr><td class="text-muted">Inspector</td><td>: ${d.nama} (${d.nik})</td></tr>
-                                <tr><td class="text-muted">Perusahaan</td><td>: ${d.perusahaan || '-'}</td></tr>
+                                <tr><td class="text-muted">Inspector Utama</td><td>: ${escapeHtml(d.nama)} (${escapeHtml(d.nik)})</td></tr>
+                                <tr><td class="text-muted">Perusahaan</td><td>: ${escapeHtml(d.perusahaan || '-')}</td></tr>
                             </table>
                         </div>
                     </div>
@@ -2230,7 +2750,7 @@
                             <h1 class="display-5 font-weight-bold mb-0" style="color: ${color};">${actual} / 4.00</h1>
                             <div class="h5 mb-1 font-weight-bold" style="color: ${color};">Pencapaian: ${ach}%</div>
                             <span class="badge px-3 py-1 mt-1" style="font-size: 12px; background: rgba(255,255,255,0.08); color: ${color};">
-                                Kategori: ${d.kategoriIndex}
+                                Kategori: ${escapeHtml(d.kategoriIndex)}
                             </span>
                         </div>
                     </div>
@@ -2290,15 +2810,15 @@
                 ${d.catatan ? `
                     <div class="mt-3 p-3 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
                         <strong class="text-white">Catatan Observasi:</strong>
-                        <p class="mb-0 text-muted mt-1">${d.catatan}</p>
+                        <p class="mb-0 text-muted mt-1">${escapeHtml(d.catatan)}</p>
                     </div>
                 ` : ''}
 
                 ${d.tindakanPerbaikan ? `
                     <div class="mt-3 p-3 rounded-3" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3);">
                         <strong style="color: #f59e0b;"><i class="bi bi-tools me-1"></i> Rekomendasi Perbaikan:</strong>
-                        <p class="mb-0 mt-1" style="color: var(--text-main);">${d.tindakanPerbaikan}</p>
-                        ${d.pic ? `<small class="text-muted d-block mt-1">PIC: <strong>${d.pic}</strong></small>` : ''}
+                        <p class="mb-0 mt-1" style="color: var(--text-main);">${escapeHtml(d.tindakanPerbaikan)}</p>
+                        ${d.pic ? `<small class="text-muted d-block mt-1">PIC: <strong>${escapeHtml(d.pic)}</strong></small>` : ''}
                     </div>
                 ` : ''}
 
@@ -2309,6 +2829,109 @@
                     </div>
                 ` : ''}
 
+                <!-- GRID TANDA TANGAN PERSIS STANDAR SP3 EXCEL (DIBUAT OLEH & DISETUJUI OLEH) -->
+                <div class="mt-4 p-3 rounded-3" style="background: rgba(255,255,255,0.02); border: 1.5px solid var(--border-color);">
+                    <!-- 1. DIBUAT OLEH -->
+                    <div class="mb-4">
+                        <h6 class="text-white font-weight-bold mb-3 text-center text-uppercase" style="letter-spacing: 1.5px; font-size: 12.5px;">
+                            <i class="bi bi-pen me-1 text-primary"></i> Dibuat oleh,
+                        </h6>
+                        <div class="row g-2 justify-content-center">
+            `;
+
+            if (d.creators && d.creators.length > 0) {
+                d.creators.forEach(c => {
+                    html += `
+                        <div class="col-6 col-md-3">
+                            <div class="sp3-sig-box">
+                                <div class="sp3-sig-header">${escapeHtml(c.jabatan || 'Inspector')}<br><small class="text-muted">${escapeHtml(c.perusahaan || '-')}</small></div>
+                                <div class="sp3-sig-body my-2">
+                                    <i class="bi bi-vector-pen text-primary mb-1" style="font-size: 20px; opacity: 0.8;"></i>
+                                    <span class="badge bg-primary bg-opacity-25 text-primary" style="font-size: 9.5px;">Telah Menyusun</span>
+                                </div>
+                                <div class="pt-2 border-top border-secondary border-opacity-25">
+                                    <div class="sp3-sig-name text-truncate">${escapeHtml(c.nama)}</div>
+                                    <div class="sp3-sig-nik">NIK: ${escapeHtml(c.nik)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                html += `
+                    <div class="col-6 col-md-3">
+                        <div class="sp3-sig-box">
+                            <div class="sp3-sig-header">${escapeHtml(d.departemen || 'Operations')}<br><small class="text-muted">${escapeHtml(d.perusahaan || '-')}</small></div>
+                            <div class="sp3-sig-body my-2">
+                                <span class="badge bg-primary bg-opacity-25 text-primary" style="font-size: 9.5px;">Telah Menyusun</span>
+                            </div>
+                            <div class="pt-2 border-top border-secondary border-opacity-25">
+                                <div class="sp3-sig-name text-truncate">${escapeHtml(d.nama)}</div>
+                                <div class="sp3-sig-nik">NIK: ${escapeHtml(d.nik)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `
+                        </div>
+                    </div>
+
+                    <!-- 2. DISETUJUI OLEH -->
+                    <div class="pt-3 border-top border-secondary border-opacity-25">
+                        <h6 class="text-white font-weight-bold mb-3 text-center text-uppercase" style="letter-spacing: 1.5px; font-size: 12.5px;">
+                            <i class="bi bi-shield-check me-1 text-success"></i> Disetujui Oleh,
+                        </h6>
+                        <div class="row g-2 justify-content-center">
+            `;
+
+            if (d.approvers && d.approvers.length > 0) {
+                d.approvers.forEach(a => {
+                    const isApp = a.status === 'Approved';
+                    html += `
+                        <div class="col-6 col-md-3">
+                            <div class="sp3-sig-box" style="border-color: ${isApp ? 'rgba(16, 185, 129, 0.5)' : 'rgba(245, 158, 11, 0.4)'};">
+                                <div class="sp3-sig-header">${escapeHtml(a.jabatan || 'Approver')}<br><small class="text-muted">${escapeHtml(a.perusahaan || '-')}</small></div>
+                                <div class="sp3-sig-body my-2">
+                                    ${isApp 
+                                        ? `<span class="badge bg-success px-2 py-1" style="font-size: 10px;"><i class="bi bi-check2-all me-1"></i>APPROVED</span><div class="text-muted mt-1" style="font-size: 9.5px;">${a.actionAt || ''}</div>${a.catatan ? `<div style="font-size: 9.5px; color:#10b981; font-style:italic;">"${escapeHtml(a.catatan)}"</div>` : ''}` 
+                                        : `<span class="badge bg-warning text-dark px-2 py-1" style="font-size: 10px;"><i class="bi bi-hourglass-split me-1"></i>PENDING</span><div class="text-muted mt-1" style="font-size: 9.5px;">Menunggu Persetujuan</div>`}
+                                </div>
+                                <div class="pt-2 border-top border-secondary border-opacity-25">
+                                    <div class="sp3-sig-name text-truncate">${escapeHtml(a.nama)}</div>
+                                    <div class="sp3-sig-nik">NIK: ${escapeHtml(a.nik)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                html += `
+                    <div class="col-12 text-center text-muted py-2" style="font-size: 12px;">
+                        Belum ada data penyetuju yang ditugaskan.
+                    </div>
+                `;
+            }
+
+            html += `
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (d.canApprove) {
+                html += `
+                    <div class="mt-3 p-3 rounded-3 text-center animate-fade-in" style="background: rgba(16, 185, 129, 0.12); border: 1.5px solid rgba(16, 185, 129, 0.4);">
+                        <div class="text-white fw-bold mb-2">Anda terdaftar sebagai penyetuju pada laporan ini!</div>
+                        <button type="button" class="btn btn-success fw-bold px-4 py-2 shadow-sm" onclick="$('#rciDetailModal').modal('hide'); openApprovalModal(${d.id}, '${escapeHtml(d.namaJalan || d.lokasi)}', '${escapeHtml(d.nama)}');" style="border-radius: 10px; background: linear-gradient(135deg, #10b981, #059669); border: none;">
+                            <i class="bi bi-check-circle-fill me-1"></i> Setujui Laporan Ini Sekarang
+                        </button>
+                    </div>
+                `;
+            }
+
+            html += `
                 <div class="mt-3 text-end">
                     <button type="button" class="btn btn-sm btn-success px-3 py-1.5" onclick="shareSavedRci(${d.id})" style="border-radius: 8px;">
                         <i class="bi bi-whatsapp me-1"></i> Bagikan Laporan ke WhatsApp

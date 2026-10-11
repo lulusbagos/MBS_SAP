@@ -48,6 +48,7 @@ namespace MBS_SAP.Data
         // FCI, RCI, DCI & SPI
         public DbSet<FciReport> FciReports { get; set; } = null!;
         public DbSet<RciReport> RciReports { get; set; } = null!;
+        public DbSet<RciMember> RciMembers { get; set; } = null!;
         public DbSet<DciReport> DciReports { get; set; } = null!;
         public DbSet<SpiReport> SpiReports { get; set; } = null!;
 
@@ -200,7 +201,14 @@ namespace MBS_SAP.Data
                 .ToTable("tbl_t_fci_report");
 
             modelBuilder.Entity<RciReport>()
-                .ToTable("tbl_t_rci_report");
+                .ToTable("tbl_t_rci_report")
+                .HasMany(r => r.Members)
+                .WithOne(m => m.RciReport)
+                .HasForeignKey(m => m.RciReportId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RciMember>()
+                .ToTable("tbl_t_rci_member");
 
             modelBuilder.Entity<DciReport>()
                 .ToTable("tbl_t_dci_report");

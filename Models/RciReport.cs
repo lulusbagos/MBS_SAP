@@ -107,11 +107,28 @@ namespace MBS_SAP.Models
         [MaxLength(500)]
         public string? FotoUrl { get; set; }
 
+        [MaxLength(50)]
+        [Column("status")]
+        public string Status { get; set; } = "Pending";
+
+        [Column("approved_at")]
+        public DateTime? ApprovedAt { get; set; }
+
+        [MaxLength(500)]
+        [Column("creators_summary")]
+        public string? CreatorsSummary { get; set; }
+
+        [MaxLength(500)]
+        [Column("approvers_summary")]
+        public string? ApproversSummary { get; set; }
+
         [Column("is_deleted")]
         public bool IsDeleted { get; set; } = false;
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedAt { get; set; }
+
+        public virtual ICollection<RciMember> Members { get; set; } = new List<RciMember>();
     }
 }

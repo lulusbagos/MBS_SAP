@@ -28,14 +28,16 @@ namespace MBS_SAP.Controllers
             _companyHierarchyService = companyHierarchyService;
         }
 
-        public async Task<IActionResult> Index(string? search, string? namaJalan, string? kategori, DateTime? startDate, DateTime? endDate)
+        public async Task<IActionResult> Index(string? search, string? namaJalan, string? kategori, string? statusFilter, DateTime? startDate, DateTime? endDate)
         {
             ViewData["HeaderTitle"] = "Road Condition Index (RCI)";
             ViewData["ActiveTab"] = "Rci";
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim() ?? string.Empty;
 
-            var query = _context.RciReports.Where(r => !r.IsDeleted);
+            var query = _context.RciReports
+                .Include(r => r.Members)
+                .Where(r => !r.IsDeleted);
 
             // Filter date range (default: 30 days)
             var start = startDate ?? DateTime.Today.AddDays(-30);
@@ -50,7 +52,9 @@ namespace MBS_SAP.Controllers
                                          r.Nik.ToLower().Contains(s) ||
                                          r.Lokasi.ToLower().Contains(s) ||
                                          (r.NamaJalan != null && r.NamaJalan.ToLower().Contains(s)) ||
-                                         (r.SegmentJalan != null && r.SegmentJalan.ToLower().Contains(s)));
+                                         (r.SegmentJalan != null && r.SegmentJalan.ToLower().Contains(s)) ||
+                                         (r.CreatorsSummary != null && r.CreatorsSummary.ToLower().Contains(s)) ||
+                                         (r.ApproversSummary != null && r.ApproversSummary.ToLower().Contains(s)));
             }
 
             if (!string.IsNullOrEmpty(namaJalan))
@@ -63,10 +67,31 @@ namespace MBS_SAP.Controllers
                 query = query.Where(r => r.KategoriIndex == kategori);
             }
 
+            if (!string.IsNullOrEmpty(statusFilter))
+            {
+                if (statusFilter == "MyApprovals")
+                {
+                    query = query.Where(r => r.Members.Any(m => m.Role == "Approver" && m.Nik == userNik && m.Status == "Pending"));
+                }
+                else if (statusFilter == "MyJoints")
+                {
+                    query = query.Where(r => r.Nik == userNik || r.Members.Any(m => m.Role == "Creator" && m.Nik == userNik));
+                }
+                else if (statusFilter == "Pending")
+                {
+                    query = query.Where(r => r.Status == "Pending");
+                }
+                else if (statusFilter == "Approved")
+                {
+                    query = query.Where(r => r.Status == "Approved");
+                }
+            }
+
             var reports = await query.OrderByDescending(r => r.Tanggal).ThenByDescending(r => r.CreatedAt).ToListAsync();
 
-            // Statistics
+            // Statistics (30 days)
             var allMtdReports = await _context.RciReports
+                .Include(r => r.Members)
                 .Where(r => !r.IsDeleted && r.Tanggal >= DateTime.Today.AddDays(-30))
                 .ToListAsync();
 
@@ -75,6 +100,13 @@ namespace MBS_SAP.Controllers
             ViewBag.GoodCount = allMtdReports.Count(r => r.KategoriIndex == "Baik");
             ViewBag.FairCount = allMtdReports.Count(r => r.KategoriIndex == "Sedang");
             ViewBag.PoorCount = allMtdReports.Count(r => r.KategoriIndex == "Kurang");
+
+            // Approval Metrics
+            ViewBag.PendingCount = allMtdReports.Count(r => r.Status == "Pending");
+            ViewBag.ApprovedCount = allMtdReports.Count(r => r.Status == "Approved");
+            ViewBag.MyPendingApprovalsCount = allMtdReports.Count(r => r.Members.Any(m => m.Role == "Approver" && m.Nik == userNik && m.Status == "Pending"));
+            ViewBag.MyJointCount = allMtdReports.Count(r => r.Nik == userNik || r.Members.Any(m => m.Role == "Creator" && m.Nik == userNik));
+            ViewBag.CurrentStatus = statusFilter ?? "";
 
             // Distinct roads for filter
             ViewBag.JalanList = await _context.RciReports
@@ -108,6 +140,75 @@ namespace MBS_SAP.Controllers
             ViewBag.UserCompany = User.FindFirst("Company")?.Value ?? "PT MEGA GLOBAL ENERGY";
 
             return View(reports);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SearchEmployees(string? q)
+        {
+            if (string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2)
+                return Json(new List<object>());
+
+            var term = q.Trim().ToLower();
+
+            try
+            {
+                var empQuery = from k in _context.Karyawans.AsNoTracking()
+                               join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal
+                               join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into cg
+                               from c in cg.DefaultIfEmpty()
+                               join j in _context.Jabatans.AsNoTracking() on k.IdJabatan equals j.JabatanId into jg
+                               from j in jg.DefaultIfEmpty()
+                               where k.StatusAktif
+                                     && (p.NamaLengkap.ToLower().Contains(term) || (k.NoNik != null && k.NoNik.ToLower().Contains(term)))
+                               select new
+                               {
+                                   nik = k.NoNik,
+                                   nama = p.NamaLengkap,
+                                   jabatan = j != null ? j.NamaJabatan : "Staff",
+                                   perusahaan = c != null ? c.NamaPerusahaan : "PT MEGA GLOBAL ENERGY",
+                                   perusahaanId = (int?)k.IdPerusahaan
+                               };
+
+                var list = await empQuery.Take(25).ToListAsync();
+                return Json(list);
+            }
+            catch
+            {
+                return Json(new List<object>());
+            }
+        }
+
+        private async Task<(string nik, string nama, string jabatan, string perusahaan, int? perusahaanId)> ResolveEmployeeInfoAsync(string nik)
+        {
+            var cleanNik = (nik ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(cleanNik)) return (cleanNik, "Unknown", "Staff", "PT MEGA GLOBAL ENERGY", null);
+
+            try
+            {
+                var emp = await (from k in _context.Karyawans.AsNoTracking()
+                                 join p in _context.Personals.AsNoTracking() on k.IdPersonal equals p.IdPersonal
+                                 join c in _context.Perusahaans.AsNoTracking() on k.IdPerusahaan equals c.PerusahaanId into cg
+                                 from c in cg.DefaultIfEmpty()
+                                 join j in _context.Jabatans.AsNoTracking() on k.IdJabatan equals j.JabatanId into jg
+                                 from j in jg.DefaultIfEmpty()
+                                 where k.NoNik == cleanNik
+                                 select new
+                                 {
+                                     nik = k.NoNik,
+                                     nama = p.NamaLengkap,
+                                     jabatan = j != null ? j.NamaJabatan : "Staff",
+                                     perusahaan = c != null ? c.NamaPerusahaan : "PT MEGA GLOBAL ENERGY",
+                                     perusahaanId = (int?)k.IdPerusahaan
+                                 }).FirstOrDefaultAsync();
+
+                if (emp != null)
+                {
+                    return (emp.nik, emp.nama, emp.jabatan, emp.perusahaan, emp.perusahaanId);
+                }
+            }
+            catch { }
+
+            return (cleanNik, cleanNik, "Staff", "PT MEGA GLOBAL ENERGY", null);
         }
 
         [HttpPost]
@@ -151,7 +252,9 @@ namespace MBS_SAP.Controllers
             string? catatan = null,
             string? tindakanPerbaikan = null,
             string? pic = null,
-            IFormFile? foto = null)
+            IFormFile? foto = null,
+            List<string>? creatorNiks = null,
+            List<string>? approverNiks = null)
         {
             try
             {
@@ -160,6 +263,21 @@ namespace MBS_SAP.Controllers
                 var userDept = User.FindFirst("Department")?.Value ?? "Operations";
                 var userComp = User.FindFirst("Company")?.Value ?? "PT MEGA GLOBAL ENERGY";
                 int.TryParse(User.FindFirst("CompanyId")?.Value, out int compId);
+
+                // Validasi Penyetuju (Wajib minimal 1 orang sesuai permintaan user)
+                var validApproverNiks = approverNiks?.Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n.Trim()).Distinct().ToList() ?? new List<string>();
+                if (validApproverNiks.Count == 0)
+                {
+                    TempData["ErrorMessage"] = "Wajib memilih minimal 1 orang Penyetuju (Approver)!";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                // Tim Pembuat: masukkan penginput utama jika belum ada
+                var validCreatorNiks = creatorNiks?.Where(n => !string.IsNullOrWhiteSpace(n)).Select(n => n.Trim()).Distinct().ToList() ?? new List<string>();
+                if (!validCreatorNiks.Contains(userNik))
+                {
+                    validCreatorNiks.Insert(0, userNik);
+                }
 
                 TimeSpan waktu = DateTime.Now.TimeOfDay;
                 if (!string.IsNullOrEmpty(waktuStr) && TimeSpan.TryParse(waktuStr, out var parsedWaktu))
@@ -193,9 +311,11 @@ namespace MBS_SAP.Controllers
                     fotoUrl = await _imageUploadService.UploadAndCompressImageAsync(foto, "rci");
                 }
 
+                RciReport reportObj;
+
                 if (id.HasValue && id.Value > 0)
                 {
-                    var existing = await _context.RciReports.FindAsync(id.Value);
+                    var existing = await _context.RciReports.Include(r => r.Members).FirstOrDefaultAsync(r => r.Id == id.Value);
                     if (existing == null || existing.IsDeleted) return NotFound();
 
                     if (existing.Nik != userNik && !CompanyHierarchyService.IsAdminUser(User))
@@ -241,10 +361,9 @@ namespace MBS_SAP.Controllers
                     existing.ActualRoadScore = actualRoadScore;
                     existing.TargetScore = targetScore;
                     existing.Achievement = achievement;
-                    existing.TotalScore = achievement; // stored as % for compatibility
+                    existing.TotalScore = achievement;
                     existing.KategoriIndex = kategoriIndex;
 
-                    // Legacy mappings
                     existing.SkorPermukaanJalan = (int)Math.Round(skorSurfacing * 25);
                     existing.SkorGradeJalan = (int)Math.Round(skorUndulation * 25);
                     existing.SkorLebarJalan = (int)Math.Round(skorSpoil * 25);
@@ -263,13 +382,17 @@ namespace MBS_SAP.Controllers
                         existing.FotoUrl = fotoUrl;
                     }
 
+                    // Reset members for clean assignment
+                    var oldMembers = await _context.RciMembers.Where(m => m.RciReportId == existing.Id).ToListAsync();
+                    _context.RciMembers.RemoveRange(oldMembers);
+
+                    reportObj = existing;
                     _context.RciReports.Update(existing);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"Laporan RCI di {namaJalan ?? lokasi} berhasil diperbarui! Skor: {actualRoadScore}/4.00 ({achievement}%) [{kategoriIndex}]";
                 }
                 else
                 {
-                    var report = new RciReport
+                    reportObj = new RciReport
                     {
                         Tanggal = tanggal.Date,
                         Waktu = waktu,
@@ -316,7 +439,6 @@ namespace MBS_SAP.Controllers
                         TotalScore = achievement,
                         KategoriIndex = kategoriIndex,
 
-                        // Legacy mappings
                         SkorPermukaanJalan = (int)Math.Round(skorSurfacing * 25),
                         SkorGradeJalan = (int)Math.Round(skorUndulation * 25),
                         SkorLebarJalan = (int)Math.Round(skorSpoil * 25),
@@ -329,14 +451,89 @@ namespace MBS_SAP.Controllers
                         TindakanPerbaikan = tindakanPerbaikan,
                         Pic = pic,
                         FotoUrl = fotoUrl,
+                        Status = "Pending",
                         CreatedAt = DateTime.Now
                     };
 
-                    _context.RciReports.Add(report);
+                    _context.RciReports.Add(reportObj);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"Inspeksi RCI berhasil disimpan! Skor: {actualRoadScore}/4.00 ({achievement}%) [{kategoriIndex}]";
                 }
 
+                // Proses Tim Pembuat (Creators)
+                var creatorNames = new List<string>();
+                foreach (var cNik in validCreatorNiks)
+                {
+                    var cInfo = await ResolveEmployeeInfoAsync(cNik);
+                    creatorNames.Add(cInfo.nama);
+
+                    _context.RciMembers.Add(new RciMember
+                    {
+                        RciReportId = reportObj.Id,
+                        Role = "Creator",
+                        Nik = cInfo.nik,
+                        Nama = cInfo.nama,
+                        Jabatan = cInfo.jabatan,
+                        Perusahaan = cInfo.perusahaan,
+                        PerusahaanId = cInfo.perusahaanId,
+                        Status = "Confirmed",
+                        CreatedAt = DateTime.Now
+                    });
+
+                    // Notifikasi untuk rekan yang di-tag (selain penginput yang login)
+                    if (cInfo.nik != userNik)
+                    {
+                        _context.Notifications.Add(new Notification
+                        {
+                            RecipientNik = cInfo.nik,
+                            Title = "Sidak Bersama RCI",
+                            Message = $"{userName} menambahkan Anda ke Tim Sidak Bersama RCI di {namaJalan ?? lokasi}.",
+                            Url = $"/Rci/Index?search={reportObj.Id}",
+                            NotifType = "rci_joint",
+                            CreatedAt = DateTime.Now
+                        });
+                    }
+                }
+
+                // Proses Tim Penyetuju (Approvers)
+                var approverNames = new List<string>();
+                foreach (var aNik in validApproverNiks)
+                {
+                    var aInfo = await ResolveEmployeeInfoAsync(aNik);
+                    approverNames.Add(aInfo.nama);
+
+                    _context.RciMembers.Add(new RciMember
+                    {
+                        RciReportId = reportObj.Id,
+                        Role = "Approver",
+                        Nik = aInfo.nik,
+                        Nama = aInfo.nama,
+                        Jabatan = aInfo.jabatan,
+                        Perusahaan = aInfo.perusahaan,
+                        PerusahaanId = aInfo.perusahaanId,
+                        Status = "Pending",
+                        CreatedAt = DateTime.Now
+                    });
+
+                    // Notifikasi untuk Penyetuju
+                    _context.Notifications.Add(new Notification
+                    {
+                        RecipientNik = aInfo.nik,
+                        Title = "Permintaan Persetujuan RCI",
+                        Message = $"Laporan RCI #{reportObj.Id} ({namaJalan ?? lokasi}) dibuat oleh {userName} membutuhkan persetujuan Anda.",
+                        Url = $"/Rci/Index?search={reportObj.Id}&statusFilter=MyApprovals",
+                        NotifType = "rci_approval_request",
+                        CreatedAt = DateTime.Now
+                    });
+                }
+
+                reportObj.CreatorsSummary = string.Join(", ", creatorNames);
+                reportObj.ApproversSummary = string.Join(", ", approverNames.Select(n => $"{n} (⏳ Menunggu)"));
+                reportObj.Status = "Pending";
+
+                _context.RciReports.Update(reportObj);
+                await _context.SaveChangesAsync();
+
+                TempData["SuccessMessage"] = $"Laporan RCI #{reportObj.Id} di {namaJalan ?? lokasi} berhasil disimpan! Status: PENDING (Menunggu {validApproverNiks.Count} Penyetuju).";
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -346,11 +543,91 @@ namespace MBS_SAP.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApproveReport(int id, string? catatan)
+        {
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim() ?? string.Empty;
+            var userName = User.Identity?.Name ?? "Approver";
+            var isAdmin = CompanyHierarchyService.IsAdminUser(User);
+
+            var report = await _context.RciReports.Include(r => r.Members).FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
+            if (report == null) return NotFound();
+
+            var approverMember = report.Members.FirstOrDefault(m => m.Role == "Approver" && m.Nik == userNik);
+            if (approverMember == null && !isAdmin)
+            {
+                TempData["ErrorMessage"] = "Anda tidak terdaftar sebagai penyetuju untuk laporan RCI ini.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (approverMember != null)
+            {
+                approverMember.Status = "Approved";
+                approverMember.ActionAt = DateTime.Now;
+                approverMember.Catatan = catatan;
+                _context.RciMembers.Update(approverMember);
+            }
+            else if (isAdmin)
+            {
+                var pendingApprover = report.Members.FirstOrDefault(m => m.Role == "Approver" && m.Status == "Pending");
+                if (pendingApprover != null)
+                {
+                    pendingApprover.Status = "Approved";
+                    pendingApprover.ActionAt = DateTime.Now;
+                    pendingApprover.Catatan = $"Disetujui oleh Admin ({userName}): {catatan}";
+                    _context.RciMembers.Update(pendingApprover);
+                }
+            }
+
+            // Cek apakah seluruh penyetuju telah menyetujui
+            var approvers = report.Members.Where(m => m.Role == "Approver").ToList();
+            bool allApproved = approvers.All(a => a.Status == "Approved");
+            if (allApproved)
+            {
+                report.Status = "Approved";
+                report.ApprovedAt = DateTime.Now;
+
+                // Kirim notifikasi ke pembuat laporan bahwa RCI sudah fully approved
+                _context.Notifications.Add(new Notification
+                {
+                    RecipientNik = report.Nik,
+                    Title = "Laporan RCI Disetujui (Approved)",
+                    Message = $"Laporan RCI #{report.Id} di {report.NamaJalan ?? report.Lokasi} telah disetujui sepenuhnya (Status: APPROVED).",
+                    Url = $"/Rci/Index?search={report.Id}",
+                    NotifType = "rci_approved",
+                    CreatedAt = DateTime.Now
+                });
+            }
+            else
+            {
+                report.Status = "Pending";
+            }
+
+            report.ApproversSummary = string.Join(", ", approvers.Select(a => $"{a.Nama} ({(a.Status == "Approved" ? "✓ Disetujui" : "⏳ Menunggu")})"));
+            report.UpdatedAt = DateTime.Now;
+            _context.RciReports.Update(report);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = allApproved
+                ? $"Laporan RCI #{report.Id} di {report.NamaJalan ?? report.Lokasi} telah disetujui sepenuhnya (Status: APPROVED)!"
+                : $"Persetujuan Anda untuk laporan RCI #{report.Id} berhasil disimpan (Menunggu approver lainnya).";
+
+            return RedirectToAction(nameof(Index));
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetDetail(int id)
         {
-            var item = await _context.RciReports.FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim() ?? string.Empty;
+            var isAdmin = CompanyHierarchyService.IsAdminUser(User);
+
+            var item = await _context.RciReports
+                .Include(r => r.Members)
+                .FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
             if (item == null) return NotFound();
+
+            var canApprove = item.Members.Any(m => m.Role == "Approver" && m.Nik == userNik && m.Status == "Pending") || (isAdmin && item.Status == "Pending");
 
             return Json(new
             {
@@ -397,7 +674,28 @@ namespace MBS_SAP.Controllers
                 catatan = item.Catatan,
                 tindakanPerbaikan = item.TindakanPerbaikan,
                 pic = item.Pic,
-                fotoUrl = item.FotoUrl
+                fotoUrl = item.FotoUrl,
+                status = item.Status,
+                approvedAt = item.ApprovedAt?.ToString("dd/MM/yyyy HH:mm"),
+                creatorsSummary = item.CreatorsSummary,
+                approversSummary = item.ApproversSummary,
+                canApprove = canApprove,
+                creators = item.Members.Where(m => m.Role == "Creator").Select(m => new {
+                    nik = m.Nik,
+                    nama = m.Nama,
+                    jabatan = m.Jabatan ?? "Inspector",
+                    perusahaan = m.Perusahaan ?? "-",
+                    status = m.Status
+                }).ToList(),
+                approvers = item.Members.Where(m => m.Role == "Approver").Select(m => new {
+                    nik = m.Nik,
+                    nama = m.Nama,
+                    jabatan = m.Jabatan ?? "Approver",
+                    perusahaan = m.Perusahaan ?? "-",
+                    status = m.Status,
+                    catatan = m.Catatan,
+                    actionAt = m.ActionAt?.ToString("dd/MM/yyyy HH:mm")
+                }).ToList()
             });
         }
 
