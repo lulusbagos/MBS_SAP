@@ -335,76 +335,97 @@
                     </div>
 
                     <!-- Section 1.b: Tim Pelaksana Sidak & Penyetujuan (Standar SP3) -->
-                    <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
-                        <div class="text-white font-weight-bold mb-3" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
-                            <i class="bi bi-people-fill me-1" style="color: #3b82f6;"></i> 1.b Tim Sidak &amp; Penyetujuan (Format SP3)
+                    <div class="p-3 mb-3 rounded-3 sp3-section-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="sp3-section-icon">
+                                    <i class="bi bi-people-fill text-primary"></i>
+                                </div>
+                                <div>
+                                    <div class="sp3-section-title">1.B TIM SIDAK &amp; PENYETUJUAN</div>
+                                    <div class="sp3-section-subtitle">Format SP3 Standar &bull; Tim Pelaksana Sidak Lapangan &amp; Otorisasi Penyetuju</div>
+                                </div>
+                            </div>
+                            <span class="badge sp3-badge-header">
+                                <i class="bi bi-patch-check-fill me-1 text-primary"></i> Standar Berita Acara SP3
+                            </span>
                         </div>
 
-                        <!-- 1. DIBUAT OLEH (TIM INSPEKSI / PEMBUAT BERSAMA) -->
-                        <div class="mb-3 p-3 rounded-3" style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.25);">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label-sap mb-0 font-weight-bold" style="color: #60a5fa; font-size: 12.5px;">
-                                    <i class="bi bi-pen-fill me-1"></i> Dibuat oleh, (Tim Pembuat / Sidak Bersama)
-                                </label>
-                                <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; font-size: 10px;">Bisa Tag Multi Orang</span>
-                            </div>
-                            <div class="text-muted mb-2" style="font-size: 11px;">
-                                Anda otomatis terdaftar sebagai pembuat utama. Cari dan tambahkan rekan inspeksi dari view karyawan (PT KPP / PT IC / Mitra):
-                            </div>
+                        <div class="row g-3">
+                            <!-- 1. DIBUAT OLEH (TIM INSPEKSI / PEMBUAT BERSAMA) -->
+                            <div class="col-lg-6 col-12">
+                                <div class="sp3-signer-panel creator-panel h-100">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="sp3-panel-label text-primary mb-0">
+                                            <i class="bi bi-pen-fill me-1"></i> Dibuat Oleh, (Tim Sidak Bersama)
+                                        </label>
+                                        <span class="badge sp3-badge-pill-blue">
+                                            <i class="bi bi-people me-1"></i>Bisa Multi Tim
+                                        </span>
+                                    </div>
+                                    <div class="sp3-panel-hint mb-2">
+                                        Anda otomatis terdaftar sebagai pembuat utama. Ketik nama/NIK untuk menambahkan rekan sidak (PT KPP / PT IC / Mitra):
+                                    </div>
 
-                            <!-- Autocomplete Search Input Karyawan -->
-                            <div class="position-relative mb-2">
-                                <div class="input-sap-wrapper mb-0">
-                                    <i class="bi bi-search input-sap-icon"></i>
-                                    <input type="text" id="creatorSearchInput" class="input-sap" placeholder="Ketik nama atau NIK rekan tim sidak..." autocomplete="off" style="font-size: 12px;" />
-                                    <span id="creatorSearchSpinner" class="spinner-border spinner-border-sm position-absolute d-none" style="right: 14px; top: 14px; color: #3b82f6;"></span>
+                                    <!-- Autocomplete Search Input Karyawan -->
+                                    <div class="position-relative mb-2">
+                                        <div class="sp3-search-wrapper">
+                                            <i class="bi bi-search sp3-search-icon text-primary"></i>
+                                            <input type="text" id="creatorSearchInput" class="sp3-search-input" placeholder="Cari nama atau NIK rekan tim sidak..." autocomplete="off" />
+                                            <span id="creatorSearchSpinner" class="spinner-border spinner-border-sm position-absolute d-none" style="right: 14px; top: 12px; color: #3b82f6;"></span>
+                                        </div>
+                                        <div id="creatorSuggestions" class="suggestions-dropdown d-none position-absolute w-100" style="top: 100%; left: 0; right: 0; z-index: 1060;"></div>
+                                    </div>
+
+                                    <!-- Container Cards Pembuat Terpilih -->
+                                    <div id="selectedCreatorsContainer" class="sp3-members-wrapper d-flex flex-column gap-2">
+                                        <!-- Cards loaded via JS -->
+                                    </div>
                                 </div>
-                                <div id="creatorSuggestions" class="suggestions-dropdown d-none position-absolute w-100" style="top: 100%; left: 0; right: 0; z-index: 1060;"></div>
                             </div>
 
-                            <!-- Container Chips Pembuat Terpilih -->
-                            <div id="selectedCreatorsContainer" class="d-flex flex-wrap gap-1.5 p-2 rounded-2" style="min-height: 44px; background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.15);">
-                                <!-- Chips loaded via JS -->
-                            </div>
-                        </div>
+                            <!-- 2. DISETUJUI OLEH (PENYETUJU / APPROVER) - WAJIB DIISI! -->
+                            <div class="col-lg-6 col-12">
+                                <div class="sp3-signer-panel approver-panel h-100">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="sp3-panel-label text-success mb-0">
+                                            <i class="bi bi-shield-check me-1"></i> Disetujui Oleh, (Approver)
+                                            <span class="badge bg-danger ms-1 sp3-badge-required">* WAJIB DIISI</span>
+                                        </label>
+                                        <span class="badge sp3-badge-pill-emerald">
+                                            <i class="bi bi-shield-lock me-1"></i>Bisa Multi Penyetuju
+                                        </span>
+                                    </div>
+                                    <div class="sp3-panel-hint mb-2">
+                                        Pilih minimal 1 orang atasan / perwakilan penyetuju (contoh: Dept Head KPP, Mine Operation Spt IC, Engineering Spt IC):
+                                    </div>
 
-                        <!-- 2. DISETUJUI OLEH (PENYETUJU / APPROVER) - WAJIB DIISI! -->
-                        <div class="p-3 rounded-3" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25);">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label-sap mb-0 font-weight-bold" style="color: #34d399; font-size: 12.5px;">
-                                    <i class="bi bi-shield-check me-1"></i> Disetujui Oleh, (Approver)
-                                    <span class="badge bg-danger ms-1" style="font-size: 9.5px; font-weight: 800; letter-spacing: 0.5px;">* WAJIB DIISI</span>
-                                </label>
-                                <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; font-size: 10px;">Bisa Multi Penyetuju</span>
-                            </div>
-                            <div class="text-muted mb-2" style="font-size: 11px;">
-                                Pilih minimal 1 orang atasan / perwakilan penyetuju (contoh: Dept Head KPP, Mine Operation Spt IC, Engineering Spt IC):
-                            </div>
+                                    <!-- Autocomplete Search Input Penyetuju -->
+                                    <div class="position-relative mb-2">
+                                        <div class="sp3-search-wrapper">
+                                            <i class="bi bi-person-check-fill sp3-search-icon text-success"></i>
+                                            <input type="text" id="approverSearchInput" class="sp3-search-input" placeholder="Cari nama atau NIK atasan penyetuju..." autocomplete="off" />
+                                            <span id="approverSearchSpinner" class="spinner-border spinner-border-sm position-absolute d-none" style="right: 14px; top: 12px; color: #10b981;"></span>
+                                        </div>
+                                        <div id="approverSuggestions" class="suggestions-dropdown d-none position-absolute w-100" style="top: 100%; left: 0; right: 0; z-index: 1060;"></div>
+                                    </div>
 
-                            <!-- Autocomplete Search Input Penyetuju -->
-                            <div class="position-relative mb-2">
-                                <div class="input-sap-wrapper mb-0">
-                                    <i class="bi bi-person-check-fill input-sap-icon"></i>
-                                    <input type="text" id="approverSearchInput" class="input-sap" placeholder="Ketik nama atau NIK penyetuju..." autocomplete="off" style="font-size: 12px;" />
-                                    <span id="approverSearchSpinner" class="spinner-border spinner-border-sm position-absolute d-none" style="right: 14px; top: 14px; color: #10b981;"></span>
+                                    <!-- Container Cards Penyetuju Terpilih -->
+                                    <div id="selectedApproversContainer" class="sp3-members-wrapper d-flex flex-column gap-2">
+                                        <!-- Cards loaded via JS -->
+                                    </div>
                                 </div>
-                                <div id="approverSuggestions" class="suggestions-dropdown d-none position-absolute w-100" style="top: 100%; left: 0; right: 0; z-index: 1060;"></div>
-                            </div>
-
-                            <!-- Container Chips Penyetuju Terpilih -->
-                            <div id="selectedApproversContainer" class="d-flex flex-wrap gap-1.5 p-2 rounded-2" style="min-height: 44px; background: rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.15);">
-                                <!-- Chips loaded via JS -->
                             </div>
                         </div>
                     </div>
 
                     <!-- Section 2: Kalkulator Segmen & Penilaian 8 Parameter (3 PILAR UTAMA) -->
-                    <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
+                    <div class="p-3 mb-3 rounded-3" style="background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="text-white font-weight-bold" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <div class="font-weight-bold" style="color: var(--text-main); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
                                 <i class="bi bi-rulers me-1" style="color: #3b82f6;"></i> 2. Penilaian 8 Parameter Berbasis 3 Pilar
                             </div>
-                            <div class="badge px-3 py-1.5 shadow-sm" id="liveScoreBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 13px; font-weight: 700; border-radius: 10px;">
+                            <div class="badge px-3 py-1.5 shadow-sm" id="liveScoreBadge" style="background: rgba(16, 185, 129, 0.15); color: #059669; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 13px; font-weight: 700; border-radius: 10px;">
                                 Skor: <span id="liveScoreVal">4.00</span> / 4.00 (<span id="liveAchVal">100.0</span>%)
                             </div>
                         </div>
@@ -1643,50 +1664,277 @@
         color: #ffffff !important;
     }
 
-    /* Multi-creator & Multi-approver Chips & Suggestions */
-    .rci-member-chip {
-        display: inline-flex;
+    /* Executive SP3 Signers & Approvers (Format SP3 Standar) */
+    .sp3-section-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+    .sp3-section-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: rgba(59, 130, 246, 0.12);
+        display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 11.5px;
+        justify-content: center;
+        font-size: 18px;
+    }
+    .sp3-section-title {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--text-main);
+        letter-spacing: 0.5px;
+    }
+    .sp3-section-subtitle {
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+    .sp3-badge-header {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563eb;
+        border: 1px solid rgba(59, 130, 246, 0.25);
+        font-size: 11px;
         font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 8px;
+    }
+    body:not(.light-theme) .sp3-badge-header {
+        color: #93c5fd;
+    }
+    .sp3-signer-panel {
+        background: rgba(255, 255, 255, 0.015);
+        border-radius: 12px;
+        padding: 14px;
+        border: 1px solid var(--border-color);
         transition: all 0.2s;
-        background: rgba(59, 130, 246, 0.15);
-        border: 1px solid rgba(59, 130, 246, 0.35);
+    }
+    .sp3-signer-panel.creator-panel {
+        border-top: 3px solid #3b82f6;
+    }
+    .sp3-signer-panel.approver-panel {
+        border-top: 3px solid #10b981;
+    }
+    .sp3-panel-label {
+        font-size: 12.5px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+    }
+    .sp3-panel-hint {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.4;
+    }
+    .sp3-badge-pill-blue {
+        background: #dbeafe;
+        color: #1d4ed8;
+        font-size: 10.5px;
+        font-weight: 700;
+        border-radius: 20px;
+        padding: 3px 9px;
+    }
+    body:not(.light-theme) .sp3-badge-pill-blue {
+        background: rgba(59, 130, 246, 0.2);
+        color: #93c5fd;
+    }
+    .sp3-badge-pill-emerald {
+        background: #d1fae5;
+        color: #047857;
+        font-size: 10.5px;
+        font-weight: 700;
+        border-radius: 20px;
+        padding: 3px 9px;
+    }
+    body:not(.light-theme) .sp3-badge-pill-emerald {
+        background: rgba(16, 185, 129, 0.2);
+        color: #6ee7b7;
+    }
+    .sp3-badge-required {
+        font-size: 9.5px;
+        font-weight: 800;
+        border-radius: 4px;
+        padding: 2px 6px;
+        letter-spacing: 0.5px;
+    }
+    .sp3-search-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        border-radius: 10px;
+        background: var(--bg-card);
+        border: 1.5px solid var(--border-color);
+        transition: all 0.2s;
+    }
+    .sp3-search-wrapper:focus-within {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    .sp3-search-icon {
+        position: absolute;
+        left: 12px;
+        font-size: 14px;
+        pointer-events: none;
+    }
+    .sp3-search-input {
+        width: 100%;
+        border: none;
+        outline: none;
+        background: transparent;
+        padding: 8px 36px 8px 34px;
+        font-size: 12px;
+        color: var(--text-main);
+        font-family: inherit;
+        font-weight: 500;
+    }
+    .sp3-search-input::placeholder {
+        color: var(--text-muted);
+        font-weight: 400;
+    }
+    .sp3-members-wrapper {
+        background: #f8fafc;
+        border: 1.5px dashed #cbd5e1;
+        border-radius: 10px;
+        padding: 8px;
+        min-height: 64px;
+        transition: all 0.2s;
+    }
+    body:not(.light-theme) .sp3-members-wrapper {
+        background: rgba(15, 23, 42, 0.4);
+        border-color: rgba(255, 255, 255, 0.12);
+    }
+    .sp3-member-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s;
+    }
+    .sp3-member-card:hover {
+        border-color: rgba(59, 130, 246, 0.35);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+    }
+    .sp3-member-card.approver-card:hover {
+        border-color: rgba(16, 185, 129, 0.35);
+    }
+    .sp3-avatar-circle {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 11.5px;
+        color: #ffffff;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.12);
+    }
+    .sp3-avatar-circle.sp3-avatar-sm {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        font-size: 10.5px;
+    }
+    .sp3-avatar-blue {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    }
+    .sp3-avatar-emerald {
+        background: linear-gradient(135deg, #10b981, #047857);
+    }
+    .sp3-member-name {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--text-main);
+        line-height: 1.25;
+        margin-bottom: 2px;
+    }
+    .sp3-member-sub {
+        font-size: 11px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+    .sp3-nik-pill {
+        font-size: 10.5px;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: rgba(100, 116, 139, 0.12);
         color: var(--text-main);
     }
-    .rci-member-chip.approver-chip {
-        background: rgba(16, 185, 129, 0.15);
-        border: 1px solid rgba(16, 185, 129, 0.35);
-    }
-    .rci-member-chip .btn-remove-chip {
+    .sp3-btn-remove {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: none;
+        background: transparent;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         cursor: pointer;
-        color: #f43f5e;
-        font-size: 14px;
-        margin-left: 2px;
-        transition: transform 0.15s;
+        transition: all 0.15s;
+        font-size: 12px;
     }
-    .rci-member-chip .btn-remove-chip:hover {
-        transform: scale(1.25);
+    .sp3-btn-remove:hover {
+        background: #fee2e2;
+        color: #dc2626;
+        transform: scale(1.15);
+    }
+    .sp3-empty-state {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 8px;
+    }
+    .sp3-empty-state.warning {
+        background: rgba(239, 68, 68, 0.05);
+        border: 1px dashed rgba(239, 68, 68, 0.35);
+    }
+    .sp3-empty-state.info {
+        background: rgba(59, 130, 246, 0.05);
+        border: 1px dashed rgba(59, 130, 246, 0.25);
+    }
+    .sp3-empty-title {
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    .sp3-empty-desc {
+        font-size: 11px;
+        color: var(--text-muted);
+        line-height: 1.3;
     }
     .suggestions-dropdown {
         background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        max-height: 220px;
+        border: 1.5px solid var(--border-color);
+        border-radius: 10px;
+        max-height: 250px;
         overflow-y: auto;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+        margin-top: 4px;
     }
     .suggestion-emp-item {
-        padding: 8px 12px;
+        padding: 9px 12px;
         cursor: pointer;
         border-bottom: 1px solid var(--border-color);
-        transition: background 0.15s;
+        transition: all 0.15s;
+    }
+    .suggestion-emp-item:last-child {
+        border-bottom: none;
     }
     .suggestion-emp-item:hover {
-        background: rgba(59, 130, 246, 0.12);
+        background: rgba(59, 130, 246, 0.08);
     }
     .sp3-sig-box {
         border: 1.5px solid var(--border-color);
@@ -2372,7 +2620,16 @@
         }
     }
 
-    // Autocomplete & Chips for Creators and Approvers
+    // Helper Initials Avatar
+    function getInitials(name) {
+        if (!name) return '??';
+        const parts = name.trim().split(/\s+/).filter(Boolean);
+        if (parts.length === 0) return '??';
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
+    // Autocomplete & Executive Identity Cards for Creators and Approvers
     function initMemberAutocomplete() {
         $('#creatorSearchInput').on('input', function() {
             clearTimeout(creatorDebounceTimer);
@@ -2388,17 +2645,27 @@
                     $('#creatorSearchSpinner').addClass('d-none');
                     suggestions.empty();
                     if (!data || data.length === 0) {
-                        suggestions.html('<div class="p-2 text-muted text-center" style="font-size:12px;">Karyawan tidak ditemukan</div>');
+                        suggestions.html('<div class="p-3 text-muted text-center" style="font-size:12px;"><i class="bi bi-search me-1"></i>Karyawan tidak ditemukan</div>');
                     } else {
                         data.forEach(emp => {
+                            const initials = getInitials(emp.nama);
                             const el = $(`
-                                <div class="suggestion-emp-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="bi bi-person me-1 text-primary"></i>
-                                        <strong>${escapeHtml(emp.nama)}</strong> <span class="text-muted" style="font-size:11px;">(${escapeHtml(emp.nik)})</span>
-                                        <div class="text-muted" style="font-size:10.5px;">${escapeHtml(emp.jabatan)} | ${escapeHtml(emp.perusahaan)}</div>
+                                <div class="suggestion-emp-item d-flex justify-content-between align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                        <div class="sp3-avatar-circle sp3-avatar-sm sp3-avatar-blue flex-shrink-0">
+                                            ${initials}
+                                        </div>
+                                        <div class="text-truncate">
+                                            <div class="sp3-member-name text-truncate" style="font-size:12px;">${escapeHtml(emp.nama)}</div>
+                                            <div class="sp3-member-sub text-truncate" style="font-size:10.5px;">
+                                                <span class="sp3-nik-pill" style="font-size:9.5px;">${escapeHtml(emp.nik)}</span>
+                                                <span class="text-truncate">${escapeHtml(emp.jabatan)} &bull; <strong>${escapeHtml(emp.perusahaan)}</strong></span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:11px;">+ Pilih</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2 flex-shrink-0" style="font-size:11px; height:24px;">
+                                        <i class="bi bi-plus me-1"></i>Pilih
+                                    </button>
                                 </div>
                             `);
                             el.on('click', () => addCreator(emp));
@@ -2424,17 +2691,27 @@
                     $('#approverSearchSpinner').addClass('d-none');
                     suggestions.empty();
                     if (!data || data.length === 0) {
-                        suggestions.html('<div class="p-2 text-muted text-center" style="font-size:12px;">Karyawan tidak ditemukan</div>');
+                        suggestions.html('<div class="p-3 text-muted text-center" style="font-size:12px;"><i class="bi bi-search me-1"></i>Karyawan tidak ditemukan</div>');
                     } else {
                         data.forEach(emp => {
+                            const initials = getInitials(emp.nama);
                             const el = $(`
-                                <div class="suggestion-emp-item d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="bi bi-shield-check me-1 text-success"></i>
-                                        <strong>${escapeHtml(emp.nama)}</strong> <span class="text-muted" style="font-size:11px;">(${escapeHtml(emp.nik)})</span>
-                                        <div class="text-muted" style="font-size:10.5px;">${escapeHtml(emp.jabatan)} | ${escapeHtml(emp.perusahaan)}</div>
+                                <div class="suggestion-emp-item d-flex justify-content-between align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                        <div class="sp3-avatar-circle sp3-avatar-sm sp3-avatar-emerald flex-shrink-0">
+                                            ${initials}
+                                        </div>
+                                        <div class="text-truncate">
+                                            <div class="sp3-member-name text-truncate" style="font-size:12px;">${escapeHtml(emp.nama)}</div>
+                                            <div class="sp3-member-sub text-truncate" style="font-size:10.5px;">
+                                                <span class="sp3-nik-pill" style="font-size:9.5px;">${escapeHtml(emp.nik)}</span>
+                                                <span class="text-truncate">${escapeHtml(emp.jabatan)} &bull; <strong>${escapeHtml(emp.perusahaan)}</strong></span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-outline-success py-0 px-2" style="font-size:11px;">+ Pilih Penyetuju</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill py-0 px-2 flex-shrink-0" style="font-size:11px; height:24px;">
+                                        <i class="bi bi-shield-plus me-1"></i>Pilih Penyetuju
+                                    </button>
                                 </div>
                             `);
                             el.on('click', () => addApprover(emp));
@@ -2461,20 +2738,50 @@
         const c = $('#selectedCreatorsContainer');
         c.empty();
         if (selectedCreators.length === 0) {
-            c.html('<span class="text-muted" style="font-size:11.5px;">Belum ada tim pembuat dipilih.</span>');
+            c.html(`
+                <div class="sp3-empty-state info text-primary">
+                    <i class="bi bi-info-circle fs-5 flex-shrink-0"></i>
+                    <div>
+                        <div class="sp3-empty-title">Belum ada tim pembuat dipilih</div>
+                        <div class="sp3-empty-desc">Cari dan tambahkan rekan inspeksi dari kotak pencarian di atas.</div>
+                    </div>
+                </div>
+            `);
             return;
         }
         selectedCreators.forEach(item => {
             const isMe = item.nik === '@userNik' || item.isPrimary;
-            const chip = $(`
-                <div class="rci-member-chip animate-fade-in">
-                    <i class="bi bi-person-fill text-primary"></i>
-                    <span><strong>${escapeHtml(item.nama)}</strong> (${escapeHtml(item.nik)}) - <span class="text-muted">${escapeHtml(item.jabatan || item.perusahaan || '-')}</span></span>
-                    ${isMe ? '<span class="badge bg-primary ms-1" style="font-size:9px;">Utama (Anda)</span>' : `<i class="bi bi-x-circle-fill btn-remove-chip" title="Hapus" onclick="removeCreator('${escapeHtml(item.nik)}')"></i>`}
-                    <input type="hidden" name="creatorNiks" value="${escapeHtml(item.nik)}" />
+            const initials = getInitials(item.nama);
+            const card = $(`
+                <div class="sp3-member-card animate-fade-in">
+                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                        <div class="sp3-avatar-circle sp3-avatar-blue flex-shrink-0">
+                            ${initials}
+                        </div>
+                        <div class="text-truncate">
+                            <div class="sp3-member-name text-truncate">${escapeHtml(item.nama)}</div>
+                            <div class="sp3-member-sub text-truncate">
+                                <span class="sp3-nik-pill">${escapeHtml(item.nik)}</span>
+                                <span class="text-truncate">${escapeHtml(item.jabatan || item.perusahaan || '-')}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        ${isMe ? `
+                            <span class="badge sp3-badge-pill-blue d-inline-flex align-items-center gap-1">
+                                <i class="bi bi-star-fill text-warning" style="font-size:9px;"></i> Utama (Anda)
+                            </span>
+                        ` : `
+                            <span class="badge bg-light text-secondary border" style="font-size:10px;">Rekan Sidak</span>
+                            <button type="button" class="sp3-btn-remove" title="Hapus Anggota" onclick="removeCreator('${escapeHtml(item.nik)}')">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        `}
+                        <input type="hidden" name="creatorNiks" value="${escapeHtml(item.nik)}" />
+                    </div>
                 </div>
             `);
-            c.append(chip);
+            c.append(card);
         });
     }
 
@@ -2482,20 +2789,45 @@
         const c = $('#selectedApproversContainer');
         c.empty();
         if (selectedApprovers.length === 0) {
-            c.html('<span class="text-danger fw-bold" style="font-size:11.5px;"><i class="bi bi-exclamation-circle me-1"></i>Belum ada penyetuju dipilih (* Wajib minimal 1 orang penyetuju).</span>');
+            c.html(`
+                <div class="sp3-empty-state warning text-danger">
+                    <i class="bi bi-shield-exclamation fs-5 text-danger flex-shrink-0"></i>
+                    <div>
+                        <div class="sp3-empty-title text-danger">Penyetuju Belum Dipilih (* Wajib)</div>
+                        <div class="sp3-empty-desc">Pilih minimal 1 orang atasan / perwakilan penyetuju SP3 di kolom pencarian di atas.</div>
+                    </div>
+                </div>
+            `);
             return;
         }
         selectedApprovers.forEach(item => {
-            const chip = $(`
-                <div class="rci-member-chip approver-chip animate-fade-in">
-                    <i class="bi bi-shield-check text-success"></i>
-                    <span><strong>${escapeHtml(item.nama)}</strong> (${escapeHtml(item.nik)}) - <span class="text-muted">${escapeHtml(item.jabatan || item.perusahaan || '-')}</span></span>
-                    <span class="badge bg-warning text-dark ms-1" style="font-size:9px;">Pending</span>
-                    <i class="bi bi-x-circle-fill btn-remove-chip" title="Hapus" onclick="removeApprover('${escapeHtml(item.nik)}')"></i>
-                    <input type="hidden" name="approverNiks" value="${escapeHtml(item.nik)}" />
+            const initials = getInitials(item.nama);
+            const card = $(`
+                <div class="sp3-member-card approver-card animate-fade-in">
+                    <div class="d-flex align-items-center gap-2 overflow-hidden">
+                        <div class="sp3-avatar-circle sp3-avatar-emerald flex-shrink-0">
+                            ${initials}
+                        </div>
+                        <div class="text-truncate">
+                            <div class="sp3-member-name text-truncate">${escapeHtml(item.nama)}</div>
+                            <div class="sp3-member-sub text-truncate">
+                                <span class="sp3-nik-pill">${escapeHtml(item.nik)}</span>
+                                <span class="text-truncate">${escapeHtml(item.jabatan || item.perusahaan || '-')}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <span class="badge bg-warning text-dark border border-warning-subtle fw-semibold" style="font-size:10px; border-radius:12px; padding: 4px 8px;">
+                            <i class="bi bi-hourglass-split me-1"></i>Pending
+                        </span>
+                        <button type="button" class="sp3-btn-remove" title="Hapus Penyetuju" onclick="removeApprover('${escapeHtml(item.nik)}')">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                        <input type="hidden" name="approverNiks" value="${escapeHtml(item.nik)}" />
+                    </div>
                 </div>
             `);
-            c.append(chip);
+            c.append(card);
         });
     }
 
