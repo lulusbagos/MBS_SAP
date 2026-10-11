@@ -782,7 +782,7 @@
                 <div class="kpi-body">
                     <div>
                         <span class="kpi-num text-white" id="rciAvgScore">--</span>
-                        <span style="font-size: 12px; color: var(--muted); font-weight: 700;"> / 100</span>
+                        <span style="font-size: 12px; color: var(--muted); font-weight: 700;"> / 4.00</span>
                     </div>
                     <div class="text-end">
                         <div class="fw-bold" style="font-size: 13px; color: #38bdf8;" id="rciTotalCount">-- LAPORAN</div>
@@ -1032,8 +1032,12 @@
             <button type="button" class="tech-modal-close" onclick="closeLightbox()" title="Tutup">
                 <i class="bi bi-x-lg"></i>
             </button>
-            <div class="tech-modal-img-wrap">
-                <img id="modalImg" src="" alt="Bukti Foto" class="tech-modal-img" onerror="this.src='/img/placeholder-photo.png'" />
+            <div class="tech-modal-img-wrap" id="modalImgWrap">
+                <img id="modalImg" src="" alt="Bukti Foto" class="tech-modal-img" onerror="handleModalImgError()" />
+                <div id="modalFallbackPlaceholder" style="display:none; text-align:center; padding: 40px;">
+                    <i class="bi bi-image text-muted" style="font-size: 64px;"></i>
+                    <div class="text-muted mt-2 fw-bold" style="font-size: 14px;">FOTO TIDAK TERSEDIA</div>
+                </div>
             </div>
             <div class="tech-modal-body">
                 <div>
@@ -1085,6 +1089,12 @@
     let progressTimer = null;
     let slideProgress = 0;
 
+    function resetSlideProgressBar() {
+        slideTimeRemaining = typeof SLIDE_DURATION_SECONDS !== 'undefined' ? SLIDE_DURATION_SECONDS : 300;
+        const progressEl = document.getElementById('topProgressBar');
+        if (progressEl) progressEl.style.width = '0%';
+    }
+
     /* ──────────────────────────────────────────────────────────────────────────
        2. LIVE DIGITAL CLOCK
        ────────────────────────────────────────────────────────────────────────── */
@@ -1132,10 +1142,10 @@
 
         // RCI
         if (d.rci) {
-            document.getElementById('rciAvgScore').textContent = Number(d.rci.avgScore || 0).toFixed(1);
+            document.getElementById('rciAvgScore').textContent = Number(d.rci.avgScore || 0).toFixed(2);
             document.getElementById('rciTotalCount').textContent = `${d.rci.total || 0} LAPORAN`;
             document.getElementById('rciTodayCount').textContent = `${d.rci.today || 0} hari ini`;
-            document.getElementById('rciScoreBadge').textContent = d.rci.avgScore >= 85 ? 'KONDISI BAIK' : (d.rci.avgScore >= 70 ? 'SEDANG' : 'PERHATIAN');
+            document.getElementById('rciScoreBadge').textContent = d.rci.avgScore >= 3.5 ? 'KONDISI BAIK' : (d.rci.avgScore >= 3.0 ? 'SEDANG' : 'PERHATIAN');
             document.getElementById('rciBaikCount').textContent = d.rci.baik || 0;
             document.getElementById('rciSedangCount').textContent = d.rci.sedang || 0;
             document.getElementById('rciKurangCount').textContent = d.rci.kurang || 0;
@@ -1283,8 +1293,13 @@
     }
 
     function handleHeroImgError() {
-        document.getElementById('heroImg').style.display = 'none';
-        document.getElementById('heroFallbackPlaceholder').style.display = 'block';
+        const imgEl = document.getElementById('heroImg');
+        if (imgEl) {
+            imgEl.onerror = null;
+            imgEl.style.display = 'none';
+        }
+        const fallback = document.getElementById('heroFallbackPlaceholder');
+        if (fallback) fallback.style.display = 'block';
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
@@ -1306,14 +1321,14 @@
             colorGrad = 'linear-gradient(90deg, #0284c7, #38bdf8)';
             const p = d.rci?.paramAvg || {};
             params = [
-                { name: 'Lebar Jalan', val: p.lebar || 100 },
-                { name: 'Grade Jalan', val: p.grade || 100 },
-                { name: 'Permukaan', val: p.permukaan || 100 },
-                { name: 'Safety Berm', val: p.berm || 100 },
-                { name: 'Drainase Parit', val: p.drainase || 100 },
-                { name: 'Superelevasi', val: p.superelevasi || 100 },
-                { name: 'Bebas Spillage', val: p.spillage || 100 },
-                { name: 'Rambu & Debu', val: p.rambu || 100 }
+                { name: 'Surfacing & Mat. (20%)', val: p.surfacing ?? 4.0, max: 4.0, suffix: ' / 4.0' },
+                { name: 'Undulation (35%)', val: p.undulation ?? 4.0, max: 4.0, suffix: ' / 4.0' },
+                { name: 'Spoil / Lebar 18m (5%)', val: p.spoil ?? 4.0, max: 4.0, suffix: ' / 4.0' },
+                { name: 'Safety Berm ¾ (10%)', val: p.berm ?? 4.0, max: 4.0, suffix: ' / 4.0' },
+                { name: 'Road Attachment (5%)', val: p.roadAttachment ?? 4.0, max: 4.0, suffix: ' / 4.0' },
+                { name: 'Dust Control (5%)', val: p.dust ?? 4.0, max: 4.0, suffix: ' / 4.0' },
+                { name: 'Crossfall 0.5-1% (10%)', val: p.crossfall ?? 4.0, max: 4.0, suffix: ' / 4.0' },
+                { name: 'Drainage Parit (10%)', val: p.drainage ?? 4.0, max: 4.0, suffix: ' / 4.0' }
             ];
         } else if (currentMode === 'fci' || (currentMode === 'all' && heroSlides[currentHeroIndex]?.type === 'FCI')) {
             titleEl.innerHTML = `<i class="bi bi-truck-front-fill text-warning"></i> 8 PARAMETER FRONT CONDITION INDEX`;
@@ -1342,6 +1357,9 @@
                 { name: 'Grade Dumping', val: p.grade || 100 },
                 { name: 'Drainase Dump', val: p.drainase || 100 },
                 { name: 'Penataan Spillage', val: p.spillage || 100 },
+                { name: 'Penerangan & Rambu', val: p.rambu || 100 },
+                { name: 'Spotter & Manuver', val: p.spotter || 100 }
+            ];
         } else if (d.spi && (currentMode === 'spi' || (currentMode === 'all' && heroSlides[currentHeroIndex]?.type === 'SPI'))) {
             titleEl.innerHTML = `<i class="bi bi-droplet-half text-success"></i> 8 PARAMETER SEDIMENT POND INDEX (SPI)`;
             catEl.textContent = `RATA-RATA EVALUASI KONDISI KOLAM SEDIMEN & LINGKUNGAN`;
@@ -1416,10 +1434,10 @@
         }
 
         container.innerHTML = items.map((item, index) => {
-            const hasPhoto = Boolean(item.fotoUrl);
+            const typeIcon = item.type === 'RCI' ? 'bi-cone-striped text-info' : (item.type === 'FCI' ? 'bi-truck-front-fill text-warning' : (item.type === 'DCI' ? 'bi-layers-fill text-warning' : (item.type === 'SPI' ? 'bi-droplet-half text-success' : 'bi-shield-check text-info')));
             const thumbHtml = hasPhoto
-                ? `<img src="${item.fotoUrl}" class="feed-thumb-img" alt="Foto" onerror="this.src='/img/placeholder-photo.png'" />`
-                : `<i class="bi ${item.type === 'RCI' ? 'bi-cone-striped text-info' : (item.type === 'FCI' ? 'bi-truck-front-fill text-warning' : (item.type === 'DCI' ? 'bi-layers-fill text-warning' : (item.type === 'SPI' ? 'bi-droplet-half text-success' : 'bi-shield-check text-info')))} feed-thumb-placeholder"></i>`;
+                ? `<img src="${item.fotoUrl}" class="feed-thumb-img" alt="Foto" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\\'bi ${typeIcon} feed-thumb-placeholder\\\'></i>';" />`
+                : `<i class="bi ${typeIcon} feed-thumb-placeholder"></i>`;
 
             const pillBg = item.type === 'RCI' ? 'rgba(14, 165, 233, 0.2); color:#38bdf8;' : (item.type === 'FCI' ? 'rgba(217, 119, 6, 0.2); color:#fbbf24;' : (item.type === 'DCI' ? 'rgba(249, 115, 22, 0.2); color:#fb923c;' : (item.type === 'SPI' ? 'rgba(16, 185, 129, 0.2); color:#10b981;' : 'rgba(2, 132, 199, 0.2); color:#38bdf8;')));
 
@@ -1617,9 +1635,31 @@
         if (item) openModalWithItem(item);
     }
 
+    function handleModalImgError() {
+        const img = document.getElementById('modalImg');
+        if (img) {
+            img.onerror = null;
+            img.style.display = 'none';
+        }
+        const fb = document.getElementById('modalFallbackPlaceholder');
+        if (fb) fb.style.display = 'block';
+    }
+
     function openModalWithItem(item) {
         const modal = document.getElementById('techModal');
-        document.getElementById('modalImg').src = item.fotoUrl || '/img/placeholder-photo.png';
+        const modalImg = document.getElementById('modalImg');
+        const modalFb = document.getElementById('modalFallbackPlaceholder');
+        if (modalImg) {
+            if (item.fotoUrl) {
+                modalImg.src = item.fotoUrl;
+                modalImg.style.display = 'block';
+                if (modalFb) modalFb.style.display = 'none';
+            } else {
+                modalImg.src = '';
+                modalImg.style.display = 'none';
+                if (modalFb) modalFb.style.display = 'block';
+            }
+        }
         
         const typeBadge = document.getElementById('modalTypeBadge');
         typeBadge.textContent = `${item.type} - ${item.typeLabel || ''}`;

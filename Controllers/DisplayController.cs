@@ -66,21 +66,25 @@ namespace MBS_SAP.Controllers
                 int totalRci = allRciList.Count;
                 int todayRci = allRciList.Count(r => r.Tanggal >= today || r.CreatedAt >= today);
                 int mtdRci = allRciList.Count(r => r.Tanggal >= startOfMonth);
-                double avgScoreRci = allRciList.Any() ? Math.Round(allRciList.Average(r => r.TotalScore), 1) : 100.0;
+                double avgScoreRci = allRciList.Any() ? Math.Round(allRciList.Average(r => r.ActualRoadScore), 2) : 4.0;
                 int rciBaik = allRciList.Count(r => r.KategoriIndex == "Baik");
                 int rciSedang = allRciList.Count(r => r.KategoriIndex == "Sedang");
                 int rciKurang = allRciList.Count(r => r.KategoriIndex == "Kurang");
                 
                 var rciParamAvg = new
                 {
-                    lebar = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorLebarJalan), 1) : 100.0,
-                    grade = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorGradeJalan), 1) : 100.0,
-                    permukaan = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorPermukaanJalan), 1) : 100.0,
-                    berm = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorSafetyBerm), 1) : 100.0,
-                    drainase = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorDrainaseParit), 1) : 100.0,
-                    superelevasi = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorSuperelevasiTikungan), 1) : 100.0,
-                    spillage = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorBebasSpillage), 1) : 100.0,
-                    rambu = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorRambuDebu), 1) : 100.0
+                    surfacing = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorSurfacing), 1) : 4.0,
+                    undulation = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorUndulation), 1) : 4.0,
+                    spoil = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorSpoil), 1) : 4.0,
+                    berm = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorSafetyBerm), 1) : 4.0,
+                    roadAttachment = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorRoadAttachment), 1) : 4.0,
+                    dust = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorDust), 1) : 4.0,
+                    crossfall = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorCrossfall), 1) : 4.0,
+                    drainage = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorDrainage), 1) : 4.0,
+                    lebar = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorSpoil), 1) : 4.0,
+                    grade = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorCrossfall), 1) : 4.0,
+                    permukaan = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorSurfacing), 1) : 4.0,
+                    drainase = allRciList.Any() ? Math.Round(allRciList.Average(r => r.SkorDrainage), 1) : 4.0
                 };
 
                 var topRoads = allRciList.Where(r => !string.IsNullOrEmpty(r.NamaJalan))
@@ -247,8 +251,8 @@ namespace MBS_SAP.Controllers
                         surveyorNama = r.Nama,
                         surveyorNik = r.Nik,
                         surveyorPerusahaan = r.Perusahaan ?? "PT Indexim Coalindo",
-                        score = r.TotalScore,
-                        scoreDisplay = $"{r.TotalScore:F1}/100",
+                        score = r.ActualRoadScore,
+                        scoreDisplay = $"{r.ActualRoadScore:F2}/4.00 ({r.Achievement:F1}%)",
                         kategori = r.KategoriIndex,
                         statusBadge = r.KategoriIndex == "Baik" ? "Kondisi Baik" : (r.KategoriIndex == "Sedang" ? "Perlu Perhatian" : "Kondisi Kurang"),
                         statusColor = r.KategoriIndex == "Baik" ? "#34d399" : (r.KategoriIndex == "Sedang" ? "#fbbf24" : "#f87171"),
@@ -444,7 +448,7 @@ namespace MBS_SAP.Controllers
                     .ToList();
 
                 // 8. MARQUEE TICKER
-                var marquee = $"📢 RCI, FCI, DCI, SPI & BBS REAL-TIME RADAR • TOTAL AKTIVITAS: {totalActivities} LAPORAN ({todayActivities} HARI INI) • RCI RATA-RATA: {avgScoreRci}/100 • FCI RATA-RATA: {avgScoreFci}/100 • DCI RATA-RATA: {avgScoreDci}/100 • SPI RATA-RATA: {avgScoreSpi}/100 • BBS SAFE BEHAVIOR: {safeIndexPct}% ({safeCount} AMAN, {atRiskCount} AT-RISK) • BUKTI FOTO LAPANGAN: {totalPhotos} DOKUMENTASI TERVERIFIKASI • TETAP UTAMAKAN KESELAMATAN & LINGKUNGAN KERJA (SAFETY & ENVIRONMENT FIRST)";
+                var marquee = $"📢 RCI, FCI, DCI, SPI & BBS REAL-TIME RADAR • TOTAL AKTIVITAS: {totalActivities} LAPORAN ({todayActivities} HARI INI) • RCI RATA-RATA: {avgScoreRci:F2}/4.00 • FCI RATA-RATA: {avgScoreFci}/100 • DCI RATA-RATA: {avgScoreDci}/100 • SPI RATA-RATA: {avgScoreSpi}/100 • BBS SAFE BEHAVIOR: {safeIndexPct}% ({safeCount} AMAN, {atRiskCount} AT-RISK) • BUKTI FOTO LAPANGAN: {totalPhotos} DOKUMENTASI TERVERIFIKASI • TETAP UTAMAKAN KESELAMATAN & LINGKUNGAN KERJA (SAFETY & ENVIRONMENT FIRST)";
 
                 return Ok(new
                 {
