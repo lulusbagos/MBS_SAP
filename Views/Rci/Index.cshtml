@@ -219,14 +219,14 @@
                             </div>
                         </div>
 
-                        <!-- Area Utama (Searchable Ala P5M) -->
+                        <!-- Area Utama (Searchable Ala Form Observasi & Hazard) -->
                         <div class="row g-2 mb-2">
                             <div class="col-md-6 form-group-sap">
                                 <label class="form-label-sap" for="areaSearch">Area Utama</label>
-                                <div class="position-relative">
+                                <div class="position-relative mb-0">
                                     <div class="input-sap-wrapper mb-0">
                                         <i class="bi bi-geo-alt-fill input-sap-icon"></i>
-                                        <input type="text" id="areaSearch" class="input-sap text-uppercase" placeholder="Ketik atau pilih Area Utama..." autocomplete="off" style="padding-right: 36px;" required />
+                                        <input type="text" id="areaSearch" class="input-sap text-uppercase" placeholder="Ketik untuk mencari area..." autocomplete="off" style="padding-right: 36px;" />
                                         <i class="bi bi-chevron-down position-absolute" style="right: 12px; top: 14px; color: var(--text-muted); cursor: pointer;" id="toggleAreaDropdown"></i>
                                     </div>
                                     <input type="hidden" id="area" name="area" value="" required />
@@ -918,7 +918,7 @@
                                     <span style="color: #60a5fa; font-size: 11px; text-transform: uppercase; font-weight: 700;">
                                         <i class="bi bi-lightbulb-fill me-1 text-warning"></i> Rekomendasi Tindakan Otomatis:
                                     </span>
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 10px; border-radius: 6px;" onclick="applyAutoRecommendationRci()">
+                                    <button type="button" id="btnSalinKeForm" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 10px; border-radius: 6px; transition: all 0.2s;" onclick="applyAutoRecommendationRci()">
                                         Salin ke Form
                                     </button>
                                 </div>
@@ -1469,6 +1469,7 @@
 <script>
     let currentRciSummaryData = {};
 
+    // 26 Area Utama Standar SAP (Persis Form Observasi & Hazard)
     var globalAreasList = [
         { id: 1, namaArea: "Port/Jetty - Indexim" },
         { id: 2, namaArea: "CPP-33 & ROM - Indexim" },
@@ -1497,16 +1498,6 @@
         { id: 25, namaArea: "Road Coal Hauling (Jl. Nusantara)" },
         { id: 26, namaArea: "Other Area" }
     ];
-
-    @if (areaList != null && areaList.Any())
-    {
-        <text>
-        var serverAreas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(areaList));
-        if (serverAreas && serverAreas.length > 0) {
-            globalAreasList = serverAreas.map((a, i) => ({ id: i + 1, namaArea: a }));
-        }
-        </text>
-    }
 
     // 8 Parameter Standar & Bobot Aktual SP3 Excel
     const rciParamsMetadata = [
@@ -1546,51 +1537,85 @@
         calculateRciScore();
     });
 
-    // Area Dropdown Functionality
+    // Area Dropdown Functionality (Persis Form Observasi & Hazard)
     function initAreaDropdown() {
         const input = $('#areaSearch');
         const menu = $('#areaDropdownMenu');
-        const hidden = $('#area');
 
-        function renderList(filter = '') {
-            menu.empty();
-            const filtered = globalAreasList.filter(a => a.namaArea.toLowerCase().includes(filter.toLowerCase()));
-            if (filtered.length === 0) {
-                menu.append('<div class="p-2 text-muted text-center" style="font-size:12px;">Tidak ditemukan</div>');
+        // Toggle area dropdown on chevron click
+        $('#toggleAreaDropdown').on('click', function(e) {
+            e.stopPropagation();
+            if (menu.is(':visible')) {
+                menu.hide();
             } else {
-                filtered.forEach(a => {
-                    const item = $(`<div class="p-2 border-bottom border-secondary border-opacity-10 area-item" style="cursor:pointer; font-size:12px; color:var(--text-main);">${a.namaArea}</div>`);
-                    item.hover(
-                        function() { $(this).css('background', 'rgba(59, 130, 246, 0.15)'); },
-                        function() { $(this).css('background', 'transparent'); }
-                    );
-                    item.on('click', function() {
-                        input.val(a.namaArea);
-                        hidden.val(a.namaArea);
-                        menu.hide();
-                        onAreaSelected(a.namaArea);
-                    });
-                    menu.append(item);
-                });
+                renderAreaDropdown(input.val());
+                menu.show();
             }
-        }
+        });
 
-        input.on('focus input', function() {
-            renderList($(this).val());
+        // Filter dropdown on keyup / input
+        input.on('input keyup', function() {
+            renderAreaDropdown($(this).val());
             menu.show();
         });
 
-        $('#toggleAreaDropdown').on('click', function(e) {
-            e.stopPropagation();
-            if (menu.is(':visible')) menu.hide();
-            else { renderList(input.val()); menu.show(); }
+        // Open dropdown on focus or click
+        input.on('focus click', function() {
+            renderAreaDropdown($(this).val());
+            menu.show();
         });
 
+        // Close dropdown when clicking outside
         $(document).on('click', function(e) {
             if (!$(e.target).closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown').length) {
-                menu.hide();
+                $('#areaDropdownMenu').hide();
+            }
+            if (!$(e.target).closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown').length) {
+                $('#benchmarkDropdownMenu').hide();
             }
         });
+    }
+
+    function renderAreaDropdown(filterText = '') {
+        const menu = $('#areaDropdownMenu');
+        menu.empty();
+        const clean = (filterText || '').trim().toLowerCase();
+        const filtered = globalAreasList.filter(a => a.namaArea.toLowerCase().includes(clean));
+
+        if (filtered.length > 0) {
+            filtered.forEach(item => {
+                const btn = $('<button type="button"></button>')
+                    .addClass('d-block w-100 text-start py-2 px-3 border-0 area-option-btn')
+                    .css({
+                        background: 'none',
+                        color: 'var(--text-main)',
+                        fontSize: '13px',
+                        borderBottom: '1px solid var(--border-color)',
+                        cursor: 'pointer'
+                    })
+                    .html('<i class="bi bi-geo-alt-fill me-2 text-primary"></i>' + item.namaArea)
+                    .on('mouseenter', function() { $(this).css('background', 'var(--bg-layout)'); })
+                    .on('mouseleave', function() { $(this).css('background', 'none'); })
+                    .on('click', function() {
+                        selectArea(item.namaArea);
+                    });
+                menu.append(btn);
+            });
+        } else if (clean.length > 0) {
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Area "' + filterText + '" tidak ditemukan</div>');
+        } else {
+            menu.append('<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada Area Utama.</div>');
+        }
+
+        if (menu.children().length > 0) menu.show(); else menu.hide();
+    }
+
+    function selectArea(namaArea) {
+        $('#areaSearch').val(namaArea);
+        $('#area').val(namaArea);
+        $('#areaDropdownMenu').hide();
+        $('#areaSearch').removeClass('is-invalid');
+        onAreaSelected(namaArea);
     }
 
     function onAreaSelected(areaName) {
@@ -1907,9 +1932,23 @@
         const rec = $('#autoRecText').text().trim();
         if (rec) {
             $('#tindakanPerbaikan').val(rec);
-            $('#clientAlertTitle').text('Rekomendasi Diterapkan');
-            $('#clientAlertMsg').text('Rekomendasi tindakan otomatis telah disalin ke formulir tindakan perbaikan.');
-            new bootstrap.Modal(document.getElementById('clientAlertModal')).show();
+            
+            // Visual feedback pada tombol "Salin ke Form" (tanpa popup modal yang mengganggu)
+            const btn = $('#btnSalinKeForm');
+            const originalHtml = btn.html();
+            btn.removeClass('btn-outline-primary').addClass('btn-success')
+               .html('<i class="bi bi-check2 me-1"></i> Tersalin!');
+            
+            // Highlight dan fokus textarea tindakan perbaikan
+            $('#tindakanPerbaikan').addClass('is-valid').focus();
+            
+            // Scroll halus ke formulir tindakan perbaikan
+            document.getElementById('tindakanPerbaikan')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            setTimeout(function() {
+                btn.removeClass('btn-success').addClass('btn-outline-primary').html(originalHtml);
+                $('#tindakanPerbaikan').removeClass('is-valid');
+            }, 2500);
         }
     }
 

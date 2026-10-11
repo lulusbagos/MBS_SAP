@@ -84,11 +84,18 @@ namespace MBS_SAP.Controllers
                 .ToListAsync();
 
             // Areas
-            ViewBag.AreaList = await _context.MasterAreas
-                .OrderBy(a => a.NamaArea)
-                .Select(a => a.NamaArea)
-                .Distinct()
-                .ToListAsync();
+            try
+            {
+                ViewBag.AreaList = await _context.MasterAreas
+                    .OrderBy(a => a.NamaArea)
+                    .Select(a => a.NamaArea)
+                    .Distinct()
+                    .ToListAsync();
+            }
+            catch
+            {
+                ViewBag.AreaList = new List<string>();
+            }
 
             ViewBag.StartDate = start.ToString("yyyy-MM-dd");
             ViewBag.EndDate = (endDate ?? DateTime.Today).ToString("yyyy-MM-dd");
