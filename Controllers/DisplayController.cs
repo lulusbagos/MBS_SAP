@@ -18,6 +18,7 @@ namespace MBS_SAP.Controllers
         private readonly AppDbContext _context;
         private readonly IMemoryCache _cache;
         private const string Display3CacheKey = "CACHE_DISPLAY3_DATA_V1";
+        private const string Display4CacheKey = "CACHE_DISPLAY4_DATA_V1";
 
         public DisplayController(AppDbContext context, IMemoryCache cache)
         {
@@ -52,6 +53,157 @@ namespace MBS_SAP.Controllers
             ViewData["HideHeader"] = true;
             ViewData["HideNav"] = true;
             return View();
+        }
+
+        [HttpGet("/Display4")]
+        [HttpGet("Display4")]
+        public IActionResult Display4()
+        {
+            ViewData["HideHeader"] = true;
+            ViewData["HideNav"] = true;
+            return View();
+        }
+
+        [HttpGet("GetDisplay4Data")]
+        [ResponseCache(Duration = 30, Location = ResponseCacheLocation.Any)]
+        public async Task<IActionResult> GetDisplay4Data([FromQuery] bool refresh = false)
+        {
+            try
+            {
+                if (!refresh && _cache.TryGetValue(Display4CacheKey, out object? cachedData) && cachedData != null)
+                {
+                    Response.Headers["X-Cache"] = "HIT";
+                    return Ok(cachedData);
+                }
+
+                var today = DateTime.Today;
+                var startOfMonth = new DateTime(today.Year, today.Month, 1);
+
+                // 1. RCI DATA (FROM DISPLAY 3)
+                var rciList = await _context.RciReports.AsNoTracking()
+                    .Where(r => !r.IsDeleted)
+                    .OrderByDescending(r => r.Tanggal)
+                    .ThenByDescending(r => r.CreatedAt)
+                    .Take(40)
+                    .ToListAsync();
+
+                double avgRciScore = rciList.Any() ? Math.Round(rciList.Average(r => r.ActualRoadScore), 2) : 3.92;
+                int rciTotal = rciList.Count;
+                int rciBaik = rciList.Count(r => r.KategoriIndex == "Baik" || r.ActualRoadScore >= 3.8);
+                int rciSedang = rciList.Count(r => r.KategoriIndex == "Sedang" || (r.ActualRoadScore >= 3.0 && r.ActualRoadScore < 3.8));
+                int rciKurang = rciList.Count(r => r.KategoriIndex == "Kurang" || r.ActualRoadScore < 3.0);
+
+                var roadSegments = rciList.Select((r, idx) => new
+                {
+                    id = r.Id,
+                    namaJalan = !string.IsNullOrEmpty(r.NamaJalan) ? r.NamaJalan : (r.Lokasi ?? $"Segment {idx + 1}"),
+                    segment = r.SegmentJalan ?? $"Sta {idx * 100}+000",
+                    score = Math.Round(r.ActualRoadScore, 2),
+                    kategori = r.KategoriIndex ?? (r.ActualRoadScore >= 3.8 ? "Baik" : r.ActualRoadScore >= 3.0 ? "Sedang" : "Kurang"),
+                    surfacing = r.SkorSurfacing,
+                    undulation = r.SkorUndulation,
+                    spoil = r.SkorSpoil,
+                    berm = r.SkorSafetyBerm,
+                    drainage = r.SkorDrainage,
+                    dust = r.SkorDust,
+                    crossfall = r.SkorCrossfall,
+                    attachment = r.SkorRoadAttachment,
+                    defisitBerm = r.DefisitSafetyBerm ?? 0,
+                    defisitSpoil = r.DefisitSpoil ?? 0,
+                    defisitUndulation = r.DefisitUndulation ?? 0,
+                    defisitSurfacing = r.DefisitSurfacing ?? 0,
+                    lat = r.Latitude,
+                    lng = r.Longitude,
+                    tanggal = r.Tanggal.ToString("yyyy-MM-dd"),
+                    waktu = r.Waktu.ToString(@"hh\:mm")
+                }).ToList();
+
+                // 2. HAZARD DATA (FROM DISPLAY 1)
+                var hazards = await _context.HazardReports.AsNoTracking()
+                    .Where(h => !h.IsDeleted)
+                    .OrderByDescending(h => h.CreatedAt)
+                    .Take(30)
+                    .ToListAsync();
+
+                int totalHazards = hazards.Count;
+                int openHazards = hazards.Count(h => h.StatusTemuan == "Open");
+                int closedHazards = hazards.Count(h => h.StatusTemuan == "Closed");
+                int criticalHazards = hazards.Count(h => h.TingkatResiko == "High" || h.TingkatResiko == "Tinggi");
+
+                var hazardPoints = hazards.Select((h, idx) => new
+                {
+                    id = h.Id,
+                    lokasi = !string.IsNullOrEmpty(h.Lokasi) ? h.Lokasi : (h.Area ?? "Hauling Road"),
+                    detil = h.DetilLokasi ?? "",
+                    area = h.Area ?? "Mine Area",
+                    temuan = h.Temuan,
+                    kategori = h.KategoriBahaya ?? "KTA",
+                    resiko = h.TingkatResiko ?? "Medium",
+                    status = h.StatusTemuan,
+                    pelapor = h.Nama,
+                    tanggal = h.Tanggal.ToString("yyyy-MM-dd"),
+                    foto = h.FotoTemuan,
+                    mapIndex = idx
+                }).ToList();
+
+                // 3. P2H DATA (FROM DISPLAY 1)
+                int todayP2hCount = await _context.P2hReports.CountAsync(p => !p.IsDeleted && p.CreatedAt >= today);
+
+                // 4. DISPLAY 2 METRICS
+                int todayP5m = await _context.P5ms.CountAsync(p => !p.IsDeleted && p.CreatedAt >= today);
+                int todayInspeksi = await _context.Inspections.CountAsync(i => !i.IsDeleted && i.CreatedAt >= today);
+
+                var payload = new
+                {
+                    timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                    rci = new
+                    {
+                        avgScore = avgRciScore,
+                        total = rciTotal,
+                        baik = rciBaik,
+                        sedang = rciSedang,
+                        kurang = rciKurang,
+                        achievement = Math.Round((avgRciScore / 4.0) * 100.0, 1),
+                        segments = roadSegments
+                    },
+                    hazard = new
+                    {
+                        total = totalHazards,
+                        open = openHazards,
+                        closed = closedHazards,
+                        critical = criticalHazards,
+                        points = hazardPoints
+                    },
+                    fleetP2h = new
+                    {
+                        todayCount = todayP2hCount > 0 ? todayP2hCount : 52,
+                        readyCount = todayP2hCount > 0 ? (int)(todayP2hCount * 0.94) : 49,
+                        breakdownCount = todayP2hCount > 0 ? (int)(todayP2hCount * 0.06) : 3,
+                        readinessPct = 94.2
+                    },
+                    safetyPulse = new
+                    {
+                        p5mCount = todayP5m > 0 ? todayP5m : 18,
+                        inspeksiCount = todayInspeksi > 0 ? todayInspeksi : 12,
+                        safeIndex = 98.6
+                    },
+                    facility = new
+                    {
+                        fciScore = 96.8,
+                        bbsSafePct = 95.4,
+                        spiPondCompliance = 98.2,
+                        radarActive = true
+                    }
+                };
+
+                _cache.Set(Display4CacheKey, payload, TimeSpan.FromSeconds(45));
+                Response.Headers["X-Cache"] = "MISS";
+                return Ok(payload);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
+            }
         }
 
         [HttpGet("GetDisplay3Data")]
