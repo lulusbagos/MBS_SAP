@@ -151,9 +151,13 @@
         background: linear-gradient(135deg, #ea580c, #c2410c);
         box-shadow: 0 0 14px rgba(234, 88, 12, 0.6);
     }
+    .mode-btn.active.spi {
+        background: linear-gradient(135deg, #059669, #10b981);
+        box-shadow: 0 0 14px rgba(16, 185, 129, 0.6);
+    }
     .mode-btn.active.bbs {
-        background: linear-gradient(135deg, #059669, #047857);
-        box-shadow: 0 0 14px rgba(5, 150, 105, 0.6);
+        background: linear-gradient(135deg, #0284c7, #0369a1);
+        box-shadow: 0 0 14px rgba(2, 132, 199, 0.6);
     }
 
     /* Header Right: Clock & Actions */
@@ -246,7 +250,7 @@
     /* ── Row 1: KPI HUD Cards (No Targets) ── */
     .kpi-row {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 10px;
     }
     .kpi-card {
@@ -269,7 +273,8 @@
     .kpi-card.rci::before { background: linear-gradient(180deg, #00d2ff, #0284c7); }
     .kpi-card.fci::before { background: linear-gradient(180deg, #fbbf24, #d97706); }
     .kpi-card.dci::before { background: linear-gradient(180deg, #fb923c, #ea580c); }
-    .kpi-card.bbs::before { background: linear-gradient(180deg, #34d399, #059669); }
+    .kpi-card.spi::before { background: linear-gradient(180deg, #10b981, #059669); }
+    .kpi-card.bbs::before { background: linear-gradient(180deg, #38bdf8, #0284c7); }
     .kpi-card.photo::before { background: linear-gradient(180deg, #a78bfa, #7c3aed); }
 
     .kpi-hdr {
@@ -684,33 +689,49 @@
                 </div>
                 <div>
                     <div class="brand-title">
-                        MBS DISPLAY 3 <span style="font-size:12px; color:var(--muted); font-weight:600;">[RCI &bull; FCI &bull; DCI &bull; BBS]</span>
+                        MBS DISPLAY 3 <span style="font-size:12px; color:var(--muted); font-weight:600;">[RCI &bull; FCI &bull; DCI &bull; SPI &bull; BBS]</span>
                     </div>
                     <div class="brand-sub">
-                        FIELD CONDITION, DUMP & BEHAVIOR OBSERVATION COMMAND CENTER
+                        FIELD, DUMP, SEDIMENT POND &amp; BEHAVIOR OBSERVATION COMMAND CENTER
                     </div>
                 </div>
             </div>
 
             <!-- Mode Switcher Tabs -->
             <div class="view-mode-tabs">
-                <button type="button" class="mode-btn active" id="tabAllBtn" onclick="switchDisplayMode('all')">
+                <button type="button" class="mode-btn active" id="tabAllBtn" onclick="userSelectMode('all')">
                     <i class="bi bi-grid-fill"></i> ALL RADAR
                 </button>
-                <button type="button" class="mode-btn rci" id="tabRciBtn" onclick="switchDisplayMode('rci')">
+                <button type="button" class="mode-btn bbs" id="tabBbsBtn" onclick="userSelectMode('bbs')">
+                    <i class="bi bi-shield-check"></i> BBS (PERILAKU)
+                </button>
+                <button type="button" class="mode-btn rci" id="tabRciBtn" onclick="userSelectMode('rci')">
                     <i class="bi bi-cone-striped"></i> RCI (ROAD)
                 </button>
-                <button type="button" class="mode-btn fci" id="tabFciBtn" onclick="switchDisplayMode('fci')">
+                <button type="button" class="mode-btn fci" id="tabFciBtn" onclick="userSelectMode('fci')">
                     <i class="bi bi-truck-front-fill"></i> FCI (FRONT)
                 </button>
-                <button type="button" class="mode-btn dci" id="tabDciBtn" onclick="switchDisplayMode('dci')">
+                <button type="button" class="mode-btn dci" id="tabDciBtn" onclick="userSelectMode('dci')">
                     <i class="bi bi-layers-fill"></i> DCI (DUMP)
                 </button>
-                <button type="button" class="mode-btn bbs" id="tabBbsBtn" onclick="switchDisplayMode('bbs')">
-                    <i class="bi bi-person-check-fill"></i> BBS (BEHAVIOR)
+                <button type="button" class="mode-btn spi" id="tabSpiBtn" onclick="userSelectMode('spi')">
+                    <i class="bi bi-droplet-half"></i> SPI (KOLAM)
                 </button>
-                <button type="button" class="mode-btn" id="tabPhotoBtn" onclick="switchDisplayMode('photo')">
+                <button type="button" class="mode-btn" id="tabPhotoBtn" onclick="userSelectMode('photo')">
                     <i class="bi bi-camera-fill text-warning"></i> FOTO ONLY
+                </button>
+            </div>
+
+            <!-- Category Slideshow Indicator Widget -->
+            <div class="slide-indicator-widget" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
+                <div class="slide-pill" id="menuRotateBadge" style="color: #10b981; background: rgba(16, 185, 129, 0.18); border-color: rgba(16, 185, 129, 0.35);">
+                    <i class="bi bi-arrow-repeat"></i> ROTASI MENU
+                </div>
+                <div class="slide-timer-text" style="color: #6ee7b7; font-size: 11px;">
+                    Aktif: <strong id="currentMenuLabel" class="text-white">SEMUA</strong> (<span id="menuCountdown">20s</span>)
+                </div>
+                <button class="slide-btn" id="toggleMenuAutoSlideBtn" onclick="toggleMenuAutoSlide()" title="Jeda / Lanjut rotasi otomatis menu">
+                    <i class="bi bi-pause-fill" id="menuPauseIcon"></i> <span id="menuPauseText">Jeda</span>
                 </button>
             </div>
 
@@ -818,6 +839,29 @@
                     <span><i class="bi bi-check-circle text-success me-1"></i>Aman: <strong id="dciBaikCount">0</strong></span>
                     <span><i class="bi bi-exclamation-triangle text-warning me-1"></i>Sedang: <strong id="dciSedangCount">0</strong></span>
                     <span><i class="bi bi-x-circle text-danger me-1"></i>Rawan: <strong id="dciKurangCount">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Card 4: SPI Sediment Pond Condition -->
+            <div class="kpi-card spi">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-droplet-half text-success"></i> SEDIMENT POND (SPI)</span>
+                    <span class="kpi-tag" style="background: rgba(16, 185, 129, 0.2); color: #10b981;" id="spiScoreBadge">SKOR: --</span>
+                </div>
+                <div class="kpi-body">
+                    <div>
+                        <span class="kpi-num text-white" id="spiAvgScore">--</span>
+                        <span style="font-size: 11px; color: var(--muted); font-weight: 700;"> / 100</span>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold" style="font-size: 12px; color: #10b981;" id="spiTotalCount">-- LAPORAN</div>
+                        <div class="kpi-sub" id="spiTodayCount">-- hari ini</div>
+                    </div>
+                </div>
+                <div class="kpi-footer">
+                    <span><i class="bi bi-check-circle text-success me-1"></i>Baik: <strong id="spiBaikCount">0</strong></span>
+                    <span><i class="bi bi-exclamation-triangle text-warning me-1"></i>Sedang: <strong id="spiSedangCount">0</strong></span>
+                    <span><i class="bi bi-x-circle text-danger me-1"></i>Kurang: <strong id="spiKurangCount">0</strong></span>
                 </div>
             </div>
 
@@ -1119,6 +1163,17 @@
             document.getElementById('dciKurangCount').textContent = d.dci.kurang || 0;
         }
 
+        // SPI
+        if (d.spi) {
+            document.getElementById('spiAvgScore').textContent = Number(d.spi.avgScore || 0).toFixed(1);
+            document.getElementById('spiTotalCount').textContent = `${d.spi.total || 0} LAPORAN`;
+            document.getElementById('spiTodayCount').textContent = `${d.spi.today || 0} hari ini`;
+            document.getElementById('spiScoreBadge').textContent = d.spi.avgScore >= 85 ? 'KPL OPTIMAL' : (d.spi.avgScore >= 70 ? 'SEDANG' : 'DANGKAL');
+            document.getElementById('spiBaikCount').textContent = d.spi.baik || 0;
+            document.getElementById('spiSedangCount').textContent = d.spi.sedang || 0;
+            document.getElementById('spiKurangCount').textContent = d.spi.kurang || 0;
+        }
+
         // BBS
         if (d.bbs) {
             const safePct = Number(d.bbs.safeIndexPct || 0).toFixed(1);
@@ -1287,8 +1342,20 @@
                 { name: 'Grade Dumping', val: p.grade || 100 },
                 { name: 'Drainase Dump', val: p.drainase || 100 },
                 { name: 'Penataan Spillage', val: p.spillage || 100 },
-                { name: 'Rambu & Lampu', val: p.rambu || 100 },
-                { name: 'Spotter & Manuver', val: p.spotter || 100 }
+        } else if (d.spi && (currentMode === 'spi' || (currentMode === 'all' && heroSlides[currentHeroIndex]?.type === 'SPI'))) {
+            titleEl.innerHTML = `<i class="bi bi-droplet-half text-success"></i> 8 PARAMETER SEDIMENT POND INDEX (SPI)`;
+            catEl.textContent = `RATA-RATA EVALUASI KONDISI KOLAM SEDIMEN & LINGKUNGAN`;
+            colorGrad = 'linear-gradient(90deg, #059669, #10b981)';
+            const p = d.spi?.paramAvg || {};
+            params = [
+                { name: 'Kapasitas Endapan', val: p.endapan || 100 },
+                { name: 'Kondisi Tanggul', val: p.tanggul || 100 },
+                { name: 'Sekat Baffle', val: p.baffle || 100 },
+                { name: 'Pelimpah Spillway', val: p.spillway || 100 },
+                { name: 'Fasilitas Dosing', val: p.dosing || 100 },
+                { name: 'Kualitas Air Fisik', val: p.kualitasAir || 100 },
+                { name: 'Titik Pantau Debit', val: p.titikPantau || 100 },
+                { name: 'Rambu & Pengaman', val: p.rambu || 100 }
             ];
         } else {
             titleEl.innerHTML = `<i class="bi bi-person-check-fill text-success"></i> TELEMETRI PERILAKU BBS (SAFE VS AT-RISK)`;
@@ -1336,6 +1403,7 @@
         if (currentMode === 'rci') items = items.filter(x => x.type === 'RCI');
         else if (currentMode === 'fci') items = items.filter(x => x.type === 'FCI');
         else if (currentMode === 'dci') items = items.filter(x => x.type === 'DCI');
+        else if (currentMode === 'spi') items = items.filter(x => x.type === 'SPI');
         else if (currentMode === 'bbs') items = items.filter(x => x.type === 'BBS');
         else if (currentMode === 'photo') items = items.filter(x => !stringIsNullOrEmpty(x.fotoUrl));
 
@@ -1351,9 +1419,9 @@
             const hasPhoto = Boolean(item.fotoUrl);
             const thumbHtml = hasPhoto
                 ? `<img src="${item.fotoUrl}" class="feed-thumb-img" alt="Foto" onerror="this.src='/img/placeholder-photo.png'" />`
-                : `<i class="bi ${item.type === 'RCI' ? 'bi-cone-striped text-info' : (item.type === 'FCI' ? 'bi-truck-front-fill text-warning' : (item.type === 'DCI' ? 'bi-layers-fill text-warning' : 'bi-shield-check text-success'))} feed-thumb-placeholder"></i>`;
+                : `<i class="bi ${item.type === 'RCI' ? 'bi-cone-striped text-info' : (item.type === 'FCI' ? 'bi-truck-front-fill text-warning' : (item.type === 'DCI' ? 'bi-layers-fill text-warning' : (item.type === 'SPI' ? 'bi-droplet-half text-success' : 'bi-shield-check text-info')))} feed-thumb-placeholder"></i>`;
 
-            const pillBg = item.type === 'RCI' ? 'rgba(14, 165, 233, 0.2); color:#38bdf8;' : (item.type === 'FCI' ? 'rgba(217, 119, 6, 0.2); color:#fbbf24;' : (item.type === 'DCI' ? 'rgba(249, 115, 22, 0.2); color:#fb923c;' : 'rgba(5, 150, 105, 0.2); color:#34d399;'));
+            const pillBg = item.type === 'RCI' ? 'rgba(14, 165, 233, 0.2); color:#38bdf8;' : (item.type === 'FCI' ? 'rgba(217, 119, 6, 0.2); color:#fbbf24;' : (item.type === 'DCI' ? 'rgba(249, 115, 22, 0.2); color:#fb923c;' : (item.type === 'SPI' ? 'rgba(16, 185, 129, 0.2); color:#10b981;' : 'rgba(2, 132, 199, 0.2); color:#38bdf8;')));
 
             return `
             <div class="feed-card" onclick='openModalWithItem(${JSON.stringify(item).replace(/'/g, "&#39;")})'>
@@ -1430,14 +1498,44 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       9. MODE SWITCHER & AUTO-ROTATION
+       9. MODE SWITCHER & CATEGORY SLIDESHOW ROTATION
        ────────────────────────────────────────────────────────────────────────── */
+    const MENU_SLIDES = ['all', 'bbs', 'rci', 'fci', 'dci', 'spi'];
+    const MENU_LABELS = {
+        all: 'SEMUA RADAR',
+        bbs: 'BBS PERILAKU',
+        rci: 'RCI ROAD',
+        fci: 'FCI FRONT',
+        dci: 'DCI DUMP',
+        spi: 'SPI KOLAM'
+    };
+    let menuSlideIndex = 0;
+    let isMenuAutoSlide = true;
+    let menuSecondsLeft = 20;
+    const MENU_CYCLE_SECONDS = 20;
+
+    function userSelectMode(mode) {
+        // Find index if in rotation
+        const idx = MENU_SLIDES.indexOf(mode.toLowerCase());
+        if (idx !== -1) {
+            menuSlideIndex = idx;
+        }
+        menuSecondsLeft = MENU_CYCLE_SECONDS;
+        switchDisplayMode(mode);
+    }
+
     function switchDisplayMode(mode) {
         currentMode = mode;
-        ['All', 'Rci', 'Fci', 'Dci', 'Bbs', 'Photo'].forEach(m => {
+        ['All', 'Rci', 'Fci', 'Dci', 'Spi', 'Bbs', 'Photo'].forEach(m => {
             const btn = document.getElementById(`tab${m}Btn`);
             if (btn) btn.classList.toggle('active', m.toLowerCase() === mode.toLowerCase());
         });
+
+        // Update menu indicator
+        const labelEl = document.getElementById('currentMenuLabel');
+        if (labelEl) {
+            labelEl.textContent = MENU_LABELS[mode.toLowerCase()] || mode.toUpperCase();
+        }
 
         if (currentData) {
             prepareHeroSlides(currentData);
@@ -1445,6 +1543,43 @@
             renderTelemetry(currentData);
         }
         resetSlideProgressBar();
+    }
+
+    function updateMenuRotateTimer() {
+        if (!isMenuAutoSlide) return;
+        menuSecondsLeft--;
+        const cdEl = document.getElementById('menuCountdown');
+        if (cdEl) cdEl.textContent = `${menuSecondsLeft}s`;
+
+        if (menuSecondsLeft <= 0) {
+            menuSecondsLeft = MENU_CYCLE_SECONDS;
+            menuSlideIndex = (menuSlideIndex + 1) % MENU_SLIDES.length;
+            const nextMode = MENU_SLIDES[menuSlideIndex];
+            switchDisplayMode(nextMode);
+        }
+    }
+    setInterval(updateMenuRotateTimer, 1000);
+
+    function toggleMenuAutoSlide() {
+        isMenuAutoSlide = !isMenuAutoSlide;
+        const icon = document.getElementById('menuPauseIcon');
+        const text = document.getElementById('menuPauseText');
+        const badge = document.getElementById('menuRotateBadge');
+        if (isMenuAutoSlide) {
+            if (icon) icon.className = 'bi bi-pause-fill';
+            if (text) text.innerText = 'Jeda';
+            if (badge) {
+                badge.style.background = 'rgba(16, 185, 129, 0.18)';
+                badge.style.color = '#10b981';
+            }
+        } else {
+            if (icon) icon.className = 'bi bi-play-fill';
+            if (text) text.innerText = 'Lanjut';
+            if (badge) {
+                badge.style.background = 'rgba(239, 68, 68, 0.2)';
+                badge.style.color = '#ef4444';
+            }
+        }
     }
 
     function toggleAutoRotation() {
@@ -1488,7 +1623,7 @@
         
         const typeBadge = document.getElementById('modalTypeBadge');
         typeBadge.textContent = `${item.type} - ${item.typeLabel || ''}`;
-        typeBadge.style.background = item.type === 'RCI' ? '#0284c7' : (item.type === 'FCI' ? '#d97706' : (item.kategori === 'Aman' ? '#059669' : '#dc2626'));
+        typeBadge.style.background = item.type === 'RCI' ? '#0284c7' : (item.type === 'FCI' ? '#d97706' : (item.type === 'DCI' ? '#f97316' : (item.type === 'SPI' ? '#059669' : (item.kategori === 'Aman' ? '#059669' : '#dc2626'))));
 
         const scoreBadge = document.getElementById('modalScoreBadge');
         scoreBadge.textContent = item.scoreDisplay || `${item.score}/100`;

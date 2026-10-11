@@ -45,10 +45,11 @@ namespace MBS_SAP.Data
         public DbSet<BbsBehavior> BbsBehaviors { get; set; } = null!;
         public DbSet<BbsObservation> BbsObservations { get; set; } = null!;
 
-        // FCI, RCI & DCI
+        // FCI, RCI, DCI & SPI
         public DbSet<FciReport> FciReports { get; set; } = null!;
         public DbSet<RciReport> RciReports { get; set; } = null!;
         public DbSet<DciReport> DciReports { get; set; } = null!;
+        public DbSet<SpiReport> SpiReports { get; set; } = null!;
 
         // View entities
         public DbSet<KaryawanView> Karyawans { get; set; } = null!;
@@ -203,6 +204,9 @@ namespace MBS_SAP.Data
 
             modelBuilder.Entity<DciReport>()
                 .ToTable("tbl_t_dci_report");
+
+            modelBuilder.Entity<SpiReport>()
+                .ToTable("tbl_t_spi_report");
 
             // View mappings
             modelBuilder.Entity<KaryawanView>()

@@ -105,6 +105,13 @@
             <i class="bi bi-stars" style="font-size: 9px;"></i> NEW
         </span>
     </a>
+    <a asp-controller="Spi" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Spi" ? "active" : "")">
+        <i class="bi bi-droplet-half" style="color: #10b981;"></i>
+        <span>SPI (Kolam)</span>
+        <span class="badge ms-auto" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9px; font-weight: 800; padding: 2px 5.5px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(244, 63, 94, 0.4); display: inline-flex; align-items: center; gap: 2px;">
+            <i class="bi bi-stars" style="font-size: 9px;"></i> NEW
+        </span>
+    </a>
     @if (isAdminUser)
     {
         <a asp-controller="Incident" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "Incident" ? "active" : "")">

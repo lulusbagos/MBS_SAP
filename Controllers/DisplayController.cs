@@ -152,7 +152,38 @@ namespace MBS_SAP.Controllers
                     .Take(5)
                     .ToList();
 
-                // 4. BBS DATA
+                // 4. SPI DATA (Sediment Pond Index)
+                var spiQuery = _context.SpiReports.AsNoTracking().Where(s => !s.IsDeleted);
+                var allSpiList = await spiQuery.OrderByDescending(s => s.Tanggal).ThenByDescending(s => s.CreatedAt).ToListAsync();
+
+                int totalSpi = allSpiList.Count;
+                int todaySpi = allSpiList.Count(s => s.Tanggal >= today || s.CreatedAt >= today);
+                int mtdSpi = allSpiList.Count(s => s.Tanggal >= startOfMonth);
+                double avgScoreSpi = allSpiList.Any() ? Math.Round(allSpiList.Average(s => s.TotalScore), 1) : 100.0;
+                int spiBaik = allSpiList.Count(s => s.KategoriIndex == "Baik");
+                int spiSedang = allSpiList.Count(s => s.KategoriIndex == "Sedang");
+                int spiKurang = allSpiList.Count(s => s.KategoriIndex == "Kurang");
+
+                var spiParamAvg = new
+                {
+                    endapan = allSpiList.Any() ? Math.Round(allSpiList.Average(s => s.SkorKapasitasEndapan), 1) : 100.0,
+                    tanggul = allSpiList.Any() ? Math.Round(allSpiList.Average(s => s.SkorKondisiTanggul), 1) : 100.0,
+                    baffle = allSpiList.Any() ? Math.Round(allSpiList.Average(s => s.SkorSekatBaffle), 1) : 100.0,
+                    spillway = allSpiList.Any() ? Math.Round(allSpiList.Average(s => s.SkorPelimpahSpillway), 1) : 100.0,
+                    dosing = allSpiList.Any() ? Math.Round(allSpiList.Average(s => s.SkorFasilitasDosing), 1) : 100.0,
+                    kualitasAir = allSpiList.Any() ? Math.Round(allSpiList.Average(s => s.SkorKualitasAirFisik), 1) : 100.0,
+                    titikPantau = allSpiList.Any() ? Math.Round(allSpiList.Average(s => s.SkorTitikPenaatanDebit), 1) : 100.0,
+                    rambu = allSpiList.Any() ? Math.Round(allSpiList.Average(s => s.SkorRambuPengaman), 1) : 100.0
+                };
+
+                var topPonds = allSpiList.Where(s => !string.IsNullOrEmpty(s.NamaKolam) || !string.IsNullOrEmpty(s.Area))
+                    .GroupBy(s => (!string.IsNullOrEmpty(s.NamaKolam) ? s.NamaKolam! : s.Area!))
+                    .Select(g => new { name = g.Key, count = g.Count(), avgScore = Math.Round(g.Average(x => x.TotalScore), 1) })
+                    .OrderByDescending(x => x.count)
+                    .Take(5)
+                    .ToList();
+
+                // 5. BBS DATA
                 var bbsQuery = _context.BbsObservations.AsNoTracking().Where(b => !b.IsDeleted);
                 var allBbsList = await bbsQuery.OrderByDescending(b => b.Tanggal).ThenByDescending(b => b.CreatedAt).ToListAsync();
 
@@ -178,24 +209,26 @@ namespace MBS_SAP.Controllers
                     .Take(6)
                     .ToList();
 
-                // 5. OVERALL STATS
-                int totalActivities = totalRci + totalFci + totalDci + totalBbs;
-                int todayActivities = todayRci + todayFci + todayDci + todayBbs;
+                // 6. OVERALL STATS
+                int totalActivities = totalRci + totalFci + totalDci + totalSpi + totalBbs;
+                int todayActivities = todayRci + todayFci + todayDci + todaySpi + todayBbs;
                 int totalPhotos = allRciList.Count(r => !string.IsNullOrEmpty(r.FotoUrl))
                                 + allFciList.Count(f => !string.IsNullOrEmpty(f.FotoUrl))
                                 + allDciList.Count(d => !string.IsNullOrEmpty(d.FotoUrl))
+                                + allSpiList.Count(s => !string.IsNullOrEmpty(s.FotoUrl))
                                 + allBbsList.Count(b => !string.IsNullOrEmpty(b.FotoUrl));
                 double photoComplianceRate = totalActivities > 0 ? Math.Round((double)totalPhotos / totalActivities * 100, 1) : 0;
 
                 var uniqueSurveyors = allRciList.Select(r => r.Nik)
                     .Concat(allFciList.Select(f => f.Nik))
                     .Concat(allDciList.Select(d => d.Nik))
+                    .Concat(allSpiList.Select(s => s.Nik))
                     .Concat(allBbsList.Select(b => b.ObserverNik))
                     .Where(n => !string.IsNullOrEmpty(n))
                     .Distinct()
                     .Count();
 
-                // 6. UNIFIED RECENT ITEMS FEED (with Photos & Details)
+                // 7. UNIFIED RECENT ITEMS FEED (with Photos & Details)
                 var feedItems = new List<dynamic>();
 
                 foreach (var r in allRciList.Take(40))
@@ -314,9 +347,49 @@ namespace MBS_SAP.Controllers
                             new { label = "Kondisi Crest", val = d.SkorKondisiCrest },
                             new { label = "Grade Dumping", val = d.SkorGradeDumping },
                             new { label = "Drainase", val = d.SkorDrainaseDump },
-                            new { label = "Penataan Spillage", val = d.SkorPenataanSpillage },
                             new { label = "Penerangan", val = d.SkorRambuPenerangan },
                             new { label = "Spotter & Manuver", val = d.SkorSpotterManuver }
+                        }
+                    });
+                }
+
+                foreach (var s in allSpiList.Take(40))
+                {
+                    feedItems.Add(new
+                    {
+                        id = s.Id,
+                        type = "SPI",
+                        typeLabel = "Sediment Pond Index",
+                        title = !string.IsNullOrEmpty(s.NamaKolam) ? s.NamaKolam : (!string.IsNullOrEmpty(s.Area) ? s.Area : "Inspeksi KPL"),
+                        subtitle = !string.IsNullOrEmpty(s.TitikPenaatan) ? $"Titik Pantau: {s.TitikPenaatan}" : (s.DetilLokasi ?? s.Lokasi),
+                        area = s.Area ?? "-",
+                        tanggal = s.Tanggal.ToString("dd MMM yyyy"),
+                        waktu = s.Waktu.ToString(@"hh\:mm"),
+                        createdAt = s.CreatedAt,
+                        surveyorNama = s.Nama,
+                        surveyorNik = s.Nik,
+                        surveyorPerusahaan = s.Perusahaan ?? "PT Indexim Coalindo",
+                        score = s.TotalScore,
+                        scoreDisplay = $"{s.TotalScore:F1}/100",
+                        kategori = s.KategoriIndex,
+                        statusBadge = s.KategoriIndex == "Baik" ? "KPL Optimal" : (s.KategoriIndex == "Sedang" ? "Perlu Desilting" : "Kritis / Dangkal"),
+                        statusColor = s.KategoriIndex == "Baik" ? "#10b981" : (s.KategoriIndex == "Sedang" ? "#fbbf24" : "#f87171"),
+                        fotoUrl = s.FotoUrl,
+                        catatan = s.Catatan,
+                        tindakan = s.TindakanPerbaikan,
+                        pic = s.Pic,
+                        lat = s.Latitude,
+                        lng = s.Longitude,
+                        details = new[]
+                        {
+                            new { label = "Kapasitas Endapan", val = s.SkorKapasitasEndapan },
+                            new { label = "Kondisi Tanggul", val = s.SkorKondisiTanggul },
+                            new { label = "Sekat Baffle", val = s.SkorSekatBaffle },
+                            new { label = "Pelimpah Spillway", val = s.SkorPelimpahSpillway },
+                            new { label = "Fasilitas Dosing", val = s.SkorFasilitasDosing },
+                            new { label = "Kualitas Air Fisik", val = s.SkorKualitasAirFisik },
+                            new { label = "Titik Pantau Debit", val = s.SkorTitikPenaatanDebit },
+                            new { label = "Rambu & Pengaman", val = s.SkorRambuPengaman }
                         }
                     });
                 }
@@ -371,7 +444,7 @@ namespace MBS_SAP.Controllers
                     .ToList();
 
                 // 8. MARQUEE TICKER
-                var marquee = $"📢 RCI, FCI, DCI & BBS REAL-TIME RADAR • TOTAL AKTIVITAS: {totalActivities} LAPORAN ({todayActivities} HARI INI) • RCI RATA-RATA: {avgScoreRci}/100 • FCI RATA-RATA: {avgScoreFci}/100 • DCI RATA-RATA: {avgScoreDci}/100 • BBS SAFE BEHAVIOR: {safeIndexPct}% ({safeCount} AMAN, {atRiskCount} AT-RISK) • BUKTI FOTO LAPANGAN: {totalPhotos} DOKUMENTASI TERVERIFIKASI • TETAP UTAMAKAN KESELAMATAN KERJA (SAFETY FIRST)";
+                var marquee = $"📢 RCI, FCI, DCI, SPI & BBS REAL-TIME RADAR • TOTAL AKTIVITAS: {totalActivities} LAPORAN ({todayActivities} HARI INI) • RCI RATA-RATA: {avgScoreRci}/100 • FCI RATA-RATA: {avgScoreFci}/100 • DCI RATA-RATA: {avgScoreDci}/100 • SPI RATA-RATA: {avgScoreSpi}/100 • BBS SAFE BEHAVIOR: {safeIndexPct}% ({safeCount} AMAN, {atRiskCount} AT-RISK) • BUKTI FOTO LAPANGAN: {totalPhotos} DOKUMENTASI TERVERIFIKASI • TETAP UTAMAKAN KESELAMATAN & LINGKUNGAN KERJA (SAFETY & ENVIRONMENT FIRST)";
 
                 return Ok(new
                 {
@@ -416,6 +489,18 @@ namespace MBS_SAP.Controllers
                         kurang = dciKurang,
                         paramAvg = dciParamAvg,
                         topDisposals
+                    },
+                    spi = new
+                    {
+                        total = totalSpi,
+                        today = todaySpi,
+                        mtd = mtdSpi,
+                        avgScore = avgScoreSpi,
+                        baik = spiBaik,
+                        sedang = spiSedang,
+                        kurang = spiKurang,
+                        paramAvg = spiParamAvg,
+                        topPonds
                     },
                     bbs = new
                     {
