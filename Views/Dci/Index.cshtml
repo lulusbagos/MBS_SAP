@@ -368,19 +368,40 @@
                                     <option value="Night">Night Shift</option>
                                 </select>
                             </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">AREA *</label>
-                                <select id="inputArea" name="area" class="form-select form-select-sm" required>
-                                    <option value="">Pilih Area...</option>
-                                    @foreach (var a in areaList)
-                                    {
-                                        <option value="@a">@a</option>
-                                    }
-                                </select>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">AREA UTAMA *</label>
+                                <div class="position-relative mb-0">
+                                    <div class="input-group input-group-sm mb-0">
+                                        <span class="input-group-text bg-dark border-secondary text-warning"><i class="bi bi-geo-alt-fill"></i></span>
+                                        <input type="text" id="areaSearch" class="form-control form-control-sm text-uppercase" placeholder="Ketik untuk mencari area..." autocomplete="off" />
+                                        <button type="button" class="btn btn-outline-secondary" id="toggleAreaDropdown"><i class="bi bi-chevron-down"></i></button>
+                                    </div>
+                                    <select id="inputArea" name="area" required style="display:none;">
+                                        <option value="" disabled selected></option>
+                                    </select>
+                                    <div id="areaDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1060; background: var(--bg-card, #1e293b); border:1px solid rgba(255,255,255,0.15); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+                                        <!-- Populated by JS -->
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-12 col-md-4">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">LOKASI UMUM *</label>
-                                <input type="text" id="inputLokasi" name="lokasi" class="form-control form-control-sm" required placeholder="Contoh: Disposal North KM 8" />
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">DETAIL LOKASI / BENCHMARK</label>
+                                <div class="d-flex align-items-center gap-1">
+                                    <div class="position-relative flex-grow-1 mb-0">
+                                        <div class="input-group input-group-sm mb-0">
+                                            <span class="input-group-text bg-dark border-secondary text-warning"><i class="bi bi-compass-fill"></i></span>
+                                            <input type="text" id="benchmarkSearch" class="form-control form-control-sm text-uppercase" placeholder="Pilih Area Utama dulu..." autocomplete="off" disabled />
+                                            <button type="button" class="btn btn-outline-secondary" id="toggleBenchmarkDropdown"><i class="bi bi-chevron-down"></i></button>
+                                        </div>
+                                        <input type="hidden" id="inputDetilLokasi" name="detilLokasi" value="" />
+                                        <div id="benchmarkDropdownMenu" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:1060; background: var(--bg-card, #1e293b); border:1px solid rgba(255,255,255,0.15); max-height:220px; overflow-y:auto; border-radius:8px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">
+                                            <!-- Populated by JS -->
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="$('#addBenchmarkModal').modal('show')" title="Tambah Benchmark Baru" id="btnAddBenchmark" disabled style="height: 31px; border-radius: 6px;">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="col-6 col-md-4">
                                 <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">DISPOSAL</label>
@@ -396,16 +417,16 @@
                                 <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">NAMA DUMP / PAD</label>
                                 <input type="text" id="inputNamaDump" name="namaDump" class="form-control form-control-sm" placeholder="Contoh: Pad 2B, Dump RL 45" />
                             </div>
-                            <div class="col-12 col-md-8">
-                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">DETIL LOKASI</label>
-                                <input type="text" id="inputDetilLokasi" name="detilLokasi" class="form-control form-control-sm" placeholder="Contoh: Sayap Kiri dekat Lamp Tower 3" />
-                            </div>
                             <div class="col-12 col-md-4">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">LOKASI UMUM *</label>
+                                <input type="text" id="inputLokasi" name="lokasi" class="form-control form-control-sm" required placeholder="Contoh: Disposal North KM 8" />
+                            </div>
+                            <div class="col-12 col-md-12">
                                 <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">GPS COORDINATES</label>
                                 <div class="input-group input-group-sm">
-                                    <input type="text" id="inputGps" class="form-control" placeholder="Lat, Long" readonly />
+                                    <input type="text" id="inputGps" class="form-control" placeholder="Tekan tombol GPS untuk deteksi otomatis" readonly />
                                     <button type="button" class="btn btn-outline-warning" onclick="getLocation()" title="Ambil GPS Otomatis">
-                                        <i class="bi bi-geo-alt"></i>
+                                        <i class="bi bi-geo-alt me-1"></i> Ambil GPS
                                     </button>
                                 </div>
                                 <input type="hidden" id="inputLat" name="latitude" />
@@ -814,6 +835,42 @@
     </div>
 </div>
 
+<!-- Modal Add Benchmark -->
+<div class="modal fade" id="addBenchmarkModal" tabindex="-1" aria-labelledby="addBenchmarkModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title text-white fw-bold" id="addBenchmarkModalLabel"><i class="bi bi-plus-square-fill text-warning me-2"></i>Tambah Benchmark Baru</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-4">
+                <div class="alert alert-info py-2" style="font-size: 12px; border-radius: 8px;">
+                    <i class="bi bi-info-circle me-1"></i> Benchmark yang Anda tambahkan hanya akan terlihat oleh karyawan di perusahaan Anda untuk area yang sedang dipilih.
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">Area Utama</label>
+                    <input type="text" id="newBenchmarkArea" class="form-control form-control-sm" disabled />
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">Nama Benchmark / Detail Lokasi</label>
+                    <input type="text" id="newBenchmarkName" class="form-control form-control-sm text-uppercase" placeholder="Misal: DEPAN POS SECURITY KM 3" />
+                    <div id="addBenchmarkError" class="text-danger mt-2" style="font-size: 12px; display: none;"></div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="text-white fw-bold mb-2" style="font-size: 13px;"><i class="bi bi-list-task me-1 text-warning"></i>Daftar Benchmark Terdaftar (di area ini)</h6>
+                    <div id="existingBenchmarksList" class="list-group" style="max-height: 180px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.2);">
+                        <div class="p-3 text-center text-muted" style="font-size: 12px;">Memuat daftar benchmark...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 8px;">Tutup</button>
+                <button type="button" class="btn btn-warning" id="btnSaveBenchmark" onclick="saveNewBenchmark()" style="border-radius: 8px; font-weight: 600;">Simpan Benchmark</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
 .param-box-premium {
     background: rgba(255, 255, 255, 0.02);
@@ -907,34 +964,341 @@
 </style>
 
 <script>
+    var globalAreasList = [
+        { id: 1, namaArea: "Port/Jetty - Indexim" },
+        { id: 2, namaArea: "CPP-33 & ROM - Indexim" },
+        { id: 3, namaArea: "Kantor - Indexim" },
+        { id: 4, namaArea: "Mess & Fasilitas - Indexim" },
+        { id: 5, namaArea: "Nursery - Indexim" },
+        { id: 6, namaArea: "Settling Pond - Indexim" },
+        { id: 7, namaArea: "PIT - Unggul" },
+        { id: 8, namaArea: "Road PIT Overburden - Unggul" },
+        { id: 9, namaArea: "Kantor - Unggul" },
+        { id: 10, namaArea: "Mess & Fasilitas - Unggul" },
+        { id: 11, namaArea: "Settling Pond - Unggul" },
+        { id: 12, namaArea: "PIT - KPP" },
+        { id: 13, namaArea: "Road PIT Overburden - KPP" },
+        { id: 14, namaArea: "Kantor - KPP" },
+        { id: 15, namaArea: "Mess & Fasilitas - KPP" },
+        { id: 16, namaArea: "Settling Pond - KPP" },
+        { id: 17, namaArea: "PIT - MGE" },
+        { id: 18, namaArea: "Road PIT Overburden - MGE" },
+        { id: 19, namaArea: "Kantor - MGE" },
+        { id: 20, namaArea: "Mess & Fasilitas - MGE" },
+        { id: 21, namaArea: "Settling Pond - MGE" },
+        { id: 22, namaArea: "Magazine/Gudang Handak" },
+        { id: 23, namaArea: "Road Coal Mining (Jl. Anggrek)" },
+        { id: 24, namaArea: "Road Coal Mining (Jl. Mawar)" },
+        { id: 25, namaArea: "Road Coal Hauling (Jl. Nusantara)" },
+        { id: 26, namaArea: "Other Area" }
+    ];
+
+    @if (areaList != null && areaList.Any())
+    {
+        <text>
+        var serverAreas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(areaList));
+        serverAreas.forEach(function(sa) {
+            if (sa && !globalAreasList.some(function(a) { return a.namaArea.toLowerCase() === sa.toLowerCase(); })) {
+                globalAreasList.push({ id: globalAreasList.length + 1, namaArea: sa });
+            }
+        });
+        </text>
+    }
+
+    var globalBenchmarksList = [];
+
+    function loadAreas() {
+        var select = document.getElementById('inputArea');
+        if (select) {
+            select.innerHTML = '<option value="" disabled selected></option>';
+            globalAreasList.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.namaArea;
+                opt.textContent = item.namaArea;
+                select.appendChild(opt);
+            });
+        }
+        renderAreaDropdown('');
+    }
+
+    function renderAreaDropdown(filterText) {
+        var menu = document.getElementById('areaDropdownMenu');
+        if (!menu) return;
+        menu.innerHTML = '';
+        var clean = (filterText || '').trim().toLowerCase();
+        var filtered = globalAreasList.filter(a => a.namaArea.toLowerCase().includes(clean));
+
+        if (filtered.length > 0) {
+            filtered.forEach(item => {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'd-block w-100 text-start py-2 px-3 border-0';
+                btn.style.background = 'none';
+                btn.style.color = '#f8fafc';
+                btn.style.fontSize = '12px';
+                btn.style.borderBottom = '1px solid rgba(255,255,255,0.08)';
+                btn.style.cursor = 'pointer';
+                btn.innerHTML = `<i class="bi bi-geo-alt-fill me-2 text-warning"></i>${item.namaArea}`;
+                btn.onmouseenter = () => btn.style.background = 'rgba(249, 115, 22, 0.15)';
+                btn.onmouseleave = () => btn.style.background = 'none';
+                btn.onclick = () => selectArea(item.namaArea);
+                menu.appendChild(btn);
+            });
+        } else if (clean.length > 0) {
+            menu.innerHTML = `<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Area "${filterText}" tidak ditemukan</div>`;
+        } else {
+            menu.innerHTML = '<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada Area Utama.</div>';
+        }
+    }
+
+    function selectArea(namaArea) {
+        document.getElementById('areaSearch').value = namaArea;
+        document.getElementById('inputArea').value = namaArea;
+        document.getElementById('areaDropdownMenu').style.display = 'none';
+
+        loadBenchmarks(namaArea);
+
+        var curLokasi = document.getElementById('inputLokasi').value.trim();
+        if (curLokasi === '') {
+            document.getElementById('inputLokasi').value = namaArea + ' - ';
+            document.getElementById('inputLokasi').focus();
+        } else if (curLokasi.indexOf(' - ') !== -1) {
+            var parts = curLokasi.split(' - ');
+            parts[0] = namaArea;
+            document.getElementById('inputLokasi').value = parts.join(' - ');
+        }
+    }
+
+    function loadBenchmarks(areaUtama, preselectBenchmark) {
+        if (!areaUtama) return;
+        const bInput = document.getElementById('benchmarkSearch');
+        const bBtn = document.getElementById('btnAddBenchmark');
+        if (bInput) { bInput.disabled = true; bInput.value = 'Memuat benchmark...'; }
+        if (bBtn) bBtn.disabled = true;
+
+        fetch(`/Api/GetBenchmarks?areaUtama=${encodeURIComponent(areaUtama)}`)
+            .then(res => res.json())
+            .then(response => {
+                globalBenchmarksList = response || [];
+                if (bInput) { bInput.disabled = false; bInput.value = ''; }
+                if (bBtn) bBtn.disabled = false;
+
+                if (preselectBenchmark) {
+                    selectBenchmark(preselectBenchmark);
+                } else {
+                    document.getElementById('inputDetilLokasi').value = '';
+                    renderBenchmarkDropdown('');
+                }
+            })
+            .catch(() => {
+                if (bInput) { bInput.disabled = false; bInput.value = ''; }
+                if (bBtn) bBtn.disabled = false;
+            });
+    }
+
+    function renderBenchmarkDropdown(filterText) {
+        var menu = document.getElementById('benchmarkDropdownMenu');
+        if (!menu) return;
+        menu.innerHTML = '';
+        var clean = (filterText || '').trim().toLowerCase();
+        var filtered = globalBenchmarksList.filter(b => b.namaBenchmark.toLowerCase().includes(clean));
+
+        if (filtered.length > 0) {
+            filtered.forEach(item => {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'd-block w-100 text-start py-2 px-3 border-0';
+                btn.style.background = 'none';
+                btn.style.color = '#f8fafc';
+                btn.style.fontSize = '12px';
+                btn.style.borderBottom = '1px solid rgba(255,255,255,0.08)';
+                btn.style.cursor = 'pointer';
+                btn.innerHTML = `<i class="bi bi-compass-fill me-2 text-warning"></i>${item.namaBenchmark}`;
+                btn.onmouseenter = () => btn.style.background = 'rgba(249, 115, 22, 0.15)';
+                btn.onmouseleave = () => btn.style.background = 'none';
+                btn.onclick = () => selectBenchmark(item.namaBenchmark);
+                menu.appendChild(btn);
+            });
+        } else if (clean.length > 0) {
+            menu.innerHTML = `<div class="p-3 text-center text-muted" style="font-size:12px;"><i class="bi bi-search me-1"></i>Benchmark "${filterText}" tidak ditemukan</div>`;
+        } else {
+            menu.innerHTML = '<div class="p-3 text-center text-muted" style="font-size:12px;">Belum ada benchmark di area ini. Klik + untuk tambah.</div>';
+        }
+    }
+
+    function selectBenchmark(namaBenchmark) {
+        document.getElementById('benchmarkSearch').value = namaBenchmark;
+        document.getElementById('inputDetilLokasi').value = namaBenchmark;
+        document.getElementById('benchmarkDropdownMenu').style.display = 'none';
+    }
+
+    function saveNewBenchmark() {
+        var btn = document.getElementById('btnSaveBenchmark');
+        var errorDiv = document.getElementById('addBenchmarkError');
+        var benchmarkName = document.getElementById('newBenchmarkName').value;
+        var areaUtama = document.getElementById('inputArea').value;
+
+        if (!areaUtama) {
+            errorDiv.innerText = 'Area utama belum dipilih!';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        if (!benchmarkName || benchmarkName.trim() === '') {
+            errorDiv.innerText = 'Nama benchmark tidak boleh kosong';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Menyimpan...';
+        errorDiv.style.display = 'none';
+
+        const formData = new FormData();
+        formData.append('areaUtama', areaUtama);
+        formData.append('namaBenchmark', benchmarkName);
+
+        fetch('/Api/AddBenchmark', {
+            method: 'POST',
+            body: formData
+        })
+        .then(async res => {
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || 'Gagal menyimpan benchmark');
+            }
+            return res.json();
+        })
+        .then(response => {
+            const modalEl = document.getElementById('addBenchmarkModal');
+            bootstrap.Modal.getInstance(modalEl)?.hide();
+            document.getElementById('newBenchmarkName').value = '';
+            var toSelect = (response && response.data) ? response.data.namaBenchmark : null;
+            loadBenchmarks(areaUtama, toSelect);
+            btn.disabled = false;
+            btn.innerText = 'Simpan Benchmark';
+        })
+        .catch(err => {
+            errorDiv.innerText = err.message;
+            errorDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.innerText = 'Simpan Benchmark';
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
+        loadAreas();
+
+        // Area & Benchmark Dropdown Events
+        const areaSearch = document.getElementById('areaSearch');
+        const areaMenu = document.getElementById('areaDropdownMenu');
+        const toggleAreaBtn = document.getElementById('toggleAreaDropdown');
+
+        if (toggleAreaBtn && areaMenu && areaSearch) {
+            toggleAreaBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (areaMenu.style.display === 'block') {
+                    areaMenu.style.display = 'none';
+                } else {
+                    renderAreaDropdown(areaSearch.value);
+                    areaMenu.style.display = 'block';
+                }
+            });
+            areaSearch.addEventListener('input', function() {
+                renderAreaDropdown(this.value);
+                areaMenu.style.display = 'block';
+            });
+            areaSearch.addEventListener('focus', function() {
+                renderAreaDropdown(this.value);
+                areaMenu.style.display = 'block';
+            });
+        }
+
+        const bSearch = document.getElementById('benchmarkSearch');
+        const bMenu = document.getElementById('benchmarkDropdownMenu');
+        const toggleBBtn = document.getElementById('toggleBenchmarkDropdown');
+
+        if (toggleBBtn && bMenu && bSearch) {
+            toggleBBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (bSearch.disabled) return;
+                if (bMenu.style.display === 'block') {
+                    bMenu.style.display = 'none';
+                } else {
+                    renderBenchmarkDropdown(bSearch.value);
+                    bMenu.style.display = 'block';
+                }
+            });
+            bSearch.addEventListener('input', function() {
+                renderBenchmarkDropdown(this.value);
+                if (this.value === '') document.getElementById('inputDetilLokasi').value = '';
+                bMenu.style.display = 'block';
+            });
+            bSearch.addEventListener('focus', function() {
+                if (this.disabled) return;
+                renderBenchmarkDropdown(this.value);
+                bMenu.style.display = 'block';
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (bMenu && !e.target.closest('#benchmarkSearch, #benchmarkDropdownMenu, #toggleBenchmarkDropdown')) {
+                bMenu.style.display = 'none';
+            }
+            if (areaMenu && !e.target.closest('#areaSearch, #areaDropdownMenu, #toggleAreaDropdown')) {
+                areaMenu.style.display = 'none';
+            }
+        });
+
+        const addModalEl = document.getElementById('addBenchmarkModal');
+        if (addModalEl) {
+            addModalEl.addEventListener('show.bs.modal', function(e) {
+                const area = document.getElementById('inputArea')?.value;
+                if (!area) {
+                    alert('Pilih Area Utama terlebih dahulu!');
+                    e.preventDefault();
+                    return;
+                }
+                document.getElementById('newBenchmarkArea').value = area;
+                document.getElementById('newBenchmarkName').value = '';
+                document.getElementById('addBenchmarkError').style.display = 'none';
+
+                const list = document.getElementById('existingBenchmarksList');
+                list.innerHTML = '';
+                if (globalBenchmarksList.length > 0) {
+                    globalBenchmarksList.forEach(b => {
+                        const item = document.createElement('div');
+                        item.className = 'list-group-item';
+                        item.style.fontSize = '12px';
+                        item.style.background = 'rgba(0,0,0,0.2)';
+                        item.style.borderColor = 'var(--border-color)';
+                        item.style.color = '#f8fafc';
+                        item.innerHTML = `<i class="bi bi-compass me-2 text-warning"></i>${b.namaBenchmark}`;
+                        list.appendChild(item);
+                    });
+                } else {
+                    list.innerHTML = '<div class="p-3 text-center text-muted" style="font-size: 12px;">Belum ada benchmark di area ini</div>';
+                }
+            });
+        }
+
         // Init score button click handlers
         document.querySelectorAll('.btn-score-card').forEach(btn => {
             btn.addEventListener('click', function () {
                 const param = this.dataset.param;
                 const val = parseInt(this.dataset.val);
 
-                // Set active class
                 document.querySelectorAll(`.btn-score-card[data-param="${param}"]`).forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
-
-                // Update hidden input
                 document.getElementById(param).value = val;
-
-                // Recalculate score live
                 calcLiveScore();
             });
         });
 
-        // Trigger Success/Error modal if present
         const successModal = document.getElementById('statusSuccessModal');
-        if (successModal) {
-            new bootstrap.Modal(successModal).show();
-        }
+        if (successModal) { new bootstrap.Modal(successModal).show(); }
         const errorModal = document.getElementById('statusErrorModal');
-        if (errorModal) {
-            new bootstrap.Modal(errorModal).show();
-        }
+        if (errorModal) { new bootstrap.Modal(errorModal).show(); }
 
         calcLiveScore();
     });
@@ -971,6 +1335,12 @@
     function openInputModal() {
         document.getElementById('dciForm').reset();
         document.getElementById('reportId').value = '';
+        document.getElementById('areaSearch').value = '';
+        document.getElementById('inputArea').value = '';
+        document.getElementById('benchmarkSearch').disabled = true;
+        document.getElementById('benchmarkSearch').value = 'Pilih Area Utama dulu...';
+        document.getElementById('inputDetilLokasi').value = '';
+        document.getElementById('btnAddBenchmark').disabled = true;
         document.getElementById('modalFormTitle').innerText = 'Form Inspeksi Dump Condition Index (DCI)';
         const newBadge = document.getElementById('modalNewBadge');
         if (newBadge) newBadge.classList.remove('d-none');
@@ -978,7 +1348,6 @@
         document.getElementById('inputWaktu').value = new Date().toTimeString().substring(0, 5);
         document.getElementById('photoPreviewWrap').classList.add('d-none');
 
-        // Reset all buttons to 100
         ['skorLantaiDump', 'skorSafetyBerm', 'skorKondisiCrest', 'skorGradeDumping',
          'skorDrainaseDump', 'skorPenataanSpillage', 'skorRambuPenerangan', 'skorSpotterManuver'].forEach(param => {
             document.getElementById(param).value = 100;
@@ -1004,10 +1373,18 @@
                 document.getElementById('inputWaktu').value = data.waktu;
                 document.getElementById('inputShift').value = data.shift || 'Day';
                 document.getElementById('inputArea').value = data.area || '';
+                document.getElementById('areaSearch').value = data.area || '';
                 document.getElementById('inputLokasi').value = data.lokasi || '';
                 document.getElementById('inputDisposal').value = data.disposal || '';
                 document.getElementById('inputNamaDump').value = data.namaDump || '';
                 document.getElementById('inputDetilLokasi').value = data.detilLokasi || '';
+                if (data.area) {
+                    loadBenchmarks(data.area, data.detilLokasi);
+                } else {
+                    document.getElementById('benchmarkSearch').disabled = true;
+                    document.getElementById('benchmarkSearch').value = 'Pilih Area Utama dulu...';
+                    document.getElementById('btnAddBenchmark').disabled = true;
+                }
                 document.getElementById('inputLat').value = data.latitude || '';
                 document.getElementById('inputLong').value = data.longitude || '';
                 if (data.latitude && data.longitude) {
