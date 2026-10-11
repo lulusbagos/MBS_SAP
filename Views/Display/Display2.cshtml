@@ -1571,7 +1571,7 @@
                 <i class="bi bi-display"></i> Slide 2 / 3
             </div>
             <div class="slide-timer-text">
-                <i class="bi bi-clock-history" style="color:#38bdf8;"></i> Ganti ke Display 1 dalam: <span id="slideCountdown">05:00</span>
+                <i class="bi bi-clock-history" style="color:#38bdf8;"></i> Ganti ke Display 3 dalam: <span id="slideCountdown">05:00</span>
             </div>
             <a href="/Display" class="slide-btn" title="Pindah ke Display 1 sekarang">
                 <i class="bi bi-arrow-left-right"></i> Display 1
@@ -2138,8 +2138,8 @@ function updateSlideTimer() {
 
     slideTimeRemaining--;
     if (slideTimeRemaining < 0) {
-        // Transition to Display 1
-        window.location.href = '/Display';
+        // Transition to Display 3 (RCI, FCI & BBS)
+        window.location.href = '/Display3';
         return;
     }
 
