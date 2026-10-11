@@ -6,12 +6,12 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Display 4 &mdash; Analisis 3D Hazard: TTA vs KTA &amp; MTD vs YTD</title>
+    <title>Display 4 &mdash; 3D Hazard Analytics: Top 5 KTA &amp; TTA &bull; MTD vs YTD</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=JetBrains+Mono:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=JetBrains+Mono:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
     <!-- Three.js 3D Engine & OrbitControls -->
     <script src="~/lib/three/three.min.js"></script>
@@ -26,14 +26,15 @@
     <style>
     :root {
         --bg-space: #030712;
-        --hud-bg: rgba(10, 16, 35, 0.88);
-        --hud-border: rgba(56, 189, 248, 0.28);
-        --neon-cyan: #38bdf8;
-        --neon-amber: #f59e0b;
-        --neon-emerald: #10b981;
-        --neon-purple: #a855f7;
-        --neon-red: #f43f5e;
-        --gold-bright: #fbbf24;
+        --hud-bg: rgba(7, 13, 31, 0.92);
+        --hud-border: rgba(56, 189, 248, 0.35);
+        --neon-cyan: #00f0ff;
+        --neon-amber: #ff9e00;
+        --neon-emerald: #00e676;
+        --neon-purple: #c084fc;
+        --neon-red: #ff3366;
+        --gold-bright: #ffb703;
+        --table-green: #007A3D;
         --text-white: #ffffff;
         --text-muted: #94a3b8;
     }
@@ -71,7 +72,7 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        padding: 14px 20px;
+        padding: 10px 16px;
     }
 
     .interactive { pointer-events: auto; }
@@ -85,9 +86,10 @@
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
         border: 1px solid var(--hud-border);
-        border-radius: 14px;
-        padding: 10px 20px;
-        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(56, 189, 248, 0.25);
+        border-radius: 12px;
+        padding: 8px 18px;
+        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(56, 189, 248, 0.3);
+        margin-bottom: 6px;
     }
 
     .hud-brand {
@@ -103,13 +105,13 @@
         padding: 5px 10px;
         border-radius: 6px;
         letter-spacing: 1px;
-        box-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
+        box-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
         display: inline-flex;
         align-items: center;
         gap: 5px;
     }
     .hud-title {
-        font-size: 17px;
+        font-size: 16px;
         font-weight: 800;
         letter-spacing: 0.5px;
         color: #ffffff;
@@ -128,12 +130,12 @@
         gap: 8px;
     }
     .nav-btn {
-        background: rgba(255, 255, 255, 0.06);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        color: #cbd5e1;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #e2e8f0;
         font-size: 11.5px;
         font-weight: 600;
-        padding: 6px 12px;
+        padding: 5px 11px;
         border-radius: 8px;
         text-decoration: none;
         display: inline-flex;
@@ -143,27 +145,27 @@
         cursor: pointer;
     }
     .nav-btn:hover {
-        background: rgba(56, 189, 248, 0.2);
+        background: rgba(56, 189, 248, 0.25);
         border-color: var(--neon-cyan);
         color: #ffffff;
         transform: translateY(-1px);
     }
     .nav-btn.active {
-        background: linear-gradient(135deg, rgba(2, 132, 199, 0.4), rgba(37, 99, 235, 0.5));
+        background: linear-gradient(135deg, rgba(2, 132, 199, 0.6), rgba(37, 99, 235, 0.7));
         border-color: var(--neon-cyan);
         color: #ffffff;
-        box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
+        box-shadow: 0 0 16px rgba(0, 240, 255, 0.6);
     }
 
     .slide-timer-pill {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        background: rgba(56, 189, 248, 0.1);
-        border: 1px solid rgba(56, 189, 248, 0.3);
-        padding: 5px 12px;
+        background: rgba(56, 189, 248, 0.15);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        padding: 4px 10px;
         border-radius: 20px;
-        font-size: 11.5px;
+        font-size: 11px;
         color: var(--neon-cyan);
         font-family: 'JetBrains Mono', monospace;
     }
@@ -173,11 +175,11 @@
         background-color: var(--neon-cyan);
         border-radius: 50%;
         display: inline-block;
-        box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7);
+        box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.8);
         animation: pulseCyan 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
     }
     @@keyframes pulseCyan {
-        to { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
+        to { box-shadow: 0 0 0 10px rgba(0, 240, 255, 0); }
     }
 
     .hud-clock {
@@ -185,7 +187,7 @@
         font-family: 'JetBrains Mono', monospace;
     }
     .clock-time {
-        font-size: 17px;
+        font-size: 16px;
         font-weight: 800;
         color: #ffffff;
         letter-spacing: 1px;
@@ -195,154 +197,192 @@
         color: var(--text-muted);
     }
 
-    /* Main HUD Middle Area */
-    .hud-middle {
+    /* ── VIEWPORT HUD SUMMARY CARDS (Top Left & Top Right) ── */
+    .viewport-overlay-kpi {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-        flex-grow: 1;
-        margin: 12px 0;
-        overflow: hidden;
+        pointer-events: none;
+        margin-bottom: auto;
     }
-
-    .hud-col {
-        width: 340px;
-        max-width: 340px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        max-height: calc(100vh - 150px);
-        overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: var(--hud-border) transparent;
-    }
-    .hud-col::-webkit-scrollbar { width: 4px; }
-    .hud-col::-webkit-scrollbar-thumb { background: var(--hud-border); border-radius: 4px; }
-
-    .hud-card {
-        background: var(--hud-bg);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
+    .floating-mini-card {
+        background: rgba(10, 18, 42, 0.88);
         border: 1px solid var(--hud-border);
-        border-radius: 12px;
-        padding: 14px 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        position: relative;
-        overflow: hidden;
-    }
-    .hud-card.card-cyan::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
-    }
-    .hud-card.card-amber::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, transparent, var(--neon-amber), transparent);
+        border-radius: 10px;
+        padding: 8px 14px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        gap: 12px;
     }
 
-    .hud-card-header {
+    /* ── BOTTOM DOCKED TABLES SECTION (EXACT SCREENSHOT IMPLEMENTATION) ── */
+    .hud-tables-section {
+        background: rgba(6, 11, 25, 0.94);
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        border-radius: 12px;
+        padding: 10px 14px;
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        margin-top: auto;
+        transition: all 0.3s ease;
+    }
+
+    .tables-header-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
-    .hud-card-title {
-        font-size: 12px;
+    .tables-section-title {
+        font-size: 13px;
         font-weight: 800;
         letter-spacing: 0.5px;
-        text-transform: uppercase;
-        color: #f1f5f9;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .view-mode-toggle {
         display: flex;
         align-items: center;
         gap: 6px;
     }
-    .hud-badge-val {
-        font-size: 11px;
-        font-weight: 800;
-        padding: 3px 8px;
+    .mode-btn {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        color: #cbd5e1;
+        font-size: 10.5px;
+        font-weight: 700;
+        padding: 3px 10px;
         border-radius: 6px;
-        font-family: 'JetBrains Mono', monospace;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .mode-btn:hover, .mode-btn.active {
+        background: var(--table-green);
+        border-color: #10b981;
+        color: #ffffff;
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
     }
 
-    /* KPI Row & Box */
-    .kpi-row {
+    .tables-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
     }
-    .kpi-box {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+
+    /* White Paper Card for Tables with Exact Signature Green Header #007A3D */
+    .table-container-card {
+        background: #ffffff;
         border-radius: 8px;
-        padding: 9px;
-        text-align: center;
-    }
-    .kpi-label {
-        font-size: 9.5px;
-        color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 3px;
-    }
-    .kpi-number {
-        font-size: 20px;
-        font-weight: 900;
-        font-family: 'JetBrains Mono', monospace;
-        line-height: 1;
-    }
-    .kpi-sub {
-        font-size: 10px;
-        color: var(--text-muted);
-        margin-top: 3px;
-    }
-
-    /* Ratio Progress Bar */
-    .ratio-bar-wrap {
-        margin-top: 10px;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 6px;
         overflow: hidden;
-        height: 10px;
-        display: flex;
-    }
-    .ratio-bar-kta {
-        background: var(--neon-cyan);
-        height: 100%;
-        transition: width 0.6s ease;
-        box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
-    }
-    .ratio-bar-tta {
-        background: var(--neon-amber);
-        height: 100%;
-        transition: width 0.6s ease;
-        box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        border: 1px solid #d1d5db;
     }
 
-    /* Bottom HUD Toolbar */
-    .hud-bottom {
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11.5px;
+        color: #1f2937;
+    }
+    .report-table thead tr {
+        background: var(--table-green);
+        height: 36px;
+    }
+    .report-table thead th {
+        color: #ffffff;
+        font-weight: 800;
+        padding: 7px 10px;
+        border: none;
+        letter-spacing: 0.3px;
+    }
+    .report-table tbody tr {
+        border-bottom: 1px solid #e5e7eb;
+        height: 30px;
+        transition: background 0.15s;
+    }
+    .report-table tbody tr:hover {
+        background-color: #f3f4f6;
+    }
+    .report-table tbody td {
+        padding: 6px 10px;
+        vertical-align: middle;
+    }
+    .report-table tfoot tr {
+        background: #f8fafc;
+        border-top: 2px solid var(--table-green);
+        border-bottom: 2px solid var(--table-green);
+        height: 34px;
+        font-weight: 800;
+    }
+    .report-table tfoot td {
+        padding: 6px 10px;
+        color: var(--table-green);
+    }
+
+    .cat-name-cell {
+        font-weight: 600;
+        color: #111827;
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .val-cell {
+        text-align: right;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 700;
+        color: #1f2937;
+    }
+    .total-cell {
+        text-align: right;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 800;
+        color: #111827;
+    }
+    .pct-cell {
+        text-align: right;
+        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        color: #4b5563;
+    }
+    .trend-cell {
+        text-align: center;
+        width: 45px;
+    }
+
+    /* Trend Arrows */
+    .arrow-up {
+        color: #dc2626;
+        font-weight: 900;
+        font-size: 12px;
+    }
+    .arrow-down {
+        color: #16a34a;
+        font-weight: 900;
+        font-size: 12px;
+    }
+    .arrow-same {
+        color: #9ca3af;
+        font-size: 12px;
+    }
+
+    /* ── BOTTOM HUD TOOLBAR ── */
+    .hud-bottom-bar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: var(--hud-bg);
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-        border: 1px solid var(--hud-border);
-        border-radius: 12px;
-        padding: 9px 18px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        padding-top: 8px;
+        font-size: 11px;
     }
-
     .legend-indicators {
         display: flex;
         align-items: center;
         gap: 16px;
-        font-size: 11.5px;
         font-weight: 600;
     }
     .legend-pill {
@@ -358,13 +398,12 @@
         box-shadow: 0 0 8px currentColor;
     }
 
-    .ticker-bar {
-        font-size: 11px;
-        color: var(--text-muted);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-family: 'JetBrains Mono', monospace;
+    /* Collapsed state for tables */
+    .hud-tables-section.collapsed .tables-grid {
+        display: none;
+    }
+    .hud-tables-section.collapsed {
+        padding: 6px 14px;
     }
     </style>
 </head>
@@ -382,12 +421,12 @@
                 <span class="hud-badge-k3"><i class="bi bi-shield-shaded"></i> 3D HAZARD RADAR</span>
                 <div>
                     <div class="hud-title">ANALISIS KATEGORI HAZARD &amp; KOMPARASI WAKTU</div>
-                    <div class="hud-subtitle">GRAFIK 3 DIMENSI &bull; UNSAFE ACTION (TTA) vs UNSAFE CONDITION (KTA) &bull; MTD vs YTD</div>
+                    <div class="hud-subtitle">3D SKYSCRAPER BARS &bull; TOP 5 KONDISI TIDAK AMAN (KTA) vs TINDAKAN TIDAK AMAN (TTA) &bull; MTD vs YTD</div>
                 </div>
             </div>
 
             <div class="hud-nav-buttons">
-                <a href="/Display" class="nav-btn" title="Display 1: Safety &amp; K3 Command Center">
+                <a href="/Display" class="nav-btn" title="Display 1: Safety Command Center">
                     <i class="bi bi-shield-check text-primary"></i> Display 1
                 </a>
                 <a href="/Display2" class="nav-btn" title="Display 2: Operations &amp; Safety League">
@@ -419,137 +458,152 @@
             </div>
         </header>
 
-        <!-- ── MAIN HUD MIDDLE (COLUMNS LEFT & RIGHT) ── -->
-        <div class="hud-middle">
-            
-            <!-- LEFT COLUMN: REPORT 1 - ANALISIS KATEGORI (TTA VS KTA) -->
-            <aside class="hud-col interactive">
-                
-                <div class="hud-card card-cyan">
-                    <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-pie-chart-fill text-cyan"></i> GRAFIK 1: KATEGORI HAZARD</span>
-                        <span class="hud-badge-val" style="background: rgba(56, 189, 248, 0.2); color: var(--neon-cyan);">PROPORSI TOTAL</span>
-                    </div>
+        <!-- ── VIEWPORT FLOATING KPI CHIPS ── -->
+        <div class="viewport-overlay-kpi interactive">
+            <div class="floating-mini-card" style="border-left: 4px solid var(--neon-cyan);">
+                <div>
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Podium Kiri</div>
+                    <div style="font-size: 13px; font-weight: 800; color: var(--neon-cyan);">TOP 5 KONDISI TIDAK AMAN (KTA)</div>
+                </div>
+                <div style="text-align: right; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px;">
+                    <div style="font-size: 16px; font-weight: 900; font-family: 'JetBrains Mono', monospace; color: #fff;" id="chipKtaTotal">--</div>
+                    <div style="font-size: 10px; color: var(--neon-cyan);" id="chipKtaPct">--% Laporan</div>
+                </div>
+            </div>
 
-                    <div class="kpi-row">
-                        <div class="kpi-box" style="border-top: 3px solid var(--neon-cyan);">
-                            <div class="kpi-label">Kondisi Tdk Aman (KTA)</div>
-                            <div class="kpi-number text-cyan" id="kpiKtaTotal">--</div>
-                            <div class="kpi-sub" id="kpiKtaPct">--% dari total</div>
-                        </div>
-                        <div class="kpi-box" style="border-top: 3px solid var(--neon-amber);">
-                            <div class="kpi-label">Tindakan Tdk Aman (TTA)</div>
-                            <div class="kpi-number text-warning" id="kpiTtaTotal">--</div>
-                            <div class="kpi-sub" id="kpiTtaPct">--% dari total</div>
-                        </div>
-                    </div>
-
-                    <!-- Visual Ratio Bar -->
-                    <div class="ratio-bar-wrap" title="Rasio KTA vs TTA">
-                        <div class="ratio-bar-kta" id="ratioBarKta" style="width: 65%;"></div>
-                        <div class="ratio-bar-tta" id="ratioBarTta" style="width: 35%;"></div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mt-2" style="font-size:10px; color:var(--text-muted);">
-                        <span><span class="color-dot" style="background:var(--neon-cyan); color:var(--neon-cyan);"></span> KTA (Unsafe Condition)</span>
-                        <span><span class="color-dot" style="background:var(--neon-amber); color:var(--neon-amber);"></span> TTA (Unsafe Action)</span>
+            <div class="floating-mini-card" style="border-left: 4px solid var(--neon-emerald);">
+                <div style="text-align: center;">
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Komparasi Periode</div>
+                    <div style="font-size: 13px; font-weight: 800; color: #fff;">
+                        MTD: <span class="text-success" id="chipMtdTotal">--</span> &bull; 
+                        YTD: <span style="color:var(--neon-purple);" id="chipYtdTotal">--</span>
                     </div>
                 </div>
+            </div>
 
-                <!-- Detail Kategori MTD -->
-                <div class="hud-card">
-                    <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-calendar2-month text-primary"></i> Rincian Bulan Ini (MTD)</span>
-                        <span class="badge bg-secondary" style="font-size:9.5px;" id="badgeBulanNama">Bulan Berjalan</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary border-opacity-25" style="font-size:11.5px;">
-                        <span><i class="bi bi-cone text-cyan me-1"></i>KTA (Kondisi Tidak Aman)</span>
-                        <strong class="text-white" id="mtdKtaDetail">-- Laporan (--%)</strong>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary border-opacity-25" style="font-size:11.5px;">
-                        <span><i class="bi bi-person-exclamation text-warning me-1"></i>TTA (Tindakan Tidak Aman)</span>
-                        <strong class="text-white" id="mtdTtaDetail">-- Laporan (--%)</strong>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center py-2" style="font-size:11.5px;">
-                        <span><i class="bi bi-clipboard2-check text-success me-1"></i>Total Hazard Bulan Ini</span>
-                        <strong class="text-cyan" id="mtdTotalDetail">-- Laporan</strong>
-                    </div>
+            <div class="floating-mini-card" style="border-left: 4px solid var(--neon-amber);">
+                <div>
+                    <div style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">Podium Kanan</div>
+                    <div style="font-size: 13px; font-weight: 800; color: var(--neon-amber);">TOP 5 TINDAKAN TIDAK AMAN (TTA)</div>
                 </div>
-
-            </aside>
-
-            <!-- RIGHT COLUMN: REPORT 2 - KOMPARASI WAKTU (MTD VS YTD) -->
-            <aside class="hud-col interactive">
-                
-                <div class="hud-card card-amber">
-                    <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-bar-chart-steps text-warning"></i> GRAFIK 2: KOMPARASI PERIODE</span>
-                        <span class="hud-badge-val" style="background: rgba(245, 158, 11, 0.2); color: var(--gold-bright);">MTD vs YTD</span>
-                    </div>
-
-                    <div class="kpi-row">
-                        <div class="kpi-box" style="border-top: 3px solid var(--neon-emerald);">
-                            <div class="kpi-label">MTD (Bulan Ini)</div>
-                            <div class="kpi-number text-success" id="kpiMtdTotal">--</div>
-                            <div class="kpi-sub" id="kpiMtdClosedRate">--% Closed</div>
-                        </div>
-                        <div class="kpi-box" style="border-top: 3px solid var(--neon-purple);">
-                            <div class="kpi-label">YTD (Tahun Berjalan)</div>
-                            <div class="kpi-number" style="color: var(--neon-purple);" id="kpiYtdTotal">--</div>
-                            <div class="kpi-sub" id="kpiYtdClosedRate">--% Closed</div>
-                        </div>
-                    </div>
+                <div style="text-align: right; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px;">
+                    <div style="font-size: 16px; font-weight: 900; font-family: 'JetBrains Mono', monospace; color: #fff;" id="chipTtaTotal">--</div>
+                    <div style="font-size: 10px; color: var(--neon-amber);" id="chipTtaPct">--% Laporan</div>
                 </div>
-
-                <!-- Status Penyelesaian MTD & YTD -->
-                <div class="hud-card">
-                    <div class="hud-card-header">
-                        <span class="hud-card-title"><i class="bi bi-check2-circle text-success"></i> Status Penyelesaian (Closed)</span>
-                        <span class="badge bg-success" style="font-size:9.5px;">TARGET &ge; 90%</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary border-opacity-25" style="font-size:11.5px;">
-                        <span><i class="bi bi-check-all text-success me-1"></i>Closed Hazard MTD</span>
-                        <strong class="text-white" id="mtdClosedDetail">-- Temuan (--%)</strong>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-secondary border-opacity-25" style="font-size:11.5px;">
-                        <span><i class="bi bi-check-all text-success me-1"></i>Closed Hazard YTD</span>
-                        <strong class="text-white" id="ytdClosedDetail">-- Temuan (--%)</strong>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center py-2" style="font-size:11.5px;">
-                        <span><i class="bi bi-clock-history text-danger me-1"></i>Sisa Temuan Open (MTD)</span>
-                        <strong class="text-danger" id="mtdOpenDetail">-- Temuan Aktif</strong>
-                    </div>
-                </div>
-
-            </aside>
-
+            </div>
         </div>
 
-        <!-- ── BOTTOM HUD TOOLBAR ── -->
-        <footer class="hud-bottom interactive">
-            <div class="legend-indicators">
-                <span style="color:var(--text-muted); font-size:11px; text-transform:uppercase;">KETERANGAN GRAFIK 3D:</span>
-                <span class="legend-pill"><span class="color-dot" style="background:var(--neon-cyan); color:var(--neon-cyan);"></span> KTA (Kondisi Tidak Aman)</span>
-                <span class="legend-pill"><span class="color-dot" style="background:var(--neon-amber); color:var(--neon-amber);"></span> TTA (Tindakan Tidak Aman)</span>
-                <span class="legend-pill"><span class="color-dot" style="background:var(--neon-emerald); color:var(--neon-emerald);"></span> MTD (Bulan Ini)</span>
-                <span class="legend-pill"><span class="color-dot" style="background:var(--neon-purple); color:var(--neon-purple);"></span> YTD (Tahun Berjalan)</span>
+        <!-- ── BOTTOM DOCKED TABLES (EXACT USER SCREENSHOT) ── -->
+        <section class="hud-tables-section interactive" id="tablesSection">
+            <div class="tables-header-row">
+                <div class="tables-section-title">
+                    <i class="bi bi-table text-success"></i>
+                    <span>TABEL DATA 3 BULAN &bull; TOP 5 TINDAKAN &amp; KONDISI TIDAK AMAN</span>
+                    <span class="badge" style="background:var(--table-green); font-size:10px;" id="badgeMonthsRange">Jul - Sep</span>
+                </div>
+
+                <div class="view-mode-toggle">
+                    <button type="button" class="mode-btn active" id="btnModeSplit" onclick="setTablesVisible(true)">
+                        <i class="bi bi-layout-split me-1"></i>3D + Tabel Lengkap
+                    </button>
+                    <button type="button" class="mode-btn" id="btnMode3D" onclick="setTablesVisible(false)">
+                        <i class="bi bi-boxes me-1"></i>Hanya 3D Skyscraper
+                    </button>
+                </div>
             </div>
 
-            <div class="ticker-bar">
-                <span><i class="bi bi-display text-cyan me-1"></i>WALL DISPLAY MODE</span>
-                <span>&bull;</span>
-                <span>SEMUA LABEL &amp; ANGKA TAMPIL PERMANEN TANPA PERLU MOUSE</span>
+            <!-- DUAL TABLES GRID -->
+            <div class="tables-grid" id="tablesGrid">
+                
+                <!-- 1. LEFT TABLE: TOP 5 UNSAFE ACTION (3 BULAN) -->
+                <div class="table-container-card">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">TOP 5 UNSAFE ACTION (3 BULAN)</th>
+                                <th class="text-center" style="width: 55px;" id="thTtaM1">M1</th>
+                                <th class="text-center" style="width: 65px;" id="thTtaM2">M2</th>
+                                <th class="text-center" style="width: 65px;" id="thTtaM3">M3</th>
+                                <th class="text-center" style="width: 60px;">Total</th>
+                                <th class="text-center" style="width: 50px;">%</th>
+                                <th class="text-center pe-3" style="width: 48px;">Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyTta">
+                            <tr><td colspan="7" class="text-center py-3 text-muted">Memuat data 3 bulan Unsafe Action...</td></tr>
+                        </tbody>
+                        <tfoot id="tfootTta">
+                            <tr>
+                                <td class="ps-3 fw-bold">TOTAL TOP 5 TTA</td>
+                                <td class="text-center fw-bold" id="tfTtaM1">--</td>
+                                <td class="text-center fw-bold" id="tfTtaM2">--</td>
+                                <td class="text-center fw-bold" id="tfTtaM3">--</td>
+                                <td class="text-center fw-bold text-success" id="tfTtaTotal">--</td>
+                                <td class="text-center fw-bold" id="tfTtaPct">--%</td>
+                                <td class="text-center fw-bold text-success" id="tfTtaTrend">▼</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- 2. RIGHT TABLE: TOP 5 UNSAFE CONDITION (3 BULAN) -->
+                <div class="table-container-card">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">TOP 5 UNSAFE CONDITION (3 BULAN)</th>
+                                <th class="text-center" style="width: 55px;" id="thKtaM1">M1</th>
+                                <th class="text-center" style="width: 65px;" id="thKtaM2">M2</th>
+                                <th class="text-center" style="width: 65px;" id="thKtaM3">M3</th>
+                                <th class="text-center" style="width: 60px;">Total</th>
+                                <th class="text-center" style="width: 50px;">%</th>
+                                <th class="text-center pe-3" style="width: 48px;">Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyKta">
+                            <tr><td colspan="7" class="text-center py-3 text-muted">Memuat data 3 bulan Unsafe Condition...</td></tr>
+                        </tbody>
+                        <tfoot id="tfootKta">
+                            <tr>
+                                <td class="ps-3 fw-bold">TOTAL TOP 5 KTA</td>
+                                <td class="text-center fw-bold" id="tfKtaM1">--</td>
+                                <td class="text-center fw-bold" id="tfKtaM2">--</td>
+                                <td class="text-center fw-bold" id="tfKtaM3">--</td>
+                                <td class="text-center fw-bold text-success" id="tfKtaTotal">--</td>
+                                <td class="text-center fw-bold" id="tfKtaPct">--%</td>
+                                <td class="text-center fw-bold text-success" id="tfKtaTrend">▼</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
             </div>
-        </footer>
+
+            <!-- BOTTOM HUD FOOTER -->
+            <div class="hud-bottom-bar">
+                <div class="legend-indicators">
+                    <span style="color:var(--text-muted); font-size:10.5px; text-transform:uppercase;">LEGENDA GRAFIK 3D:</span>
+                    <span class="legend-pill"><span class="color-dot" style="background:var(--neon-cyan); color:var(--neon-cyan);"></span> KTA (Kondisi Tidak Aman)</span>
+                    <span class="legend-pill"><span class="color-dot" style="background:var(--neon-amber); color:var(--neon-amber);"></span> TTA (Tindakan Tidak Aman)</span>
+                    <span class="legend-pill"><span class="color-dot" style="background:var(--neon-emerald); color:var(--neon-emerald);"></span> MTD (Bulan Berjalan)</span>
+                    <span class="legend-pill"><span class="color-dot" style="background:var(--neon-purple); color:var(--neon-purple);"></span> YTD (Tahun Berjalan)</span>
+                </div>
+
+                <div style="font-family:'JetBrains Mono', monospace; color:var(--text-muted); font-size:10.5px;">
+                    <i class="bi bi-tv me-1 text-cyan"></i>WALL DISPLAY AUTO-KIOSK &bull; SEMUA LABEL TERANG PERMANEN &bull; TANPA PERLU MOUSE
+                </div>
+            </div>
+        </section>
 
     </div>
 
     <!-- ═════════════════════════════════════════════════════════════════════════
-         THREE.JS 3D ENGINE SCRIPT (PERMANENT FLOATING 3D BILLBOARDS)
+         THREE.JS 3D ENGINE SCRIPT (HIGH CONTRAST & LUMINOUS 3D SKYSCRAPERS)
          ═════════════════════════════════════════════════════════════════════════ -->
     <script>
     let scene, camera, renderer, controls;
     let clock = new THREE.Clock();
-    let chartGroup1, chartGroup2, lasersGroup, particlesGroup;
+    let ktaGroup, ttaGroup, komparasiGroup, particlesGroup;
     let display4Data = null;
 
     /* ──────────────────────────────────────────────────────────────────────────
@@ -561,11 +615,12 @@
         const height = window.innerHeight;
 
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x030712);
-        scene.fog = new THREE.FogExp2(0x030712, 0.0032);
+        scene.background = new THREE.Color(0x020617);
+        scene.fog = new THREE.FogExp2(0x020617, 0.0028);
 
+        // Perspective camera angled to view all 3 pedestals
         camera = new THREE.PerspectiveCamera(45, width / height, 1, 3000);
-        camera.position.set(0, 110, 280);
+        camera.position.set(0, 115, 275);
 
         renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, powerPreference: 'high-performance' });
         renderer.setSize(width, height);
@@ -579,68 +634,76 @@
         controls.maxPolarAngle = Math.PI / 2 - 0.02;
         controls.minDistance = 60;
         controls.maxDistance = 650;
-        controls.target.set(0, 45, 0);
+        controls.target.set(0, 40, 0);
 
         setupLighting();
         createReflectiveGridFloor();
-        createGoldenParticles();
+        createCyberDustParticles();
 
         window.addEventListener('resize', onWindowResize);
         animate();
     }
 
     function setupLighting() {
-        const ambientLight = new THREE.AmbientLight(0x1e293b, 1.4);
+        // Crisp Ambient
+        const ambientLight = new THREE.AmbientLight(0x334155, 1.8);
         scene.add(ambientLight);
 
-        const sunLight = new THREE.DirectionalLight(0xffffff, 1.6);
-        sunLight.position.set(100, 220, 150);
+        // High Intensity Directional Sunlight
+        const sunLight = new THREE.DirectionalLight(0xffffff, 2.4);
+        sunLight.position.set(80, 240, 160);
         sunLight.castShadow = true;
         scene.add(sunLight);
 
-        // Cyan uplight for Left Pod
-        const light1 = new THREE.PointLight(0x38bdf8, 2.5, 200);
-        light1.position.set(-80, 20, 0);
-        scene.add(light1);
+        // Vibrant Cyan Uplight for KTA Podium (Left)
+        const lightKta = new THREE.PointLight(0x00f0ff, 4.0, 260);
+        lightKta.position.set(-80, 45, 10);
+        scene.add(lightKta);
 
-        // Purple uplight for Right Pod
-        const light2 = new THREE.PointLight(0xa855f7, 2.5, 200);
-        light2.position.set(80, 20, 0);
-        scene.add(light2);
+        // Vibrant Amber/Gold Uplight for TTA Podium (Right)
+        const lightTta = new THREE.PointLight(0xff9e00, 4.0, 260);
+        lightTta.position.set(80, 45, 10);
+        scene.add(lightTta);
+
+        // Vibrant Emerald/Purple Light for Center Komparasi Podium
+        const lightKomparasi = new THREE.PointLight(0x00e676, 3.0, 200);
+        lightKomparasi.position.set(0, 50, -40);
+        scene.add(lightKomparasi);
     }
 
     function createReflectiveGridFloor() {
-        const floorGeom = new THREE.PlaneGeometry(500, 500);
+        const floorGeom = new THREE.PlaneGeometry(600, 600);
         floorGeom.rotateX(-Math.PI / 2);
         const floorMat = new THREE.MeshStandardMaterial({
             color: 0x050b18,
-            roughness: 0.15,
-            metalness: 0.85
+            roughness: 0.12,
+            metalness: 0.88
         });
         const floor = new THREE.Mesh(floorGeom, floorMat);
         floor.receiveShadow = true;
         scene.add(floor);
 
-        const gridHelper = new THREE.GridHelper(500, 60, 0x38bdf8, 0x1e293b);
-        gridHelper.position.y = 0.1;
+        // Vibrant Grid Lines
+        const gridHelper = new THREE.GridHelper(600, 60, 0x00f0ff, 0x1e293b);
+        gridHelper.position.y = 0.15;
         scene.add(gridHelper);
     }
 
-    function createGoldenParticles() {
-        const count = 350;
+    function createCyberDustParticles() {
+        const count = 400;
         const geom = new THREE.BufferGeometry();
         const positions = new Float32Array(count * 3);
         for (let i = 0; i < count * 3; i += 3) {
-            positions[i] = (Math.random() - 0.5) * 400;
-            positions[i + 1] = Math.random() * 150 + 5;
-            positions[i + 2] = (Math.random() - 0.5) * 400;
+            positions[i] = (Math.random() - 0.5) * 450;
+            positions[i + 1] = Math.random() * 160 + 5;
+            positions[i + 2] = (Math.random() - 0.5) * 450;
         }
         geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         const mat = new THREE.PointsMaterial({
             color: 0x38bdf8,
-            size: 2.0,
+            size: 2.2,
             transparent: true,
-            opacity: 0.5,
+            opacity: 0.6,
             blending: THREE.AdditiveBlending
         });
         particlesGroup = new THREE.Points(geom, mat);
@@ -648,83 +711,110 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       2. HIGH-RES BILLBOARD TEXT SPRITE GENERATOR (NO-MOUSE WALL TV)
+       2. ULTRA HIGH-CONTRAST 3D BILLBOARD SPRITE GENERATOR (1024x512)
        ────────────────────────────────────────────────────────────────────────── */
-    function createBillboardSprite(lines, options = {}) {
+    function createHighContrastBillboard(options) {
         const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 256;
+        canvas.width = 1024;
+        canvas.height = 512;
         const ctx = canvas.getContext('2d');
 
-        const bgColor = options.bgColor || 'rgba(11, 19, 43, 0.92)';
-        const borderColor = options.borderColor || '#38bdf8';
-        const titleColor = options.titleColor || '#ffffff';
+        const borderColor = options.borderColor || '#00f0ff';
+        const rankText = options.rankText || '#1';
+        const titleText = options.titleText || 'Kategori';
+        const valueText = options.valueText || '0 Laporan';
+        const subText = options.subText || '';
+        const trendArrow = options.trendArrow || '▼';
+        const isTrendUp = options.isTrendUp || false;
 
-        // Draw Rounded Card Background
-        ctx.fillStyle = bgColor;
+        // 1. Solid High Contrast Background (No Transparency blur so it's 100% crisp)
+        ctx.fillStyle = '#060d1f';
+        ctx.fillRect(0, 0, 1024, 512);
+
+        // 2. Thick Glowing Neon Border
         ctx.strokeStyle = borderColor;
-        ctx.lineWidth = 6;
-        roundRect(ctx, 10, 10, 492, 236, 20);
-        ctx.fill();
+        ctx.lineWidth = 12;
+        roundRect(ctx, 10, 10, 1004, 492, 28);
         ctx.stroke();
 
-        // Top Accent Line
+        // 3. Top Accent Header Banner
         ctx.fillStyle = borderColor;
-        ctx.fillRect(20, 16, 472, 6);
+        ctx.fillRect(10, 10, 1004, 80);
 
-        // Header / Category Title
+        // Rank Badge & Header Text
+        ctx.fillStyle = '#000000';
+        ctx.font = '900 42px "Poppins", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(rankText, 40, 68);
+
+        ctx.textAlign = 'right';
+        ctx.font = '800 32px "Poppins", sans-serif';
+        ctx.fillText(options.categoryType || 'HAZARD REPORT', 980, 64);
+
+        // 4. Main Category Name (Pure White, Bold, Crisp)
         ctx.textAlign = 'center';
-        ctx.font = 'bold 26px Poppins, sans-serif';
-        ctx.fillStyle = titleColor;
-        ctx.fillText(lines[0] || '', 256, 60);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 48px "Poppins", sans-serif';
+        // Truncate if too long
+        let displayTitle = titleText;
+        if (displayTitle.length > 26) {
+            displayTitle = displayTitle.substring(0, 24) + '...';
+        }
+        ctx.fillText(displayTitle, 512, 175);
 
-        // Subtitle (e.g. Unsafe Condition)
-        ctx.font = '600 18px Poppins, sans-serif';
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillText(lines[1] || '', 256, 92);
-
-        // Big Main Value (e.g. 68.4% • 184 Laporan)
-        ctx.font = '900 36px "JetBrains Mono", monospace';
+        // 5. Huge Bright Number Value
         ctx.fillStyle = borderColor;
-        ctx.fillText(lines[2] || '', 256, 150);
+        ctx.font = '900 70px "JetBrains Mono", monospace';
+        ctx.fillText(valueText, 512, 275);
 
-        // Secondary Metric (e.g. YTD: 1,420 • Closed: 96%)
-        ctx.font = '600 20px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#e2e8f0';
-        ctx.fillText(lines[3] || '', 256, 195);
+        // 6. Subtitle / 3-Month Breakdown Text
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '700 36px "JetBrains Mono", monospace';
+        ctx.fillText(subText, 512, 365);
+
+        // 7. Trend Tag Pill at Bottom
+        const trendBg = isTrendUp ? '#dc2626' : '#16a34a';
+        ctx.fillStyle = trendBg;
+        roundRect(ctx, 360, 410, 304, 60, 16);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '800 32px "Poppins", sans-serif';
+        ctx.fillText(isTrendUp ? '▲ TREN NAIK' : '▼ TREN TURUN', 512, 452);
 
         const texture = new THREE.CanvasTexture(canvas);
         texture.minFilter = THREE.LinearFilter;
         texture.magFilter = THREE.LinearFilter;
 
-        const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: false });
         const sprite = new THREE.Sprite(spriteMat);
-        sprite.scale.set(38, 19, 1);
+        sprite.scale.set(30, 15, 1);
         return sprite;
     }
 
-    function createHeaderSignSprite(text, color) {
+    function createPodiumTitleSprite(title, color) {
         const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 128;
+        canvas.width = 1024;
+        canvas.height = 256;
         const ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillStyle = '#060d1f';
+        ctx.fillRect(0, 0, 1024, 256);
+
         ctx.strokeStyle = color;
-        ctx.lineWidth = 4;
-        roundRect(ctx, 10, 10, 492, 108, 14);
-        ctx.fill();
+        ctx.lineWidth = 8;
+        roundRect(ctx, 8, 8, 1008, 240, 24);
         ctx.stroke();
 
-        ctx.textAlign = 'center';
-        ctx.font = 'bold 24px Poppins, sans-serif';
         ctx.fillStyle = color;
-        ctx.fillText(text, 256, 72);
+        ctx.font = '900 48px "Poppins", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(title, 512, 145);
 
         const texture = new THREE.CanvasTexture(canvas);
-        const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: false });
         const sprite = new THREE.Sprite(spriteMat);
-        sprite.scale.set(45, 11, 1);
+        sprite.scale.set(45, 11.2, 1);
         return sprite;
     }
 
@@ -739,200 +829,247 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       3. BUILD 3D BARS FOR REPORT 1 (TTA VS KTA) & REPORT 2 (MTD VS YTD)
+       3. BUILD 3D BARS (TOP 5 KTA, TOP 5 TTA & KOMPARASI MTD vs YTD)
        ────────────────────────────────────────────────────────────────────────── */
     function build3DCharts(data) {
-        if (chartGroup1) scene.remove(chartGroup1);
-        if (chartGroup2) scene.remove(chartGroup2);
-        if (lasersGroup) scene.remove(lasersGroup);
+        if (ktaGroup) scene.remove(ktaGroup);
+        if (ttaGroup) scene.remove(ttaGroup);
+        if (komparasiGroup) scene.remove(komparasiGroup);
 
-        chartGroup1 = new THREE.Group();
-        chartGroup2 = new THREE.Group();
-        lasersGroup = new THREE.Group();
+        ktaGroup = new THREE.Group();
+        ttaGroup = new THREE.Group();
+        komparasiGroup = new THREE.Group();
 
-        const kat = data.kategori || {};
+        const months = data.months || ['M1', 'M2', 'M3'];
+        const top5Kta = data.top5Kta || [];
+        const top5Tta = data.top5Tta || [];
         const kom = data.komparasi || {};
         const mtd = kom.mtd || {};
         const ytd = kom.ytd || {};
 
         // ═════════════════════════════════════════════════════════════════════
-        // PODIUM 1 (LEFT): KATEGORI HAZARD (KTA vs TTA)
+        // PODIUM 1 (LEFT): TOP 5 KONDISI TIDAK AMAN (KTA) - ELECTRIC CYAN
         // ═════════════════════════════════════════════════════════════════════
-        chartGroup1.position.set(-80, 0, 0);
+        ktaGroup.position.set(-82, 0, 0);
 
         // Pedestal Platform Left
-        const ped1Geom = new THREE.BoxGeometry(60, 4, 35);
-        const ped1Mat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.6 });
-        const ped1 = new THREE.Mesh(ped1Geom, ped1Mat);
-        ped1.position.y = 2;
-        chartGroup1.add(ped1);
-
-        // Header Title Sign Left
-        const sign1 = createHeaderSignSprite('GRAFIK 1: KATEGORI HAZARD (KTA vs TTA)', '#38bdf8');
-        sign1.position.set(0, 78, 0);
-        chartGroup1.add(sign1);
-
-        // Bar 1: KTA (Unsafe Condition) - Cyan
-        const ktaVal = kat.ktaAll || 68;
-        const ktaPct = kat.ktaAllPct || 68.0;
-        const ktaHeight = Math.max(20, (ktaPct / 100) * 65);
-
-        const ktaBarGeom = new THREE.BoxGeometry(16, ktaHeight, 16);
-        ktaBarGeom.translate(0, ktaHeight / 2, 0);
-        const ktaBarMat = new THREE.MeshStandardMaterial({
-            color: 0x0284c7,
-            metalness: 0.7,
-            roughness: 0.2,
-            transparent: true,
-            opacity: 0.9,
-            emissive: 0x0284c7,
-            emissiveIntensity: 0.35
+        const pedKtaGeom = new THREE.BoxGeometry(95, 4, 45);
+        const pedKtaMat = new THREE.MeshStandardMaterial({
+            color: 0x07152b,
+            roughness: 0.25,
+            metalness: 0.8
         });
-        const ktaBar = new THREE.Mesh(ktaBarGeom, ktaBarMat);
-        ktaBar.position.set(-15, 4, 0);
-        chartGroup1.add(ktaBar);
+        const pedKta = new THREE.Mesh(pedKtaGeom, pedKtaMat);
+        pedKta.position.y = 2;
+        pedKta.receiveShadow = true;
+        ktaGroup.add(pedKta);
 
-        // Permanent Label Sprite on top of KTA Bar
-        const ktaSprite = createBillboardSprite([
-            'KONDISI TIDAK AMAN (KTA)',
-            'UNSAFE CONDITION',
-            `${ktaPct}% • ${ktaVal} LAPORAN`,
-            `MTD: ${kat.ktaMtd || 0}  |  YTD: ${kat.ktaYtd || 0}`
-        ], { borderColor: '#38bdf8', titleColor: '#ffffff' });
-        ktaSprite.position.set(-15, ktaHeight + 16, 0);
-        chartGroup1.add(ktaSprite);
+        // Glowing Footing Frame
+        const pedKtaEdge = new THREE.BoxGeometry(97, 1, 47);
+        const pedKtaEdgeMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
+        const edgeKta = new THREE.Mesh(pedKtaEdge, pedKtaEdgeMat);
+        edgeKta.position.y = 0.5;
+        ktaGroup.add(edgeKta);
 
-        // Bar 2: TTA (Unsafe Action) - Amber
-        const ttaVal = kat.ttaAll || 32;
-        const ttaPct = kat.ttaAllPct || 32.0;
-        const ttaHeight = Math.max(20, (ttaPct / 100) * 65);
+        // Title Sign
+        const titleKta = createPodiumTitleSprite('TOP 5 KONDISI TIDAK AMAN (KTA)', '#00f0ff');
+        titleKta.position.set(0, 85, 0);
+        ktaGroup.add(titleKta);
 
-        const ttaBarGeom = new THREE.BoxGeometry(16, ttaHeight, 16);
-        ttaBarGeom.translate(0, ttaHeight / 2, 0);
-        const ttaBarMat = new THREE.MeshStandardMaterial({
-            color: 0xd97706,
-            metalness: 0.7,
-            roughness: 0.2,
-            transparent: true,
-            opacity: 0.9,
-            emissive: 0xd97706,
-            emissiveIntensity: 0.35
+        // Render 5 Skyscraper Bars for KTA
+        const maxKtaTotal = top5Kta.length > 0 ? Math.max(...top5Kta.map(x => x.total || 1)) : 100;
+        const ktaColors = [0x00f0ff, 0x00d4ff, 0x0284c7, 0x0369a1, 0x075985];
+
+        top5Kta.forEach((item, index) => {
+            const posX = -36 + (index * 18);
+            const rawHeight = (item.total / maxKtaTotal) * 58;
+            const barHeight = Math.max(16, rawHeight);
+
+            // Bar Mesh
+            const barGeom = new THREE.BoxGeometry(13, barHeight, 13);
+            barGeom.translate(0, barHeight / 2, 0);
+            const barMat = new THREE.MeshStandardMaterial({
+                color: ktaColors[index] || 0x00f0ff,
+                metalness: 0.85,
+                roughness: 0.15,
+                emissive: ktaColors[index] || 0x00f0ff,
+                emissiveIntensity: 0.55
+            });
+            const bar = new THREE.Mesh(barGeom, barMat);
+            bar.position.set(posX, 4, 0);
+            bar.castShadow = true;
+            ktaGroup.add(bar);
+
+            // Floating Billboard Card Directly Above Bar
+            const sprite = createHighContrastBillboard({
+                borderColor: '#00f0ff',
+                categoryType: 'KONDISI TIDAK AMAN (KTA)',
+                rankText: `RANK #${index + 1}`,
+                titleText: item.name,
+                valueText: `${item.total.toLocaleString('id-ID')} (${item.pct}%)`,
+                subText: `${months[0]}:${item.m1}  ${months[1]}:${item.m2}  ${months[2]}:${item.m3}`,
+                isTrendUp: item.trend === 'up'
+            });
+            sprite.position.set(posX, barHeight + 14, 0);
+            ktaGroup.add(sprite);
         });
-        const ttaBar = new THREE.Mesh(ttaBarGeom, ttaBarMat);
-        ttaBar.position.set(15, 4, 0);
-        chartGroup1.add(ttaBar);
-
-        // Permanent Label Sprite on top of TTA Bar
-        const ttaSprite = createBillboardSprite([
-            'TINDAKAN TIDAK AMAN (TTA)',
-            'UNSAFE ACTION',
-            `${ttaPct}% • ${ttaVal} LAPORAN`,
-            `MTD: ${kat.ttaMtd || 0}  |  YTD: ${kat.ttaYtd || 0}`
-        ], { borderColor: '#f59e0b', titleColor: '#ffffff' });
-        ttaSprite.position.set(15, ttaHeight + 16, 0);
-        chartGroup1.add(ttaSprite);
 
         // ═════════════════════════════════════════════════════════════════════
-        // PODIUM 2 (RIGHT): KOMPARASI WAKTU (MTD vs YTD)
+        // PODIUM 2 (RIGHT): TOP 5 TINDAKAN TIDAK AMAN (TTA) - VIVID AMBER/GOLD
         // ═════════════════════════════════════════════════════════════════════
-        chartGroup2.position.set(80, 0, 0);
+        ttaGroup.position.set(82, 0, 0);
 
         // Pedestal Platform Right
-        const ped2Geom = new THREE.BoxGeometry(60, 4, 35);
-        const ped2Mat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4, metalness: 0.6 });
-        const ped2 = new THREE.Mesh(ped2Geom, ped2Mat);
-        ped2.position.y = 2;
-        chartGroup2.add(ped2);
-
-        // Header Title Sign Right
-        const sign2 = createHeaderSignSprite('GRAFIK 2: KOMPARASI PERIODE (MTD vs YTD)', '#10b981');
-        sign2.position.set(0, 78, 0);
-        chartGroup2.add(sign2);
-
-        // Bar 3: MTD (Bulan Berjalan) - Emerald
-        const mtdTotal = mtd.total || 140;
-        const mtdClosed = mtd.closed || 135;
-        const mtdClosedPct = mtd.closedPct || 96.4;
-        const mtdHeight = 36; // Scaled display height
-
-        const mtdBarGeom = new THREE.BoxGeometry(16, mtdHeight, 16);
-        mtdBarGeom.translate(0, mtdHeight / 2, 0);
-        const mtdBarMat = new THREE.MeshStandardMaterial({
-            color: 0x059669,
-            metalness: 0.7,
-            roughness: 0.2,
-            transparent: true,
-            opacity: 0.9,
-            emissive: 0x059669,
-            emissiveIntensity: 0.35
+        const pedTtaGeom = new THREE.BoxGeometry(95, 4, 45);
+        const pedTtaMat = new THREE.MeshStandardMaterial({
+            color: 0x1f1406,
+            roughness: 0.25,
+            metalness: 0.8
         });
-        const mtdBar = new THREE.Mesh(mtdBarGeom, mtdBarMat);
-        mtdBar.position.set(-15, 4, 0);
-        chartGroup2.add(mtdBar);
+        const pedTta = new THREE.Mesh(pedTtaGeom, pedTtaMat);
+        pedTta.position.y = 2;
+        pedTta.receiveShadow = true;
+        ttaGroup.add(pedTta);
 
-        // Permanent Label Sprite on top of MTD Bar
-        const mtdSprite = createBillboardSprite([
-            'MTD (BULAN INI)',
-            data.periode ? data.periode.bulanNama : 'Bulan Berjalan',
-            `${mtdTotal} TOTAL HAZARD`,
-            `Closed: ${mtdClosedPct}% (${mtdClosed} Selesai)`
-        ], { borderColor: '#10b981', titleColor: '#ffffff' });
-        mtdSprite.position.set(-15, mtdHeight + 16, 0);
-        chartGroup2.add(mtdSprite);
+        // Glowing Footing Frame
+        const pedTtaEdge = new THREE.BoxGeometry(97, 1, 47);
+        const pedTtaEdgeMat = new THREE.MeshBasicMaterial({ color: 0xff9e00 });
+        const edgeTta = new THREE.Mesh(pedTtaEdge, pedTtaEdgeMat);
+        edgeTta.position.y = 0.5;
+        ttaGroup.add(edgeTta);
 
-        // Bar 4: YTD (Tahun Berjalan) - Purple / Gold
-        const ytdTotal = ytd.total || 1450;
-        const ytdClosed = ytd.closed || 1410;
-        const ytdClosedPct = ytd.closedPct || 97.2;
-        const ytdHeight = 58; // Higher skyscraper reflecting year accumulation
+        // Title Sign
+        const titleTta = createPodiumTitleSprite('TOP 5 TINDAKAN TIDAK AMAN (TTA)', '#ff9e00');
+        titleTta.position.set(0, 85, 0);
+        ttaGroup.add(titleTta);
 
-        const ytdBarGeom = new THREE.BoxGeometry(16, ytdHeight, 16);
-        ytdBarGeom.translate(0, ytdHeight / 2, 0);
-        const ytdBarMat = new THREE.MeshStandardMaterial({
-            color: 0x7c3aed,
+        // Render 5 Skyscraper Bars for TTA
+        const maxTtaTotal = top5Tta.length > 0 ? Math.max(...top5Tta.map(x => x.total || 1)) : 100;
+        const ttaColors = [0xffb703, 0xfb8500, 0xf59e0b, 0xd97706, 0xb45309];
+
+        top5Tta.forEach((item, index) => {
+            const posX = -36 + (index * 18);
+            const rawHeight = (item.total / maxTtaTotal) * 58;
+            const barHeight = Math.max(16, rawHeight);
+
+            // Bar Mesh
+            const barGeom = new THREE.BoxGeometry(13, barHeight, 13);
+            barGeom.translate(0, barHeight / 2, 0);
+            const barMat = new THREE.MeshStandardMaterial({
+                color: ttaColors[index] || 0xff9e00,
+                metalness: 0.85,
+                roughness: 0.15,
+                emissive: ttaColors[index] || 0xff9e00,
+                emissiveIntensity: 0.55
+            });
+            const bar = new THREE.Mesh(barGeom, barMat);
+            bar.position.set(posX, 4, 0);
+            bar.castShadow = true;
+            ttaGroup.add(bar);
+
+            // Floating Billboard Card Directly Above Bar
+            const sprite = createHighContrastBillboard({
+                borderColor: '#ff9e00',
+                categoryType: 'TINDAKAN TIDAK AMAN (TTA)',
+                rankText: `RANK #${index + 1}`,
+                titleText: item.name,
+                valueText: `${item.total.toLocaleString('id-ID')} (${item.pct}%)`,
+                subText: `${months[0]}:${item.m1}  ${months[1]}:${item.m2}  ${months[2]}:${item.m3}`,
+                isTrendUp: item.trend === 'up'
+            });
+            sprite.position.set(posX, barHeight + 14, 0);
+            ttaGroup.add(sprite);
+        });
+
+        // ═════════════════════════════════════════════════════════════════════
+        // PODIUM 3 (CENTER BACKDROP): KOMPARASI MTD vs YTD
+        // ═════════════════════════════════════════════════════════════════════
+        komparasiGroup.position.set(0, 0, -50);
+
+        const pedKomGeom = new THREE.BoxGeometry(50, 4, 28);
+        const pedKomMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.7 });
+        const pedKom = new THREE.Mesh(pedKomGeom, pedKomMat);
+        pedKom.position.y = 2;
+        komparasiGroup.add(pedKom);
+
+        const titleKom = createPodiumTitleSprite('KOMPARASI PERIODE (MTD vs YTD)', '#00e676');
+        titleKom.position.set(0, 68, 0);
+        komparasiGroup.add(titleKom);
+
+        // MTD Bar (Emerald Green)
+        const mtdBarGeom = new THREE.BoxGeometry(14, 34, 14);
+        mtdBarGeom.translate(0, 17, 0);
+        const mtdBarMat = new THREE.MeshStandardMaterial({
+            color: 0x00e676,
             metalness: 0.8,
             roughness: 0.15,
-            transparent: true,
-            opacity: 0.9,
-            emissive: 0x7c3aed,
-            emissiveIntensity: 0.4
+            emissive: 0x00e676,
+            emissiveIntensity: 0.5
+        });
+        const mtdBar = new THREE.Mesh(mtdBarGeom, mtdBarMat);
+        mtdBar.position.set(-13, 4, 0);
+        komparasiGroup.add(mtdBar);
+
+        const mtdSprite = createHighContrastBillboard({
+            borderColor: '#00e676',
+            categoryType: 'BULAN BERJALAN',
+            rankText: 'MTD',
+            titleText: 'TOTAL BULAN INI',
+            valueText: `${(mtd.total || 0).toLocaleString('id-ID')} LAPORAN`,
+            subText: `Selesai: ${mtd.closedPct || 0}% (${mtd.closed || 0} Closed)`,
+            isTrendUp: false
+        });
+        mtdSprite.position.set(-13, 48, 0);
+        komparasiGroup.add(mtdSprite);
+
+        // YTD Bar (Vivid Purple)
+        const ytdBarGeom = new THREE.BoxGeometry(14, 50, 14);
+        ytdBarGeom.translate(0, 25, 0);
+        const ytdBarMat = new THREE.MeshStandardMaterial({
+            color: 0xc084fc,
+            metalness: 0.8,
+            roughness: 0.15,
+            emissive: 0xa855f7,
+            emissiveIntensity: 0.5
         });
         const ytdBar = new THREE.Mesh(ytdBarGeom, ytdBarMat);
-        ytdBar.position.set(15, 4, 0);
-        chartGroup2.add(ytdBar);
+        ytdBar.position.set(13, 4, 0);
+        komparasiGroup.add(ytdBar);
 
-        // Permanent Label Sprite on top of YTD Bar
-        const ytdSprite = createBillboardSprite([
-            'YTD (TAHUN BERJALAN)',
-            `Akumulasi Tahun ${data.periode ? data.periode.tahun : 2026}`,
-            `${ytdTotal} TOTAL HAZARD`,
-            `Closed: ${ytdClosedPct}% (${ytdClosed} Selesai)`
-        ], { borderColor: '#a855f7', titleColor: '#ffffff' });
-        ytdSprite.position.set(15, ytdHeight + 16, 0);
-        chartGroup2.add(ytdSprite);
+        const ytdSprite = createHighContrastBillboard({
+            borderColor: '#c084fc',
+            categoryType: 'TAHUN BERJALAN',
+            rankText: 'YTD',
+            titleText: 'AKUMULASI TAHUNAN',
+            valueText: `${(ytd.total || 0).toLocaleString('id-ID')} LAPORAN`,
+            subText: `Selesai: ${ytd.closedPct || 0}% (${ytd.closed || 0} Closed)`,
+            isTrendUp: false
+        });
+        ytdSprite.position.set(13, 64, 0);
+        komparasiGroup.add(ytdSprite);
 
-        // Add Groups to Scene
-        scene.add(chartGroup1);
-        scene.add(chartGroup2);
+        // Add All Groups to Scene
+        scene.add(ktaGroup);
+        scene.add(ttaGroup);
+        scene.add(komparasiGroup);
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       4. ANIMATION LOOP & AUTOMATIC SMOOTH CAMERA GLIDE
+       4. ANIMATION LOOP & SMOOTH GLIDE (NO-MOUSE TV)
        ────────────────────────────────────────────────────────────────────────── */
     function animate() {
         requestAnimationFrame(animate);
 
         const time = clock.getElapsedTime();
 
-        // Smooth subtle cinematic floating camera for TV Wall (no mouse needed)
-        // Camera glides gently left-to-right to give depth to the 3D bars and labels
-        camera.position.x = Math.sin(time * 0.15) * 45;
-        camera.position.y = 85 + Math.cos(time * 0.2) * 8;
-        camera.position.z = 240 + Math.sin(time * 0.1) * 12;
+        // Subtle panoramic floating camera for rich 3D perspective
+        camera.position.x = Math.sin(time * 0.12) * 35;
+        camera.position.y = 110 + Math.cos(time * 0.15) * 6;
+        camera.position.z = 270 + Math.sin(time * 0.08) * 10;
         camera.lookAt(0, 42, 0);
 
         if (particlesGroup) {
-            particlesGroup.rotation.y = time * 0.03;
+            particlesGroup.rotation.y = time * 0.025;
         }
 
         renderer.render(scene, camera);
@@ -952,51 +1089,140 @@
         }
     }
 
+    function setTablesVisible(show) {
+        const sec = document.getElementById('tablesSection');
+        const btnSplit = document.getElementById('btnModeSplit');
+        const btn3D = document.getElementById('btnMode3D');
+
+        if (show) {
+            sec.classList.remove('collapsed');
+            btnSplit.classList.add('active');
+            btn3D.classList.remove('active');
+        } else {
+            sec.classList.add('collapsed');
+            btnSplit.classList.remove('active');
+            btn3D.classList.add('active');
+        }
+    }
+
     /* ──────────────────────────────────────────────────────────────────────────
-       5. FETCH DATA & UPDATE HUD & 3D BILLBOARDS
+       5. FETCH DATA & POPULATE TABLES & 3D BILLBOARDS
        ────────────────────────────────────────────────────────────────────────── */
     function fetchDisplay4Data() {
         fetch('/Display/GetDisplay4Data')
             .then(res => res.json())
             .then(data => {
                 display4Data = data;
-                updateHud(data);
+                renderDualTables(data);
                 build3DCharts(data);
+                updateHudChips(data);
             })
             .catch(err => console.warn('Error fetching Display 4 data:', err));
     }
 
-    function updateHud(data) {
+    function updateHudChips(data) {
         if (!data) return;
-
-        const kat = data.kategori || {};
+        const totKta = data.totalTop5Kta || {};
+        const totTta = data.totalTop5Tta || {};
         const kom = data.komparasi || {};
         const mtd = kom.mtd || {};
         const ytd = kom.ytd || {};
 
-        // 1. Report 1 (KTA vs TTA)
-        document.getElementById('kpiKtaTotal').innerText = kat.ktaAll || 0;
-        document.getElementById('kpiTtaTotal').innerText = kat.ttaAll || 0;
-        document.getElementById('kpiKtaPct').innerText = `${kat.ktaAllPct || 0}% dari total`;
-        document.getElementById('kpiTtaPct').innerText = `${kat.ttaAllPct || 0}% dari total`;
+        document.getElementById('chipKtaTotal').innerText = (totKta.total || 0).toLocaleString('id-ID');
+        document.getElementById('chipKtaPct').innerText = `${totKta.pct || 0}% Laporan`;
 
-        document.getElementById('ratioBarKta').style.width = `${kat.ktaAllPct || 50}%`;
-        document.getElementById('ratioBarTta').style.width = `${kat.ttaAllPct || 50}%`;
+        document.getElementById('chipTtaTotal').innerText = (totTta.total || 0).toLocaleString('id-ID');
+        document.getElementById('chipTtaPct').innerText = `${totTta.pct || 0}% Laporan`;
 
-        document.getElementById('badgeBulanNama').innerText = data.periode ? data.periode.bulanNama : 'Bulan Berjalan';
-        document.getElementById('mtdKtaDetail').innerText = `${kat.ktaMtd || 0} Laporan (${kat.ktaMtdPct || 0}%)`;
-        document.getElementById('mtdTtaDetail').innerText = `${kat.ttaMtd || 0} Laporan (${kat.ttaMtdPct || 0}%)`;
-        document.getElementById('mtdTotalDetail').innerText = `${mtd.total || 0} Laporan`;
+        document.getElementById('chipMtdTotal').innerText = (mtd.total || 0).toLocaleString('id-ID');
+        document.getElementById('chipYtdTotal').innerText = (ytd.total || 0).toLocaleString('id-ID');
 
-        // 2. Report 2 (MTD vs YTD)
-        document.getElementById('kpiMtdTotal').innerText = mtd.total || 0;
-        document.getElementById('kpiYtdTotal').innerText = ytd.total || 0;
-        document.getElementById('kpiMtdClosedRate').innerText = `${mtd.closedPct || 0}% Closed`;
-        document.getElementById('kpiYtdClosedRate').innerText = `${ytd.closedPct || 0}% Closed`;
+        if (data.months && data.months.length === 3) {
+            document.getElementById('badgeMonthsRange').innerText = `${data.months[0]} - ${data.months[2]}`;
+        }
+    }
 
-        document.getElementById('mtdClosedDetail').innerText = `${mtd.closed || 0} Temuan (${mtd.closedPct || 0}%)`;
-        document.getElementById('ytdClosedDetail').innerText = `${ytd.closed || 0} Temuan (${ytd.closedPct || 0}%)`;
-        document.getElementById('mtdOpenDetail').innerText = `${mtd.open || 0} Temuan Aktif`;
+    /* ── POPULATE EXACT DUAL TABLES (UNSAFE ACTION & UNSAFE CONDITION) ── */
+    function renderDualTables(data) {
+        const months = data.months || ['M1', 'M2', 'M3'];
+        const top5Tta = data.top5Tta || [];
+        const top5Kta = data.top5Kta || [];
+        const totTta = data.totalTop5Tta || {};
+        const totKta = data.totalTop5Kta || {};
+
+        // Update Table Headers
+        document.getElementById('thTtaM1').innerText = months[0];
+        document.getElementById('thTtaM2').innerText = months[1];
+        document.getElementById('thTtaM3').innerText = months[2];
+        document.getElementById('thKtaM1').innerText = months[0];
+        document.getElementById('thKtaM2').innerText = months[1];
+        document.getElementById('thKtaM3').innerText = months[2];
+
+        // 1. Render TTA Table
+        let htmlTta = '';
+        top5Tta.forEach(item => {
+            const m2Arrow = renderArrow(item.delta1);
+            const m3Arrow = renderArrow(item.delta2);
+            const trendBadge = item.trend === 'up'
+                ? '<span class="arrow-up" title="Tren Naik">▲</span>'
+                : (item.trend === 'down' ? '<span class="arrow-down" title="Tren Turun">▼</span>' : '<span class="arrow-same">━</span>');
+
+            htmlTta += `
+                <tr>
+                    <td class="cat-name-cell ps-3" title="${item.name}">${item.name}</td>
+                    <td class="val-cell">${item.m1.toLocaleString('id-ID')}</td>
+                    <td class="val-cell">${item.m2.toLocaleString('id-ID')} ${m2Arrow}</td>
+                    <td class="val-cell">${item.m3.toLocaleString('id-ID')} ${m3Arrow}</td>
+                    <td class="total-cell">${item.total.toLocaleString('id-ID')}</td>
+                    <td class="pct-cell">${item.pct}%</td>
+                    <td class="trend-cell pe-3">${trendBadge}</td>
+                </tr>
+            `;
+        });
+        document.getElementById('tbodyTta').innerHTML = htmlTta || '<tr><td colspan="7" class="text-center py-2">Data tidak tersedia</td></tr>';
+
+        // TTA Footer
+        document.getElementById('tfTtaM1').innerText = (totTta.m1 || 0).toLocaleString('id-ID');
+        document.getElementById('tfTtaM2').innerText = (totTta.m2 || 0).toLocaleString('id-ID');
+        document.getElementById('tfTtaM3').innerText = (totTta.m3 || 0).toLocaleString('id-ID');
+        document.getElementById('tfTtaTotal').innerText = (totTta.total || 0).toLocaleString('id-ID');
+        document.getElementById('tfTtaPct').innerText = `${totTta.pct || 0}%`;
+
+        // 2. Render KTA Table
+        let htmlKta = '';
+        top5Kta.forEach(item => {
+            const m2Arrow = renderArrow(item.delta1);
+            const m3Arrow = renderArrow(item.delta2);
+            const trendBadge = item.trend === 'up'
+                ? '<span class="arrow-up" title="Tren Naik">▲</span>'
+                : (item.trend === 'down' ? '<span class="arrow-down" title="Tren Turun">▼</span>' : '<span class="arrow-same">━</span>');
+
+            htmlKta += `
+                <tr>
+                    <td class="cat-name-cell ps-3" title="${item.name}">${item.name}</td>
+                    <td class="val-cell">${item.m1.toLocaleString('id-ID')}</td>
+                    <td class="val-cell">${item.m2.toLocaleString('id-ID')} ${m2Arrow}</td>
+                    <td class="val-cell">${item.m3.toLocaleString('id-ID')} ${m3Arrow}</td>
+                    <td class="total-cell">${item.total.toLocaleString('id-ID')}</td>
+                    <td class="pct-cell">${item.pct}%</td>
+                    <td class="trend-cell pe-3">${trendBadge}</td>
+                </tr>
+            `;
+        });
+        document.getElementById('tbodyKta').innerHTML = htmlKta || '<tr><td colspan="7" class="text-center py-2">Data tidak tersedia</td></tr>';
+
+        // KTA Footer
+        document.getElementById('tfKtaM1').innerText = (totKta.m1 || 0).toLocaleString('id-ID');
+        document.getElementById('tfKtaM2').innerText = (totKta.m2 || 0).toLocaleString('id-ID');
+        document.getElementById('tfKtaM3').innerText = (totKta.m3 || 0).toLocaleString('id-ID');
+        document.getElementById('tfKtaTotal').innerText = (totKta.total || 0).toLocaleString('id-ID');
+        document.getElementById('tfKtaPct').innerText = `${totKta.pct || 0}%`;
+    }
+
+    function renderArrow(delta) {
+        if (delta > 0) return `<span class="arrow-up" title="+${delta}">▲</span>`;
+        if (delta < 0) return `<span class="arrow-down" title="${delta}">▼</span>`;
+        return `<span class="arrow-same">━</span>`;
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
