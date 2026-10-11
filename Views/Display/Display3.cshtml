@@ -147,6 +147,10 @@
         background: linear-gradient(135deg, #d97706, #b45309);
         box-shadow: 0 0 14px rgba(217, 119, 6, 0.6);
     }
+    .mode-btn.active.dci {
+        background: linear-gradient(135deg, #ea580c, #c2410c);
+        box-shadow: 0 0 14px rgba(234, 88, 12, 0.6);
+    }
     .mode-btn.active.bbs {
         background: linear-gradient(135deg, #059669, #047857);
         box-shadow: 0 0 14px rgba(5, 150, 105, 0.6);
@@ -242,14 +246,14 @@
     /* ── Row 1: KPI HUD Cards (No Targets) ── */
     .kpi-row {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
     }
     .kpi-card {
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: var(--r);
-        padding: 12px 16px;
+        padding: 10px 14px;
         backdrop-filter: blur(16px);
         position: relative; overflow: hidden;
         transition: transform 0.25s, border-color 0.25s;
@@ -264,6 +268,7 @@
     }
     .kpi-card.rci::before { background: linear-gradient(180deg, #00d2ff, #0284c7); }
     .kpi-card.fci::before { background: linear-gradient(180deg, #fbbf24, #d97706); }
+    .kpi-card.dci::before { background: linear-gradient(180deg, #fb923c, #ea580c); }
     .kpi-card.bbs::before { background: linear-gradient(180deg, #34d399, #059669); }
     .kpi-card.photo::before { background: linear-gradient(180deg, #a78bfa, #7c3aed); }
 
@@ -679,10 +684,10 @@
                 </div>
                 <div>
                     <div class="brand-title">
-                        MBS DISPLAY 3 <span style="font-size:12px; color:var(--muted); font-weight:600;">[RCI &bull; FCI &bull; BBS]</span>
+                        MBS DISPLAY 3 <span style="font-size:12px; color:var(--muted); font-weight:600;">[RCI &bull; FCI &bull; DCI &bull; BBS]</span>
                     </div>
                     <div class="brand-sub">
-                        FIELD CONDITION, ROAD & BEHAVIOR OBSERVATION COMMAND CENTER
+                        FIELD CONDITION, DUMP & BEHAVIOR OBSERVATION COMMAND CENTER
                     </div>
                 </div>
             </div>
@@ -697,6 +702,9 @@
                 </button>
                 <button type="button" class="mode-btn fci" id="tabFciBtn" onclick="switchDisplayMode('fci')">
                     <i class="bi bi-truck-front-fill"></i> FCI (FRONT)
+                </button>
+                <button type="button" class="mode-btn dci" id="tabDciBtn" onclick="switchDisplayMode('dci')">
+                    <i class="bi bi-layers-fill"></i> DCI (DUMP)
                 </button>
                 <button type="button" class="mode-btn bbs" id="tabBbsBtn" onclick="switchDisplayMode('bbs')">
                     <i class="bi bi-person-check-fill"></i> BBS (BEHAVIOR)
@@ -770,16 +778,16 @@
             <!-- Card 2: FCI Front Condition -->
             <div class="kpi-card fci">
                 <div class="kpi-hdr">
-                    <span class="kpi-title"><i class="bi bi-geo-alt-fill text-warning"></i> FRONT CONDITION INDEX (FCI)</span>
+                    <span class="kpi-title"><i class="bi bi-geo-alt-fill text-warning"></i> FRONT CONDITION (FCI)</span>
                     <span class="kpi-tag" style="background: rgba(251, 191, 36, 0.2); color: #fbbf24;" id="fciScoreBadge">SKOR: --</span>
                 </div>
                 <div class="kpi-body">
                     <div>
                         <span class="kpi-num text-white" id="fciAvgScore">--</span>
-                        <span style="font-size: 12px; color: var(--muted); font-weight: 700;"> / 100</span>
+                        <span style="font-size: 11px; color: var(--muted); font-weight: 700;"> / 100</span>
                     </div>
                     <div class="text-end">
-                        <div class="fw-bold" style="font-size: 13px; color: #fbbf24;" id="fciTotalCount">-- LAPORAN</div>
+                        <div class="fw-bold" style="font-size: 12px; color: #fbbf24;" id="fciTotalCount">-- LAPORAN</div>
                         <div class="kpi-sub" id="fciTodayCount">-- hari ini</div>
                     </div>
                 </div>
@@ -787,6 +795,29 @@
                     <span><i class="bi bi-check-circle text-success me-1"></i>Aman: <strong id="fciBaikCount">0</strong></span>
                     <span><i class="bi bi-exclamation-triangle text-warning me-1"></i>Waspada: <strong id="fciSedangCount">0</strong></span>
                     <span><i class="bi bi-x-circle text-danger me-1"></i>Kritis: <strong id="fciKurangCount">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Card 3: DCI Dump Condition -->
+            <div class="kpi-card dci">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-layers-fill text-warning"></i> DUMP CONDITION (DCI)</span>
+                    <span class="kpi-tag" style="background: rgba(249, 115, 22, 0.2); color: #fb923c;" id="dciScoreBadge">SKOR: --</span>
+                </div>
+                <div class="kpi-body">
+                    <div>
+                        <span class="kpi-num text-white" id="dciAvgScore">--</span>
+                        <span style="font-size: 11px; color: var(--muted); font-weight: 700;"> / 100</span>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold" style="font-size: 12px; color: #fb923c;" id="dciTotalCount">-- LAPORAN</div>
+                        <div class="kpi-sub" id="dciTodayCount">-- hari ini</div>
+                    </div>
+                </div>
+                <div class="kpi-footer">
+                    <span><i class="bi bi-check-circle text-success me-1"></i>Aman: <strong id="dciBaikCount">0</strong></span>
+                    <span><i class="bi bi-exclamation-triangle text-warning me-1"></i>Sedang: <strong id="dciSedangCount">0</strong></span>
+                    <span><i class="bi bi-x-circle text-danger me-1"></i>Rawan: <strong id="dciKurangCount">0</strong></span>
                 </div>
             </div>
 
@@ -1077,6 +1108,17 @@
             document.getElementById('fciKurangCount').textContent = d.fci.kurang || 0;
         }
 
+        // DCI
+        if (d.dci) {
+            document.getElementById('dciAvgScore').textContent = Number(d.dci.avgScore || 0).toFixed(1);
+            document.getElementById('dciTotalCount').textContent = `${d.dci.total || 0} LAPORAN`;
+            document.getElementById('dciTodayCount').textContent = `${d.dci.today || 0} hari ini`;
+            document.getElementById('dciScoreBadge').textContent = d.dci.avgScore >= 85 ? 'DUMP AMAN' : (d.dci.avgScore >= 70 ? 'SEDANG' : 'RAWAN');
+            document.getElementById('dciBaikCount').textContent = d.dci.baik || 0;
+            document.getElementById('dciSedangCount').textContent = d.dci.sedang || 0;
+            document.getElementById('dciKurangCount').textContent = d.dci.kurang || 0;
+        }
+
         // BBS
         if (d.bbs) {
             const safePct = Number(d.bbs.safeIndexPct || 0).toFixed(1);
@@ -1148,7 +1190,7 @@
         // Badges
         const typeEl = document.getElementById('heroTypeBadge');
         typeEl.textContent = `${item.type} ${item.typeLabel || ''}`.trim();
-        typeEl.style.background = item.type === 'RCI' ? '#0284c7' : (item.type === 'FCI' ? '#d97706' : (item.kategori === 'Aman' ? '#059669' : '#dc2626'));
+        typeEl.style.background = item.type === 'RCI' ? '#0284c7' : (item.type === 'FCI' ? '#d97706' : (item.type === 'DCI' ? '#ea580c' : (item.kategori === 'Aman' ? '#059669' : '#dc2626')));
 
         document.getElementById('heroAreaBadge').innerHTML = `<i class="bi bi-geo-alt-fill text-warning me-1"></i>${item.area || 'Area Lapangan'}`;
         
@@ -1233,6 +1275,21 @@
                 { name: 'Posisi Alat', val: p.posisi || 100 },
                 { name: 'Penerangan', val: p.rambu || 100 }
             ];
+        } else if (currentMode === 'dci' || (currentMode === 'all' && heroSlides[currentHeroIndex]?.type === 'DCI')) {
+            titleEl.innerHTML = `<i class="bi bi-layers-fill text-warning"></i> 8 PARAMETER DUMP CONDITION INDEX`;
+            catEl.textContent = `RATA-RATA EVALUASI AREA DUMPING & DISPOSAL TAMBANG`;
+            colorGrad = 'linear-gradient(90deg, #c2410c, #f97316)';
+            const p = d.dci?.paramAvg || {};
+            params = [
+                { name: 'Lantai Dump (Pad)', val: p.lantai || 100 },
+                { name: 'Safety Berm / Bund', val: p.berm || 100 },
+                { name: 'Kondisi Crest & Edge', val: p.crest || 100 },
+                { name: 'Grade Dumping', val: p.grade || 100 },
+                { name: 'Drainase Dump', val: p.drainase || 100 },
+                { name: 'Penataan Spillage', val: p.spillage || 100 },
+                { name: 'Rambu & Lampu', val: p.rambu || 100 },
+                { name: 'Spotter & Manuver', val: p.spotter || 100 }
+            ];
         } else {
             titleEl.innerHTML = `<i class="bi bi-person-check-fill text-success"></i> TELEMETRI PERILAKU BBS (SAFE VS AT-RISK)`;
             catEl.textContent = `DISTRIBUSI TINGKAT RISIKO & KATEGORI PERILAKU`;
@@ -1278,6 +1335,7 @@
         let items = d.feed || [];
         if (currentMode === 'rci') items = items.filter(x => x.type === 'RCI');
         else if (currentMode === 'fci') items = items.filter(x => x.type === 'FCI');
+        else if (currentMode === 'dci') items = items.filter(x => x.type === 'DCI');
         else if (currentMode === 'bbs') items = items.filter(x => x.type === 'BBS');
         else if (currentMode === 'photo') items = items.filter(x => !stringIsNullOrEmpty(x.fotoUrl));
 
@@ -1293,9 +1351,9 @@
             const hasPhoto = Boolean(item.fotoUrl);
             const thumbHtml = hasPhoto
                 ? `<img src="${item.fotoUrl}" class="feed-thumb-img" alt="Foto" onerror="this.src='/img/placeholder-photo.png'" />`
-                : `<i class="bi ${item.type === 'RCI' ? 'bi-cone-striped text-info' : (item.type === 'FCI' ? 'bi-truck-front-fill text-warning' : 'bi-shield-check text-success')} feed-thumb-placeholder"></i>`;
+                : `<i class="bi ${item.type === 'RCI' ? 'bi-cone-striped text-info' : (item.type === 'FCI' ? 'bi-truck-front-fill text-warning' : (item.type === 'DCI' ? 'bi-layers-fill text-warning' : 'bi-shield-check text-success'))} feed-thumb-placeholder"></i>`;
 
-            const pillBg = item.type === 'RCI' ? 'rgba(14, 165, 233, 0.2); color:#38bdf8;' : (item.type === 'FCI' ? 'rgba(217, 119, 6, 0.2); color:#fbbf24;' : 'rgba(5, 150, 105, 0.2); color:#34d399;');
+            const pillBg = item.type === 'RCI' ? 'rgba(14, 165, 233, 0.2); color:#38bdf8;' : (item.type === 'FCI' ? 'rgba(217, 119, 6, 0.2); color:#fbbf24;' : (item.type === 'DCI' ? 'rgba(249, 115, 22, 0.2); color:#fb923c;' : 'rgba(5, 150, 105, 0.2); color:#34d399;'));
 
             return `
             <div class="feed-card" onclick='openModalWithItem(${JSON.stringify(item).replace(/'/g, "&#39;")})'>
@@ -1376,7 +1434,7 @@
        ────────────────────────────────────────────────────────────────────────── */
     function switchDisplayMode(mode) {
         currentMode = mode;
-        ['All', 'Rci', 'Fci', 'Bbs', 'Photo'].forEach(m => {
+        ['All', 'Rci', 'Fci', 'Dci', 'Bbs', 'Photo'].forEach(m => {
             const btn = document.getElementById(`tab${m}Btn`);
             if (btn) btn.classList.toggle('active', m.toLowerCase() === mode.toLowerCase());
         });

@@ -30,13 +30,6 @@ namespace MBS_SAP.Controllers
 
         public async Task<IActionResult> Index(string? search, string? namaJalan, string? kategori, DateTime? startDate, DateTime? endDate)
         {
-            // Access control: only PT Mega Global Energy and subsidiaries (or Admin)
-            if (!CompanyHierarchyService.IsMgeGroupUser(User))
-            {
-                TempData["ErrorMessage"] = "Fitur Road Condition Index (RCI) hanya dapat diakses oleh PT Mega Global Energy dan anak perusahaannya.";
-                return RedirectToAction("Index", "Home");
-            }
-
             ViewData["HeaderTitle"] = "Road Condition Index (RCI)";
             ViewData["ActiveTab"] = "Rci";
 
@@ -137,12 +130,6 @@ namespace MBS_SAP.Controllers
             string? pic,
             IFormFile? foto)
         {
-            if (!CompanyHierarchyService.IsMgeGroupUser(User))
-            {
-                TempData["ErrorMessage"] = "Akses ditolak.";
-                return RedirectToAction(nameof(Index));
-            }
-
             try
             {
                 var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim() ?? "00000";
@@ -339,11 +326,6 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> ExportExcel(DateTime? startDate, DateTime? endDate)
         {
-            if (!CompanyHierarchyService.IsMgeGroupUser(User))
-            {
-                return Forbid();
-            }
-
             var start = startDate ?? DateTime.Today.AddDays(-30);
             var end = (endDate ?? DateTime.Today).AddDays(1).AddTicks(-1);
 

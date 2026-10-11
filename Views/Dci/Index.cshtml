@@ -1,0 +1,1137 @@
+@model IEnumerable<MBS_SAP.Models.DciReport>
+@{
+    ViewData["Title"] = "Dump Condition Index (DCI) - SAP";
+    var userNik = ViewBag.UserNik as string ?? "";
+    var userNama = ViewBag.UserNama as string ?? "";
+    var userDept = ViewBag.UserDept as string ?? "";
+    var userCompany = ViewBag.UserCompany as string ?? "PT INDEXIM COALINDO";
+    var areaList = ViewBag.AreaList as List<string> ?? new List<string>();
+    var disposalList = ViewBag.DisposalList as List<string> ?? new List<string>();
+    var totalReports = ViewBag.TotalReports as int? ?? 0;
+    var avgScore = ViewBag.AvgScore as double? ?? 100.0;
+    var goodCount = ViewBag.GoodCount as int? ?? 0;
+    var fairCount = ViewBag.FairCount as int? ?? 0;
+    var poorCount = ViewBag.PoorCount as int? ?? 0;
+}
+
+<div class="animate-fade-in">
+    <!-- Header Screen Title -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <div class="screen-title d-flex align-items-center gap-2">
+                <i class="bi bi-layers-fill" style="color: #f97316;"></i>
+                <span>Dump Condition Index (DCI)</span>
+                <span class="badge" style="background: rgba(249, 115, 22, 0.15); color: #ea580c; border: 1px solid rgba(249, 115, 22, 0.3); font-size: 11px; padding: 4px 10px; border-radius: 8px;">Disposal Area</span>
+            </div>
+            <p class="screen-subtitle mb-0">Inspeksi & Penilaian Standar Kelayakan Area Dumping / Disposal Tambang.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="ExportExcel" asp-route-startDate="@ViewBag.StartDate" asp-route-endDate="@ViewBag.EndDate" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 shadow-sm" style="border-radius: 10px; padding: 8px 14px; font-weight: 600;">
+                <i class="bi bi-file-earmark-excel-fill"></i>
+                <span>Export Excel</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Feedback Popup Modal (Desktop & Mobile) -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="modal fade" id="statusSuccessModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered" style="max-width: 420px; margin: 16px auto;">
+                <div class="modal-content text-center p-4" style="background: var(--bg-card); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                    <div class="mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 72px; height: 72px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 2px solid #10b981;">
+                        <i class="bi bi-check-lg text-success" style="font-size: 38px;"></i>
+                    </div>
+                    <h4 class="text-white font-weight-bold mb-2">Berhasil Disimpan!</h4>
+                    <p class="text-muted mb-4" style="font-size: 13.5px; line-height: 1.5;">@TempData["SuccessMessage"]</p>
+                    <button type="button" class="btn btn-primary w-100 py-2.5 font-weight-bold shadow-sm" style="background: linear-gradient(135deg, #c2410c, #ea580c); border: none; border-radius: 14px;" data-bs-dismiss="modal">
+                        <i class="bi bi-check2-circle me-1"></i> Selesai
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="modal fade" id="statusErrorModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered" style="max-width: 420px; margin: 16px auto;">
+                <div class="modal-content text-center p-4" style="background: var(--bg-card); border: 1px solid rgba(244, 63, 94, 0.4); border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                    <div class="mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 72px; height: 72px; border-radius: 50%; background: rgba(244, 63, 94, 0.15); border: 2px solid #f43f5e;">
+                        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 32px;"></i>
+                    </div>
+                    <h4 class="text-white font-weight-bold mb-2">Gagal Menyimpan!</h4>
+                    <p class="text-muted mb-4" style="font-size: 13.5px; line-height: 1.5;">@TempData["ErrorMessage"]</p>
+                    <button type="button" class="btn btn-outline-danger w-100 py-2.5 font-weight-bold shadow-sm" style="border-radius: 14px;" data-bs-dismiss="modal">
+                        Tutup &amp; Periksa Kembali
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Client Validation Popup Modal (Desktop & Mobile) -->
+    <div class="modal fade" id="clientAlertModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 400px; margin: 16px auto;">
+            <div class="modal-content text-center p-4" style="background: var(--bg-card); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 22px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                <div class="mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 64px; height: 64px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 2px solid #f59e0b;">
+                    <i class="bi bi-exclamation-circle-fill" style="color: #f59e0b; font-size: 28px;"></i>
+                </div>
+                <h5 class="text-white font-weight-bold mb-2" id="clientAlertTitle">Perhatian</h5>
+                <p class="text-muted mb-4" id="clientAlertMsg" style="font-size: 13px;"></p>
+                <button type="button" class="btn btn-warning w-100 py-2 font-weight-bold shadow-sm" style="border-radius: 12px; color: #000;" data-bs-dismiss="modal">
+                    Mengerti &amp; Lengkapi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm Popup Modal (Desktop & Mobile) -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 400px; margin: 16px auto;">
+            <div class="modal-content text-center p-4" style="background: var(--bg-card); border: 1px solid rgba(244, 63, 94, 0.4); border-radius: 22px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+                <div class="mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 64px; height: 64px; border-radius: 50%; background: rgba(244, 63, 94, 0.15); border: 2px solid #f43f5e;">
+                    <i class="bi bi-trash3-fill text-danger" style="font-size: 28px;"></i>
+                </div>
+                <h5 class="text-white font-weight-bold mb-2">Hapus Laporan?</h5>
+                <p class="text-muted mb-4" style="font-size: 13px;">Data laporan inspeksi ini akan dihapus dari sistem. Tindakan ini tidak dapat dibatalkan.</p>
+                <form id="deleteForm" method="post" action="">
+                    @Html.AntiForgeryToken()
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary flex-fill py-2" data-bs-dismiss="modal" style="border-radius: 12px;">Batal</button>
+                        <button type="submit" class="btn btn-danger flex-fill py-2 font-weight-bold" style="border-radius: 12px;">Ya, Hapus</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Summary Metrics Cards (30 Days) -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card-sap p-3 h-100" style="border-left: 4px solid #f97316;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Total Inspeksi</div>
+                        <h3 class="mb-0 mt-1 font-weight-bold" style="color: var(--text-main);">@totalReports</h3>
+                    </div>
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(249, 115, 22, 0.15); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-clipboard-data-fill" style="color: #f97316; font-size: 20px;"></i>
+                    </div>
+                </div>
+                <div class="text-muted mt-2" style="font-size: 11px;">30 Hari Terakhir</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card-sap p-3 h-100" style="border-left: 4px solid #3b82f6;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Rata-rata Skor DCI</div>
+                        <h3 class="mb-0 mt-1 font-weight-bold" style="color: @(avgScore >= 85 ? "#10b981" : (avgScore >= 70 ? "#f59e0b" : "#f43f5e"));">@avgScore%</h3>
+                    </div>
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-speedometer2" style="color: #3b82f6; font-size: 20px;"></i>
+                    </div>
+                </div>
+                <div class="text-muted mt-2" style="font-size: 11px;">Target Operasi: &gt;= 85%</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card-sap p-3 h-100" style="border-left: 4px solid #10b981;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Kondisi Baik</div>
+                        <h3 class="mb-0 mt-1 font-weight-bold text-success">@goodCount</h3>
+                    </div>
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(16, 185, 129, 0.15); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 20px;"></i>
+                    </div>
+                </div>
+                <div class="text-muted mt-2" style="font-size: 11px;">Skor &ge; 85%</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="card-sap p-3 h-100" style="border-left: 4px solid #f43f5e;">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="text-muted" style="font-size: 11px; font-weight: 600; text-transform: uppercase;">Perlu Perbaikan</div>
+                        <h3 class="mb-0 mt-1 font-weight-bold" style="color: #f43f5e;">@(fairCount + poorCount)</h3>
+                    </div>
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: rgba(244, 63, 94, 0.15); display: flex; align-items: center; justify-content: center;">
+                        <i class="bi bi-exclamation-octagon-fill text-danger" style="font-size: 20px;"></i>
+                    </div>
+                </div>
+                <div class="text-muted mt-2" style="font-size: 11px;">Sedang: @fairCount | Kurang: @poorCount</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter & Action Bar -->
+    <div class="card-sap p-3 mb-4">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">PENCARIAN</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-transparent border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" value="@ViewBag.CurrentSearch" class="form-control border-start-0" placeholder="Nama, NIK, Dump, Lokasi..." />
+                </div>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">DISPOSAL</label>
+                <select name="disposal" class="form-select form-select-sm">
+                    <option value="">Semua Disposal</option>
+                    @foreach (var d in disposalList)
+                    {
+                        <option value="@d" selected="@(d == ViewBag.CurrentDisposal)">@d</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-6 col-md-2">
+                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">KATEGORI</label>
+                <select name="kategori" class="form-select form-select-sm">
+                    <option value="">Semua Kategori</option>
+                    <option value="Baik" selected="@("Baik" == ViewBag.CurrentKategori)">Baik (>=85%)</option>
+                    <option value="Sedang" selected="@("Sedang" == ViewBag.CurrentKategori)">Sedang (70-84%)</option>
+                    <option value="Kurang" selected="@("Kurang" == ViewBag.CurrentKategori)">Kurang (<70%)</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-md-3">
+                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">PERIODE TANGGAL</label>
+                <div class="input-group input-group-sm">
+                    <input type="date" name="startDate" value="@ViewBag.StartDate" class="form-control" />
+                    <span class="input-group-text">-</span>
+                    <input type="date" name="endDate" value="@ViewBag.EndDate" class="form-control" />
+                </div>
+            </div>
+
+            <div class="col-6 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary flex-fill" style="background: #ea580c; border: none; border-radius: 8px;">
+                    <i class="bi bi-funnel-fill me-1"></i> Filter
+                </button>
+                <button type="button" class="btn btn-sm btn-success flex-fill" style="background: linear-gradient(135deg, #ea580c, #f97316); border: none; border-radius: 8px; font-weight: 600;" onclick="openInputModal()">
+                    <i class="bi bi-plus-lg me-1"></i> Baru
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Main List Table / Cards -->
+    <div class="card-sap p-0 mb-4 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size: 13px;">
+                <thead style="background: rgba(249, 115, 22, 0.05); border-bottom: 1px solid var(--border-color);">
+                    <tr class="text-muted" style="font-size: 11px; font-weight: 700; text-transform: uppercase;">
+                        <th class="ps-3 py-3" style="width: 50px;">Foto</th>
+                        <th class="py-3">Tanggal &amp; Waktu</th>
+                        <th class="py-3">Disposal &amp; Nama Dump</th>
+                        <th class="py-3">Lokasi / Area</th>
+                        <th class="py-3">Surveyor</th>
+                        <th class="py-3 text-center">Skor DCI</th>
+                        <th class="py-3 text-center">Status</th>
+                        <th class="pe-3 py-3 text-end" style="width: 140px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model == null || !Model.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox d-block mb-2" style="font-size: 32px; color: var(--text-muted);"></i>
+                                Belum ada laporan Dump Condition Index (DCI) untuk kriteria ini.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-3">
+                                    @if (!string.IsNullOrEmpty(item.FotoUrl))
+                                    {
+                                        <div style="width: 44px; height: 44px; border-radius: 8px; overflow: hidden; background: #000; cursor: pointer; border: 1px solid rgba(255,255,255,0.1);" onclick="openDetailModal(@item.Id)">
+                                            <img src="@item.FotoUrl" alt="Foto DCI" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/img/placeholder-photo.png'" />
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div style="width: 44px; height: 44px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 18px;">
+                                            <i class="bi bi-camera"></i>
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="font-weight-bold" style="color: var(--text-main);">@item.Tanggal.ToString("dd MMM yyyy")</div>
+                                    <small class="text-muted">@item.Waktu.ToString(@"hh\:mm") | Shift: @(item.Shift ?? "-")</small>
+                                </td>
+                                <td>
+                                    <div class="font-weight-bold" style="color: #ea580c;">@(item.NamaDump ?? item.Disposal ?? "Dump Disposal")</div>
+                                    <small class="text-muted"><i class="bi bi-layers me-1"></i>@(item.Disposal ?? "Disposal Area")</small>
+                                </td>
+                                <td>
+                                    <div style="color: var(--text-main);">@item.Lokasi</div>
+                                    <small class="text-muted">@item.Area @(!string.IsNullOrEmpty(item.DetilLokasi) ? $"• {item.DetilLokasi}" : "")</small>
+                                </td>
+                                <td>
+                                    <div class="font-weight-bold" style="color: var(--text-main);">@item.Nama</div>
+                                    <small class="text-muted">@item.Nik • @(item.Departemen ?? "-")</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge px-2.5 py-1.5" style="font-size: 12px; font-weight: 800; border-radius: 8px; background: @(item.TotalScore >= 85 ? "rgba(16, 185, 129, 0.15)" : (item.TotalScore >= 70 ? "rgba(245, 158, 11, 0.15)" : "rgba(244, 63, 94, 0.15)")); color: @(item.TotalScore >= 85 ? "#10b981" : (item.TotalScore >= 70 ? "#f59e0b" : "#f43f5e")); border: 1px solid @(item.TotalScore >= 85 ? "rgba(16, 185, 129, 0.3)" : (item.TotalScore >= 70 ? "rgba(245, 158, 11, 0.3)" : "rgba(244, 63, 94, 0.3)"));">
+                                        @item.TotalScore%
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    @if (item.KategoriIndex == "Baik")
+                                    {
+                                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; font-size: 11px;">Baik</span>
+                                    }
+                                    else if (item.KategoriIndex == "Sedang")
+                                    {
+                                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 11px;">Sedang</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 6px; font-size: 11px;">Kurang</span>
+                                    }
+                                </td>
+                                <td class="pe-3 text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-info" title="Lihat Detail" onclick="openDetailModal(@item.Id)">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary" title="Edit Laporan" onclick="editReport(@item.Id)">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger" title="Hapus Laporan" onclick="confirmDelete(@item.Id)">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Input / Edit Modal -->
+<div class="modal fade" id="dciInputModal" tabindex="-1" aria-labelledby="dciInputModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid rgba(249, 115, 22, 0.3); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 24px;">
+                <h5 class="modal-title font-weight-bold d-flex align-items-center gap-2" id="dciInputModalLabel" style="color: var(--text-main);">
+                    <i class="bi bi-layers-fill" style="color: #ea580c;"></i>
+                    <span id="modalFormTitle">Form Inspeksi Dump Condition Index (DCI)</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <form id="dciForm" method="post" asp-action="Submit" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="reportId" name="id" value="" />
+
+                    <!-- Section 1: Data Lokasi & Waktu -->
+                    <div class="mb-4">
+                        <div class="text-muted font-weight-bold mb-3" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="bi bi-geo-alt-fill text-warning me-1"></i> 1. Informasi Umum &amp; Lokasi
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">TANGGAL *</label>
+                                <input type="date" id="inputTanggal" name="tanggal" class="form-control form-control-sm" required value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">WAKTU *</label>
+                                <input type="time" id="inputWaktu" name="waktuStr" class="form-control form-control-sm" required value="@DateTime.Now.ToString("HH:mm")" />
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">SHIFT</label>
+                                <select id="inputShift" name="shift" class="form-select form-select-sm">
+                                    <option value="Day">Day Shift</option>
+                                    <option value="Night">Night Shift</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">AREA *</label>
+                                <select id="inputArea" name="area" class="form-select form-select-sm" required>
+                                    <option value="">Pilih Area...</option>
+                                    @foreach (var a in areaList)
+                                    {
+                                        <option value="@a">@a</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">LOKASI UMUM *</label>
+                                <input type="text" id="inputLokasi" name="lokasi" class="form-control form-control-sm" required placeholder="Contoh: Disposal North KM 8" />
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">DISPOSAL</label>
+                                <input type="text" id="inputDisposal" name="disposal" class="form-control form-control-sm" placeholder="Contoh: Disposal Utama, In-pit Dump" list="disposalDatalist" />
+                                <datalist id="disposalDatalist">
+                                    @foreach (var d in disposalList)
+                                    {
+                                        <option value="@d" />
+                                    }
+                                </datalist>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">NAMA DUMP / PAD</label>
+                                <input type="text" id="inputNamaDump" name="namaDump" class="form-control form-control-sm" placeholder="Contoh: Pad 2B, Dump RL 45" />
+                            </div>
+                            <div class="col-12 col-md-8">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">DETIL LOKASI</label>
+                                <input type="text" id="inputDetilLokasi" name="detilLokasi" class="form-control form-control-sm" placeholder="Contoh: Sayap Kiri dekat Lamp Tower 3" />
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">GPS COORDINATES</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" id="inputGps" class="form-control" placeholder="Lat, Long" readonly />
+                                    <button type="button" class="btn btn-outline-warning" onclick="getLocation()" title="Ambil GPS Otomatis">
+                                        <i class="bi bi-geo-alt"></i>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="inputLat" name="latitude" />
+                                <input type="hidden" id="inputLong" name="longitude" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Penilaian 8 Parameter DCI -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="text-muted font-weight-bold" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i class="bi bi-layers-fill text-warning me-1"></i> 2. Penilaian 8 Parameter Dump Condition
+                            </div>
+                            <div class="badge px-3 py-1.5 shadow-sm" id="liveScoreBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 13px; font-weight: 700; border-radius: 10px;">
+                                Skor DCI: <span id="liveScoreVal">100.0</span>% (Baik)
+                            </div>
+                        </div>
+
+                        <!-- Param 1 -->
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(249, 115, 22, 0.15); color: #f97316;">
+                                        <i class="bi bi-grid-1x2-fill"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">1. Lantai Dump &amp; Pad Stability</span>
+                                        <span class="badge" style="background: rgba(249, 115, 22, 0.15); color: #ea580c; border: 1px solid rgba(249, 115, 22, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Rata, padat, bebas amblas &amp; lumpur
+                                </div>
+                            </div>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorLantaiDump" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Standar (Rata &amp; Padat)</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorLantaiDump" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Bergelombang / Lembek Sebagian</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorLantaiDump" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Amblas Parah / Lumpur / Unit Terjebak</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="skorLantaiDump" name="skorLantaiDump" value="100" />
+                        </div>
+
+                        <!-- Param 2 -->
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
+                                        <i class="bi bi-shield-check"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">2. Safety Berm / Tanggul Penahan Dump</span>
+                                        <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Tinggi &ge; 1/2 diameter roda unit terbesar &amp; kokoh
+                                </div>
+                            </div>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorSafetyBerm" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">&ge; 1/2 Roda &amp; Padat Kokoh</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Kurang Tinggi (&lt; 1/2 Roda)</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Tanggul Jebol / Tanpa Tanggul</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="skorSafetyBerm" name="skorSafetyBerm" value="100" />
+                        </div>
+
+                        <!-- Param 3 -->
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e;">
+                                        <i class="bi bi-border-width"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">3. Kondisi Crest &amp; Edge Disposal</span>
+                                        <span class="badge" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Garis tepi lurus, bebas retakan tarik (tension crack)
+                                </div>
+                            </div>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorKondisiCrest" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Crest Lurus &amp; Bebas Retakan</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorKondisiCrest" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Retak Tarik Halus (Awal)</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorKondisiCrest" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Slumping / Retak Parah / Longsor</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="skorKondisiCrest" name="skorKondisiCrest" value="100" />
+                        </div>
+
+                        <!-- Param 4 -->
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                        <i class="bi bi-triangle-half"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">4. Grade &amp; Kemiringan Dumping</span>
+                                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10px; margin-left: 6px;">Bobot 15%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Adverse grade 1-2% mengarah ke dalam tebing
+                                </div>
+                            </div>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorGradeDumping" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Adverse Grade (1-2% ke Dalam)</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorGradeDumping" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Rata / Netral (0%)</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorGradeDumping" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Miring ke Arah Tebing / Jurang</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="skorGradeDumping" name="skorGradeDumping" value="100" />
+                        </div>
+
+                        <!-- Param 5 -->
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">
+                                        <i class="bi bi-water"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">5. Drainase &amp; Aliran Air Dump</span>
+                                        <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Parit keliling lancar, tidak ada genangan air di pad
+                                </div>
+                            </div>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorDrainaseDump" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Kering &amp; Drainase Lancar</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorDrainaseDump" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Genangan Air Lokal Kecil</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorDrainaseDump" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Banjir / Parit Tertutup Total</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="skorDrainaseDump" name="skorDrainaseDump" value="100" />
+                        </div>
+
+                        <!-- Param 6 -->
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                                        <i class="bi bi-stack"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">6. Penataan Material &amp; Spreading Dozer</span>
+                                        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Dozer spreading aktif, tidak menumpuk liar
+                                </div>
+                            </div>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorPenataanSpillage" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Terhampar Rata &amp; Rapih</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorPenataanSpillage" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Tumpukan Belum Diratakan</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorPenataanSpillage" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Tumpukan Liar Halangi Akses</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="skorPenataanSpillage" name="skorPenataanSpillage" value="100" />
+                        </div>
+
+                        <!-- Param 7 -->
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">
+                                        <i class="bi bi-lightbulb-fill"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">7. Rambu &amp; Penerangan Disposal</span>
+                                        <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Rambu batas dumping jelas, tower lamp memadai
+                                </div>
+                            </div>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorRambuPenerangan" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Terang &amp; Rambu Lengkap</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorRambuPenerangan" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Penerangan Kurang / Rambu Rusak</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorRambuPenerangan" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Gelap Total / Tanpa Rambu</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="skorRambuPenerangan" name="skorRambuPenerangan" value="100" />
+                        </div>
+
+                        <!-- Param 8 -->
+                        <div class="param-box-premium">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9;">
+                                        <i class="bi bi-person-badge-fill"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">8. Petugas Spotter &amp; Manuver Unit</span>
+                                        <span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Spotter aktif, radio jelas, jalur manuver hauler aman
+                                </div>
+                            </div>
+                            <div class="score-btn-grid">
+                                <button type="button" class="btn-score-card active" data-param="skorSpotterManuver" data-val="100">
+                                    <span class="btn-score-pill">100</span>
+                                    <span class="btn-score-text">Spotter Aktif &amp; Manuver Aman</span>
+                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSpotterManuver" data-val="70">
+                                    <span class="btn-score-pill">70</span>
+                                    <span class="btn-score-text">Spotter Pasif / Visibilitas Kurang</span>
+                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSpotterManuver" data-val="40">
+                                    <span class="btn-score-pill">40</span>
+                                    <span class="btn-score-text">Tanpa Spotter / Bahaya Senggolan</span>
+                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="skorSpotterManuver" name="skorSpotterManuver" value="100" />
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Dokumentasi & Tindakan Perbaikan -->
+                    <div class="mb-3">
+                        <div class="text-muted font-weight-bold mb-3" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="bi bi-camera-fill text-warning me-1"></i> 3. Dokumentasi Foto &amp; Rekomendasi
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">UPLOAD BUKTI FOTO KONDISI DUMP</label>
+                                <input type="file" id="inputFoto" name="foto" class="form-control form-control-sm" accept="image/*" onchange="previewPhoto(this)" />
+                                <div id="photoPreviewWrap" class="mt-2 d-none">
+                                    <img id="photoPreviewImg" src="" alt="Preview" style="max-height: 140px; border-radius: 10px; border: 1px solid var(--border-color); object-fit: cover;" />
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">PIC / PENGAWAS DISPOSAL</label>
+                                <input type="text" id="inputPic" name="pic" class="form-control form-control-sm" placeholder="Contoh: Budi Santoso (Foreman Dump)" />
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">CATATAN TEMUAN LAPANGAN</label>
+                                <textarea id="inputCatatan" name="catatan" rows="3" class="form-control form-control-sm" placeholder="Jelaskan temuan kondisi dump di lapangan..."></textarea>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-muted" style="font-size: 11px; font-weight: 600;">TINDAKAN PERBAIKAN / REKOMENDASI</label>
+                                <textarea id="inputTindakan" name="tindakanPerbaikan" rows="3" class="form-control form-control-sm" placeholder="Tindakan yang segera dilakukan (e.g. Dozer dorong crest, perbaikan bundwall)..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3" style="border-top: 1px solid var(--border-color);">
+                        <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-sm btn-primary px-4 font-weight-bold" style="background: linear-gradient(135deg, #c2410c, #ea580c); border: none;">
+                            <i class="bi bi-save me-1"></i> Simpan Laporan DCI
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal fade" id="dciDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid rgba(249, 115, 22, 0.4); border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 24px;">
+                <h5 class="modal-title font-weight-bold text-white d-flex align-items-center gap-2">
+                    <i class="bi bi-layers-fill" style="color: #ea580c;"></i>
+                    <span>Detail Laporan Dump Condition Index (DCI)</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <div class="row g-4">
+                    <div class="col-12 col-md-5">
+                        <div id="detailImgWrap" style="width: 100%; height: 260px; border-radius: 14px; overflow: hidden; background: #000; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
+                            <img id="detailImg" src="" alt="Foto DCI" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='/img/placeholder-photo.png'" />
+                        </div>
+                        <div class="mt-3 p-3 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted" style="font-size: 12px;">Skor Akhir DCI:</span>
+                                <span class="font-weight-bold" id="detailSkor" style="font-size: 14px;">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted" style="font-size: 12px;">Status Kategori:</span>
+                                <span class="font-weight-bold" id="detailKategori" style="font-size: 12px;">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted" style="font-size: 12px;">Disposal / Dump:</span>
+                                <span class="font-weight-bold text-white" id="detailNamaDump" style="font-size: 12px;">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted" style="font-size: 12px;">Surveyor:</span>
+                                <span class="font-weight-bold text-white" id="detailSurveyor" style="font-size: 12px;">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-7">
+                        <h6 class="text-white font-weight-bold mb-3" style="font-size: 13px;">Breakdown 8 Parameter Penilaian:</h6>
+                        <div class="d-flex flex-column gap-2" id="detailParamsList">
+                            <!-- Injected by JS -->
+                        </div>
+
+                        <div class="mt-3 p-3 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); font-size: 12px;">
+                            <div class="mb-2"><strong>Catatan:</strong> <span id="detailCatatan" class="text-muted">-</span></div>
+                            <div class="mb-2"><strong>Tindakan Perbaikan:</strong> <span id="detailTindakan" class="text-muted">-</span></div>
+                            <div><strong>PIC:</strong> <span id="detailPic" class="text-muted">-</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-sm btn-success me-auto" id="btnShareWa" onclick="shareWhatsApp()">
+                    <i class="bi bi-whatsapp me-1"></i> Bagikan WhatsApp
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.param-box-premium {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+}
+.param-box-premium:hover {
+    background: rgba(249, 115, 22, 0.03);
+    border-color: rgba(249, 115, 22, 0.3);
+}
+.param-icon-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+.param-header-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+.param-guideline-badge {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.score-btn-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.btn-score-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+.btn-score-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(249, 115, 22, 0.4);
+    color: #fff;
+}
+.btn-score-card.active {
+    background: rgba(249, 115, 22, 0.15);
+    border-color: #f97316;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+}
+.btn-score-pill {
+    font-weight: 800;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.3);
+    margin-right: 6px;
+}
+.btn-score-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+}
+.btn-score-icon {
+    font-size: 14px;
+    margin-left: 6px;
+    opacity: 0.3;
+}
+.btn-score-card.active .btn-score-icon {
+    opacity: 1;
+    color: #ea580c;
+}
+@@media (max-width: 768px) {
+    .score-btn-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Init score button click handlers
+        document.querySelectorAll('.btn-score-card').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const param = this.dataset.param;
+                const val = parseInt(this.dataset.val);
+
+                // Set active class
+                document.querySelectorAll(`.btn-score-card[data-param="${param}"]`).forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                // Update hidden input
+                document.getElementById(param).value = val;
+
+                // Recalculate score live
+                calcLiveScore();
+            });
+        });
+
+        // Trigger Success/Error modal if present
+        const successModal = document.getElementById('statusSuccessModal');
+        if (successModal) {
+            new bootstrap.Modal(successModal).show();
+        }
+        const errorModal = document.getElementById('statusErrorModal');
+        if (errorModal) {
+            new bootstrap.Modal(errorModal).show();
+        }
+
+        calcLiveScore();
+    });
+
+    function calcLiveScore() {
+        const p1 = parseInt(document.getElementById('skorLantaiDump').value) || 100;
+        const p2 = parseInt(document.getElementById('skorSafetyBerm').value) || 100;
+        const p3 = parseInt(document.getElementById('skorKondisiCrest').value) || 100;
+        const p4 = parseInt(document.getElementById('skorGradeDumping').value) || 100;
+        const p5 = parseInt(document.getElementById('skorDrainaseDump').value) || 100;
+        const p6 = parseInt(document.getElementById('skorPenataanSpillage').value) || 100;
+        const p7 = parseInt(document.getElementById('skorRambuPenerangan').value) || 100;
+        const p8 = parseInt(document.getElementById('skorSpotterManuver').value) || 100;
+
+        let total = (p1 * 0.15) + (p2 * 0.15) + (p3 * 0.15) + (p4 * 0.15) +
+                    (p5 * 0.10) + (p6 * 0.10) + (p7 * 0.10) + (p8 * 0.10);
+        total = Math.round(total * 10) / 10;
+
+        let kat = total >= 85 ? "Baik" : (total >= 70 ? "Sedang" : "Kurang");
+        let color = total >= 85 ? "#10b981" : (total >= 70 ? "#f59e0b" : "#f43f5e");
+        let bg = total >= 85 ? "rgba(16, 185, 129, 0.2)" : (total >= 70 ? "rgba(245, 158, 11, 0.2)" : "rgba(244, 63, 94, 0.2)");
+
+        const scoreValEl = document.getElementById('liveScoreVal');
+        const badgeEl = document.getElementById('liveScoreBadge');
+        if (scoreValEl && badgeEl) {
+            scoreValEl.innerText = total.toFixed(1);
+            badgeEl.innerHTML = `Skor DCI: <span id="liveScoreVal">${total.toFixed(1)}</span>% (${kat})`;
+            badgeEl.style.color = color;
+            badgeEl.style.backgroundColor = bg;
+            badgeEl.style.borderColor = color;
+        }
+    }
+
+    function openInputModal() {
+        document.getElementById('dciForm').reset();
+        document.getElementById('reportId').value = '';
+        document.getElementById('modalFormTitle').innerText = 'Form Inspeksi Dump Condition Index (DCI)';
+        document.getElementById('inputTanggal').value = new Date().toISOString().substring(0, 10);
+        document.getElementById('inputWaktu').value = new Date().toTimeString().substring(0, 5);
+        document.getElementById('photoPreviewWrap').classList.add('d-none');
+
+        // Reset all buttons to 100
+        ['skorLantaiDump', 'skorSafetyBerm', 'skorKondisiCrest', 'skorGradeDumping',
+         'skorDrainaseDump', 'skorPenataanSpillage', 'skorRambuPenerangan', 'skorSpotterManuver'].forEach(param => {
+            document.getElementById(param).value = 100;
+            document.querySelectorAll(`.btn-score-card[data-param="${param}"]`).forEach(b => {
+                if (b.dataset.val === "100") b.classList.add('active');
+                else b.classList.remove('active');
+            });
+        });
+
+        calcLiveScore();
+        new bootstrap.Modal(document.getElementById('dciInputModal')).show();
+    }
+
+    function editReport(id) {
+        fetch(`/Dci/GetDetail?id=${id}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('reportId').value = data.id;
+                document.getElementById('modalFormTitle').innerText = 'Edit Laporan DCI #' + data.id;
+                document.getElementById('inputTanggal').value = data.tanggal;
+                document.getElementById('inputWaktu').value = data.waktu;
+                document.getElementById('inputShift').value = data.shift || 'Day';
+                document.getElementById('inputArea').value = data.area || '';
+                document.getElementById('inputLokasi').value = data.lokasi || '';
+                document.getElementById('inputDisposal').value = data.disposal || '';
+                document.getElementById('inputNamaDump').value = data.namaDump || '';
+                document.getElementById('inputDetilLokasi').value = data.detilLokasi || '';
+                document.getElementById('inputLat').value = data.latitude || '';
+                document.getElementById('inputLong').value = data.longitude || '';
+                if (data.latitude && data.longitude) {
+                    document.getElementById('inputGps').value = `${data.latitude}, ${data.longitude}`;
+                } else {
+                    document.getElementById('inputGps').value = '';
+                }
+
+                document.getElementById('inputCatatan').value = data.catatan || '';
+                document.getElementById('inputTindakan').value = data.tindakanPerbaikan || '';
+                document.getElementById('inputPic').value = data.pic || '';
+
+                if (data.fotoUrl) {
+                    document.getElementById('photoPreviewImg').src = data.fotoUrl;
+                    document.getElementById('photoPreviewWrap').classList.remove('d-none');
+                } else {
+                    document.getElementById('photoPreviewWrap').classList.add('d-none');
+                }
+
+                // Set score values
+                const scoreMap = {
+                    'skorLantaiDump': data.skorLantaiDump,
+                    'skorSafetyBerm': data.skorSafetyBerm,
+                    'skorKondisiCrest': data.skorKondisiCrest,
+                    'skorGradeDumping': data.skorGradeDumping,
+                    'skorDrainaseDump': data.skorDrainaseDump,
+                    'skorPenataanSpillage': data.skorPenataanSpillage,
+                    'skorRambuPenerangan': data.skorRambuPenerangan,
+                    'skorSpotterManuver': data.skorSpotterManuver
+                };
+
+                for (let param in scoreMap) {
+                    const val = scoreMap[param] || 100;
+                    document.getElementById(param).value = val;
+                    document.querySelectorAll(`.btn-score-card[data-param="${param}"]`).forEach(b => {
+                        if (parseInt(b.dataset.val) === val) b.classList.add('active');
+                        else b.classList.remove('active');
+                    });
+                }
+
+                calcLiveScore();
+                new bootstrap.Modal(document.getElementById('dciInputModal')).show();
+            })
+            .catch(err => alert('Gagal memuat data laporan: ' + err));
+    }
+
+    let currentDetailData = null;
+
+    function openDetailModal(id) {
+        fetch(`/Dci/GetDetail?id=${id}`)
+            .then(res => res.json())
+            .then(data => {
+                currentDetailData = data;
+                document.getElementById('detailImg').src = data.fotoUrl || '/img/placeholder-photo.png';
+                document.getElementById('detailSkor').innerText = data.totalScore + '%';
+                document.getElementById('detailKategori').innerText = data.kategoriIndex;
+                document.getElementById('detailKategori').style.color = data.totalScore >= 85 ? '#10b981' : (data.totalScore >= 70 ? '#f59e0b' : '#f43f5e');
+                document.getElementById('detailNamaDump').innerText = data.namaDump || data.disposal || data.lokasi;
+                document.getElementById('detailSurveyor').innerText = `${data.nama} (${data.nik})`;
+                document.getElementById('detailCatatan').innerText = data.catatan || '-';
+                document.getElementById('detailTindakan').innerText = data.tindakanPerbaikan || '-';
+                document.getElementById('detailPic').innerText = data.pic || '-';
+
+                const params = [
+                    { name: '1. Lantai Dump & Pad Stability', val: data.skorLantaiDump, weight: '15%' },
+                    { name: '2. Safety Berm / Tanggul Penahan', val: data.skorSafetyBerm, weight: '15%' },
+                    { name: '3. Kondisi Crest & Edge Disposal', val: data.skorKondisiCrest, weight: '15%' },
+                    { name: '4. Grade & Kemiringan Dumping', val: data.skorGradeDumping, weight: '15%' },
+                    { name: '5. Drainase & Aliran Air Dump', val: data.skorDrainaseDump, weight: '10%' },
+                    { name: '6. Penataan Material & Spillage', val: data.skorPenataanSpillage, weight: '10%' },
+                    { name: '7. Rambu & Penerangan Disposal', val: data.skorRambuPenerangan, weight: '10%' },
+                    { name: '8. Petugas Spotter & Manuver Unit', val: data.skorSpotterManuver, weight: '10%' }
+                ];
+
+                let html = '';
+                params.forEach(p => {
+                    let col = p.val === 100 ? '#10b981' : (p.val === 70 ? '#f59e0b' : '#f43f5e');
+                    html += `
+                        <div class="d-flex align-items-center justify-content-between p-2 rounded-2" style="background: rgba(255,255,255,0.03); font-size: 11.5px;">
+                            <span class="text-white">${p.name} <small class="text-muted">(${p.weight})</small></span>
+                            <span class="badge" style="background: ${col}20; color: ${col}; border: 1px solid ${col}40; font-weight: 700;">${p.val}</span>
+                        </div>
+                    `;
+                });
+                document.getElementById('detailParamsList').innerHTML = html;
+
+                new bootstrap.Modal(document.getElementById('dciDetailModal')).show();
+            })
+            .catch(err => alert('Gagal memuat detail laporan: ' + err));
+    }
+
+    function shareWhatsApp() {
+        if (!currentDetailData) return;
+        const d = currentDetailData;
+        const text = `*LAPORAN DUMP CONDITION INDEX (DCI)*%0A` +
+                     `*Tanggal:* ${d.tanggal} (${d.waktu})%0A` +
+                     `*Lokasi:* ${d.lokasi} - ${d.area}%0A` +
+                     `*Disposal/Dump:* ${d.namaDump || d.disposal || '-'}%0A` +
+                     `*Surveyor:* ${d.nama} (${d.nik})%0A` +
+                     `*Total Skor DCI:* ${d.totalScore}% (${d.kategoriIndex})%0A` +
+                     `-------------------------%0A` +
+                     `*Catatan:* ${d.catatan || '-'}%0A` +
+                     `*Tindakan Perbaikan:* ${d.tindakanPerbaikan || '-'}%0A` +
+                     `*PIC:* ${d.pic || '-'}`;
+        window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+    }
+
+    function confirmDelete(id) {
+        document.getElementById('deleteForm').action = `/Dci/Delete?id=${id}`;
+        new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
+    }
+
+    function previewPhoto(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('photoPreviewImg').src = e.target.result;
+                document.getElementById('photoPreviewWrap').classList.remove('d-none');
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                const lat = position.coords.latitude.toFixed(6);
+                const long = position.coords.longitude.toFixed(6);
+                document.getElementById('inputLat').value = lat;
+                document.getElementById('inputLong').value = long;
+                document.getElementById('inputGps').value = `${lat}, ${long}`;
+            }, err => {
+                alert('Gagal mengambil GPS: ' + err.message);
+            });
+        } else {
+            alert('Geolocation tidak didukung pada browser ini.');
+        }
+    }
+</script>

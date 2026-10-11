@@ -121,7 +121,38 @@ namespace MBS_SAP.Controllers
                     .Take(5)
                     .ToList();
 
-                // 3. BBS DATA
+                // 3. DCI DATA (Dump Condition Index)
+                var dciQuery = _context.DciReports.AsNoTracking().Where(d => !d.IsDeleted);
+                var allDciList = await dciQuery.OrderByDescending(d => d.Tanggal).ThenByDescending(d => d.CreatedAt).ToListAsync();
+
+                int totalDci = allDciList.Count;
+                int todayDci = allDciList.Count(d => d.Tanggal >= today || d.CreatedAt >= today);
+                int mtdDci = allDciList.Count(d => d.Tanggal >= startOfMonth);
+                double avgScoreDci = allDciList.Any() ? Math.Round(allDciList.Average(d => d.TotalScore), 1) : 100.0;
+                int dciBaik = allDciList.Count(d => d.KategoriIndex == "Baik");
+                int dciSedang = allDciList.Count(d => d.KategoriIndex == "Sedang");
+                int dciKurang = allDciList.Count(d => d.KategoriIndex == "Kurang");
+
+                var dciParamAvg = new
+                {
+                    lantai = allDciList.Any() ? Math.Round(allDciList.Average(d => d.SkorLantaiDump), 1) : 100.0,
+                    berm = allDciList.Any() ? Math.Round(allDciList.Average(d => d.SkorSafetyBerm), 1) : 100.0,
+                    crest = allDciList.Any() ? Math.Round(allDciList.Average(d => d.SkorKondisiCrest), 1) : 100.0,
+                    grade = allDciList.Any() ? Math.Round(allDciList.Average(d => d.SkorGradeDumping), 1) : 100.0,
+                    drainase = allDciList.Any() ? Math.Round(allDciList.Average(d => d.SkorDrainaseDump), 1) : 100.0,
+                    spillage = allDciList.Any() ? Math.Round(allDciList.Average(d => d.SkorPenataanSpillage), 1) : 100.0,
+                    rambu = allDciList.Any() ? Math.Round(allDciList.Average(d => d.SkorRambuPenerangan), 1) : 100.0,
+                    spotter = allDciList.Any() ? Math.Round(allDciList.Average(d => d.SkorSpotterManuver), 1) : 100.0
+                };
+
+                var topDisposals = allDciList.Where(d => !string.IsNullOrEmpty(d.Disposal) || !string.IsNullOrEmpty(d.NamaDump))
+                    .GroupBy(d => (!string.IsNullOrEmpty(d.NamaDump) ? d.NamaDump! : d.Disposal!))
+                    .Select(g => new { name = g.Key, count = g.Count(), avgScore = Math.Round(g.Average(x => x.TotalScore), 1) })
+                    .OrderByDescending(x => x.count)
+                    .Take(5)
+                    .ToList();
+
+                // 4. BBS DATA
                 var bbsQuery = _context.BbsObservations.AsNoTracking().Where(b => !b.IsDeleted);
                 var allBbsList = await bbsQuery.OrderByDescending(b => b.Tanggal).ThenByDescending(b => b.CreatedAt).ToListAsync();
 
@@ -147,22 +178,24 @@ namespace MBS_SAP.Controllers
                     .Take(6)
                     .ToList();
 
-                // 4. OVERALL STATS
-                int totalActivities = totalRci + totalFci + totalBbs;
-                int todayActivities = todayRci + todayFci + todayBbs;
+                // 5. OVERALL STATS
+                int totalActivities = totalRci + totalFci + totalDci + totalBbs;
+                int todayActivities = todayRci + todayFci + todayDci + todayBbs;
                 int totalPhotos = allRciList.Count(r => !string.IsNullOrEmpty(r.FotoUrl))
                                 + allFciList.Count(f => !string.IsNullOrEmpty(f.FotoUrl))
+                                + allDciList.Count(d => !string.IsNullOrEmpty(d.FotoUrl))
                                 + allBbsList.Count(b => !string.IsNullOrEmpty(b.FotoUrl));
                 double photoComplianceRate = totalActivities > 0 ? Math.Round((double)totalPhotos / totalActivities * 100, 1) : 0;
 
                 var uniqueSurveyors = allRciList.Select(r => r.Nik)
                     .Concat(allFciList.Select(f => f.Nik))
+                    .Concat(allDciList.Select(d => d.Nik))
                     .Concat(allBbsList.Select(b => b.ObserverNik))
                     .Where(n => !string.IsNullOrEmpty(n))
                     .Distinct()
                     .Count();
 
-                // 5. UNIFIED RECENT ITEMS FEED (with Photos & Details)
+                // 6. UNIFIED RECENT ITEMS FEED (with Photos & Details)
                 var feedItems = new List<dynamic>();
 
                 foreach (var r in allRciList.Take(40))
@@ -247,6 +280,47 @@ namespace MBS_SAP.Controllers
                     });
                 }
 
+                foreach (var d in allDciList.Take(40))
+                {
+                    feedItems.Add(new
+                    {
+                        id = d.Id,
+                        type = "DCI",
+                        typeLabel = "Dump Condition Index",
+                        title = !string.IsNullOrEmpty(d.NamaDump) ? d.NamaDump : (!string.IsNullOrEmpty(d.Disposal) ? $"Disposal {d.Disposal}" : "Inspeksi Dump"),
+                        subtitle = !string.IsNullOrEmpty(d.Disposal) ? $"Disposal: {d.Disposal}" : (d.DetilLokasi ?? d.Lokasi),
+                        area = d.Area ?? "-",
+                        tanggal = d.Tanggal.ToString("dd MMM yyyy"),
+                        waktu = d.Waktu.ToString(@"hh\:mm"),
+                        createdAt = d.CreatedAt,
+                        surveyorNama = d.Nama,
+                        surveyorNik = d.Nik,
+                        surveyorPerusahaan = d.Perusahaan ?? "PT Indexim Coalindo",
+                        score = d.TotalScore,
+                        scoreDisplay = $"{d.TotalScore:F1}/100",
+                        kategori = d.KategoriIndex,
+                        statusBadge = d.KategoriIndex == "Baik" ? "Dump Aman" : (d.KategoriIndex == "Sedang" ? "Perlu Perhatian" : "Dump Rawan"),
+                        statusColor = d.KategoriIndex == "Baik" ? "#fb923c" : (d.KategoriIndex == "Sedang" ? "#fbbf24" : "#f87171"),
+                        fotoUrl = d.FotoUrl,
+                        catatan = d.Catatan,
+                        tindakan = d.TindakanPerbaikan,
+                        pic = d.Pic,
+                        lat = d.Latitude,
+                        lng = d.Longitude,
+                        details = new[]
+                        {
+                            new { label = "Lantai Dump", val = d.SkorLantaiDump },
+                            new { label = "Safety Berm", val = d.SkorSafetyBerm },
+                            new { label = "Kondisi Crest", val = d.SkorKondisiCrest },
+                            new { label = "Grade Dumping", val = d.SkorGradeDumping },
+                            new { label = "Drainase", val = d.SkorDrainaseDump },
+                            new { label = "Penataan Spillage", val = d.SkorPenataanSpillage },
+                            new { label = "Penerangan", val = d.SkorRambuPenerangan },
+                            new { label = "Spotter & Manuver", val = d.SkorSpotterManuver }
+                        }
+                    });
+                }
+
                 foreach (var b in allBbsList.Take(40))
                 {
                     bool isSafe = b.Klasifikasi == "Aman";
@@ -290,14 +364,14 @@ namespace MBS_SAP.Controllers
                     .Take(60)
                     .ToList();
 
-                // 6. PHOTO HIGHLIGHTS ONLY (for the Hero Showcase)
+                // 7. PHOTO HIGHLIGHTS ONLY (for the Hero Showcase)
                 var photoHighlights = orderedFeed
                     .Where(x => !string.IsNullOrEmpty((string?)x.fotoUrl))
                     .Take(25)
                     .ToList();
 
-                // 7. MARQUEE TICKER
-                var marquee = $"📢 RCI, FCI & BBS REAL-TIME RADAR • TOTAL AKTIVITAS: {totalActivities} LAPORAN ({todayActivities} HARI INI) • RCI RATA-RATA: {avgScoreRci}/100 • FCI RATA-RATA: {avgScoreFci}/100 • BBS SAFE BEHAVIOR: {safeIndexPct}% ({safeCount} AMAN, {atRiskCount} AT-RISK) • BUKTI FOTO LAPANGAN: {totalPhotos} DOKUMENTASI TERVERIFIKASI • TETAP UTAMAKAN KESELAMATAN KERJA (SAFETY FIRST)";
+                // 8. MARQUEE TICKER
+                var marquee = $"📢 RCI, FCI, DCI & BBS REAL-TIME RADAR • TOTAL AKTIVITAS: {totalActivities} LAPORAN ({todayActivities} HARI INI) • RCI RATA-RATA: {avgScoreRci}/100 • FCI RATA-RATA: {avgScoreFci}/100 • DCI RATA-RATA: {avgScoreDci}/100 • BBS SAFE BEHAVIOR: {safeIndexPct}% ({safeCount} AMAN, {atRiskCount} AT-RISK) • BUKTI FOTO LAPANGAN: {totalPhotos} DOKUMENTASI TERVERIFIKASI • TETAP UTAMAKAN KESELAMATAN KERJA (SAFETY FIRST)";
 
                 return Ok(new
                 {
@@ -330,6 +404,18 @@ namespace MBS_SAP.Controllers
                         kurang = fciKurang,
                         paramAvg = fciParamAvg,
                         topPits
+                    },
+                    dci = new
+                    {
+                        total = totalDci,
+                        today = todayDci,
+                        mtd = mtdDci,
+                        avgScore = avgScoreDci,
+                        baik = dciBaik,
+                        sedang = dciSedang,
+                        kurang = dciKurang,
+                        paramAvg = dciParamAvg,
+                        topDisposals
                     },
                     bbs = new
                     {
