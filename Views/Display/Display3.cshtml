@@ -1115,14 +1115,42 @@
     updateLiveClock();
 
     /* ──────────────────────────────────────────────────────────────────────────
-       3. FETCH DISPLAY 3 DATA (RCI, FCI & BBS)
+       3. FETCH DISPLAY 3 DATA (RCI, FCI & BBS) WITH INSTANT LOCAL CACHING
        ────────────────────────────────────────────────────────────────────────── */
-    async function fetchDisplay3Data() {
+    const DISPLAY3_CACHE_KEY = 'mbs_display3_instant_cache_v1';
+
+    // ⚡ Instant Cache Restore (Render UI in 0ms on page load without waiting for API)
+    (function restoreInstantDisplay3Cache() {
         try {
-            const res = await fetch('/Display/GetDisplay3Data');
+            const raw = localStorage.getItem(DISPLAY3_CACHE_KEY);
+            if (raw) {
+                const cached = JSON.parse(raw);
+                if (cached && typeof cached === 'object') {
+                    currentData = cached;
+                    renderKPIs(cached);
+                    prepareHeroSlides(cached);
+                    renderFeed(cached);
+                    renderTelemetry(cached);
+                    renderTicker(cached.marqueeText);
+                }
+            }
+        } catch (e) {
+            console.warn('Display3 cache restore error:', e);
+        }
+    })();
+
+    async function fetchDisplay3Data(forceRefresh = false) {
+        try {
+            const url = forceRefresh ? '/Display/GetDisplay3Data?refresh=true' : '/Display/GetDisplay3Data';
+            const res = await fetch(url);
             if (!res.ok) throw new Error('HTTP ' + res.status);
             const data = await res.json();
             currentData = data;
+
+            // Persist into localStorage for instant load on subsequent visits/reloads
+            try {
+                localStorage.setItem(DISPLAY3_CACHE_KEY, JSON.stringify(data));
+            } catch (e) { }
 
             renderKPIs(data);
             prepareHeroSlides(data);

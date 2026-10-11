@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using MBS_SAP.Data;
 using MBS_SAP.Models;
 using System;
@@ -15,10 +16,13 @@ namespace MBS_SAP.Controllers
     public class DisplayController : Controller
     {
         private readonly AppDbContext _context;
+        private readonly IMemoryCache _cache;
+        private const string Display3CacheKey = "CACHE_DISPLAY3_DATA_V1";
 
-        public DisplayController(AppDbContext context)
+        public DisplayController(AppDbContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         [Route("")]
@@ -51,10 +55,18 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet("GetDisplay3Data")]
-        public async Task<IActionResult> GetDisplay3Data()
+        [ResponseCache(Duration = 30, Location = ResponseCacheLocation.Any)]
+        public async Task<IActionResult> GetDisplay3Data([FromQuery] bool refresh = false)
         {
             try
             {
+                // Return high-performance in-memory cached response (1ms response time)
+                if (!refresh && _cache.TryGetValue(Display3CacheKey, out object? cachedData) && cachedData != null)
+                {
+                    Response.Headers["X-Cache"] = "HIT";
+                    return Ok(cachedData);
+                }
+
                 var now = DateTime.Now;
                 var today = DateTime.Today;
                 var startOfMonth = new DateTime(now.Year, now.Month, 1);
@@ -450,7 +462,7 @@ namespace MBS_SAP.Controllers
                 // 8. MARQUEE TICKER
                 var marquee = $"📢 RCI, FCI, DCI, SPI & BBS REAL-TIME RADAR • TOTAL AKTIVITAS: {totalActivities} LAPORAN ({todayActivities} HARI INI) • RCI RATA-RATA: {avgScoreRci:F2}/4.00 • FCI RATA-RATA: {avgScoreFci}/100 • DCI RATA-RATA: {avgScoreDci}/100 • SPI RATA-RATA: {avgScoreSpi}/100 • BBS SAFE BEHAVIOR: {safeIndexPct}% ({safeCount} AMAN, {atRiskCount} AT-RISK) • BUKTI FOTO LAPANGAN: {totalPhotos} DOKUMENTASI TERVERIFIKASI • TETAP UTAMAKAN KESELAMATAN & LINGKUNGAN KERJA (SAFETY & ENVIRONMENT FIRST)";
 
-                return Ok(new
+                var responsePayload = new
                 {
                     totalActivities,
                     todayActivities,
@@ -519,7 +531,17 @@ namespace MBS_SAP.Controllers
                     },
                     feed = orderedFeed,
                     photoHighlights
+                };
+
+                // Store in memory cache for 60 seconds (refresh interval on Display 3 is 30s)
+                _cache.Set(Display3CacheKey, responsePayload, new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60),
+                    SlidingExpiration = TimeSpan.FromSeconds(45)
                 });
+
+                Response.Headers["X-Cache"] = "MISS";
+                return Ok(responsePayload);
             }
             catch (Exception ex)
             {
