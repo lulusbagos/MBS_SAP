@@ -944,10 +944,20 @@
 
                     <!-- Image Display Wrap -->
                     <div class="hero-photo-wrap" onclick="openHeroInLightbox()" style="cursor: pointer;">
-                        <img id="heroImg" src="" alt="Bukti Foto Lapangan" class="hero-photo-img" onerror="handleHeroImgError()" />
-                        <div id="heroFallbackPlaceholder" style="display:none; text-align:center; padding: 40px;">
-                            <i class="bi bi-image text-muted" style="font-size: 64px;"></i>
-                            <div class="text-muted mt-2 fw-bold" style="font-size: 14px;">DOKUMENTASI FOTO DALAM PROSES VERIFIKASI</div>
+                        <img id="heroImg" src="" alt="Bukti Foto Lapangan" class="hero-photo-img" onerror="handleHeroImgError()" style="display:none;" />
+                        <div id="heroFallbackPlaceholder" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 25px 20px; z-index: 5; position: relative;">
+                            <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); border: 2px dashed rgba(56, 189, 248, 0.4); display: flex; align-items: center; justify-content: center; margin-bottom: 12px; box-shadow: 0 0 25px rgba(56, 189, 248, 0.2);">
+                                <i class="bi bi-shield-check text-info" style="font-size: 32px;" id="heroFallbackIcon"></i>
+                            </div>
+                            <div class="badge bg-primary bg-opacity-25 text-info border border-info border-opacity-25 px-3 py-1 mb-2" style="font-size: 11px; letter-spacing: 0.8px; font-weight:700;" id="heroFallbackBadge">
+                                LAPORAN TERVERIFIKASI
+                            </div>
+                            <div class="text-white fw-bold" style="font-size: 15px; letter-spacing: 0.3px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);" id="heroFallbackTitle">
+                                OBSERVASI LAPANGAN
+                            </div>
+                            <div class="text-muted mt-1 text-center px-3" style="font-size: 12px; max-width: 480px; line-height: 1.5;" id="heroFallbackSubtitle">
+                                Data teknis lengkap tercatat dalam sistem monitoring real-time
+                            </div>
                         </div>
                         <div class="hero-photo-gradient"></div>
                     </div>
@@ -1117,7 +1127,37 @@
     /* ──────────────────────────────────────────────────────────────────────────
        3. FETCH DISPLAY 3 DATA (RCI, FCI & BBS) WITH INSTANT LOCAL CACHING
        ────────────────────────────────────────────────────────────────────────── */
-    const DISPLAY3_CACHE_KEY = 'mbs_display3_instant_cache_v1';
+    const DISPLAY3_CACHE_KEY = 'mbs_display3_instant_cache_v2';
+
+    // Image Preloader & In-Memory Cache (Eliminates black void & blanks)
+    const imagePreloadCache = new Map();
+
+    function preloadPhoto(url) {
+        if (!url || typeof url !== 'string' || !url.trim()) return Promise.resolve(null);
+        url = url.trim();
+        if (imagePreloadCache.has(url)) return Promise.resolve(imagePreloadCache.get(url));
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => {
+                const entry = { status: 'loaded', url };
+                imagePreloadCache.set(url, entry);
+                resolve(entry);
+            };
+            img.onerror = () => {
+                const entry = { status: 'error', url };
+                imagePreloadCache.set(url, entry);
+                resolve(entry);
+            };
+            img.src = url;
+        });
+    }
+
+    function preloadBatchPhotos(items) {
+        if (!Array.isArray(items)) return;
+        items.slice(0, 20).forEach(it => {
+            if (it && it.fotoUrl) preloadPhoto(it.fotoUrl);
+        });
+    }
 
     // ⚡ Instant Cache Restore (Render UI in 0ms on page load without waiting for API)
     (function restoreInstantDisplay3Cache() {
@@ -1139,13 +1179,27 @@
         }
     })();
 
+    let isFetchingDisplay3 = false;
     async function fetchDisplay3Data(forceRefresh = false) {
+        if (isFetchingDisplay3) return;
+        isFetchingDisplay3 = true;
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000);
+
             const url = forceRefresh ? '/Display/GetDisplay3Data?refresh=true' : '/Display/GetDisplay3Data';
-            const res = await fetch(url);
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
             if (!res.ok) throw new Error('HTTP ' + res.status);
             const data = await res.json();
+            if (!data || typeof data !== 'object') throw new Error('Data payload empty');
+
             currentData = data;
+
+            // Preload batch photos in background for seamless caching
+            if (Array.isArray(data.photoHighlights)) preloadBatchPhotos(data.photoHighlights);
+            if (Array.isArray(data.feed)) preloadBatchPhotos(data.feed);
 
             // Persist into localStorage for instant load on subsequent visits/reloads
             try {
@@ -1158,7 +1212,10 @@
             renderTelemetry(data);
             renderTicker(data.marqueeText);
         } catch (err) {
-            console.error('Error fetching Display 3 data:', err);
+            console.warn('Warning fetching Display 3 data (retaining cached view):', err);
+            // Retain existing view, NEVER blank out the screen
+        } finally {
+            isFetchingDisplay3 = false;
         }
     }
 
@@ -1249,15 +1306,19 @@
         if (currentMode === 'all') {
             items = (d.photoHighlights && d.photoHighlights.length > 0) ? d.photoHighlights : (d.feed || []);
         } else if (currentMode === 'photo') {
-            items = d.photoHighlights || [];
+            items = (d.photoHighlights && d.photoHighlights.length > 0) ? d.photoHighlights : (d.feed || []).filter(x => x.fotoUrl);
         } else {
             const feed = d.feed || [];
             items = feed.filter(x => x.type && x.type.toLowerCase() === currentMode.toLowerCase());
-            // prioritize those with photos
+            // Prioritize items with photos
             items.sort((a,b) => (b.fotoUrl ? 1 : 0) - (a.fotoUrl ? 1 : 0));
         }
 
-        heroSlides = items.length > 0 ? items : (d.feed || []);
+        // If specific mode has no items, fallback smoothly to photoHighlights or general feed
+        heroSlides = (items && items.length > 0) 
+            ? items 
+            : ((d.photoHighlights && d.photoHighlights.length > 0) ? d.photoHighlights : (d.feed || []));
+
         if (currentHeroIndex >= heroSlides.length) currentHeroIndex = 0;
         renderHeroSlide(currentHeroIndex);
     }
@@ -1267,43 +1328,102 @@
         const item = heroSlides[idx];
         if (!item) return;
 
-        // Image
-        const imgEl = document.getElementById('heroImg');
-        const fallbackEl = document.getElementById('heroFallbackPlaceholder');
-
-        if (item.fotoUrl) {
-            imgEl.src = item.fotoUrl;
-            imgEl.style.display = 'block';
-            fallbackEl.style.display = 'none';
-        } else {
-            imgEl.style.display = 'none';
-            fallbackEl.style.display = 'block';
+        // 1. Render all text & metadata immediately (so report is NEVER hidden or blank)
+        const typeEl = document.getElementById('heroTypeBadge');
+        if (typeEl) {
+            typeEl.textContent = `${item.type} ${item.typeLabel || ''}`.trim();
+            typeEl.style.background = item.type === 'RCI' ? '#0284c7' : (item.type === 'FCI' ? '#d97706' : (item.type === 'DCI' ? '#ea580c' : (item.type === 'SPI' ? '#059669' : (item.kategori === 'Aman' ? '#059669' : '#dc2626'))));
         }
 
-        // Badges
-        const typeEl = document.getElementById('heroTypeBadge');
-        typeEl.textContent = `${item.type} ${item.typeLabel || ''}`.trim();
-        typeEl.style.background = item.type === 'RCI' ? '#0284c7' : (item.type === 'FCI' ? '#d97706' : (item.type === 'DCI' ? '#ea580c' : (item.kategori === 'Aman' ? '#059669' : '#dc2626')));
+        const areaEl = document.getElementById('heroAreaBadge');
+        if (areaEl) areaEl.innerHTML = `<i class="bi bi-geo-alt-fill text-warning me-1"></i>${item.area || 'Area Lapangan'}`;
 
-        document.getElementById('heroAreaBadge').innerHTML = `<i class="bi bi-geo-alt-fill text-warning me-1"></i>${item.area || 'Area Lapangan'}`;
-        
         const scoreEl = document.getElementById('heroScoreBadge');
-        scoreEl.textContent = item.scoreDisplay || `${item.score}/100`;
-        scoreEl.style.background = item.statusColor || '#0284c7';
+        if (scoreEl) {
+            scoreEl.textContent = item.scoreDisplay || `${item.score}/100`;
+            scoreEl.style.background = item.statusColor || '#0284c7';
+        }
 
-        // Titles
-        document.getElementById('heroTitle').textContent = item.title || 'Laporan Pengamatan';
-        document.getElementById('heroSubtitle').textContent = item.subtitle || (item.catatan || 'Detail hasil inspeksi visual di area kerja');
-        
+        const titleEl = document.getElementById('heroTitle');
+        if (titleEl) titleEl.textContent = item.title || 'Laporan Pengamatan';
+
+        const subEl = document.getElementById('heroSubtitle');
+        if (subEl) subEl.textContent = item.subtitle || (item.catatan || 'Detail hasil inspeksi visual di area kerja');
+
         const statusText = document.getElementById('heroStatusText');
-        statusText.textContent = item.statusBadge || item.kategori;
-        statusText.style.background = item.statusColor || '#475569';
+        if (statusText) {
+            statusText.textContent = item.statusBadge || item.kategori;
+            statusText.style.background = item.statusColor || '#475569';
+        }
 
-        // Meta
-        document.getElementById('heroSurveyor').textContent = item.surveyorNama || item.surveyorNik || 'Observer';
-        document.getElementById('heroCompany').textContent = item.surveyorPerusahaan || 'PT Indexim Coalindo';
-        document.getElementById('heroDate').textContent = item.tanggal || '-';
-        document.getElementById('heroTime').textContent = item.waktu || '-';
+        const survEl = document.getElementById('heroSurveyor');
+        if (survEl) survEl.textContent = item.surveyorNama || item.surveyorNik || 'Observer';
+
+        const compEl = document.getElementById('heroCompany');
+        if (compEl) compEl.textContent = item.surveyorPerusahaan || 'PT Indexim Coalindo';
+
+        const dateEl = document.getElementById('heroDate');
+        if (dateEl) dateEl.textContent = item.tanggal || '-';
+
+        const timeEl = document.getElementById('heroTime');
+        if (timeEl) timeEl.textContent = item.waktu || '-';
+
+        // 2. Set dynamic preview elements inside fallback placeholder
+        const fbIcon = document.getElementById('heroFallbackIcon');
+        const fbBadge = document.getElementById('heroFallbackBadge');
+        const fbTitle = document.getElementById('heroFallbackTitle');
+        const fbSub = document.getElementById('heroFallbackSubtitle');
+
+        if (fbIcon) {
+            fbIcon.className = item.type === 'RCI' ? 'bi bi-cone-striped text-info' : (item.type === 'FCI' ? 'bi bi-truck-front-fill text-warning' : (item.type === 'DCI' ? 'bi bi-layers-fill text-warning' : (item.type === 'SPI' ? 'bi bi-droplet-half text-success' : 'bi bi-shield-check text-info')));
+        }
+        if (fbBadge) fbBadge.textContent = `${item.type} TERVERIFIKASI`;
+        if (fbTitle) fbTitle.textContent = item.title || 'Laporan Lapangan';
+        if (fbSub) fbSub.textContent = item.subtitle || item.catatan || 'Dokumentasi teknis tercatat dalam radar komando';
+
+        // 3. Image with cache verification & seamless preloading
+        const imgEl = document.getElementById('heroImg');
+        const fallbackEl = document.getElementById('heroFallbackPlaceholder');
+        const photoUrl = (item.fotoUrl && typeof item.fotoUrl === 'string') ? item.fotoUrl.trim() : null;
+
+        if (photoUrl) {
+            const cached = imagePreloadCache.get(photoUrl);
+            if (cached && cached.status === 'loaded') {
+                if (imgEl) {
+                    imgEl.src = photoUrl;
+                    imgEl.style.display = 'block';
+                }
+                if (fallbackEl) fallbackEl.style.display = 'none';
+            } else if (cached && cached.status === 'error') {
+                if (imgEl) imgEl.style.display = 'none';
+                if (fallbackEl) fallbackEl.style.display = 'flex';
+            } else {
+                // Not in cache yet: keep placeholder visible and preload asynchronously
+                if (imgEl) imgEl.style.display = 'none';
+                if (fallbackEl) fallbackEl.style.display = 'flex';
+
+                preloadPhoto(photoUrl).then(res => {
+                    if (currentHeroIndex === idx && res && res.status === 'loaded') {
+                        if (imgEl) {
+                            imgEl.src = photoUrl;
+                            imgEl.style.display = 'block';
+                        }
+                        if (fallbackEl) fallbackEl.style.display = 'none';
+                    }
+                });
+            }
+        } else {
+            if (imgEl) imgEl.style.display = 'none';
+            if (fallbackEl) fallbackEl.style.display = 'flex';
+        }
+
+        // Prefetch next 2 slides in background for instant transition
+        if (heroSlides.length > 1) {
+            const next1 = heroSlides[(idx + 1) % heroSlides.length];
+            const next2 = heroSlides[(idx + 2) % heroSlides.length];
+            if (next1?.fotoUrl) preloadPhoto(next1.fotoUrl);
+            if (next2?.fotoUrl) preloadPhoto(next2.fotoUrl);
+        }
     }
 
     function nextHeroSlide() {
@@ -1327,7 +1447,7 @@
             imgEl.style.display = 'none';
         }
         const fallback = document.getElementById('heroFallbackPlaceholder');
-        if (fallback) fallback.style.display = 'block';
+        if (fallback) fallback.style.display = 'flex';
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
@@ -1451,20 +1571,50 @@
         else if (currentMode === 'dci') items = items.filter(x => x.type === 'DCI');
         else if (currentMode === 'spi') items = items.filter(x => x.type === 'SPI');
         else if (currentMode === 'bbs') items = items.filter(x => x.type === 'BBS');
-        else if (currentMode === 'photo') items = items.filter(x => !stringIsNullOrEmpty(x.fotoUrl));
+        else if (currentMode === 'photo') items = items.filter(x => Boolean(x.fotoUrl && typeof x.fotoUrl === 'string' && x.fotoUrl.trim() !== ''));
 
-        document.getElementById('feedCounter').textContent = `${items.length} LAPORAN`;
+        const totalMatching = items.length;
+        // Limit strictly to 20 latest records for lightweight rendering and zero lag
+        items = items.slice(0, 20);
+
+        const counterEl = document.getElementById('feedCounter');
+        if (counterEl) counterEl.textContent = `${totalMatching} LAPORAN`;
 
         const container = document.getElementById('feedContainer');
+        if (!container) return;
+
+        // Reset scroll position on every render to prevent content from staying off-screen
+        feedScrollPos = 0;
+        container.style.transform = 'translateY(0px)';
+
         if (items.length === 0) {
-            container.innerHTML = `<div class="p-4 text-center text-muted" style="font-size:12.5px;">Belum ada laporan pada kategori ini.</div>`;
-            return;
+            // When category is empty, show a helpful alert + display latest general records so UI is NEVER empty!
+            const fallbackGeneral = (d.feed || []).slice(0, 20);
+            if (fallbackGeneral.length > 0) {
+                container.innerHTML = `
+                <div class="p-3 text-center mb-2" style="background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.12); border-radius: 8px;">
+                    <div class="text-warning fw-bold" style="font-size:12px;">
+                        <i class="bi bi-info-circle me-1"></i>Belum ada laporan kategori ${currentMode.toUpperCase()}
+                    </div>
+                    <div class="text-muted mt-1" style="font-size:11px;">Menampilkan ${fallbackGeneral.length} laporan terbaru radar komando:</div>
+                </div>
+                ` + buildFeedCardsHtml(fallbackGeneral);
+                return;
+            } else {
+                container.innerHTML = `<div class="p-4 text-center text-muted" style="font-size:12.5px;">Belum ada laporan pada sistem.</div>`;
+                return;
+            }
         }
 
-        container.innerHTML = items.map((item, index) => {
+        container.innerHTML = buildFeedCardsHtml(items);
+    }
+
+    function buildFeedCardsHtml(items) {
+        return items.map((item, index) => {
+            const hasPhoto = Boolean(item.fotoUrl && typeof item.fotoUrl === 'string' && item.fotoUrl.trim() !== '');
             const typeIcon = item.type === 'RCI' ? 'bi-cone-striped text-info' : (item.type === 'FCI' ? 'bi-truck-front-fill text-warning' : (item.type === 'DCI' ? 'bi-layers-fill text-warning' : (item.type === 'SPI' ? 'bi-droplet-half text-success' : 'bi-shield-check text-info')));
             const thumbHtml = hasPhoto
-                ? `<img src="${item.fotoUrl}" class="feed-thumb-img" alt="Foto" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\\'bi ${typeIcon} feed-thumb-placeholder\\\'></i>';" />`
+                ? `<img src="${item.fotoUrl}" loading="lazy" class="feed-thumb-img" alt="Foto" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\\'bi ${typeIcon} feed-thumb-placeholder\\\'></i>';" />`
                 : `<i class="bi ${typeIcon} feed-thumb-placeholder"></i>`;
 
             const pillBg = item.type === 'RCI' ? 'rgba(14, 165, 233, 0.2); color:#38bdf8;' : (item.type === 'FCI' ? 'rgba(217, 119, 6, 0.2); color:#fbbf24;' : (item.type === 'DCI' ? 'rgba(249, 115, 22, 0.2); color:#fb923c;' : (item.type === 'SPI' ? 'rgba(16, 185, 129, 0.2); color:#10b981;' : 'rgba(2, 132, 199, 0.2); color:#38bdf8;')));
@@ -1519,11 +1669,14 @@
                         isFeedPaused = true;
                         setTimeout(() => {
                             feedScrollPos = 0;
-                            content.style.transform = `translateY(-${feedScrollPos}px)`;
-                            setTimeout(() => { isFeedPaused = false; }, 2000);
-                        }, 4000);
+                            content.style.transform = `translateY(0px)`;
+                            setTimeout(() => { isFeedPaused = false; }, 1500);
+                        }, 3000);
                     }
                     content.style.transform = `translateY(-${feedScrollPos}px)`;
+                } else {
+                    feedScrollPos = 0;
+                    content.style.transform = 'translateY(0px)';
                 }
             }
         }
@@ -1544,7 +1697,7 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       9. MODE SWITCHER & CATEGORY SLIDESHOW ROTATION
+       9. MODE SWITCHER & SMART CATEGORY SLIDESHOW ROTATION
        ────────────────────────────────────────────────────────────────────────── */
     const MENU_SLIDES = ['all', 'bbs', 'rci', 'fci', 'dci', 'spi'];
     const MENU_LABELS = {
@@ -1560,9 +1713,20 @@
     let menuSecondsLeft = 20;
     const MENU_CYCLE_SECONDS = 20;
 
+    function getActiveModesWithData() {
+        if (!currentData) return ['all', 'bbs'];
+        const list = ['all'];
+        if (currentData.bbs?.total > 0) list.push('bbs');
+        if (currentData.rci?.total > 0) list.push('rci');
+        if (currentData.fci?.total > 0) list.push('fci');
+        if (currentData.dci?.total > 0) list.push('dci');
+        if (currentData.spi?.total > 0) list.push('spi');
+        return list.length > 0 ? list : ['all'];
+    }
+
     function userSelectMode(mode) {
-        // Find index if in rotation
-        const idx = MENU_SLIDES.indexOf(mode.toLowerCase());
+        const available = getActiveModesWithData();
+        const idx = available.indexOf(mode.toLowerCase());
         if (idx !== -1) {
             menuSlideIndex = idx;
         }
@@ -1599,9 +1763,13 @@
 
         if (menuSecondsLeft <= 0) {
             menuSecondsLeft = MENU_CYCLE_SECONDS;
-            menuSlideIndex = (menuSlideIndex + 1) % MENU_SLIDES.length;
-            const nextMode = MENU_SLIDES[menuSlideIndex];
-            switchDisplayMode(nextMode);
+            // Only rotate to modes that actually contain reports
+            const availableModes = getActiveModesWithData();
+            if (availableModes.length > 1) {
+                menuSlideIndex = (menuSlideIndex + 1) % availableModes.length;
+                const nextMode = availableModes[menuSlideIndex];
+                switchDisplayMode(nextMode);
+            }
         }
     }
     setInterval(updateMenuRotateTimer, 1000);
@@ -1766,8 +1934,24 @@
        11. 5-MINUTE AUTO SLIDE TRANSITION (DISPLAY 3 -> DISPLAY 1 ROTATION LOOP)
        ────────────────────────────────────────────────────────────────────────── */
     const SLIDE_DURATION_SECONDS = 300; // 5 minutes = 300 seconds
+    const KIOSK_STAY_KEY = 'mbs_display3_kiosk_stay';
     let slideTimeRemaining = SLIDE_DURATION_SECONDS;
-    let isSlidePaused = false;
+    let isSlidePaused = (localStorage.getItem(KIOSK_STAY_KEY) === 'true');
+
+    // Update initial pause button UI if persisted as paused
+    if (isSlidePaused) {
+        setTimeout(() => {
+            const icon = document.getElementById('pauseIcon');
+            const text = document.getElementById('pauseText');
+            const btn = document.getElementById('togglePauseBtn');
+            if (icon) icon.className = 'bi bi-play-fill';
+            if (text) text.innerText = 'Lanjut';
+            if (btn) {
+                btn.style.background = 'rgba(239, 68, 68, 0.3)';
+                btn.style.borderColor = '#ef4444';
+            }
+        }, 150);
+    }
 
     function updateSlideTimer() {
         if (isSlidePaused) return;
@@ -1796,6 +1980,8 @@
 
     function togglePauseSlide() {
         isSlidePaused = !isSlidePaused;
+        try { localStorage.setItem(KIOSK_STAY_KEY, isSlidePaused ? 'true' : 'false'); } catch (e) { }
+
         const icon = document.getElementById('pauseIcon');
         const text = document.getElementById('pauseText');
         const btn = document.getElementById('togglePauseBtn');

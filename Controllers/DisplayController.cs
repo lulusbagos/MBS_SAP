@@ -247,7 +247,7 @@ namespace MBS_SAP.Controllers
                 // 7. UNIFIED RECENT ITEMS FEED (with Photos & Details)
                 var feedItems = new List<dynamic>();
 
-                foreach (var r in allRciList.Take(40))
+                foreach (var r in allRciList.Take(15))
                 {
                     feedItems.Add(new
                     {
@@ -288,7 +288,7 @@ namespace MBS_SAP.Controllers
                     });
                 }
 
-                foreach (var f in allFciList.Take(40))
+                foreach (var f in allFciList.Take(15))
                 {
                     feedItems.Add(new
                     {
@@ -329,7 +329,7 @@ namespace MBS_SAP.Controllers
                     });
                 }
 
-                foreach (var d in allDciList.Take(40))
+                foreach (var d in allDciList.Take(15))
                 {
                     feedItems.Add(new
                     {
@@ -369,7 +369,7 @@ namespace MBS_SAP.Controllers
                     });
                 }
 
-                foreach (var s in allSpiList.Take(40))
+                foreach (var s in allSpiList.Take(15))
                 {
                     feedItems.Add(new
                     {
@@ -410,7 +410,7 @@ namespace MBS_SAP.Controllers
                     });
                 }
 
-                foreach (var b in allBbsList.Take(40))
+                foreach (var b in allBbsList.Take(15))
                 {
                     bool isSafe = b.Klasifikasi == "Aman";
                     feedItems.Add(new
@@ -447,17 +447,22 @@ namespace MBS_SAP.Controllers
                     });
                 }
 
-                // Sort unified feed by CreatedAt descending
+                // Sort unified feed by CreatedAt descending (max 20 records for high speed & lightweight memory)
                 var orderedFeed = feedItems
                     .OrderByDescending(x => (DateTime)x.createdAt)
-                    .Take(60)
+                    .Take(20)
                     .ToList();
 
                 // 7. PHOTO HIGHLIGHTS ONLY (for the Hero Showcase)
                 var photoHighlights = orderedFeed
                     .Where(x => !string.IsNullOrEmpty((string?)x.fotoUrl))
-                    .Take(25)
+                    .Take(15)
                     .ToList();
+
+                if (!photoHighlights.Any())
+                {
+                    photoHighlights = orderedFeed.Take(15).ToList();
+                }
 
                 // 8. MARQUEE TICKER
                 var marquee = $"📢 RCI, FCI, DCI, SPI & BBS REAL-TIME RADAR • TOTAL AKTIVITAS: {totalActivities} LAPORAN ({todayActivities} HARI INI) • RCI RATA-RATA: {avgScoreRci:F2}/4.00 • FCI RATA-RATA: {avgScoreFci}/100 • DCI RATA-RATA: {avgScoreDci}/100 • SPI RATA-RATA: {avgScoreSpi}/100 • BBS SAFE BEHAVIOR: {safeIndexPct}% ({safeCount} AMAN, {atRiskCount} AT-RISK) • BUKTI FOTO LAPANGAN: {totalPhotos} DOKUMENTASI TERVERIFIKASI • TETAP UTAMAKAN KESELAMATAN & LINGKUNGAN KERJA (SAFETY & ENVIRONMENT FIRST)";
