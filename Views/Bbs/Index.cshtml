@@ -209,7 +209,12 @@
             <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
             
             <i class="bi bi-shield-check text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
-            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px; letter-spacing: 0.5px;">OBSERVASI PERILAKU (BBS)</h4>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px; letter-spacing: 0.5px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                <span>OBSERVASI PERILAKU (BBS)</span>
+                <span class="badge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 8px; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(0,0,0,0.25); display: inline-flex; align-items: center; gap: 3px;">
+                    <i class="bi bi-stars" style="font-size: 11px;"></i> NEW
+                </span>
+            </h4>
             <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Behavior Based Safety: Observasi perilaku aman &amp; berisiko di lingkungan kerja Anda.</p>
         </div>
     </div>
@@ -258,9 +263,15 @@
 
                 <!-- Card Header -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="mb-0 text-white" style="font-weight: 700;" id="formTitle">
-                        <i class="bi bi-person-check-fill me-2" style="color: var(--color-primary);"></i>
-                        @(isEdit ? $"Edit Observasi: {obs.ObservationNo}" : "Form Input Observasi Perilaku (BBS)")
+                    <h5 class="mb-0 text-white d-flex align-items-center gap-2" style="font-weight: 700;" id="formTitle">
+                        <i class="bi bi-person-check-fill" style="color: var(--color-primary);"></i>
+                        <span>@(isEdit ? $"Edit Observasi: {obs.ObservationNo}" : "Form Input Observasi Perilaku (BBS)")</span>
+                        @if (!isEdit)
+                        {
+                            <span class="badge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(244, 63, 94, 0.4); display: inline-flex; align-items: center; gap: 2px;">
+                                <i class="bi bi-stars" style="font-size: 9px;"></i> NEW
+                            </span>
+                        }
                     </h5>
                     @if (isEdit)
                     {

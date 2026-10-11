@@ -21,6 +21,9 @@
             <div class="screen-title d-flex align-items-center gap-2">
                 <i class="bi bi-layers-fill" style="color: #f97316;"></i>
                 <span>Dump Condition Index (DCI)</span>
+                <span class="badge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 10px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(244, 63, 94, 0.4); display: inline-flex; align-items: center; gap: 2px;">
+                    <i class="bi bi-stars" style="font-size: 9px;"></i> NEW
+                </span>
                 <span class="badge" style="background: rgba(249, 115, 22, 0.15); color: #ea580c; border: 1px solid rgba(249, 115, 22, 0.3); font-size: 11px; padding: 4px 10px; border-radius: 8px;">Disposal Area</span>
             </div>
             <p class="screen-subtitle mb-0">Inspeksi & Penilaian Standar Kelayakan Area Dumping / Disposal Tambang.</p>
@@ -214,8 +217,10 @@
                 <button type="submit" class="btn btn-sm btn-primary flex-fill" style="background: #ea580c; border: none; border-radius: 8px;">
                     <i class="bi bi-funnel-fill me-1"></i> Filter
                 </button>
-                <button type="button" class="btn btn-sm btn-success flex-fill" style="background: linear-gradient(135deg, #ea580c, #f97316); border: none; border-radius: 8px; font-weight: 600;" onclick="openInputModal()">
-                    <i class="bi bi-plus-lg me-1"></i> Baru
+                <button type="button" class="btn btn-sm btn-success flex-fill d-flex align-items-center justify-content-center gap-1" style="background: linear-gradient(135deg, #ea580c, #f97316); border: none; border-radius: 8px; font-weight: 600;" onclick="openInputModal()">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Baru</span>
+                    <span class="badge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 8.5px; font-weight: 800; padding: 1.5px 4.5px; border-radius: 4px; letter-spacing: 0.5px;">NEW</span>
                 </button>
             </div>
         </form>
@@ -331,6 +336,9 @@
                 <h5 class="modal-title font-weight-bold d-flex align-items-center gap-2" id="dciInputModalLabel" style="color: var(--text-main);">
                     <i class="bi bi-layers-fill" style="color: #ea580c;"></i>
                     <span id="modalFormTitle">Form Inspeksi Dump Condition Index (DCI)</span>
+                    <span class="badge" id="modalNewBadge" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(244, 63, 94, 0.4); display: inline-flex; align-items: center; gap: 2px;">
+                        <i class="bi bi-stars" style="font-size: 9px;"></i> NEW
+                    </span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -964,6 +972,8 @@
         document.getElementById('dciForm').reset();
         document.getElementById('reportId').value = '';
         document.getElementById('modalFormTitle').innerText = 'Form Inspeksi Dump Condition Index (DCI)';
+        const newBadge = document.getElementById('modalNewBadge');
+        if (newBadge) newBadge.classList.remove('d-none');
         document.getElementById('inputTanggal').value = new Date().toISOString().substring(0, 10);
         document.getElementById('inputWaktu').value = new Date().toTimeString().substring(0, 5);
         document.getElementById('photoPreviewWrap').classList.add('d-none');
@@ -988,6 +998,8 @@
             .then(data => {
                 document.getElementById('reportId').value = data.id;
                 document.getElementById('modalFormTitle').innerText = 'Edit Laporan DCI #' + data.id;
+                const newBadge = document.getElementById('modalNewBadge');
+                if (newBadge) newBadge.classList.add('d-none');
                 document.getElementById('inputTanggal').value = data.tanggal;
                 document.getElementById('inputWaktu').value = data.waktu;
                 document.getElementById('inputShift').value = data.shift || 'Day';

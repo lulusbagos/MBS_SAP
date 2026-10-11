@@ -757,7 +757,10 @@
                 <span class="badge" style="background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; font-size: 10px; font-weight: 600;">Akt: @(ViewData["ThisMonthCoachings"] ?? "0") / Tgt: @(ViewData["TargetCoaching"] ?? "0")</span>
             </a>
 
-            <a asp-controller="Bbs" asp-action="Index" class="btn-action-card animate-pop-in delay-6">
+            <a asp-controller="Bbs" asp-action="Index" class="btn-action-card animate-pop-in delay-6 position-relative">
+                <span class="badge position-absolute" style="top: 10px; right: 10px; background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 8px; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(244, 63, 94, 0.45); display: inline-flex; align-items: center; gap: 3px;">
+                    <i class="bi bi-stars" style="font-size: 10px;"></i> NEW
+                </span>
                 <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; margin: 0 auto 10px;">
                     <i class="bi bi-shield-check" style="font-size: 22px; color: white;"></i>
                 </div>
