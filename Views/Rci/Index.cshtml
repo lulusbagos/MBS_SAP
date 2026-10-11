@@ -327,7 +327,7 @@
                                         <i class="bi bi-rulers" style="font-size: 18px;"></i>
                                     </div>
                                     <div>
-                                        <label class="form-label-sap mb-0" for="panjangSegment" style="color: #93c5fd; font-weight: 700; font-size: 13px;">
+                                        <label class="form-label-sap mb-0" for="panjangSegment" style="color: var(--text-main, #1e3a8a); font-weight: 700; font-size: 13px;">
                                             Panjang Segmen Jalan (Meter)
                                         </label>
                                         <div class="text-muted" style="font-size: 11px;">Standar Excel SP3: 100 Meter per Segmen</div>
@@ -336,15 +336,15 @@
                             </div>
                             <div class="col-md-5">
                                 <div class="input-group">
-                                    <input type="number" id="panjangSegment" name="panjangSegment" class="form-control text-end font-weight-bold" value="100" min="1" step="any" required style="border-radius: 10px 0 0 10px; font-size: 15px; background: var(--bg-card); color: #ffffff; border: 1.5px solid rgba(59, 130, 246, 0.4); height: 44px;" oninput="onPanjangSegmentChange()" />
-                                    <span class="input-group-text font-weight-bold" style="background: rgba(59, 130, 246, 0.25); color: #93c5fd; border: 1.5px solid rgba(59, 130, 246, 0.4); border-radius: 0 10px 10px 0; font-size: 13px;">Meter</span>
+                                    <input type="number" id="panjangSegment" name="panjangSegment" class="form-control text-end font-weight-bold param-segment-input" value="100" min="1" step="any" required onfocus="this.select()" oninput="onPanjangSegmentChange()" />
+                                    <span class="input-group-text font-weight-bold param-segment-addon">Meter</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- ================= PILAR 1: PERMUKAAN JALAN (TOTAL 60%) ================= -->
-                        <div class="p-2 mb-2 rounded-2" style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6;">
-                            <span class="fw-bold text-white" style="font-size: 12px;"><i class="bi bi-layers-half me-1 text-primary"></i> PILAR 1: PERMUKAAN JALAN (TOTAL BOBOT 60%)</span>
+                        <div class="p-2 mb-2 rounded-2" style="background: rgba(59, 130, 246, 0.12); border-left: 3px solid #3b82f6;">
+                            <span class="fw-bold" style="font-size: 12px; color: var(--text-main, #1e3a8a);"><i class="bi bi-layers-half me-1 text-primary"></i> PILAR 1: PERMUKAAN JALAN (TOTAL BOBOT 60%)</span>
                         </div>
 
                         <!-- PARAMETER 1: SURFACING (BOBOT 20%) -->
@@ -364,16 +364,16 @@
                                 </div>
                             </div>
 
-                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2 param-defisit-row">
                                 <div class="col-8 col-sm-8">
-                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                    <span class="defisit-label">
                                         <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Kerusakan Surfacing (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
                                     <div class="input-group input-group-sm">
-                                        <input type="number" id="defisitSurfacing" name="defisitSurfacing" class="form-control text-end font-weight-bold param-defisit-input" data-param="Surfacing" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Surfacing')" />
-                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                        <input type="number" id="defisitSurfacing" name="defisitSurfacing" class="form-control text-end font-weight-bold param-defisit-input" data-param="Surfacing" value="0" min="0" step="any" onfocus="this.select()" oninput="calcParamFromDeficit('Surfacing')" />
+                                        <span class="input-group-text param-unit-addon">m</span>
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
@@ -425,16 +425,16 @@
                                 </div>
                             </div>
 
-                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2 param-defisit-row">
                                 <div class="col-8 col-sm-8">
-                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                    <span class="defisit-label">
                                         <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Kerusakan Undulasi (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
                                     <div class="input-group input-group-sm">
-                                        <input type="number" id="defisitUndulation" name="defisitUndulation" class="form-control text-end font-weight-bold param-defisit-input" data-param="Undulation" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Undulation')" />
-                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                        <input type="number" id="defisitUndulation" name="defisitUndulation" class="form-control text-end font-weight-bold param-defisit-input" data-param="Undulation" value="0" min="0" step="any" onfocus="this.select()" oninput="calcParamFromDeficit('Undulation')" />
+                                        <span class="input-group-text param-unit-addon">m</span>
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
@@ -485,16 +485,16 @@
                                 </div>
                             </div>
 
-                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2 param-defisit-row">
                                 <div class="col-8 col-sm-8">
-                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                    <span class="defisit-label">
                                         <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Spoil / Penyempitan (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
                                     <div class="input-group input-group-sm">
-                                        <input type="number" id="defisitSpoil" name="defisitSpoil" class="form-control text-end font-weight-bold param-defisit-input" data-param="Spoil" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Spoil')" />
-                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                        <input type="number" id="defisitSpoil" name="defisitSpoil" class="form-control text-end font-weight-bold param-defisit-input" data-param="Spoil" value="0" min="0" step="any" onfocus="this.select()" oninput="calcParamFromDeficit('Spoil')" />
+                                        <span class="input-group-text param-unit-addon">m</span>
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
@@ -529,8 +529,8 @@
                         </div>
 
                         <!-- ================= PILAR 2: SAFETY BERM (TOTAL 20%) ================= -->
-                        <div class="p-2 mb-2 rounded-2 mt-3" style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981;">
-                            <span class="fw-bold text-white" style="font-size: 12px;"><i class="bi bi-shield-check me-1 text-success"></i> PILAR 2: SAFETY BERM &amp; FASILITAS (TOTAL BOBOT 20%)</span>
+                        <div class="p-2 mb-2 rounded-2 mt-3" style="background: rgba(16, 185, 129, 0.12); border-left: 3px solid #10b981;">
+                            <span class="fw-bold" style="font-size: 12px; color: var(--text-main, #065f46);"><i class="bi bi-shield-check me-1 text-success"></i> PILAR 2: SAFETY BERM &amp; FASILITAS (TOTAL BOBOT 20%)</span>
                         </div>
 
                         <!-- PARAMETER 4: SAFETY BERM (BOBOT 10%) -->
@@ -550,16 +550,16 @@
                                 </div>
                             </div>
 
-                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2 param-defisit-row">
                                 <div class="col-8 col-sm-8">
-                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                    <span class="defisit-label">
                                         <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Tanggul Kurang dari 3/4 (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
                                     <div class="input-group input-group-sm">
-                                        <input type="number" id="defisitSafetyBerm" name="defisitSafetyBerm" class="form-control text-end font-weight-bold param-defisit-input" data-param="SafetyBerm" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('SafetyBerm')" />
-                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                        <input type="number" id="defisitSafetyBerm" name="defisitSafetyBerm" class="form-control text-end font-weight-bold param-defisit-input" data-param="SafetyBerm" value="0" min="0" step="any" onfocus="this.select()" oninput="calcParamFromDeficit('SafetyBerm')" />
+                                        <span class="input-group-text param-unit-addon">m</span>
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
@@ -610,16 +610,16 @@
                                 </div>
                             </div>
 
-                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2 param-defisit-row">
                                 <div class="col-8 col-sm-8">
-                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                    <span class="defisit-label">
                                         <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Rambu Rusak / Tanpa Delineator (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
                                     <div class="input-group input-group-sm">
-                                        <input type="number" id="defisitRoadAttachment" name="defisitRoadAttachment" class="form-control text-end font-weight-bold param-defisit-input" data-param="RoadAttachment" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('RoadAttachment')" />
-                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                        <input type="number" id="defisitRoadAttachment" name="defisitRoadAttachment" class="form-control text-end font-weight-bold param-defisit-input" data-param="RoadAttachment" value="0" min="0" step="any" onfocus="this.select()" oninput="calcParamFromDeficit('RoadAttachment')" />
+                                        <span class="input-group-text param-unit-addon">m</span>
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
@@ -670,16 +670,16 @@
                                 </div>
                             </div>
 
-                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2 param-defisit-row">
                                 <div class="col-8 col-sm-8">
-                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                    <span class="defisit-label">
                                         <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Segmen Berdebu (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
                                     <div class="input-group input-group-sm">
-                                        <input type="number" id="defisitDust" name="defisitDust" class="form-control text-end font-weight-bold param-defisit-input" data-param="Dust" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Dust')" />
-                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                        <input type="number" id="defisitDust" name="defisitDust" class="form-control text-end font-weight-bold param-defisit-input" data-param="Dust" value="0" min="0" step="any" onfocus="this.select()" oninput="calcParamFromDeficit('Dust')" />
+                                        <span class="input-group-text param-unit-addon">m</span>
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
@@ -714,8 +714,8 @@
                         </div>
 
                         <!-- ================= PILAR 3: DRAINAGE (TOTAL 20%) ================= -->
-                        <div class="p-2 mb-2 rounded-2 mt-3" style="background: rgba(14, 165, 233, 0.1); border-left: 3px solid #0ea5e9;">
-                            <span class="fw-bold text-white" style="font-size: 12px;"><i class="bi bi-water me-1 text-info"></i> PILAR 3: DRAINAGE &amp; PENIRISAN (TOTAL BOBOT 20%)</span>
+                        <div class="p-2 mb-2 rounded-2 mt-3" style="background: rgba(14, 165, 233, 0.12); border-left: 3px solid #0ea5e9;">
+                            <span class="fw-bold" style="font-size: 12px; color: var(--text-main, #075985);"><i class="bi bi-water me-1 text-info"></i> PILAR 3: DRAINAGE &amp; PENIRISAN (TOTAL BOBOT 20%)</span>
                         </div>
 
                         <!-- PARAMETER 7: CROSSFALL (BOBOT 10%) -->
@@ -735,16 +735,16 @@
                                 </div>
                             </div>
 
-                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2 param-defisit-row">
                                 <div class="col-8 col-sm-8">
-                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                    <span class="defisit-label">
                                         <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Crossfall Tidak Terbentuk (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
                                     <div class="input-group input-group-sm">
-                                        <input type="number" id="defisitCrossfall" name="defisitCrossfall" class="form-control text-end font-weight-bold param-defisit-input" data-param="Crossfall" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Crossfall')" />
-                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                        <input type="number" id="defisitCrossfall" name="defisitCrossfall" class="form-control text-end font-weight-bold param-defisit-input" data-param="Crossfall" value="0" min="0" step="any" onfocus="this.select()" oninput="calcParamFromDeficit('Crossfall')" />
+                                        <span class="input-group-text param-unit-addon">m</span>
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
@@ -795,16 +795,16 @@
                                 </div>
                             </div>
 
-                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2 param-defisit-row">
                                 <div class="col-8 col-sm-8">
-                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                    <span class="defisit-label">
                                         <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Parit Tidak Terbentuk / Genangan (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
                                     <div class="input-group input-group-sm">
-                                        <input type="number" id="defisitDrainage" name="defisitDrainage" class="form-control text-end font-weight-bold param-defisit-input" data-param="Drainage" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Drainage')" />
-                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                        <input type="number" id="defisitDrainage" name="defisitDrainage" class="form-control text-end font-weight-bold param-defisit-input" data-param="Drainage" value="0" min="0" step="any" onfocus="this.select()" oninput="calcParamFromDeficit('Drainage')" />
+                                        <span class="input-group-text param-unit-addon">m</span>
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
@@ -846,7 +846,7 @@
                                         <i class="bi bi-award-fill" style="font-size: 19px;"></i>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0 fw-bold text-white" style="font-size: 14px;">HASIL EVALUASI SEGMEN JALAN (RCI)</h6>
+                                        <h6 class="mb-0 fw-bold" style="font-size: 14px; color: var(--text-main, #0f172a);">HASIL EVALUASI SEGMEN JALAN (RCI)</h6>
                                         <small class="text-muted" style="font-size: 11px;">Skor 3 Pilar &amp; Achievement Target 4.00 (Draft SP3)</small>
                                     </div>
                                 </div>
@@ -1242,6 +1242,100 @@
         border-radius: 20px;
         display: inline-flex;
         align-items: center;
+    }
+
+    /* Deficit Input & Container Styling (Theme-Aware for Light & Dark Theme) */
+    .param-defisit-row {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+    }
+    body.light-theme .param-defisit-row {
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+    body:not(.light-theme) .param-defisit-row {
+        background: rgba(0, 0, 0, 0.25) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
+    .defisit-label {
+        font-size: 11.5px;
+        font-weight: 600;
+        color: var(--text-main, #334155);
+    }
+    body.light-theme .defisit-label {
+        color: #334155 !important;
+    }
+    body:not(.light-theme) .defisit-label {
+        color: #cbd5e1 !important;
+    }
+
+    .param-defisit-input {
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        border: 1.5px solid #94a3b8 !important;
+        border-radius: 8px 0 0 8px !important;
+    }
+    body.light-theme .param-defisit-input {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border-color: #94a3b8 !important;
+    }
+    body:not(.light-theme) .param-defisit-input {
+        background-color: #0f172a !important;
+        color: #ffffff !important;
+        border-color: #475569 !important;
+    }
+    .param-defisit-input:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+    }
+
+    .param-unit-addon {
+        font-size: 11.5px !important;
+        font-weight: 700 !important;
+        border-radius: 0 8px 8px 0 !important;
+        border: 1.5px solid #94a3b8 !important;
+        border-left: none !important;
+    }
+    body.light-theme .param-unit-addon {
+        background-color: #e2e8f0 !important;
+        color: #334155 !important;
+        border-color: #94a3b8 !important;
+    }
+    body:not(.light-theme) .param-unit-addon {
+        background-color: #1e293b !important;
+        color: #94a3b8 !important;
+        border-color: #475569 !important;
+    }
+
+    .param-segment-input {
+        border-radius: 10px 0 0 10px !important;
+        font-size: 15px !important;
+        height: 44px !important;
+        border: 1.5px solid rgba(59, 130, 246, 0.5) !important;
+    }
+    body.light-theme .param-segment-input {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+    }
+    body:not(.light-theme) .param-segment-input {
+        background-color: #0f172a !important;
+        color: #ffffff !important;
+    }
+
+    .param-segment-addon {
+        background-color: rgba(59, 130, 246, 0.15) !important;
+        color: #2563eb !important;
+        border: 1.5px solid rgba(59, 130, 246, 0.5) !important;
+        border-left: none !important;
+        border-radius: 0 10px 10px 0 !important;
+        font-size: 13px !important;
+    }
+    body:not(.light-theme) .param-segment-addon {
+        background-color: rgba(59, 130, 246, 0.25) !important;
+        color: #93c5fd !important;
     }
 
     /* Score Selector 5-Way Grid (SP3 Excel: 4.0, 3.5, 3.0, 2.5, 2.0) */
@@ -1649,6 +1743,16 @@
         $(`.btn-score-card[data-param="skor${paramKey}"]`).removeClass('active');
         $(`.btn-score-card[data-param="skor${paramKey}"][data-val="${val}"], .btn-score-card[data-param="skor${paramKey}"][data-val="${val.toFixed(1)}"]`).addClass('active');
         $(`#skor${paramKey}`).val(val);
+
+        const totalPanjang = parseFloat($('#panjangSegment').val()) || 100;
+        let defVal = 0, pct = 100.0;
+        if (val === 4.0) { defVal = 0; pct = 100.0; }
+        else if (val === 3.5) { defVal = Math.round(totalPanjang * 0.05); pct = 95.0; }
+        else if (val === 3.0) { defVal = Math.round(totalPanjang * 0.15); pct = 85.0; }
+        else if (val === 2.5) { defVal = Math.round(totalPanjang * 0.30); pct = 70.0; }
+        else if (val === 2.0) { defVal = Math.round(totalPanjang * 0.60); pct = 40.0; }
+        $(`#defisit${paramKey}`).val(defVal);
+        $(`#badgePersen${paramKey}`).text(`Ketercapaian: ${pct.toFixed(1)}% (Defisit: ${defVal}m)`);
 
         calculateRciScore();
     }
