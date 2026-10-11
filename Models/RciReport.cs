@@ -63,14 +63,19 @@ namespace MBS_SAP.Models
         public double? DefisitDrainage { get; set; } = 0;
         public double? DefisitRoadAttachment { get; set; } = 0;
 
-        public int SkorSurfacing { get; set; } = 4;
-        public int SkorUndulation { get; set; } = 4;
-        public int SkorSpoil { get; set; } = 4;
-        public int SkorSafetyBerm { get; set; } = 4;
-        public int SkorCrossfall { get; set; } = 4;
-        public int SkorDust { get; set; } = 4;
-        public int SkorDrainage { get; set; } = 4;
-        public int SkorRoadAttachment { get; set; } = 4;
+        public double SkorSurfacing { get; set; } = 4.0;
+        public double SkorUndulation { get; set; } = 4.0;
+        public double SkorSpoil { get; set; } = 4.0;
+        public double SkorSafetyBerm { get; set; } = 4.0;
+        public double SkorCrossfall { get; set; } = 4.0;
+        public double SkorDust { get; set; } = 4.0;
+        public double SkorDrainage { get; set; } = 4.0;
+        public double SkorRoadAttachment { get; set; } = 4.0;
+
+        // Group Scores (Permukaan 60%, Safety Berm 20%, Drainage 20%)
+        public double SkorPermukaanGroup { get; set; } = 4.0;
+        public double SkorSafetyBermGroup { get; set; } = 4.0;
+        public double SkorDrainageGroup { get; set; } = 4.0;
 
         public double ActualRoadScore { get; set; } = 4.0;
         public double TargetScore { get; set; } = 4.0;

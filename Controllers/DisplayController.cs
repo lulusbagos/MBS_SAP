@@ -260,14 +260,14 @@ namespace MBS_SAP.Controllers
                         lng = r.Longitude,
                         details = new[]
                         {
-                            new { label = "Lebar Jalan", val = r.SkorLebarJalan },
-                            new { label = "Grade Jalan", val = r.SkorGradeJalan },
-                            new { label = "Permukaan", val = r.SkorPermukaanJalan },
-                            new { label = "Safety Berm", val = r.SkorSafetyBerm },
-                            new { label = "Drainase", val = r.SkorDrainaseParit },
-                            new { label = "Superelevasi", val = r.SkorSuperelevasiTikungan },
-                            new { label = "Spillage", val = r.SkorBebasSpillage },
-                            new { label = "Rambu & Debu", val = r.SkorRambuDebu }
+                            new { label = "Surfacing", val = (object)r.SkorSurfacing },
+                            new { label = "Undulation", val = (object)r.SkorUndulation },
+                            new { label = "Spoil", val = (object)r.SkorSpoil },
+                            new { label = "Safety Berm", val = (object)r.SkorSafetyBerm },
+                            new { label = "Road Attachment", val = (object)r.SkorRoadAttachment },
+                            new { label = "Dust", val = (object)r.SkorDust },
+                            new { label = "Crossfall", val = (object)r.SkorCrossfall },
+                            new { label = "Drainage", val = (object)r.SkorDrainage }
                         }
                     });
                 }

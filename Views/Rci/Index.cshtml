@@ -22,11 +22,11 @@
                 <i class="bi bi-cone-striped text-primary" style="color: #3b82f6;"></i>
                 <span>Road Condition Index (RCI)</span>
                 <span class="badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-size: 10px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 2px;">
-                    <i class="bi bi-rulers" style="font-size: 9px;"></i> STANDAR SEGMEN (1-4)
+                    <i class="bi bi-check-circle-fill" style="font-size: 9px;"></i> STANDAR AKTUAL SP3 (2.0 - 4.0)
                 </span>
                 <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 11px; padding: 4px 10px; border-radius: 8px;">Road Assessment</span>
             </div>
-            <p class="screen-subtitle mb-0">Inspeksi & Penilaian Standar Teknis Jalan Hauling & Tambang Berbasis Segmen.</p>
+            <p class="screen-subtitle mb-0">Inspeksi &amp; Penilaian Standar Hauling CPP33 - Exit Pit Berbasis Segmen &amp; 3 Pilar Utama.</p>
         </div>
         <div class="d-flex gap-2">
             <a asp-action="ExportExcel" asp-route-startDate="@ViewBag.StartDate" asp-route-endDate="@ViewBag.EndDate" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 shadow-sm" style="border-radius: 10px; padding: 8px 14px; font-weight: 600;">
@@ -184,7 +184,7 @@
                         <i class="bi bi-pencil-square" style="color: #3b82f6;"></i>
                         <span>Form Penilaian RCI</span>
                         <span class="badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 2px;">
-                            <i class="bi bi-stars" style="font-size: 9px;"></i> OPSI B
+                            <i class="bi bi-stars" style="font-size: 9px;"></i> SP3 EXCEL
                         </span>
                     </h5>
                     <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="btnCancelEdit" onclick="resetRciForm()">
@@ -261,14 +261,14 @@
                                 <label class="form-label-sap" for="namaJalan">Nama Jalan / Jalur Hauling</label>
                                 <div class="input-sap-wrapper">
                                     <i class="bi bi-signpost-fill input-sap-icon"></i>
-                                    <input type="text" id="namaJalan" name="namaJalan" class="input-sap text-uppercase" placeholder="Misal: Hauling CPP33 - Exit Pit, Jl. Anggrek" required />
+                                    <input type="text" id="namaJalan" name="namaJalan" class="input-sap text-uppercase" placeholder="Misal: Jalan Anggrek, Jalan SAMS, Jalan Mawar" required />
                                 </div>
                             </div>
                             <div class="col-md-6 form-group-sap">
                                 <label class="form-label-sap" for="segmentJalan">Segment / Sta / KM</label>
                                 <div class="input-sap-wrapper">
                                     <i class="bi bi-pin-map-fill input-sap-icon"></i>
-                                    <input type="text" id="segmentJalan" name="segmentJalan" class="input-sap text-uppercase" placeholder="Misal: Sta 0+500 s/d 1+200, KM 2.5" />
+                                    <input type="text" id="segmentJalan" name="segmentJalan" class="input-sap text-uppercase" placeholder="Misal: Sta 0+000 - 0+100, KM 2.5" />
                                 </div>
                             </div>
                         </div>
@@ -308,11 +308,11 @@
                         </div>
                     </div>
 
-                    <!-- Section 2: Kalkulator Segmen & Penilaian 8 Parameter -->
+                    <!-- Section 2: Kalkulator Segmen & Penilaian 8 Parameter (3 PILAR UTAMA) -->
                     <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color);">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div class="text-white font-weight-bold" style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                <i class="bi bi-rulers me-1" style="color: #3b82f6;"></i> 2. Penilaian 8 Parameter Segmen
+                                <i class="bi bi-rulers me-1" style="color: #3b82f6;"></i> 2. Penilaian 8 Parameter Berbasis 3 Pilar
                             </div>
                             <div class="badge px-3 py-1.5 shadow-sm" id="liveScoreBadge" style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 13px; font-weight: 700; border-radius: 10px;">
                                 Skor: <span id="liveScoreVal">4.00</span> / 4.00 (<span id="liveAchVal">100.0</span>%)
@@ -330,7 +330,7 @@
                                         <label class="form-label-sap mb-0" for="panjangSegment" style="color: #93c5fd; font-weight: 700; font-size: 13px;">
                                             Panjang Segmen Jalan (Meter)
                                         </label>
-                                        <div class="text-muted" style="font-size: 11px;">Dasar rumus: (Panjang Segmen - Total Defisit) / Panjang Segmen</div>
+                                        <div class="text-muted" style="font-size: 11px;">Standar Excel SP3: 100 Meter per Segmen</div>
                                     </div>
                                 </div>
                             </div>
@@ -342,28 +342,32 @@
                             </div>
                         </div>
 
-                        <!-- PARAMETER 1: SURFACING AND MATERIAL (BOBOT 30%) -->
+                        <!-- ================= PILAR 1: PERMUKAAN JALAN (TOTAL 60%) ================= -->
+                        <div class="p-2 mb-2 rounded-2" style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6;">
+                            <span class="fw-bold text-white" style="font-size: 12px;"><i class="bi bi-layers-half me-1 text-primary"></i> PILAR 1: PERMUKAAN JALAN (TOTAL BOBOT 60%)</span>
+                        </div>
+
+                        <!-- PARAMETER 1: SURFACING (BOBOT 20%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="param-icon-badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6;">
-                                        <i class="bi bi-layers-half"></i>
+                                        <i class="bi bi-gem"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">1. Surfacing and Material</span>
-                                        <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35); font-size: 10px; margin-left: 6px;">Bobot 30%</span>
+                                        <span class="param-header-title">1.a Surfacing and Material</span>
+                                        <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35); font-size: 10px; margin-left: 6px;">Bobot 20%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Surface batu split &amp; tidak terkupas
+                                    <i class="bi bi-info-circle me-1"></i> Batu split &amp; tidak terkupas
                                 </div>
                             </div>
 
-                            <!-- Input Defisit Meter -->
                             <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
                                 <div class="col-8 col-sm-8">
                                     <span style="font-size: 11.5px; color: var(--text-muted);">
-                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Bukan Split / Terkelupas (m)
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Kerusakan Surfacing (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
@@ -373,38 +377,38 @@
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
-                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="text-muted">Formula: (100 - Defisit) / 100</span>
                                     <span class="badge bg-secondary font-weight-bold" id="badgePersenSurfacing">Ketercapaian: 100.0%</span>
                                 </div>
                             </div>
 
-                            <!-- 4 Score Buttons Grid (Skala 1 - 4) -->
-                            <div class="score-btn-grid-4">
-                                <button type="button" class="btn-score-card active" data-param="skorSurfacing" data-val="4" onclick="selectScoreManual('Surfacing', 4)">
-                                    <span class="btn-score-pill">4</span>
-                                    <span class="btn-score-text">90% - 100%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                            <!-- 5 Score Buttons Grid (SP3 Excel: 4.0, 3.5, 3.0, 2.5, 2.0) -->
+                            <div class="score-btn-grid-5">
+                                <button type="button" class="btn-score-card active" data-param="skorSurfacing" data-val="4" onclick="selectScoreManual('Surfacing', 4.0)">
+                                    <span class="btn-score-pill">4.0</span>
+                                    <span class="btn-score-text">0% Defisit</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSurfacing" data-val="3" onclick="selectScoreManual('Surfacing', 3)">
-                                    <span class="btn-score-pill">3</span>
-                                    <span class="btn-score-text">71% - 90%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorSurfacing" data-val="3.5" onclick="selectScoreManual('Surfacing', 3.5)">
+                                    <span class="btn-score-pill">3.5</span>
+                                    <span class="btn-score-text">&le; 10%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSurfacing" data-val="2" onclick="selectScoreManual('Surfacing', 2)">
-                                    <span class="btn-score-pill">2</span>
-                                    <span class="btn-score-text">41% - 70%</span>
-                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorSurfacing" data-val="3" onclick="selectScoreManual('Surfacing', 3.0)">
+                                    <span class="btn-score-pill">3.0</span>
+                                    <span class="btn-score-text">11% - 20%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSurfacing" data-val="1" onclick="selectScoreManual('Surfacing', 1)">
-                                    <span class="btn-score-pill">1</span>
-                                    <span class="btn-score-text">0% - 40%</span>
-                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorSurfacing" data-val="2.5" onclick="selectScoreManual('Surfacing', 2.5)">
+                                    <span class="btn-score-pill">2.5</span>
+                                    <span class="btn-score-text">21% - 50%</span>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSurfacing" data-val="2" onclick="selectScoreManual('Surfacing', 2.0)">
+                                    <span class="btn-score-pill">2.0</span>
+                                    <span class="btn-score-text">&gt; 50%</span>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorSurfacing" name="skorSurfacing" value="4" />
+                            <input type="hidden" id="skorSurfacing" name="skorSurfacing" value="4.0" />
                         </div>
 
-                        <!-- PARAMETER 2: UNDULATION / CORRUGATION (BOBOT 25%) -->
+                        <!-- PARAMETER 2: UNDULATION / CORRUGATION (BOBOT 35%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
@@ -412,8 +416,8 @@
                                         <i class="bi bi-activity"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">2. Undulation / Corrugation</span>
-                                        <span class="badge" style="background: rgba(147, 51, 234, 0.2); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.35); font-size: 10px; margin-left: 6px;">Bobot 25%</span>
+                                        <span class="param-header-title">1.b Undulation / Corrugation</span>
+                                        <span class="badge" style="background: rgba(147, 51, 234, 0.2); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.35); font-size: 10px; margin-left: 6px;">Bobot 35%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
@@ -424,7 +428,7 @@
                             <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
                                 <div class="col-8 col-sm-8">
                                     <span style="font-size: 11.5px; color: var(--text-muted);">
-                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Terdapat Lendutan / Keriting (m)
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Kerusakan Undulasi (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
@@ -434,37 +438,37 @@
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
-                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="text-muted">Formula: (100 - Defisit) / 100</span>
                                     <span class="badge bg-secondary font-weight-bold" id="badgePersenUndulation">Ketercapaian: 100.0%</span>
                                 </div>
                             </div>
 
-                            <div class="score-btn-grid-4">
-                                <button type="button" class="btn-score-card active" data-param="skorUndulation" data-val="4" onclick="selectScoreManual('Undulation', 4)">
-                                    <span class="btn-score-pill">4</span>
-                                    <span class="btn-score-text">90% - 100%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                            <div class="score-btn-grid-5">
+                                <button type="button" class="btn-score-card active" data-param="skorUndulation" data-val="4" onclick="selectScoreManual('Undulation', 4.0)">
+                                    <span class="btn-score-pill">4.0</span>
+                                    <span class="btn-score-text">0% Defisit</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorUndulation" data-val="3" onclick="selectScoreManual('Undulation', 3)">
-                                    <span class="btn-score-pill">3</span>
-                                    <span class="btn-score-text">71% - 90%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorUndulation" data-val="3.5" onclick="selectScoreManual('Undulation', 3.5)">
+                                    <span class="btn-score-pill">3.5</span>
+                                    <span class="btn-score-text">&le; 10%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorUndulation" data-val="2" onclick="selectScoreManual('Undulation', 2)">
-                                    <span class="btn-score-pill">2</span>
-                                    <span class="btn-score-text">41% - 70%</span>
-                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorUndulation" data-val="3" onclick="selectScoreManual('Undulation', 3.0)">
+                                    <span class="btn-score-pill">3.0</span>
+                                    <span class="btn-score-text">11% - 20%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorUndulation" data-val="1" onclick="selectScoreManual('Undulation', 1)">
-                                    <span class="btn-score-pill">1</span>
-                                    <span class="btn-score-text">0% - 40%</span>
-                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorUndulation" data-val="2.5" onclick="selectScoreManual('Undulation', 2.5)">
+                                    <span class="btn-score-pill">2.5</span>
+                                    <span class="btn-score-text">21% - 50%</span>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorUndulation" data-val="2" onclick="selectScoreManual('Undulation', 2.0)">
+                                    <span class="btn-score-pill">2.0</span>
+                                    <span class="btn-score-text">&gt; 50%</span>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorUndulation" name="skorUndulation" value="4" />
+                            <input type="hidden" id="skorUndulation" name="skorUndulation" value="4.0" />
                         </div>
 
-                        <!-- PARAMETER 3: SPOIL (BOBOT 20%) -->
+                        <!-- PARAMETER 3: SPOIL (BOBOT 5%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
@@ -472,19 +476,19 @@
                                         <i class="bi bi-arrows-expand"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">3. Spoil &amp; Lebar Efektif (18m)</span>
-                                        <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 10px; margin-left: 6px;">Bobot 20%</span>
+                                        <span class="param-header-title">1.c Spoil (Lebar Jalan 18m)</span>
+                                        <span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Lebar &ge;18m, bebas penyempitan mud &amp; batubara
+                                    <i class="bi bi-info-circle me-1"></i> Bebas penyempitan mud spoil/batubara
                                 </div>
                             </div>
 
                             <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
                                 <div class="col-8 col-sm-8">
                                     <span style="font-size: 11.5px; color: var(--text-muted);">
-                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Terdapat Spoil / Menyempit (m)
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Spoil / Penyempitan (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
@@ -494,37 +498,42 @@
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
-                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="text-muted">Formula: (100 - Defisit) / 100</span>
                                     <span class="badge bg-secondary font-weight-bold" id="badgePersenSpoil">Ketercapaian: 100.0%</span>
                                 </div>
                             </div>
 
-                            <div class="score-btn-grid-4">
-                                <button type="button" class="btn-score-card active" data-param="skorSpoil" data-val="4" onclick="selectScoreManual('Spoil', 4)">
-                                    <span class="btn-score-pill">4</span>
-                                    <span class="btn-score-text">90% - 100%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                            <div class="score-btn-grid-5">
+                                <button type="button" class="btn-score-card active" data-param="skorSpoil" data-val="4" onclick="selectScoreManual('Spoil', 4.0)">
+                                    <span class="btn-score-pill">4.0</span>
+                                    <span class="btn-score-text">0% Defisit</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSpoil" data-val="3" onclick="selectScoreManual('Spoil', 3)">
-                                    <span class="btn-score-pill">3</span>
-                                    <span class="btn-score-text">71% - 90%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorSpoil" data-val="3.5" onclick="selectScoreManual('Spoil', 3.5)">
+                                    <span class="btn-score-pill">3.5</span>
+                                    <span class="btn-score-text">&le; 10%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSpoil" data-val="2" onclick="selectScoreManual('Spoil', 2)">
-                                    <span class="btn-score-pill">2</span>
-                                    <span class="btn-score-text">41% - 70%</span>
-                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorSpoil" data-val="3" onclick="selectScoreManual('Spoil', 3.0)">
+                                    <span class="btn-score-pill">3.0</span>
+                                    <span class="btn-score-text">11% - 20%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSpoil" data-val="1" onclick="selectScoreManual('Spoil', 1)">
-                                    <span class="btn-score-pill">1</span>
-                                    <span class="btn-score-text">0% - 40%</span>
-                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorSpoil" data-val="2.5" onclick="selectScoreManual('Spoil', 2.5)">
+                                    <span class="btn-score-pill">2.5</span>
+                                    <span class="btn-score-text">21% - 50%</span>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSpoil" data-val="2" onclick="selectScoreManual('Spoil', 2.0)">
+                                    <span class="btn-score-pill">2.0</span>
+                                    <span class="btn-score-text">&gt; 50%</span>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorSpoil" name="skorSpoil" value="4" />
+                            <input type="hidden" id="skorSpoil" name="skorSpoil" value="4.0" />
                         </div>
 
-                        <!-- PARAMETER 4: SAFETY BERM (BOBOT 5%) -->
+                        <!-- ================= PILAR 2: SAFETY BERM (TOTAL 20%) ================= -->
+                        <div class="p-2 mb-2 rounded-2 mt-3" style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid #10b981;">
+                            <span class="fw-bold text-white" style="font-size: 12px;"><i class="bi bi-shield-check me-1 text-success"></i> PILAR 2: SAFETY BERM &amp; FASILITAS (TOTAL BOBOT 20%)</span>
+                        </div>
+
+                        <!-- PARAMETER 4: SAFETY BERM (BOBOT 10%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
@@ -532,19 +541,19 @@
                                         <i class="bi bi-shield-check"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">4. Safety Berm</span>
-                                        <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
+                                        <span class="param-header-title">2.a Tinggi Tanggul 3/4 Ban</span>
+                                        <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Standar &ge;3/4 tinggi ban &amp; bebas tanaman
+                                    <i class="bi bi-info-circle me-1"></i> Standar &ge;3/4 tinggi ban unit terbesar
                                 </div>
                             </div>
 
                             <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
                                 <div class="col-8 col-sm-8">
                                     <span style="font-size: 11.5px; color: var(--text-muted);">
-                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Berm Substandar / Tertutup Tanaman (m)
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Tanggul Kurang dari 3/4 (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
@@ -554,94 +563,94 @@
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
-                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="text-muted">Formula: (100 - Defisit) / 100</span>
                                     <span class="badge bg-secondary font-weight-bold" id="badgePersenSafetyBerm">Ketercapaian: 100.0%</span>
                                 </div>
                             </div>
 
-                            <div class="score-btn-grid-4">
-                                <button type="button" class="btn-score-card active" data-param="skorSafetyBerm" data-val="4" onclick="selectScoreManual('SafetyBerm', 4)">
-                                    <span class="btn-score-pill">4</span>
-                                    <span class="btn-score-text">90% - 100%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                            <div class="score-btn-grid-5">
+                                <button type="button" class="btn-score-card active" data-param="skorSafetyBerm" data-val="4" onclick="selectScoreManual('SafetyBerm', 4.0)">
+                                    <span class="btn-score-pill">4.0</span>
+                                    <span class="btn-score-text">0% Defisit</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="3" onclick="selectScoreManual('SafetyBerm', 3)">
-                                    <span class="btn-score-pill">3</span>
-                                    <span class="btn-score-text">71% - 90%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="3.5" onclick="selectScoreManual('SafetyBerm', 3.5)">
+                                    <span class="btn-score-pill">3.5</span>
+                                    <span class="btn-score-text">&le; 10%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="2" onclick="selectScoreManual('SafetyBerm', 2)">
-                                    <span class="btn-score-pill">2</span>
-                                    <span class="btn-score-text">41% - 70%</span>
-                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="3" onclick="selectScoreManual('SafetyBerm', 3.0)">
+                                    <span class="btn-score-pill">3.0</span>
+                                    <span class="btn-score-text">11% - 20%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="1" onclick="selectScoreManual('SafetyBerm', 1)">
-                                    <span class="btn-score-pill">1</span>
-                                    <span class="btn-score-text">0% - 40%</span>
-                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="2.5" onclick="selectScoreManual('SafetyBerm', 2.5)">
+                                    <span class="btn-score-pill">2.5</span>
+                                    <span class="btn-score-text">21% - 50%</span>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorSafetyBerm" data-val="2" onclick="selectScoreManual('SafetyBerm', 2.0)">
+                                    <span class="btn-score-pill">2.0</span>
+                                    <span class="btn-score-text">&gt; 50%</span>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorSafetyBerm" name="skorSafetyBerm" value="4" />
+                            <input type="hidden" id="skorSafetyBerm" name="skorSafetyBerm" value="4.0" />
                         </div>
 
-                        <!-- PARAMETER 5: CROSSFALL (BOBOT 5%) -->
+                        <!-- PARAMETER 5: ROAD ATTACHMENT (BOBOT 5%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">
-                                        <i class="bi bi-bezier2"></i>
+                                    <div class="param-icon-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                                        <i class="bi bi-signpost-2"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">5. Crossfall (Grade 0.5% - 1%)</span>
-                                        <span class="badge" style="background: rgba(6, 182, 212, 0.2); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
+                                        <span class="param-header-title">2.b Road Attachment (Rambu/Delineator)</span>
+                                        <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Kemiringan punggung jalan 0.5% - 1%
+                                    <i class="bi bi-info-circle me-1"></i> Kelengkapan rambu &amp; delineator per 35m
                                 </div>
                             </div>
 
                             <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
                                 <div class="col-8 col-sm-8">
                                     <span style="font-size: 11.5px; color: var(--text-muted);">
-                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Crossfall Tidak Standar / Rata (m)
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Rambu Rusak / Tanpa Delineator (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
                                     <div class="input-group input-group-sm">
-                                        <input type="number" id="defisitCrossfall" name="defisitCrossfall" class="form-control text-end font-weight-bold param-defisit-input" data-param="Crossfall" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Crossfall')" />
+                                        <input type="number" id="defisitRoadAttachment" name="defisitRoadAttachment" class="form-control text-end font-weight-bold param-defisit-input" data-param="RoadAttachment" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('RoadAttachment')" />
                                         <span class="input-group-text" style="font-size: 11px;">m</span>
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
-                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
-                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenCrossfall">Ketercapaian: 100.0%</span>
+                                    <span class="text-muted">Formula: (100 - Defisit) / 100</span>
+                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenRoadAttachment">Ketercapaian: 100.0%</span>
                                 </div>
                             </div>
 
-                            <div class="score-btn-grid-4">
-                                <button type="button" class="btn-score-card active" data-param="skorCrossfall" data-val="4" onclick="selectScoreManual('Crossfall', 4)">
-                                    <span class="btn-score-pill">4</span>
-                                    <span class="btn-score-text">90% - 100%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                            <div class="score-btn-grid-5">
+                                <button type="button" class="btn-score-card active" data-param="skorRoadAttachment" data-val="4" onclick="selectScoreManual('RoadAttachment', 4.0)">
+                                    <span class="btn-score-pill">4.0</span>
+                                    <span class="btn-score-text">0% Defisit</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorCrossfall" data-val="3" onclick="selectScoreManual('Crossfall', 3)">
-                                    <span class="btn-score-pill">3</span>
-                                    <span class="btn-score-text">71% - 90%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorRoadAttachment" data-val="3.5" onclick="selectScoreManual('RoadAttachment', 3.5)">
+                                    <span class="btn-score-pill">3.5</span>
+                                    <span class="btn-score-text">&le; 10%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorCrossfall" data-val="2" onclick="selectScoreManual('Crossfall', 2)">
-                                    <span class="btn-score-pill">2</span>
-                                    <span class="btn-score-text">41% - 70%</span>
-                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorRoadAttachment" data-val="3" onclick="selectScoreManual('RoadAttachment', 3.0)">
+                                    <span class="btn-score-pill">3.0</span>
+                                    <span class="btn-score-text">11% - 20%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorCrossfall" data-val="1" onclick="selectScoreManual('Crossfall', 1)">
-                                    <span class="btn-score-pill">1</span>
-                                    <span class="btn-score-text">0% - 40%</span>
-                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorRoadAttachment" data-val="2.5" onclick="selectScoreManual('RoadAttachment', 2.5)">
+                                    <span class="btn-score-pill">2.5</span>
+                                    <span class="btn-score-text">21% - 50%</span>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorRoadAttachment" data-val="2" onclick="selectScoreManual('RoadAttachment', 2.0)">
+                                    <span class="btn-score-pill">2.0</span>
+                                    <span class="btn-score-text">&gt; 50%</span>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorCrossfall" name="skorCrossfall" value="4" />
+                            <input type="hidden" id="skorRoadAttachment" name="skorRoadAttachment" value="4.0" />
                         </div>
 
                         <!-- PARAMETER 6: DUST (BOBOT 5%) -->
@@ -652,19 +661,19 @@
                                         <i class="bi bi-wind"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">6. Dust (Pengendalian Debu)</span>
+                                        <span class="param-header-title">2.c Dust (Pengendalian Debu)</span>
                                         <span class="badge" style="background: rgba(234, 88, 12, 0.2); color: #fb923c; border: 1px solid rgba(234, 88, 12, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Debu tidak mengganggu jarak pandang DT
+                                    <i class="bi bi-info-circle me-1"></i> Tidak mengganggu jarak pandang
                                 </div>
                             </div>
 
                             <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
                                 <div class="col-8 col-sm-8">
                                     <span style="font-size: 11.5px; color: var(--text-muted);">
-                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Segmen Berdebu Tebal (m)
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Segmen Berdebu (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
@@ -674,57 +683,122 @@
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
-                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="text-muted">Formula: (100 - Defisit) / 100</span>
                                     <span class="badge bg-secondary font-weight-bold" id="badgePersenDust">Ketercapaian: 100.0%</span>
                                 </div>
                             </div>
 
-                            <div class="score-btn-grid-4">
-                                <button type="button" class="btn-score-card active" data-param="skorDust" data-val="4" onclick="selectScoreManual('Dust', 4)">
-                                    <span class="btn-score-pill">4</span>
-                                    <span class="btn-score-text">90% - 100%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                            <div class="score-btn-grid-5">
+                                <button type="button" class="btn-score-card active" data-param="skorDust" data-val="4" onclick="selectScoreManual('Dust', 4.0)">
+                                    <span class="btn-score-pill">4.0</span>
+                                    <span class="btn-score-text">0% Defisit</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorDust" data-val="3" onclick="selectScoreManual('Dust', 3)">
-                                    <span class="btn-score-pill">3</span>
-                                    <span class="btn-score-text">71% - 90%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorDust" data-val="3.5" onclick="selectScoreManual('Dust', 3.5)">
+                                    <span class="btn-score-pill">3.5</span>
+                                    <span class="btn-score-text">&le; 10%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorDust" data-val="2" onclick="selectScoreManual('Dust', 2)">
-                                    <span class="btn-score-pill">2</span>
-                                    <span class="btn-score-text">41% - 70%</span>
-                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorDust" data-val="3" onclick="selectScoreManual('Dust', 3.0)">
+                                    <span class="btn-score-pill">3.0</span>
+                                    <span class="btn-score-text">11% - 20%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorDust" data-val="1" onclick="selectScoreManual('Dust', 1)">
-                                    <span class="btn-score-pill">1</span>
-                                    <span class="btn-score-text">0% - 40%</span>
-                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorDust" data-val="2.5" onclick="selectScoreManual('Dust', 2.5)">
+                                    <span class="btn-score-pill">2.5</span>
+                                    <span class="btn-score-text">21% - 50%</span>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorDust" data-val="2" onclick="selectScoreManual('Dust', 2.0)">
+                                    <span class="btn-score-pill">2.0</span>
+                                    <span class="btn-score-text">&gt; 50%</span>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorDust" name="skorDust" value="4" />
+                            <input type="hidden" id="skorDust" name="skorDust" value="4.0" />
                         </div>
 
-                        <!-- PARAMETER 7: DRAINAGE (BOBOT 5%) -->
+                        <!-- ================= PILAR 3: DRAINAGE (TOTAL 20%) ================= -->
+                        <div class="p-2 mb-2 rounded-2 mt-3" style="background: rgba(14, 165, 233, 0.1); border-left: 3px solid #0ea5e9;">
+                            <span class="fw-bold text-white" style="font-size: 12px;"><i class="bi bi-water me-1 text-info"></i> PILAR 3: DRAINAGE &amp; PENIRISAN (TOTAL BOBOT 20%)</span>
+                        </div>
+
+                        <!-- PARAMETER 7: CROSSFALL (BOBOT 10%) -->
                         <div class="param-box-premium">
                             <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9;">
-                                        <i class="bi bi-water"></i>
+                                    <div class="param-icon-badge" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">
+                                        <i class="bi bi-bezier2"></i>
                                     </div>
                                     <div>
-                                        <span class="param-header-title">7. Drainage (Saluran &amp; Genangan)</span>
-                                        <span class="badge" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
+                                        <span class="param-header-title">3.a Crossfall Terbentuk (0.5% - 1%)</span>
+                                        <span class="badge" style="background: rgba(6, 182, 212, 0.2); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.35); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
                                     </div>
                                 </div>
                                 <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Bebas genangan, aliran terarah &amp; gorong2 bersih
+                                    <i class="bi bi-info-circle me-1"></i> Grade melintang 0.5% - 1%
                                 </div>
                             </div>
 
                             <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
                                 <div class="col-8 col-sm-8">
                                     <span style="font-size: 11.5px; color: var(--text-muted);">
-                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Terdapat Genangan Air (m)
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Crossfall Tidak Terbentuk (meter)
+                                    </span>
+                                </div>
+                                <div class="col-4 col-sm-4">
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" id="defisitCrossfall" name="defisitCrossfall" class="form-control text-end font-weight-bold param-defisit-input" data-param="Crossfall" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('Crossfall')" />
+                                        <span class="input-group-text" style="font-size: 11px;">m</span>
+                                    </div>
+                                </div>
+                                <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
+                                    <span class="text-muted">Formula: (100 - Defisit) / 100</span>
+                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenCrossfall">Ketercapaian: 100.0%</span>
+                                </div>
+                            </div>
+
+                            <div class="score-btn-grid-5">
+                                <button type="button" class="btn-score-card active" data-param="skorCrossfall" data-val="4" onclick="selectScoreManual('Crossfall', 4.0)">
+                                    <span class="btn-score-pill">4.0</span>
+                                    <span class="btn-score-text">0% Defisit</span>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorCrossfall" data-val="3.5" onclick="selectScoreManual('Crossfall', 3.5)">
+                                    <span class="btn-score-pill">3.5</span>
+                                    <span class="btn-score-text">&le; 10%</span>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorCrossfall" data-val="3" onclick="selectScoreManual('Crossfall', 3.0)">
+                                    <span class="btn-score-pill">3.0</span>
+                                    <span class="btn-score-text">11% - 20%</span>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorCrossfall" data-val="2.5" onclick="selectScoreManual('Crossfall', 2.5)">
+                                    <span class="btn-score-pill">2.5</span>
+                                    <span class="btn-score-text">21% - 50%</span>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorCrossfall" data-val="2" onclick="selectScoreManual('Crossfall', 2.0)">
+                                    <span class="btn-score-pill">2.0</span>
+                                    <span class="btn-score-text">&gt; 50%</span>
+                                </button>
+                            </div>
+                            <input type="hidden" id="skorCrossfall" name="skorCrossfall" value="4.0" />
+                        </div>
+
+                        <!-- PARAMETER 8: DRAINAGE / PARIT (BOBOT 10%) -->
+                        <div class="param-box-premium mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="param-icon-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9;">
+                                        <i class="bi bi-water"></i>
+                                    </div>
+                                    <div>
+                                        <span class="param-header-title">3.b Parit / Tali Air Terbentuk</span>
+                                        <span class="badge" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.35); font-size: 10px; margin-left: 6px;">Bobot 10%</span>
+                                    </div>
+                                </div>
+                                <div class="param-guideline-badge">
+                                    <i class="bi bi-info-circle me-1"></i> Bebas genangan &amp; aliran lancar
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="col-8 col-sm-8">
+                                    <span style="font-size: 11.5px; color: var(--text-muted);">
+                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit Parit Tidak Terbentuk / Genangan (meter)
                                     </span>
                                 </div>
                                 <div class="col-4 col-sm-4">
@@ -734,97 +808,37 @@
                                     </div>
                                 </div>
                                 <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
-                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
+                                    <span class="text-muted">Formula: (100 - Defisit) / 100</span>
                                     <span class="badge bg-secondary font-weight-bold" id="badgePersenDrainage">Ketercapaian: 100.0%</span>
                                 </div>
                             </div>
 
-                            <div class="score-btn-grid-4">
-                                <button type="button" class="btn-score-card active" data-param="skorDrainage" data-val="4" onclick="selectScoreManual('Drainage', 4)">
-                                    <span class="btn-score-pill">4</span>
-                                    <span class="btn-score-text">90% - 100%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                            <div class="score-btn-grid-5">
+                                <button type="button" class="btn-score-card active" data-param="skorDrainage" data-val="4" onclick="selectScoreManual('Drainage', 4.0)">
+                                    <span class="btn-score-pill">4.0</span>
+                                    <span class="btn-score-text">0% Defisit</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorDrainage" data-val="3" onclick="selectScoreManual('Drainage', 3)">
-                                    <span class="btn-score-pill">3</span>
-                                    <span class="btn-score-text">71% - 90%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorDrainage" data-val="3.5" onclick="selectScoreManual('Drainage', 3.5)">
+                                    <span class="btn-score-pill">3.5</span>
+                                    <span class="btn-score-text">&le; 10%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorDrainage" data-val="2" onclick="selectScoreManual('Drainage', 2)">
-                                    <span class="btn-score-pill">2</span>
-                                    <span class="btn-score-text">41% - 70%</span>
-                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorDrainage" data-val="3" onclick="selectScoreManual('Drainage', 3.0)">
+                                    <span class="btn-score-pill">3.0</span>
+                                    <span class="btn-score-text">11% - 20%</span>
                                 </button>
-                                <button type="button" class="btn-score-card" data-param="skorDrainage" data-val="1" onclick="selectScoreManual('Drainage', 1)">
-                                    <span class="btn-score-pill">1</span>
-                                    <span class="btn-score-text">0% - 40%</span>
-                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
+                                <button type="button" class="btn-score-card" data-param="skorDrainage" data-val="2.5" onclick="selectScoreManual('Drainage', 2.5)">
+                                    <span class="btn-score-pill">2.5</span>
+                                    <span class="btn-score-text">21% - 50%</span>
+                                </button>
+                                <button type="button" class="btn-score-card" data-param="skorDrainage" data-val="2" onclick="selectScoreManual('Drainage', 2.0)">
+                                    <span class="btn-score-pill">2.0</span>
+                                    <span class="btn-score-text">&gt; 50%</span>
                                 </button>
                             </div>
-                            <input type="hidden" id="skorDrainage" name="skorDrainage" value="4" />
+                            <input type="hidden" id="skorDrainage" name="skorDrainage" value="4.0" />
                         </div>
 
-                        <!-- PARAMETER 8: ROAD ATTACHMENT (BOBOT 5%) -->
-                        <div class="param-box-premium mb-3">
-                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="param-icon-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
-                                        <i class="bi bi-signpost-2"></i>
-                                    </div>
-                                    <div>
-                                        <span class="param-header-title">8. Road Attachment (Delineator &amp; Rambu)</span>
-                                        <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); font-size: 10px; margin-left: 6px;">Bobot 5%</span>
-                                    </div>
-                                </div>
-                                <div class="param-guideline-badge">
-                                    <i class="bi bi-info-circle me-1"></i> Delineator per 35m &amp; rambu jalan lengkap
-                                </div>
-                            </div>
-
-                            <div class="row g-2 mb-2 align-items-center p-2 rounded-2" style="background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05);">
-                                <div class="col-8 col-sm-8">
-                                    <span style="font-size: 11.5px; color: var(--text-muted);">
-                                        <i class="bi bi-exclamation-triangle text-warning me-1"></i> Defisit: Tanpa Delineator / Rambu Rusak (m)
-                                    </span>
-                                </div>
-                                <div class="col-4 col-sm-4">
-                                    <div class="input-group input-group-sm">
-                                        <input type="number" id="defisitRoadAttachment" name="defisitRoadAttachment" class="form-control text-end font-weight-bold param-defisit-input" data-param="RoadAttachment" value="0" min="0" step="any" style="background: var(--bg-card); color: #fff; border-color: rgba(255,255,255,0.15);" oninput="calcParamFromDeficit('RoadAttachment')" />
-                                        <span class="input-group-text" style="font-size: 11px;">m</span>
-                                    </div>
-                                </div>
-                                <div class="col-12 mt-1 d-flex justify-content-between align-items-center" style="font-size: 11px;">
-                                    <span class="text-muted">Formula: (Segmen - Defisit) / Segmen</span>
-                                    <span class="badge bg-secondary font-weight-bold" id="badgePersenRoadAttachment">Ketercapaian: 100.0%</span>
-                                </div>
-                            </div>
-
-                            <div class="score-btn-grid-4">
-                                <button type="button" class="btn-score-card active" data-param="skorRoadAttachment" data-val="4" onclick="selectScoreManual('RoadAttachment', 4)">
-                                    <span class="btn-score-pill">4</span>
-                                    <span class="btn-score-text">90% - 100%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
-                                </button>
-                                <button type="button" class="btn-score-card" data-param="skorRoadAttachment" data-val="3" onclick="selectScoreManual('RoadAttachment', 3)">
-                                    <span class="btn-score-pill">3</span>
-                                    <span class="btn-score-text">71% - 90%</span>
-                                    <i class="bi bi-check-circle-fill btn-score-icon"></i>
-                                </button>
-                                <button type="button" class="btn-score-card" data-param="skorRoadAttachment" data-val="2" onclick="selectScoreManual('RoadAttachment', 2)">
-                                    <span class="btn-score-pill">2</span>
-                                    <span class="btn-score-text">41% - 70%</span>
-                                    <i class="bi bi-exclamation-circle-fill btn-score-icon"></i>
-                                </button>
-                                <button type="button" class="btn-score-card" data-param="skorRoadAttachment" data-val="1" onclick="selectScoreManual('RoadAttachment', 1)">
-                                    <span class="btn-score-pill">1</span>
-                                    <span class="btn-score-text">0% - 40%</span>
-                                    <i class="bi bi-x-circle-fill btn-score-icon"></i>
-                                </button>
-                            </div>
-                            <input type="hidden" id="skorRoadAttachment" name="skorRoadAttachment" value="4" />
-                        </div>
-
-                        <!-- LIVE DYNAMIC CONCLUSION & SHARE CARD -->
+                        <!-- LIVE DYNAMIC CONCLUSION & SHARE CARD (EXACT SUMMARY EXCEL FORMAT) -->
                         <div class="card-sap p-3 p-md-4 mb-2 rounded-4 shadow-sm" id="conclusionCard" style="border: 2px solid rgba(16, 185, 129, 0.4); background: linear-gradient(145deg, rgba(16, 185, 129, 0.08), rgba(59, 130, 246, 0.04));">
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                                 <div class="d-flex align-items-center gap-2">
@@ -832,8 +846,8 @@
                                         <i class="bi bi-award-fill" style="font-size: 19px;"></i>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0 fw-bold text-white" style="font-size: 14px;">HASIL EVALUASI JALAN (RCI)</h6>
-                                        <small class="text-muted" style="font-size: 11px;">Skor Aktual vs Target 4.00 &amp; Analisis Ketercapaian</small>
+                                        <h6 class="mb-0 fw-bold text-white" style="font-size: 14px;">HASIL EVALUASI SEGMEN JALAN (RCI)</h6>
+                                        <small class="text-muted" style="font-size: 11px;">Skor 3 Pilar &amp; Achievement Target 4.00 (Draft SP3)</small>
                                     </div>
                                 </div>
                                 <div class="d-flex align-items-center gap-3">
@@ -851,25 +865,25 @@
                                 </div>
                             </div>
 
-                            <!-- 3-Group Parameter Summary Table (Format Gambar 3) -->
+                            <!-- 3-Group Parameter Summary Table (Persis Format Sheet Summary) -->
                             <div class="table-responsive mb-3 rounded-2" style="border: 1px solid rgba(255,255,255,0.08);">
-                                <table class="table table-sm table-bordered text-center mb-0" style="font-size: 11.5px; background: rgba(0,0,0,0.2);">
-                                    <thead class="text-white" style="background: rgba(255,255,255,0.05);">
+                                <table class="table table-sm table-bordered text-center mb-0" style="font-size: 11.5px; background: rgba(0,0,0,0.25);">
+                                    <thead class="text-white" style="background: rgba(255,255,255,0.06);">
                                         <tr>
-                                            <th>Permukaan Jalan (75%)</th>
-                                            <th>Safety Berm (5%)</th>
-                                            <th>Drainase &amp; Lainnya (20%)</th>
+                                            <th>Permukaan Jalan (60%)</th>
+                                            <th>Safety Berm (20%)</th>
+                                            <th>Drainage (20%)</th>
                                             <th>TOTAL SCORE</th>
                                             <th>ACHIEVEMENT</th>
                                         </tr>
                                     </thead>
                                     <tbody class="text-white font-weight-bold">
                                         <tr>
-                                            <td id="grpPermukaanVal" style="color: #60a5fa;">4.00</td>
-                                            <td id="grpBermVal" style="color: #34d399;">4.00</td>
-                                            <td id="grpDrainaseVal" style="color: #38bdf8;">4.00</td>
-                                            <td id="grpTotalVal" style="color: #10b981;">4.00 / 4.00</td>
-                                            <td id="grpAchVal" style="color: #10b981;">100.0%</td>
+                                            <td id="grpPermukaanVal" style="color: #60a5fa; font-size: 13px;">4.00</td>
+                                            <td id="grpBermVal" style="color: #34d399; font-size: 13px;">4.00</td>
+                                            <td id="grpDrainaseVal" style="color: #38bdf8; font-size: 13px;">4.00</td>
+                                            <td id="grpTotalVal" style="color: #10b981; font-size: 13px;">4.00 / 4.00</td>
+                                            <td id="grpAchVal" style="color: #10b981; font-size: 13px;">100.0%</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -1074,16 +1088,23 @@
                                 </div>
                             </div>
 
-                            <!-- 8 New Standard Parameters Score Pills -->
+                            <!-- 3 Group Pillars Pills -->
                             <div class="d-flex flex-wrap gap-1 mb-2 pt-1 border-top border-secondary border-opacity-25" style="font-size: 10.5px;">
-                                <span class="badge bg-dark text-muted">Surfacing: @item.SkorSurfacing</span>
-                                <span class="badge bg-dark text-muted">Undulation: @item.SkorUndulation</span>
-                                <span class="badge bg-dark text-muted">Spoil: @item.SkorSpoil</span>
-                                <span class="badge bg-dark text-muted">Berm: @item.SkorSafetyBerm</span>
-                                <span class="badge bg-dark text-muted">Crossfall: @item.SkorCrossfall</span>
-                                <span class="badge bg-dark text-muted">Dust: @item.SkorDust</span>
-                                <span class="badge bg-dark text-muted">Drainage: @item.SkorDrainage</span>
-                                <span class="badge bg-dark text-muted">Attachment: @item.SkorRoadAttachment</span>
+                                <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25">Permukaan (60%): @(item.SkorPermukaanGroup > 0 ? item.SkorPermukaanGroup.ToString("F2") : "-")</span>
+                                <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25">Safety Berm (20%): @(item.SkorSafetyBermGroup > 0 ? item.SkorSafetyBermGroup.ToString("F2") : "-")</span>
+                                <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-25">Drainage (20%): @(item.SkorDrainageGroup > 0 ? item.SkorDrainageGroup.ToString("F2") : "-")</span>
+                            </div>
+
+                            <!-- 8 Parameters Pills -->
+                            <div class="d-flex flex-wrap gap-1 mb-2" style="font-size: 10px;">
+                                <span class="badge bg-dark text-muted">Surfacing: @item.SkorSurfacing.ToString("0.#")</span>
+                                <span class="badge bg-dark text-muted">Undulation: @item.SkorUndulation.ToString("0.#")</span>
+                                <span class="badge bg-dark text-muted">Spoil: @item.SkorSpoil.ToString("0.#")</span>
+                                <span class="badge bg-dark text-muted">Berm: @item.SkorSafetyBerm.ToString("0.#")</span>
+                                <span class="badge bg-dark text-muted">Attachment: @item.SkorRoadAttachment.ToString("0.#")</span>
+                                <span class="badge bg-dark text-muted">Dust: @item.SkorDust.ToString("0.#")</span>
+                                <span class="badge bg-dark text-muted">Crossfall: @item.SkorCrossfall.ToString("0.#")</span>
+                                <span class="badge bg-dark text-muted">Drainage: @item.SkorDrainage.ToString("0.#")</span>
                             </div>
 
                             @if (!string.IsNullOrEmpty(item.Catatan))
@@ -1223,33 +1244,33 @@
         align-items: center;
     }
 
-    /* Score Selector 4-Way Grid (Propose: 4, 3, 2, 1) */
-    .score-btn-grid-4 {
+    /* Score Selector 5-Way Grid (SP3 Excel: 4.0, 3.5, 3.0, 2.5, 2.0) */
+    .score-btn-grid-5 {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 6px;
     }
     @@media (max-width: 768px) {
-        .score-btn-grid-4 {
+        .score-btn-grid-5 {
             grid-template-columns: repeat(2, 1fr);
             gap: 6px;
         }
     }
     .btn-score-card {
-        border-radius: 12px;
-        padding: 8px 10px;
+        border-radius: 10px;
+        padding: 7px 8px;
         width: 100%;
         text-align: left;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 6px;
+        gap: 4px;
         cursor: pointer;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         border: 1.5px solid var(--border-color, #e2e8f0);
         background: rgba(255, 255, 255, 0.05);
         color: var(--text-main, #1e293b);
-        font-size: 11.5px;
+        font-size: 11px;
         position: relative;
     }
     .btn-score-card:hover {
@@ -1257,107 +1278,96 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.06);
     }
     .btn-score-pill {
-        font-size: 11px;
+        font-size: 10.5px;
         font-weight: 800;
-        padding: 2px 7px;
-        border-radius: 6px;
+        padding: 2px 6px;
+        border-radius: 5px;
         flex-shrink: 0;
-        line-height: 1.3;
+        line-height: 1.2;
     }
     .btn-score-text {
         font-weight: 600;
         flex-grow: 1;
-        line-height: 1.25;
-        font-size: 11px;
-    }
-    .btn-score-icon {
-        font-size: 13px;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-        flex-shrink: 0;
+        line-height: 1.2;
+        font-size: 10px;
     }
 
     /* Unselected visual pills */
-    .btn-score-card[data-val="4"] .btn-score-pill {
+    .btn-score-card[data-val="4"] .btn-score-pill, .btn-score-card[data-val="4.0"] .btn-score-pill {
         background: rgba(16, 185, 129, 0.15);
         color: #10b981;
     }
-    .btn-score-card[data-val="3"] .btn-score-pill {
+    .btn-score-card[data-val="3.5"] .btn-score-pill {
         background: rgba(6, 182, 212, 0.15);
         color: #06b6d4;
     }
-    .btn-score-card[data-val="2"] .btn-score-pill {
+    .btn-score-card[data-val="3"] .btn-score-pill, .btn-score-card[data-val="3.0"] .btn-score-pill {
+        background: rgba(59, 130, 246, 0.15);
+        color: #3b82f6;
+    }
+    .btn-score-card[data-val="2.5"] .btn-score-pill {
         background: rgba(245, 158, 11, 0.15);
         color: #f59e0b;
     }
-    .btn-score-card[data-val="1"] .btn-score-pill {
+    .btn-score-card[data-val="2"] .btn-score-pill, .btn-score-card[data-val="2.0"] .btn-score-pill {
         background: rgba(244, 63, 94, 0.15);
         color: #f43f5e;
     }
 
     /* Active Selected States */
-    .btn-score-card.active[data-val="4"] {
+    .btn-score-card.active[data-val="4"], .btn-score-card.active[data-val="4.0"] {
         background: linear-gradient(135deg, #059669, #10b981) !important;
         border-color: #10b981 !important;
         color: #ffffff !important;
-        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35) !important;
-        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
     }
-    .btn-score-card.active[data-val="4"] .btn-score-pill {
+    .btn-score-card.active[data-val="4"] .btn-score-pill, .btn-score-card.active[data-val="4.0"] .btn-score-pill {
         background: rgba(255, 255, 255, 0.25) !important;
         color: #ffffff !important;
     }
-    .btn-score-card.active[data-val="4"] .btn-score-icon {
-        opacity: 1;
-        color: #ffffff;
-    }
 
-    .btn-score-card.active[data-val="3"] {
+    .btn-score-card.active[data-val="3.5"] {
         background: linear-gradient(135deg, #0891b2, #06b6d4) !important;
         border-color: #06b6d4 !important;
         color: #ffffff !important;
-        box-shadow: 0 6px 18px rgba(6, 182, 212, 0.35) !important;
-        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35) !important;
     }
-    .btn-score-card.active[data-val="3"] .btn-score-pill {
+    .btn-score-card.active[data-val="3.5"] .btn-score-pill {
         background: rgba(255, 255, 255, 0.25) !important;
         color: #ffffff !important;
     }
-    .btn-score-card.active[data-val="3"] .btn-score-icon {
-        opacity: 1;
-        color: #ffffff;
+
+    .btn-score-card.active[data-val="3"], .btn-score-card.active[data-val="3.0"] {
+        background: linear-gradient(135deg, #2563eb, #3b82f6) !important;
+        border-color: #3b82f6 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35) !important;
+    }
+    .btn-score-card.active[data-val="3"] .btn-score-pill, .btn-score-card.active[data-val="3.0"] .btn-score-pill {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
     }
 
-    .btn-score-card.active[data-val="2"] {
+    .btn-score-card.active[data-val="2.5"] {
         background: linear-gradient(135deg, #d97706, #f59e0b) !important;
         border-color: #f59e0b !important;
         color: #ffffff !important;
-        box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35) !important;
-        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35) !important;
     }
-    .btn-score-card.active[data-val="2"] .btn-score-pill {
+    .btn-score-card.active[data-val="2.5"] .btn-score-pill {
         background: rgba(255, 255, 255, 0.25) !important;
         color: #ffffff !important;
     }
-    .btn-score-card.active[data-val="2"] .btn-score-icon {
-        opacity: 1;
-        color: #ffffff;
-    }
 
-    .btn-score-card.active[data-val="1"] {
+    .btn-score-card.active[data-val="2"], .btn-score-card.active[data-val="2.0"] {
         background: linear-gradient(135deg, #e11d48, #f43f5e) !important;
         border-color: #f43f5e !important;
         color: #ffffff !important;
-        box-shadow: 0 6px 18px rgba(244, 63, 94, 0.35) !important;
-        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(244, 63, 94, 0.35) !important;
     }
-    .btn-score-card.active[data-val="1"] .btn-score-pill {
+    .btn-score-card.active[data-val="2"] .btn-score-pill, .btn-score-card.active[data-val="2.0"] .btn-score-pill {
         background: rgba(255, 255, 255, 0.25) !important;
         color: #ffffff !important;
-    }
-    .btn-score-card.active[data-val="1"] .btn-score-icon {
-        opacity: 1;
-        color: #ffffff;
     }
 </style>
 
@@ -1404,15 +1414,21 @@
         </text>
     }
 
+    // 8 Parameter Standar & Bobot Aktual SP3 Excel
     const rciParamsMetadata = [
-        { key: "Surfacing", name: "Surfacing and Material", weight: 0.30, desc: "Material Surface batu split & tidak terkupas" },
-        { key: "Undulation", name: "Undulation / Corrugation", weight: 0.25, desc: "Bebas lendutan & jalan keriting" },
-        { key: "Spoil", name: "Spoil & Lebar Jalan (18m)", weight: 0.20, desc: "Lebar jalan 18m, tidak ada penyempitan mud spoil/batubara" },
-        { key: "SafetyBerm", name: "Safety Berm", weight: 0.05, desc: "Tinggi >= 3/4 ban, bersih tanaman" },
-        { key: "Crossfall", name: "Crossfall (0.5% - 1%)", weight: 0.05, desc: "Grade crossfall penirisan jalan 0.5% - 1%" },
-        { key: "Dust", name: "Dust Control", weight: 0.05, desc: "Debu tidak mengurangi jarak pandang dumptruck" },
-        { key: "Drainage", name: "Drainage (Saluran)", weight: 0.05, desc: "Bebas genangan air badan jalan & parit lancar" },
-        { key: "RoadAttachment", name: "Road Attachment", weight: 0.05, desc: "Delineator per 35m & rambu terpasang" }
+        // Pilar 1: Permukaan Jalan (Bobot Pilar 60%)
+        { key: "Surfacing", name: "Surfacing and Material", weight: 0.20, pilar: "Permukaan", desc: "Surface batu split & tidak terkupas" },
+        { key: "Undulation", name: "Undulation / Corrugation", weight: 0.35, pilar: "Permukaan", desc: "Bebas lendutan & jalan keriting" },
+        { key: "Spoil", name: "Spoil (Lebar 18m)", weight: 0.05, pilar: "Permukaan", desc: "Lebar jalan 18m, bebas penyempitan mud spoil/batubara" },
+
+        // Pilar 2: Safety Berm (Bobot Pilar 20%)
+        { key: "SafetyBerm", name: "Safety Berm (3/4 Ban)", weight: 0.10, pilar: "Berm", desc: "Tinggi >= 3/4 ban, bersih tanaman" },
+        { key: "RoadAttachment", name: "Road Attachment", weight: 0.05, pilar: "Berm", desc: "Delineator per 35m & rambu terpasang" },
+        { key: "Dust", name: "Dust Control", weight: 0.05, pilar: "Berm", desc: "Debu tidak mengurangi jarak pandang dumptruck" },
+
+        // Pilar 3: Drainage (Bobot Pilar 20%)
+        { key: "Crossfall", name: "Crossfall (0.5% - 1%)", weight: 0.10, pilar: "Drainage", desc: "Grade crossfall penirisan jalan 0.5% - 1%" },
+        { key: "Drainage", name: "Drainage (Saluran)", weight: 0.10, pilar: "Drainage", desc: "Bebas genangan air badan jalan & parit lancar" }
     ];
 
     $(document).ready(function() {
@@ -1585,7 +1601,7 @@
         });
     }
 
-    // Segmen Length & Defisit Live Calculation (OPSI B)
+    // Segmen Length & Defisit Live Calculation (PERSIS EXCEL SP3 J20 FORMULA)
     function onPanjangSegmentChange() {
         const p = parseFloat($('#panjangSegment').val()) || 100;
         if (p <= 0) return;
@@ -1598,33 +1614,32 @@
         const totalPanjang = parseFloat($('#panjangSegment').val()) || 100;
         const defisitInput = parseFloat($(`#defisit${paramKey}`).val()) || 0;
 
-        // Persentase Ketercapaian = (Panjang - Defisit) / Panjang * 100%
-        let ketercapaian = 100.0;
+        // Persentase Ketercapaian = (Panjang - Defisit) / Panjang
+        let ketercapaian = 1.0;
         if (totalPanjang > 0) {
-            ketercapaian = Math.max(0, Math.min(100, ((totalPanjang - defisitInput) / totalPanjang) * 100));
+            ketercapaian = Math.max(0, Math.min(1.0, (totalPanjang - defisitInput) / totalPanjang));
         }
+        const pctKetercapaian = (ketercapaian * 100.0).toFixed(1);
+        $(`#badgePersen${paramKey}`).text(`Ketercapaian: ${pctKetercapaian}% (Defisit: ${defisitInput}m)`);
 
-        $(`#badgePersen${paramKey}`).text(`Ketercapaian: ${ketercapaian.toFixed(1)}%`);
-
-        // Konversi Otomatis ke Skor (Skala Propose: 1 - 4)
-        // 4: 90% - 100%
-        // 3: 71% - 90%
-        // 2: 41% - 70%
-        // 1: 0% - 40%
-        let score = 4;
-        if (ketercapaian > 90.0) {
-            score = 4;
-        } else if (ketercapaian > 70.0) {
-            score = 3;
-        } else if (ketercapaian > 40.0) {
-            score = 2;
+        // RUMUS ASLI EXCEL SP3 CELL J20:
+        // =IF((100-Defisit)/100 <= 0.50, 2, IF(<= 0.80, 2.5, IF(<= 0.90, 3, IF(<= 0.99, 3.5, 4))))
+        let score = 4.0;
+        if (ketercapaian <= 0.50) {
+            score = 2.0;
+        } else if (ketercapaian <= 0.80) {
+            score = 2.5;
+        } else if (ketercapaian <= 0.90) {
+            score = 3.0;
+        } else if (ketercapaian <= 0.99) {
+            score = 3.5;
         } else {
-            score = 1;
+            score = 4.0;
         }
 
         // Update score button active
         $(`.btn-score-card[data-param="skor${paramKey}"]`).removeClass('active');
-        $(`.btn-score-card[data-param="skor${paramKey}"][data-val="${score}"]`).addClass('active');
+        $(`.btn-score-card[data-param="skor${paramKey}"][data-val="${score}"], .btn-score-card[data-param="skor${paramKey}"][data-val="${score.toFixed(1)}"]`).addClass('active');
         $(`#skor${paramKey}`).val(score);
 
         calculateRciScore();
@@ -1632,38 +1647,42 @@
 
     function selectScoreManual(paramKey, val) {
         $(`.btn-score-card[data-param="skor${paramKey}"]`).removeClass('active');
-        $(`.btn-score-card[data-param="skor${paramKey}"][data-val="${val}"]`).addClass('active');
+        $(`.btn-score-card[data-param="skor${paramKey}"][data-val="${val}"], .btn-score-card[data-param="skor${paramKey}"][data-val="${val.toFixed(1)}"]`).addClass('active');
         $(`#skor${paramKey}`).val(val);
 
         calculateRciScore();
     }
 
-    // Live Total RCI Calculator (OPSI B: Skala 1 - 4, Target 4.00, Bobot Propose)
+    // Live Total RCI Calculator (PERSIS EXCEL SP3 SUMMARY & WEST ROAD SCORE)
     function calculateRciScore() {
-        const p1 = parseInt($('#skorSurfacing').val()) || 4;
-        const p2 = parseInt($('#skorUndulation').val()) || 4;
-        const p3 = parseInt($('#skorSpoil').val()) || 4;
-        const p4 = parseInt($('#skorSafetyBerm').val()) || 4;
-        const p5 = parseInt($('#skorCrossfall').val()) || 4;
-        const p6 = parseInt($('#skorDust').val()) || 4;
-        const p7 = parseInt($('#skorDrainage').val()) || 4;
-        const p8 = parseInt($('#skorRoadAttachment').val()) || 4;
+        const s1 = parseFloat($('#skorSurfacing').val()) || 4.0;
+        const s2 = parseFloat($('#skorUndulation').val()) || 4.0;
+        const s3 = parseFloat($('#skorSpoil').val()) || 4.0;
+        const s4 = parseFloat($('#skorSafetyBerm').val()) || 4.0;
+        const s5 = parseFloat($('#skorRoadAttachment').val()) || 4.0;
+        const s6 = parseFloat($('#skorDust').val()) || 4.0;
+        const s7 = parseFloat($('#skorCrossfall').val()) || 4.0;
+        const s8 = parseFloat($('#skorDrainage').val()) || 4.0;
 
-        // Bobot Propose:
-        // Surfacing 30%, Undulation 25%, Spoil 20%, Safety Berm 5%, Crossfall 5%, Dust 5%, Drainage 5%, Road Attachment 5%
-        const actualScore = (p1 * 0.30) + (p2 * 0.25) + (p3 * 0.20) + (p4 * 0.05) + (p5 * 0.05) + (p6 * 0.05) + (p7 * 0.05) + (p8 * 0.05);
+        // Pilar 1: Permukaan Jalan (Total Bobot 60% = 0.60)
+        // Surfacing 20%, Undulation 35%, Spoil 5%
+        const grpPermukaan = ((s1 * 0.20) + (s2 * 0.35) + (s3 * 0.05)) / 0.60;
+
+        // Pilar 2: Safety Berm & Fasilitas (Total Bobot 20% = 0.20)
+        // Safety Berm 10%, Road Attachment 5%, Dust 5%
+        const grpBerm = ((s4 * 0.10) + (s5 * 0.05) + (s6 * 0.05)) / 0.20;
+
+        // Pilar 3: Drainage & Penirisan (Total Bobot 20% = 0.20)
+        // Crossfall 10%, Drainage 10%
+        const grpDrainase = ((s7 * 0.10) + (s8 * 0.10)) / 0.20;
+
+        // Total Actual Road Score = (Permukaan * 0.60) + (Berm * 0.20) + (Drainase * 0.20)
+        const actualScore = (grpPermukaan * 0.60) + (grpBerm * 0.20) + (grpDrainase * 0.20);
         const actualRounded = actualScore.toFixed(2);
         const target = 4.00;
-        const achievement = ((actualScore / target) * 100.0).toFixed(1);
+        const achievement = ((actualScore / target) * 100.0).toFixed(2);
 
-        // Grouping Table (Gambar 3 Format)
-        // Permukaan Jalan (Surfacing 30% + Undulation 25% + Spoil 20% -> bobot total 75%)
-        const grpPermukaan = ((p1 * 0.30) + (p2 * 0.25) + (p3 * 0.20)) / 0.75;
-        // Safety Berm (5%)
-        const grpBerm = p4;
-        // Drainase & Lainnya (Crossfall 5% + Dust 5% + Drainage 5% + Road Attachment 5% -> bobot total 20%)
-        const grpDrainase = ((p5 * 0.05) + (p6 * 0.05) + (p7 * 0.05) + (p8 * 0.05)) / 0.20;
-
+        // Update Tabel Rekapitulasi 3 Pilar (Format Sheet Summary)
         $('#grpPermukaanVal').text(grpPermukaan.toFixed(2));
         $('#grpBermVal').text(grpBerm.toFixed(2));
         $('#grpDrainaseVal').text(grpDrainase.toFixed(2));
@@ -1673,35 +1692,40 @@
         // Defisit Findings & Action Recommendations
         let findings = [];
         let autoActions = [];
-        let cnt4 = 0, cnt3 = 0, cnt2 = 0, cnt1 = 0;
+        let cnt4 = 0, cnt35 = 0, cnt3 = 0, cnt25 = 0, cnt2 = 0;
 
         rciParamsMetadata.forEach(m => {
-            const val = parseInt($(`#skor${m.key}`).val()) || 4;
+            const val = parseFloat($(`#skor${m.key}`).val()) || 4.0;
             const defM = parseFloat($(`#defisit${m.key}`).val()) || 0;
 
-            if (val === 4) cnt4++;
-            else if (val === 3) {
+            if (val >= 4.0) cnt4++;
+            else if (val >= 3.5) {
+                cnt35++;
+                findings.push(`<b>${m.name}</b>: Skor 3.5 (Defisit ${defM}m / &le;10% Cacat)`);
+                if (m.key === "Dust") autoActions.push("Jadwalkan penyiraman ringan water truck");
+                else autoActions.push(`Inspeksi rutin lanjutan pada ${m.name}`);
+            } else if (val >= 3.0) {
                 cnt3++;
-                findings.push(`<b>${m.name}</b>: Skor 3 (Defisit ${defM}m / 71%-90%)`);
-                if (m.key === "Surfacing") autoActions.push("Scraping ringan & penambahan batu split di area aus");
-                else if (m.key === "Undulation") autoActions.push("Perataan gelombang permukaan jalan dengan motor grader");
-                else if (m.key === "Spoil") autoActions.push("Pembersihan ceceran spoil & pelebaran jalan sesuai standar 18m");
-                else if (m.key === "SafetyBerm") autoActions.push("Perapihan tanggul & pembersihan gulma/tanaman penutup");
-                else if (m.key === "Dust") autoActions.push("Jadwalkan penyiraman rutin tambahan unit water truck");
-                else if (m.key === "Drainage") autoActions.push("Pembersihan parit dan pembuangan endapan lumpur");
-                else autoActions.push(`Pemeliharaan rutin pada parameter ${m.name}`);
-            } else if (val === 2) {
-                cnt2++;
-                findings.push(`<span class="text-warning"><b>${m.name}</b>: Skor 2 (Defisit ${defM}m / 41%-70%) [PERHATIAN]</span>`);
+                findings.push(`<b>${m.name}</b>: Skor 3.0 (Defisit ${defM}m / 11%-20% Cacat)`);
+                if (m.key === "Surfacing") autoActions.push("Scraping ringan & penambahan batu split tipis");
+                else if (m.key === "Undulation") autoActions.push("Perataan gelombang jalan dengan motor grader");
+                else if (m.key === "Spoil") autoActions.push("Pembersihan ceceran spoil & pelebaran ke 18m");
+                else if (m.key === "SafetyBerm") autoActions.push("Perapihan tanggul & pembersihan gulma");
+                else if (m.key === "Dust") autoActions.push("Tingkatkan ritasi penyiraman water truck");
+                else if (m.key === "Crossfall") autoActions.push("Bentuk crossfall kemiringan 0.5% - 1% penirisan");
+                else if (m.key === "Drainage") autoActions.push("Pembersihan endapan parit drainase");
+            } else if (val >= 2.5) {
+                cnt25++;
+                findings.push(`<span class="text-warning"><b>${m.name}</b>: Skor 2.5 (Defisit ${defM}m / 21%-50% Cacat) [PERHATIAN]</span>`);
                 if (m.key === "Surfacing") autoActions.push("URGENT: Re-sheeting batu split lapis aus & pemadatan compactor");
                 else if (m.key === "Undulation") autoActions.push("URGENT: Grading mendalam menghilangkan lendutan keriting");
-                else if (m.key === "Spoil") autoActions.push("URGENT: Singkirkan tumpukan spoil / batubara penyebab penyempitan");
+                else if (m.key === "Spoil") autoActions.push("URGENT: Singkirkan tumpukan spoil / batubara penyempitan");
                 else if (m.key === "SafetyBerm") autoActions.push("URGENT: Peninggian tanggul pengaman minimum 3/4 tinggi ban alat");
                 else if (m.key === "Drainage") autoActions.push("URGENT: Penggalian kembali parit yang tersumbat / buat sodetan");
-                else autoActions.push(`Perbaikan terarah pada parameter ${m.name}`);
-            } else if (val === 1) {
-                cnt1++;
-                findings.push(`<span class="text-danger"><b>${m.name}</b>: Skor 1 (Defisit ${defM}m / &le;40%) [KRITIS]</span>`);
+                else autoActions.push(`Penanganan terarah pada parameter ${m.name}`);
+            } else {
+                cnt2++;
+                findings.push(`<span class="text-danger"><b>${m.name}</b>: Skor 2.0 (Defisit ${defM}m / &gt;50% Cacat) [KRITIS]</span>`);
                 autoActions.push(`TINDAKAN DARURAT: Rekonstruksi & perbaikan mendesak pada ${m.name}`);
             }
         });
@@ -1767,10 +1791,9 @@
             kategori: label,
             statusTitle: statusTitle,
             panjangSegment: $('#panjangSegment').val() || 100,
-            cnt4: cnt4,
-            cnt3: cnt3,
-            cnt2: cnt2,
-            cnt1: cnt1,
+            grpPermukaan: grpPermukaan.toFixed(2),
+            grpBerm: grpBerm.toFixed(2),
+            grpDrainase: grpDrainase.toFixed(2),
             findings: findings,
             autoRec: $('#autoRecText').text()
         };
@@ -1806,10 +1829,10 @@
         text += `⭐ *SKOR AKHIR: ${currentRciSummaryData.actualScore || '4.00'} / 4.00 (${currentRciSummaryData.achievement || '100'}% - ${currentRciSummaryData.kategori || 'Baik'})*\n`;
         text += `📋 *${currentRciSummaryData.statusTitle || 'STATUS: LAYAK OPERASIONAL'}*\n\n`;
 
-        text += `• Skor 4 (90-100%): ${currentRciSummaryData.cnt4 || 8}\n`;
-        text += `• Skor 3 (71-90%): ${currentRciSummaryData.cnt3 || 0}\n`;
-        text += `• Skor 2 (41-70%): ${currentRciSummaryData.cnt2 || 0}\n`;
-        text += `• Skor 1 (0-40%): ${currentRciSummaryData.cnt1 || 0}\n\n`;
+        text += `📊 *Rekap 3 Pilar Utama:*\n`;
+        text += `• Permukaan Jalan (60%): ${currentRciSummaryData.grpPermukaan || '4.00'} / 4.00\n`;
+        text += `• Safety Berm (20%): ${currentRciSummaryData.grpBerm || '4.00'} / 4.00\n`;
+        text += `• Drainage (20%): ${currentRciSummaryData.grpDrainase || '4.00'} / 4.00\n\n`;
 
         if (currentRciSummaryData.findings && currentRciSummaryData.findings.length > 0) {
             text += `⚠️ *Temuan Defisit Segmen:*\n`;
@@ -1872,14 +1895,18 @@
             text += `👷 *Inspector:* ${d.nama} (${d.nik})\n\n`;
 
             text += `⭐ *SKOR AKHIR: ${actual} / 4.00 (${ach}% - ${d.kategoriIndex})*\n`;
+            text += `• Permukaan (60%): ${d.skorPermukaanGroup || '-'}\n`;
+            text += `• Safety Berm (20%): ${d.skorSafetyBermGroup || '-'}\n`;
+            text += `• Drainage (20%): ${d.skorDrainageGroup || '-'}\n\n`;
+
             text += `• Surfacing: ${d.skorSurfacing}/4 (Defisit: ${d.defisitSurfacing || 0}m)\n`;
             text += `• Undulation: ${d.skorUndulation}/4 (Defisit: ${d.defisitUndulation || 0}m)\n`;
             text += `• Spoil (18m): ${d.skorSpoil}/4 (Defisit: ${d.defisitSpoil || 0}m)\n`;
             text += `• Safety Berm: ${d.skorSafetyBerm}/4 (Defisit: ${d.defisitSafetyBerm || 0}m)\n`;
-            text += `• Crossfall: ${d.skorCrossfall}/4 (Defisit: ${d.defisitCrossfall || 0}m)\n`;
+            text += `• Attachment: ${d.skorRoadAttachment}/4 (Defisit: ${d.defisitRoadAttachment || 0}m)\n`;
             text += `• Dust: ${d.skorDust}/4 (Defisit: ${d.defisitDust || 0}m)\n`;
-            text += `• Drainage: ${d.skorDrainage}/4 (Defisit: ${d.defisitDrainage || 0}m)\n`;
-            text += `• Attachment: ${d.skorRoadAttachment}/4 (Defisit: ${d.defisitRoadAttachment || 0}m)\n\n`;
+            text += `• Crossfall: ${d.skorCrossfall}/4 (Defisit: ${d.defisitCrossfall || 0}m)\n`;
+            text += `• Drainage: ${d.skorDrainage}/4 (Defisit: ${d.defisitDrainage || 0}m)\n\n`;
 
             if (d.catatan) text += `📝 *Catatan:* ${d.catatan}\n`;
             if (d.tindakanPerbaikan) text += `🔧 *Perbaikan:* ${d.tindakanPerbaikan} ${d.pic ? `(PIC: ${d.pic})` : ''}\n`;
@@ -1957,15 +1984,15 @@
         $('#benchmarkSearch').prop('disabled', true).val('Pilih Area Utama dulu...');
         $('#detilLokasi').val('');
         $('#btnAddBenchmark').prop('disabled', true);
-        $('#formTitle').html('<i class="bi bi-pencil-square" style="color: #3b82f6;"></i> <span>Form Penilaian RCI</span> <span class="badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 2px;"><i class="bi bi-stars" style="font-size: 9px;"></i> OPSI B</span>');
+        $('#formTitle').html('<i class="bi bi-pencil-square" style="color: #3b82f6;"></i> <span>Form Penilaian RCI</span> <span class="badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-size: 9.5px; font-weight: 800; padding: 2.5px 7px; border-radius: 6px; letter-spacing: 0.5px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4); display: inline-flex; align-items: center; gap: 2px;"><i class="bi bi-stars" style="font-size: 9px;"></i> SP3 EXCEL</span>');
         $('#btnCancelEdit').addClass('d-none');
 
         $('#panjangSegment').val(100);
         rciParamsMetadata.forEach(m => {
             $(`#defisit${m.key}`).val(0);
-            $(`#skor${m.key}`).val(4);
+            $(`#skor${m.key}`).val(4.0);
             $(`.btn-score-card[data-param="skor${m.key}"]`).removeClass('active');
-            $(`.btn-score-card[data-param="skor${m.key}"][data-val="4"]`).addClass('active');
+            $(`.btn-score-card[data-param="skor${m.key}"][data-val="4"], .btn-score-card[data-param="skor${m.key}"][data-val="4.0"]`).addClass('active');
             $(`#badgePersen${m.key}`).text('Ketercapaian: 100.0%');
         });
 
@@ -2006,15 +2033,15 @@
 
             rciParamsMetadata.forEach(m => {
                 const defVal = data[`defisit${m.key}`] || 0;
-                const scoreVal = data[`skor${m.key}`] || 4;
+                const scoreVal = data[`skor${m.key}`] || 4.0;
                 $(`#defisit${m.key}`).val(defVal);
                 $(`#skor${m.key}`).val(scoreVal);
                 $(`.btn-score-card[data-param="skor${m.key}"]`).removeClass('active');
-                $(`.btn-score-card[data-param="skor${m.key}"][data-val="${scoreVal}"]`).addClass('active');
+                $(`.btn-score-card[data-param="skor${m.key}"][data-val="${scoreVal}"], .btn-score-card[data-param="skor${m.key}"][data-val="${scoreVal.toFixed(1)}"]`).addClass('active');
 
                 const totalP = parseFloat(data.panjangSegment) || 100;
                 const pct = totalP > 0 ? Math.max(0, Math.min(100, ((totalP - defVal) / totalP) * 100)) : 100;
-                $(`#badgePersen${m.key}`).text(`Ketercapaian: ${pct.toFixed(1)}%`);
+                $(`#badgePersen${m.key}`).text(`Ketercapaian: ${pct.toFixed(1)}% (Defisit: ${defVal}m)`);
             });
 
             calculateRciScore();
@@ -2066,27 +2093,52 @@
                     </div>
                 </div>
 
+                <!-- 3 Pillars Table -->
                 <div class="mt-3 p-3 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
-                    <h6 class="text-white font-weight-bold mb-2">Rincian Nilai 8 Parameter Standar RCI (Opsi B)</h6>
+                    <h6 class="text-white font-weight-bold mb-2">Nilai 3 Pilar Utama (SP3 Excel)</h6>
+                    <table class="table table-sm table-bordered text-center text-white mb-0" style="font-size: 11.5px;">
+                        <thead style="background: rgba(255,255,255,0.08);">
+                            <tr>
+                                <th>Permukaan Jalan (60%)</th>
+                                <th>Safety Berm (20%)</th>
+                                <th>Drainage (20%)</th>
+                                <th>TOTAL SCORE</th>
+                            </tr>
+                        </thead>
+                        <tbody class="fw-bold">
+                            <tr>
+                                <td class="text-primary">${d.skorPermukaanGroup || '-'}</td>
+                                <td class="text-success">${d.skorSafetyBermGroup || '-'}</td>
+                                <td class="text-info">${d.skorDrainageGroup || '-'}</td>
+                                <td style="color: ${color};">${actual} / 4.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 8 Parameters Detail Table -->
+                <div class="mt-3 p-3 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
+                    <h6 class="text-white font-weight-bold mb-2">Rincian 8 Parameter Jalan</h6>
                     <div class="table-responsive">
                         <table class="table table-sm table-bordered text-white mb-0" style="font-size: 11.5px;">
                             <thead style="background: rgba(255,255,255,0.08);">
                                 <tr>
                                     <th>Parameter</th>
+                                    <th>Pilar</th>
                                     <th>Bobot</th>
                                     <th>Defisit (m)</th>
-                                    <th>Skor (1-4)</th>
+                                    <th>Skor (2.0 - 4.0)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td>1. Surfacing and Material</td><td>30%</td><td>${d.defisitSurfacing || 0} m</td><td><span class="badge bg-primary">${d.skorSurfacing}/4</span></td></tr>
-                                <tr><td>2. Undulation / Corrugation</td><td>25%</td><td>${d.defisitUndulation || 0} m</td><td><span class="badge bg-primary">${d.skorUndulation}/4</span></td></tr>
-                                <tr><td>3. Spoil & Lebar Efektif (18m)</td><td>20%</td><td>${d.defisitSpoil || 0} m</td><td><span class="badge bg-primary">${d.skorSpoil}/4</span></td></tr>
-                                <tr><td>4. Safety Berm</td><td>5%</td><td>${d.defisitSafetyBerm || 0} m</td><td><span class="badge bg-info text-dark">${d.skorSafetyBerm}/4</span></td></tr>
-                                <tr><td>5. Crossfall (0.5% - 1%)</td><td>5%</td><td>${d.defisitCrossfall || 0} m</td><td><span class="badge bg-info text-dark">${d.skorCrossfall}/4</span></td></tr>
-                                <tr><td>6. Dust (Debu)</td><td>5%</td><td>${d.defisitDust || 0} m</td><td><span class="badge bg-info text-dark">${d.skorDust}/4</span></td></tr>
-                                <tr><td>7. Drainage (Saluran/Genangan)</td><td>5%</td><td>${d.defisitDrainage || 0} m</td><td><span class="badge bg-info text-dark">${d.skorDrainage}/4</span></td></tr>
-                                <tr><td>8. Road Attachment</td><td>5%</td><td>${d.defisitRoadAttachment || 0} m</td><td><span class="badge bg-info text-dark">${d.skorRoadAttachment}/4</span></td></tr>
+                                <tr><td>1. Surfacing and Material</td><td>Permukaan</td><td>20%</td><td>${d.defisitSurfacing || 0} m</td><td><span class="badge bg-primary">${d.skorSurfacing}</span></td></tr>
+                                <tr><td>2. Undulation / Corrugation</td><td>Permukaan</td><td>35%</td><td>${d.defisitUndulation || 0} m</td><td><span class="badge bg-primary">${d.skorUndulation}</span></td></tr>
+                                <tr><td>3. Spoil &amp; Lebar Efektif (18m)</td><td>Permukaan</td><td>5%</td><td>${d.defisitSpoil || 0} m</td><td><span class="badge bg-primary">${d.skorSpoil}</span></td></tr>
+                                <tr><td>4. Safety Berm (3/4 Ban)</td><td>Safety Berm</td><td>10%</td><td>${d.defisitSafetyBerm || 0} m</td><td><span class="badge bg-success">${d.skorSafetyBerm}</span></td></tr>
+                                <tr><td>5. Road Attachment</td><td>Safety Berm</td><td>5%</td><td>${d.defisitRoadAttachment || 0} m</td><td><span class="badge bg-success">${d.skorRoadAttachment}</span></td></tr>
+                                <tr><td>6. Dust (Pengendalian Debu)</td><td>Safety Berm</td><td>5%</td><td>${d.defisitDust || 0} m</td><td><span class="badge bg-success">${d.skorDust}</span></td></tr>
+                                <tr><td>7. Crossfall (0.5% - 1%)</td><td>Drainage</td><td>10%</td><td>${d.defisitCrossfall || 0} m</td><td><span class="badge bg-info text-dark">${d.skorCrossfall}</span></td></tr>
+                                <tr><td>8. Drainage (Parit &amp; Aliran)</td><td>Drainage</td><td>10%</td><td>${d.defisitDrainage || 0} m</td><td><span class="badge bg-info text-dark">${d.skorDrainage}</span></td></tr>
                             </tbody>
                         </table>
                     </div>

@@ -126,14 +126,14 @@ namespace MBS_SAP.Controllers
             double? defisitDust,
             double? defisitDrainage,
             double? defisitRoadAttachment,
-            int skorSurfacing = 4,
-            int skorUndulation = 4,
-            int skorSpoil = 4,
-            int skorSafetyBerm = 4,
-            int skorCrossfall = 4,
-            int skorDust = 4,
-            int skorDrainage = 4,
-            int skorRoadAttachment = 4,
+            double skorSurfacing = 4.0,
+            double skorUndulation = 4.0,
+            double skorSpoil = 4.0,
+            double skorSafetyBerm = 4.0,
+            double skorCrossfall = 4.0,
+            double skorDust = 4.0,
+            double skorDrainage = 4.0,
+            double skorRoadAttachment = 4.0,
             int? skorLebarJalan = null,
             int? skorGradeJalan = null,
             int? skorPermukaanJalan = null,
@@ -160,23 +160,18 @@ namespace MBS_SAP.Controllers
                     waktu = parsedWaktu;
                 }
 
-                // Standard Baru RCI (Bobot Propose: Total 100%, Skala 1 - 4, Target 4.00)
-                // 1. Surfacing and Material (30%)
-                // 2. Undulation / Corrugation (25%)
-                // 3. Spoil (20%)
-                // 4. Safety Berm (5%)
-                // 5. Crossfall (5%)
-                // 6. Dust (5%)
-                // 7. Drainage (5%)
-                // 8. Road Attachment (5%)
-                double actualRoadScore = (skorSurfacing * 0.30) +
-                                         (skorUndulation * 0.25) +
-                                         (skorSpoil * 0.20) +
-                                         (skorSafetyBerm * 0.05) +
-                                         (skorCrossfall * 0.05) +
-                                         (skorDust * 0.05) +
-                                         (skorDrainage * 0.05) +
-                                         (skorRoadAttachment * 0.05);
+                // Rumus Aktual Excel SP3:
+                // Pilar 1: Permukaan Jalan (Bobot 60%) -> Surfacing 20%, Undulation 35%, Spoil 5%
+                double skorPermukaanGroup = ((skorSurfacing * 0.20) + (skorUndulation * 0.35) + (skorSpoil * 0.05)) / 0.60;
+                
+                // Pilar 2: Safety Berm (Bobot 20%) -> Safety Berm 10%, Road Attachment 5%, Dust 5%
+                double skorSafetyBermGroup = ((skorSafetyBerm * 0.10) + (skorRoadAttachment * 0.05) + (skorDust * 0.05)) / 0.20;
+
+                // Pilar 3: Drainage (Bobot 20%) -> Crossfall 10%, Drainage 10%
+                double skorDrainageGroup = ((skorCrossfall * 0.10) + (skorDrainage * 0.10)) / 0.20;
+
+                // Total Road Score (Skala 1.00 - 4.00, Target 4.00):
+                double actualRoadScore = (skorPermukaanGroup * 0.60) + (skorSafetyBermGroup * 0.20) + (skorDrainageGroup * 0.20);
                 actualRoadScore = Math.Round(actualRoadScore, 2);
 
                 double targetScore = 4.00;
@@ -232,6 +227,10 @@ namespace MBS_SAP.Controllers
                     existing.SkorDrainage = skorDrainage;
                     existing.SkorRoadAttachment = skorRoadAttachment;
 
+                    existing.SkorPermukaanGroup = Math.Round(skorPermukaanGroup, 2);
+                    existing.SkorSafetyBermGroup = Math.Round(skorSafetyBermGroup, 2);
+                    existing.SkorDrainageGroup = Math.Round(skorDrainageGroup, 2);
+
                     existing.ActualRoadScore = actualRoadScore;
                     existing.TargetScore = targetScore;
                     existing.Achievement = achievement;
@@ -239,13 +238,13 @@ namespace MBS_SAP.Controllers
                     existing.KategoriIndex = kategoriIndex;
 
                     // Legacy mappings
-                    existing.SkorPermukaanJalan = skorSurfacing * 25;
-                    existing.SkorGradeJalan = skorUndulation * 25;
-                    existing.SkorLebarJalan = skorSpoil * 25;
-                    existing.SkorDrainaseParit = skorDrainage * 25;
-                    existing.SkorSuperelevasiTikungan = skorCrossfall * 25;
-                    existing.SkorBebasSpillage = skorDust * 25;
-                    existing.SkorRambuDebu = skorRoadAttachment * 25;
+                    existing.SkorPermukaanJalan = (int)Math.Round(skorSurfacing * 25);
+                    existing.SkorGradeJalan = (int)Math.Round(skorUndulation * 25);
+                    existing.SkorLebarJalan = (int)Math.Round(skorSpoil * 25);
+                    existing.SkorDrainaseParit = (int)Math.Round(skorDrainage * 25);
+                    existing.SkorSuperelevasiTikungan = (int)Math.Round(skorCrossfall * 25);
+                    existing.SkorBebasSpillage = (int)Math.Round(skorDust * 25);
+                    existing.SkorRambuDebu = (int)Math.Round(skorRoadAttachment * 25);
 
                     existing.Catatan = catatan;
                     existing.TindakanPerbaikan = tindakanPerbaikan;
@@ -300,6 +299,10 @@ namespace MBS_SAP.Controllers
                         SkorDrainage = skorDrainage,
                         SkorRoadAttachment = skorRoadAttachment,
 
+                        SkorPermukaanGroup = Math.Round(skorPermukaanGroup, 2),
+                        SkorSafetyBermGroup = Math.Round(skorSafetyBermGroup, 2),
+                        SkorDrainageGroup = Math.Round(skorDrainageGroup, 2),
+
                         ActualRoadScore = actualRoadScore,
                         TargetScore = targetScore,
                         Achievement = achievement,
@@ -307,13 +310,13 @@ namespace MBS_SAP.Controllers
                         KategoriIndex = kategoriIndex,
 
                         // Legacy mappings
-                        SkorPermukaanJalan = skorSurfacing * 25,
-                        SkorGradeJalan = skorUndulation * 25,
-                        SkorLebarJalan = skorSpoil * 25,
-                        SkorDrainaseParit = skorDrainage * 25,
-                        SkorSuperelevasiTikungan = skorCrossfall * 25,
-                        SkorBebasSpillage = skorDust * 25,
-                        SkorRambuDebu = skorRoadAttachment * 25,
+                        SkorPermukaanJalan = (int)Math.Round(skorSurfacing * 25),
+                        SkorGradeJalan = (int)Math.Round(skorUndulation * 25),
+                        SkorLebarJalan = (int)Math.Round(skorSpoil * 25),
+                        SkorDrainaseParit = (int)Math.Round(skorDrainage * 25),
+                        SkorSuperelevasiTikungan = (int)Math.Round(skorCrossfall * 25),
+                        SkorBebasSpillage = (int)Math.Round(skorDust * 25),
+                        SkorRambuDebu = (int)Math.Round(skorRoadAttachment * 25),
 
                         Catatan = catatan,
                         TindakanPerbaikan = tindakanPerbaikan,
@@ -376,6 +379,9 @@ namespace MBS_SAP.Controllers
                 skorDust = item.SkorDust,
                 skorDrainage = item.SkorDrainage,
                 skorRoadAttachment = item.SkorRoadAttachment,
+                skorPermukaanGroup = item.SkorPermukaanGroup > 0 ? item.SkorPermukaanGroup : Math.Round(((item.SkorSurfacing * 0.2) + (item.SkorUndulation * 0.35) + (item.SkorSpoil * 0.05)) / 0.6, 2),
+                skorSafetyBermGroup = item.SkorSafetyBermGroup > 0 ? item.SkorSafetyBermGroup : Math.Round(((item.SkorSafetyBerm * 0.1) + (item.SkorRoadAttachment * 0.05) + (item.SkorDust * 0.05)) / 0.2, 2),
+                skorDrainageGroup = item.SkorDrainageGroup > 0 ? item.SkorDrainageGroup : Math.Round(((item.SkorCrossfall * 0.1) + (item.SkorDrainage * 0.1)) / 0.2, 2),
                 actualRoadScore = item.ActualRoadScore > 0 ? item.ActualRoadScore : Math.Round(item.TotalScore / 25.0, 2),
                 targetScore = item.TargetScore > 0 ? item.TargetScore : 4.0,
                 achievement = item.Achievement > 0 ? item.Achievement : item.TotalScore,
