@@ -9,7 +9,9 @@ namespace MBS_SAP.Services
 {
     /// <summary>
     /// Background scheduler that executes automatically every night at 12:00 AM (00:00 midnight)
-    /// to audit and assess the quality of all submitted SAP reports using AI / ML Quality Engine.
+    /// to audit and assess the quality of all submitted SAP reports using AI / ML Quality Engine,
+    /// including re-checking all Hazard reports in the active period (1 periode) to accommodate
+    /// updates/edits on hazard data.
     /// Also executes an initial audit pass shortly after application startup.
     /// </summary>
     public class SapQualityAuditScheduler : BackgroundService
@@ -50,7 +52,7 @@ namespace MBS_SAP.Services
             }
 
             // 1. Initial pass on startup to ensure recent reports are audited and ready for League
-            _logger.LogInformation("SapQualityAuditScheduler: Menjalankan audit awal pasca-startup...");
+            _logger.LogInformation("SapQualityAuditScheduler: Menjalankan audit awal pasca-startup (termasuk re-check Hazard 1 periode)...");
             await RunAuditJobAsync("Startup Initial", stoppingToken);
 
             // 2. Loop waiting for midnight (12:00 AM) every day
@@ -74,7 +76,7 @@ namespace MBS_SAP.Services
                     break;
                 }
 
-                _logger.LogInformation("SapQualityAuditScheduler: Menjalankan audit harian otomatis jam 12:00 malam...");
+                _logger.LogInformation("SapQualityAuditScheduler: Menjalankan audit harian otomatis jam 12:00 malam (re-check data Hazard 1 periode aktif)...");
                 await RunAuditJobAsync("Nightly Midnight (12 AM)", stoppingToken);
 
                 // Small buffer delay so we don't accidentally re-trigger within the same minute
@@ -123,8 +125,9 @@ namespace MBS_SAP.Services
             {
                 using var scope = _scopeFactory.CreateScope();
                 var qualityService = scope.ServiceProvider.GetRequiredService<SapQualityService>();
-                int auditedCount = await qualityService.AuditUnratedReportsAsync(cancellationToken);
-                _logger.LogInformation("SapQualityAuditScheduler [{Trigger}]: Berhasil menyelesaikan audit {Count} laporan SAP.", triggerSource, auditedCount);
+                var auditResult = await qualityService.AuditReportsAsync(recheckHazardPeriod: true, customPeriodDate: null, cancellationToken);
+                _logger.LogInformation("SapQualityAuditScheduler [{Trigger}]: Berhasil menyelesaikan audit SAP AI. (Re-checked Hazard: {Rechecked}, Laporan Baru: {Count} total).", 
+                    triggerSource, auditResult.HazardRechecked, auditResult.TotalInserted);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {

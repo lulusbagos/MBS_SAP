@@ -27,6 +27,17 @@ namespace MBS_SAP.Services
         public Dictionary<int, QualityStat> CompStats { get; set; } = new();
     }
 
+    public class SapAuditResult
+    {
+        public int TotalInserted { get; set; }
+        public int HazardRechecked { get; set; }
+        public int HazardNew { get; set; }
+        public int InspectionNew { get; set; }
+        public int SafetyTalkNew { get; set; }
+        public int ObservationNew { get; set; }
+        public int CoachingNew { get; set; }
+    }
+
     public class SapQualityService
     {
         private readonly AppDbContext _context;
@@ -41,27 +52,162 @@ namespace MBS_SAP.Services
         }
 
         /// <summary>
-        /// Audits unrated records in all 5 SAP programs and stores the results in tbl_m_penilaian_kualitas_sap.
+        /// Audits unrated records in all 5 SAP programs and re-checks existing hazard reports for 1 period (periode berjalan).
+        /// Re-checking 1 period of Hazard data accommodates recent updates/edits on hazard findings.
         /// Executed daily at midnight (12:00 AM) and available on demand.
         /// </summary>
-        public async Task<int> AuditUnratedReportsAsync(CancellationToken cancellationToken = default, int batchSize = 1000, int maxPerProgram = 20000)
+        public async Task<SapAuditResult> AuditReportsAsync(
+            bool recheckHazardPeriod = true,
+            DateTime? customPeriodDate = null,
+            CancellationToken cancellationToken = default,
+            int batchSize = 1000,
+            int maxPerProgram = 20000)
         {
-            _logger.LogInformation("SapQualityService: Memulai audit otomatis mutu laporan SAP...");
+            _logger.LogInformation("SapQualityService: Memulai audit otomatis mutu laporan SAP (Recheck Hazard 1 Periode: {Recheck})...", recheckHazardPeriod);
             var now = DateTime.Now;
-            int totalInserted = 0;
+            var result = new SapAuditResult();
+
+            // Tentukan rentang 1 periode (periode bulan berjalan, plus transisi awal bulan)
+            var targetDate = customPeriodDate ?? DateTime.Today;
+            var periodStart = new DateTime(targetDate.Year, targetDate.Month, 1);
+            var periodEnd = periodStart.AddMonths(1);
+            var effectivePeriodStart = periodStart;
+            if (targetDate.Day <= 7)
+            {
+                effectivePeriodStart = periodStart.AddMonths(-1);
+            }
 
             try
             {
                 await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;", cancellationToken);
 
-                // 1. Audit Hazard Reports
+                // 1a. Re-check Hazard Reports dalam 1 Periode karena ada fitur update data hazard
+                if (recheckHazardPeriod && !cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogInformation("SapQualityService: Mengecek ulang data Hazard 1 periode ({Start:yyyy-MM-dd} s/d {End:yyyy-MM-dd}) untuk memperbarui penilaian AI...",
+                        effectivePeriodStart, periodEnd);
+
+                    var periodHazards = await (from h in _context.HazardReports
+                                               where !h.IsDeleted &&
+                                                     ((h.Tanggal >= effectivePeriodStart && h.Tanggal < periodEnd) ||
+                                                      (h.CreatedAt >= effectivePeriodStart && h.CreatedAt < periodEnd))
+                                               orderby h.Id descending
+                                               select new
+                                               {
+                                                   h.Id,
+                                                   h.Temuan,
+                                                   h.KategoriBahaya,
+                                                   h.JenisBahaya,
+                                                   h.TingkatResiko,
+                                                   h.Lokasi,
+                                                   h.DetilLokasi,
+                                                   h.Perbaikan,
+                                                   h.StatusTemuan,
+                                                   h.Tanggal
+                                               })
+                                               .Take(maxPerProgram)
+                                               .ToListAsync(cancellationToken);
+
+                    if (periodHazards.Any())
+                    {
+                        var hazardIds = periodHazards.Select(x => x.Id).ToList();
+                        var existingAssessments = new Dictionary<int, SapQualityAssessment>();
+
+                        for (int i = 0; i < hazardIds.Count; i += 1000)
+                        {
+                            var chunk = hazardIds.Skip(i).Take(1000).ToList();
+                            var chunkAssessments = await _context.SapQualityAssessments
+                                .Where(a => a.ProgramType == "Hazard" && chunk.Contains(a.ProgramId))
+                                .ToListAsync(cancellationToken);
+
+                            foreach (var a in chunkAssessments)
+                            {
+                                existingAssessments[a.ProgramId] = a;
+                            }
+                        }
+
+                        var newPeriodAssessments = new List<SapQualityAssessment>();
+
+                        foreach (var h in periodHazards)
+                        {
+                            var aiHazard = SapQualityMlEngine.AnalyzeHazard(
+                                h.Temuan, h.KategoriBahaya, h.JenisBahaya, h.TingkatResiko,
+                                h.Lokasi, h.DetilLokasi, h.Perbaikan, h.StatusTemuan, h.Tanggal
+                            );
+
+                            string ratingBadge = aiHazard.QualityScore >= 4 ? "Kualitas Baik" : (aiHazard.QualityScore == 3 ? "Kualitas Cukup" : "Kualitas Rendah");
+                            string newNotes = $"[{ratingBadge}] AI Prioritas Close: {aiHazard.PriorityLevel} ({aiHazard.PriorityBadgeText}). Batas Waktu: {aiHazard.DueDateFormatted}. {aiHazard.AiReasoning}";
+                            int newRating = aiHazard.QualityScore;
+
+                            if (existingAssessments.TryGetValue(h.Id, out var existing))
+                            {
+                                // Hanya perbarui jika penilaian berasal dari sistem (tidak menimpa manual override Admin)
+                                bool isSystem = string.IsNullOrEmpty(existing.CreatedBy) || existing.CreatedBy.StartsWith("System-");
+                                if (isSystem)
+                                {
+                                    bool isModified = existing.Rating != newRating || 
+                                                      existing.Notes != newNotes ||
+                                                      existing.ProgramCreatedAt != h.Tanggal;
+
+                                    if (isModified)
+                                    {
+                                        existing.Rating = newRating;
+                                        existing.Notes = newNotes;
+                                        existing.CreatedAt = now;
+                                        existing.ProgramCreatedAt = h.Tanggal;
+                                        result.HazardRechecked++;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                newPeriodAssessments.Add(new SapQualityAssessment
+                                {
+                                    ProgramType = "Hazard",
+                                    ProgramId = h.Id,
+                                    Rating = newRating,
+                                    Notes = newNotes,
+                                    CreatedBy = "System-ML-Scheduler",
+                                    CreatedAt = now,
+                                    ProgramCreatedAt = h.Tanggal
+                                });
+                                result.HazardNew++;
+                            }
+                        }
+
+                        if (newPeriodAssessments.Any())
+                        {
+                            _context.SapQualityAssessments.AddRange(newPeriodAssessments);
+                        }
+
+                        await _context.SaveChangesAsync(cancellationToken);
+                        result.TotalInserted += result.HazardNew;
+
+                        _logger.LogInformation("SapQualityService: Selesai re-check Hazard 1 periode (Diperbarui: {Rechecked}, Baru: {New})",
+                            result.HazardRechecked, result.HazardNew);
+                    }
+                }
+
+                // 1b. Audit Unrated Hazard Reports (misalnya backlog historis di luar 1 periode)
                 int hProcessed = 0;
                 while (hProcessed < maxPerProgram && !cancellationToken.IsCancellationRequested)
                 {
                     var rawHazards = await (from h in _context.HazardReports
                                             where !h.IsDeleted && !_context.SapQualityAssessments.Any(a => a.ProgramType == "Hazard" && a.ProgramId == h.Id)
                                             orderby h.Id descending
-                                            select new { h.Id, h.Temuan, h.Tanggal })
+                                            select new
+                                            {
+                                                h.Id,
+                                                h.Temuan,
+                                                h.KategoriBahaya,
+                                                h.JenisBahaya,
+                                                h.TingkatResiko,
+                                                h.Lokasi,
+                                                h.DetilLokasi,
+                                                h.Perbaikan,
+                                                h.StatusTemuan,
+                                                h.Tanggal
+                                            })
                                             .Take(batchSize)
                                             .ToListAsync(cancellationToken);
 
@@ -70,13 +216,19 @@ namespace MBS_SAP.Services
                     var list = new List<SapQualityAssessment>();
                     foreach (var h in rawHazards)
                     {
-                        var (rating, notes) = SapQualityMlEngine.AssessQuality("Hazard", "Hazard Report", h.Temuan ?? "");
+                        var aiHazard = SapQualityMlEngine.AnalyzeHazard(
+                            h.Temuan, h.KategoriBahaya, h.JenisBahaya, h.TingkatResiko,
+                            h.Lokasi, h.DetilLokasi, h.Perbaikan, h.StatusTemuan, h.Tanggal
+                        );
+                        string ratingBadge = aiHazard.QualityScore >= 4 ? "Kualitas Baik" : (aiHazard.QualityScore == 3 ? "Kualitas Cukup" : "Kualitas Rendah");
+                        string note = $"[{ratingBadge}] AI Prioritas Close: {aiHazard.PriorityLevel} ({aiHazard.PriorityBadgeText}). Batas Waktu: {aiHazard.DueDateFormatted}. {aiHazard.AiReasoning}";
+
                         list.Add(new SapQualityAssessment
                         {
                             ProgramType = "Hazard",
                             ProgramId = h.Id,
-                            Rating = rating,
-                            Notes = notes,
+                            Rating = aiHazard.QualityScore,
+                            Notes = note,
                             CreatedBy = "System-ML-Scheduler",
                             CreatedAt = now,
                             ProgramCreatedAt = h.Tanggal
@@ -85,10 +237,14 @@ namespace MBS_SAP.Services
 
                     _context.SapQualityAssessments.AddRange(list);
                     await _context.SaveChangesAsync(cancellationToken);
-                    totalInserted += list.Count;
+                    result.TotalInserted += list.Count;
+                    result.HazardNew += list.Count;
                     hProcessed += list.Count;
                 }
-                _logger.LogInformation("SapQualityService: Selesai audit Hazard ({Count} laporan baru)", hProcessed);
+                if (hProcessed > 0)
+                {
+                    _logger.LogInformation("SapQualityService: Selesai audit backlog Hazard ({Count} laporan baru)", hProcessed);
+                }
 
                 // 2. Audit Inspeksi K3
                 int iProcessed = 0;
@@ -146,7 +302,8 @@ namespace MBS_SAP.Services
 
                     _context.SapQualityAssessments.AddRange(list);
                     await _context.SaveChangesAsync(cancellationToken);
-                    totalInserted += list.Count;
+                    result.TotalInserted += list.Count;
+                    result.InspectionNew += list.Count;
                     iProcessed += list.Count;
                 }
                 _logger.LogInformation("SapQualityService: Selesai audit Inspeksi ({Count} laporan baru)", iProcessed);
@@ -182,7 +339,8 @@ namespace MBS_SAP.Services
 
                     _context.SapQualityAssessments.AddRange(list);
                     await _context.SaveChangesAsync(cancellationToken);
-                    totalInserted += list.Count;
+                    result.TotalInserted += list.Count;
+                    result.SafetyTalkNew += list.Count;
                     stProcessed += list.Count;
                 }
                 _logger.LogInformation("SapQualityService: Selesai audit Safety Talk ({Count} laporan baru)", stProcessed);
@@ -226,7 +384,8 @@ namespace MBS_SAP.Services
 
                     _context.SapQualityAssessments.AddRange(list);
                     await _context.SaveChangesAsync(cancellationToken);
-                    totalInserted += list.Count;
+                    result.TotalInserted += list.Count;
+                    result.ObservationNew += list.Count;
                     oProcessed += list.Count;
                 }
                 _logger.LogInformation("SapQualityService: Selesai audit Observasi ({Count} laporan baru)", oProcessed);
@@ -262,22 +421,39 @@ namespace MBS_SAP.Services
 
                     _context.SapQualityAssessments.AddRange(list);
                     await _context.SaveChangesAsync(cancellationToken);
-                    totalInserted += list.Count;
+                    result.TotalInserted += list.Count;
+                    result.CoachingNew += list.Count;
                     cProcessed += list.Count;
                 }
                 _logger.LogInformation("SapQualityService: Selesai audit Coaching ({Count} laporan baru)", cProcessed);
 
-                // Invalidate memory cache for the current month so league gets fresh values immediately
+                // Invalidate memory cache agar League & Performance menampilkan nilai terbaru
                 string curKey = $"MonthlyQualitySummary_{DateTime.Today.Year}_{DateTime.Today.Month}";
                 _cache.Remove(curKey);
-                _logger.LogInformation("SapQualityService: Selesai audit keseluruhan! Total {Total} laporan berhasil diaudit AI.", totalInserted);
+                if (effectivePeriodStart.Month != DateTime.Today.Month || effectivePeriodStart.Year != DateTime.Today.Year)
+                {
+                    string prevKey = $"MonthlyQualitySummary_{effectivePeriodStart.Year}_{effectivePeriodStart.Month}";
+                    _cache.Remove(prevKey);
+                }
+
+                _logger.LogInformation("SapQualityService: Selesai audit keseluruhan! Total {Total} laporan baru, {Rechecked} Hazard 1 periode di-recheck/diperbarui.",
+                    result.TotalInserted, result.HazardRechecked);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "SapQualityService: Terjadi kesalahan saat audit otomatis laporan SAP.");
             }
 
-            return totalInserted;
+            return result;
+        }
+
+        /// <summary>
+        /// Wrapper untuk audit unrated reports (kompatibel ke belakang), sekaligus mengakomodir re-check Hazard 1 periode.
+        /// </summary>
+        public async Task<int> AuditUnratedReportsAsync(CancellationToken cancellationToken = default, int batchSize = 1000, int maxPerProgram = 20000)
+        {
+            var res = await AuditReportsAsync(recheckHazardPeriod: true, customPeriodDate: null, cancellationToken, batchSize, maxPerProgram);
+            return res.TotalInserted + res.HazardRechecked;
         }
 
         /// <summary>
