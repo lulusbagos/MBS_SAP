@@ -1050,6 +1050,11 @@ namespace MBS_SAP.Services
                 await _context.SaveChangesAsync(cancellationToken);
             }
 
+            if (result.HazardInserted > 0 || result.HazardUpdated > 0)
+            {
+                await SyncHazardActionPlansAsync(since, cancellationToken);
+            }
+
             _logger.LogInformation(
                 "Postgres replication completed. Hazard +{HazardInserted} ~{HazardUpdated}; Inspection +{InspectionInserted} ~{InspectionUpdated}; " +
                 "Coaching +{CoachingInserted} ~{CoachingUpdated}; Observation +{ObservationInserted} ~{ObservationUpdated}; " +
@@ -1877,7 +1882,66 @@ namespace MBS_SAP.Services
                 await _context.SaveChangesAsync(cancellationToken);
             }
 
+            if (result.HazardInserted > 0 || result.HazardUpdated > 0)
+            {
+                await SyncHazardActionPlansAsync(since, cancellationToken);
+            }
+
             return result;
+        }
+
+        private async Task SyncHazardActionPlansAsync(DateTime since, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var insertSql = @"
+                    INSERT INTO tbl_t_action_plan (
+                        foto_temuan, foto_perbaikan, tanggal, waktu, nama, nik, departemen,
+                        area, lokasi, detil_lokasi, item_sap, kategori_temuan, detil_temuan,
+                        status, pja, nik_pja, departemen_pja, rencana_perbaikan, perbaikan,
+                        perusahaan_id, is_deleted, created_at
+                    )
+                    SELECT 
+                        h.foto_temuan, h.foto_perbaikan, h.tanggal, h.waktu, h.nama, h.nik, h.departemen,
+                        h.area, h.lokasi, h.detil_lokasi, CONCAT('hazard:', h.id), h.kategori_bahaya, h.temuan,
+                        h.status_temuan, h.pja, h.nik_pja, h.departemen_pja, h.tindakan_perbaikan, h.perbaikan,
+                        h.perusahaan_id, h.is_deleted, h.created_at
+                    FROM tbl_t_hazard_report h
+                    LEFT JOIN tbl_t_action_plan a ON a.item_sap = CONCAT('hazard:', h.id)
+                    WHERE h.tanggal >= {0}
+                      AND h.is_deleted = 0
+                      AND a.id IS NULL";
+
+                var updateSql = @"
+                    UPDATE a
+                    SET 
+                        a.status = h.status_temuan,
+                        a.pja = h.pja,
+                        a.nik_pja = h.nik_pja,
+                        a.departemen_pja = h.departemen_pja,
+                        a.perbaikan = COALESCE(h.perbaikan, a.perbaikan),
+                        a.foto_perbaikan = COALESCE(h.foto_perbaikan, a.foto_perbaikan),
+                        a.is_deleted = h.is_deleted
+                    FROM tbl_t_action_plan a
+                    INNER JOIN tbl_t_hazard_report h ON a.item_sap = CONCAT('hazard:', h.id)
+                    WHERE h.tanggal >= {0}
+                      AND (
+                          a.status <> h.status_temuan OR
+                          ISNULL(a.pja, '') <> ISNULL(h.pja, '') OR
+                          ISNULL(a.nik_pja, '') <> ISNULL(h.nik_pja, '') OR
+                          ISNULL(a.departemen_pja, '') <> ISNULL(h.departemen_pja, '') OR
+                          (h.perbaikan IS NOT NULL AND ISNULL(a.perbaikan, '') <> h.perbaikan) OR
+                          (h.foto_perbaikan IS NOT NULL AND ISNULL(a.foto_perbaikan, '') <> h.foto_perbaikan) OR
+                          a.is_deleted <> h.is_deleted
+                      )";
+
+                await _context.Database.ExecuteSqlRawAsync(insertSql, new object[] { since }, cancellationToken);
+                await _context.Database.ExecuteSqlRawAsync(updateSql, new object[] { since }, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to sync hazard action plans: {Message}", ex.Message);
+            }
         }
 
         private static string[] GetPossibleSourceNiks(string targetNik)
