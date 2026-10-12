@@ -33,7 +33,7 @@ namespace MBS_SAP.Controllers
             ViewData["HeaderTitle"] = "Coaching & Pembinaan";
             ViewData["ActiveTab"] = "Coaching";
 
-            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
             var companyIdStr = User.FindFirst("CompanyId")?.Value;
             int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
 
@@ -51,13 +51,23 @@ namespace MBS_SAP.Controllers
             ViewBag.CompanyList = companyList;
             ViewBag.UserCompanyId = companyId;
 
-            var satuBulanLalu = DateTime.Now.AddMonths(-1);
+            // Hanya tampilkan sesi coaching di mana user yang login bertindak sebagai pemberi coaching (coach) atau peserta coaching (peserta)
             var query = _context.Coachings
                 .Include(c => c.Participants)
-                .Where(c => !c.IsDeleted && c.CreatedAt >= satuBulanLalu && c.Nik == userNik);
+                .Where(c => !c.IsDeleted);
+
+            if (!string.IsNullOrEmpty(userNik))
+            {
+                query = query.Where(c => c.Nik == userNik || c.Participants.Any(p => p.Nik == userNik));
+            }
+            else
+            {
+                query = query.Where(c => false);
+            }
 
             var reports = await query
-                .OrderByDescending(c => c.CreatedAt)
+                .OrderByDescending(c => c.Tanggal)
+                .ThenByDescending(c => c.CreatedAt)
                 .ToListAsync();
             return View(reports);
         }
@@ -69,14 +79,19 @@ namespace MBS_SAP.Controllers
             var coaching = await _context.Coachings.Include(c => c.Participants).FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
             if (coaching == null) return NotFound();
 
-            // Filter berdasarkan perusahaan login (cross-company check)
-            var companyIdStr = User.FindFirst("CompanyId")?.Value;
-            if (int.TryParse(companyIdStr, out var cid) && cid > 0)
+            // Filter berdasarkan perusahaan login (cross-company check, kecuali creator sendiri atau admin)
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
+            var isAdmin = User.IsInRole("Admin");
+            if (coaching.Nik != userNik && !isAdmin)
             {
-                var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(cid);
-                if (!coaching.PerusahaanId.HasValue || !allowedIds.Contains(coaching.PerusahaanId.Value))
+                var companyIdStr = User.FindFirst("CompanyId")?.Value;
+                if (int.TryParse(companyIdStr, out var cid) && cid > 0)
                 {
-                    return Forbid();
+                    var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(cid);
+                    if (!coaching.PerusahaanId.HasValue || !allowedIds.Contains(coaching.PerusahaanId.Value))
+                    {
+                        return Forbid();
+                    }
                 }
             }
 
@@ -113,10 +128,11 @@ namespace MBS_SAP.Controllers
         {
             var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
 
-            // Restrict date to +/- 7 days
+            // Restrict date to +/- 7 days for new coaching records
+            bool isExisting = id.HasValue && id.Value > 0;
             var minDate = DateTime.Today.AddDays(-7);
             var maxDate = DateTime.Today.AddDays(7);
-            if (tanggal < minDate || tanggal > maxDate)
+            if (!isExisting && (tanggal < minDate || tanggal > maxDate))
             {
                 var dateErrMsg = "Tanggal Coaching harus berada dalam rentang 7 hari sebelum dan sesudah hari ini!";
                 if (isAjax)
@@ -160,8 +176,8 @@ namespace MBS_SAP.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                // Cross-company edit check
-                if (userCompanyId.HasValue)
+                // Cross-company edit check (kecuali creator sendiri atau admin)
+                if (coaching.Nik != userNik && !User.IsInRole("Admin") && userCompanyId.HasValue)
                 {
                     var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
                     if (coaching.PerusahaanId.HasValue && !allowedIds.Contains(coaching.PerusahaanId.Value))

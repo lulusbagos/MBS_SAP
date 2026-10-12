@@ -30,32 +30,42 @@ namespace MBS_SAP.Controllers
         }
 
         // GET: Hazard
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? periode = null)
         {
             ViewData["HeaderTitle"] = "Temuan Hazard";
             ViewData["ActiveTab"] = "Hazard";
-            var historyWindowStart = DateTime.Today.AddDays(-6);
 
-            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            DateTime targetMonthDate = DateTime.Today;
+            if (!string.IsNullOrEmpty(periode) && DateTime.TryParse(periode + "-01", out var parsedDate))
+            {
+                targetMonthDate = parsedDate;
+            }
+            var startOfMonth = new DateTime(targetMonthDate.Year, targetMonthDate.Month, 1);
+            var endOfMonth = startOfMonth.AddMonths(1);
+            var idCulture = new System.Globalization.CultureInfo("id-ID");
+            ViewBag.PeriodeNama = targetMonthDate.ToString("MMMM yyyy", idCulture);
+            ViewBag.CurrentPeriode = targetMonthDate.ToString("yyyy-MM");
+
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
             var isAdmin = User.IsInRole("Admin");
             var companyIdStr = User.FindFirst("CompanyId")?.Value;
             int? companyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
 
-            var satuBulanLalu = DateTime.Now.AddMonths(-1);
-            var query = _context.HazardReports.Where(r => !r.IsDeleted && r.CreatedAt >= satuBulanLalu);
+            var baseQuery = _context.HazardReports.Where(r => !r.IsDeleted);
 
-            // Tampilkan history pembuatan hazard nik login saja dan hazard yang diarahkan ke nik login
+            // Tampilkan history pembuatan hazard NIK login saja dan hazard yang diarahkan ke NIK login (PJA)
             if (!string.IsNullOrEmpty(userNik))
             {
-                query = query.Where(r => r.Nik == userNik || r.NikPja == userNik);
+                baseQuery = baseQuery.Where(r => r.Nik == userNik || r.NikPja == userNik);
             }
 
-            // History card only shows last 7 days (including today).
-            query = query.Where(r => r.Tanggal >= historyWindowStart || r.CreatedAt >= historyWindowStart);
+            var query = baseQuery.Where(r => (r.Tanggal >= startOfMonth && r.Tanggal < endOfMonth) || (r.CreatedAt >= startOfMonth && r.CreatedAt < endOfMonth));
 
             var reports = await query
-                .OrderByDescending(r => r.CreatedAt)
+                .OrderByDescending(r => r.Tanggal)
+                .ThenByDescending(r => r.CreatedAt)
                 .ThenByDescending(r => r.Id)
+                .Take(100)
                 .ToListAsync();
 
             // Prevent duplicate cards from repeated inserts of the same report payload.
@@ -411,13 +421,15 @@ namespace MBS_SAP.Controllers
             var report = await _context.HazardReports.FindAsync(id);
             if (report == null || report.IsDeleted) return NotFound();
 
-            // Pastikan user hanya bisa akses data milik perusahaannya, kecuali jika dia adalah pencipta atau ditunjuk sebagai PJA
-            var companyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
-            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (userCompanyId.HasValue && report.Nik != userNik && report.NikPja != userNik)
+            var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Trim();
+            var isAdmin = User.IsInRole("Admin");
+
+            // Jika user adalah pembuat laporan, PJA, atau Admin, izinkan akses langsung
+            if (report.Nik != userNik && report.NikPja != userNik && !isAdmin)
             {
-                if (report.PerusahaanId != userCompanyId.Value)
+                var companyIdStr = User.FindFirst("CompanyId")?.Value;
+                int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+                if (userCompanyId.HasValue && report.PerusahaanId.HasValue && report.PerusahaanId.Value != userCompanyId.Value)
                     return Unauthorized();
             }
 

@@ -1487,85 +1487,94 @@ function renderCompanyTabs(data) {
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    FETCH PERFORMANCE
 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-async function fetchPerformance() {
-    try {
-        const res  = await fetch('/Display/GetCompanyPerformance');
-        if (!res.ok) return;
-        const d = await res.json();
+function applyPerformanceData(d) {
+    if (!d) return;
 
-        // KPI
-        document.getElementById('kv-kar').innerText   = d.totalKaryawan   ?? '-';
-        document.getElementById('kv-tgt').innerText   = d.monthlyTarget   ?? '-';
-        document.getElementById('kv-real').innerText  = d.monthlyRealization ?? '-';
-        document.getElementById('kv-open').innerText  = d.totalOpenHazards ?? '-';
-        document.getElementById('kv-close').innerText = (d.complianceClose ?? 0) + '%';
-        
-        // Zero Incident Safe Days
-        const safeDaysEl = document.getElementById('kv-safe-days');
-        if (safeDaysEl) {
-            safeDaysEl.innerText = (d.safeDays ?? 0) + ' HARI';
+    // KPI
+    const elKar = document.getElementById('kv-kar');
+    if (elKar) elKar.innerText = d.totalKaryawan ?? '-';
+    const elTgt = document.getElementById('kv-tgt');
+    if (elTgt) elTgt.innerText = d.monthlyTarget ?? '-';
+    const elReal = document.getElementById('kv-real');
+    if (elReal) elReal.innerText = d.monthlyRealization ?? '-';
+    const elOpen = document.getElementById('kv-open');
+    if (elOpen) elOpen.innerText = d.totalOpenHazards ?? '-';
+    const elClose = document.getElementById('kv-close');
+    if (elClose) elClose.innerText = (d.complianceClose ?? 0) + '%';
+    
+    // Zero Incident Safe Days
+    const safeDaysEl = document.getElementById('kv-safe-days');
+    if (safeDaysEl) {
+        safeDaysEl.innerText = (d.safeDays ?? 0) + ' HARI';
+    }
+
+    // Running Text Marquee
+    const marqueeEl = document.getElementById('marqueeText');
+    if (marqueeEl && d.marqueeText) {
+        if (marqueeEl.innerText !== d.marqueeText) {
+            marqueeEl.innerText = d.marqueeText;
         }
+    }
 
-        // Running Text Marquee
-        const marqueeEl = document.getElementById('marqueeText');
-        if (marqueeEl && d.marqueeText) {
-            if (marqueeEl.innerText !== d.marqueeText) {
-                marqueeEl.innerText = d.marqueeText;
-            }
-        }
+    // SAP bar chart
+    if (cSap) {
+        cSap.data.datasets[0].data = [
+            d.targetHazard    ?? 0,
+            d.targetInspeksi  ?? 0,
+            d.targetSafetyTalk?? 0,
+            d.targetObs       ?? 0,
+            d.targetCoaching  ?? 0,
+            d.targetP5m       ?? 0
+        ];
+        cSap.data.datasets[1].data = [
+            d.monthHazards    ?? 0,
+            d.monthInspections?? 0,
+            d.monthSafetyTalks?? 0,
+            d.monthObs        ?? 0,
+            d.monthCoachings  ?? 0,
+            d.monthP5ms       ?? 0
+        ];
+        cSap.update('active');
+    }
 
-        // SAP bar chart
-        if (cSap) {
-            cSap.data.datasets[0].data = [
-                d.targetHazard    ?? 0,
-                d.targetInspeksi  ?? 0,
-                d.targetSafetyTalk?? 0,
-                d.targetObs       ?? 0,
-                d.targetCoaching  ?? 0,
-                d.targetP5m       ?? 0
-            ];
-            cSap.data.datasets[1].data = [
-                d.monthHazards    ?? 0,
-                d.monthInspections?? 0,
-                d.monthSafetyTalks?? 0,
-                d.monthObs        ?? 0,
-                d.monthCoachings  ?? 0,
-                d.monthP5ms       ?? 0
-            ];
-            cSap.update('active');
-        }
+    // Donut
+    if (cDonut) {
+        cDonut.data.datasets[0].data = [
+            d.monthHazards    ?? 0,
+            d.monthInspections?? 0,
+            d.monthSafetyTalks?? 0,
+            d.monthObs        ?? 0,
+            d.monthCoachings  ?? 0,
+            d.monthP5ms       ?? 0
+        ];
+        cDonut.update('active');
+    }
 
-        // Donut
-        if (cDonut) {
-            cDonut.data.datasets[0].data = [
-                d.monthHazards    ?? 0,
-                d.monthInspections?? 0,
-                d.monthSafetyTalks?? 0,
-                d.monthObs        ?? 0,
-                d.monthCoachings  ?? 0,
-                d.monthP5ms       ?? 0
-            ];
-            cDonut.update('active');
-        }
+    // Update RHR indicators
+    const rriVal = d.rri ?? 0;
+    const elRri = document.getElementById('lbl-rri');
+    if (elRri) elRri.innerText = rriVal + '%';
+    const barRri = document.getElementById('bar-rri');
+    if (barRri) barRri.style.width = rriVal + '%';
 
-        // Update RHR indicators
-        const rriVal = d.rri ?? 0;
-        document.getElementById('lbl-rri').innerText = rriVal + '%';
-        document.getElementById('bar-rri').style.width = rriVal + '%';
+    const compRiskVal = d.complianceRisk ?? 0;
+    const elRisk = document.getElementById('lbl-comp-risk');
+    if (elRisk) elRisk.innerText = compRiskVal + '%';
+    const barRisk = document.getElementById('bar-comp-risk');
+    if (barRisk) barRisk.style.width = compRiskVal + '%';
 
-        const compRiskVal = d.complianceRisk ?? 0;
-        document.getElementById('lbl-comp-risk').innerText = compRiskVal + '%';
-        document.getElementById('bar-comp-risk').style.width = compRiskVal + '%';
+    const wTarget = d.weeklyTarget ?? 0;
+    const wReal = d.weeklyRealization ?? 0;
+    const weeklyPct = wTarget > 0 ? Math.min(Math.round((wReal / wTarget) * 100), 100) : 0;
+    const elWk = document.getElementById('lbl-weekly-pct');
+    if (elWk) elWk.innerText = weeklyPct + '%';
+    const barWk = document.getElementById('bar-weekly-pct');
+    if (barWk) barWk.style.width = weeklyPct + '%';
 
-        const wTarget = d.weeklyTarget ?? 0;
-        const wReal = d.weeklyRealization ?? 0;
-        const weeklyPct = wTarget > 0 ? Math.min(Math.round((wReal / wTarget) * 100), 100) : 0;
-        document.getElementById('lbl-weekly-pct').innerText = weeklyPct + '%';
-        document.getElementById('bar-weekly-pct').style.width = weeklyPct + '%';
-
-        // Render Top Areas/Locations list
-        const locs = d.topLocations || [];
-        const locList = document.getElementById('location-list');
+    // Render Top Areas/Locations list
+    const locs = d.topLocations || [];
+    const locList = document.getElementById('location-list');
+    if (locList) {
         if (locs.length === 0) {
             locList.innerHTML = '<div style="font-size:11px; color:var(--muted); text-align:center;">Belum ada data temuan.</div>';
         } else {
@@ -1586,67 +1595,82 @@ async function fetchPerformance() {
                 </div>`;
             }).join('');
         }
+    }
 
-        // Update Location Polar Chart
-        if (cLoc) {
-            cLoc.data.labels = locs.map(l => l.locationName);
-            cLoc.data.datasets[0].data = locs.map(l => l.count);
-            cLoc.update('active');
-        }
+    // Update Location Polar Chart
+    if (cLoc) {
+        cLoc.data.labels = locs.map(l => l.locationName);
+        cLoc.data.datasets[0].data = locs.map(l => l.count);
+        cLoc.update('active');
+    }
 
-        // Update Risks Chart
-        if (cRisks) {
-            cRisks.data.datasets[0].data = [
-                d.riskExtreme ?? 0,
-                d.riskHigh    ?? 0,
-                d.riskMedium  ?? 0,
-                d.riskLow     ?? 0
-            ];
-            cRisks.update('active');
-        }
+    // Update Risks Chart
+    if (cRisks) {
+        cRisks.data.datasets[0].data = [
+            d.riskExtreme ?? 0,
+            d.riskHigh    ?? 0,
+            d.riskMedium  ?? 0,
+            d.riskLow     ?? 0
+        ];
+        cRisks.update('active');
+    }
 
-        // Update Status Chart
-        if (cStatus) {
-            cStatus.data.datasets[0].data = [
-                d.totalOpenHazards    ?? 0,
-                d.totalOpenActionPlans  ?? 0
-            ];
-            cStatus.data.datasets[1].data = [
-                d.totalProgresHazards  ?? 0,
-                d.totalProgresActionPlans ?? 0
-            ];
-            cStatus.data.datasets[2].data = [
-                d.totalClosedHazards  ?? 0,
-                d.totalClosedActionPlans ?? 0
-            ];
-            cStatus.update('active');
-        }
+    // Update Status Chart
+    if (cStatus) {
+        cStatus.data.datasets[0].data = [
+            d.totalOpenHazards    ?? 0,
+            d.totalOpenActionPlans  ?? 0
+        ];
+        cStatus.data.datasets[1].data = [
+            d.totalProgresHazards  ?? 0,
+            d.totalProgresActionPlans ?? 0
+        ];
+        cStatus.data.datasets[2].data = [
+            d.totalClosedHazards  ?? 0,
+            d.totalClosedActionPlans ?? 0
+        ];
+        cStatus.update('active');
+    }
 
-        // Update Today's Submissions Chart
-        if (cToday) {
-            cToday.data.datasets[0].data = [
-                d.todayHazards     ?? 0,
-                d.todayP2h         ?? 0,
-                d.todayP5ms        ?? 0,
-                d.todayInspections ?? 0,
-                d.todayObservations?? 0,
-                d.todaySafetyTalks ?? 0,
-                d.todayCoachings   ?? 0
-            ];
-            cToday.update('active');
-        }
+    // Update Today's Submissions Chart
+    if (cToday) {
+        cToday.data.datasets[0].data = [
+            d.todayHazards     ?? 0,
+            d.todayP2h         ?? 0,
+            d.todayP5ms        ?? 0,
+            d.todayInspections ?? 0,
+            d.todayObservations?? 0,
+            d.todaySafetyTalks ?? 0,
+            d.todayCoachings   ?? 0
+        ];
+        cToday.update('active');
+    }
 
-        // Update Maincon Subcon Active vs Inactive Chart
-        if (cMainconCompliance && d.mainconSubconCompliance) {
-            const activePcts = d.mainconSubconCompliance.map(x => x.activePercentage ?? x.ActivePercentage ?? 0);
-            const inactivePcts = d.mainconSubconCompliance.map(x => x.inactivePercentage ?? x.InactivePercentage ?? 0);
-            
-            cMainconCompliance.data.datasets[0].data = activePcts;
-            cMainconCompliance.data.datasets[1].data = inactivePcts;
-            cMainconCompliance.update('active');
-        }
+    // Update Maincon Subcon Active vs Inactive Chart
+    if (cMainconCompliance && d.mainconSubconCompliance) {
+        const activePcts = d.mainconSubconCompliance.map(x => x.activePercentage ?? x.ActivePercentage ?? 0);
+        const inactivePcts = d.mainconSubconCompliance.map(x => x.inactivePercentage ?? x.InactivePercentage ?? 0);
+        
+        cMainconCompliance.data.datasets[0].data = activePcts;
+        cMainconCompliance.data.datasets[1].data = inactivePcts;
+        cMainconCompliance.update('active');
+    }
 
-        renderCompanyTabs(d);
+    renderCompanyTabs(d);
+}
+
+async function fetchPerformance() {
+    try {
+        const res  = await fetch('/Display/GetCompanyPerformance');
+        if (!res.ok) return;
+        const d = await res.json();
+        if (!d) return;
+
+        applyPerformanceData(d);
+
+        try {
+            localStorage.setItem('MBS_DISPLAY1_PERF_CACHE', JSON.stringify(d));
+        } catch(e) {}
 
     } catch(e) {
         console.warn('Performance fetch error:', e);
@@ -1715,6 +1739,19 @@ function getCardBackupBgAndIcon(type) {
             color: '#818cf8'
         };
     }
+const feedImageCache = new Map();
+function preloadBatchImages(items) {
+    if (!Array.isArray(items)) return;
+    items.slice(0, 30).forEach(it => {
+        if (it && it.imageUrl) {
+            const src = it.imageUrl.trim();
+            if (src && !feedImageCache.has(src)) {
+                const img = new Image();
+                img.src = src;
+                feedImageCache.set(src, img);
+            }
+        }
+    });
 }
 
 async function fetchFeed() {
@@ -1725,6 +1762,11 @@ async function fetchFeed() {
         if (!items || !items.length) return;
 
         rawFeedItems = items;
+
+        try {
+            localStorage.setItem('MBS_DISPLAY_FEED_CACHE', JSON.stringify(items));
+        } catch(e) {}
+        preloadBatchImages(items);
 
         const topKey = `${items[0].type}_${items[0].id}_${items[0].createdAt}`;
         if (topKey !== lastTopKey) {
@@ -2000,14 +2042,57 @@ async function refreshAll() {
     nextDataAt = Date.now() + DATA_INTERVAL_S * 1000;
 }
 
-// Initial load
+function prefetchNextSlide(pageUrl, apiUrl, storageKey) {
+    try {
+        let link = document.querySelector(`link[rel="prefetch"][href="${pageUrl}"]`);
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = pageUrl;
+            document.head.appendChild(link);
+        }
+    } catch(e) {}
+    if (apiUrl && storageKey) {
+        fetch(apiUrl)
+            .then(r => r.json())
+            .then(d => {
+                if (d) {
+                    try { localStorage.setItem(storageKey, JSON.stringify(d)); } catch(e) {}
+                }
+            })
+            .catch(() => {});
+    }
+}
+
+// ⚡ Instant Cache Restore on TV Boot (0ms render, zero blank screen)
 buildCharts();
+(function restoreInstantDisplay1Cache() {
+    try {
+        const cachedPerf = localStorage.getItem('MBS_DISPLAY1_PERF_CACHE');
+        if (cachedPerf) {
+            const d = JSON.parse(cachedPerf);
+            if (d) applyPerformanceData(d);
+        }
+        const cachedFeed = localStorage.getItem('MBS_DISPLAY_FEED_CACHE');
+        if (cachedFeed) {
+            const items = JSON.parse(cachedFeed);
+            if (items && items.length) {
+                rawFeedItems = items;
+                renderFeed(items);
+                preloadBatchImages(items);
+            }
+        }
+    } catch(e) {
+        console.warn('Display 1 instant cache restore:', e);
+    }
+})();
+
 refreshAll();
 
 // Data polling: every 30 seconds
 setInterval(refreshAll, DATA_INTERVAL_S * 1000);
 
-// Page hard reload: every 15 minutes (to prevent memory leaks on TV)
+// Page hard reload: every 24 hours (to prevent memory leaks on TV)
 setTimeout(() => location.reload(), PAGE_RELOAD_MIN * 60 * 1000);
 
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -2068,11 +2153,19 @@ setInterval(rotateRankings, 8000);
 const SLIDE_DURATION_SECONDS = 300; // 5 minutes = 300 seconds
 let slideTimeRemaining = SLIDE_DURATION_SECONDS;
 let isSlidePaused = false;
+let hasPrefetchedDisplay2 = false;
 
 function updateSlideTimer() {
     if (isSlidePaused) return;
 
     slideTimeRemaining--;
+
+    // 🚀 Prefetch Display 2 page & data 30s before rotating for silky smooth transition
+    if (slideTimeRemaining <= 30 && !hasPrefetchedDisplay2) {
+        hasPrefetchedDisplay2 = true;
+        prefetchNextSlide('/Display2', '/Display/GetDisplay2Data', 'MBS_DISPLAY2_DATA_CACHE');
+    }
+
     if (slideTimeRemaining < 0) {
         // Transition to Display 2
         window.location.href = '/Display2';

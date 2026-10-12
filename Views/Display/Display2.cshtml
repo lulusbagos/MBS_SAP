@@ -2088,12 +2088,54 @@ function triggerNewAlert(item) {
     }
 }
 
+const feedImageCache = new Map();
+function preloadFeedImages(items) {
+    if (!Array.isArray(items)) return;
+    items.slice(0, 30).forEach(it => {
+        if (it && it.imageUrl) {
+            const src = it.imageUrl.trim();
+            if (src && !feedImageCache.has(src)) {
+                const img = new Image();
+                img.src = src;
+                feedImageCache.set(src, img);
+            }
+        }
+    });
+}
+
+function prefetchNextSlide(pageUrl, apiUrl, storageKey) {
+    try {
+        let link = document.querySelector(`link[rel="prefetch"][href="${pageUrl}"]`);
+        if (!link) {
+            link = document.createElement('link');
+            link.rel = 'prefetch';
+            link.href = pageUrl;
+            document.head.appendChild(link);
+        }
+    } catch(e) {}
+    if (apiUrl && storageKey) {
+        fetch(apiUrl)
+            .then(r => r.json())
+            .then(d => {
+                if (d) {
+                    try { localStorage.setItem(storageKey, JSON.stringify(d)); } catch(e) {}
+                }
+            })
+            .catch(() => {});
+    }
+}
+
 async function fetchFeed() {
     try {
         const res = await fetch('/Display/GetLatestFeed');
         if (!res.ok) return;
         const items = await res.json();
         if (!items || !items.length) return;
+
+        try {
+            localStorage.setItem('MBS_DISPLAY_FEED_CACHE', JSON.stringify(items));
+        } catch(e) {}
+        preloadFeedImages(items);
 
         const topKey = `${items[0].type}_${items[0].id}_${items[0].createdAt}`;
         if (topKey !== lastTopKey) {
@@ -2127,16 +2169,24 @@ setInterval(updateClock, 1000);
 updateClock();
 
 /* ──────────────────────────────────────────────────────────────────────────
-   2. 5-MINUTE AUTO SLIDE ROTATION (/Display2 -> /Display)
+   2. 5-MINUTE AUTO SLIDE ROTATION (/Display2 -> /Display3)
    ────────────────────────────────────────────────────────────────────────── */
 const SLIDE_DURATION_SECONDS = 300; // 5 minutes = 300 seconds
 let slideTimeRemaining = SLIDE_DURATION_SECONDS;
 let isSlidePaused = false;
+let hasPrefetchedDisplay3 = false;
 
 function updateSlideTimer() {
     if (isSlidePaused) return;
 
     slideTimeRemaining--;
+
+    // 🚀 Prefetch Display 3 page & data 30s before rotating for silky smooth transition
+    if (slideTimeRemaining <= 30 && !hasPrefetchedDisplay3) {
+        hasPrefetchedDisplay3 = true;
+        prefetchNextSlide('/Display3', '/Display/GetDisplay3Data', 'mbs_display3_instant_cache_v2');
+    }
+
     if (slideTimeRemaining < 0) {
         // Transition to Display 3 (RCI, FCI & BBS)
         window.location.href = '/Display3';
@@ -2313,6 +2363,9 @@ async function fetchDisplay2Data() {
         const data = await res.json();
         if (data && data.success) {
             currentData = data;
+            try {
+                localStorage.setItem('MBS_DISPLAY2_DATA_CACHE', JSON.stringify(data));
+            } catch(e) {}
             renderAll(data);
         }
     } catch (e) {
@@ -3259,6 +3312,29 @@ requestAnimationFrame(runAutoScroll);
 /* ──────────────────────────────────────────────────────────────────────────
    9. INITIALIZATION & REFRESH INTERVAL (EVERY 30 SECONDS / 6S FEED)
    ────────────────────────────────────────────────────────────────────────── */
+// ⚡ Instant Cache Restore on TV Boot (0ms render, zero blank screen)
+(function restoreInstantDisplay2Cache() {
+    try {
+        const raw = localStorage.getItem('MBS_DISPLAY2_DATA_CACHE');
+        if (raw) {
+            const cached = JSON.parse(raw);
+            if (cached && cached.success) {
+                currentData = cached;
+                renderAll(cached);
+            }
+        }
+        const cachedFeed = localStorage.getItem('MBS_DISPLAY_FEED_CACHE');
+        if (cachedFeed) {
+            const items = JSON.parse(cachedFeed);
+            if (items && items.length) {
+                preloadFeedImages(items);
+            }
+        }
+    } catch (e) {
+        console.warn('Display 2 instant cache restore:', e);
+    }
+})();
+
 fetchDisplay2Data();
 setInterval(fetchDisplay2Data, 30000); // 30 seconds data refresh
 

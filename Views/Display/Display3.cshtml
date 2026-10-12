@@ -1931,14 +1931,52 @@
     const SLIDE_DURATION_SECONDS = 300; // 5 minutes = 300 seconds
     let slideTimeRemaining = SLIDE_DURATION_SECONDS;
     let isSlidePaused = false;
+    let hasPrefetchedDisplay1 = false;
 
     // Clear any previous stay lock so rotation back to Display 1 is active
     try { localStorage.removeItem('mbs_display3_kiosk_stay'); } catch (e) { }
+
+    function prefetchNextSlide(pageUrl, apiUrl, storageKey) {
+        try {
+            let link = document.querySelector(`link[rel="prefetch"][href="${pageUrl}"]`);
+            if (!link) {
+                link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = pageUrl;
+                document.head.appendChild(link);
+            }
+        } catch(e) {}
+        if (apiUrl && storageKey) {
+            fetch(apiUrl)
+                .then(r => r.json())
+                .then(d => {
+                    if (d) {
+                        try { localStorage.setItem(storageKey, JSON.stringify(d)); } catch(e) {}
+                    }
+                })
+                .catch(() => {});
+        }
+    }
 
     function updateSlideTimer() {
         if (isSlidePaused) return;
 
         slideTimeRemaining--;
+
+        // 🚀 Prefetch Display 1 page & data 30s before rotating for silky smooth transition
+        if (slideTimeRemaining <= 30 && !hasPrefetchedDisplay1) {
+            hasPrefetchedDisplay1 = true;
+            prefetchNextSlide('/Display', '/Display/GetCompanyPerformance', 'MBS_DISPLAY1_PERF_CACHE');
+            fetch('/Display/GetLatestFeed')
+                .then(r => r.json())
+                .then(items => {
+                    if (items) {
+                        try { localStorage.setItem('MBS_DISPLAY_FEED_CACHE', JSON.stringify(items)); } catch(e) {}
+                    }
+                })
+                .catch(() => {});
+        }
+
         if (slideTimeRemaining <= 0) {
             // Transition to Display 1 (continuous rotation: Display 1 -> 2 -> 3 -> 1)
             window.location.href = '/Display';

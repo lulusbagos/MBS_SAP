@@ -17,6 +17,9 @@ namespace MBS_SAP.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IMemoryCache _cache;
+        private const string Display1PerfCacheKey = "CACHE_DISPLAY1_PERF_V1";
+        private const string Display2CacheKey = "CACHE_DISPLAY2_DATA_V1";
+        private const string DisplayFeedCacheKey = "CACHE_DISPLAY_FEED_V1";
         private const string Display3CacheKey = "CACHE_DISPLAY3_DATA_V1";
 
         public DisplayController(AppDbContext context, IMemoryCache cache)
@@ -555,10 +558,17 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet("GetCompanyPerformance")]
-        public async Task<IActionResult> GetCompanyPerformance()
+        [ResponseCache(Duration = 30, Location = ResponseCacheLocation.Any)]
+        public async Task<IActionResult> GetCompanyPerformance([FromQuery] bool refresh = false)
         {
             try 
             {
+                if (!refresh && _cache.TryGetValue(Display1PerfCacheKey, out object? cachedData) && cachedData != null)
+                {
+                    Response.Headers["X-Cache"] = "HIT";
+                    return Ok(cachedData);
+                }
+
                 // Dates
                 var now = DateTime.Now;
                 var startOfWeek  = DateTime.Today.AddDays(-6);
@@ -633,43 +643,7 @@ namespace MBS_SAP.Controllers
                 int targetCoaching  = targetMappings.Sum(m => m.TargetCoaching ?? 0);
                 int targetP5m       = targetMappings.Count;
 
-                // ── Hazard close metrics ────────────────────────────────────────
-                var allHazards = await _context.HazardReports
-                    .Where(h => !h.IsDeleted)
-                    .Select(h => new { h.Id, h.StatusTemuan })
-                    .ToListAsync();
-                
-                var hazardActionPlans = await _context.ActionPlans
-                    .Where(ap => !ap.IsDeleted && ap.ItemSap != null && ap.ItemSap.StartsWith("hazard:"))
-                    .Select(ap => new { ap.ItemSap, ap.RencanaPerbaikan })
-                    .ToListAsync();
-
-                int totalClosedHazards = allHazards.Count(h => h.StatusTemuan == "Closed");
-                int totalProgresHazards = 0;
-                int totalOpenHazards = 0;
-
-                foreach (var h in allHazards)
-                {
-                    if (h.StatusTemuan == "Closed") continue;
-                    
-                    var linkedAp = hazardActionPlans.FirstOrDefault(ap => ap.ItemSap == $"hazard:{h.Id}");
-                    if (linkedAp != null && !string.IsNullOrEmpty(linkedAp.RencanaPerbaikan))
-                    {
-                        totalProgresHazards++;
-                    }
-                    else
-                    {
-                        totalOpenHazards++;
-                    }
-                }
-                int totalHazards = totalOpenHazards + totalProgresHazards + totalClosedHazards;
-                double complianceClose= totalHazards > 0 ? Math.Round((double)totalClosedHazards / totalHazards * 100, 1) : 0;
-
-                int totalOpenActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Open" && string.IsNullOrEmpty(ap.RencanaPerbaikan));
-                int totalClosedActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Closed");
-                int totalProgresActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Open" && !string.IsNullOrEmpty(ap.RencanaPerbaikan));
-
-                var allHazardRisks = await _context.HazardReports.Where(h => !h.IsDeleted).Select(h => new { h.StatusTemuan, h.TingkatResiko }).ToListAsync();
+                // ── Hazard close & risk metrics ────────────────────────────────────────
                 int GetRiskWeight(string? r) {
                     if (string.IsNullOrEmpty(r)) return 0;
                     if (r.Contains("Extreme", StringComparison.OrdinalIgnoreCase) || r.Contains("Ekstrim", StringComparison.OrdinalIgnoreCase)) return 4;
@@ -679,11 +653,67 @@ namespace MBS_SAP.Controllers
                     if (r.Contains("Low", StringComparison.OrdinalIgnoreCase) || r.Contains("Rendah", StringComparison.OrdinalIgnoreCase)) return 1;
                     return 0;
                 }
-                int totalRW  = allHazardRisks.Sum(h => GetRiskWeight(h.TingkatResiko));
-                int closedRW = allHazardRisks.Where(h => h.StatusTemuan == "Closed").Sum(h => GetRiskWeight(h.TingkatResiko));
-                double rri   = totalRW > 0 ? Math.Round((double)closedRW / totalRW * 100, 1) : 0;
-                int highRiskOpen = allHazardRisks.Count(h => h.StatusTemuan == "Open" && GetRiskWeight(h.TingkatResiko) >= 3);
+
+                var allHazards = await _context.HazardReports.AsNoTracking()
+                    .Where(h => !h.IsDeleted)
+                    .Select(h => new { h.Id, h.StatusTemuan, h.TingkatResiko })
+                    .ToListAsync();
+                
+                var hazardActionPlanIdsWithRencana = (await _context.ActionPlans.AsNoTracking()
+                    .Where(ap => !ap.IsDeleted && ap.ItemSap != null && ap.ItemSap.StartsWith("hazard:") && !string.IsNullOrEmpty(ap.RencanaPerbaikan))
+                    .Select(ap => ap.ItemSap!)
+                    .ToListAsync())
+                    .Select(itemSap => int.TryParse(itemSap.Substring(7), out int hid) ? hid : 0)
+                    .Where(hid => hid > 0)
+                    .ToHashSet();
+
+                int totalClosedHazards = 0;
+                int totalProgresHazards = 0;
+                int totalOpenHazards = 0;
+                int totalRW  = 0;
+                int closedRW = 0;
+                int highRiskOpen = 0;
+                int riskExtreme = 0;
+                int riskHigh    = 0;
+                int riskMedium  = 0;
+                int riskLow     = 0;
+
+                foreach (var h in allHazards)
+                {
+                    int rw = GetRiskWeight(h.TingkatResiko);
+                    totalRW += rw;
+                    if (rw == 4) riskExtreme++;
+                    else if (rw == 3) riskHigh++;
+                    else if (rw == 2) riskMedium++;
+                    else if (rw == 1) riskLow++;
+
+                    if (h.StatusTemuan == "Closed")
+                    {
+                        totalClosedHazards++;
+                        closedRW += rw;
+                    }
+                    else
+                    {
+                        if (rw >= 3) highRiskOpen++;
+                        if (hazardActionPlanIdsWithRencana.Contains(h.Id))
+                        {
+                            totalProgresHazards++;
+                        }
+                        else
+                        {
+                            totalOpenHazards++;
+                        }
+                    }
+                }
+
+                int totalHazards = totalOpenHazards + totalProgresHazards + totalClosedHazards;
+                double complianceClose = totalHazards > 0 ? Math.Round((double)totalClosedHazards / totalHazards * 100, 1) : 0;
+                double rri = totalRW > 0 ? Math.Round((double)closedRW / totalRW * 100, 1) : 0;
                 double complianceRisk = totalOpenHazards > 0 ? Math.Round((double)highRiskOpen / totalOpenHazards * 100, 1) : 0;
+
+                int totalOpenActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Open" && string.IsNullOrEmpty(ap.RencanaPerbaikan));
+                int totalClosedActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Closed");
+                int totalProgresActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Open" && !string.IsNullOrEmpty(ap.RencanaPerbaikan));
 
                 // ── Per-company breakdown ───────────────────────────────────────
                 var activeCompanies = await _context.Perusahaans.Where(p => p.StatusAktif).ToListAsync();
@@ -728,11 +758,6 @@ namespace MBS_SAP.Controllers
                 var stagnant  = allCompanyData.Cast<dynamic>().Where(x => x.Realization == 0).OrderBy(x => x.CompanyName).Take(5).Select(x => (object)new { CompanyName = x.CompanyName, Target = x.Target, Realization = x.Realization, Percentage = x.Percentage }).ToList();
                 var fastest   = allCompanyData.Cast<dynamic>().Where(x => x.Realization > 0).OrderByDescending(x => x.Percentage).Take(5).Select(x => (object)new { CompanyName = x.CompanyName, Target = x.Target, Realization = x.Realization, Percentage = x.Percentage }).ToList();
                 var allRanked = sorted.Select(x => (object)new { CompanyName = x.CompanyName, Target = x.Target, Realization = x.Realization, Percentage = x.Percentage }).ToList();
-
-                int riskExtreme = allHazardRisks.Count(h => GetRiskWeight(h.TingkatResiko) == 4);
-                int riskHigh    = allHazardRisks.Count(h => GetRiskWeight(h.TingkatResiko) == 3);
-                int riskMedium  = allHazardRisks.Count(h => GetRiskWeight(h.TingkatResiko) == 2);
-                int riskLow     = allHazardRisks.Count(h => GetRiskWeight(h.TingkatResiko) == 1);
 
                 var topLocations = await _context.HazardReports
                     .Where(h => !h.IsDeleted && h.Area != null && h.Area != "")
@@ -838,7 +863,7 @@ namespace MBS_SAP.Controllers
                     });
                 }
 
-                return Json(new {
+                var result = new {
                     totalKaryawan,
                     totalOpenHazards,
                     totalProgresHazards,
@@ -887,7 +912,11 @@ namespace MBS_SAP.Controllers
                     todayCoachings,
                     monthCoachings,
                     mainconSubconCompliance = mainconSubconComplianceList
-                });
+                };
+
+                _cache.Set(Display1PerfCacheKey, result, TimeSpan.FromSeconds(60));
+                Response.Headers["X-Cache"] = "MISS";
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -896,10 +925,17 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet("GetDisplay2Data")]
-        public async Task<IActionResult> GetDisplay2Data()
+        [ResponseCache(Duration = 30, Location = ResponseCacheLocation.Any)]
+        public async Task<IActionResult> GetDisplay2Data([FromQuery] bool refresh = false)
         {
             try
             {
+                if (!refresh && _cache.TryGetValue(Display2CacheKey, out object? cachedData) && cachedData != null)
+                {
+                    Response.Headers["X-Cache"] = "HIT";
+                    return Ok(cachedData);
+                }
+
                 var now = DateTime.Now;
                 var startOfMonth = new DateTime(now.Year, now.Month, 1);
                 var endOfMonth = startOfMonth.AddMonths(1).AddTicks(-1);
@@ -1255,12 +1291,12 @@ namespace MBS_SAP.Controllers
                 var mappingsDict = targetMappings.ToDictionary(m => m.KaryawanId);
 
                 // Pre-fetch all group rosters in month
-                var allEmpNiks = activeKaryawans.Select(k => (k.NoNik ?? string.Empty).Trim()).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
                 var allRosters = await _context.Rosters.AsNoTracking()
-                    .Where(r => allEmpNiks.Contains(r.Nik))
+                    .Where(r => r.AwalDinas <= endOfMonth && r.AkhirDinas >= startOfMonth)
                     .ToListAsync();
                 var rostersByNik = allRosters
-                    .GroupBy(r => r.Nik.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .Where(r => !string.IsNullOrEmpty(r.Nik))
+                    .GroupBy(r => r.Nik!.Trim(), StringComparer.OrdinalIgnoreCase)
                     .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
                 int totalDaysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
@@ -1774,7 +1810,7 @@ namespace MBS_SAP.Controllers
                         };
                     }).ToList();
 
-                return Json(new {
+                var result = new {
                     success = true,
                     timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                     safeDays,
@@ -1807,7 +1843,11 @@ namespace MBS_SAP.Controllers
                         totalCoachingReal,
                         totalP5mReal
                     }
-                });
+                };
+
+                _cache.Set(Display2CacheKey, result, TimeSpan.FromSeconds(60));
+                Response.Headers["X-Cache"] = "MISS";
+                return Ok(result);
             }
             catch (Exception ex)
             {
@@ -1816,9 +1856,18 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet("GetLatestFeed")]
-        public async Task<IActionResult> GetLatestFeed()
+        [ResponseCache(Duration = 20, Location = ResponseCacheLocation.Any)]
+        public async Task<IActionResult> GetLatestFeed([FromQuery] bool refresh = false)
         {
-            // Limit query size for performance, fetch top 40 of each
+            try
+            {
+                if (!refresh && _cache.TryGetValue(DisplayFeedCacheKey, out object? cachedData) && cachedData != null)
+                {
+                    Response.Headers["X-Cache"] = "HIT";
+                    return Ok(cachedData);
+                }
+
+                // Limit query size for performance, fetch top 40 of each
             var p5ms = await _context.P5ms.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(40).ToListAsync();
             var hazards = await _context.HazardReports.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(40).ToListAsync();
             var inspections = await _context.Inspections.Where(x => !x.IsDeleted).OrderByDescending(x => x.CreatedAt).Take(40).ToListAsync();
@@ -1829,9 +1878,14 @@ namespace MBS_SAP.Controllers
 
             var feed = new List<TimelineItem>();
 
-            var hazardActionPlans = await _context.ActionPlans
-                .Where(ap => !ap.IsDeleted && ap.ItemSap != null && ap.ItemSap.StartsWith("hazard:"))
+            var hazardSapKeys = hazards.Select(h => $"hazard:{h.Id}").ToList();
+            var hazardActionPlans = await _context.ActionPlans.AsNoTracking()
+                .Where(ap => !ap.IsDeleted && ap.ItemSap != null && hazardSapKeys.Contains(ap.ItemSap))
+                .Select(ap => new { ap.ItemSap, ap.RencanaPerbaikan })
                 .ToListAsync();
+            var apRencanaDict = hazardActionPlans
+                .GroupBy(ap => ap.ItemSap!)
+                .ToDictionary(g => g.Key, g => g.First().RencanaPerbaikan);
 
             string? ProxyUrl(string? url)
             {
@@ -1860,11 +1914,10 @@ namespace MBS_SAP.Controllers
             
             foreach(var h in hazards)
             {
-                var linkedAp = hazardActionPlans.FirstOrDefault(ap => ap.ItemSap == $"hazard:{h.Id}");
                 var hazardStatus = h.StatusTemuan ?? "Open";
                 if (hazardStatus.Equals("Open", StringComparison.OrdinalIgnoreCase)
-                    && linkedAp != null
-                    && !string.IsNullOrEmpty(linkedAp.RencanaPerbaikan))
+                    && apRencanaDict.TryGetValue($"hazard:{h.Id}", out var linkedRencana)
+                    && !string.IsNullOrEmpty(linkedRencana))
                 {
                     hazardStatus = "Progres";
                 }
@@ -1887,8 +1940,10 @@ namespace MBS_SAP.Controllers
                 });
             }
             
-            var inspectionActionPlans = await _context.ActionPlans
-                .Where(ap => !ap.IsDeleted && (ap.ItemSap == "inspection" || ap.ItemSap == "Inspection"))
+            var inspNiks = inspections.Select(i => i.Nik).Distinct().ToList();
+            var inspectionActionPlans = await _context.ActionPlans.AsNoTracking()
+                .Where(ap => !ap.IsDeleted && (ap.ItemSap == "inspection" || ap.ItemSap == "Inspection") && inspNiks.Contains(ap.Nik))
+                .Select(ap => new { ap.Nik, ap.Tanggal, ap.Waktu, ap.Status, ap.RencanaPerbaikan })
                 .ToListAsync();
 
             foreach(var i in inspections)
@@ -2031,15 +2086,29 @@ namespace MBS_SAP.Controllers
                 });
             }
 
-            // Fetch Likes and Comments for the feed items
-            var allLikes = await _context.TimelineLikes.ToListAsync();
-            var allComments = await _context.TimelineComments.OrderBy(c => c.CreatedAt).ToListAsync();
-            var overrides = await _context.PasswordOverrides.ToListAsync(); // to get profile pics
+            // Fetch Likes and Comments only for the feed items
+            var feedItemIds = feed.Select(f => f.Id).Distinct().ToList();
+            var feedItemTypes = feed.Select(f => f.Type).Distinct().ToList();
+            var allLikes = await _context.TimelineLikes.AsNoTracking()
+                .Where(l => feedItemIds.Contains(l.ItemId) && feedItemTypes.Contains(l.ItemType))
+                .ToListAsync();
+            var allComments = await _context.TimelineComments.AsNoTracking()
+                .Where(c => feedItemIds.Contains(c.ItemId) && feedItemTypes.Contains(c.ItemType))
+                .OrderBy(c => c.CreatedAt)
+                .ToListAsync();
+
+            var feedNiks = feed.Select(f => f.Nik).Where(n => !string.IsNullOrEmpty(n)).Distinct().ToList();
+            var overrides = await _context.PasswordOverrides.AsNoTracking()
+                .Where(o => feedNiks.Contains(o.Nrp))
+                .ToListAsync();
+            var userProfMap = overrides
+                .GroupBy(o => o.Nrp)
+                .ToDictionary(g => g.Key, g => g.First().ProfilePicture);
 
             // Fetch all companies and employees for company name lookup
-            var companiesMap = await _context.Perusahaans.ToDictionaryAsync(p => p.PerusahaanId, p => p.NamaPerusahaan ?? "Indexim");
-            var employeeCompanyList = await _context.Karyawans
-                .Where(k => k.StatusAktif)
+            var companiesMap = await _context.Perusahaans.AsNoTracking().ToDictionaryAsync(p => p.PerusahaanId, p => p.NamaPerusahaan ?? "Indexim");
+            var employeeCompanyList = await _context.Karyawans.AsNoTracking()
+                .Where(k => k.StatusAktif && feedNiks.Contains(k.NoNik))
                 .Select(k => new { k.NoNik, k.IdPerusahaan })
                 .ToListAsync();
             var employeeCompanyMap = employeeCompanyList
@@ -2052,8 +2121,7 @@ namespace MBS_SAP.Controllers
                 item.Comments = allComments.Where(c => c.ItemType == item.Type && c.ItemId == item.Id).Select(c => new CommentDto { Name = c.NamaPengguna ?? "Guest", Text = c.CommentText }).ToList();
                 
                 // Get User Profile Pic
-                var userProf = overrides.FirstOrDefault(o => o.Nrp == item.Nik);
-                item.UserProfilePic = userProf?.ProfilePicture ?? "/images/default-avatar.png";
+                item.UserProfilePic = (userProfMap.TryGetValue(item.Nik, out var pic) && !string.IsNullOrEmpty(pic)) ? pic : "/images/default-avatar.png";
 
                 // Get Company Name
                 if (employeeCompanyMap.TryGetValue(item.Nik, out int compId) && companiesMap.TryGetValue(compId, out string? compName))
@@ -2072,10 +2140,17 @@ namespace MBS_SAP.Controllers
                                  .OrderByDescending(f => f.CreatedAt)
                                  .Take(150).ToList();
             
-            return Json(sortedFeed);
+            _cache.Set(DisplayFeedCacheKey, sortedFeed, TimeSpan.FromSeconds(45));
+            Response.Headers["X-Cache"] = "MISS";
+            return Ok(sortedFeed);
         }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
+        }
+    }
 
-        [HttpPost("AddLike")]
+    [HttpPost("AddLike")]
         public async Task<IActionResult> AddLike([FromBody] LikeRequest req)
         {
             var like = new TimelineLike

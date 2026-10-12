@@ -287,15 +287,18 @@
 
         <!-- History/List Column -->
         <div>
-            <div class="history-header mb-3">
-                <h6 style="font-weight: 700; color: var(--text-main);"><i class="bi bi-card-list me-2" style="color: #a855f7;"></i>Log Coaching & Pembinaan</h6>
+            <div class="history-header mb-3 d-flex justify-content-between align-items-center">
+                <h6 style="font-weight: 700; color: var(--text-main); margin-bottom: 0;"><i class="bi bi-card-list me-2" style="color: #a855f7;"></i>Log Coaching Anda</h6>
+                <span class="badge" style="background-color: rgba(124, 58, 237, 0.15); color: #c084fc; font-size: 10px; padding: 4px 10px; border-radius: 20px;">
+                    <i class="bi bi-person-check-fill me-1"></i>Coach & Peserta
+                </span>
             </div>
             
             @if (Model == null || !Model.Any())
             {
                 <div class="card-sap text-center py-4 text-muted">
-                    <i class="bi bi-inbox-fill d-block mb-2" style="font-size: 32px;"></i>
-                    Belum ada sesi coaching tercatat.
+                    <i class="bi bi-inbox-fill d-block mb-2" style="font-size: 32px; color: #a855f7;"></i>
+                    Belum ada sesi coaching Anda (sebagai Pemberi Coaching maupun Peserta).
                 </div>
             }
             else
@@ -303,15 +306,34 @@
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                     @foreach (var item in Model)
                     {
+                        var isCoach = item.Nik == userNik;
+                        var isTrainee = item.Participants.Any(p => p.Nik == userNik);
                         <div class="card-sap border-purple-accent mb-0">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
                                     <span class="badge" style="background-color: rgba(124, 58, 237, 0.15); color: #c084fc; font-size: 10px; padding: 4px 8px; border-radius: 6px;">@item.Tema</span>
                                     <span class="d-block" style="font-weight: 700; font-size: 14px; margin-top: 4px; color: var(--text-main);"><i class="bi bi-geo-alt-fill me-1 text-muted"></i>@(item.Lokasi ?? item.Area ?? "General")</span>
                                 </div>
-                                <span class="status-badge approved" style="font-size: 9px; background-color: rgba(16, 185, 129, 0.15); color: #10b981;">
-                                    Selesai
-                                </span>
+                                <div class="d-flex flex-column align-items-end gap-1">
+                                    @if (isCoach)
+                                    {
+                                        <span class="status-badge" style="font-size: 9px; background-color: rgba(124, 58, 237, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); font-weight: 700;">
+                                            <i class="bi bi-person-badge-fill me-1"></i>Pemberi Coaching
+                                        </span>
+                                    }
+                                    else if (isTrainee)
+                                    {
+                                        <span class="status-badge" style="font-size: 9px; background-color: rgba(59, 130, 246, 0.18); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); font-weight: 700;">
+                                            <i class="bi bi-person-check-fill me-1"></i>Peserta Coaching
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge approved" style="font-size: 9px; background-color: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                            Selesai
+                                        </span>
+                                    }
+                                </div>
                             </div>
 
                             <div style="font-size: 12px; margin: 8px 0; color: var(--text-muted);">
@@ -321,8 +343,9 @@
                                     <div class="d-flex flex-wrap gap-1 mt-1">
                                         @foreach (var p in item.Participants)
                                         {
-                                            <span class="trainee-badge-log">
-                                                <i class="bi bi-person-check-fill" style="color: #c084fc; font-size: 11px;"></i> @p.Nama
+                                            var isMe = p.Nik == userNik;
+                                            <span class="trainee-badge-log" style="@(isMe ? "background-color: rgba(59, 130, 246, 0.25) !important; border-color: #3b82f6 !important; color: #93c5fd !important; font-weight: 700;" : "")">
+                                                <i class="bi bi-person-check-fill" style="color: @(isMe ? "#60a5fa" : "#c084fc"); font-size: 11px;"></i> @p.Nama @(isMe ? "(Anda)" : "")
                                             </span>
                                         }
                                     </div>
@@ -345,7 +368,7 @@
 
                             @if (!string.IsNullOrEmpty(item.Foto))
                             {
-                                @if (item.Nik == userNik)
+                                @if (isCoach || isTrainee || isAdmin)
                                 {
                                     var proxyFoto = item.Foto.StartsWith("http") ? "/ImageProxy/Get?url=" + Uri.EscapeDataString(item.Foto) : item.Foto;
                                     <div class="my-2">

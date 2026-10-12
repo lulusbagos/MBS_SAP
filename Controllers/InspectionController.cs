@@ -27,35 +27,50 @@ namespace MBS_SAP.Controllers
         }
 
         // GET: Inspection
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? periode = null)
         {
             ViewData["HeaderTitle"] = "Safety Inspeksi";
             ViewData["ActiveTab"] = "Inspection";
-            var historyWindowStart = DateTime.Today.AddDays(-6);
 
-            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var satuBulanLalu = DateTime.Now.AddMonths(-1);
-            IQueryable<Inspection> query = _context.Inspections
-                .Where(i => !i.IsDeleted && i.CreatedAt >= satuBulanLalu && i.Nik == userNik);
+            DateTime targetMonthDate = DateTime.Today;
+            if (!string.IsNullOrEmpty(periode) && DateTime.TryParse(periode + "-01", out var parsedDate))
+            {
+                targetMonthDate = parsedDate;
+            }
+            var startOfMonth = new DateTime(targetMonthDate.Year, targetMonthDate.Month, 1);
+            var endOfMonth = startOfMonth.AddMonths(1);
+            var idCulture = new System.Globalization.CultureInfo("id-ID");
+            ViewBag.PeriodeNama = targetMonthDate.ToString("MMMM yyyy", idCulture);
+            ViewBag.CurrentPeriode = targetMonthDate.ToString("yyyy-MM");
 
-            // History card only shows last 7 days (including today).
-            query = query.Where(i => i.Tanggal >= historyWindowStart || i.CreatedAt >= historyWindowStart);
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
+            IQueryable<Inspection> baseQuery = _context.Inspections
+                .Where(i => !i.IsDeleted);
 
-            ViewBag.JenisInspeksiList = await query
-                .Where(i => !string.IsNullOrEmpty(i.JenisInspeksi))
+            if (!string.IsNullOrEmpty(userNik))
+            {
+                baseQuery = baseQuery.Where(i => i.Nik == userNik);
+            }
+
+            var query = baseQuery.Where(i => (i.Tanggal >= startOfMonth && i.Tanggal < endOfMonth) || (i.CreatedAt >= startOfMonth && i.CreatedAt < endOfMonth));
+
+            ViewBag.JenisInspeksiList = await _context.Inspections
+                .Where(i => !i.IsDeleted && !string.IsNullOrEmpty(i.JenisInspeksi))
                 .Select(i => i.JenisInspeksi!)
                 .Distinct()
+                .Take(20)
                 .ToListAsync();
 
-            ViewBag.AreaList = await query
-                .Where(i => !string.IsNullOrEmpty(i.Area))
-                .Select(i => i.Area!)
-                .Distinct()
+            ViewBag.AreaList = await _context.MasterAreas
+                .OrderBy(a => a.NamaArea)
+                .Select(a => a.NamaArea)
                 .ToListAsync();
 
             var inspections = await query
-                .OrderByDescending(i => i.CreatedAt)
+                .OrderByDescending(i => i.Tanggal)
+                .ThenByDescending(i => i.CreatedAt)
                 .ThenByDescending(i => i.Id)
+                .Take(100)
                 .ToListAsync();
 
             // Prevent duplicate cards from repeated inserts of the same inspection payload.
@@ -176,46 +191,49 @@ namespace MBS_SAP.Controllers
                 if (string.IsNullOrWhiteSpace(lokasi)) validationErrors.Add("Lokasi spesifik wajib diisi.");
                 if (string.IsNullOrWhiteSpace(pja)) validationErrors.Add("Penanggung Jawab Area (PJA) wajib dipilih dari hasil pencarian.");
 
-                var scoreItems = new[]
+                if (isNew)
                 {
-                    new { Key = "1_1", Label = "Modul 1 Pertanyaan 1", Score = q1_1 },
-                    new { Key = "1_2", Label = "Modul 1 Pertanyaan 2", Score = q1_2 },
-                    new { Key = "1_3", Label = "Modul 1 Pertanyaan 3", Score = q1_3 },
-                    new { Key = "2_1", Label = "Modul 2 Pertanyaan 1", Score = q2_1 },
-                    new { Key = "2_2", Label = "Modul 2 Pertanyaan 2", Score = q2_2 },
-                    new { Key = "2_3", Label = "Modul 2 Pertanyaan 3", Score = q2_3 },
-                    new { Key = "3_1", Label = "Modul 3 Pertanyaan 1", Score = q3_1 },
-                    new { Key = "3_2", Label = "Modul 3 Pertanyaan 2", Score = q3_2 },
-                    new { Key = "3_3", Label = "Modul 3 Pertanyaan 3", Score = q3_3 },
-                    new { Key = "4_1", Label = "Modul 4 Pertanyaan 1", Score = q4_1 },
-                    new { Key = "4_2", Label = "Modul 4 Pertanyaan 2", Score = q4_2 },
-                    new { Key = "4_3", Label = "Modul 4 Pertanyaan 3", Score = q4_3 },
-                    new { Key = "5_1", Label = "Modul 5 Pertanyaan 1", Score = q5_1 },
-                    new { Key = "5_2", Label = "Modul 5 Pertanyaan 2", Score = q5_2 },
-                    new { Key = "5_3", Label = "Modul 5 Pertanyaan 3", Score = q5_3 }
-                };
-
-                foreach (var item in scoreItems)
-                {
-                    if (item.Score < 0 || item.Score > 2)
+                    var scoreItems = new[]
                     {
-                        validationErrors.Add($"{item.Label} memiliki nilai jawaban tidak valid.");
-                    }
+                        new { Key = "1_1", Label = "Modul 1 Pertanyaan 1", Score = q1_1 },
+                        new { Key = "1_2", Label = "Modul 1 Pertanyaan 2", Score = q1_2 },
+                        new { Key = "1_3", Label = "Modul 1 Pertanyaan 3", Score = q1_3 },
+                        new { Key = "2_1", Label = "Modul 2 Pertanyaan 1", Score = q2_1 },
+                        new { Key = "2_2", Label = "Modul 2 Pertanyaan 2", Score = q2_2 },
+                        new { Key = "2_3", Label = "Modul 2 Pertanyaan 3", Score = q2_3 },
+                        new { Key = "3_1", Label = "Modul 3 Pertanyaan 1", Score = q3_1 },
+                        new { Key = "3_2", Label = "Modul 3 Pertanyaan 2", Score = q3_2 },
+                        new { Key = "3_3", Label = "Modul 3 Pertanyaan 3", Score = q3_3 },
+                        new { Key = "4_1", Label = "Modul 4 Pertanyaan 1", Score = q4_1 },
+                        new { Key = "4_2", Label = "Modul 4 Pertanyaan 2", Score = q4_2 },
+                        new { Key = "4_3", Label = "Modul 4 Pertanyaan 3", Score = q4_3 },
+                        new { Key = "5_1", Label = "Modul 5 Pertanyaan 1", Score = q5_1 },
+                        new { Key = "5_2", Label = "Modul 5 Pertanyaan 2", Score = q5_2 },
+                        new { Key = "5_3", Label = "Modul 5 Pertanyaan 3", Score = q5_3 }
+                    };
 
-                    if (item.Score == 0)
+                    foreach (var item in scoreItems)
                     {
-                        var file = Request.Form.Files[$"foto_{item.Key}"];
-                        var hasExistingFile = existingLampiranDict.ContainsKey(item.Key) && !string.IsNullOrWhiteSpace(existingLampiranDict[item.Key]);
-                        if ((file == null || file.Length == 0) && !hasExistingFile)
+                        if (item.Score < 0 || item.Score > 2)
                         {
-                            validationErrors.Add($"{item.Label} dijawab TIDAK, foto lampiran bukti wajib diunggah.");
+                            validationErrors.Add($"{item.Label} memiliki nilai jawaban tidak valid.");
+                        }
+
+                        if (item.Score == 0)
+                        {
+                            var file = Request.Form.Files[$"foto_{item.Key}"];
+                            var hasExistingFile = existingLampiranDict.ContainsKey(item.Key) && !string.IsNullOrWhiteSpace(existingLampiranDict[item.Key]);
+                            if ((file == null || file.Length == 0) && !hasExistingFile)
+                            {
+                                validationErrors.Add($"{item.Label} dijawab TIDAK, foto lampiran bukti wajib diunggah.");
+                            }
                         }
                     }
-                }
 
-                if (scoreItems.Any(x => x.Score == 0) && string.IsNullOrWhiteSpace(catatan))
-                {
-                    validationErrors.Add("Catatan atau rencana tindakan wajib diisi jika ada item inspeksi yang dijawab TIDAK.");
+                    if (scoreItems.Any(x => x.Score == 0) && string.IsNullOrWhiteSpace(catatan))
+                    {
+                        validationErrors.Add("Catatan atau rencana tindakan wajib diisi jika ada item inspeksi yang dijawab TIDAK.");
+                    }
                 }
 
                 if (validationErrors.Any())
@@ -223,9 +241,9 @@ namespace MBS_SAP.Controllers
                     return ValidationErrorResponse(isAjax, validationErrors, "Laporan inspeksi belum lengkap.");
                 }
                 
-                // Allow backdate up to 1 week (7 days)
+                // Allow backdate up to 1 week (7 days) for new records
                 var validatedTanggal = tanggal.Date;
-                if (validatedTanggal < DateTime.Today.AddDays(-7) || validatedTanggal > DateTime.Today)
+                if (isNew && (validatedTanggal < DateTime.Today.AddDays(-7) || validatedTanggal > DateTime.Today))
                 {
                     validatedTanggal = DateTime.Today;
                 }
@@ -284,21 +302,24 @@ namespace MBS_SAP.Controllers
                     }
                 }
                 
-                inspection.Q1_1 = q1_1;
-                inspection.Q1_2 = q1_2;
-                inspection.Q1_3 = q1_3;
-                inspection.Q2_1 = q2_1;
-                inspection.Q2_2 = q2_2;
-                inspection.Q2_3 = q2_3;
-                inspection.Q3_1 = q3_1;
-                inspection.Q3_2 = q3_2;
-                inspection.Q3_3 = q3_3;
-                inspection.Q4_1 = q4_1;
-                inspection.Q4_2 = q4_2;
-                inspection.Q4_3 = q4_3;
-                inspection.Q5_1 = q5_1;
-                inspection.Q5_2 = q5_2;
-                inspection.Q5_3 = q5_3;
+                if (isNew)
+                {
+                    inspection.Q1_1 = q1_1;
+                    inspection.Q1_2 = q1_2;
+                    inspection.Q1_3 = q1_3;
+                    inspection.Q2_1 = q2_1;
+                    inspection.Q2_2 = q2_2;
+                    inspection.Q2_3 = q2_3;
+                    inspection.Q3_1 = q3_1;
+                    inspection.Q3_2 = q3_2;
+                    inspection.Q3_3 = q3_3;
+                    inspection.Q4_1 = q4_1;
+                    inspection.Q4_2 = q4_2;
+                    inspection.Q4_3 = q4_3;
+                    inspection.Q5_1 = q5_1;
+                    inspection.Q5_2 = q5_2;
+                    inspection.Q5_3 = q5_3;
+                }
                 inspection.Catatan = catatan;
 
                 // Handle Photo Uploads for 15 questions
@@ -374,42 +395,72 @@ namespace MBS_SAP.Controllers
                     }
                 }
 
-                // Check if any check item is 0, then spawn ActionPlan
-                var checks = new[]
+                // Handle ActionPlans
+                if (isNew)
                 {
-                    new { Name = "Modul 1: Kepatuhan & Sistem", Score = Math.Min(q1_1, Math.Min(q1_2, q1_3)) },
-                    new { Name = "Modul 2: Risiko & Keselamatan", Score = Math.Min(q2_1, Math.Min(q2_2, q2_3)) },
-                    new { Name = "Modul 3: SDM & Kesehatan Kerja", Score = Math.Min(q3_1, Math.Min(q3_2, q3_3)) },
-                    new { Name = "Modul 4: Operasi & Lingkungan", Score = Math.Min(q4_1, Math.Min(q4_2, q4_3)) },
-                    new { Name = "Modul 5: Monitoring & Perbaikan", Score = Math.Min(q5_1, Math.Min(q5_2, q5_3)) }
-                };
-
-                foreach (var check in checks)
-                {
-                    if (check.Score == 0)
+                    // Check if any check item is 0, then spawn ActionPlan
+                    var checks = new[]
                     {
-                        var actionPlan = new ActionPlan
-                        {
-                            Tanggal = inspection.Tanggal,
-                            Waktu = inspection.Waktu,
-                            Nama = SafeTruncate(userName, 150),
-                            Nik = SafeTruncate(userNik, 50),
-                            Departemen = SafeTruncate(userDept, 150),
-                            Area = inspection.Area,
-                            Lokasi = inspection.Lokasi,
-                            DetilLokasi = inspection.DetilLokasi,
-                            ItemSap = $"inspection:{inspection.Id}",
-                            KategoriTemuan = SafeTruncate(check.Name, 150),
-                            DetilTemuan = $"Temuan ketidaksesuaian (skor 0) saat inspeksi '{inspection.JenisInspeksi}' pada {check.Name}. Catatan: {catatan}",
-                            Status = "Open",
-                            Pja = inspection.Pja,
-                            NikPja = inspection.NikPja,
-                            DepartemenPja = inspection.DepartemenPja,
-                            PerusahaanId = inspection.PerusahaanId,
-                            CreatedAt = DateTime.Now
-                        };
+                        new { Name = "Modul 1: Kepatuhan & Sistem", Score = Math.Min(q1_1, Math.Min(q1_2, q1_3)) },
+                        new { Name = "Modul 2: Risiko & Keselamatan", Score = Math.Min(q2_1, Math.Min(q2_2, q2_3)) },
+                        new { Name = "Modul 3: SDM & Kesehatan Kerja", Score = Math.Min(q3_1, Math.Min(q3_2, q3_3)) },
+                        new { Name = "Modul 4: Operasi & Lingkungan", Score = Math.Min(q4_1, Math.Min(q4_2, q4_3)) },
+                        new { Name = "Modul 5: Monitoring & Perbaikan", Score = Math.Min(q5_1, Math.Min(q5_2, q5_3)) }
+                    };
 
-                        _context.ActionPlans.Add(actionPlan);
+                    foreach (var check in checks)
+                    {
+                        if (check.Score == 0)
+                        {
+                            var actionPlan = new ActionPlan
+                            {
+                                Tanggal = inspection.Tanggal,
+                                Waktu = inspection.Waktu,
+                                Nama = SafeTruncate(userName, 150),
+                                Nik = SafeTruncate(userNik, 50),
+                                Departemen = SafeTruncate(userDept, 150),
+                                Area = inspection.Area,
+                                Lokasi = inspection.Lokasi,
+                                DetilLokasi = inspection.DetilLokasi,
+                                ItemSap = $"inspection:{inspection.Id}",
+                                KategoriTemuan = SafeTruncate(check.Name, 150),
+                                DetilTemuan = $"Temuan ketidaksesuaian (skor 0) saat inspeksi '{inspection.JenisInspeksi}' pada {check.Name}. Catatan: {catatan}",
+                                Status = "Open",
+                                Pja = inspection.Pja,
+                                NikPja = inspection.NikPja,
+                                DepartemenPja = inspection.DepartemenPja,
+                                PerusahaanId = inspection.PerusahaanId,
+                                CreatedAt = DateTime.Now
+                            };
+
+                            _context.ActionPlans.Add(actionPlan);
+                        }
+                    }
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    // Sync updated metadata with existing ActionPlans
+                    var actionPlanItemSap = $"inspection:{inspection.Id}";
+                    var linkedActionPlans = await _context.ActionPlans
+                        .Where(a => a.ItemSap == actionPlanItemSap && !a.IsDeleted)
+                        .ToListAsync();
+
+                    foreach (var ap in linkedActionPlans)
+                    {
+                        ap.Tanggal = inspection.Tanggal;
+                        ap.Waktu = inspection.Waktu;
+                        ap.Area = inspection.Area;
+                        ap.Lokasi = inspection.Lokasi;
+                        ap.DetilLokasi = inspection.DetilLokasi;
+                        ap.Pja = inspection.Pja;
+                        ap.NikPja = inspection.NikPja;
+                        ap.DepartemenPja = inspection.DepartemenPja;
+                        ap.PerusahaanId = inspection.PerusahaanId;
+                    }
+
+                    if (linkedActionPlans.Any())
+                    {
                         await _context.SaveChangesAsync();
                     }
                 }
@@ -453,25 +504,18 @@ namespace MBS_SAP.Controllers
             var inspection = await _context.Inspections.FindAsync(id);
             if (inspection == null || inspection.IsDeleted) return NotFound();
 
-            // Pastikan user hanya bisa akses data milik perusahaannya
-            var companyIdStr = User.FindFirst("CompanyId")?.Value;
-            int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
+            var isAdmin = User.IsInRole("Admin");
+            bool isUserInvolved = (inspection.Nik == userNik || inspection.NikPja == userNik || isAdmin);
 
-            // Jika user tidak punya CompanyId, tolak akses
-            if (!userCompanyId.HasValue && !User.IsInRole("Admin"))
-                return Unauthorized();
-
-            // Jika user punya CompanyId, validasi akses perusahaan
-            if (userCompanyId.HasValue)
+            if (!isUserInvolved)
             {
-                // Jika inspection tidak punya PerusahaanId, tolak akses (data tidak jelas milik siapa)
-                if (!inspection.PerusahaanId.HasValue)
+                var companyIdStr = User.FindFirst("CompanyId")?.Value;
+                int? userCompanyId = int.TryParse(companyIdStr, out var cid) && cid > 0 ? cid : null;
+                if (!userCompanyId.HasValue)
                     return Unauthorized();
 
-                var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                bool isUserInvolved = (inspection.Nik == userNik || inspection.NikPja == userNik);
-
-                if (!isUserInvolved && inspection.PerusahaanId.Value != userCompanyId.Value)
+                if (!inspection.PerusahaanId.HasValue || inspection.PerusahaanId.Value != userCompanyId.Value)
                     return Unauthorized();
             }
 
