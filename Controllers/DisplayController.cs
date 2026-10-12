@@ -654,62 +654,56 @@ namespace MBS_SAP.Controllers
                     return 0;
                 }
 
-                var allHazards = await _context.HazardReports.AsNoTracking()
+                var hazardRiskGroups = await _context.HazardReports.AsNoTracking()
                     .Where(h => !h.IsDeleted)
-                    .Select(h => new { h.Id, h.StatusTemuan, h.TingkatResiko })
+                    .GroupBy(h => new { h.StatusTemuan, h.TingkatResiko })
+                    .Select(g => new { g.Key.StatusTemuan, g.Key.TingkatResiko, Count = g.Count() })
                     .ToListAsync();
                 
-                var hazardActionPlanIdsWithRencana = (await _context.ActionPlans.AsNoTracking()
-                    .Where(ap => !ap.IsDeleted && ap.ItemSap != null && ap.ItemSap.StartsWith("hazard:") && !string.IsNullOrEmpty(ap.RencanaPerbaikan))
-                    .Select(ap => ap.ItemSap!)
-                    .ToListAsync())
-                    .Select(itemSap => int.TryParse(itemSap.Substring(7), out int hid) ? hid : 0)
-                    .Where(hid => hid > 0)
-                    .ToHashSet();
+                int totalProgresHazards = await _context.ActionPlans.AsNoTracking()
+                    .CountAsync(ap => !ap.IsDeleted && ap.Status == "Open" && ap.ItemSap != null && ap.ItemSap.StartsWith("hazard:") && !string.IsNullOrEmpty(ap.RencanaPerbaikan));
 
                 int totalClosedHazards = 0;
-                int totalProgresHazards = 0;
-                int totalOpenHazards = 0;
+                int rawOpenHazards = 0;
                 int totalRW  = 0;
                 int closedRW = 0;
                 int highRiskOpen = 0;
+                int highRiskClosed = 0;
                 int riskExtreme = 0;
                 int riskHigh    = 0;
                 int riskMedium  = 0;
                 int riskLow     = 0;
 
-                foreach (var h in allHazards)
+                foreach (var g in hazardRiskGroups)
                 {
-                    int rw = GetRiskWeight(h.TingkatResiko);
-                    totalRW += rw;
-                    if (rw == 4) riskExtreme++;
-                    else if (rw == 3) riskHigh++;
-                    else if (rw == 2) riskMedium++;
-                    else if (rw == 1) riskLow++;
+                    int rw = GetRiskWeight(g.TingkatResiko);
+                    totalRW += rw * g.Count;
+                    if (rw == 4) riskExtreme += g.Count;
+                    else if (rw == 3) riskHigh += g.Count;
+                    else if (rw == 2) riskMedium += g.Count;
+                    else if (rw == 1) riskLow += g.Count;
 
-                    if (h.StatusTemuan == "Closed")
+                    if (g.StatusTemuan == "Closed")
                     {
-                        totalClosedHazards++;
-                        closedRW += rw;
+                        totalClosedHazards += g.Count;
+                        closedRW += rw * g.Count;
+                        if (rw >= 3) highRiskClosed += g.Count;
                     }
                     else
                     {
-                        if (rw >= 3) highRiskOpen++;
-                        if (hazardActionPlanIdsWithRencana.Contains(h.Id))
-                        {
-                            totalProgresHazards++;
-                        }
-                        else
-                        {
-                            totalOpenHazards++;
-                        }
+                        rawOpenHazards += g.Count;
+                        if (rw >= 3) highRiskOpen += g.Count;
                     }
                 }
 
+                int totalOpenHazards = Math.Max(0, rawOpenHazards - totalProgresHazards);
                 int totalHazards = totalOpenHazards + totalProgresHazards + totalClosedHazards;
                 double complianceClose = totalHazards > 0 ? Math.Round((double)totalClosedHazards / totalHazards * 100, 1) : 0;
                 double rri = totalRW > 0 ? Math.Round((double)closedRW / totalRW * 100, 1) : 0;
-                double complianceRisk = totalOpenHazards > 0 ? Math.Round((double)highRiskOpen / totalOpenHazards * 100, 1) : 0;
+                
+                // True high risk resolution rate: percentage of high & extreme hazards successfully closed
+                int totalHighRisk = highRiskOpen + highRiskClosed;
+                double complianceRisk = totalHighRisk > 0 ? Math.Round((double)highRiskClosed / totalHighRisk * 100, 1) : 0;
 
                 int totalOpenActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Open" && string.IsNullOrEmpty(ap.RencanaPerbaikan));
                 int totalClosedActionPlans = await _context.ActionPlans.CountAsync(ap => !ap.IsDeleted && ap.Status == "Closed");
@@ -874,6 +868,7 @@ namespace MBS_SAP.Controllers
                     complianceClose,
                     rri,
                     complianceRisk,
+                    highRiskOpen,
                     weeklyTarget,
                     weeklyRealization,
                     monthlyTarget,
@@ -884,6 +879,7 @@ namespace MBS_SAP.Controllers
                     monthSafetyTalks,
                     monthP5ms,
                     monthObs,
+                    monthCoachings,
                     // Per-category targets
                     targetHazard,
                     targetInspeksi,
@@ -910,11 +906,10 @@ namespace MBS_SAP.Controllers
                     todayObservations,
                     todaySafetyTalks,
                     todayCoachings,
-                    monthCoachings,
                     mainconSubconCompliance = mainconSubconComplianceList
                 };
 
-                _cache.Set(Display1PerfCacheKey, result, TimeSpan.FromSeconds(60));
+                _cache.Set(Display1PerfCacheKey, result, TimeSpan.FromSeconds(120));
                 Response.Headers["X-Cache"] = "MISS";
                 return Ok(result);
             }
@@ -1845,7 +1840,7 @@ namespace MBS_SAP.Controllers
                     }
                 };
 
-                _cache.Set(Display2CacheKey, result, TimeSpan.FromSeconds(60));
+                _cache.Set(Display2CacheKey, result, TimeSpan.FromSeconds(120));
                 Response.Headers["X-Cache"] = "MISS";
                 return Ok(result);
             }

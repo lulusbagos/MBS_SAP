@@ -12,38 +12,90 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <style>
     :root {
-        --bg:          #050811;
-        --bg-card:     rgba(15, 23, 42, 0.45);
-        --panel:       rgba(10, 18, 32, 0.7);
-        --border:      rgba(56, 189, 248, 0.08);
-        --brutal-brd:  #070c16;
+        --bg:          #060913;
+        --bg-card:     rgba(13, 20, 36, 0.65);
+        --panel:       rgba(10, 16, 30, 0.75);
+        --border:      rgba(56, 189, 248, 0.12);
+        --border-glow: rgba(56, 189, 248, 0.28);
+        --brutal-brd:  #0a1120;
         --txt:         #ffffff;
         --muted:       #94a3b8;
         --blue:        #38bdf8;
+        --blue-glow:   rgba(56, 189, 248, 0.4);
         --green:       #34d399;
+        --green-glow:  rgba(52, 211, 153, 0.4);
         --red:         #f87171;
+        --red-glow:    rgba(248, 113, 113, 0.4);
         --amber:       #fbbf24;
+        --amber-glow:  rgba(251, 191, 36, 0.4);
         --purple:      #a78bfa;
         --pink:        #f472b6;
         --teal:        #2dd4bf;
         --r:           16px;
     }
 
-    html { background: #050811; }
+    /* ── 3D Element Styling & Hologram HUD ── */
+    .holo-3d-box {
+        flex: 1;
+        min-height: 0;
+        position: relative;
+        overflow: hidden;
+        border-radius: 12px;
+        background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.15) 0%, rgba(6, 11, 24, 0.8) 100%);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        box-shadow: inset 0 0 25px rgba(56, 189, 248, 0.12), 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .holo-hud-top {
+        position: absolute;
+        top: 8px; left: 10px; right: 10px;
+        display: flex; justify-content: space-between; align-items: center;
+        pointer-events: none; z-index: 10;
+    }
+    .holo-badge {
+        font-size: 8.5px; font-weight: 800; letter-spacing: 1px;
+        color: #38bdf8; background: rgba(56, 189, 248, 0.14);
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        padding: 2px 7px; border-radius: 4px;
+        text-transform: uppercase; display: flex; align-items: center; gap: 5px;
+    }
+    .holo-badge-live {
+        font-size: 8px; font-weight: 800; color: #34d399;
+        background: rgba(16, 185, 129, 0.14);
+        border: 1px solid rgba(16, 185, 129, 0.35);
+        padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;
+    }
+    .holo-hud-bot {
+        position: absolute;
+        bottom: 8px; left: 10px; right: 10px;
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 9px; color: #94a3b8; font-weight: 700;
+        pointer-events: none; z-index: 10;
+        background: rgba(6, 10, 20, 0.65);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        padding: 3px 8px; border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    html { background: #060913; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
         background: var(--bg);
-        background-image: radial-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-        background-size: 28px 28px;
-        font-family: 'Outfit', sans-serif;
+        background-image: 
+            radial-gradient(rgba(56, 189, 248, 0.035) 1px, transparent 1px),
+            linear-gradient(180deg, #070c1a 0%, #050811 100%);
+        background-size: 32px 32px, 100% 100%;
+        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         color: var(--txt);
         height: 100vh;
+        width: 100vw;
         overflow: hidden;
         position: relative;
+        -webkit-font-smoothing: antialiased;
     }
 
     body::before {
@@ -51,26 +103,24 @@
         position: fixed;
         inset: 0;
         background:
-            radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
-            radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 40%),
-            radial-gradient(circle at 80% 15%, rgba(16, 185, 129, 0.05) 0%, transparent 35%);
+            radial-gradient(circle at 10% 15%, rgba(37, 99, 235, 0.12) 0%, transparent 45%),
+            radial-gradient(circle at 90% 85%, rgba(139, 92, 246, 0.08) 0%, transparent 45%),
+            radial-gradient(circle at 80% 10%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.4) 0%, transparent 60%);
         z-index: -1;
         pointer-events: none;
     }
 
-    @@keyframes rotateBg {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-       OUTER GRID: HEADER + BODY
-    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ═══════════════════════════════════════════════════════════════════
+       OUTER GRID: FULL SCREEN TV COMMAND DECK
+    ═══════════════════════════════════════════════════════════════════ */
     .tv {
         display: grid;
         grid-template-rows: auto 1fr auto;
         height: 100vh;
-        padding: 14px;
+        width: 100vw;
+        max-width: 100%;
+        padding: 12px 16px;
         gap: 12px;
     }
 
@@ -79,37 +129,37 @@
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: var(--r);
-        backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
-        padding: 8px 20px;
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        padding: 6px 18px;
         overflow: hidden;
         display: flex;
         align-items: center;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.08);
         gap: 16px;
-        height: 48px;
+        height: 46px;
     }
     .marquee-container {
         flex: 1;
         overflow: hidden;
         position: relative;
-        height: 20px;
+        height: 22px;
         display: flex;
         align-items: center;
     }
     .marquee-text {
         white-space: nowrap;
         display: inline-block;
-        animation: scrollMarquee 35s linear infinite;
-        font-size: 15px;
+        animation: scrollMarquee 40s linear infinite;
+        font-size: 14.5px;
         font-weight: 600;
-        color: #ffffff;
-        letter-spacing: 0.5px;
+        color: #f1f5f9;
+        letter-spacing: 0.4px;
         will-change: transform;
     }
     @@keyframes scrollMarquee {
-        0%   { transform: translateX(0%); }
-        100% { transform: translateX(-200%); }
+        0%   { transform: translate3d(0, 0, 0); }
+        100% { transform: translate3d(-200%, 0, 0); }
     }
 
     /* ── Top Global Progress Bar (5 Minutes Slide Countdown) ── */
@@ -317,122 +367,194 @@
         display: flex; align-items: center; gap: 8px;
         font-size: 13px; font-weight: 800;
         text-transform: uppercase; letter-spacing: .8px;
-        color: #e2e8f0; margin-bottom: 14px; flex-shrink: 0;
+        color: #e2e8f0; margin-bottom: 12px; flex-shrink: 0;
     }
-    .sec-hdr i { font-size: 12px; }
+    .sec-hdr i { font-size: 13px; }
 
     /* ──────────────── KPI Cards ──────────────── */
-    .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+    .kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
 
     .kpi {
-        background: rgba(255, 255, 255, 0.02);
-        border: 1px solid rgba(255, 255, 255, 0.04);
-        border-radius: 12px;
-        padding: 12px 6px;
+        position: relative;
+        background: linear-gradient(180deg, rgba(22, 33, 56, 0.55) 0%, rgba(13, 20, 36, 0.75) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 14px;
+        padding: 10px 8px;
         text-align: center;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.03);
-        transition: all 0.3s ease;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        overflow: hidden;
+    }
+    .kpi::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: var(--kpi-accent, var(--blue));
+        box-shadow: 0 0 12px var(--kpi-accent, var(--blue));
     }
     .kpi:hover {
-        border-color: rgba(56, 189, 248, 0.35);
-        background: rgba(255, 255, 255, 0.04);
+        border-color: rgba(56, 189, 248, 0.4);
+        background: linear-gradient(180deg, rgba(30, 45, 75, 0.65) 0%, rgba(15, 24, 44, 0.85) 100%);
         transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 16px rgba(56, 189, 248, 0.2);
     }
-    .kpi-lbl { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255, 255, 255, 0.5); margin-bottom: 4px; }
-    .kpi-val { font-size: 28px; font-weight: 800; line-height: 1.1; color: #ffffff; letter-spacing: -0.5px; }
-    .kpi-target { font-size: 9.5px; color: rgba(255, 255, 255, 0.35); margin-top: 4px; font-weight: 600; }
+    .kpi-top {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 2px;
+    }
+    .kpi-ico {
+        font-size: 12px;
+        color: var(--kpi-accent, var(--blue));
+        filter: drop-shadow(0 0 6px var(--kpi-accent, var(--blue)));
+    }
+    .kpi-karyawan    { --kpi-accent: #38bdf8; }
+    .kpi-target-bln  { --kpi-accent: #fbbf24; }
+    .kpi-realisasi   { --kpi-accent: #34d399; }
+    .kpi-hazard-open { --kpi-accent: #f87171; }
+    .kpi-close-rate  { --kpi-accent: #2dd4bf; }
+    .kpi-safe-days   { --kpi-accent: #10b981; }
 
-    /* â”€â”€ Chart containers â”€â”€ */
+    .kpi-lbl {
+        font-size: 10.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #94a3b8;
+    }
+    .kpi-val {
+        font-size: 26px;
+        font-weight: 900;
+        line-height: 1.15;
+        color: #ffffff;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -0.5px;
+        text-shadow: 0 0 14px rgba(255, 255, 255, 0.12);
+    }
+    .kpi-target {
+        font-size: 9.5px;
+        color: #64748b;
+        margin-top: 3px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+
+    /* ── Chart containers ── */
     .chart-wrap { flex: 1; position: relative; min-height: 0; }
 
-    /* â”€â”€ Company panels with tabs â”€â”€ */
+    /* ── Company panels with tabs ── */
     .tab-row {
         display: flex; gap: 6px; margin-bottom: 10px; flex-shrink: 0;
     }
     .tab-btn {
-        flex: 1; padding: 7px 4px;
-        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 8px; font-size: 11px; font-weight: 700;
+        flex: 1; padding: 7px 8px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 9px;
+        font-size: 11px; font-weight: 700;
         color: #94a3b8; cursor: pointer; text-transform: uppercase;
-        letter-spacing: .3px; transition: all .25s ease;
+        letter-spacing: .4px; transition: all .25s ease;
+        display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .tab-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
     }
     .tab-btn.active {
-        background: rgba(59,130,246,0.2);
-        border-color: #3b82f6;
-        color: #93c5fd;
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.3), rgba(56, 189, 248, 0.2));
+        border-color: rgba(56, 189, 248, 0.5);
+        color: #38bdf8;
         font-weight: 800;
+        box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
     }
     .tab-pane { display: none; flex: 1; overflow-y: auto; flex-direction: column; gap: 6px; }
     .tab-pane.active { display: flex; }
     .tab-pane::-webkit-scrollbar { width: 4px; }
-    .tab-pane::-webkit-scrollbar-thumb { background: rgba(255,255,255,.07); border-radius: 2px; }
+    .tab-pane::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 2px; }
 
-    /* â”€â”€ Company Row â”€â”€ */
+    /* ── Company Row ── */
     .co-row {
-        display: flex; align-items: center; gap: 8px;
-        background: var(--bg);
-        border: 1px solid var(--border);
-        border-radius: 9px;
-        padding: 8px 10px; flex-shrink: 0;
+        display: flex; align-items: center; gap: 10px;
+        background: rgba(13, 20, 36, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+        padding: 8px 12px; flex-shrink: 0;
+        transition: all 0.25s ease;
+    }
+    .co-row:hover {
+        background: rgba(18, 29, 52, 0.7);
+        border-color: rgba(56, 189, 248, 0.25);
+        transform: translateX(2px);
     }
     .co-rank {
-        width: 22px; height: 22px; border-radius: 50%;
+        width: 24px; height: 24px; border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        font-size: 10px; font-weight: 900; color: #000; flex-shrink: 0;
+        font-size: 11px; font-weight: 900; color: #fff; flex-shrink: 0;
     }
-    .co-name { font-size: 14px; font-weight: 700; color: #ffffff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .co-bar-wrap { width: 80px; height: 7px; background: rgba(255,255,255,.15); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
-    .co-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
-    .co-pct { font-size: 17px; font-weight: 900; flex-shrink: 0; text-align: right; }
-    .co-detail { font-size: 11px; color: #94a3b8; text-align: right; }
+    .rank-gold   { background: linear-gradient(135deg, #fbbf24, #d97706); box-shadow: 0 0 12px rgba(251, 191, 36, 0.6); color: #000; }
+    .rank-silver { background: linear-gradient(135deg, #e2e8f0, #94a3b8); box-shadow: 0 0 10px rgba(226, 232, 240, 0.4); color: #000; }
+    .rank-bronze { background: linear-gradient(135deg, #f97316, #b45309); box-shadow: 0 0 10px rgba(249, 115, 22, 0.4); color: #fff; }
+    .rank-default{ background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.1); }
 
-    /* â”€â”€ Stagnant pill â”€â”€ */
+    .co-name { font-size: 13.5px; font-weight: 700; color: #ffffff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .co-bar-wrap { width: 90px; height: 6px; background: rgba(255, 255, 255, 0.12); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+    .co-bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+    .co-pct { font-size: 16px; font-weight: 900; flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; }
+    .co-detail { font-size: 10.5px; color: #94a3b8; text-align: right; }
+
+    /* ── Stagnant pill ── */
     .stagnant-tag {
-        font-size: 8px; font-weight: 800; padding: 2px 6px;
-        background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.22);
-        color: #f87171; border-radius: 4px; flex-shrink: 0;
+        font-size: 9px; font-weight: 800; padding: 3px 8px;
+        background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #f87171; border-radius: 6px; flex-shrink: 0;
+        display: inline-flex; align-items: center; gap: 4px;
     }
 
-    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-       RIGHT COLUMN &mdash; SAFEFEED GRID
-    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ═══════════════════════════════════════════════════════════════════
+       RIGHT COLUMN — SAFEFEED GRID
+    ═══════════════════════════════════════════════════════════════════ */
     .right-col { display: grid; grid-template-rows: 1.55fr 1fr; gap: 12px; overflow: hidden; }
 
-    .feed-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-shrink: 0; }
-    .feed-title-txt { font-size: 15px; font-weight: 700; color: #ffffff; display: flex; align-items: center; gap: 8px; }
+    .feed-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-shrink: 0; }
+    .feed-title-txt { font-size: 15px; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 8px; }
 
     .feed-grid {
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
         gap: 10px;
         align-content: start;
         padding-right: 2px;
     }
     .feed-grid::-webkit-scrollbar { width: 4px; }
-    .feed-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,.07); border-radius: 2px; }
+    .feed-grid::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: 2px; }
 
     /* Feed Card */
     .fcard {
-        background: rgba(255, 255, 255, 0.015);
-        border: 1px solid rgba(255, 255, 255, 0.04);
-        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(16, 25, 46, 0.7) 0%, rgba(10, 16, 30, 0.85) 100%);
+        border: 1px solid rgba(56, 189, 248, 0.12);
+        border-radius: 14px;
         overflow: hidden;
         display: flex; flex-direction: column;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.25);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
     }
     .fcard:hover {
-        transform: translateY(-4px) scale(1.01);
-        border-color: rgba(56, 189, 248, 0.25);
-        background: rgba(255, 255, 255, 0.03);
-        box-shadow: 0 12px 28px rgba(0,0,0,0.4), 0 0 12px rgba(56, 189, 248, 0.1);
+        transform: translateY(-3px) scale(1.015);
+        border-color: rgba(56, 189, 248, 0.4);
+        background: linear-gradient(180deg, rgba(22, 34, 62, 0.8) 0%, rgba(13, 22, 40, 0.9) 100%);
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.2);
     }
     .fcard.is-new {
         animation: cardIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -440,10 +562,10 @@
     @@keyframes cardIn {
         from { 
             opacity: 0; 
-            transform: translateY(24px) scale(0.96); 
+            transform: translateY(20px) scale(0.96); 
             filter: blur(4px);
-            border-color: rgba(56, 189, 248, 0.6);
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+            border-color: rgba(56, 189, 248, 0.8);
+            box-shadow: 0 0 24px rgba(56, 189, 248, 0.35);
         }
         to { 
             opacity: 1; 
@@ -451,42 +573,39 @@
             filter: blur(0);
         }
     }
-    .fcard-img { width: 100%; height: 148px; object-fit: cover; display: block; background: #0f172a; }
-    .fcard-noimg { width: 100%; height: 148px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.015); color: rgba(255,255,255,.1); font-size: 28px; }
-    .fcard-body { padding: 9px 11px 11px; display: flex; flex-direction: column; gap: 6px; }
-    .fcard-user { display: flex; align-items: center; gap: 7px; }
-    .fcard-avatar { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(56,189,248,.35); flex-shrink: 0; }
-    .fcard-uname { font-size: 13px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .fcard-uloc  { font-size: 10px; color: #a8bbd4; }
-    .fcard-badges { display: flex; gap: 4px; flex-wrap: wrap; }
-    .bgt { padding: 2px 5px; border-radius: 4px; font-size: 8px; font-weight: 800; text-transform: uppercase; }
-    .bgt-type   { background: rgba(56,189,248,.1);   color: #38bdf8; }
-    .bgt-closed { background: rgba(16,185,129,.13); color: #34d399; border: 1px solid rgba(16,185,129,.2); }
-    .bgt-open   { background: rgba(239,68,68,.13);  color: #f87171; border: 1px solid rgba(239,68,68,.2); }
-    .bgt-progres{ background: rgba(245,158,11,.13); color: #fbbf24; border: 1px solid rgba(245,158,11,.2); }
-    .fcard-ttl  { font-size: 12px; font-weight: 700; color: #ffffff; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .fcard-img { width: 100%; height: 144px; object-fit: cover; display: block; background: #0b1220; }
+    .fcard-noimg { width: 100%; height: 144px; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.02); color: rgba(255, 255, 255, 0.2); font-size: 32px; }
+    .fcard-body { padding: 9px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+    .fcard-user { display: flex; align-items: center; gap: 8px; }
+    .fcard-avatar { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid rgba(56, 189, 248, 0.4); flex-shrink: 0; }
+    .fcard-uname { font-size: 13px; font-weight: 800; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fcard-uloc  { font-size: 10.5px; color: #94a3b8; }
+    .fcard-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+    .bgt { padding: 3px 7px; border-radius: 5px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; }
+    .bgt-type   { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
+    .bgt-closed { background: rgba(16, 185, 129, 0.14); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); box-shadow: 0 0 8px rgba(16, 185, 129, 0.15); }
+    .bgt-open   { background: rgba(239, 68, 68, 0.14);  color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); box-shadow: 0 0 8px rgba(239, 68, 68, 0.15); }
+    .bgt-progres{ background: rgba(245, 158, 11, 0.14); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); box-shadow: 0 0 8px rgba(245, 158, 11, 0.15); }
+    .fcard-ttl  { font-size: 12px; font-weight: 700; color: #f8fafc; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
     /* Skeleton */
-    .skel { background: rgba(255,255,255,.02); border: 1px solid rgba(255,255,255,.04); border-radius: 11px; height: 210px; position: relative; overflow: hidden; }
-    .skel::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.04), transparent); animation: shimmer 1.6s infinite; }
+    .skel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 12px; height: 210px; position: relative; overflow: hidden; }
+    .skel::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.04), transparent); animation: shimmer 1.6s infinite; }
     @@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 
-    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-       NOTIFICATION POPUP
-    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    /* ═══════════════════════════════════════════════════════════════════
        PREMIUM NOTIFICATION CARD
-    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    ═══════════════════════════════════════════════════════════════════ */
     .notif-card {
         position: fixed;
         bottom: 30px;
         right: 30px;
         width: 440px;
         background: var(--bg-card);
-        border: 1px solid rgba(59,130,246,0.3);
+        border: 1px solid rgba(59, 130, 246, 0.4);
         border-radius: 16px;
         z-index: 10000;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.2);
         overflow: hidden;
         display: flex;
         flex-direction: column;
@@ -504,8 +623,8 @@
         align-items: center;
         justify-content: space-between;
         padding: 10px 16px;
-        background: rgba(255, 255, 255, 0.02);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
     .notif-card-body {
         display: grid;
@@ -553,18 +672,18 @@
 
     /* ── Initials Avatar ── */
     .fcard-avatar-initials {
-        width: 26px;
-        height: 26px;
+        width: 28px;
+        height: 28px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 10px;
+        font-size: 10.5px;
         font-weight: 800;
         color: #fff;
         flex-shrink: 0;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.4);
-        box-shadow: inset 0 0 4px rgba(255,255,255,0.25);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+        box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.25);
     }
 
     /* Screen flash */
@@ -574,22 +693,47 @@
 
     /* ── Update overlay ── */
     .update-toast {
-        position: fixed; top: 24px; right: 24px;
-        background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.3);
-        border-radius: 10px; padding: 10px 16px;
+        position: fixed; top: 20px; right: 24px;
+        background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35);
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border-radius: 10px; padding: 8px 16px;
         display: flex; align-items: center; gap: 8px;
         font-size: 12px; font-weight: 700; color: #34d399;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 16px rgba(16, 185, 129, 0.2);
         z-index: 9000; opacity: 0; transform: translateY(-8px);
         transition: all .35s ease;
         pointer-events: none;
     }
     .update-toast.show { opacity: 1; transform: translateY(0); }
 
-    /* Audio unlock badge pulse anim */
-    @@keyframes pulseAlert {
-        0% { transform: scale(1); box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35); }
-        50% { transform: scale(1.04); box-shadow: 0 8px 36px rgba(239, 68, 68, 0.6); }
-        100% { transform: scale(1); box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35); }
+    /* ── Sleek Audio Unlock Pill ── */
+    .audio-unlock-pill {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        z-index: 10000;
+        display: none;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        border-radius: 30px;
+        padding: 8px 16px;
+        cursor: pointer;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.25);
+        animation: pulseAudioBadge 3s infinite ease-in-out;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        align-items: center;
+        gap: 10px;
+    }
+    .audio-unlock-pill:hover {
+        transform: translateY(-2px) scale(1.02);
+        border-color: #38bdf8;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.4);
+    }
+    @@keyframes pulseAudioBadge {
+        0%, 100% { box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6), 0 0 16px rgba(56, 189, 248, 0.25); border-color: rgba(56, 189, 248, 0.4); }
+        50%      { box-shadow: 0 14px 36px rgba(0, 0, 0, 0.7), 0 0 28px rgba(56, 189, 248, 0.55); border-color: rgba(56, 189, 248, 0.8); }
     }
     </style>
 </head>
@@ -604,15 +748,16 @@
     <i class="bi bi-arrow-clockwise"></i> <span id="updateToastMsg">Data diperbarui</span>
 </div>
 
-<!-- Floating Audio Warning Badge -->
-<div id="audioUnlockBadge" style="position: fixed; bottom: 24px; left: 24px; z-index: 10000; display: none; background: rgba(239, 68, 68, 0.95); color: #fff; padding: 14px 20px; border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; border: 1px solid rgba(239, 68, 68, 0.55); flex-direction: column; align-items: flex-start; gap: 6px; font-family: 'Outfit', sans-serif; backdrop-filter: blur(12px); box-shadow: 0 12px 30px rgba(239, 68, 68, 0.4); animation: pulseAlert 2s infinite; transition: all 0.3s ease;">
-    <div style="display: flex; align-items: center; gap: 8px;">
-        <i class="bi bi-volume-mute-fill" style="font-size: 18px;"></i>
-        <span>Audio Terblokir Browser! Klik di sini untuk mengaktifkan suara display</span>
+<!-- Floating Audio Control Pill -->
+<div id="audioUnlockBadge" class="audio-unlock-pill">
+    <i class="bi bi-volume-mute-fill" style="font-size: 16px; color: #38bdf8;"></i>
+    <div style="display: flex; flex-direction: column; line-height: 1.2;">
+        <span style="font-size: 12px; font-weight: 800; color: #ffffff;">Aktifkan Suara Display</span>
+        <span style="font-size: 9.5px; color: #94a3b8;">Klik untuk suara notifikasi K3 otomatis</span>
     </div>
-    <div style="font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.85); margin-left: 26px;">
-        Tips TV: Izinkan suara di browser (chrome://settings/content/sound) agar otomatis menyala tanpa klik setelah restart TV.
-    </div>
+    <span style="font-size: 10px; font-weight: 800; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 3px 8px; border-radius: 12px;">
+        <i class="bi bi-volume-up-fill"></i> NYALAKAN
+    </span>
 </div>
 
 <div class="tv">
@@ -670,33 +815,55 @@
         <div class="left-col">
 
             <!-- KPI Row -->
-            <div class="panel" style="padding: 12px 14px;">
+            <div class="panel" style="padding: 10px 12px;">
                 <div class="kpi-row">
-                    <div class="kpi">
-                        <div class="kpi-lbl">Karyawan</div>
+                    <div class="kpi kpi-karyawan">
+                        <div class="kpi-top">
+                            <i class="bi bi-people-fill kpi-ico"></i>
+                            <span class="kpi-lbl">Karyawan</span>
+                        </div>
                         <div class="kpi-val" id="kv-kar" style="color:var(--blue)">-</div>
+                        <div class="kpi-target">Total Pekerja</div>
                     </div>
-                    <div class="kpi">
-                        <div class="kpi-lbl">Target Bulan</div>
+                    <div class="kpi kpi-target-bln">
+                        <div class="kpi-top">
+                            <i class="bi bi-bullseye kpi-ico"></i>
+                            <span class="kpi-lbl">Target Bulan</span>
+                        </div>
                         <div class="kpi-val" id="kv-tgt" style="color:var(--amber)">-</div>
+                        <div class="kpi-target">Target Laporan</div>
                     </div>
-                    <div class="kpi">
-                        <div class="kpi-lbl">Realisasi</div>
+                    <div class="kpi kpi-realisasi">
+                        <div class="kpi-top">
+                            <i class="bi bi-check2-circle kpi-ico"></i>
+                            <span class="kpi-lbl">Realisasi</span>
+                        </div>
                         <div class="kpi-val" id="kv-real" style="color:var(--green)">-</div>
+                        <div class="kpi-target" id="kv-real-sub">Total Terkumpul</div>
                     </div>
-                    <div class="kpi">
-                        <div class="kpi-lbl">Hazard Open</div>
+                    <div class="kpi kpi-hazard-open">
+                        <div class="kpi-top">
+                            <i class="bi bi-exclamation-triangle-fill kpi-ico"></i>
+                            <span class="kpi-lbl">Hazard Open</span>
+                        </div>
                         <div class="kpi-val" id="kv-open" style="color:var(--red)">-</div>
+                        <div class="kpi-target">Temuan Open</div>
                     </div>
-                    <div class="kpi">
-                        <div class="kpi-lbl">Close Rate</div>
+                    <div class="kpi kpi-close-rate">
+                        <div class="kpi-top">
+                            <i class="bi bi-shield-check kpi-ico"></i>
+                            <span class="kpi-lbl">Close Rate</span>
+                        </div>
                         <div class="kpi-val" id="kv-close" style="color:var(--teal)">-</div>
-                        <div class="kpi-target">% closed</div>
+                        <div class="kpi-target">% Selesai</div>
                     </div>
-                    <div class="kpi">
-                        <div class="kpi-lbl">Hari Kerja Aman</div>
+                    <div class="kpi kpi-safe-days">
+                        <div class="kpi-top">
+                            <i class="bi bi-trophy-fill kpi-ico"></i>
+                            <span class="kpi-lbl">Hari Kerja Aman</span>
+                        </div>
                         <div class="kpi-val" id="kv-safe-days" style="color:#10b981">-</div>
-                        <div class="kpi-target">Zero Incident</div>
+                        <div class="kpi-target" style="color:#34d399;font-weight:700;"><i class="bi bi-shield-fill-check"></i> Zero Incident</div>
                     </div>
                 </div>
             </div>
@@ -707,13 +874,11 @@
                     <span id="rotatingChartTitle">
                         <i class="bi bi-bar-chart-fill" style="color:var(--blue)"></i> Pencapaian Per Kategori SAP
                     </span>
-                    <div style="display:flex; gap:5px; align-items:center;" id="chartIndicatorDots">
-                        <span class="chart-dot active" onclick="setChartIndex(0)"></span>
-                        <span class="chart-dot"        onclick="setChartIndex(1)"></span>
-                        <span class="chart-dot"        onclick="setChartIndex(2)"></span>
-                        <span class="chart-dot"        onclick="setChartIndex(3)"></span>
-                        <span class="chart-dot"        onclick="setChartIndex(4)"></span>
-                        <span class="chart-dot"        onclick="setChartIndex(5)"></span>
+                    <div style="display:flex; gap:6px; align-items:center;" id="chartIndicatorDots">
+                        <span class="chart-dot active" onclick="setChartIndex(0)" title="Pencapaian SAP"></span>
+                        <span class="chart-dot"        onclick="setChartIndex(1)" title="Tingkat Risiko"></span>
+                        <span class="chart-dot"        onclick="setChartIndex(2)" title="Status Temuan"></span>
+                        <span class="chart-dot"        onclick="setChartIndex(3)" title="Laporan Hari Ini"></span>
                     </div>
                 </div>
                 <div class="chart-wrap" style="flex:1; position:relative; min-height:0;">
@@ -721,19 +886,13 @@
                         <canvas id="chartSap"></canvas>
                     </div>
                     <div class="chart-slide" id="slide-chart-2">
-                        <canvas id="chartDonut"></canvas>
-                    </div>
-                    <div class="chart-slide" id="slide-chart-3">
                         <canvas id="chartRisks"></canvas>
                     </div>
-                    <div class="chart-slide" id="slide-chart-4">
+                    <div class="chart-slide" id="slide-chart-3">
                         <canvas id="chartStatus"></canvas>
                     </div>
-                    <div class="chart-slide" id="slide-chart-5">
+                    <div class="chart-slide" id="slide-chart-4">
                         <canvas id="chartToday"></canvas>
-                    </div>
-                    <div class="chart-slide" id="slide-chart-6">
-                        <canvas id="chartMainconCompliance"></canvas>
                     </div>
                 </div>
             </div>
@@ -783,40 +942,40 @@
 
             <!-- Additional Analytics & RHR Locations (approx 39%) -->
             <div class="panel" style="padding:14px 16px; display:grid; grid-template-columns: 1.2fr 1.1fr 1fr; gap:14px; overflow:hidden;">
-                <!-- Section 1: RHR Ratios -->
+                <!-- Section 1: RHR Ratios (Accurate Calculations) -->
                 <div style="display:flex; flex-direction:column; justify-content:space-between;">
-                    <div class="sec-hdr">
-                        <i class="bi bi-shield-slash-fill" style="color:var(--red)"></i> <span style="color:#e2e8f0;">Indikator Resiko &amp; Kepatuhan (RHR)</span>
+                    <div class="sec-hdr" style="margin-bottom:8px;">
+                        <i class="bi bi-shield-check" style="color:var(--green)"></i> <span style="color:#e2e8f0;">Indikator Risiko &amp; Kepatuhan</span>
                     </div>
                     <div class="d-flex flex-column gap-2 justify-content-center" style="flex:1;">
                         <!-- RRI -->
                         <div>
-                            <div class="d-flex justify-content-between mb-1" style="font-size:13px;">
-                                <span style="font-weight:700; color:#ffffff; font-size:13px;">Risk Reduction Index (RRI)</span>
+                            <div class="d-flex justify-content-between mb-1" style="font-size:12px;">
+                                <span style="font-weight:700; color:#ffffff;">Risk Reduction Index (RRI)</span>
                                 <span id="lbl-rri" style="font-weight:900; color:var(--green)">0%</span>
                             </div>
-                            <div style="height:10px; background:rgba(255,255,255,0.15); border-radius:5px; overflow:hidden;">
-                                <div id="bar-rri" style="height:100%; border-radius:5px; width:0%; background:linear-gradient(90deg, var(--red), var(--green)); transition: width 1s ease;"></div>
+                            <div style="height:8px; background:rgba(255,255,255,0.12); border-radius:4px; overflow:hidden;">
+                                <div id="bar-rri" style="height:100%; border-radius:4px; width:0%; background:linear-gradient(90deg, #f59e0b, #10b981); transition: width 0.8s ease;"></div>
                             </div>
                         </div>
-                        <!-- Compliance Risk -->
+                        <!-- High Risk Resolution -->
                         <div>
-                            <div class="d-flex justify-content-between mb-1" style="font-size:13px;">
-                                <span style="font-weight:700; color:#e2e8f0;">Kepatuhan Resiko Tinggi</span>
+                            <div class="d-flex justify-content-between mb-1" style="font-size:12px;">
+                                <span style="font-weight:700; color:#e2e8f0;">Resolusi Risiko Kritis &amp; Tinggi</span>
                                 <span id="lbl-comp-risk" style="font-weight:900; color:var(--blue)">0%</span>
                             </div>
-                            <div style="height:10px; background:rgba(255,255,255,0.15); border-radius:5px; overflow:hidden;">
-                                <div id="bar-comp-risk" style="height:100%; border-radius:5px; width:0%; background:linear-gradient(90deg, var(--amber), var(--blue)); transition: width 1s ease;"></div>
+                            <div style="height:8px; background:rgba(255,255,255,0.12); border-radius:4px; overflow:hidden;">
+                                <div id="bar-comp-risk" style="height:100%; border-radius:4px; width:0%; background:linear-gradient(90deg, #38bdf8, #818cf8); transition: width 0.8s ease;"></div>
                             </div>
                         </div>
                         <!-- Weekly Pct -->
                         <div>
-                            <div class="d-flex justify-content-between mb-1" style="font-size:13px;">
-                                <span style="font-weight:700; color:#e2e8f0;">Realisasi Target Mingguan</span>
+                            <div class="d-flex justify-content-between mb-1" style="font-size:12px;">
+                                <span style="font-weight:700; color:#e2e8f0;">Target Mingguan Berjalan</span>
                                 <span id="lbl-weekly-pct" style="font-weight:900; color:var(--purple)">0%</span>
                             </div>
-                            <div style="height:10px; background:rgba(255,255,255,0.15); border-radius:5px; overflow:hidden;">
-                                <div id="bar-weekly-pct" style="height:100%; border-radius:5px; width:0%; background:linear-gradient(90deg, var(--blue), var(--purple)); transition: width 1s ease;"></div>
+                            <div style="height:8px; background:rgba(255,255,255,0.12); border-radius:4px; overflow:hidden;">
+                                <div id="bar-weekly-pct" style="height:100%; border-radius:4px; width:0%; background:linear-gradient(90deg, #818cf8, #c084fc); transition: width 0.8s ease;"></div>
                             </div>
                         </div>
                     </div>
@@ -824,7 +983,7 @@
 
                 <!-- Section 2: Top Locations -->
                 <div style="display:flex; flex-direction:column;">
-                    <div class="sec-hdr">
+                    <div class="sec-hdr" style="margin-bottom:8px;">
                         <i class="bi bi-geo-alt-fill" style="color:var(--amber)"></i> <span style="color:#e2e8f0;">Top Area Temuan Terbanyak</span>
                     </div>
                     <div id="location-list" class="d-flex flex-column gap-2 justify-content-center" style="flex:1;">
@@ -832,13 +991,21 @@
                     </div>
                 </div>
 
-                <!-- Section 3: Radar/Polar Area Visualizer -->
+                <!-- Section 3: Live 3D Safety Hologram Core -->
                 <div style="display:flex; flex-direction:column;">
-                    <div class="sec-hdr">
-                        <i class="bi bi-pie-chart-fill" style="color:var(--pink)"></i> <span style="color:#e2e8f0;">Visualisasi Rasio Area</span>
+                    <div class="sec-hdr" style="margin-bottom:8px;">
+                        <i class="bi bi-shield-shaded" style="color:var(--teal)"></i> <span style="color:#e2e8f0;">3D Site Safety Core</span>
                     </div>
-                    <div class="chart-wrap" style="flex:1; min-height:0;">
-                        <canvas id="chartLocations"></canvas>
+                    <div class="holo-3d-box" id="threeDContainer">
+                        <div class="holo-hud-top">
+                            <span class="holo-badge"><i class="bi bi-broadcast"></i> TELEMETRY 3D</span>
+                            <span class="holo-badge-live"><i class="bi bi-circle-fill" style="font-size:6px;"></i> ONLINE</span>
+                        </div>
+                        <div id="threeDCoreCanvas" style="width: 100%; height: 100%; position: absolute; inset: 0;"></div>
+                        <div class="holo-hud-bot">
+                            <span><i class="bi bi-geo-alt" style="color:var(--blue)"></i> SANGATTA SITE</span>
+                            <span style="color:#34d399; font-weight:800;"><i class="bi bi-shield-check"></i> ZERO INCIDENT</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1047,7 +1214,7 @@ Chart.defaults.font.size = 11;
 const TICK = '#cbd5e1';
 const GRID = 'rgba(255,255,255,0.12)';
 
-let cSap = null, cDonut = null, cLoc = null, cRisks = null, cStatus = null, cToday = null, cMainconCompliance = null;
+let cSap = null, cRisks = null, cStatus = null, cToday = null;
 
 function buildCharts() {
     /* SAP Category Horizontal Bar */
@@ -1108,77 +1275,6 @@ function buildCharts() {
                 y: {
                     ticks: { color: '#e2e8f0', font: { weight:'bold', size: 11 } },
                     grid:  { display: false }
-                }
-            }
-        }
-    });
-
-    /* Donut chart */
-    const ctx2 = document.getElementById('chartDonut').getContext('2d');
-    cDonut = new Chart(ctx2, {
-        type: 'doughnut',
-        data: {
-            labels: ['Hazard', 'Inspeksi', 'Safety Talk', 'Observasi', 'Coaching', 'P5M'],
-            datasets: [{
-                data: [0,0,0,0,0,0],
-                backgroundColor: ['#f87171','#60a5fa','#a78bfa','#2dd4bf','#fbbf24','#34d399'],
-                borderWidth: 2, borderColor: '#050810',
-                hoverOffset: 6
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: { color: '#e2e8f0', font: { weight:'bold', size: 11 }, boxWidth: 10, padding: 10 }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(5,8,18,.95)',
-                    borderColor: 'rgba(56,189,248,.3)', borderWidth: 1,
-                    callbacks: {
-                        label: ctx => {
-                            const total = ctx.dataset.data.reduce((a,b) => a+b, 0);
-                            const pct = total > 0 ? Math.round(ctx.raw / total * 100) : 0;
-                            return ` ${ctx.raw} laporan (${pct}%)`;
-                        }
-                    }
-                }
-            },
-            cutout: '65%'
-        }
-    });
-
-    /* Polar area locations chart */
-    const ctx3 = document.getElementById('chartLocations').getContext('2d');
-    cLoc = new Chart(ctx3, {
-        type: 'polarArea',
-        data: {
-            labels: [],
-            datasets: [{
-                data: [],
-                backgroundColor: [
-                    'rgba(245, 158, 11, 0.75)', // amber
-                    'rgba(56, 189, 248, 0.75)', // blue
-                    'rgba(16, 185, 129, 0.75)', // green
-                    'rgba(168, 85, 247, 0.75)', // purple
-                    'rgba(236, 72, 153, 0.75)'  // pink
-                ],
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.08)'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                r: {
-                    ticks: { display: false, color: '#cbd5e1' },
-                    grid: { color: 'rgba(255,255,255,0.15)' },
-                    angleLines: { color: 'rgba(255,255,255,0.15)' }
                 }
             }
         }
@@ -1345,71 +1441,148 @@ function buildCharts() {
             }
         }
     });
+}
 
-    /* Maincon Subcon Active vs Inactive Percentages Stacked/Grouped Bar Chart */
-    const ctxMainconComp = document.getElementById('chartMainconCompliance').getContext('2d');
-    cMainconCompliance = new Chart(ctxMainconComp, {
-        type: 'bar',
-        data: {
-            labels: ['UDU', 'KPP', 'MGE'],
-            datasets: [
-                {
-                    label: 'Aktif',
-                    data: [0, 0, 0],
-                    backgroundColor: 'rgba(16, 185, 129, 0.85)',
-                    borderColor: '#10b981',
-                    borderWidth: 1.5,
-                    borderRadius: 4
-                },
-                {
-                    label: 'Belum Bergerak',
-                    data: [0, 0, 0],
-                    backgroundColor: 'rgba(239, 68, 68, 0.85)',
-                    borderColor: '#ef4444',
-                    borderWidth: 1.5,
-                    borderRadius: 4
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        color: '#cbd5e1',
-                        font: { weight: 'bold' }
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(5,8,18,.95)',
-                    borderColor: 'rgba(56,189,248,.3)',
-                    borderWidth: 1,
-                    callbacks: {
-                        label: function(context) {
-                            return ' ' + context.dataset.label + ': ' + context.raw + '%';
-                        }
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    ticks: { color: '#cbd5e1', font: { weight: 'bold', size: 12 } },
-                    grid: { display: false }
-                },
-                y: {
-                    min: 0,
-                    max: 100,
-                    ticks: {
-                        color: '#cbd5e1',
-                        font: { weight: 'bold', size: 11 },
-                        callback: function(value) { return value + '%'; }
-                    },
-                    grid: { color: 'rgba(255,255,255,0.15)' }
-                }
-            }
+/* ══════════════════════════════════════════════════════════════════════════
+   LIVE 3D SITE SAFETY HOLOGRAPHIC CORE (Three.js WebGL Engine)
+   ══════════════════════════════════════════════════════════════════════════ */
+function init3dSafetyCore() {
+    const container = document.getElementById('threeDCoreCanvas');
+    if (!container || !window.THREE) return;
+    
+    container.innerHTML = '';
+    const width = container.clientWidth || 240;
+    const height = container.clientHeight || 150;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.z = 4.2;
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const coreGroup = new THREE.Group();
+    scene.add(coreGroup);
+
+    // 1. Holographic Wireframe Globe (Safety Coverage Sphere)
+    const sphereGeo = new THREE.IcosahedronGeometry(1.22, 2);
+    const wireMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.55
+    });
+    const wireSphere = new THREE.Mesh(sphereGeo, wireMat);
+    coreGroup.add(wireSphere);
+
+    // 2. Inner Glowing Core (Zero Incident Telemetry Heart)
+    const coreGeo = new THREE.OctahedronGeometry(0.65, 0);
+    const coreMat = new THREE.MeshBasicMaterial({
+        color: 0x10b981,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.85
+    });
+    const innerCore = new THREE.Mesh(coreGeo, coreMat);
+    coreGroup.add(innerCore);
+
+    // 3. Cyber Telemetry Rings
+    const ring1Geo = new THREE.TorusGeometry(1.65, 0.02, 8, 64);
+    const ring1Mat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.8
+    });
+    const ring1 = new THREE.Mesh(ring1Geo, ring1Mat);
+    ring1.rotation.x = Math.PI / 3;
+    coreGroup.add(ring1);
+
+    const ring2Geo = new THREE.TorusGeometry(1.85, 0.015, 8, 64);
+    const ring2Mat = new THREE.MeshBasicMaterial({
+        color: 0x10b981,
+        transparent: true,
+        opacity: 0.65
+    });
+    const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+    ring2.rotation.y = Math.PI / 4;
+    ring2.rotation.x = Math.PI / 6;
+    coreGroup.add(ring2);
+
+    // 4. Orbiting Sensor Particles (Safety Monitoring Points)
+    const particleCount = 65;
+    const posArray = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount * 3; i += 3) {
+        const u = Math.random();
+        const v = Math.random();
+        const theta = u * 2.0 * Math.PI;
+        const phi = Math.acos(2.0 * v - 1.0);
+        const r = 1.35 + Math.random() * 0.7;
+        posArray[i] = r * Math.sin(phi) * Math.cos(theta);
+        posArray[i + 1] = r * Math.sin(phi) * Math.sin(theta);
+        posArray[i + 2] = r * Math.cos(phi);
+    }
+    const particleGeo = new THREE.BufferGeometry();
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    const particleMat = new THREE.PointsMaterial({
+        size: 0.045,
+        color: 0x67e8f9,
+        transparent: true,
+        opacity: 0.85
+    });
+    const particleSystem = new THREE.Points(particleGeo, particleMat);
+    coreGroup.add(particleSystem);
+
+    // Interactive mouse parallax
+    let mouseX = 0, mouseY = 0;
+    const parentBox = document.getElementById('threeDContainer');
+    if (parentBox) {
+        parentBox.addEventListener('mousemove', (e) => {
+            const rect = parentBox.getBoundingClientRect();
+            mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 0.8;
+            mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 0.8;
+        });
+        parentBox.addEventListener('mouseleave', () => {
+            mouseX = 0;
+            mouseY = 0;
+        });
+    }
+
+    let clock = new THREE.Clock();
+    function animate() {
+        requestAnimationFrame(animate);
+        const elapsed = clock.getElapsedTime();
+
+        wireSphere.rotation.y = elapsed * 0.25;
+        wireSphere.rotation.x = elapsed * 0.12;
+
+        innerCore.rotation.y = -elapsed * 0.45;
+        innerCore.rotation.z = elapsed * 0.3;
+
+        ring1.rotation.z = elapsed * 0.35;
+        ring2.rotation.z = -elapsed * 0.28;
+        particleSystem.rotation.y = elapsed * 0.15;
+
+        // Pulse scale
+        const pulse = 1 + Math.sin(elapsed * 2.5) * 0.08;
+        innerCore.scale.set(pulse, pulse, pulse);
+
+        coreGroup.rotation.y += (mouseX - coreGroup.rotation.y) * 0.05;
+        coreGroup.rotation.x += (-mouseY - coreGroup.rotation.x) * 0.05;
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        if (!container) return;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        if (w > 0 && h > 0) {
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
         }
     });
 }
@@ -1427,37 +1600,50 @@ function switchTab(id, btn) {
     if (index !== -1) currentRankTab = index;
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-   RENDER COMPANY ROW
-â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-const RANK_COLORS = ['#fbbf24','#d1d5db','#d97706','#6b7280','#6b7280'];
+function fmtNum(n) {
+    if (n === null || n === undefined || isNaN(n)) return '-';
+    return Number(n).toLocaleString('id-ID');
+}
 
+/* ──────────────────────────────────────────────────────────────────────────
+   RENDER COMPANY ROW
+   ────────────────────────────────────────────────────────────────────────── */
 function companyRowHtml(c, idx, mode) {
     const pct    = c.percentage ?? c.Percentage ?? 0;
-    const real   = c.realization ?? c.Realization ?? 0;
-    const tgt    = c.target ?? c.Target ?? 0;
+    const real   = fmtNum(c.realization ?? c.Realization ?? 0);
+    const tgt    = fmtNum(c.target ?? c.Target ?? 0);
     const name   = c.companyName ?? c.CompanyName ?? '-';
     const fill   = Math.min(pct, 100);
     const color  = pct >= 100 ? '#10b981' : pct >= 50 ? '#38bdf8' : pct > 0 ? '#f59e0b' : '#ef4444';
-    const rankClr= RANK_COLORS[idx] ?? '#6b7280';
+
+    let rankBadge = '';
+    if (idx === 0) {
+        rankBadge = `<span class="co-rank rank-gold" title="Peringkat 1">🥇</span>`;
+    } else if (idx === 1) {
+        rankBadge = `<span class="co-rank rank-silver" title="Peringkat 2">🥈</span>`;
+    } else if (idx === 2) {
+        rankBadge = `<span class="co-rank rank-bronze" title="Peringkat 3">🥉</span>`;
+    } else {
+        rankBadge = `<span class="co-rank rank-default">${idx + 1}</span>`;
+    }
 
     let extra = '';
     if (mode === 'stagnant') {
-        extra = `<span class="stagnant-tag">Belum ada laporan</span>`;
+        extra = `<span class="stagnant-tag"><i class="bi bi-hourglass-split"></i> Belum ada laporan</span>`;
     }
 
     return `
     <div class="co-row">
-        <span class="co-rank" style="background:${rankClr};">${idx+1}</span>
+        ${rankBadge}
         <div style="flex:1;min-width:0;">
-            <div class="co-name">${name}</div>
+            <div class="co-name" title="${name}">${name}</div>
             <div class="co-bar-wrap">
-                <div class="co-bar-fill" style="width:${fill}%;background:${color};"></div>
+                <div class="co-bar-fill" style="width:${fill}%;background:${color};box-shadow:0 0 8px ${color}80;"></div>
             </div>
         </div>
         ${extra}
-        <div>
-            <div class="co-pct" style="color:${color};">${pct}%</div>
+        <div style="text-align:right;">
+            <div class="co-pct" style="color:${color};text-shadow:0 0 10px ${color}40;">${pct}%</div>
             <div class="co-detail">${real} / ${tgt}</div>
         </div>
     </div>`;
@@ -1484,28 +1670,28 @@ function renderCompanyTabs(data) {
             : '<div style="font-size:11px;color:var(--muted);text-align:center;padding:16px;">Belum ada data.</div>';
 }
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ──────────────────────────────────────────────────────────────────────────
    FETCH PERFORMANCE
-â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+   ────────────────────────────────────────────────────────────────────────── */
 function applyPerformanceData(d) {
     if (!d) return;
 
-    // KPI
+    // KPI with formatted numbers
     const elKar = document.getElementById('kv-kar');
-    if (elKar) elKar.innerText = d.totalKaryawan ?? '-';
+    if (elKar) elKar.innerText = fmtNum(d.totalKaryawan);
     const elTgt = document.getElementById('kv-tgt');
-    if (elTgt) elTgt.innerText = d.monthlyTarget ?? '-';
+    if (elTgt) elTgt.innerText = fmtNum(d.monthlyTarget);
     const elReal = document.getElementById('kv-real');
-    if (elReal) elReal.innerText = d.monthlyRealization ?? '-';
+    if (elReal) elReal.innerText = fmtNum(d.monthlyRealization);
     const elOpen = document.getElementById('kv-open');
-    if (elOpen) elOpen.innerText = d.totalOpenHazards ?? '-';
+    if (elOpen) elOpen.innerText = fmtNum(d.totalOpenHazards);
     const elClose = document.getElementById('kv-close');
     if (elClose) elClose.innerText = (d.complianceClose ?? 0) + '%';
     
     // Zero Incident Safe Days
     const safeDaysEl = document.getElementById('kv-safe-days');
     if (safeDaysEl) {
-        safeDaysEl.innerText = (d.safeDays ?? 0) + ' HARI';
+        safeDaysEl.innerText = fmtNum(d.safeDays ?? 0) + ' HARI';
     }
 
     // Running Text Marquee
@@ -1516,7 +1702,7 @@ function applyPerformanceData(d) {
         }
     }
 
-    // SAP bar chart
+    // SAP bar chart (update without heavy layout freeze)
     if (cSap) {
         cSap.data.datasets[0].data = [
             d.targetHazard    ?? 0,
@@ -1534,20 +1720,7 @@ function applyPerformanceData(d) {
             d.monthCoachings  ?? 0,
             d.monthP5ms       ?? 0
         ];
-        cSap.update('active');
-    }
-
-    // Donut
-    if (cDonut) {
-        cDonut.data.datasets[0].data = [
-            d.monthHazards    ?? 0,
-            d.monthInspections?? 0,
-            d.monthSafetyTalks?? 0,
-            d.monthObs        ?? 0,
-            d.monthCoachings  ?? 0,
-            d.monthP5ms       ?? 0
-        ];
-        cDonut.update('active');
+        cSap.update('none');
     }
 
     // Update RHR indicators
@@ -1597,13 +1770,6 @@ function applyPerformanceData(d) {
         }
     }
 
-    // Update Location Polar Chart
-    if (cLoc) {
-        cLoc.data.labels = locs.map(l => l.locationName);
-        cLoc.data.datasets[0].data = locs.map(l => l.count);
-        cLoc.update('active');
-    }
-
     // Update Risks Chart
     if (cRisks) {
         cRisks.data.datasets[0].data = [
@@ -1612,7 +1778,7 @@ function applyPerformanceData(d) {
             d.riskMedium  ?? 0,
             d.riskLow     ?? 0
         ];
-        cRisks.update('active');
+        cRisks.update('none');
     }
 
     // Update Status Chart
@@ -1629,7 +1795,7 @@ function applyPerformanceData(d) {
             d.totalClosedHazards  ?? 0,
             d.totalClosedActionPlans ?? 0
         ];
-        cStatus.update('active');
+        cStatus.update('none');
     }
 
     // Update Today's Submissions Chart
@@ -1643,17 +1809,7 @@ function applyPerformanceData(d) {
             d.todaySafetyTalks ?? 0,
             d.todayCoachings   ?? 0
         ];
-        cToday.update('active');
-    }
-
-    // Update Maincon Subcon Active vs Inactive Chart
-    if (cMainconCompliance && d.mainconSubconCompliance) {
-        const activePcts = d.mainconSubconCompliance.map(x => x.activePercentage ?? x.ActivePercentage ?? 0);
-        const inactivePcts = d.mainconSubconCompliance.map(x => x.inactivePercentage ?? x.InactivePercentage ?? 0);
-        
-        cMainconCompliance.data.datasets[0].data = activePcts;
-        cMainconCompliance.data.datasets[1].data = inactivePcts;
-        cMainconCompliance.update('active');
+        cToday.update('none');
     }
 
     renderCompanyTabs(d);
@@ -1739,6 +1895,8 @@ function getCardBackupBgAndIcon(type) {
             color: '#818cf8'
         };
     }
+}
+
 const feedImageCache = new Map();
 function preloadBatchImages(items) {
     if (!Array.isArray(items)) return;
@@ -2066,6 +2224,7 @@ function prefetchNextSlide(pageUrl, apiUrl, storageKey) {
 
 // ⚡ Instant Cache Restore on TV Boot (0ms render, zero blank screen)
 buildCharts();
+init3dSafetyCore();
 (function restoreInstantDisplay1Cache() {
     try {
         const cachedPerf = localStorage.getItem('MBS_DISPLAY1_PERF_CACHE');
@@ -2095,18 +2254,16 @@ setInterval(refreshAll, DATA_INTERVAL_S * 1000);
 // Page hard reload: every 24 hours (to prevent memory leaks on TV)
 setTimeout(() => location.reload(), PAGE_RELOAD_MIN * 60 * 1000);
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ──────────────────────────────────────────────────────────────────────────
    AUTO ROTATION LOOPS (TV Display Mode)
-â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+   ────────────────────────────────────────────────────────────────────────── */
 // 1. Chart Slide Rotation (Every 10 seconds)
 let currentChartIdx = 0;
 const chartTitles = [
     '<i class="bi bi-bar-chart-fill" style="color:var(--blue)"></i> Pencapaian Per Kategori SAP &mdash; Bulan Ini',
-    '<i class="bi bi-pie-chart-fill" style="color:var(--purple)"></i> Distribusi Aktivitas Laporan K3',
     '<i class="bi bi-shield-exclamation" style="color:var(--red)"></i> Distribusi Tingkat Risiko Laporan K3',
     '<i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Status Temuan & Action Plan (Open vs Closed)',
-    '<i class="bi bi-calendar-event" style="color:var(--amber)"></i> Laporan K3 Masuk Hari Ini',
-    '<i class="bi bi-diagram-3-fill" style="color:var(--teal)"></i> Keaktifan Subkontraktor MTD Group (% Aktif vs % Belum Bergerak)'
+    '<i class="bi bi-calendar-event" style="color:var(--amber)"></i> Laporan K3 Masuk Hari Ini'
 ];
 
 function setChartIndex(idx) {
@@ -2124,7 +2281,7 @@ function setChartIndex(idx) {
 }
 
 function rotateCharts() {
-    const nextIdx = (currentChartIdx + 1) % 6;
+    const nextIdx = (currentChartIdx + 1) % chartTitles.length;
     setChartIndex(nextIdx);
 }
 setInterval(rotateCharts, 10000);
