@@ -680,7 +680,6 @@ namespace MBS_SAP.Controllers
                 int totalDaysInMonth = DateTime.DaysInMonth(selectedYear, selectedMonth);
                 int onsiteDays = totalDaysInMonth; // default if no roster setting
                 bool hasRoster = false;
-                bool isTugasExempt = false;
 
                 DateTime effectiveEmpStart = (k.TanggalMasuk.HasValue && k.TanggalMasuk.Value > startOfMonth)
                     ? k.TanggalMasuk.Value
@@ -688,31 +687,21 @@ namespace MBS_SAP.Controllers
 
                 if (rostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
                 {
+                    hasRoster = true;
                     int computedOnsite = 0;
-                    bool hasAnyRoster = false;
-                    foreach (var r in empRosters)
+                    for (var cur = effectiveEmpStart.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
                     {
-                        hasAnyRoster = true;
-                        if (r.TipeRoster == "TUGAS")
+                        bool isTugas = empRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                        if (!isTugas)
                         {
-                            var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                            var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                            if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
-                        }
-
-                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
-                        {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            bool isDinas = empRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                            if (isDinas)
+                            {
+                                computedOnsite++;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        onsiteDays = isTugasExempt ? 0 : Math.Min(computedOnsite, totalDaysInMonth);
-                    }
+                    onsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
                 }
                 else if (effectiveEmpStart > startOfMonth)
                 {
@@ -1106,35 +1095,24 @@ namespace MBS_SAP.Controllers
 
                 int onsiteDays = totalDaysInMonth;
                 bool hasRoster = false;
-                bool isTugasExempt = false;
 
                 if (rostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
                 {
+                    hasRoster = true;
                     int computedOnsite = 0;
-                    bool hasAnyRoster = false;
-                    foreach (var r in empRosters)
+                    for (var cur = effectiveEmpStart.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
                     {
-                        hasAnyRoster = true;
-                        if (r.TipeRoster == "TUGAS")
+                        bool isTugas = empRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                        if (!isTugas)
                         {
-                            var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                            var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                            if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
-                        }
-
-                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
-                        {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            bool isDinas = empRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                            if (isDinas)
+                            {
+                                computedOnsite++;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        onsiteDays = isTugasExempt ? 0 : Math.Min(computedOnsite, totalDaysInMonth);
-                    }
+                    onsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
                 }
                 else if (effectiveEmpStart > startOfMonth)
                 {
@@ -2264,35 +2242,24 @@ namespace MBS_SAP.Controllers
 
                 int onsiteDays = totalDaysInMonth;
                 bool hasRoster = false;
-                bool isTugasExempt = false;
 
                 if (rostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
                 {
+                    hasRoster = true;
                     int computedOnsite = 0;
-                    bool hasAnyRoster = false;
-                    foreach (var r in empRosters)
+                    for (var cur = effectiveEmpStart.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
                     {
-                        hasAnyRoster = true;
-                        if (r.TipeRoster == "TUGAS")
+                        bool isTugas = empRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                        if (!isTugas)
                         {
-                            var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                            var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                            if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
-                        }
-
-                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
-                        {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            bool isDinas = empRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                            if (isDinas)
+                            {
+                                computedOnsite++;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        onsiteDays = isTugasExempt ? 0 : computedOnsite;
-                    }
+                    onsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
                 }
                 else if (effectiveEmpStart > startOfMonth)
                 {
@@ -2541,35 +2508,24 @@ namespace MBS_SAP.Controllers
 
                 int onsiteDays = totalDaysInMonthM;
                 bool hasRoster = false;
-                bool isTugasExempt = false;
 
                 if (!string.IsNullOrEmpty(nik) && activeRostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
                 {
+                    hasRoster = true;
                     int computedOnsite = 0;
-                    bool hasAnyRoster = false;
-                    foreach (var r in empRosters)
+                    for (var cur = effectiveEmpStart.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
                     {
-                        hasAnyRoster = true;
-                        if (r.TipeRoster == "TUGAS")
+                        bool isTugas = empRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                        if (!isTugas)
                         {
-                            var ovTStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                            var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                            if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
-                        }
-
-                        var overlapStart = r.AwalDinas > effectiveEmpStart ? r.AwalDinas : effectiveEmpStart;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
-                        {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            bool isDinas = empRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                            if (isDinas)
+                            {
+                                computedOnsite++;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        onsiteDays = isTugasExempt ? 0 : computedOnsite;
-                    }
+                    onsiteDays = Math.Min(computedOnsite, totalDaysInMonthM);
                 }
                 else if (effectiveEmpStart > startOfMonth)
                 {
@@ -3127,7 +3083,7 @@ namespace MBS_SAP.Controllers
                 int totalDaysInMonth = DateTime.DaysInMonth(startOfMonth.Year, startOfMonth.Month);
                 int computedOnsiteDays = totalDaysInMonth;
                 bool hasRoster = false;
-                bool isTugasExempt = false;
+                int tugasDays = 0;
 
                 var rosterHistory = await _context.Rosters
                     .Where(r => r.Nik == userNik)
@@ -3136,34 +3092,25 @@ namespace MBS_SAP.Controllers
 
                 if (rosterHistory != null && rosterHistory.Any())
                 {
+                    hasRoster = true;
                     int computedOnsite = 0;
-                    bool hasAnyRoster = false;
-                    foreach (var r in rosterHistory)
+                    for (var cur = startOfMonth.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
                     {
-                        hasAnyRoster = true;
-                        if (r.TipeRoster == "TUGAS")
+                        bool isTugas = rosterHistory.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                        if (isTugas)
                         {
-                            var overlapStartT = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
-                            var overlapEndT = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                            if (overlapStartT <= overlapEndT)
+                            tugasDays++;
+                        }
+                        else
+                        {
+                            bool isDinas = rosterHistory.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                            if (isDinas)
                             {
-                                isTugasExempt = true;
+                                computedOnsite++;
                             }
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
-                        }
-
-                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
-                        {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        computedOnsiteDays = isTugasExempt ? 0 : computedOnsite;
-                    }
+                    computedOnsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
                 }
                 else if (currentKaryawan != null && currentKaryawan.TanggalMasuk.HasValue && currentKaryawan.TanggalMasuk.Value > startOfMonth)
                 {
@@ -3181,7 +3128,8 @@ namespace MBS_SAP.Controllers
                     return Math.Max(scaled, 1);
                 }
 
-                if (isTugasExempt)
+                bool isFullyTugasExempt = hasRoster && computedOnsiteDays == 0 && tugasDays > 0;
+                if (isFullyTugasExempt)
                 {
                     targetHazardReport = 0;
                     targetInspeksi = 0;
@@ -8369,35 +8317,24 @@ namespace MBS_SAP.Controllers
                 var nik = (emp.NoNik ?? string.Empty).Trim();
                 int onsiteDays = totalDaysInMonthTargetDict;
                 bool hasRoster = false;
-                bool isTugasExempt = false;
 
                 if (!string.IsNullOrEmpty(nik) && allActiveRostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
                 {
+                    hasRoster = true;
                     int computedOnsite = 0;
-                    bool hasAnyRoster = false;
-                    foreach (var r in empRosters)
+                    for (var cur = startOfMonthM.Date; cur <= endOfMonthM.Date; cur = cur.AddDays(1))
                     {
-                        hasAnyRoster = true;
-                        if (r.TipeRoster == "TUGAS")
+                        bool isTugas = empRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                        if (!isTugas)
                         {
-                            var ovTStart = r.AwalDinas > startOfMonthM ? r.AwalDinas : startOfMonthM;
-                            var ovTEnd = r.AkhirDinas < endOfMonthM ? r.AkhirDinas : endOfMonthM;
-                            if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
-                        }
-
-                        var overlapStart = r.AwalDinas > startOfMonthM ? r.AwalDinas : startOfMonthM;
-                        var overlapEnd = r.AkhirDinas < endOfMonthM ? r.AkhirDinas : endOfMonthM;
-                        if (overlapStart <= overlapEnd)
-                        {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            bool isDinas = empRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                            if (isDinas)
+                            {
+                                computedOnsite++;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        onsiteDays = isTugasExempt ? 0 : computedOnsite;
-                    }
+                    onsiteDays = Math.Min(computedOnsite, totalDaysInMonthTargetDict);
                 }
 
                 double ratio = hasRoster ? (double)onsiteDays / totalDaysInMonthTargetDict : 1.0;

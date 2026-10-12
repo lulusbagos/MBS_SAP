@@ -905,156 +905,153 @@ ORDER BY nama_perusahaan";
             var userNik = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrWhiteSpace(userNik))
             {
-                return Unauthorized("NIK tidak ditemukan.");
+                return Unauthorized(new { success = false, message = "Sesi login tidak valid. NIK tidak ditemukan." });
             }
 
-            // Allowed for all companies during testing / usage
-
-            bool isTugas = string.Equals(req?.TipeRoster, "TUGAS", StringComparison.OrdinalIgnoreCase);
-
-            if (isTugas)
+            try
             {
+                bool isTugas = string.Equals(req?.TipeRoster, "TUGAS", StringComparison.OrdinalIgnoreCase);
+
+                if (isTugas)
+                {
+                    if (req == null || 
+                        !DateTime.TryParse(req.AwalDinas, out DateTime awalTugas) ||
+                        !DateTime.TryParse(req.AkhirDinas, out DateTime akhirTugas))
+                    {
+                        return BadRequest(new { success = false, message = "Format tanggal periode tugas tidak valid. Mohon isi tanggal mulai dan selesai tugas." });
+                    }
+
+                    if (awalTugas > akhirTugas)
+                    {
+                        return BadRequest(new { success = false, message = "Tanggal mulai tugas tidak boleh lebih besar dari akhir tugas." });
+                    }
+
+                    Roster? rosterTugasToUpdate = null;
+                    if (req.Id.HasValue && req.Id.Value > 0)
+                    {
+                        rosterTugasToUpdate = await _context.Rosters
+                            .FirstOrDefaultAsync(r => r.Id == req.Id.Value && r.Nik == userNik && r.TipeRoster == "TUGAS");
+                    }
+
+                    if (rosterTugasToUpdate != null)
+                    {
+                        rosterTugasToUpdate.AwalDinas = awalTugas;
+                        rosterTugasToUpdate.AkhirDinas = akhirTugas;
+                        rosterTugasToUpdate.AwalCuti = akhirTugas;
+                        rosterTugasToUpdate.AkhirCuti = akhirTugas;
+                        rosterTugasToUpdate.TipeRoster = "TUGAS";
+                        rosterTugasToUpdate.Keterangan = req.Keterangan;
+                        rosterTugasToUpdate.UpdatedAt = DateTime.Now;
+                        _context.Rosters.Update(rosterTugasToUpdate);
+                    }
+                    else
+                    {
+                        var newRosterTugas = new Roster
+                        {
+                            Nik = userNik,
+                            AwalDinas = awalTugas,
+                            AkhirDinas = akhirTugas,
+                            AwalCuti = akhirTugas,
+                            AkhirCuti = akhirTugas,
+                            TipeRoster = "TUGAS",
+                            Keterangan = req.Keterangan,
+                            CreatedAt = DateTime.Now,
+                            UpdatedAt = DateTime.Now
+                        };
+                        _context.Rosters.Add(newRosterTugas);
+                    }
+
+                    await _context.SaveChangesAsync();
+                    _cache.Remove($"UserDashboardStats_{userNik}");
+                    return Ok(new { success = true, message = "Periode Tugas berhasil disimpan. Anda dibebaskan dari target SAP selama periode ini." });
+                }
+
                 if (req == null || 
-                    !DateTime.TryParse(req.AwalDinas, out DateTime awalTugas) ||
-                    !DateTime.TryParse(req.AkhirDinas, out DateTime akhirTugas))
+                    !DateTime.TryParse(req.AwalDinas, out DateTime awalDinas) ||
+                    !DateTime.TryParse(req.AkhirDinas, out DateTime akhirDinas) ||
+                    !DateTime.TryParse(req.AwalCuti, out DateTime awalCuti) ||
+                    !DateTime.TryParse(req.AkhirCuti, out DateTime akhirCuti))
                 {
-                    return BadRequest("Format tanggal periode tugas tidak valid.");
+                    return BadRequest(new { success = false, message = "Format tanggal dinas atau cuti tidak valid. Mohon lengkapi semua kolom tanggal." });
                 }
 
-                if (awalTugas > akhirTugas)
+                // Validasi urutan tanggal
+                if (awalDinas > akhirDinas)
                 {
-                    return BadRequest("Tanggal mulai tugas tidak boleh lebih besar dari akhir tugas.");
+                    return BadRequest(new { success = false, message = "Tanggal awal dinas tidak boleh lebih besar dari akhir dinas." });
+                }
+                if (akhirDinas >= awalCuti)
+                {
+                    return BadRequest(new { success = false, message = "Tanggal akhir dinas harus sebelum tanggal mulai cuti." });
+                }
+                if (awalCuti > akhirCuti)
+                {
+                    return BadRequest(new { success = false, message = "Tanggal awal cuti tidak boleh lebih besar dari akhir cuti." });
                 }
 
-                Roster? rosterTugasToUpdate = null;
+                int actualOnsite = (akhirDinas - awalDinas).Days + 1;
+                int actualOffsite = (akhirCuti - awalCuti).Days + 1;
+
+                if (actualOnsite < 1 || actualOnsite > 365)
+                {
+                    return BadRequest(new { success = false, message = "Durasi dinas (onsite) harus antara 1 sampai 365 hari." });
+                }
+                if (actualOffsite < 1 || actualOffsite > 180)
+                {
+                    return BadRequest(new { success = false, message = "Durasi cuti (offsite) harus antara 1 sampai 180 hari." });
+                }
+
+                Roster? rosterRegulerToUpdate = null;
                 if (req.Id.HasValue && req.Id.Value > 0)
                 {
-                    rosterTugasToUpdate = await _context.Rosters
-                        .FirstOrDefaultAsync(r => r.Id == req.Id.Value && r.Nik == userNik);
+                    rosterRegulerToUpdate = await _context.Rosters
+                        .FirstOrDefaultAsync(r => r.Id == req.Id.Value && r.Nik == userNik && r.TipeRoster != "TUGAS");
                 }
 
-                if (rosterTugasToUpdate == null)
+                if (rosterRegulerToUpdate == null)
                 {
-                    rosterTugasToUpdate = await _context.Rosters
-                        .Where(r => r.Nik == userNik && r.AkhirCuti >= DateTime.Today)
+                    rosterRegulerToUpdate = await _context.Rosters
+                        .Where(r => r.Nik == userNik && r.TipeRoster != "TUGAS" && r.AkhirCuti >= DateTime.Today)
                         .OrderByDescending(r => r.AkhirCuti)
                         .FirstOrDefaultAsync();
                 }
 
-                if (rosterTugasToUpdate != null)
+                if (rosterRegulerToUpdate != null)
                 {
-                    rosterTugasToUpdate.AwalDinas = awalTugas;
-                    rosterTugasToUpdate.AkhirDinas = akhirTugas;
-                    rosterTugasToUpdate.AwalCuti = akhirTugas;
-                    rosterTugasToUpdate.AkhirCuti = akhirTugas;
-                    rosterTugasToUpdate.TipeRoster = "TUGAS";
-                    rosterTugasToUpdate.Keterangan = req.Keterangan;
-                    rosterTugasToUpdate.UpdatedAt = DateTime.Now;
-                    _context.Rosters.Update(rosterTugasToUpdate);
+                    rosterRegulerToUpdate.AwalDinas = awalDinas;
+                    rosterRegulerToUpdate.AkhirDinas = akhirDinas;
+                    rosterRegulerToUpdate.AwalCuti = awalCuti;
+                    rosterRegulerToUpdate.AkhirCuti = akhirCuti;
+                    rosterRegulerToUpdate.TipeRoster = "REGULER";
+                    rosterRegulerToUpdate.Keterangan = null;
+                    rosterRegulerToUpdate.UpdatedAt = DateTime.Now;
+                    _context.Rosters.Update(rosterRegulerToUpdate);
                 }
                 else
                 {
-                    var newRosterTugas = new Roster
+                    var newRoster = new Roster
                     {
                         Nik = userNik,
-                        AwalDinas = awalTugas,
-                        AkhirDinas = akhirTugas,
-                        AwalCuti = akhirTugas,
-                        AkhirCuti = akhirTugas,
-                        TipeRoster = "TUGAS",
-                        Keterangan = req.Keterangan,
+                        AwalDinas = awalDinas,
+                        AkhirDinas = akhirDinas,
+                        AwalCuti = awalCuti,
+                        AkhirCuti = akhirCuti,
+                        TipeRoster = "REGULER",
+                        Keterangan = null,
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now
                     };
-                    _context.Rosters.Add(newRosterTugas);
+                    _context.Rosters.Add(newRoster);
                 }
 
                 await _context.SaveChangesAsync();
                 _cache.Remove($"UserDashboardStats_{userNik}");
-                return Ok(new { message = "Periode Tugas berhasil disimpan. Anda dibebaskan dari kewajiban target SAP selama periode ini." });
+                return Ok(new { success = true, message = "Roster kerja berhasil disimpan." });
             }
-
-            if (req == null || 
-                !DateTime.TryParse(req.AwalDinas, out DateTime awalDinas) ||
-                !DateTime.TryParse(req.AkhirDinas, out DateTime akhirDinas) ||
-                !DateTime.TryParse(req.AwalCuti, out DateTime awalCuti) ||
-                !DateTime.TryParse(req.AkhirCuti, out DateTime akhirCuti))
+            catch (Exception ex)
             {
-                return BadRequest("Format tanggal tidak valid.");
+                return StatusCode(500, new { success = false, message = $"Gagal menyimpan roster: {ex.Message}" });
             }
-
-            // Validasi urutan tanggal
-            if (awalDinas > akhirDinas)
-            {
-                return BadRequest("Tanggal awal dinas tidak boleh lebih besar dari akhir dinas.");
-            }
-            if (akhirDinas >= awalCuti)
-            {
-                return BadRequest("Tanggal akhir dinas harus lebih kecil dari awal cuti.");
-            }
-            if (awalCuti > akhirCuti)
-            {
-                return BadRequest("Tanggal awal cuti tidak boleh lebih besar dari akhir cuti.");
-            }
-
-            int actualOnsite = (akhirDinas - awalDinas).Days + 1;
-            int actualOffsite = (akhirCuti - awalCuti).Days + 1;
-
-            if (actualOnsite < 1 || actualOnsite > 365)
-            {
-                return BadRequest("Durasi dinas (onsite) harus antara 1 sampai 365 hari.");
-            }
-            if (actualOffsite < 1 || actualOffsite > 180)
-            {
-                return BadRequest("Durasi cuti (offsite) harus antara 1 sampai 180 hari.");
-            }
-
-            Roster? rosterRegulerToUpdate = null;
-            if (req.Id.HasValue && req.Id.Value > 0)
-            {
-                rosterRegulerToUpdate = await _context.Rosters
-                    .FirstOrDefaultAsync(r => r.Id == req.Id.Value && r.Nik == userNik);
-            }
-
-            if (rosterRegulerToUpdate == null)
-            {
-                rosterRegulerToUpdate = await _context.Rosters
-                    .Where(r => r.Nik == userNik && r.AkhirCuti >= DateTime.Today)
-                    .OrderByDescending(r => r.AkhirCuti)
-                    .FirstOrDefaultAsync();
-            }
-
-            if (rosterRegulerToUpdate != null)
-            {
-                rosterRegulerToUpdate.AwalDinas = awalDinas;
-                rosterRegulerToUpdate.AkhirDinas = akhirDinas;
-                rosterRegulerToUpdate.AwalCuti = awalCuti;
-                rosterRegulerToUpdate.AkhirCuti = akhirCuti;
-                rosterRegulerToUpdate.TipeRoster = "REGULER";
-                rosterRegulerToUpdate.Keterangan = null;
-                rosterRegulerToUpdate.UpdatedAt = DateTime.Now;
-                _context.Rosters.Update(rosterRegulerToUpdate);
-            }
-            else
-            {
-                var newRoster = new Roster
-                {
-                    Nik = userNik,
-                    AwalDinas = awalDinas,
-                    AkhirDinas = akhirDinas,
-                    AwalCuti = awalCuti,
-                    AkhirCuti = akhirCuti,
-                    TipeRoster = "REGULER",
-                    Keterangan = null,
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
-                };
-                _context.Rosters.Add(newRoster);
-            }
-
-            await _context.SaveChangesAsync();
-            _cache.Remove($"UserDashboardStats_{userNik}");
-            return Ok(new { message = "Roster berhasil disimpan." });
         }
 
         [HttpPost]

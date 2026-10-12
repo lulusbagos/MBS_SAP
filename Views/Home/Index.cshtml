@@ -1652,6 +1652,12 @@
                     }
                 });
 
+                // Store original edit info
+                const initialEditId = $('#rosterEditId').val();
+                const initialEditTipe = $('#tipeRosterSelected').val() || 'REGULER';
+                $('#rosterSettingsModal').data('initialEditId', initialEditId);
+                $('#rosterSettingsModal').data('initialEditTipe', initialEditTipe);
+
                 // Tab switching between Roster Reguler and Periode Tugas
                 $('#tabRosterReguler').on('click', function() {
                     $(this).addClass('active');
@@ -1659,6 +1665,13 @@
                     $('#sectionRosterReguler').show();
                     $('#sectionPeriodeTugas').hide();
                     $('#tipeRosterSelected').val('REGULER');
+                    
+                    if ($('#rosterSettingsModal').data('initialEditTipe') === 'REGULER') {
+                        $('#rosterEditId').val($('#rosterSettingsModal').data('initialEditId') || '');
+                    } else {
+                        $('#rosterEditId').val('');
+                        $('#rosterEditModeNotice').addClass('d-none');
+                    }
                 });
 
                 $('#tabPeriodeTugas').on('click', function() {
@@ -1667,7 +1680,31 @@
                     $('#sectionPeriodeTugas').show();
                     $('#sectionRosterReguler').hide();
                     $('#tipeRosterSelected').val('TUGAS');
+
+                    if ($('#rosterSettingsModal').data('initialEditTipe') === 'TUGAS') {
+                        $('#rosterEditId').val($('#rosterSettingsModal').data('initialEditId') || '');
+                    } else {
+                        $('#rosterEditId').val('');
+                        $('#rosterEditModeNotice').addClass('d-none');
+                    }
                 });
+
+                function extractAjaxErrorMessage(xhr, fallbackMsg) {
+                    if (xhr.status === 401) return 'Sesi login Anda telah berakhir. Silakan refresh halaman dan login kembali.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) return xhr.responseJSON.message;
+                    if (xhr.responseText) {
+                        try {
+                            const parsed = JSON.parse(xhr.responseText);
+                            if (parsed && parsed.message) return parsed.message;
+                        } catch (e) {
+                            if (xhr.responseText.includes('<html') || xhr.responseText.includes('<!DOCTYPE')) {
+                                return 'Terjadi kesalahan sistem (HTTP ' + xhr.status + '). Silakan coba sesaat lagi.';
+                            }
+                            return xhr.responseText;
+                        }
+                    }
+                    return fallbackMsg;
+                }
 
                 $('#btnSaveRoster').on('click', function() {
                     const alertContainer = $('#rosterFormAlert');
@@ -1752,7 +1789,7 @@
                             },
                             error: function(xhr) {
                                 btn.prop('disabled', false).text(originalText);
-                                const errorMsg = xhr.responseJSON?.message || xhr.responseText || 'Gagal menyimpan periode tugas. Coba lagi.';
+                                const errorMsg = extractAjaxErrorMessage(xhr, 'Gagal menyimpan periode tugas. Coba lagi.');
                                 alertContainer.removeClass('d-none')
                                     .removeClass('alert-success')
                                     .addClass('alert-danger')
@@ -1761,7 +1798,7 @@
                                         'border-color': 'rgba(244, 63, 94, 0.2)',
                                         'color': 'var(--color-red)'
                                     })
-                                    .text(errorMsg);
+                                    .html('<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + errorMsg);
                             }
                         });
                         return;
@@ -1871,7 +1908,7 @@
                         },
                         error: function(xhr) {
                             btn.prop('disabled', false).text(originalText);
-                            const errorMsg = xhr.responseJSON?.message || xhr.responseText || 'Gagal menyimpan roster. Coba lagi.';
+                            const errorMsg = extractAjaxErrorMessage(xhr, 'Gagal menyimpan roster. Coba lagi.');
                             alertContainer.removeClass('d-none')
                                 .removeClass('alert-success')
                                 .addClass('alert-danger')
@@ -1880,7 +1917,7 @@
                                     'border-color': 'rgba(244, 63, 94, 0.2)',
                                     'color': 'var(--color-red)'
                                 })
-                                .text(errorMsg);
+                                .html('<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + errorMsg);
                         }
                     });
                 });

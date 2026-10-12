@@ -913,6 +913,8 @@
                 $('#modalEmployeeName').text(nama);
                 $('#modalEmployeeSub').text(`NIK: ${nik} | Perusahaan: ${perusahaan} | Dept: ${dept}`);
                 $('#formEmployeeNik').val(nik);
+                $('#formAdminRoster').data('originalId', rosterId);
+                $('#formAdminRoster').data('originalTipe', tipe);
                 $('#formRosterId').val(rosterId);
                 $('#modalAlert').addClass('d-none').text('');
 
@@ -968,6 +970,12 @@
                 $('#secReguler').show();
                 $('#secTugas').hide();
                 $('#formTipeRoster').val('REGULER');
+                // Jika tipe modal semula bukan REGULER, kosongkan rosterId agar menjadi penambahan baru
+                if ($('#formAdminRoster').data('originalTipe') !== 'REGULER') {
+                    $('#formRosterId').val('');
+                } else {
+                    $('#formRosterId').val($('#formAdminRoster').data('originalId') || '');
+                }
             });
 
             $('#btnTabTugas').on('click', function() {
@@ -976,12 +984,18 @@
                 $('#secTugas').show();
                 $('#secReguler').hide();
                 $('#formTipeRoster').val('TUGAS');
+                // Jika tipe modal semula bukan TUGAS, kosongkan rosterId agar menjadi penambahan Tugas baru
+                if ($('#formAdminRoster').data('originalTipe') !== 'TUGAS') {
+                    $('#formRosterId').val('');
+                } else {
+                    $('#formRosterId').val($('#formAdminRoster').data('originalId') || '');
+                }
             });
 
             // Save Admin Roster
             $('#btnSaveAdminRoster').on('click', function() {
                 const alertContainer = $('#modalAlert');
-                alertContainer.addClass('d-none').text('');
+                alertContainer.addClass('d-none').empty();
 
                 const nik = $('#formEmployeeNik').val();
                 const rosterIdVal = $('#formRosterId').val();
@@ -1000,12 +1014,12 @@
                     const keterangan = $('#inputKeteranganTugas').val();
 
                     if (!awalTugas || !akhirTugas) {
-                        alertContainer.removeClass('d-none').text('Tanggal mulai dan selesai tugas wajib diisi!');
+                        alertContainer.removeClass('d-none').html('<i class="bi bi-exclamation-circle-fill me-1"></i> Tanggal mulai dan selesai tugas wajib diisi!');
                         return;
                     }
 
                     if (new Date(awalTugas) > new Date(akhirTugas)) {
-                        alertContainer.removeClass('d-none').text('Tanggal mulai tugas tidak boleh melebihi selesai tugas.');
+                        alertContainer.removeClass('d-none').html('<i class="bi bi-exclamation-circle-fill me-1"></i> Tanggal mulai tugas tidak boleh melebihi tanggal selesai tugas.');
                         return;
                     }
 
@@ -1019,22 +1033,22 @@
                     const akhirCuti = $('#inputAkhirCuti').val();
 
                     if (!awalDinas || !akhirDinas || !awalCuti || !akhirCuti) {
-                        alertContainer.removeClass('d-none').text('Semua tanggal dinas dan cuti wajib diisi!');
+                        alertContainer.removeClass('d-none').html('<i class="bi bi-exclamation-circle-fill me-1"></i> Semua kolom tanggal dinas dan cuti wajib diisi!');
                         return;
                     }
 
                     if (new Date(awalDinas) > new Date(akhirDinas)) {
-                        alertContainer.removeClass('d-none').text('Tanggal mulai dinas tidak boleh melebihi akhir dinas.');
+                        alertContainer.removeClass('d-none').html('<i class="bi bi-exclamation-circle-fill me-1"></i> Tanggal awal dinas tidak boleh melebihi akhir dinas.');
                         return;
                     }
 
                     if (new Date(akhirDinas) >= new Date(awalCuti)) {
-                        alertContainer.removeClass('d-none').text('Tanggal akhir dinas harus sebelum mulai cuti.');
+                        alertContainer.removeClass('d-none').html('<i class="bi bi-exclamation-circle-fill me-1"></i> Tanggal akhir dinas harus sebelum tanggal mulai cuti.');
                         return;
                     }
 
                     if (new Date(awalCuti) > new Date(akhirCuti)) {
-                        alertContainer.removeClass('d-none').text('Tanggal mulai cuti tidak boleh melebihi akhir cuti.');
+                        alertContainer.removeClass('d-none').html('<i class="bi bi-exclamation-circle-fill me-1"></i> Tanggal awal cuti tidak boleh melebihi akhir cuti.');
                         return;
                     }
 
@@ -1062,8 +1076,25 @@
                     },
                     error: function(xhr) {
                         btn.prop('disabled', false).html(originalText);
-                        const msg = xhr.responseJSON?.message || xhr.responseText || 'Gagal menyimpan roster karyawan.';
-                        alertContainer.removeClass('d-none').text(msg);
+                        let msg = 'Gagal menyimpan roster karyawan.';
+                        if (xhr.status === 401) {
+                            msg = 'Sesi Anda telah kedaluwarsa atau Anda tidak memiliki akses admin/safety. Silakan login kembali.';
+                        } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                            msg = xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            try {
+                                const parsed = JSON.parse(xhr.responseText);
+                                if (parsed && parsed.message) msg = parsed.message;
+                                else msg = xhr.responseText;
+                            } catch (e) {
+                                if (xhr.responseText.includes('<html') || xhr.responseText.includes('<!DOCTYPE')) {
+                                    msg = 'Terjadi kesalahan pada server (HTTP ' + xhr.status + '). Silakan hubungi admin IT jika masalah berlanjut.';
+                                } else {
+                                    msg = xhr.responseText;
+                                }
+                            }
+                        }
+                        alertContainer.removeClass('d-none').html('<i class="bi bi-exclamation-triangle-fill me-1.5"></i> ' + escapeHtml(msg));
                     }
                 });
             });
@@ -1275,7 +1306,25 @@
                         },
                         error: function(xhr) {
                             btn.prop('disabled', false).html('<i class="bi bi-trash3"></i>');
-                            alert('Gagal menghapus: ' + (xhr.responseJSON?.message || xhr.responseText || 'Unknown error'));
+                            let msg = 'Gagal menghapus data.';
+                            if (xhr.status === 401) {
+                                msg = 'Sesi Anda telah kedaluwarsa atau Anda tidak memiliki akses admin/safety.';
+                            } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                                msg = xhr.responseJSON.message;
+                            } else if (xhr.responseText) {
+                                try {
+                                    const parsed = JSON.parse(xhr.responseText);
+                                    if (parsed && parsed.message) msg = parsed.message;
+                                    else msg = xhr.responseText;
+                                } catch (e) {
+                                    if (xhr.responseText.includes('<html') || xhr.responseText.includes('<!DOCTYPE')) {
+                                        msg = 'Terjadi kesalahan sistem (HTTP ' + xhr.status + ').';
+                                    } else {
+                                        msg = xhr.responseText;
+                                    }
+                                }
+                            }
+                            alert('Gagal menghapus: ' + msg);
                         }
                     });
                 }

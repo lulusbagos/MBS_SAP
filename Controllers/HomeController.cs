@@ -148,35 +148,28 @@ namespace MBS_SAP.Controllers
                 int computedOnsiteDays = totalDaysInMonth;
                 bool hasRoster = false;
 
-                bool isTugasExempt = false;
-
                 if (stats.RosterHistory != null && stats.RosterHistory.Any())
                 {
+                    hasRoster = true;
                     int computedOnsite = 0;
-                    bool hasAnyRoster = false;
-                    foreach (var r in stats.RosterHistory)
+                    int tugasDays = 0;
+                    for (var cur = startOfMonth.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
                     {
-                        hasAnyRoster = true;
-                        if (r.TipeRoster == "TUGAS")
+                        bool isTugas = stats.RosterHistory.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                        if (isTugas)
                         {
-                            var ovTStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
-                            var ovTEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                            if (ovTStart <= ovTEnd) isTugasExempt = true;
-                            continue; // Periode Tugas is exempt from SAP (target = 0)
+                            tugasDays++;
                         }
-
-                        var overlapStart = r.AwalDinas > startOfMonth ? r.AwalDinas : startOfMonth;
-                        var overlapEnd = r.AkhirDinas < endOfMonth ? r.AkhirDinas : endOfMonth;
-                        if (overlapStart <= overlapEnd)
+                        else
                         {
-                            computedOnsite += (overlapEnd - overlapStart).Days + 1;
+                            bool isDinas = stats.RosterHistory.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                            if (isDinas)
+                            {
+                                computedOnsite++;
+                            }
                         }
                     }
-                    if (hasAnyRoster)
-                    {
-                        hasRoster = true;
-                        computedOnsiteDays = isTugasExempt ? 0 : computedOnsite;
-                    }
+                    computedOnsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
                 }
 
                 double ratio = hasRoster ? (double)computedOnsiteDays / totalDaysInMonth : 1.0;
