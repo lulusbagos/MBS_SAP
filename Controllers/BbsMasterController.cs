@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -16,11 +20,13 @@ namespace MBS_SAP.Controllers
     {
         private readonly AppDbContext _context;
         private readonly ILogger<BbsMasterController> _logger;
+        private readonly IWebHostEnvironment _env;
 
-        public BbsMasterController(AppDbContext context, ILogger<BbsMasterController> logger)
+        public BbsMasterController(AppDbContext context, ILogger<BbsMasterController> logger, IWebHostEnvironment env)
         {
             _context = context;
             _logger = logger;
+            _env = env;
         }
 
         private bool IsAdminUser()
@@ -109,6 +115,33 @@ namespace MBS_SAP.Controllers
                 .ThenBy(b => b.BehaviorText)
                 .ToListAsync();
             ViewBag.Behaviors = behaviors;
+
+            // Load Master Documents & Checklists
+            var docsQuery = _context.BbsDocuments
+                .Include(d => d.Category)
+                .Include(d => d.Items)
+                .AsQueryable();
+
+            if (categoryId.HasValue && categoryId.Value > 0)
+            {
+                docsQuery = docsQuery.Where(d => d.CategoryId == categoryId.Value);
+            }
+
+            if (!string.IsNullOrEmpty(search) && tab == "documents")
+            {
+                var s = search.Trim().ToLower();
+                docsQuery = docsQuery.Where(d => d.DocCode.ToLower().Contains(s) || 
+                                                 d.Title.ToLower().Contains(s) || 
+                                                 (d.Description != null && d.Description.ToLower().Contains(s)) ||
+                                                 (d.Department != null && d.Department.ToLower().Contains(s)));
+            }
+
+            var documents = await docsQuery
+                .OrderBy(d => d.SortOrder)
+                .ThenBy(d => d.DocCode)
+                .ToListAsync();
+            ViewBag.Documents = documents;
+            ViewBag.TotalDocsCount = await _context.BbsDocuments.CountAsync();
 
             return View();
         }
@@ -320,6 +353,294 @@ namespace MBS_SAP.Controllers
 
             TempData["SuccessMessage"] = "Butir perilaku berhasil dihapus.";
             return RedirectToAction(nameof(Index), new { tab = "behaviors", categoryId = cId, topicId = tId });
+        }
+
+        // ==========================================
+        // 5. MASTER DOKUMEN & CHECKLIST CRUD
+        // ==========================================
+        [HttpGet]
+        public async Task<IActionResult> GetDocumentDetails(int id)
+        {
+            if (!IsAdminUser()) return Forbid();
+
+            var doc = await _context.BbsDocuments
+                .Include(d => d.Category)
+                .Include(d => d.Items)
+                .FirstOrDefaultAsync(d => d.Id == id);
+
+            if (doc == null) return NotFound(new { success = false, message = "Dokumen tidak ditemukan." });
+
+            var groupedSections = doc.Items
+                .OrderBy(i => i.SortOrder)
+                .GroupBy(i => i.SectionName)
+                .Select(g => new
+                {
+                    sectionName = g.Key,
+                    itemType = g.First().ItemType,
+                    items = g.Select(i => new
+                    {
+                        i.Id,
+                        i.ItemNo,
+                        i.ItemText,
+                        i.ItemType,
+                        i.Classification,
+                        i.RiskLevel,
+                        i.SortOrder,
+                        i.IsActive
+                    }).ToList()
+                }).ToList();
+
+            return Json(new
+            {
+                success = true,
+                doc = new
+                {
+                    doc.Id,
+                    doc.DocCode,
+                    doc.Title,
+                    doc.CategoryId,
+                    categoryName = doc.Category?.Name ?? doc.CategoryName ?? "-",
+                    doc.TopicName,
+                    doc.Revision,
+                    doc.EffectiveDate,
+                    doc.Department,
+                    doc.Scope,
+                    doc.Description,
+                    doc.Icon,
+                    doc.Color,
+                    doc.FileName,
+                    doc.FileUrl,
+                    doc.TotalItems,
+                    doc.BehaviorCount,
+                    doc.ConditionCount,
+                    doc.IsActive,
+                    sections = groupedSections
+                }
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveDocument(BbsDocument model, IFormFile? excelFile)
+        {
+            if (!IsAdminUser()) return Forbid();
+
+            try
+            {
+                if (model.CategoryId == 0) model.CategoryId = null;
+
+                if (model.CategoryId.HasValue)
+                {
+                    var cat = await _context.BbsCategories.FindAsync(model.CategoryId.Value);
+                    if (cat != null) model.CategoryName = cat.Name;
+                }
+
+                // Handle file upload if provided
+                if (excelFile != null && excelFile.Length > 0)
+                {
+                    var uploadsFolder = Path.Combine(_env.WebRootPath, "uploads", "bbs_documents");
+                    if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+                    var cleanFileName = Path.GetFileName(excelFile.FileName);
+                    var filePath = Path.Combine(uploadsFolder, cleanFileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await excelFile.CopyToAsync(stream);
+                    }
+
+                    model.FileName = cleanFileName;
+                    model.FileUrl = $"/uploads/bbs_documents/{cleanFileName}";
+                }
+
+                if (model.Id > 0)
+                {
+                    var doc = await _context.BbsDocuments.FindAsync(model.Id);
+                    if (doc == null) return NotFound();
+
+                    doc.DocCode = model.DocCode.Trim();
+                    doc.Title = model.Title.Trim();
+                    doc.CategoryId = model.CategoryId;
+                    doc.CategoryName = model.CategoryName;
+                    doc.TopicName = model.TopicName?.Trim();
+                    doc.Revision = model.Revision?.Trim() ?? "00";
+                    doc.EffectiveDate = model.EffectiveDate?.Trim();
+                    doc.Department = model.Department?.Trim();
+                    doc.Scope = model.Scope?.Trim();
+                    doc.Description = model.Description?.Trim();
+                    doc.Icon = string.IsNullOrWhiteSpace(model.Icon) ? "bi-file-earmark-text-fill" : model.Icon.Trim();
+                    doc.Color = string.IsNullOrWhiteSpace(model.Color) ? "#0284c7" : model.Color.Trim();
+                    doc.SortOrder = model.SortOrder;
+                    doc.IsActive = model.IsActive;
+                    doc.UpdatedAt = DateTime.Now;
+
+                    if (!string.IsNullOrEmpty(model.FileName))
+                    {
+                        doc.FileName = model.FileName;
+                        doc.FileUrl = model.FileUrl;
+                    }
+
+                    TempData["SuccessMessage"] = $"Dokumen '{doc.DocCode} - {doc.Title}' berhasil diperbarui.";
+                }
+                else
+                {
+                    model.DocCode = model.DocCode.Trim();
+                    model.Title = model.Title.Trim();
+                    model.Revision = model.Revision?.Trim() ?? "00";
+                    model.Icon = string.IsNullOrWhiteSpace(model.Icon) ? "bi-file-earmark-text-fill" : model.Icon.Trim();
+                    model.Color = string.IsNullOrWhiteSpace(model.Color) ? "#0284c7" : model.Color.Trim();
+                    model.CreatedAt = DateTime.Now;
+
+                    _context.BbsDocuments.Add(model);
+                    TempData["SuccessMessage"] = $"Dokumen baru '{model.DocCode} - {model.Title}' berhasil ditambahkan.";
+                }
+
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving BBS Document");
+                TempData["ErrorMessage"] = $"Gagal menyimpan dokumen: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Index), new { tab = "documents" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleDocument(int id)
+        {
+            if (!IsAdminUser()) return Forbid();
+
+            var doc = await _context.BbsDocuments.FindAsync(id);
+            if (doc == null) return NotFound();
+
+            doc.IsActive = !doc.IsActive;
+            doc.UpdatedAt = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Status dokumen '{doc.DocCode}' diubah menjadi {(doc.IsActive ? "Aktif" : "Nonaktif")}.";
+            return RedirectToAction(nameof(Index), new { tab = "documents" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDocument(int id)
+        {
+            if (!IsAdminUser()) return Forbid();
+
+            var doc = await _context.BbsDocuments.Include(d => d.Items).FirstOrDefaultAsync(d => d.Id == id);
+            if (doc == null) return NotFound();
+
+            _context.BbsDocuments.Remove(doc);
+            await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] = $"Dokumen '{doc.DocCode}' beserta seluruh butir checklist berhasil dihapus.";
+            return RedirectToAction(nameof(Index), new { tab = "documents" });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadDocument(int id)
+        {
+            var doc = await _context.BbsDocuments.FindAsync(id);
+            if (doc == null || string.IsNullOrEmpty(doc.FileName))
+            {
+                TempData["ErrorMessage"] = "Berkas file dokumen tidak ditemukan.";
+                return RedirectToAction(nameof(Index), new { tab = "documents" });
+            }
+
+            var filePath = Path.Combine(_env.WebRootPath, "uploads", "bbs_documents", doc.FileName);
+            if (!System.IO.File.Exists(filePath))
+            {
+                TempData["ErrorMessage"] = $"File '{doc.FileName}' tidak ditemukan di server.";
+                return RedirectToAction(nameof(Index), new { tab = "documents" });
+            }
+
+            var contentType = doc.FileName.EndsWith(".xls", StringComparison.OrdinalIgnoreCase) 
+                ? "application/vnd.ms-excel" 
+                : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+            var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+            return File(fileBytes, contentType, doc.FileName);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveDocumentItem(BbsDocumentItem item)
+        {
+            if (!IsAdminUser()) return Forbid();
+
+            try
+            {
+                if (item.Id > 0)
+                {
+                    var existing = await _context.BbsDocumentItems.FindAsync(item.Id);
+                    if (existing == null) return NotFound();
+
+                    existing.SectionName = item.SectionName.Trim();
+                    existing.ItemNo = item.ItemNo?.Trim();
+                    existing.ItemText = item.ItemText.Trim();
+                    existing.ItemType = item.ItemType;
+                    existing.Classification = item.Classification;
+                    existing.RiskLevel = item.RiskLevel;
+                    existing.SortOrder = item.SortOrder;
+                    existing.IsActive = item.IsActive;
+
+                    TempData["SuccessMessage"] = "Butir checklist dokumen berhasil diperbarui.";
+                }
+                else
+                {
+                    item.CreatedAt = DateTime.Now;
+                    _context.BbsDocumentItems.Add(item);
+                    TempData["SuccessMessage"] = "Butir checklist dokumen berhasil ditambahkan.";
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Recount items
+                var doc = await _context.BbsDocuments.Include(d => d.Items).FirstOrDefaultAsync(d => d.Id == item.DocumentId);
+                if (doc != null)
+                {
+                    doc.TotalItems = doc.Items.Count;
+                    doc.BehaviorCount = doc.Items.Count(i => i.ItemType == "Perilaku");
+                    doc.ConditionCount = doc.Items.Count(i => i.ItemType != "Perilaku");
+                    doc.UpdatedAt = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving BBS Document Item");
+                TempData["ErrorMessage"] = $"Gagal menyimpan butir checklist: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Index), new { tab = "documents" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDocumentItem(int id)
+        {
+            if (!IsAdminUser()) return Forbid();
+
+            var item = await _context.BbsDocumentItems.FindAsync(id);
+            if (item == null) return NotFound();
+
+            var docId = item.DocumentId;
+            _context.BbsDocumentItems.Remove(item);
+            await _context.SaveChangesAsync();
+
+            var doc = await _context.BbsDocuments.Include(d => d.Items).FirstOrDefaultAsync(d => d.Id == docId);
+            if (doc != null)
+            {
+                doc.TotalItems = doc.Items.Count;
+                doc.BehaviorCount = doc.Items.Count(i => i.ItemType == "Perilaku");
+                doc.ConditionCount = doc.Items.Count(i => i.ItemType != "Perilaku");
+                await _context.SaveChangesAsync();
+            }
+
+            TempData["SuccessMessage"] = "Butir checklist berhasil dihapus.";
+            return RedirectToAction(nameof(Index), new { tab = "documents" });
         }
     }
 }

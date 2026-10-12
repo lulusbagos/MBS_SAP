@@ -1,0 +1,1893 @@
+[
+  {
+    "file": "FM-01-MOP-32.001 Form Pengajuan Aktivitas Loading Lumpur dan Dumping High Risk.xls",
+    "doc_code": "FM-01-MOP-32.001",
+    "title": "Formulir Izin Kerja Loading Lumpur & Dumping High Risk",
+    "category": "Pekerjaan Berisiko Khusus",
+    "topic": "Izin Kerja Khusus Loading Lumpur & Dumping High Risk",
+    "revision": "0",
+    "effective_date": "2026",
+    "department": "Mining Operation & Geotechnical",
+    "icon": "bi-file-earmark-check-fill",
+    "color": "#ef4444",
+    "total_items": 11,
+    "behavior_count": 0,
+    "condition_count": 11,
+    "sections": [
+      {
+        "name": "Persyaratan Dokumen Sebelum Melakukan Pekerjaan",
+        "type": "Prasyarat",
+        "items": [
+          {
+            "no": "1.0",
+            "text": "Geotechnical assessment loading point lumpur",
+            "type": "Prasyarat"
+          },
+          {
+            "no": "2.0",
+            "text": "Geotechnical assessment disposal high risk dump (Dumping ke air dan atau lumpur)",
+            "type": "Prasyarat"
+          },
+          {
+            "no": "3.0",
+            "text": "Geotechnical assessment disposal high risk dump (Dumping dengan ketinggian bench disposal diatas 10m)",
+            "type": "Prasyarat"
+          },
+          {
+            "no": "4.0",
+            "text": "Layout Loading Point Lumpur\n(Pondok pengawas, penerangan, posisi CCTV, area loading, special treatment seperti posisi bundwall, muster point, rambu)",
+            "type": "Prasyarat"
+          },
+          {
+            "no": "5.0",
+            "text": "Layout disposal highrisk \n(Pondok, dumping limiter, dozing limiter, parkir sarana diluar area pad dumping, penerangan, posisi CCTV, area refueling A2B diluar area pad dumping, muster point, rambu)",
+            "type": "Prasyarat"
+          },
+          {
+            "no": "6.0",
+            "text": "SOP / JSEA Loading Lumpur menggunakan excavator (metode load and haul)",
+            "type": "Prasyarat"
+          },
+          {
+            "no": "7.0",
+            "text": "SOP / JSEA Loading Lumpur menggunakan dragflow / dredging / amphibious excavator (metode load and haul)",
+            "type": "Prasyarat"
+          },
+          {
+            "no": "8.0",
+            "text": "SOP / JSEA Pengelolaan dan Pengendalian Operasional High Risk Dumping",
+            "type": "Prasyarat"
+          }
+        ]
+      },
+      {
+        "name": "Tanggung Jawab Penanggung Jawab Operasional",
+        "type": "Kepatuhan",
+        "items": [
+          {
+            "no": "1",
+            "text": "Orang yang bertanggung jawab langsung untuk melakukan tugas harus menyimpan salinan asli Surat Izin Bekerja selama pekerjaan berlangsung.",
+            "type": "Kepatuhan"
+          },
+          {
+            "no": "2",
+            "text": "Orang yang bertanggung jawab langsung harus memastikan seluruh pekerja, peralatan, area kerja, akses kerja, serta perlengkapan keselamatan dan rescue telah diperiksa dan dalam kondisi aman sebelum pekerjaan dimulai.",
+            "type": "Kepatuhan"
+          },
+          {
+            "no": "3",
+            "text": "Orang yang bertanggung jawab langsung harus menghentikan pekerjaan apabila terjadi perubahan kondisi yang dapat membahayakan keselamatan (arus air, ketidakstabilan lumpur/tanah, cuaca buruk, kerusakan alat).",
+            "type": "Kepatuhan"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "FM-02-MOP-32.001 Checklist Inspeksi Front Loading Overburden .xlsx",
+    "doc_code": "FM-02-MOP-32.001",
+    "title": "Form Checklist Pengawas Area Front Loading Overburden",
+    "category": "Area Loading & Dumping",
+    "topic": "Operasional Front Loading Overburden",
+    "revision": "00",
+    "effective_date": "2026",
+    "department": "Mining Operation",
+    "icon": "bi-cone-striped",
+    "color": "#f59e0b",
+    "total_items": 41,
+    "behavior_count": 14,
+    "condition_count": 27,
+    "sections": [
+      {
+        "name": "Identifikasi Perilaku",
+        "type": "Perilaku",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah ada orang berdiri terlalu dekat dengan swing excavator atau radius manuver alat berat?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "2",
+            "text": "Apakah ada orang berdiri dekat atau dibawah dinding tebing?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "3",
+            "text": "Apakah ada orang berdiri dekat ujung tebing/sisi crest?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "4",
+            "text": "Apakah ada orang berdiri di sisi blind spot unit?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "5",
+            "text": "Apakah terdapat Pengawas di area tersebut? (1 orang Pengawas max 3 front loading radius 300 m)",
+            "type": "Perilaku"
+          },
+          {
+            "no": "6",
+            "text": "Apakah ada unit LV parkir di dekat area kerja aktif?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "7",
+            "text": "Apakah Operator atau Driver membawa KIMPER / Kartu Izin Perusahaan?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "8",
+            "text": "Apakah Operator alat berat sudah memakai seat belt?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "9",
+            "text": "Apakah Operator alat berat memakai APD lengkap?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "10",
+            "text": "Apakah Operator Hauler sudah melakukan P2H dengan benar dan divalidasi oleh Pengawas?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "11",
+            "text": "Apakah Operator Excavator sudah melakukan P2H dan divalidasi oleh Pengawas?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "12",
+            "text": "Apakah ada Operator Hauler dan A2B memasang bracket handphone / barang lain di dashboard atau sticker variasi pada kaca?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "13",
+            "text": "Apakah Operator hauler antri parkir terlalu dekat dengan hauler yang lain?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "14",
+            "text": "Apakah komunikasi via radio di area tersebut berfungsi dengan baik?",
+            "type": "Perilaku"
+          }
+        ]
+      },
+      {
+        "name": "Identifikasi Kondisi",
+        "type": "Kondisi",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah Faktor Keamanan lereng di sekitar area loading point aktif sudah diketahui dan aman?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah secara visual terdapat retakan pada dinding di sekitar area loading point aktif?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah terdapat lumpur atau genangan air yang berada di atas aktivitas kerja?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah terdapat tanggul saat melakukan metode Top Loading?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Apakah lebar jalan masuk : 3,5 x lebar truck terbesar",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Apakah terdapat Tanggul jalan : 3/4 x tinggi ban",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Apakah ada tumpukan lumpur di badan jalan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Apakah terdapat undulating di front?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Apakah Loading point bersih, bebas dari pecahan dan bongkahan material?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "10",
+            "text": "Apakah tinggi bench loading ideal (selevel dengan ujung vessel belakang truck)?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "11",
+            "text": "Apakah debu di area kerja terkontrol ?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "12",
+            "text": "Apakah terdapat potensi kontaminasi material OB ke area Coal saat dilakukan penggalian ?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "13",
+            "text": "Apakah lebar front sesuai untuk hauler dapat bermanuver dengan baik (2 x turning radius truck)?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "14",
+            "text": "Apakah tower lamp tersedia serta penerangan memadai dan berada di posisi yang aman?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "15",
+            "text": "Apakah terdapat tanggul pengaman di sekitar tower lamp?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "16",
+            "text": "Apakah drainasenya terbentuk dan berfungsi dengan baik di area front?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "17",
+            "text": "Apakah area parkir sarana atau drop point tersedia dan aman dari lalu lintas alat berat?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "18",
+            "text": "Apakah tersedia pondok pengawas di posisi yang aman?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "1",
+            "text": "Apakah Pengawas telah menerima dan mengerti instruksi pekerjaan dari atasan atau Daily Operation Plan dengan baik?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah terdapat rambu lalu lintas di jalan ke area front?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah penempatan excavator sudah sesuai dengan weekly plan / Daily Operation Plan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah sudah dipasang pita acuan batas penggalian (digging limit)?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Apakah sudah dipasang pita acuan design bulanan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Apakah patok/pita penanda elevasi terpasang?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Apakah coal sudah di-cleaning dengan baik, tidak ada sampah atau material lain selain batubara?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Apakah coal sudah diambil data survey, dan ada acuan/batas area yang sudah diambil datanya?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Apakah pengambilan coal maksimal, tidak ada coal tertinggal pada area floor?",
+            "type": "Kondisi"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "FM-02-MOP-32.002 Checklist Inspeksi Coal Getting.xlsx",
+    "doc_code": "FM-02-MOP-32.002",
+    "title": "Form Inspeksi Front Loading Coal Getting",
+    "category": "Area Loading & Dumping",
+    "topic": "Operasional Front Coal Getting",
+    "revision": "00",
+    "effective_date": "2026",
+    "department": "Mining Operation & Coal Processing",
+    "icon": "bi-box-seam-fill",
+    "color": "#10b981",
+    "total_items": 41,
+    "behavior_count": 14,
+    "condition_count": 27,
+    "sections": [
+      {
+        "name": "Identifikasi Perilaku (Behaviour Based Safety)",
+        "type": "Perilaku",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah ada orang berdiri terlalu dekat dengan swing excavator atau radius manuver alat berat?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "2",
+            "text": "Apakah ada orang berdiri dekat atau dibawah dinding tebing?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "3",
+            "text": "Apakah ada orang berdiri dekat ujung tebing/sisi crest?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "4",
+            "text": "Apakah ada orang berdiri di sisi blind spot unit?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "5",
+            "text": "Apakah terdapat Pengawas di area tersebut? (1 orang Pengawas max 3 front loading radius 300 m)",
+            "type": "Perilaku"
+          },
+          {
+            "no": "6",
+            "text": "Apakah ada unit LV parkir di dekat area kerja aktif?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "7",
+            "text": "Apakah Operator atau Driver membawa KIMPER / Kartu Izin Perusahaan?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "8",
+            "text": "Apakah Operator alat berat sudah memakai seat belt?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "9",
+            "text": "Apakah Operator alat berat memakai APD lengkap?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "10",
+            "text": "Apakah Operator Hauler sudah melakukan P2H dengan benar dan divalidasi oleh Pengawas?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "11",
+            "text": "Apakah Operator Excavator sudah melakukan P2H dan divalidasi oleh Pengawas?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "12",
+            "text": "Apakah ada Operator Hauler dan A2B memasang bracket handphone / barang lain di dashboard atau sticker variasi pada kaca?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "13",
+            "text": "Apakah Operator hauler antri parkir terlalu dekat dengan hauler yang lain?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "14",
+            "text": "Apakah komunikasi via radio di area tersebut berfungsi dengan baik?",
+            "type": "Perilaku"
+          }
+        ]
+      },
+      {
+        "name": "Identifikasi Kondisi Area Kerja",
+        "type": "Kondisi",
+        "items": [
+          {
+            "no": "1",
+            "text": "Terdapat pita batas parting (jika seam terdapat parting)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Terdapat patok batas konsesi dan sudah dipahami oleh pengawas.\n(Untuk area coal getting di batas konsesi)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Roof batubara sudah dilakukan pick up (pengukuran) survey sebelum dilakukan coal getting",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Pengendalian debu : Penyiraman terjadwal dan jumlah Water Truck cukup",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Penerangan di areal coal getting memadai, minimal 20 Lux",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Penempatan fleet sesuai dengan Plan\nBila tidak sesuai, justifikasi :",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Kondisi batubara yang akan digetting sudah dicleaning",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Housekeeping / kebersihan areal coal getting dan batubara sekitarnya memadai (bebas dari sampah seperti punting dan bungkus rokok dan barang bekas lainnya, termasuk material flyrock)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Batubara bebas dari genangan air dan material dillusi",
+            "type": "Kondisi"
+          },
+          {
+            "no": "10",
+            "text": "Apakah lebar front sudah memenuhi standar",
+            "type": "Kondisi"
+          },
+          {
+            "no": "11",
+            "text": "Apakah terdapat material Non Coal disekitar front batubara",
+            "type": "Kondisi"
+          },
+          {
+            "no": "12",
+            "text": "Apakah kondisi permukaan front loading dalam keadaan bagus dan rata",
+            "type": "Kondisi"
+          },
+          {
+            "no": "13",
+            "text": "Apakah ada sisipan pengotor di lapisan batubara",
+            "type": "Kondisi"
+          },
+          {
+            "no": "14",
+            "text": "Apakah ukuran butir/ boulder batubara sudah sesuai (<50 cm)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "15",
+            "text": "Apakah ada unit yang Breakdown di atas batubara",
+            "type": "Kondisi"
+          },
+          {
+            "no": "16",
+            "text": "Tersedia APAR di semua unit",
+            "type": "Kondisi"
+          },
+          {
+            "no": "17",
+            "text": "Kondisi front batubara rata bebas dari genangan air",
+            "type": "Kondisi"
+          },
+          {
+            "no": "18",
+            "text": "Tersedia system drainage disekitar lokasi coal getting",
+            "type": "Kondisi"
+          },
+          {
+            "no": "19",
+            "text": "Tersedia pengawas coal getting Mitra Kerja",
+            "type": "Kondisi"
+          },
+          {
+            "no": "20",
+            "text": "Jalan masuk ke front batubara rata dan bebas dari batubara lepas",
+            "type": "Kondisi"
+          },
+          {
+            "no": "21",
+            "text": "Bekas front loading batubara sudah bersih dari batubara yang sudah loss",
+            "type": "Kondisi"
+          },
+          {
+            "no": "22",
+            "text": "Semua unit dilengkapi lampu rotary / strobe lamp sesuai standar.",
+            "type": "Kondisi"
+          },
+          {
+            "no": "23",
+            "text": "Kondisi equipment :",
+            "type": "Kondisi"
+          },
+          {
+            "no": "24",
+            "text": "Floor batubara sudah dilakukan pick up (pengukuran) survey setelah dilakukan pemaksimalan batubara",
+            "type": "Kondisi"
+          },
+          {
+            "no": "1",
+            "text": "Apakah pekerja diberikan teguran positif saat ditemukan perilaku tidak aman?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah pekerja merespons dengan baik terhadap teguran yang diberikan",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah dilakukan coaching singkat di lokasi ?",
+            "type": "Kondisi"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "FM-02-MOP-32.003 Checklist Inspeksi Mine Haul Road .xlsx",
+    "doc_code": "FM-02-MOP-32.003",
+    "title": "Form Checklist Pengawas Area Mine Haul Road",
+    "category": "Mengemudi & Hauling",
+    "topic": "Pengawasan Mine Haul Road & Lalulintas Tambang",
+    "revision": "00",
+    "effective_date": "2026",
+    "department": "Mining Operation & Road Maintenance",
+    "icon": "bi-signpost-split-fill",
+    "color": "#0284c7",
+    "total_items": 41,
+    "behavior_count": 16,
+    "condition_count": 25,
+    "sections": [
+      {
+        "name": "Identifikasi Perilaku",
+        "type": "Perilaku",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah ada Orang berjalan kaki di jalan?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "2",
+            "text": "Apakah ada Orang berdiri diatas tanggul jalan?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "3",
+            "text": "Apakah ada Driver / Operator unit HD atau A2B parkir unit di daerah tikungan / turunan curam?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "4",
+            "text": "Apakah ada Orang berdiri di sisi blind spot unit ?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "5",
+            "text": "Apakah Operator atau Driver membawa KIMPER / SIM Perusahaan?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "6",
+            "text": "Apakah ada alat berat, DT atau LV parkir di area jalan aktif?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "7",
+            "text": "Apakah Operator alat berat sudah memakai seat belt?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "8",
+            "text": "Apakah Operator alat berat memakai APD lengkap?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "9",
+            "text": "Apakah Operator alat berat sudah melakukan P2H dengan benar dan divalidasi oleh Pengawas?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "10",
+            "text": "Operator Water truck melakukan penyiraman dengan benar pada area rata/tanjakan/turunan/tikungan?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "11",
+            "text": "Operator hauler menjaga jarak iring sesama hauler yang lain minimal 70 meter?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "12",
+            "text": "Operator atau Driver disiplin dengan sistem peringatan dengan klakson?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "13",
+            "text": "Apakah ada Driver DT atau LV mengemudi dengan kecepatan tinggi lebih dari 30 Km/Jam?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "14",
+            "text": "Apakah ada Operator Hauler dan A2B memasang bracket handphone / barang lain di dashboard atau sticker variasi pada kaca?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "15",
+            "text": "Apakah komunikasi via radio di area tersebut berfungsi dengan baik? (catat nama channel)",
+            "type": "Perilaku"
+          },
+          {
+            "no": "16",
+            "text": "Apakah ada Pengawas pada aktivitas pembuatan maupun pemeliharaan jalan? (catat nama Pengawas)",
+            "type": "Perilaku"
+          }
+        ]
+      },
+      {
+        "name": "Identifikasi Kondisi",
+        "type": "Kondisi",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah ada retakan pada dinding diatas jalan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah ada retakan di sekitaran crest jalan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah ada lumpur atau genangan air di badan jalan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah jalan bebas dari bongkahan/boulder?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Apakah lebar jalan : 3,5 x lebar truck terbesar?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Apakah terdapat tanggul jalan : 1 x tinggi ban?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Apakah ada tumpukan material atau tumpahan lumpur di jalan? (jika ada, sudahkan dibarikade)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Apakah terdapat jalan yang licin?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Apakah ada rembesan/aliran air ke permukaan badan jalan ?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "10",
+            "text": "Apakah terdapat undulating?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "11",
+            "text": "Apakah terdapat akses yang lembek/bonyok dan perlu perbaikan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "12",
+            "text": "Apakah jalan terbebas dari debu sehingga terbatas pandangan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "13",
+            "text": "Apakah jalan bebas dari penyempitan yang berakibat perlambatan truck?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "14",
+            "text": "Apakah rambu-rambu jalan lengkap terpasang sesuai kebutuhan dan kondisi jalan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "15",
+            "text": "Apakah post guide di tanggul jalan sudah tersedia dan terpasang?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "16",
+            "text": "Apakah cross fall jalan terbentuk, 1% - 4% sehingga tidak ada air menggenang di badan jalan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "17",
+            "text": "Apakah tower lamp / tiang lampu tersedia serta penerangan memadai dan berada di posisi yang aman pada area persimpangan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "18",
+            "text": "Apakah terdapat tanggul pengaman disekitar tower lamp atau pun tiang lampunya?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "19",
+            "text": "Apakah superelevasi pada tikungan jalan terbentuk 2% -2.5% dan terdapat median?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "20",
+            "text": "Apakah drainase di sisi kosongan maupun muatan terbentuk dan berfungsi dengan baik?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "21",
+            "text": "Apakah LV dan kendaraan dengan ketinggian kurang dari 4 m dilengkapi dengan buggy whip yang tingginya 4 meter dari tanah dan ada rotary lamp?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "1",
+            "text": "Apakah terdapat alat support untuk perawatan jalan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah terdapat aktivitas proses standardisasi jalan atau standardisasi tanggul dan ada rambu?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah ada tumpahan batubara di jalan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah terdapat proses penyiraman menggunakan water truck?",
+            "type": "Kondisi"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "FM-02-MOP-32.004 Checklist Inspeksi Disposal .xlsx",
+    "doc_code": "FM-02-MOP-32.004",
+    "title": "Form Checklist Pengawas Area Disposal",
+    "category": "Area Loading & Dumping",
+    "topic": "Manuver & Pengawasan Area Disposal",
+    "revision": "00",
+    "effective_date": "2026",
+    "department": "Mining Operation",
+    "icon": "bi-truck",
+    "color": "#8b5cf6",
+    "total_items": 42,
+    "behavior_count": 16,
+    "condition_count": 26,
+    "sections": [
+      {
+        "name": "Identifikasi Perilaku",
+        "type": "Perilaku",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah ada Orang berdiri terlalu dekat dengan Dozer / Alat berat lainnya?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "2",
+            "text": "Apakah ada Orang berdiri di dalam area manuver hauler?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "3",
+            "text": "Apakah ada Orang berdiri dekat area crest disposal?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "4",
+            "text": "Apakah ada Orang berdiri di bawah kaki disposal?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "5",
+            "text": "Apakah ada Outsider (warga) yang masuk ke area disposal?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "6",
+            "text": "Apakah Operator hauler melakukan dumping terlalu dekat dengan hauler yang lain ataupun unit dozer?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "7",
+            "text": "Apakah Operator atau Driver membawa KIMPER / Kartu Izin Perusahaan?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "8",
+            "text": "Apakah ada unit LV parkir di sekitar alat berat yang bergerak atau di blind spot?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "9",
+            "text": "Apakah Operator hauler manuver searah jarum jam?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "10",
+            "text": "Apakah Operator Dozer telah melakukan P2H dan divalidasi oleh Pengawas?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "11",
+            "text": "Apakah Operator Hauler telah melakukan P2H dengan benar dan divalidasi oleh Pengawas?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "12",
+            "text": "Apakah Operator Dozer paham dan mengerti dengan fokus pekerjaannya?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "13",
+            "text": "Apakah Operator alat berat sudah memakai seat belt ?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "14",
+            "text": "Apakah ada Operator Hauler dan A2B memasang bracket handphone / barang lain di dashboard atau sticker variasi pada kaca?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "15",
+            "text": "Apakah Operator alat berat memakai APD lengkap?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "16",
+            "text": "Apakah radio komunikasi berfungsi dengan baik dan terlaksana komunikasi aktif 2 arah di disposal?",
+            "type": "Perilaku"
+          }
+        ]
+      },
+      {
+        "name": "Identifikasi Kondisi",
+        "type": "Kondisi",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah sudah ada petunjuk arah dumpingan yang aktif (Rambu Nama Disposal)?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah Lebar jalan : 3,5 x lebar truck terbesar?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah sudah ada Tanggul jalan : 1 x tinggi ban?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah ada tumpukan lumpur di badan jalan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Apakah windrow / tanggul di ujung disposal sudah terbentuk?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Apakah ada free dump?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Apakah air permukaan mengalir ke arah kolam pengendapan atau sump?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Apakah tinggi jenjang layering sesuai rencana (per 5 m)?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Apakah ada genangan air?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "10",
+            "text": "Apakah lebar disposal sesuai dengan jumlah fleet yang dumping?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "11",
+            "text": "Apakah dozer cukup di disposal sehingga menghindarkan praktek free dump? (catat jumlah dozer running)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "12",
+            "text": "Apakah ada retakan di crest atau area manuver disposal?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "13",
+            "text": "Apakah ada retakan di sisi toe disposal?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "14",
+            "text": "Apakah ada tanah atau material yang naik di kaki / base disposal?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "15",
+            "text": "Apakah lantai disposal tidak lembek/berpotensi amblas?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "16",
+            "text": "Apakah terdapat rambu lalu lintas dijalan ke disposal?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "17",
+            "text": "Apakah tower lamp tersedia dan memadai (Minimal 20 Lux) serta berada di posisi yang aman?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "1",
+            "text": "Apakah Pengawas sudah diberikan arahan oleh Pit Engineer atau Atasannya terkait rencana dumping?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah elevasi disposal sesuai Daily Operation Plan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah patok batas 'toe' dumping sudah terpasang?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah patok/pita penanda elevasi terpasang?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Apakah dilakukan pengupasan tanah zona perakaran atau material lunak/lumpur sebelum dilakukan dumping?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Apakah penempatan material sudah sesuai peruntukkannya (Soil, OB, Lumpur)/tidak ada soil dumping bercampur OB?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Apakah terdapat tanggul pengaman disekitar tower lamp?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Apakah tersedia pondok pengawas di posisi yang aman?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Apakah tersedia area drop point atau parkir unit LV?",
+            "type": "Kondisi"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "FM-02-MOP-32.005 Checklist Inspeksi Sump .xlsx",
+    "doc_code": "FM-02-MOP-32.005",
+    "title": "Form Inspeksi Area Sump & Pompa Dewatering",
+    "category": "Pengelolaan Lingkungan Tambang",
+    "topic": "Pengawasan Sump & Dewatering Tambang",
+    "revision": "00",
+    "effective_date": "2026",
+    "department": "Mining Operation & Dewatering",
+    "icon": "bi-droplet-half",
+    "color": "#06b6d4",
+    "total_items": 27,
+    "behavior_count": 6,
+    "condition_count": 21,
+    "sections": [
+      {
+        "name": "Identifikasi Perilaku",
+        "type": "Perilaku",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah ada Pengawas atau Crew Pompa bekerja menggunakan APD lengkap termasuk rompi pelampung?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "2",
+            "text": "Apakah ada Pengawas atau Crew Pompa berdiri diatas tanggul atau dekat crest ke arah sump?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "3",
+            "text": "Apakah ada Pengawas atau Crew Pompa berdiri diatas pipa HDPE?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "3",
+            "text": "Apakah ada Pengawas atau Crew Pompa parkir unit dekat dengan air sump (bukan di area parkir)?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "4",
+            "text": "Apakah Crew Pompa menggunakan sarung tangan saat bekerja di sump?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "5",
+            "text": "Apakah terjadi komunikasi aktif 2 arah menggunakan radio saat pekerjaan berlangsung di area sump? (catat nama channel radio)",
+            "type": "Perilaku"
+          }
+        ]
+      },
+      {
+        "name": "Identifikasi Kondisi",
+        "type": "Kondisi",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah akses ke sump dapat dilalui kendaraan atau alat berat?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah ada tanda-tanda terjadi erosi / runtuhan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah tanggul-tanggul luar sump dalam kondisi baik?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah tinggi muka air masih dalam batas aman (> 1 meter) dari tinggi tanggul?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Apakah pelampung (lifebuoy) tersedia di atas pompa?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Apakah ada tanda-tanda terjadi tumpahan oli atau solar?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Apakah kondisi ponton dalam kondisi baik?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Apakah pompa dalam kondisi baik? (catat nama dan nomor pompa)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Apakah selang HDPE dalam kondisi baik (tidak ada kebocoran)?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "10",
+            "text": "Apakah sambungan selang HDPE dalam kondisi baik (tidak ada kebocoran)?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "11",
+            "text": "Apakah rotary lamp pompa dalam kondisi baik dan menyala?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "1",
+            "text": "Apakah rambu-rambu cukup dan jelas terlihat?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "13",
+            "text": "- Rambu Nama Sump (catat nama sump)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "14",
+            "text": "- Rambu APD jaket pelampung",
+            "type": "Kondisi"
+          },
+          {
+            "no": "15",
+            "text": "- Rambu Dilarang berenang",
+            "type": "Kondisi"
+          },
+          {
+            "no": "16",
+            "text": "- Rambu Elevasi Sump (Elevasi aktual, elevasi kritis)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah ada informasi level air di sump dan di-update oleh Pengawas Infra/Pit Service?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah penerangan memadai untuk aktivitas malam hari?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah tools yang digunakan oleh Crew di area sump layak dan memadai?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Apakah ada tumpahan solar atau oli di area sump?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Apakah ada sampah berserakan akibat aktivitas dewatering?",
+            "type": "Kondisi"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "FM-02-MOP-32.006 Checklist Inspeksi High Risk Dump.xlsx",
+    "doc_code": "FM-02-MOP-32.006",
+    "title": "Form Checklist Pengawas Area High Risk Dump",
+    "category": "Pekerjaan Berisiko Khusus",
+    "topic": "Operasional Area High Risk Dump & Lumpur",
+    "revision": "01",
+    "effective_date": "10 Sept 2026",
+    "department": "Mining Operation & Geotechnical",
+    "icon": "bi-exclamation-octagon-fill",
+    "color": "#dc2626",
+    "total_items": 44,
+    "behavior_count": 15,
+    "condition_count": 29,
+    "sections": [
+      {
+        "name": "Identifikasi Perilaku",
+        "type": "Perilaku",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah ada Orang yang tidak berkepentingan yang masuk ke area High Risk Dump",
+            "type": "Perilaku"
+          },
+          {
+            "no": "2",
+            "text": "Apakah Operator hauler melakukan dumping terlalu dekat dengan hauler yang lain ataupun unit dozer?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "3",
+            "text": "Apakah Operator alat berat membawa KIMPER / Kartu Izin Perusahaan yang masih berlaku?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "4",
+            "text": "Apakah unit LV parkir di drop point?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "5",
+            "text": "Apakah Operator Dozer telah melakukan P2H dan divalidasi oleh Pengawas?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "6",
+            "text": "Apakah Operator Hauler telah melakukan P2H dengan benar dan divalidasi oleh Pengawas?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "7",
+            "text": "Apakah Operator Dozer paham dan mengerti dengan fokus pekerjaannya?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "8",
+            "text": "Apakah Operator alat berat sudah memakai seat belt ?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "9",
+            "text": "Apakah ada Operator Hauler dan A2B memasang bracket handphone / barang lain di dashboard atau sticker variasi pada kaca?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "10",
+            "text": "Apakah Operator alat berat memakai APD lengkap?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "11",
+            "text": "Apakah Operator hauler manuver searah jarum jam?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "12",
+            "text": "Apakah radio komunikasi berfungsi dengan baik dan terlaksana komunikasi aktif 2 arah di disposal?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "13",
+            "text": "Apakah truck dumping sudah sesuai dengan dumping limiter?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "14",
+            "text": "Apakah dozer mendorong di area crest sudah sesuai dengan dozing limiter? (2mtr dari crest)",
+            "type": "Perilaku"
+          },
+          {
+            "no": "15",
+            "text": "Apakah di dalam windrow area high Risk tidak terdapat aktifitas refueling ataupun washing unit?",
+            "type": "Perilaku"
+          }
+        ]
+      },
+      {
+        "name": "Identifikasi Kondisi",
+        "type": "Kondisi",
+        "items": [
+          {
+            "no": "1",
+            "text": "Tersedia pengawas yang sudah di setujui oleh PT IC",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Operator yang beroperasi sesuai yang sudah sesuai dengan SOP Pengelolaan High Risk Dump PT IC",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah posisi Dumping Limiter & Dozing Limiter sudah di update sesuai dengan progress kemajuan disposal (15 meter dari crest atau sesuai kajian geotech)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah Lebar jalan : 3,5 x lebar truck terbesar?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Apakah sudah ada Tanggul jalan : 1 x tinggi ban?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Apakah terdapat Windraw : 1 x tinggi ban?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Apakah ada tumpukan lumpur di badan jalan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Apakah windrow / tanggul di ujung disposal sudah terbentuk?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Apakah ada free dump?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "10",
+            "text": "Apakah air permukaan mengalir ke arah kolam pengendapan atau sump?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "11",
+            "text": "Apakah pad High Risk Dump terdapat genangan air?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "12",
+            "text": "Apakah lebar pad High Risk Dump sesuai dengan jumlah fleet yang dumping?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "13",
+            "text": "Apakah tersedia cukup dozer di area high risk dump sehingga menghindarkan praktek free dump? (catat jumlah dozer running)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "14",
+            "text": "Apakah ada tanah atau material yang naik di kaki / base disposal?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "15",
+            "text": "Apakah lantai disposal tidak lembek/berpotensi amblas?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "16",
+            "text": "Apakah terdapat rambu lalu lintas dijalan ke disposal?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "17",
+            "text": "Apakah tower lamp tersedia dan memadai (Minimal 20 Lux) serta berada di posisi yang aman?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "18",
+            "text": "Apakah Pad Disposal dalam kondisi padat (Area tidak lembek dan Undulating) ?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "19",
+            "text": "Apakah tidak ada crack/retakan di Ujung Dumping (crest)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "20",
+            "text": "Jika dumping ke Air atau Lumpur, apakah tidak terdapat celah yang dapat membuat lumpur keluar melimpas ke perairan bebas (tidak masuk ke compliance point) ?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "1",
+            "text": "Apakah Pengawas sudah diberikan arahan oleh Pit Engineer atau Atasannya terkait rencana dumping?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah elevasi disposal sesuai Daily Operation Plan?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah patok batas 'toe' dumping sudah terpasang?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah patok/pita penanda elevasi terpasang?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Apakah penempatan material sudah sesuai peruntukkannya (Soil, OB, Lumpur)/tidak ada soil dumping bercampur OB?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Apakah terdapat tanggul pengaman disekitar tower lamp?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Apakah tersedia pondok pengawas di posisi yang aman?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Apakah tersedia area drop point atau parkir unit LV?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Apakah tersedia sling sesuai kapasitas HD terbesar yang dumping?",
+            "type": "Kondisi"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "FM-02-MOP-32.007 Checklist Inspeksi Chainsaw.xlsx",
+    "doc_code": "FM-02-MOP-32.007",
+    "title": "Form Checklist Pengawas Operasi Chainsaw & Land Clearing",
+    "category": "Pekerjaan Berisiko Khusus",
+    "topic": "Pengoperasian Chainsaw & Land Clearing",
+    "revision": "00",
+    "effective_date": "2026",
+    "department": "Civil & Land Clearing",
+    "icon": "bi-tree-fill",
+    "color": "#84cc16",
+    "total_items": 23,
+    "behavior_count": 2,
+    "condition_count": 21,
+    "sections": [
+      {
+        "name": "Identifikasi Perilaku (Behaviour Based Safety)",
+        "type": "Perilaku",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah Operator chainsaw memakai APD lengkap?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "2",
+            "text": "Apakah ada kendaraan ringan, peralatan berat, dan personil lain di dalam radius 2,5x tinggi pohon?",
+            "type": "Perilaku"
+          }
+        ]
+      },
+      {
+        "name": "Identifikasi Kondisi Chainsaw",
+        "type": "Kondisi",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah kondisi unit tampak baik secara visual?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah ada kebocoran oil atau bahan bakar?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah semua tuas befrfungsi dengan baik (throttle trigger, throttle trigger lockout, choke, wtop switch, dll?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah chain brake berfungsi dengan baik?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Apakah rantai telah dilumasi dengan baik?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Apakah mata pisau rantai dalam kondisi yang tajam?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Apakah kekencengan rantai sudah sesuai?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Apakah guide bar dalam kondisi aus atau rusak?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Apakah anti-vibration elements dalam kondisi yang baik?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "10",
+            "text": "Apakah karburator dalam kondisi yang baik? Cek idle adjustment - pisau rantau tidak boleh berputar)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "11",
+            "text": "Apakah chain catcher dalam kondisi yang baik?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "12",
+            "text": "Apakah busi dalam kondisi baik ( jarak kepala busi 0,5 mm)?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "13",
+            "text": "Apakah filter udara dalam kondisi bersih dan baik?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "14",
+            "text": "Apakah ada kotoran yang menghalangi di kipas pendingin?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "15",
+            "text": "Apakah ada baut / sekrup yang longgar ?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "16",
+            "text": "Apakah gear chain sprocket dalam kondisi baik?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "17",
+            "text": "Apakah jumlah oli pelumas cukup pada tangki reservoir?",
+            "type": "Kondisi"
+          }
+        ]
+      },
+      {
+        "name": "Identifikasi Area Kerja",
+        "type": "Kondisi",
+        "items": [
+          {
+            "no": "1",
+            "text": "Terdapat rambu larangan masuk / demarkasi area penebangan pada jarak 2,5x tinggi pohon",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah alat komunikasi (radio atau HP) tersedia dan dapat digunakan di area kerja ?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah area kerja sudah bersih dari benda yang menghalangi?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah rute evakuasi sudah dibuat?",
+            "type": "Kondisi"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "FM-02-MOP-32.008 Checklist Inspeksi Drainase dan Gorong-gorong.xlsx",
+    "doc_code": "FM-02-MOP-32.008",
+    "title": "Form Checklist Inspeksi Drainase dan Gorong-gorong Jalan Tambang",
+    "category": "Pengelolaan Lingkungan Tambang",
+    "topic": "Inspeksi Drainase & Gorong-gorong Jalan Tambang",
+    "revision": "00",
+    "effective_date": "2026",
+    "department": "Road Maintenance & Environmental",
+    "icon": "bi-water",
+    "color": "#0ea5e9",
+    "total_items": 22,
+    "behavior_count": 0,
+    "condition_count": 22,
+    "sections": [
+      {
+        "name": "Inspeksi Drainase Jalan Tambang",
+        "type": "Kondisi",
+        "items": [
+          {
+            "no": "1",
+            "text": "Saluran drainase tersedia di sepanjang jalan",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Dimensi drainase sesuai standar",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Drainase tidak tersumbat material (lumpur, batu, vegetasi)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Aliran air lancar",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Tidak terjadi genangan air di badan jalan",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Dinding drainase stabil / tidak longsor",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Kemiringan drainase (% grade) cukup untuk mengalirkan air",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Drainase tidak tertutup oleh material dumping, material spoil dll",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Terdapat tanggul di sepanjang jalan",
+            "type": "Kondisi"
+          },
+          {
+            "no": "10",
+            "text": "Terdapat sodetan air (spillway) yang memadahi",
+            "type": "Kondisi"
+          },
+          {
+            "no": "11",
+            "text": "Kondisi outlet drainase baik",
+            "type": "Kondisi"
+          }
+        ]
+      },
+      {
+        "name": "Inspeksi Gorong-Gorong / Culvert",
+        "type": "Kondisi",
+        "items": [
+          {
+            "no": "1",
+            "text": "Gorong-gorong tersedia pada titik aliran air",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Dimensi dan kapasitas gorong-gorong sesuai kapasitas aliran actual",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Tidak tersumbat lumpur, kayu, atau batu",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Struktur gorong-gorong tidak rusak / retak",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Inlet gorong-gorong tidak tertutup material",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Outlet gorong-gorong tidak tertutup material",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Outlet gorong-gorong tidak tererosi",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Tidak terjadi penggerusan (scouring) di sekitar gorong-gorong",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Permukaan jalan di atas gorong-gorong stabil",
+            "type": "Kondisi"
+          },
+          {
+            "no": "10",
+            "text": "Tidak terjadi penurunan tanah di sekitar gorong-gorong",
+            "type": "Kondisi"
+          },
+          {
+            "no": "11",
+            "text": "Kemiringan gorong-gorong cukup untuk mengalirkan air",
+            "type": "Kondisi"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "FM-02-MOP-32.009 Checklist Inspeksi Waterfill.xlsx",
+    "doc_code": "FM-02-MOP-32.009",
+    "title": "Form Inspeksi Fasilitas Pengisian Air (Waterfill Point)",
+    "category": "Pengelolaan Lingkungan Tambang",
+    "topic": "Operasional Fasilitas Waterfill",
+    "revision": "00",
+    "effective_date": "24 Sept 2026",
+    "department": "Mining Operation & Dewatering",
+    "icon": "bi-fuel-pump-fill",
+    "color": "#3b82f6",
+    "total_items": 27,
+    "behavior_count": 5,
+    "condition_count": 22,
+    "sections": [
+      {
+        "name": "Identifikasi Perilaku",
+        "type": "Perilaku",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah orang yang bekerja (Pengawas, Crew Pompa, Operator Water truck) bekerja menggunakan APD lengkap (termasuk rompi pelampung jika dekat air / sump / water void)?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "2",
+            "text": "Apakah orang yang bekerja (Pengawas, Crew Pompa, Operator Water truck) berdiri diatas tanggul atau dekat crest ke arah water ponding / void / sump?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "3",
+            "text": "Apakah ada orang yang parkir unit bukan di area parkir?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "4",
+            "text": "Apakah Crew Pompa menggunakan sarung tangan saat bekerja di sump / water void?",
+            "type": "Perilaku"
+          },
+          {
+            "no": "5",
+            "text": "Apakah terjadi komunikasi aktif 2 arah menggunakan radio saat pekerjaan berlangsung di area Waterfill?",
+            "type": "Perilaku"
+          }
+        ]
+      },
+      {
+        "name": "Identifikasi Kondisi",
+        "type": "Kondisi",
+        "items": [
+          {
+            "no": "1",
+            "text": "Apakah pondok waterfill dalam kondisi baik (Jika ada)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah pondok waterfill dilengkapi dengan penangkal petir (Jika terdapat pondok)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "3",
+            "text": "Apakah kondisi pencahayaan sesuai (20Lux)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "4",
+            "text": "Apakah terdapat pelampung / ring boy dan dalam kondisi baik",
+            "type": "Kondisi"
+          },
+          {
+            "no": "5",
+            "text": "Apakah pad waterfill dalam kondisi baik",
+            "type": "Kondisi"
+          },
+          {
+            "no": "6",
+            "text": "Apakah terdapat area parkir Sarana (Diluar waterfill point)",
+            "type": "Kondisi"
+          },
+          {
+            "no": "7",
+            "text": "Apakah terdapat area untuk antri Water Truck",
+            "type": "Kondisi"
+          },
+          {
+            "no": "8",
+            "text": "Apakah akses ke Pompa terpisah dari akses waterfill point",
+            "type": "Kondisi"
+          },
+          {
+            "no": "9",
+            "text": "Apakah lokasi waterfill dalam keadaan bersih dari sampah?",
+            "type": "Kondisi"
+          },
+          {
+            "no": "10",
+            "text": "Apakah tidak terdapat ceceran oli",
+            "type": "Kondisi"
+          },
+          {
+            "no": "1",
+            "text": "Apakah rambu tersedia dan dalam kondisi baik",
+            "type": "Kondisi"
+          },
+          {
+            "no": "12",
+            "text": "a. Papan Informasi nama Waterfill & PIC Waterfill",
+            "type": "Kondisi"
+          },
+          {
+            "no": "13",
+            "text": "b. Rambu wajib menggunakan APD",
+            "type": "Kondisi"
+          },
+          {
+            "no": "14",
+            "text": "c. Rambu informasi tempat berkumpul darurat (emergency muster point) & Nomer Emergency Call",
+            "type": "Kondisi"
+          },
+          {
+            "no": "15",
+            "text": "d. Rambu Channel Radio",
+            "type": "Kondisi"
+          },
+          {
+            "no": "16",
+            "text": "e. Rambu STOP di pintu keluar area waterfill",
+            "type": "Kondisi"
+          },
+          {
+            "no": "17",
+            "text": "f. Rambu Larangan Sarana Masuk",
+            "type": "Kondisi"
+          },
+          {
+            "no": "18",
+            "text": "g. Rambu penunjuk arah Akses Masuk Waterfill",
+            "type": "Kondisi"
+          },
+          {
+            "no": "19",
+            "text": "i. Rambu Batas Berhenti untuk pengisian air",
+            "type": "Kondisi"
+          },
+          {
+            "no": "20",
+            "text": "j. Rambu Parkir Mundur Sarana",
+            "type": "Kondisi"
+          },
+          {
+            "no": "21",
+            "text": "k. Rambu Batas Antrian",
+            "type": "Kondisi"
+          },
+          {
+            "no": "2",
+            "text": "Apakah tersedia tempat sampah (3 jenis)",
+            "type": "Kondisi"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,6 +1,6 @@
 @{
     ViewData["Title"] = "Master Konten BBS - SAP";
-    string activeTab = ViewBag.ActiveTabName ?? "categories";
+    string activeTab = ViewBag.ActiveTabName ?? "documents";
     int? selCategoryId = ViewBag.CategoryId;
     int? selTopicId = ViewBag.TopicId;
     string searchQuery = ViewBag.SearchQuery ?? "";
@@ -8,6 +8,12 @@
     var categories = ViewBag.Categories as List<MBS_SAP.Models.BbsCategory> ?? new List<MBS_SAP.Models.BbsCategory>();
     var topics = ViewBag.Topics as List<MBS_SAP.Models.BbsTopic> ?? new List<MBS_SAP.Models.BbsTopic>();
     var behaviors = ViewBag.Behaviors as List<MBS_SAP.Models.BbsBehavior> ?? new List<MBS_SAP.Models.BbsBehavior>();
+    var documents = ViewBag.Documents as List<MBS_SAP.Models.BbsDocument> ?? new List<MBS_SAP.Models.BbsDocument>();
+
+    int totalDocsCount = ViewBag.TotalDocsCount ?? documents.Count;
+    int totalChecklistItems = documents.Sum(d => d.TotalItems);
+    int totalBehaviorItems = documents.Sum(d => d.BehaviorCount);
+    int totalConditionItems = documents.Sum(d => d.ConditionCount);
 }
 
 <style>
@@ -65,6 +71,20 @@
     body.light-theme .master-table-card thead th {
         color: var(--text-muted);
     }
+
+    .doc-stat-chip {
+        padding: 6px 12px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid var(--border-color);
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 11.5px;
+    }
+    body.light-theme .doc-stat-chip {
+        background: #f8fafc;
+    }
 </style>
 
 <div class="animate-fade-in pb-5 mb-4">
@@ -80,8 +100,8 @@
                     &larr; Form &amp; Riwayat Observasi BBS
                 </a>
             </div>
-            <div class="screen-title">Master Data Konten BBS</div>
-            <p class="screen-subtitle">Kelola kategori, topik special case, dan butir-butir perilaku yang aktif di formulir BBS.</p>
+            <div class="screen-title">Master Data Konten BBS &amp; Formulir Acuan</div>
+            <p class="screen-subtitle">Kelola dokumen standar checklist (FM-MOP), kategori observasi, topik special case, dan butir perilaku aktif.</p>
         </div>
 
         <div>
@@ -99,11 +119,18 @@
                     <span>Tambah Topik Baru</span>
                 </button>
             }
-            else
+            else if (activeTab == "behaviors")
             {
                 <button type="button" class="btn btn-success fw-bold d-inline-flex align-items-center gap-2 shadow-sm" style="border-radius: 14px; padding: 10px 18px; font-size: 13px;" onclick="openBehaviorModal()">
                     <i class="bi bi-plus-circle-fill"></i>
                     <span>Tambah Butir Perilaku</span>
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-info fw-bold d-inline-flex align-items-center gap-2 text-dark shadow-sm" style="border-radius: 14px; padding: 10px 18px; font-size: 13px;" onclick="openDocumentModal()">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>Tambah Dokumen Baru</span>
                 </button>
             }
         </div>
@@ -128,22 +155,209 @@
 
     <!-- Navigation Tabs -->
     <div class="d-flex align-items-center gap-1.5 p-1 rounded-4 mb-3 flex-wrap" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); width: fit-content;">
+        <a href="/BbsMaster/Index?tab=documents" class="master-tab-btn @(activeTab == "documents" ? "active" : "")">
+            <i class="bi bi-file-earmark-medical-fill"></i>
+            <span>1. Master Dokumen Acuan (@documents.Count)</span>
+        </a>
         <a href="/BbsMaster/Index?tab=categories" class="master-tab-btn @(activeTab == "categories" ? "active" : "")">
             <i class="bi bi-grid-fill"></i>
-            <span>1. Master Kategori (@categories.Count)</span>
+            <span>2. Master Kategori (@categories.Count)</span>
         </a>
         <a href="/BbsMaster/Index?tab=topics" class="master-tab-btn @(activeTab == "topics" ? "active" : "")">
             <i class="bi bi-tags-fill"></i>
-            <span>2. Master Topik / Kasus (@topics.Count)</span>
+            <span>3. Master Topik / Kasus (@topics.Count)</span>
         </a>
         <a href="/BbsMaster/Index?tab=behaviors" class="master-tab-btn @(activeTab == "behaviors" ? "active" : "")">
             <i class="bi bi-card-checklist"></i>
-            <span>3. Master Butir Perilaku (@behaviors.Count)</span>
+            <span>4. Master Butir Perilaku (@behaviors.Count)</span>
         </a>
     </div>
 
     <!-- ============================================================== -->
-    <!-- TAB 1: MASTER KATEGORI BBS                                     -->
+    <!-- TAB 1: MASTER DOKUMEN & FORMULIR ACUAN (FM-MOP)                -->
+    <!-- ============================================================== -->
+    @if (activeTab == "documents")
+    {
+        <!-- Summary Stats Banner -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-3 rounded-4 mb-3" style="background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(2, 132, 199, 0.25);">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(2, 132, 199, 0.2); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                        <i class="bi bi-journal-check"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-primary" style="font-size: 13.5px;">Dokumen Acuan Standar Operasional (MOP)</div>
+                        <small class="text-muted">Diintegrasikan langsung dengan basis data butir observasi perilaku dan formulir lapangan.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="doc-stat-chip">
+                    <i class="bi bi-files text-primary"></i>
+                    <span><strong>@totalDocsCount</strong> Dokumen SOP</span>
+                </div>
+                <div class="doc-stat-chip">
+                    <i class="bi bi-list-check text-info"></i>
+                    <span><strong>@totalChecklistItems</strong> Butir Checklist</span>
+                </div>
+                <div class="doc-stat-chip">
+                    <i class="bi bi-shield-check text-success"></i>
+                    <span><strong>@totalBehaviorItems</strong> Identifikasi Perilaku</span>
+                </div>
+                <div class="doc-stat-chip">
+                    <i class="bi bi-clipboard-data text-warning"></i>
+                    <span><strong>@totalConditionItems</strong> Identifikasi Kondisi</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="master-table-card card-sap p-0 mb-0">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color: var(--border-color) !important;">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <h6 class="fw-bold mb-0 text-info" style="font-size: 13.5px;">
+                        <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i>Daftar Master Dokumen &amp; Form Inspeksi
+                    </h6>
+                    <select class="form-select form-select-sm" style="width: auto; min-width: 190px; border-radius: 8px; font-size: 12px;" onchange="window.location.href='/BbsMaster/Index?tab=documents&categoryId=' + this.value">
+                        <option value="">-- Semua Kategori --</option>
+                        @foreach (var c in categories)
+                        {
+                            <option value="@c.Id" selected="@(c.Id == selCategoryId)">@c.Name</option>
+                        }
+                    </select>
+
+                    <form method="get" action="/BbsMaster/Index" class="d-inline-flex gap-1 m-0">
+                        <input type="hidden" name="tab" value="documents" />
+                        @if (selCategoryId.HasValue)
+                        {
+                            <input type="hidden" name="categoryId" value="@selCategoryId.Value" />
+                        }
+                        <input type="text" name="search" value="@searchQuery" class="form-control form-control-sm" placeholder="Cari kode/judul dokumen..." style="width: 220px; border-radius: 8px; font-size: 12px;" />
+                        <button type="submit" class="btn btn-sm btn-outline-info" style="border-radius: 8px;"><i class="bi bi-search"></i></button>
+                    </form>
+                </div>
+                <small class="text-muted">Klik "Lihat Butir Checklist" untuk menampilkan seluruh poin periksa form</small>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: 12.5px; color: var(--text-main);">
+                    <thead style="background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-color);">
+                        <tr>
+                            <th style="width: 45px;" class="text-center">#</th>
+                            <th style="width: 140px;">No. Dokumen</th>
+                            <th>Judul &amp; Ruang Lingkup Dokumen</th>
+                            <th>Kategori &amp; Topik BBS</th>
+                            <th>Departemen</th>
+                            <th>Revisi / Tanggal</th>
+                            <th>Checklist</th>
+                            <th>Status</th>
+                            <th class="text-end" style="width: 160px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var doc in documents)
+                        {
+                            <tr>
+                                <td class="text-center text-muted fw-bold">@doc.SortOrder</td>
+                                <td>
+                                    <span class="badge" style="background: rgba(2, 132, 199, 0.15); color: #38bdf8; font-size: 11px; font-weight: 700; letter-spacing: 0.3px;">
+                                        @doc.DocCode
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold" style="color: var(--text-main); font-size: 13px;">@doc.Title</div>
+                                    @if (!string.IsNullOrEmpty(doc.Scope))
+                                    {
+                                        <small class="text-muted" style="font-size: 11px;"><i class="bi bi-compass me-1"></i>@doc.Scope</small>
+                                    }
+                                </td>
+                                <td>
+                                    <div style="font-size: 11.5px; font-weight: 600; color: var(--color-primary);">
+                                        @(doc.Category?.Name ?? doc.CategoryName ?? "-")
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(doc.TopicName))
+                                    {
+                                        <small class="text-muted" style="font-size: 10.5px;">&rsaquo; @doc.TopicName</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="text-muted" style="font-size: 11.5px;">@(doc.Department ?? "-")</span>
+                                </td>
+                                <td>
+                                    <div style="font-size: 11px; font-weight: 600;">@(doc.Revision ?? "Rev.00")</div>
+                                    <small class="text-muted" style="font-size: 10.5px;">@(doc.EffectiveDate ?? "2026")</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                        <button type="button" class="badge border-0" style="background: rgba(14, 165, 233, 0.18); color: #38bdf8; font-size: 10.5px; cursor: pointer;" onclick="viewDocumentDetails(@doc.Id)" title="Klik untuk lihat detail checklist">
+                                            <strong>@doc.TotalItems</strong> Butir &rarr;
+                                        </button>
+                                        @if (doc.BehaviorCount > 0)
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 9.5px;" title="Butir Perilaku">
+                                                @doc.BehaviorCount BBS
+                                            </span>
+                                        }
+                                        @if (doc.ConditionCount > 0)
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle" style="font-size: 9.5px;" title="Butir Kondisi/Prasyarat">
+                                                @doc.ConditionCount Kondisi
+                                            </span>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (doc.IsActive)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Aktif</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-muted border border-secondary-subtle">Nonaktif</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <button type="button" class="btn btn-sm btn-outline-info" title="Lihat Butir Checklist" onclick="viewDocumentDetails(@doc.Id)">
+                                            <i class="bi bi-eye-fill"></i>
+                                        </button>
+
+                                        @if (!string.IsNullOrEmpty(doc.FileName))
+                                        {
+                                            <a href="/BbsMaster/DownloadDocument/@doc.Id" class="btn btn-sm btn-outline-success" title="Download Excel Asli (@doc.FileName)">
+                                                <i class="bi bi-file-earmark-excel-fill"></i>
+                                            </a>
+                                        }
+
+                                        <button type="button" class="btn btn-sm btn-outline-warning" title="Edit Dokumen" onclick='editDocument(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { doc.Id, doc.DocCode, doc.Title, doc.CategoryId, doc.TopicName, doc.Revision, doc.EffectiveDate, doc.Department, doc.Scope, doc.Description, doc.Icon, doc.Color, doc.SortOrder, doc.IsActive })))'>
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </button>
+
+                                        <form method="post" action="/BbsMaster/ToggleDocument/@doc.Id" class="d-inline m-0">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm @(doc.IsActive ? "btn-outline-secondary" : "btn-outline-success")" title="@(doc.IsActive ? "Nonaktifkan" : "Aktifkan")">
+                                                <i class="bi @(doc.IsActive ? "bi-eye-slash-fill" : "bi-eye-fill")"></i>
+                                            </button>
+                                        </form>
+
+                                        <form method="post" action="/BbsMaster/DeleteDocument/@doc.Id" onsubmit="return confirm('Hapus dokumen ini beserta seluruh butir checklistnya?');" class="d-inline m-0">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus Dokumen">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    <!-- ============================================================== -->
+    <!-- TAB 2: MASTER KATEGORI BBS                                     -->
     <!-- ============================================================== -->
     @if (activeTab == "categories")
     {
@@ -231,7 +445,7 @@
     }
 
     <!-- ============================================================== -->
-    <!-- TAB 2: MASTER TOPIK / KASUS BBS                                -->
+    <!-- TAB 3: MASTER TOPIK / KASUS BBS                                -->
     <!-- ============================================================== -->
     @if (activeTab == "topics")
     {
@@ -248,8 +462,18 @@
                             <option value="@c.Id" selected="@(c.Id == selCategoryId)">@c.Name</option>
                         }
                     </select>
+
+                    <form method="get" action="/BbsMaster/Index" class="d-inline-flex gap-1 m-0">
+                        <input type="hidden" name="tab" value="topics" />
+                        @if (selCategoryId.HasValue)
+                        {
+                            <input type="hidden" name="categoryId" value="@selCategoryId.Value" />
+                        }
+                        <input type="text" name="search" value="@searchQuery" class="form-control form-control-sm" placeholder="Cari topik..." style="width: 180px; border-radius: 8px; font-size: 12px;" />
+                        <button type="submit" class="btn btn-sm btn-outline-warning" style="border-radius: 8px;"><i class="bi bi-search"></i></button>
+                    </form>
                 </div>
-                <small class="text-muted">Topik mendetailkan fokus observasi (contoh: Distraksi Saat Mengemudi)</small>
+                <small class="text-muted">Topik mendetailkan fokus observasi (contoh: Operasional Front Loading Overburden)</small>
             </div>
 
             <div class="table-responsive">
@@ -323,7 +547,7 @@
     }
 
     <!-- ============================================================== -->
-    <!-- TAB 3: MASTER BUTIR PERILAKU                                   -->
+    <!-- TAB 4: MASTER BUTIR PERILAKU                                   -->
     <!-- ============================================================== -->
     @if (activeTab == "behaviors")
     {
@@ -340,8 +564,22 @@
                             <option value="@c.Id" selected="@(c.Id == selCategoryId)">@c.Name</option>
                         }
                     </select>
+
+                    <form method="get" action="/BbsMaster/Index" class="d-inline-flex gap-1 m-0">
+                        <input type="hidden" name="tab" value="behaviors" />
+                        @if (selCategoryId.HasValue)
+                        {
+                            <input type="hidden" name="categoryId" value="@selCategoryId.Value" />
+                        }
+                        @if (selTopicId.HasValue)
+                        {
+                            <input type="hidden" name="topicId" value="@selTopicId.Value" />
+                        }
+                        <input type="text" name="search" value="@searchQuery" class="form-control form-control-sm" placeholder="Cari teks perilaku..." style="width: 180px; border-radius: 8px; font-size: 12px;" />
+                        <button type="submit" class="btn btn-sm btn-outline-success" style="border-radius: 8px;"><i class="bi bi-search"></i></button>
+                    </form>
                 </div>
-                <small class="text-muted">Butir pilihan perilaku yang muncul pada checklist langkah 2</small>
+                <small class="text-muted">Butir pilihan perilaku yang muncul pada formulir observasi BBS</small>
             </div>
 
             <div class="table-responsive">
@@ -380,10 +618,23 @@
                                     }
                                 </td>
                                 <td>
-                                    <span class="badge @classBadge" style="font-size: 10px;">@b.DefaultClassification</span>
+                                    <span class="badge @classBadge" style="font-size: 10px;">
+                                        @(isSafe ? "Safe (Aman)" : "At-Risk (Berisiko)")
+                                    </span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-secondary" style="font-size: 10px;">@b.DefaultRiskLevel</span>
+                                    @{
+                                        var rColor = b.DefaultRiskLevel switch
+                                        {
+                                            "Sangat Tinggi" => "#ef4444",
+                                            "Tinggi" => "#f97316",
+                                            "Sedang" => "#38bdf8",
+                                            _ => "#10b981"
+                                        };
+                                    }
+                                    <span class="badge" style="background: @(rColor)22; color: @rColor; border: 1px solid @(rColor)44; font-size: 10px;">
+                                        @(b.DefaultRiskLevel ?? "Sedang")
+                                    </span>
                                 </td>
                                 <td>
                                     @if (b.IsActive)
@@ -409,7 +660,7 @@
                                         <form method="post" action="/BbsMaster/DeleteBehavior/@b.Id" onsubmit="return confirm('Hapus butir perilaku ini?');" class="d-inline m-0">
                                             @Html.AntiForgeryToken()
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus">
-                                                <i class="bi bi-trash3-fill"></i>
+                                                <i class="bi bi-trash-fill"></i>
                                             </button>
                                         </form>
                                     </div>
@@ -421,13 +672,178 @@
             </div>
         </div>
     }
+
 </div>
 
 <!-- ============================================================== -->
-<!-- MODALS FOR MASTER CRUD                                         -->
+<!-- MODAL 1: DETAIL BUTIR CHECKLIST DOKUMEN                         -->
 <!-- ============================================================== -->
+<div class="modal fade" id="modalDocDetail" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 20px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">
+            <div class="modal-header py-3 px-4" style="border-bottom: 1px solid var(--border-color);">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(2, 132, 199, 0.15); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                        <i class="bi bi-journal-check" id="docDetailIcon"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge" id="docDetailCodeBadge" style="background: rgba(2, 132, 199, 0.2); color: #38bdf8; font-size: 11.5px; font-weight: 800;">-</span>
+                            <span class="badge bg-secondary-subtle text-muted" id="docDetailRevBadge">Rev.00</span>
+                        </div>
+                        <h6 class="modal-title fw-bold mb-0 mt-0.5" id="docDetailTitle" style="font-size: 14.5px;">Detail Checklist Dokumen</h6>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="#" id="docDetailDownloadBtn" class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center gap-1.5" style="border-radius: 10px;">
+                        <i class="bi bi-file-earmark-excel-fill"></i> Download Excel
+                    </a>
+                    <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
 
-<!-- Modal Kategori -->
+            <div class="modal-body p-4">
+                <!-- Meta Info Box -->
+                <div class="p-3 rounded-4 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);">
+                    <div class="d-flex gap-4 flex-wrap" style="font-size: 12px;">
+                        <div>
+                            <span class="text-muted d-block" style="font-size: 11px;">Kategori BBS:</span>
+                            <strong id="docDetailCategory" class="text-primary">-</strong>
+                        </div>
+                        <div>
+                            <span class="text-muted d-block" style="font-size: 11px;">Departemen:</span>
+                            <strong id="docDetailDept">-</strong>
+                        </div>
+                        <div>
+                            <span class="text-muted d-block" style="font-size: 11px;">Ruang Lingkup:</span>
+                            <strong id="docDetailScope">-</strong>
+                        </div>
+                        <div>
+                            <span class="text-muted d-block" style="font-size: 11px;">Total Butir Periksa:</span>
+                            <strong id="docDetailTotal">-</strong>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-1">
+                        <input type="text" id="docItemSearchInput" class="form-control form-control-sm" placeholder="Filter teks butir..." style="width: 220px; border-radius: 8px; font-size: 11.5px;" oninput="filterDocItems(this.value)" />
+                    </div>
+                </div>
+
+                <!-- Container Sections & Items -->
+                <div id="docSectionsContainer">
+                    <div class="text-center py-5 text-muted">
+                        <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                        <div>Memuat butir-butir checklist dokumen...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer py-2.5 px-4" style="border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn-sap-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL 2: TAMBAH / EDIT MASTER DOKUMEN                           -->
+<!-- ============================================================== -->
+<div class="modal fade" id="modalDocument" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 18px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">
+            <form method="post" action="/BbsMaster/SaveDocument" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="docModalId" value="0" />
+
+                <div class="modal-header py-3 px-4" style="border-bottom: 1px solid var(--border-color);">
+                    <h6 class="modal-title fw-bold" id="docModalTitle">Tambah Master Dokumen Standar Baru</h6>
+                    <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row mb-3">
+                        <div class="col-12 col-md-5 form-group-sap">
+                            <label class="form-label-sap" for="docModalCode">Nomor / Kode Dokumen <span class="text-danger">*</span></label>
+                            <input type="text" name="DocCode" id="docModalCode" class="input-sap" required placeholder="Contoh: FM-02-MOP-32.001" />
+                        </div>
+                        <div class="col-12 col-md-7 form-group-sap">
+                            <label class="form-label-sap" for="docModalName">Judul Dokumen / Form <span class="text-danger">*</span></label>
+                            <input type="text" name="Title" id="docModalName" class="input-sap" required placeholder="Contoh: Form Checklist Pengawas Front Loading Overburden" />
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12 col-md-6 form-group-sap">
+                            <label class="form-label-sap" for="docModalCategory">Kategori Terkait BBS</label>
+                            <select name="CategoryId" id="docModalCategory" class="input-sap">
+                                <option value="">-- Pilih Kategori --</option>
+                                @foreach (var c in categories)
+                                {
+                                    <option value="@c.Id">@c.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6 form-group-sap">
+                            <label class="form-label-sap" for="docModalTopic">Topik Spesifik Acuan</label>
+                            <input type="text" name="TopicName" id="docModalTopic" class="input-sap" placeholder="Contoh: Operasional Front Loading Overburden" />
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12 col-md-4 form-group-sap">
+                            <label class="form-label-sap" for="docModalRev">Revisi</label>
+                            <input type="text" name="Revision" id="docModalRev" class="input-sap" value="00" placeholder="Contoh: Rev. 01" />
+                        </div>
+                        <div class="col-12 col-md-4 form-group-sap">
+                            <label class="form-label-sap" for="docModalDate">Tanggal Efektif</label>
+                            <input type="text" name="EffectiveDate" id="docModalDate" class="input-sap" placeholder="Contoh: 10 Sept 2026" />
+                        </div>
+                        <div class="col-12 col-md-4 form-group-sap">
+                            <label class="form-label-sap" for="docModalDept">Departemen</label>
+                            <input type="text" name="Department" id="docModalDept" class="input-sap" placeholder="Contoh: Mining Operation" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="docModalScope">Ruang Lingkup / Cakupan Area</label>
+                        <input type="text" name="Scope" id="docModalScope" class="input-sap" placeholder="Contoh: Front Loading OB & Galian Tambang" />
+                    </div>
+
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="docModalDesc">Keterangan / Deskripsi Dokumen</label>
+                        <textarea name="Description" id="docModalDesc" class="input-sap" rows="2" placeholder="Penjelasan tujuan checklist dan ketentuan pengawasannya..."></textarea>
+                    </div>
+
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="docModalFile">Upload Berkas Excel Dokumen (Opsional / Template)</label>
+                        <input type="file" name="excelFile" id="docModalFile" class="form-control form-control-sm" accept=".xls,.xlsx" />
+                        <small class="text-muted" style="font-size: 11px;">Mendukung format .xlsx dan .xls</small>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6 form-group-sap">
+                            <label class="form-label-sap" for="docModalSort">Urutan Tampilan</label>
+                            <input type="number" name="SortOrder" id="docModalSort" class="input-sap" value="1" />
+                        </div>
+                        <div class="col-6 d-flex align-items-end">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="docModalActive" checked />
+                                <label class="form-check-label fw-bold" for="docModalActive" style="font-size: 12.5px;">Status Aktif</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2.5 px-4" style="border-top: 1px solid var(--border-color);">
+                    <button type="button" class="btn-sap-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-info fw-bold px-4 text-dark" style="border-radius: 14px;">Simpan Dokumen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL 3: KATEGORI                                              -->
+<!-- ============================================================== -->
 <div class="modal fade" id="modalCategory" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 18px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">
@@ -436,38 +852,38 @@
                 <input type="hidden" name="Id" id="catModalId" value="0" />
 
                 <div class="modal-header py-3 px-4" style="border-bottom: 1px solid var(--border-color);">
-                    <h6 class="modal-title fw-bold" id="catModalTitle">Tambah Kategori BBS</h6>
+                    <h6 class="modal-title fw-bold" id="catModalTitle">Tambah Kategori BBS Baru</h6>
                     <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3 form-group-sap">
                         <label class="form-label-sap" for="catModalName">Nama Kategori <span class="text-danger">*</span></label>
-                        <input type="text" name="Name" id="catModalName" class="input-sap" required placeholder="Contoh: Mengemudi & Hauling" />
+                        <input type="text" name="Name" id="catModalName" class="input-sap" required placeholder="Contoh: Operasional Port & Jetty" />
                     </div>
 
                     <div class="mb-3 form-group-sap">
-                        <label class="form-label-sap" for="catModalType">Tipe Tampilan</label>
+                        <label class="form-label-sap" for="catModalType">Tipe Observasi</label>
                         <select name="CategoryType" id="catModalType" class="input-sap">
-                            <option value="Both">Muncul di Keduanya (Rutin & Special Case)</option>
-                            <option value="Rutin">Observasi Rutin Saja</option>
-                            <option value="SpecialCase">Special Case Saja</option>
+                            <option value="Both">Keduanya (Rutin &amp; Special Case)</option>
+                            <option value="Rutin">Observasi Rutin</option>
+                            <option value="SpecialCase">Observasi Khusus (Special Case)</option>
                         </select>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-6 form-group-sap">
-                            <label class="form-label-sap" for="catModalIcon">Icon</label>
-                            <input type="text" name="Icon" id="catModalIcon" class="input-sap" placeholder="bi-truck" />
+                            <label class="form-label-sap" for="catModalIcon">Bootstrap Icon</label>
+                            <input type="text" name="Icon" id="catModalIcon" class="input-sap" value="bi-clipboard2-check" placeholder="bi-cone-striped" />
                         </div>
                         <div class="col-6 form-group-sap">
-                            <label class="form-label-sap" for="catModalColor">Warna</label>
-                            <input type="color" name="Color" id="catModalColor" class="form-control form-control-color w-100" value="#0284c7" style="border-radius: 14px; height: 46px;" />
+                            <label class="form-label-sap" for="catModalColor">Warna Aksen</label>
+                            <input type="color" name="Color" id="catModalColor" class="form-control form-control-color w-100" value="#0284c7" style="height: 42px; border-radius: 12px;" />
                         </div>
                     </div>
 
                     <div class="mb-3 form-group-sap">
-                        <label class="form-label-sap" for="catModalDesc">Deskripsi Singkat</label>
-                        <input type="text" name="Description" id="catModalDesc" class="input-sap" placeholder="Keterangan singkat" />
+                        <label class="form-label-sap" for="catModalDesc">Keterangan / Deskripsi Singkat</label>
+                        <textarea name="Description" id="catModalDesc" class="input-sap" rows="2" placeholder="Deskripsi ruang lingkup kategori..."></textarea>
                     </div>
 
                     <div class="row">
@@ -485,14 +901,16 @@
                 </div>
                 <div class="modal-footer py-2.5 px-4" style="border-top: 1px solid var(--border-color);">
                     <button type="button" class="btn-sap-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn-sap-primary px-4">Simpan Kategori</button>
+                    <button type="submit" class="btn-sap-primary">Simpan Kategori</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Modal Topik -->
+<!-- ============================================================== -->
+<!-- MODAL 4: TOPIK                                                 -->
+<!-- ============================================================== -->
 <div class="modal fade" id="modalTopic" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 18px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">
@@ -501,7 +919,7 @@
                 <input type="hidden" name="Id" id="topicModalId" value="0" />
 
                 <div class="modal-header py-3 px-4" style="border-bottom: 1px solid var(--border-color);">
-                    <h6 class="modal-title fw-bold" id="topicModalTitle">Tambah Topik Special Case</h6>
+                    <h6 class="modal-title fw-bold" id="topicModalTitle">Tambah Topik Special Case Baru</h6>
                     <button type="button" class="btn-close btn-close-sap" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
@@ -517,28 +935,30 @@
 
                     <div class="mb-3 form-group-sap">
                         <label class="form-label-sap" for="topicModalName">Nama Topik / Kasus <span class="text-danger">*</span></label>
-                        <input type="text" name="Name" id="topicModalName" class="input-sap" required placeholder="Contoh: Distraksi Saat Mengemudi" />
+                        <input type="text" name="Name" id="topicModalName" class="input-sap" required placeholder="Contoh: Pengoperasian Chainsaw & Land Clearing" />
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-6 form-group-sap">
-                            <label class="form-label-sap" for="topicModalIcon">Icon</label>
-                            <input type="text" name="Icon" id="topicModalIcon" class="input-sap" placeholder="bi-tag" />
-                        </div>
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="topicModalIcon">Bootstrap Icon</label>
+                        <input type="text" name="Icon" id="topicModalIcon" class="input-sap" value="bi-tag" placeholder="bi-tag" />
+                    </div>
+
+                    <div class="mb-3 form-group-sap">
+                        <label class="form-label-sap" for="topicModalDesc">Keterangan / Fokus Observasi</label>
+                        <textarea name="Description" id="topicModalDesc" class="input-sap" rows="2" placeholder="Contoh: Radius aman penebangan pohon dan APD..."></textarea>
+                    </div>
+
+                    <div class="row">
                         <div class="col-6 form-group-sap">
                             <label class="form-label-sap" for="topicModalSort">Urutan</label>
                             <input type="number" name="SortOrder" id="topicModalSort" class="input-sap" value="0" />
                         </div>
-                    </div>
-
-                    <div class="mb-3 form-group-sap">
-                        <label class="form-label-sap" for="topicModalDesc">Deskripsi Topik</label>
-                        <input type="text" name="Description" id="topicModalDesc" class="input-sap" placeholder="Penjelasan fokus perilaku kasus" />
-                    </div>
-
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="topicModalActive" checked />
-                        <label class="form-check-label fw-bold" for="topicModalActive" style="font-size: 12.5px;">Status Aktif</label>
+                        <div class="col-6 d-flex align-items-end">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" name="IsActive" value="true" id="topicModalActive" checked />
+                                <label class="form-check-label fw-bold" for="topicModalActive" style="font-size: 12.5px;">Status Aktif</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer py-2.5 px-4" style="border-top: 1px solid var(--border-color);">
@@ -550,7 +970,9 @@
     </div>
 </div>
 
-<!-- Modal Butir Perilaku -->
+<!-- ============================================================== -->
+<!-- MODAL 5: BUTIR PERILAKU                                        -->
+<!-- ============================================================== -->
 <div class="modal fade" id="modalBehavior" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content" style="border-radius: 18px; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">
@@ -639,6 +1061,192 @@
 </div>
 
 <script>
+    // --- Detail Modal Logic ---
+    let currentDocDetails = null;
+
+    function viewDocumentDetails(docId) {
+        const container = document.getElementById('docSectionsContainer');
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                <div>Memuat butir checklist dokumen #${docId}...</div>
+            </div>
+        `;
+        document.getElementById('docItemSearchInput').value = '';
+
+        const modal = new bootstrap.Modal(document.getElementById('modalDocDetail'));
+        modal.show();
+
+        fetch(`/BbsMaster/GetDocumentDetails/${docId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    container.innerHTML = `<div class="alert alert-danger">${data.message || 'Gagal memuat detail dokumen.'}</div>`;
+                    return;
+                }
+
+                currentDocDetails = data.doc;
+                renderDocDetails(data.doc);
+            })
+            .catch(err => {
+                container.innerHTML = `<div class="alert alert-danger">Terjadi kesalahan memuat data: ${err}</div>`;
+            });
+    }
+
+    function renderDocDetails(doc, filterText = '') {
+        document.getElementById('docDetailCodeBadge').textContent = doc.docCode || '-';
+        document.getElementById('docDetailRevBadge').textContent = (doc.revision || 'Rev.00') + (doc.effectiveDate ? ` (${doc.effectiveDate})` : '');
+        document.getElementById('docDetailTitle').textContent = doc.title || 'Detail Checklist Dokumen';
+        document.getElementById('docDetailCategory').textContent = doc.categoryName || '-';
+        document.getElementById('docDetailDept').textContent = doc.department || '-';
+        document.getElementById('docDetailScope').textContent = doc.scope || '-';
+        document.getElementById('docDetailTotal').textContent = `${doc.totalItems} Butir (${doc.behaviorCount} BBS / ${doc.conditionCount} Kondisi)`;
+
+        const downloadBtn = document.getElementById('docDetailDownloadBtn');
+        if (doc.fileName) {
+            downloadBtn.style.display = 'inline-flex';
+            downloadBtn.href = `/BbsMaster/DownloadDocument/${doc.id}`;
+        } else {
+            downloadBtn.style.display = 'none';
+        }
+
+        const container = document.getElementById('docSectionsContainer');
+        if (!doc.sections || doc.sections.length === 0) {
+            container.innerHTML = `<div class="text-center py-5 text-muted">Belum ada butir checklist yang terdaftar untuk dokumen ini.</div>`;
+            return;
+        }
+
+        const filterLower = filterText.trim().toLowerCase();
+        let html = '';
+
+        doc.sections.forEach((sec, sIdx) => {
+            const filteredItems = sec.items.filter(it => {
+                if (!filterLower) return true;
+                return (it.itemText && it.itemText.toLowerCase().includes(filterLower)) ||
+                       (it.itemNo && it.itemNo.toLowerCase().includes(filterLower)) ||
+                       (it.classification && it.classification.toLowerCase().includes(filterLower));
+            });
+
+            if (filterLower && filteredItems.length === 0) return;
+
+            const isPerilaku = sec.itemType === 'Perilaku';
+            const secBadgeColor = isPerilaku ? '#10b981' : '#0284c7';
+            const secBadgeBg = isPerilaku ? 'rgba(16, 185, 129, 0.15)' : 'rgba(2, 132, 199, 0.15)';
+
+            html += `
+                <div class="mb-4">
+                    <div class="d-flex align-items-center justify-content-between p-2.5 px-3 rounded-3 mb-2" style="background: ${secBadgeBg}; border-left: 4px solid ${secBadgeColor};">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold" style="color: ${secBadgeColor}; font-size: 13px;">
+                                <i class="bi ${isPerilaku ? 'bi-shield-check' : 'bi-clipboard-check'} me-1"></i>${sec.sectionName}
+                            </span>
+                            <span class="badge" style="background: ${secBadgeColor}22; color: ${secBadgeColor}; font-size: 10px;">${sec.itemType}</span>
+                        </div>
+                        <small class="text-muted" style="font-size: 11px;">${filteredItems.length} Poin Periksa</small>
+                    </div>
+
+                    <div class="table-responsive rounded-3" style="border: 1px solid var(--border-color);">
+                        <table class="table table-sm align-middle mb-0" style="font-size: 12px;">
+                            <thead style="background: rgba(255,255,255,0.02);">
+                                <tr>
+                                    <th style="width: 50px;" class="text-center">No</th>
+                                    <th>Deskripsi Pertanyaan / Butir Periksa</th>
+                                    <th style="width: 140px;">Tipe</th>
+                                    <th style="width: 120px;">Tingkat Risiko</th>
+                                    <th style="width: 90px;" class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            filteredItems.forEach(it => {
+                const isRisk = it.classification === 'At-Risk';
+                const rColor = it.riskLevel === 'Sangat Tinggi' ? '#ef4444' : (it.riskLevel === 'Tinggi' ? '#f97316' : (it.riskLevel === 'Sedang' ? '#38bdf8' : '#10b981'));
+
+                html += `
+                    <tr>
+                        <td class="text-center text-muted fw-bold">${it.itemNo || '-'}</td>
+                        <td>
+                            <div class="fw-semibold text-wrap" style="color: var(--text-main);">${it.itemText}</div>
+                        </td>
+                        <td>
+                            <span class="badge ${isRisk ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'}" style="font-size: 9.5px;">
+                                ${it.classification || (isRisk ? 'At-Risk' : 'Safe')}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge" style="background: ${rColor}22; color: ${rColor}; border: 1px solid ${rColor}44; font-size: 9.5px;">
+                                ${it.riskLevel || 'Sedang'}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge ${it.isActive ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-muted'}" style="font-size: 9px;">
+                                ${it.isActive ? 'Aktif' : 'Nonaktif'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        });
+
+        if (!html) {
+            container.innerHTML = `<div class="text-center py-4 text-muted">Tidak ada butir yang cocok dengan kata kunci "${filterText}".</div>`;
+        } else {
+            container.innerHTML = html;
+        }
+    }
+
+    function filterDocItems(txt) {
+        if (currentDocDetails) {
+            renderDocDetails(currentDocDetails, txt);
+        }
+    }
+
+    // --- Master Document CRUD Modals ---
+    function openDocumentModal() {
+        document.getElementById('docModalId').value = 0;
+        document.getElementById('docModalTitle').textContent = 'Tambah Master Dokumen Standar Baru';
+        document.getElementById('docModalCode').value = '';
+        document.getElementById('docModalName').value = '';
+        document.getElementById('docModalCategory').value = '';
+        document.getElementById('docModalTopic').value = '';
+        document.getElementById('docModalRev').value = '00';
+        document.getElementById('docModalDate').value = '2026';
+        document.getElementById('docModalDept').value = 'Mining Operation';
+        document.getElementById('docModalScope').value = '';
+        document.getElementById('docModalDesc').value = '';
+        document.getElementById('docModalSort').value = 1;
+        document.getElementById('docModalActive').checked = true;
+        document.getElementById('docModalFile').value = '';
+        new bootstrap.Modal(document.getElementById('modalDocument')).show();
+    }
+
+    function editDocument(d) {
+        document.getElementById('docModalId').value = d.Id;
+        document.getElementById('docModalTitle').textContent = `Edit Dokumen: ${d.DocCode}`;
+        document.getElementById('docModalCode').value = d.DocCode;
+        document.getElementById('docModalName').value = d.Title;
+        document.getElementById('docModalCategory').value = d.CategoryId || '';
+        document.getElementById('docModalTopic').value = d.TopicName || '';
+        document.getElementById('docModalRev').value = d.Revision || '00';
+        document.getElementById('docModalDate').value = d.EffectiveDate || '';
+        document.getElementById('docModalDept').value = d.Department || '';
+        document.getElementById('docModalScope').value = d.Scope || '';
+        document.getElementById('docModalDesc').value = d.Description || '';
+        document.getElementById('docModalSort').value = d.SortOrder || 1;
+        document.getElementById('docModalActive').checked = d.IsActive;
+        document.getElementById('docModalFile').value = '';
+        new bootstrap.Modal(document.getElementById('modalDocument')).show();
+    }
+
+    // --- Category Modals ---
     function openCategoryModal() {
         document.getElementById('catModalId').value = 0;
         document.getElementById('catModalTitle').textContent = 'Tambah Kategori BBS Baru';
@@ -665,6 +1273,7 @@
         new bootstrap.Modal(document.getElementById('modalCategory')).show();
     }
 
+    // --- Topic Modals ---
     function openTopicModal() {
         document.getElementById('topicModalId').value = 0;
         document.getElementById('topicModalTitle').textContent = 'Tambah Topik Special Case Baru';
@@ -688,6 +1297,7 @@
         new bootstrap.Modal(document.getElementById('modalTopic')).show();
     }
 
+    // --- Behavior Modals ---
     function openBehaviorModal() {
         document.getElementById('bhvModalId').value = 0;
         document.getElementById('bhvModalTitle').textContent = 'Tambah Butir Perilaku Baru';

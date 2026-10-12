@@ -44,6 +44,8 @@ namespace MBS_SAP.Data
         public DbSet<BbsTopic> BbsTopics { get; set; } = null!;
         public DbSet<BbsBehavior> BbsBehaviors { get; set; } = null!;
         public DbSet<BbsObservation> BbsObservations { get; set; } = null!;
+        public DbSet<BbsDocument> BbsDocuments { get; set; } = null!;
+        public DbSet<BbsDocumentItem> BbsDocumentItems { get; set; } = null!;
 
         // FCI, RCI, DCI & SPI
         public DbSet<FciReport> FciReports { get; set; } = null!;
