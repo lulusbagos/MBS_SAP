@@ -3126,6 +3126,9 @@
                         <h5><i class="bi bi-shield-shaded me-2 text-primary"></i>Klasemen Klub (Departemen)</h5>
                         <div class="league-card-actions">
                             <span class="badge bg-primary px-2 py-1" style="font-size: 10px; font-weight: 700;">@deptAchievements.Count KLUB</span>
+                            <button type="button" class="btn btn-sm btn-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#exportPeriodicSapModal" title="Unduh Report SAP Rentang Periode (Multi-Bulan)" style="font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 10px; background: #1d4ed8; border: 1px solid #1e40af;">
+                                <i class="bi bi-calendar-range-fill me-1"></i> <span class="d-none d-sm-inline">Report Rentang Periode</span>
+                            </button>
                             <button type="button" class="btn btn-sm btn-outline-warning" onclick="downloadSapDetailExcel(this);" title="Unduh Detail Seluruh SAP + AI Quality (.xlsx)" style="font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px;">
                                 <i class="bi bi-stars text-warning"></i> <span class="d-none d-sm-inline ms-1">Detail + AI</span>
                             </button>
@@ -3133,6 +3136,22 @@
                                 <i class="bi bi-file-earmark-excel-fill"></i> <span class="d-none d-sm-inline ms-1">Klasemen Excel</span>
                             </button>
                         </div>
+                    </div>
+
+                    <!-- Quick Banner: Download Report SAP Rentang Periode -->
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2.5 px-3 rounded-3 mb-3" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.05), rgba(37, 99, 235, 0.08)); border: 1px solid #bfdbfe;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center shadow-xs" style="width: 32px; height: 32px; background: #1e40af; color: #fff;">
+                                <i class="bi bi-file-earmark-spreadsheet-fill" style="font-size: 14px;"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark" style="font-size: 12.5px;">Download Report SAP Lintas Periode (Rentang Waktu)</div>
+                                <div class="text-muted" style="font-size: 11px;">Ekspor rekapitulasi kinerja departemen & pencapaian detail seluruh karyawan antar bulan/periode dalam 1 file Excel komprehensif.</div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary fw-bold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#exportPeriodicSapModal" style="border-radius: 8px; font-size: 11.5px; background: #1d4ed8; border: 1px solid #1e40af;">
+                            <i class="bi bi-cloud-arrow-down-fill me-1"></i> Buka Filter & Download Report
+                        </button>
                     </div>
 
                     <div class="table-responsive league-table-wrap mb-3">
@@ -4827,6 +4846,241 @@
     </div>
 }
 
+<!-- Modal: Download Report SAP Rentang Periode -->
+<div class="modal fade" id="exportPeriodicSapModal" tabindex="-1" aria-labelledby="exportPeriodicSapModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-bottom: 2px solid #3b82f6;">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: rgba(255, 255, 255, 0.15);">
+                        <i class="bi bi-file-earmark-spreadsheet-fill text-warning" style="font-size: 18px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="exportPeriodicSapModalLabel" style="font-size: 16px; letter-spacing: -0.2px;">
+                            Download Report SAP Rentang Periode
+                        </h5>
+                        <div style="font-size: 11.5px; color: #cbd5e1; font-weight: 500;">
+                            Ekspor rekapitulasi performa departemen & pencapaian detail seluruh karyawan lintas bulan
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4 bg-light">
+                <!-- Company and Department Selection Row -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-dark mb-1" style="font-size: 12px;">
+                            <i class="bi bi-buildings-fill text-primary me-1"></i> Perusahaan
+                        </label>
+                        <select id="exportPeriodicCompany" class="form-select border-2 fw-bold" style="border-radius: 8px; font-size: 12.5px;">
+                            @foreach (var c in companies)
+                            {
+                                if (c.PerusahaanId == selectedCompanyId)
+                                {
+                                    <option value="@c.PerusahaanId" selected>@c.NamaPerusahaan</option>
+                                }
+                                else
+                                {
+                                    <option value="@c.PerusahaanId">@c.NamaPerusahaan</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-dark mb-1" style="font-size: 12px;">
+                            <i class="bi bi-shield-shaded text-primary me-1"></i> Filter Departemen
+                        </label>
+                        <select id="exportPeriodicDept" class="form-select border-2 fw-semibold" style="border-radius: 8px; font-size: 12.5px;">
+                            <option value="">-- Semua Departemen (Seluruh Klub) --</option>
+                            @foreach (var dept in deptAchievements)
+                            {
+                                <option value="@dept.DepartmentName">@dept.DepartmentName (@dept.EmployeeCount Skuad)</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Date Range Selection Card -->
+                <div class="card border p-3 mb-3 bg-white shadow-xs" style="border-radius: 12px; border-color: #cbd5e1 !important;">
+                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                        <label class="fw-bold text-dark d-flex align-items-center mb-0" style="font-size: 12px;">
+                            <i class="bi bi-calendar-range text-primary me-1.5"></i> Rentang Waktu Periode Laporan
+                        </label>
+                        <!-- Quick Presets -->
+                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                            <span class="text-muted" style="font-size: 10.5px; font-weight: 600;">Preset Cepat:</span>
+                            <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('current')">1 Bulan Ini</button>
+                            <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('quarter')">3 Bulan Terakhir</button>
+                            <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('semester')">6 Bulan</button>
+                            <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('ytd')">Tahun Berjalan (YTD)</button>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 align-items-center">
+                        <!-- Start Month & Year -->
+                        <div class="col-md-5">
+                            <div class="p-2.5 rounded-3" style="background: #f8fafc; border: 1.5px solid #e2e8f0;">
+                                <div class="text-muted fw-bold mb-1.5" style="font-size: 11px;">
+                                    <i class="bi bi-arrow-right-short text-success"></i> DARI PERIODE (AWAL)
+                                </div>
+                                <div class="row g-1">
+                                    <div class="col-7">
+                                        <select id="exportPeriodicStartMonth" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;">
+                                            @foreach (var m in months)
+                                            {
+                                                if (m.Val == 1)
+                                                {
+                                                    <option value="@m.Val" selected>@m.Name</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@m.Val">@m.Name</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-5">
+                                        <select id="exportPeriodicStartYear" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;">
+                                            @for (int y = 2024; y <= 2027; y++)
+                                            {
+                                                if (y == selectedYear)
+                                                {
+                                                    <option value="@y" selected>@y</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@y">@y</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Arrow divider -->
+                        <div class="col-md-2 text-center text-muted d-none d-md-block">
+                            <i class="bi bi-arrow-right fs-4 text-primary"></i>
+                            <div style="font-size: 10px; font-weight: 700;">s/d</div>
+                        </div>
+
+                        <!-- End Month & Year -->
+                        <div class="col-md-5">
+                            <div class="p-2.5 rounded-3" style="background: #f8fafc; border: 1.5px solid #e2e8f0;">
+                                <div class="text-muted fw-bold mb-1.5" style="font-size: 11px;">
+                                    <i class="bi bi-arrow-left-short text-danger"></i> SAMPAI PERIODE (AKHIR)
+                                </div>
+                                <div class="row g-1">
+                                    <div class="col-7">
+                                        <select id="exportPeriodicEndMonth" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;">
+                                            @foreach (var m in months)
+                                            {
+                                                if (m.Val == selectedMonth)
+                                                {
+                                                    <option value="@m.Val" selected>@m.Name</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@m.Val">@m.Name</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-5">
+                                        <select id="exportPeriodicEndYear" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;">
+                                            @for (int y = 2024; y <= 2027; y++)
+                                            {
+                                                if (y == selectedYear)
+                                                {
+                                                    <option value="@y" selected>@y</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@y">@y</option>
+                                                }
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Target Filter Options -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-dark mb-1" style="font-size: 12px;">
+                        <i class="bi bi-people-fill text-primary me-1"></i> Filter Skuad Karyawan
+                    </label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="form-check form-check-inline m-0 p-2 px-3 rounded-3 border bg-white shadow-xs">
+                            <input class="form-check-input" type="radio" name="exportPeriodicTargetFilter" id="ep_tf_target" value="target" checked>
+                            <label class="form-check-label fw-bold text-dark small" for="ep_tf_target">
+                                Hanya Target SAP (Standar)
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline m-0 p-2 px-3 rounded-3 border bg-white shadow-xs">
+                            <input class="form-check-input" type="radio" name="exportPeriodicTargetFilter" id="ep_tf_all" value="all">
+                            <label class="form-check-label fw-bold text-dark small" for="ep_tf_all">
+                                Semua Skuad (+ Non-Target)
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline m-0 p-2 px-3 rounded-3 border bg-white shadow-xs">
+                            <input class="form-check-input" type="radio" name="exportPeriodicTargetFilter" id="ep_tf_active" value="nontarget_active">
+                            <label class="form-check-label fw-bold text-dark small" for="ep_tf_active">
+                                Non-Target Aktif SAP
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Highlights of what the Excel workbook contains -->
+                <div class="p-3 rounded-3 border" style="background: #ffffff; border-color: #cbd5e1 !important;">
+                    <div class="fw-bold text-dark mb-2" style="font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <i class="bi bi-file-earmark-check-fill text-success me-1"></i> Format Laporan Excel Yang Akan Diunduh:
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <div class="p-2 rounded-2 border" style="background: #f8fafc; font-size: 11px;">
+                                <div class="fw-bold text-primary mb-1"><i class="bi bi-table me-1"></i>Sheet 1: Rekapitulasi Departemen</div>
+                                <div class="text-muted" style="line-height: 1.35;">Akumulasi target, realisasi, close rate AP, rata-rata capaian, dan matriks tren capaian per bulan.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-2 rounded-2 border" style="background: #f8fafc; font-size: 11px;">
+                                <div class="fw-bold text-success mb-1"><i class="bi bi-person-badge-fill me-1"></i>Sheet 2: Pencapaian Karyawan</div>
+                                <div class="text-muted" style="line-height: 1.35;">Rincian pencapaian tiap karyawan per departemen (Target, Realisasi HZ, IP, ST, OB, CC, P5M, Capaian %, Status).</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-2 rounded-2 border" style="background: #f8fafc; font-size: 11px;">
+                                <div class="fw-bold text-secondary mb-1"><i class="bi bi-calendar3 me-1"></i>Sheet 3: Matriks Bulanan Karyawan</div>
+                                <div class="text-muted" style="line-height: 1.35;">Log bulanan individual per karyawan untuk keperluan audit K3, Pivot Table, dan monitoring konsistensi performa.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-light px-4 py-3 d-flex justify-content-between align-items-center border-top">
+                <span class="text-muted small">
+                    <i class="bi bi-shield-check text-success me-1"></i>Data dihitung secara aman sesuai formula resmi SAP & Roster Onsite.
+                </span>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-secondary btn-sm fw-bold px-3 py-2" data-bs-dismiss="modal" style="border-radius: 8px; font-size: 12px;">
+                        Batal
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm fw-bold px-4 py-2 shadow-sm" onclick="downloadPeriodicExcel(this);" style="border-radius: 8px; font-size: 12.5px; background: #1d4ed8; border: 1px solid #1e40af;">
+                        <i class="bi bi-file-earmark-arrow-down-fill me-1"></i> Unduh File Excel (.xlsx)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -5437,6 +5691,80 @@
             "Sedang mengaudit mutu laporan SAP (Hazard, Inspeksi, Action Plan, Observasi, P5M) dan menyusun Dashboard Eksekutif...",
             clickedBtn
         );
+    }
+
+    function downloadPeriodicExcel(clickedBtn) {
+        const companyId = document.getElementById('exportPeriodicCompany') ? document.getElementById('exportPeriodicCompany').value : '@selectedCompanyId';
+        const deptSelect = document.getElementById('exportPeriodicDept');
+        const departmentName = deptSelect ? deptSelect.value : '';
+        const startMonth = document.getElementById('exportPeriodicStartMonth') ? document.getElementById('exportPeriodicStartMonth').value : '1';
+        const startYear = document.getElementById('exportPeriodicStartYear') ? document.getElementById('exportPeriodicStartYear').value : '@selectedYear';
+        const endMonth = document.getElementById('exportPeriodicEndMonth') ? document.getElementById('exportPeriodicEndMonth').value : '@selectedMonth';
+        const endYear = document.getElementById('exportPeriodicEndYear') ? document.getElementById('exportPeriodicEndYear').value : '@selectedYear';
+        const targetFilterRadio = document.querySelector('input[name="exportPeriodicTargetFilter"]:checked');
+        const targetFilter = targetFilterRadio ? targetFilterRadio.value : 'target';
+
+        let url = '@Url.Action("ExportPeriodicDeptReportToExcel", "Performance")?' +
+            'companyId=' + encodeURIComponent(companyId) +
+            '&departmentName=' + encodeURIComponent(departmentName) +
+            '&startYear=' + encodeURIComponent(startYear) +
+            '&startMonth=' + encodeURIComponent(startMonth) +
+            '&endYear=' + encodeURIComponent(endYear) +
+            '&endMonth=' + encodeURIComponent(endMonth) +
+            '&targetFilter=' + encodeURIComponent(targetFilter);
+
+        if ('@ViewBag.ParentId') {
+            url += '&parentId=' + '@ViewBag.ParentId';
+        }
+
+        // Dismiss modal first
+        const modalEl = document.getElementById('exportPeriodicSapModal');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+        }
+
+        executeExcelDownload(
+            url,
+            "Menyiapkan Laporan SAP Rentang Periode...",
+            "Sedang mengagregasi data kinerja departemen & pencapaian seluruh karyawan lintas bulan ke file Excel (.xlsx)...",
+            clickedBtn
+        );
+    }
+
+    function setPeriodicPreset(type) {
+        const curYear = parseInt('@selectedYear') || (new Date()).getFullYear();
+        const curMonth = parseInt('@selectedMonth') || ((new Date()).getMonth() + 1);
+        const sMonth = document.getElementById('exportPeriodicStartMonth');
+        const sYear = document.getElementById('exportPeriodicStartYear');
+        const eMonth = document.getElementById('exportPeriodicEndMonth');
+        const eYear = document.getElementById('exportPeriodicEndYear');
+
+        if (!sMonth || !sYear || !eMonth || !eYear) return;
+
+        if (type === 'current') {
+            sMonth.value = curMonth;
+            sYear.value = curYear;
+            eMonth.value = curMonth;
+            eYear.value = curYear;
+        } else if (type === 'ytd') {
+            sMonth.value = 1;
+            sYear.value = curYear;
+            eMonth.value = curMonth;
+            eYear.value = curYear;
+        } else if (type === 'quarter') {
+            let qStartMonth = Math.max(1, curMonth - 2);
+            sMonth.value = qStartMonth;
+            sYear.value = curYear;
+            eMonth.value = curMonth;
+            eYear.value = curYear;
+        } else if (type === 'semester') {
+            let semStartMonth = Math.max(1, curMonth - 5);
+            sMonth.value = semStartMonth;
+            sYear.value = curYear;
+            eMonth.value = curMonth;
+            eYear.value = curYear;
+        }
     }
 
     async function executeExcelDownload(url, title, desc, clickedBtn) {
