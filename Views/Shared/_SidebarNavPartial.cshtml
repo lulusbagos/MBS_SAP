@@ -35,15 +35,15 @@
     var isMasterActive = activeTab == "BbsMaster" || activeTab == "RosterSap" || activeTab == "SapTarget" || activeTab == "Admin" || activeTab == "UserMgmt" || activeTab == "ResetPassword";
 }
 
-<!-- Top Brand Card (Desktop only, matches reference mockup) -->
+<!-- Top Brand Card (Desktop only) -->
 <div class="sidebar-brand-card d-none d-lg-flex">
     <div class="brand-card-icon">
         <img src="~/images/logo_mbs.png" alt="INDEXIM MBS Logo" asp-append-version="true" />
     </div>
     <div class="brand-card-info">
         <span class="brand-card-company">PT INDEXIM COALINDO</span>
-        <span class="brand-card-app">ONEDB EVOLUTIONS</span>
-        <span class="brand-card-sub"><span class="badge-dot"></span> HC ENTERPRISE</span>
+        <span class="brand-card-app">SAFETY ACCOUNTABILITY</span>
+        <span class="brand-card-sub"><span class="badge-dot"></span> HSE SYSTEM</span>
     </div>
 </div>
 
@@ -59,7 +59,7 @@
     <!-- SECTION 1: UTAMA -->
     <div class="menu-section">
         <div class="menu-section-header">
-            <span class="menu-section-title">UTAMA</span>
+            <span class="menu-section-title">MENU UTAMA</span>
         </div>
         <a asp-controller="Home" asp-action="Index" class="menu-item-standalone @(activeTab == "Home" ? "active" : "")" title="Dashboard Utama">
             <i class="bi bi-grid-1x2-fill"></i>
@@ -71,24 +71,24 @@
         </a>
     </div>
 
-    <!-- SECTION 2: KINERJA & AKUNTABILITAS -->
+    <!-- SECTION 2: KINERJA & EVALUASI SAP -->
     <div class="menu-section">
         <div class="menu-section-header">
-            <span class="menu-section-title">GENERAL SERVICE</span>
+            <span class="menu-section-title">KINERJA & EVALUASI</span>
             <span class="menu-section-badge">@kpiCount</span>
         </div>
         <div class="menu-group">
             <button class="menu-group-toggle @(isKpiActive ? "active-parent" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#collapseKpi" aria-expanded="@(isKpiActive ? "true" : "false")">
                 <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-briefcase-fill group-icon" style="color: #38bdf8;"></i>
-                    <span>General Service</span>
+                    <i class="bi bi-bar-chart-line-fill group-icon" style="color: #38bdf8;"></i>
+                    <span>Akuntabilitas SAP</span>
                 </div>
                 <i class="bi bi-chevron-down group-chevron"></i>
             </button>
             <div class="collapse menu-sub-collapse @(isKpiActive ? "show" : "")" id="collapseKpi">
                 <div class="menu-sub-list">
                     <a asp-controller="Performance" asp-action="Index" class="sub-menu-item @(activeTab == "Performance" ? "active" : "")">
-                        <i class="bi bi-bar-chart-line-fill"></i>
+                        <i class="bi bi-graph-up-arrow"></i>
                         <span>Pencapaian SAP</span>
                     </a>
                     <a asp-controller="Performance" asp-action="League" asp-route-mode="dept" class="sub-menu-item @(activeTab == "League" ? "active" : "")">
@@ -99,7 +99,7 @@
                     {
                         <a asp-controller="Admin" asp-action="SapQuality" class="sub-menu-item @(activeTab == "SapQuality" ? "active" : "")">
                             <i class="bi bi-star-fill" style="color: #fbbf24;"></i>
-                            <span>Kualitas SAP</span>
+                            <span>Kualitas Data SAP</span>
                         </a>
                     }
                 </div>
@@ -107,49 +107,17 @@
         </div>
     </div>
 
-    <!-- SECTION 3: GS TRANSPORT & OPERASIONAL -->
+    <!-- SECTION 3: KESELAMATAN & OBSERVASI K3 -->
     <div class="menu-section">
         <div class="menu-section-header">
-            <span class="menu-section-title">GS TRANSPORT</span>
-            <span class="menu-section-badge">@transportCount</span>
-        </div>
-        <div class="menu-group">
-            <button class="menu-group-toggle @(isTransportActive ? "active-parent" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTransport" aria-expanded="@(isTransportActive ? "true" : "false")">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-truck-front-fill group-icon" style="color: #22c55e;"></i>
-                    <span>GS Transport</span>
-                </div>
-                <i class="bi bi-chevron-down group-chevron"></i>
-            </button>
-            <div class="collapse menu-sub-collapse @(isTransportActive ? "show" : "")" id="collapseTransport">
-                <div class="menu-sub-list">
-                    <a asp-controller="P2h" asp-action="Index" class="sub-menu-item @(activeTab == "P2h" ? "active" : "")">
-                        <i class="bi bi-clipboard2-check-fill"></i>
-                        <span>P2H Unit Transport</span>
-                    </a>
-                    @if (userCompanyId == "1")
-                    {
-                        <a asp-controller="Dpa" asp-action="Index" class="sub-menu-item @(activeTab == "Dpa" ? "active" : "")">
-                            <i class="bi bi-speedometer2" style="color: #06b6d4;"></i>
-                            <span>DPA Performance</span>
-                        </a>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SECTION 4: KESELAMATAN & INSPEKSI (SHE) -->
-    <div class="menu-section">
-        <div class="menu-section-header">
-            <span class="menu-section-title">APPROVAL HCGS</span>
+            <span class="menu-section-title">KESELAMATAN KERJA</span>
             <span class="menu-section-badge">@sheCount</span>
         </div>
         <div class="menu-group">
             <button class="menu-group-toggle @(isSheActive ? "active-parent" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#collapseShe" aria-expanded="@(isSheActive ? "true" : "false")">
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-shield-check group-icon" style="color: #f59e0b;"></i>
-                    <span>Inspeksi & K3</span>
+                    <span>Inspeksi & Observasi</span>
                 </div>
                 <i class="bi bi-chevron-down group-chevron"></i>
             </button>
@@ -161,7 +129,7 @@
                     </a>
                     <a asp-controller="Inspection" asp-action="Index" class="sub-menu-item @(activeTab == "Inspection" ? "active" : "")">
                         <i class="bi bi-clipboard-check-fill" style="color: #10b981;"></i>
-                        <span>Inspeksi K3</span>
+                        <span>Inspeksi Terencana</span>
                     </a>
                     <a asp-controller="Bbs" asp-action="Index" class="sub-menu-item @(activeTab == "BBS" ? "active" : "")">
                         <i class="bi bi-person-check-fill" style="color: #38bdf8;"></i>
@@ -170,11 +138,11 @@
                     </a>
                     <a asp-controller="Observation" asp-action="Index" class="sub-menu-item @(activeTab == "Observation" ? "active" : "")">
                         <i class="bi bi-eye-fill" style="color: #a855f7;"></i>
-                        <span>Observasi Lapangan</span>
+                        <span>Observasi Tugas (PTO)</span>
                     </a>
                     <a asp-controller="ActionPlan" asp-action="Index" class="sub-menu-item @(activeTab == "ActionPlan" ? "active" : "")">
                         <i class="bi bi-calendar-check-fill" style="color: #06b6d4;"></i>
-                        <span>Action Plan</span>
+                        <span>Action Plan Perbaikan</span>
                     </a>
                     <a asp-controller="SafetyTalk" asp-action="Index" class="sub-menu-item @(activeTab == "SafetyTalk" ? "active" : "")">
                         <i class="bi bi-megaphone-fill" style="color: #f97316;"></i>
@@ -182,7 +150,7 @@
                     </a>
                     <a asp-controller="P5m" asp-action="Index" class="sub-menu-item @(activeTab == "P5m" ? "active" : "")">
                         <i class="bi bi-people-fill" style="color: #ec4899;"></i>
-                        <span>P5M Briefing</span>
+                        <span>P5M (Briefing Kerja)</span>
                     </a>
                     <a asp-controller="Coaching" asp-action="Index" class="sub-menu-item @(activeTab == "Coaching" ? "active" : "")">
                         <i class="bi bi-person-badge-fill" style="color: #8b5cf6;"></i>
@@ -193,17 +161,17 @@
         </div>
     </div>
 
-    <!-- SECTION 5: FIELD CONDITION ASSESSMENT (CI) -->
+    <!-- SECTION 4: KONDISI LAPANGAN (CI) -->
     <div class="menu-section">
         <div class="menu-section-header">
-            <span class="menu-section-title">HR OPERATIONS</span>
+            <span class="menu-section-title">KONDISI LAPANGAN</span>
             <span class="menu-section-badge">@ciCount</span>
         </div>
         <div class="menu-group">
             <button class="menu-group-toggle @(isCiActive ? "active-parent" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCi" aria-expanded="@(isCiActive ? "true" : "false")">
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-geo-alt-fill group-icon" style="color: #06b6d4;"></i>
-                    <span>Condition Index</span>
+                    <span>Condition Index (CI)</span>
                 </div>
                 <i class="bi bi-chevron-down group-chevron"></i>
             </button>
@@ -211,17 +179,17 @@
                 <div class="menu-sub-list">
                     <a asp-controller="Rci" asp-action="Index" class="sub-menu-item @(activeTab == "Rci" ? "active" : "")">
                         <i class="bi bi-cone-striped" style="color: #38bdf8;"></i>
-                        <span>RCI (Road Condition)</span>
+                        <span>RCI (Kondisi Jalan)</span>
                         <span class="badge ms-auto" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 8.5px; font-weight: 800; padding: 2px 4px; border-radius: 4px;">NEW</span>
                     </a>
                     <a asp-controller="Fci" asp-action="Index" class="sub-menu-item @(activeTab == "Fci" ? "active" : "")">
                         <i class="bi bi-compass" style="color: #14b8a6;"></i>
-                        <span>FCI (Front Condition)</span>
+                        <span>FCI (Kondisi Front)</span>
                         <span class="badge ms-auto" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 8.5px; font-weight: 800; padding: 2px 4px; border-radius: 4px;">NEW</span>
                     </a>
                     <a asp-controller="Dci" asp-action="Index" class="sub-menu-item @(activeTab == "Dci" ? "active" : "")">
                         <i class="bi bi-layers-fill" style="color: #fb923c;"></i>
-                        <span>DCI (Dump Condition)</span>
+                        <span>DCI (Kondisi Dump)</span>
                         <span class="badge ms-auto" style="background: linear-gradient(135deg, #ef4444, #f43f5e); color: white; font-size: 8.5px; font-weight: 800; padding: 2px 4px; border-radius: 4px;">NEW</span>
                     </a>
                     <a asp-controller="Spi" asp-action="Index" class="sub-menu-item @(activeTab == "Spi" ? "active" : "")">
@@ -239,17 +207,49 @@
         </div>
     </div>
 
-    <!-- SECTION 6: LAYANAN & SCANNER -->
+    <!-- SECTION 5: OPERASIONAL KENDARAAN & ALAT -->
     <div class="menu-section">
         <div class="menu-section-header">
-            <span class="menu-section-title">LAYANAN DEPARTEMEN</span>
+            <span class="menu-section-title">OPERASIONAL UNIT</span>
+            <span class="menu-section-badge">@transportCount</span>
+        </div>
+        <div class="menu-group">
+            <button class="menu-group-toggle @(isTransportActive ? "active-parent" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTransport" aria-expanded="@(isTransportActive ? "true" : "false")">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-truck-front-fill group-icon" style="color: #22c55e;"></i>
+                    <span>Pemeriksaan Kendaraan</span>
+                </div>
+                <i class="bi bi-chevron-down group-chevron"></i>
+            </button>
+            <div class="collapse menu-sub-collapse @(isTransportActive ? "show" : "")" id="collapseTransport">
+                <div class="menu-sub-list">
+                    <a asp-controller="P2h" asp-action="Index" class="sub-menu-item @(activeTab == "P2h" ? "active" : "")">
+                        <i class="bi bi-clipboard2-check-fill"></i>
+                        <span>P2H Unit Operasional</span>
+                    </a>
+                    @if (userCompanyId == "1")
+                    {
+                        <a asp-controller="Dpa" asp-action="Index" class="sub-menu-item @(activeTab == "Dpa" ? "active" : "")">
+                            <i class="bi bi-speedometer2" style="color: #06b6d4;"></i>
+                            <span>DPA Performance</span>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 6: LAYANAN & QR SCANNER -->
+    <div class="menu-section">
+        <div class="menu-section-header">
+            <span class="menu-section-title">LAYANAN & SCANNER</span>
             <span class="menu-section-badge">@qrCount</span>
         </div>
         <div class="menu-group">
             <button class="menu-group-toggle @(isQrActive ? "active-parent" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLayanan" aria-expanded="@(isQrActive ? "true" : "false")">
                 <div class="d-flex align-items-center gap-2">
                     <i class="bi bi-qr-code-scan group-icon" style="color: #14b8a6;"></i>
-                    <span>Layanan Departemen</span>
+                    <span>Validasi & QR Scanner</span>
                 </div>
                 <i class="bi bi-chevron-down group-chevron"></i>
             </button>
@@ -267,7 +267,7 @@
                         </a>
                         <a asp-controller="UserScan" asp-action="Index" class="sub-menu-item @(activeTab == "UserScanAdmin" ? "active" : "")">
                             <i class="bi bi-person-bounding-box" style="color: #06b6d4;"></i>
-                            <span>User Scan Permission</span>
+                            <span>Hak Akses Scan User</span>
                         </a>
                     }
                 </div>
@@ -280,14 +280,14 @@
     {
         <div class="menu-section">
             <div class="menu-section-header">
-                <span class="menu-section-title">MOBILE WORKFORCE</span>
+                <span class="menu-section-title">INFORMASI & INSIDEN</span>
                 <span class="menu-section-badge">1</span>
             </div>
             <div class="menu-group">
                 <button class="menu-group-toggle @(isIncidentActive ? "active-parent" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNews" aria-expanded="@(isIncidentActive ? "true" : "false")">
                     <div class="d-flex align-items-center gap-2">
                         <i class="bi bi-newspaper group-icon" style="color: #f43f5e;"></i>
-                        <span>Pusat Berita K3</span>
+                        <span>Publikasi K3</span>
                     </div>
                     <i class="bi bi-chevron-down group-chevron"></i>
                 </button>
@@ -295,7 +295,7 @@
                     <div class="menu-sub-list">
                         <a asp-controller="Incident" asp-action="Index" class="sub-menu-item @(activeTab == "Incident" ? "active" : "")">
                             <i class="bi bi-shield-fill-plus" style="color: #f43f5e;"></i>
-                            <span>Berita & Insiden Safety</span>
+                            <span>Berita Keselamatan & Insiden</span>
                             <span class="badge ms-auto" style="background: linear-gradient(135deg, #f43f5e, #fb7185); color: white; font-size: 8.5px; font-weight: 800; padding: 2px 4px; border-radius: 4px;">UPDATE</span>
                         </a>
                     </div>
@@ -309,14 +309,14 @@
     {
         <div class="menu-section">
             <div class="menu-section-header">
-                <span class="menu-section-title">SYSTEM MASTER</span>
+                <span class="menu-section-title">PENGATURAN & MASTER</span>
                 <span class="menu-section-badge">@masterCount</span>
             </div>
             <div class="menu-group">
                 <button class="menu-group-toggle @(isMasterActive ? "active-parent" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMaster" aria-expanded="@(isMasterActive ? "true" : "false")">
                     <div class="d-flex align-items-center gap-2">
                         <i class="bi bi-sliders group-icon" style="color: #a855f7;"></i>
-                        <span>System Master</span>
+                        <span>Master Data & Konfigurasi</span>
                     </div>
                     <i class="bi bi-chevron-down group-chevron"></i>
                 </button>
@@ -333,7 +333,7 @@
                         {
                             <a asp-controller="Roster" asp-action="Index" class="sub-menu-item @(activeTab == "RosterSap" ? "active" : "")">
                                 <i class="bi bi-calendar2-week-fill" style="color: #38bdf8;"></i>
-                                <span>Roster Kerja SAP</span>
+                                <span>Roster Kerja Karyawan</span>
                             </a>
                             <a asp-controller="SapTarget" asp-action="Index" class="sub-menu-item @(activeTab == "SapTarget" ? "active" : "")">
                                 <i class="bi bi-crosshair" style="color: #6366f1;"></i>
@@ -344,14 +344,14 @@
                         {
                             <a asp-controller="Admin" asp-action="Index" class="sub-menu-item @(activeTab == "Admin" ? "active" : "")">
                                 <i class="bi bi-cloud-arrow-up-fill" style="color: #22c55e;"></i>
-                                <span>Upload & Sinkron Data</span>
+                                <span>Unggah & Sinkron Data</span>
                             </a>
                         }
                         @if (isAdminUser)
                         {
                             <a asp-controller="UserManagement" asp-action="Index" class="sub-menu-item @(activeTab == "UserMgmt" ? "active" : "")">
                                 <i class="bi bi-person-gear" style="color: #a855f7;"></i>
-                                <span>User Management</span>
+                                <span>Manajemen Pengguna</span>
                             </a>
                         }
                         @if (isSafetyAdmin)
