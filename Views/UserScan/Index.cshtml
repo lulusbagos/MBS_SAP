@@ -1,47 +1,44 @@
 @model MBS_SAP.Controllers.UserScanIndexViewModel
 @{
-    Layout = "_Layout";
+    ViewData["Title"] = "User Scan Permission";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 <style>
     .userscan-shell {
-        padding: 24px 28px 48px;
+        padding: 24px;
+        color: var(--text-main);
     }
     .userscan-card {
         background: var(--bg-card);
         border: 1px solid var(--border-color);
         border-radius: 16px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        overflow: hidden;
     }
     .stat-pill {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 14px 18px;
         background: rgba(255, 255, 255, 0.02);
         border: 1px solid var(--border-color);
-        border-radius: 12px;
-        transition: all 0.2s ease;
+        border-radius: 14px;
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition: transform .2s ease;
     }
     .stat-pill:hover {
-        background: rgba(255, 255, 255, 0.04);
         transform: translateY(-2px);
     }
     .stat-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
+        font-size: 20px;
     }
-
-    /* Table Styles */
     .table-modern {
         width: 100%;
-        margin-bottom: 0;
         border-collapse: separate;
         border-spacing: 0;
     }
@@ -109,6 +106,7 @@
     /* Colors per permission */
     input:checked.sw-green + .slider-toggle { background-color: #10b981; border-color: #34d399; }
     input:checked.sw-red + .slider-toggle { background-color: #ef4444; border-color: #f87171; }
+    input:checked.sw-cyan + .slider-toggle { background-color: #06b6d4; border-color: #22d3ee; }
     input:checked.sw-purple + .slider-toggle { background-color: #8b5cf6; border-color: #a78bfa; }
     input:checked.sw-amber + .slider-toggle { background-color: #f59e0b; border-color: #fbbf24; }
     input:checked.sw-teal + .slider-toggle { background-color: #0d9488; border-color: #14b8a6; }
@@ -145,70 +143,81 @@
     }
 
     <!-- Quick Stats Grid -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-2">
+    <div class="row g-2 mb-4">
+        <div class="col">
             <div class="stat-pill">
                 <div class="stat-icon" style="background: rgba(14, 165, 233, 0.12); color: #38bdf8;">
                     <i class="bi bi-people-fill"></i>
                 </div>
                 <div>
                     <div class="text-muted" style="font-size: 11px;">Total User</div>
-                    <div class="fw-bold" style="font-size: 18px;">@Model.Stats.TotalUsers</div>
+                    <div class="fw-bold" style="font-size: 17px;">@Model.Stats.TotalUsers</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
+        <div class="col">
             <div class="stat-pill">
                 <div class="stat-icon" style="background: rgba(16, 185, 129, 0.12); color: #34d399;">
                     <i class="bi bi-person-vcard-fill"></i>
                 </div>
                 <div>
                     <div class="text-muted" style="font-size: 11px;">Permit Detail</div>
-                    <div class="fw-bold text-success" style="font-size: 18px;">@Model.Stats.TotalMinePermit</div>
+                    <div class="fw-bold text-success" style="font-size: 17px;">@Model.Stats.TotalMinePermit</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
+        <div class="col">
             <div class="stat-pill">
                 <div class="stat-icon" style="background: rgba(239, 68, 68, 0.12); color: #f87171;">
                     <i class="bi bi-exclamation-octagon-fill"></i>
                 </div>
                 <div>
-                    <div class="text-muted" style="font-size: 11px;">Permit Pelanggaran</div>
-                    <div class="fw-bold text-danger" style="font-size: 18px;">@Model.Stats.TotalPermitPelanggaran</div>
+                    <div class="text-muted" style="font-size: 11px;">Pelanggaran</div>
+                    <div class="fw-bold text-danger" style="font-size: 17px;">@Model.Stats.TotalPermitPelanggaran</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
+        <div class="col">
             <div class="stat-pill">
-                <div class="stat-icon" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9;">
+                <div class="stat-icon" style="background: rgba(6, 182, 212, 0.12); color: #22d3ee;">
+                    <i class="bi bi-door-open-fill"></i>
+                </div>
+                <div>
+                    <div class="text-muted" style="font-size: 11px;">Keluar Masuk</div>
+                    <div class="fw-bold" style="font-size: 17px; color: #22d3ee;">@Model.Stats.TotalPermitKeluarMasuk</div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="stat-pill">
+                <div class="stat-icon" style="background: rgba(14, 165, 233, 0.12); color: #38bdf8;">
                     <i class="bi bi-car-front-fill"></i>
                 </div>
                 <div>
                     <div class="text-muted" style="font-size: 11px;">SIMPER</div>
-                    <div class="fw-bold" style="font-size: 18px; color: #0ea5e9;">@Model.Stats.TotalSimper</div>
+                    <div class="fw-bold text-info" style="font-size: 17px;">@Model.Stats.TotalSimper</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
+        <div class="col">
             <div class="stat-pill">
                 <div class="stat-icon" style="background: rgba(245, 158, 11, 0.12); color: #fbbf24;">
                     <i class="bi bi-gear-wide-connected"></i>
                 </div>
                 <div>
                     <div class="text-muted" style="font-size: 11px;">Commissioning</div>
-                    <div class="fw-bold text-warning" style="font-size: 18px;">@Model.Stats.TotalCommissioning</div>
+                    <div class="fw-bold text-warning" style="font-size: 17px;">@Model.Stats.TotalCommissioning</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
+        <div class="col">
             <div class="stat-pill">
                 <div class="stat-icon" style="background: rgba(168, 85, 247, 0.12); color: #c084fc;">
                     <i class="bi bi-shield-lock-fill"></i>
                 </div>
                 <div>
                     <div class="text-muted" style="font-size: 11px;">Special Permit</div>
-                    <div class="fw-bold" style="font-size: 18px; color: #c084fc;">@Model.Stats.TotalSpecialPermit</div>
+                    <div class="fw-bold" style="font-size: 17px; color: #c084fc;">@Model.Stats.TotalSpecialPermit</div>
                 </div>
             </div>
         </div>
@@ -238,6 +247,7 @@
                     <option value="HasSpecial" selected="@(Model.FilterScan == "HasSpecial")">Punya Izin Khusus</option>
                     <option value="MinePermit" selected="@(Model.FilterScan == "MinePermit")">Izin Detail Permit</option>
                     <option value="PermitPelanggaran" selected="@(Model.FilterScan == "PermitPelanggaran")">Izin Pelanggaran Permit</option>
+                    <option value="PermitKeluarMasuk" selected="@(Model.FilterScan == "PermitKeluarMasuk")">Izin Keluar Masuk Permit</option>
                     <option value="Simper" selected="@(Model.FilterScan == "Simper")">Izin SIMPER</option>
                     <option value="Commissioning" selected="@(Model.FilterScan == "Commissioning")">Izin Commissioning</option>
                     <option value="SpecialPermit" selected="@(Model.FilterScan == "SpecialPermit")">Izin Special Permit</option>
@@ -259,35 +269,38 @@
                     <tr>
                         <th style="width: 220px;">Karyawan</th>
                         <th>Departemen & PT</th>
-                        <th class="text-center" style="width: 90px;">
+                        <th class="text-center" style="width: 80px;">
                             <span title="Default: Semua orang dapat melakukan scan acara">Acara</span>
                         </th>
-                        <th class="text-center" style="width: 105px;">
+                        <th class="text-center" style="width: 100px;">
                             <span style="color: #10b981;" title="Izin melihat informasi detail & masa aktif Mine Permit">Permit Detail</span>
                         </th>
-                        <th class="text-center" style="width: 115px;">
-                            <span style="color: #ef4444;" title="Izin mencatat pelanggaran K3 dari QR Mine Permit">Permit Pelanggaran</span>
+                        <th class="text-center" style="width: 105px;">
+                            <span style="color: #ef4444;" title="Izin mencatat pelanggaran K3 dari QR Mine Permit">Pelanggaran</span>
                         </th>
-                        <th class="text-center" style="width: 90px;">
+                        <th class="text-center" style="width: 105px;">
+                            <span style="color: #06b6d4;" title="Izin mencatat pergerakan keluar/masuk karyawan di gate">Keluar Masuk</span>
+                        </th>
+                        <th class="text-center" style="width: 85px;">
                             <span style="color: #0ea5e9;" title="Izin verifikasi SIMPER & Driver">SIMPER</span>
                         </th>
-                        <th class="text-center" style="width: 100px;">
+                        <th class="text-center" style="width: 95px;">
                             <span style="color: #f59e0b;" title="Izin inspeksi & commissioning unit">Commissioning</span>
                         </th>
-                        <th class="text-center" style="width: 100px;">
+                        <th class="text-center" style="width: 95px;">
                             <span style="color: #a855f7;" title="Izin scan Special Permit / Pekerjaan Kritis">Special Permit</span>
                         </th>
-                        <th class="text-center" style="width: 80px;">
+                        <th class="text-center" style="width: 75px;">
                             <span style="color: #0d9488;" title="Izin scan lainnya">Other</span>
                         </th>
-                        <th class="text-end" style="width: 80px;">Aksi</th>
+                        <th class="text-end" style="width: 75px;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.Rows.Any())
                     {
                         <tr>
-                            <td colspan="10" class="text-center py-5 text-muted">
+                            <td colspan="11" class="text-center py-5 text-muted">
                                 <i class="bi bi-person-x-fill d-block mb-2" style="font-size: 36px; opacity: 0.5;"></i>
                                 Tidak ditemukan data karyawan yang sesuai filter pencarian.
                             </td>
@@ -331,6 +344,14 @@
                                 </label>
                             </td>
 
+                            <!-- Toggle: Permit Keluar Masuk -->
+                            <td class="text-center">
+                                <label class="switch-toggle" title="Input Keluar Masuk Karyawan">
+                                    <input type="checkbox" class="sw-cyan" @(row.CanScanPermitKeluarMasuk ? "checked" : "") onchange="togglePerm('@row.Nik', 'permitkeluarmasuk', this.checked)">
+                                    <span class="slider-toggle"></span>
+                                </label>
+                            </td>
+
                             <!-- Toggle: SIMPER -->
                             <td class="text-center">
                                 <label class="switch-toggle" title="Verifikasi SIMPER">
@@ -366,7 +387,7 @@
                             <!-- Aksi Edit Modal -->
                             <td class="text-end">
                                 <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2"
-                                        onclick="openEditModal('@row.Nik', '@row.Nama', '@row.Departemen', @row.CanScanAcara.ToString().ToLower(), @row.CanScanMinePermit.ToString().ToLower(), @row.CanScanPermitPelanggaran.ToString().ToLower(), @row.CanScanSimper.ToString().ToLower(), @row.CanScanCommissioning.ToString().ToLower(), @row.CanScanSpecialPermit.ToString().ToLower(), @row.CanScanOther.ToString().ToLower())"
+                                        onclick="openEditModal('@row.Nik', '@row.Nama', '@row.Departemen', @row.CanScanAcara.ToString().ToLower(), @row.CanScanMinePermit.ToString().ToLower(), @row.CanScanPermitPelanggaran.ToString().ToLower(), @row.CanScanPermitKeluarMasuk.ToString().ToLower(), @row.CanScanSimper.ToString().ToLower(), @row.CanScanCommissioning.ToString().ToLower(), @row.CanScanSpecialPermit.ToString().ToLower(), @row.CanScanOther.ToString().ToLower())"
                                         title="Edit Lengkap">
                                     <i class="bi bi-pencil-square"></i>
                                 </button>
@@ -446,6 +467,13 @@
                                 <small class="d-block text-muted fw-normal" style="font-size: 11px;">Izin mencatat dan memberikan tindakan pelanggaran K3 dari QR permit.</small>
                             </label>
                         </div>
+                        <div class="form-check form-switch p-2 rounded-2" style="background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2);">
+                            <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanPermitKeluarMasuk" value="true" id="chkPermitKeluarMasuk">
+                            <label class="form-check-label fw-bold" style="color: #06b6d4;" for="chkPermitKeluarMasuk">
+                                🚪 Scan Keluar Masuk Karyawan
+                                <small class="d-block text-muted fw-normal" style="font-size: 11px;">Pencatatan check-in/out gate: nomor unit dan keperluan di area tambang.</small>
+                            </label>
+                        </div>
                         <div class="form-check form-switch p-2 rounded-2" style="background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.2);">
                             <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanSimper" value="true" id="chkSimper">
                             <label class="form-check-label fw-bold" style="color: #0ea5e9;" for="chkSimper">
@@ -512,6 +540,7 @@
                         <select name="scanType" class="form-select" required>
                             <option value="minepermit">Scan Detail Permit</option>
                             <option value="permitpelanggaran">Scan Pelanggaran Permit</option>
+                            <option value="permitkeluarmasuk">Scan Keluar Masuk Permit</option>
                             <option value="simper">Scan SIMPER</option>
                             <option value="commissioning">Scan Commissioning</option>
                             <option value="specialpermit">Scan Special Permit</option>
@@ -567,7 +596,7 @@
         });
     }
 
-    function openEditModal(nik, nama, dept, canAcara, canMine, canPelanggaran, canSimper, canComm, canSpecial, canOther) {
+    function openEditModal(nik, nama, dept, canAcara, canMine, canPelanggaran, canKeluarMasuk, canSimper, canComm, canSpecial, canOther) {
         $('#modalNik').val(nik);
         $('#modalNikText').text(nik);
         $('#modalNama').text(nama);
@@ -576,6 +605,7 @@
         $('#chkAcara').prop('checked', canAcara);
         $('#chkMinePermit').prop('checked', canMine);
         $('#chkPermitPelanggaran').prop('checked', canPelanggaran);
+        $('#chkPermitKeluarMasuk').prop('checked', canKeluarMasuk);
         $('#chkSimper').prop('checked', canSimper);
         $('#chkCommissioning').prop('checked', canComm);
         $('#chkSpecialPermit').prop('checked', canSpecial);

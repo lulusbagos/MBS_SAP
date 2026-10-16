@@ -37,6 +37,9 @@ namespace MBS_SAP.Models
         [Column("can_scan_permit_pelanggaran")]
         public bool CanScanPermitPelanggaran { get; set; } = false;
 
+        [Column("can_scan_permit_keluar_masuk")]
+        public bool CanScanPermitKeluarMasuk { get; set; } = false;
+
         [Column("can_scan_simper")]
         public bool CanScanSimper { get; set; } = false;
 
