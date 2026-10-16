@@ -69,9 +69,10 @@ namespace MBS_SAP.Controllers
                     allPermissions.TryGetValue(u.Nik, out var perm);
                     if (normalizedScan == "HasSpecial")
                     {
-                        return perm != null && (perm.CanScanMinePermit || perm.CanScanSimper || perm.CanScanCommissioning || perm.CanScanSpecialPermit || perm.CanScanOther);
+                        return perm != null && (perm.CanScanMinePermit || perm.CanScanPermitPelanggaran || perm.CanScanSimper || perm.CanScanCommissioning || perm.CanScanSpecialPermit || perm.CanScanOther);
                     }
                     if (normalizedScan == "MinePermit") return perm?.CanScanMinePermit == true;
+                    if (normalizedScan == "PermitPelanggaran") return perm?.CanScanPermitPelanggaran == true;
                     if (normalizedScan == "Simper") return perm?.CanScanSimper == true;
                     if (normalizedScan == "Commissioning") return perm?.CanScanCommissioning == true;
                     if (normalizedScan == "SpecialPermit") return perm?.CanScanSpecialPermit == true;
@@ -100,7 +101,8 @@ namespace MBS_SAP.Controllers
                     Perusahaan = u.Perusahaan ?? "-",
                     Role = u.Role ?? "Operator",
                     CanScanAcara = p?.CanScanAcara ?? true, // Default: semua orang bisa scan acara
-                    CanScanMinePermit = p?.CanScanMinePermit ?? false,
+                    CanScanMinePermit = p?.CanScanMinePermit ?? false, // Scan Detail Permit
+                    CanScanPermitPelanggaran = p?.CanScanPermitPelanggaran ?? false, // Scan Pelanggaran Permit
                     CanScanSimper = p?.CanScanSimper ?? false,
                     CanScanCommissioning = p?.CanScanCommissioning ?? false,
                     CanScanSpecialPermit = p?.CanScanSpecialPermit ?? false,
@@ -115,6 +117,7 @@ namespace MBS_SAP.Controllers
             {
                 TotalUsers = await _context.AppUsers.CountAsync(),
                 TotalMinePermit = allPermissions.Values.Count(p => p.CanScanMinePermit),
+                TotalPermitPelanggaran = allPermissions.Values.Count(p => p.CanScanPermitPelanggaran),
                 TotalSimper = allPermissions.Values.Count(p => p.CanScanSimper),
                 TotalCommissioning = allPermissions.Values.Count(p => p.CanScanCommissioning),
                 TotalSpecialPermit = allPermissions.Values.Count(p => p.CanScanSpecialPermit),
@@ -170,6 +173,7 @@ namespace MBS_SAP.Controllers
                     Perusahaan = appUser?.Perusahaan,
                     CanScanAcara = true,
                     CanScanMinePermit = false,
+                    CanScanPermitPelanggaran = false,
                     CanScanSimper = false,
                     CanScanCommissioning = false,
                     CanScanSpecialPermit = false,
@@ -186,7 +190,12 @@ namespace MBS_SAP.Controllers
                     perm.CanScanAcara = isChecked;
                     break;
                 case "minepermit":
+                case "permitdetail":
                     perm.CanScanMinePermit = isChecked;
+                    break;
+                case "permitpelanggaran":
+                case "pelanggaran":
+                    perm.CanScanPermitPelanggaran = isChecked;
                     break;
                 case "simper":
                     perm.CanScanSimper = isChecked;
@@ -245,6 +254,7 @@ namespace MBS_SAP.Controllers
 
             perm.CanScanAcara = form.CanScanAcara;
             perm.CanScanMinePermit = form.CanScanMinePermit;
+            perm.CanScanPermitPelanggaran = form.CanScanPermitPelanggaran;
             perm.CanScanSimper = form.CanScanSimper;
             perm.CanScanCommissioning = form.CanScanCommissioning;
             perm.CanScanSpecialPermit = form.CanScanSpecialPermit;
@@ -301,6 +311,8 @@ namespace MBS_SAP.Controllers
                 {
                     case "acara": perm.CanScanAcara = enable; break;
                     case "minepermit": perm.CanScanMinePermit = enable; break;
+                    case "permitpelanggaran":
+                    case "pelanggaran": perm.CanScanPermitPelanggaran = enable; break;
                     case "simper": perm.CanScanSimper = enable; break;
                     case "commissioning": perm.CanScanCommissioning = enable; break;
                     case "specialpermit": perm.CanScanSpecialPermit = enable; break;
@@ -339,7 +351,8 @@ namespace MBS_SAP.Controllers
         public string Perusahaan { get; set; } = string.Empty;
         public string Role { get; set; } = "Operator";
         public bool CanScanAcara { get; set; } = true;
-        public bool CanScanMinePermit { get; set; } = false;
+        public bool CanScanMinePermit { get; set; } = false; // Scan Detail Permit
+        public bool CanScanPermitPelanggaran { get; set; } = false; // Scan Pelanggaran Permit
         public bool CanScanSimper { get; set; } = false;
         public bool CanScanCommissioning { get; set; } = false;
         public bool CanScanSpecialPermit { get; set; } = false;
@@ -352,6 +365,7 @@ namespace MBS_SAP.Controllers
     {
         public int TotalUsers { get; set; }
         public int TotalMinePermit { get; set; }
+        public int TotalPermitPelanggaran { get; set; }
         public int TotalSimper { get; set; }
         public int TotalCommissioning { get; set; }
         public int TotalSpecialPermit { get; set; }
@@ -363,6 +377,7 @@ namespace MBS_SAP.Controllers
         public string Nik { get; set; } = string.Empty;
         public bool CanScanAcara { get; set; } = true;
         public bool CanScanMinePermit { get; set; }
+        public bool CanScanPermitPelanggaran { get; set; }
         public bool CanScanSimper { get; set; }
         public bool CanScanCommissioning { get; set; }
         public bool CanScanSpecialPermit { get; set; }

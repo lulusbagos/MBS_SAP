@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -33,6 +33,9 @@ namespace MBS_SAP.Models
 
         [Column("can_scan_minepermit")]
         public bool CanScanMinePermit { get; set; } = false;
+
+        [Column("can_scan_permit_pelanggaran")]
+        public bool CanScanPermitPelanggaran { get; set; } = false;
 
         [Column("can_scan_simper")]
         public bool CanScanSimper { get; set; } = false;
