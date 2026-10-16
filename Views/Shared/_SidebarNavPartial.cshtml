@@ -727,8 +727,8 @@ body.light-theme .sub-menu-item.active::before {
         </a>
     </div>
 
-    <!-- SECTION 7: PUSAT INFORMASI K3 (if isSafetyAdmin) -->
-    @if (isSafetyAdmin)
+    <!-- SECTION 7: PUSAT INFORMASI K3 (Khusus Administrator) -->
+    @if (isAdminUser)
     {
         <div class="menu-section">
             <div class="menu-section-header">

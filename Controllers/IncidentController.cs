@@ -75,19 +75,7 @@ namespace MBS_SAP.Controllers
         private bool IsAdmin()
         {
             if (User == null) return false;
-            if (MBS_SAP.Services.CompanyHierarchyService.IsAdminUser(User)) return true;
-            if (User.IsInRole("Admin") || User.IsInRole("Administrator")) return true;
-
-            var jobTitle = User.FindFirst("JobTitle")?.Value ?? "";
-            var department = User.FindFirst("Department")?.Value ?? "";
-            return jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase) ||
-                   jobTitle.Contains("HSE", StringComparison.OrdinalIgnoreCase) ||
-                   jobTitle.Contains("OHS", StringComparison.OrdinalIgnoreCase) ||
-                   jobTitle.Contains("SHE", StringComparison.OrdinalIgnoreCase) ||
-                   department.Contains("Safety", StringComparison.OrdinalIgnoreCase) ||
-                   department.Contains("HSE", StringComparison.OrdinalIgnoreCase) ||
-                   department.Contains("OHS", StringComparison.OrdinalIgnoreCase) ||
-                   department.Contains("SHE", StringComparison.OrdinalIgnoreCase);
+            return MBS_SAP.Services.CompanyHierarchyService.IsAdminUser(User);
         }
 
         private void SetIncidentCategoryOptions(string? selectedValue = null)
