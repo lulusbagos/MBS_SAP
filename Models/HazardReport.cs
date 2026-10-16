@@ -12,6 +12,9 @@ namespace MBS_SAP.Models
         [MaxLength(500)]
         public string? FotoTemuan { get; set; }
 
+        [MaxLength(500)]
+        public string? FotoPerbaikan { get; set; }
+
         [Required]
         public DateTime Tanggal { get; set; } = DateTime.Today;
 

@@ -48,6 +48,8 @@
     var dataUtamaJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(utamaList));
     var dataMitraJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(mitraList));
     var dataTotalJson = Html.Raw(System.Text.Json.JsonSerializer.Serialize(totalList));
+
+    var aiAnalysis = ViewBag.AiComplianceAnalysis as MBS_SAP.Services.SapComplianceAiResult;
 }
 
 <style>
@@ -393,6 +395,89 @@
     .custom-table tbody tr:hover td:first-child {
         padding-left: 1.5rem !important; /* Slide effect */
     }
+
+    /* AI Safety Advisor Premium Styles */
+    .ai-advisor-card {
+        background: var(--bg-card);
+        border: 1.5px solid rgba(99, 102, 241, 0.35);
+        border-radius: 20px;
+        box-shadow: 0 12px 40px rgba(99, 102, 241, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+        position: relative;
+        backdrop-filter: blur(16px);
+        margin-bottom: 28px;
+    }
+    .ai-advisor-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #6366f1, #3b82f6, #06b6d4, #10b981);
+        z-index: 5;
+    }
+    .ai-header-glow {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(59, 130, 246, 0.04));
+        padding: 22px 26px;
+        border-bottom: 1.5px solid var(--border-color);
+    }
+    .ai-score-pill {
+        border-radius: 16px;
+        padding: 10px 18px;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+    }
+    .ai-kpi-chip {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 14px;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+        height: 100%;
+    }
+    .ai-kpi-chip:hover {
+        transform: translateY(-2px);
+        border-color: rgba(99, 102, 241, 0.4);
+    }
+    .ai-tab-pill {
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 12.5px;
+        padding: 8px 16px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text-muted);
+    }
+    .ai-tab-pill:hover {
+        color: var(--text-main);
+        background: rgba(255, 255, 255, 0.04);
+    }
+    .ai-tab-pill.active {
+        background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+    .ai-item-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1.5px solid var(--border-color);
+        border-radius: 14px;
+        padding: 18px;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        position: relative;
+    }
+    .ai-item-card:hover {
+        border-color: rgba(99, 102, 241, 0.4);
+        background: rgba(255, 255, 255, 0.04);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
 </style>
 
 <div class="animate-fade-in pb-5">
@@ -426,11 +511,10 @@
         </div>
     </div>
 
-    <!-- Month / Year Filter Card -->
+    <!-- Month / Year / Company Filter Card -->
     <div class="card p-3 shadow-sm border-0 mb-4" style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.08) !important; background: var(--bg-card);">
         <form method="get" action="/Performance/Compliance" class="row g-2 align-items-end">
-            <input type="hidden" name="companyId" value="@selectedCompanyId" />
-            <div class="col-md-5 col-sm-12">
+            <div class="col-md-3 col-sm-6">
                 <label class="form-label fw-bold mb-1" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">BULAN PERIODE</label>
                 <select name="month" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 13px;" onchange="this.form.submit();">
                     @foreach (var m in months)
@@ -446,7 +530,7 @@
                     }
                 </select>
             </div>
-            <div class="col-md-3 col-sm-6">
+            <div class="col-md-2 col-sm-6">
                 <label class="form-label fw-bold mb-1" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">TAHUN</label>
                 <select name="year" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 13px;" onchange="this.form.submit();">
                     @for (int y = 2024; y <= 2026; y++)
@@ -462,18 +546,403 @@
                     }
                 </select>
             </div>
-            <div class="col-md-2 col-sm-6">
+            <div class="col-md-4 col-sm-12">
+                <label class="form-label fw-bold mb-1" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">ENTITAS / PERUSAHAAN</label>
+                <select name="companyId" class="form-select border-2 shadow-sm fw-bold" style="border-radius: 8px; font-size: 13px;" onchange="this.form.submit();">
+                    <option value="1" selected="@(selectedCompanyId == 0 || selectedCompanyId == 1)">🌐 Site Konsolidasi (Indexim &amp; Seluruh Mitra)</option>
+                    @foreach (var comp in companies)
+                    {
+                        if (comp.PerusahaanId != 1)
+                        {
+                            <option value="@comp.PerusahaanId" selected="@(comp.PerusahaanId == selectedCompanyId)">@comp.NamaPerusahaan</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-1 col-sm-6">
                 <button type="submit" class="btn btn-primary fw-bold w-100 shadow-sm" style="border-radius: 8px; font-size: 13px; height: 38px;">
-                    <i class="bi bi-funnel-fill me-1"></i> Filter
+                    <i class="bi bi-funnel-fill"></i>
                 </button>
             </div>
-            <div class="col-md-2 col-sm-12">
+            <div class="col-md-2 col-sm-6">
                 <span class="badge d-flex align-items-center justify-content-center fw-bold" style="background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; font-size: 11px; height: 38px; width: 100%;">
                     <i class="bi bi-calendar-check me-1"></i> @selectedMonthName @selectedYear
                 </span>
             </div>
         </form>
     </div>
+
+    <!-- ==================== AI SAFETY ADVISOR & AUDIT COPILOT ==================== -->
+    @if (aiAnalysis != null)
+    {
+        <div class="ai-advisor-card">
+            <!-- Header Glow with Sparkle and Health Score -->
+            <div class="ai-header-glow d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 50px; height: 50px; border-radius: 14px; background: linear-gradient(135deg, #6366f1, #3b82f6); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);">
+                        <i class="bi bi-robot text-white fs-3 animate-pulse"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                            <h5 class="fw-bold mb-0 text-white" style="font-family: 'Outfit', sans-serif; letter-spacing: 0.5px; font-size: 16px;">
+                                AI SAFETY ADVISOR &amp; AUDIT COPILOT
+                            </h5>
+                            <span class="badge" style="background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.35); font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 6px;">
+                                <i class="bi bi-stars me-1 text-warning"></i>KEPMEN ESDM 1827 K
+                            </span>
+                            @if (aiAnalysis.IsNewPolicy)
+                            {
+                                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 6px;">
+                                    Kebijakan 50:50
+                                </span>
+                            }
+                        </div>
+                        <div class="text-muted" style="font-size: 11.5px;">
+                            <i class="bi bi-calendar3 me-1 text-info"></i>Periode <strong>@aiAnalysis.PeriodName</strong> &bull;
+                            <i class="bi bi-geo-alt-fill ms-1 me-1 text-danger"></i>Cakupan: <span class="text-white fw-bold">@aiAnalysis.ScopeDescription</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Score Badge & Action Controls -->
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <div class="ai-score-pill" style="background: rgba(15, 23, 42, 0.7); border: 1.5px solid @aiAnalysis.HealthBadgeColor;">
+                        <div class="text-end">
+                            <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">HEALTH INDEX</div>
+                            <div class="fw-bold" style="font-size: 10.5px; color: @aiAnalysis.HealthBadgeColor;">@aiAnalysis.HealthStatusText</div>
+                        </div>
+                        <div class="d-flex align-items-baseline gap-1">
+                            <span style="font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 900; color: #ffffff; line-height: 1;">@aiAnalysis.HealthScore</span>
+                            <span style="font-size: 11px; color: var(--text-muted);">/100</span>
+                        </div>
+                        <div class="badge" style="background: @aiAnalysis.HealthBadgeColor; color: #ffffff; font-size: 13px; font-weight: 900; padding: 4px 8px; border-radius: 6px;">
+                            @aiAnalysis.HealthGrade
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-outline-info fw-bold" style="border-radius: 8px; padding: 7px 12px; font-size: 11px;" onclick="copyAiSummaryToClipboard()" title="Salin Ringkasan untuk Notulen Rapat K3">
+                        <i class="bi bi-clipboard2-check me-1"></i>Salin Notulen K3
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px; padding: 7px 10px;" onclick="toggleAiSection()" id="aiToggleBtn" title="Sembunyikan/Tampilkan Analisa AI">
+                        <i class="bi bi-chevron-up" id="aiToggleIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- AI Body Content (Toggleable) -->
+            <div id="aiAdvisorBody" class="p-4" style="transition: all 0.3s ease;">
+                <!-- Executive Verdict Banner -->
+                <div class="p-3 rounded-3 mb-4 d-flex align-items-start gap-3" style="background: rgba(99, 102, 241, 0.07); border: 1.5px solid rgba(99, 102, 241, 0.25);">
+                    <i class="bi bi-chat-square-quote-fill text-warning fs-4 mt-0.5 flex-shrink-0"></i>
+                    <div style="font-size: 13px; line-height: 1.6; color: var(--text-main);">
+                        <strong class="text-white d-block mb-0.5" style="font-size: 13.5px; font-family: 'Outfit', sans-serif;">
+                            <i class="bi bi-lightning-charge-fill text-warning me-1"></i>Diagnosis Eksekutif AI untuk KTT &amp; Para PJO:
+                        </strong>
+                        @aiAnalysis.ExecutiveVerdict
+                    </div>
+                </div>
+
+                <!-- 5 Key Metric Quick Chips -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="ai-kpi-chip">
+                            <div class="text-muted fw-bold mb-1" style="font-size: 10px; text-transform: uppercase;">REALISASI SUBMISI</div>
+                            <div class="fw-extrabold text-white" style="font-size: 17px; font-family: 'Outfit', sans-serif;">@aiAnalysis.OverallSubmissionRate%</div>
+                            <div class="text-info mt-1" style="font-size: 10px;">@aiAnalysis.TotalActualAll.ToString("N0") / @aiAnalysis.TotalTargetAll.ToString("N0")</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="ai-kpi-chip">
+                            <div class="text-muted fw-bold mb-1" style="font-size: 10px; text-transform: uppercase;">CLOSE RATE AP</div>
+                            <div class="fw-extrabold" style="font-size: 17px; font-family: 'Outfit', sans-serif; color: @(aiAnalysis.OverallClosureRate >= 80 ? "#10b981" : (aiAnalysis.OverallClosureRate >= 60 ? "#f59e0b" : "#ef4444"));">
+                                @aiAnalysis.OverallClosureRate%
+                            </div>
+                            <div class="text-muted mt-1" style="font-size: 10px;">@aiAnalysis.ClosedActionPlansInScope / @aiAnalysis.TotalActionPlansInScope Closed</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="ai-kpi-chip">
+                            <div class="text-muted fw-bold mb-1" style="font-size: 10px; text-transform: uppercase;">DEFISIT LAPORAN</div>
+                            <div class="fw-extrabold text-danger" style="font-size: 17px; font-family: 'Outfit', sans-serif;">
+                                @aiAnalysis.TotalDeficitAll.ToString("N0")
+                            </div>
+                            <div class="text-muted mt-1" style="font-size: 10px;">Belum Terpenuhi</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="ai-kpi-chip">
+                            <div class="text-muted fw-bold mb-1" style="font-size: 10px; text-transform: uppercase;">TEMUAN OUTSTANDING</div>
+                            <div class="fw-extrabold text-warning" style="font-size: 17px; font-family: 'Outfit', sans-serif;">
+                                @aiAnalysis.OpenActionPlansInScope
+                            </div>
+                            <div class="text-muted mt-1" style="font-size: 10px;">Open Action Plan</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="ai-kpi-chip">
+                            <div class="text-muted fw-bold mb-1" style="font-size: 10px; text-transform: uppercase;">PARTISIPASI PENGAWAS</div>
+                            <div class="fw-extrabold text-primary" style="font-size: 17px; font-family: 'Outfit', sans-serif;">
+                                @aiAnalysis.SupervisoryParticipationRate%
+                            </div>
+                            <div class="text-muted mt-1" style="font-size: 10px;">@aiAnalysis.EmployeesWithTargetCount / @aiAnalysis.TotalEmployeesInScope Orang</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4 col-lg-2">
+                        <div class="ai-kpi-chip">
+                            <div class="text-muted fw-bold mb-1" style="font-size: 10px; text-transform: uppercase;">RED FLAG MITRA</div>
+                            <div class="fw-extrabold text-warning" style="font-size: 17px; font-family: 'Outfit', sans-serif;">
+                                @aiAnalysis.InterventionTargets.Count
+                            </div>
+                            <div class="text-muted mt-1" style="font-size: 10px;">Butuh Intervensi</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs for AI Sections -->
+                <div class="d-flex gap-2 mb-4 flex-wrap pb-2 border-bottom border-secondary border-opacity-25">
+                    <button type="button" class="ai-tab-pill active" onclick="switchAiTab('tabAiSummary', this)">
+                        <i class="bi bi-file-earmark-text-fill me-1 text-info"></i>1. Ringkasan Eksekutif &amp; KTT
+                    </button>
+                    <button type="button" class="ai-tab-pill" onclick="switchAiTab('tabAiWeaknesses', this)">
+                        <i class="bi bi-exclamation-triangle-fill me-1 text-danger"></i>2. Analisa Celah &amp; Kekurangan (@aiAnalysis.Weaknesses.Count)
+                    </button>
+                    <button type="button" class="ai-tab-pill" onclick="switchAiTab('tabAiPrescriptions', this)">
+                        <i class="bi bi-tools me-1 text-warning"></i>3. Rekomendasi Tindakan Perbaikan (@aiAnalysis.ActionItems.Count)
+                    </button>
+                    <button type="button" class="ai-tab-pill" onclick="switchAiTab('tabAiRadar', this)">
+                        <i class="bi bi-shield-exclamation me-1 text-primary"></i>4. Radar Risiko &amp; Target Intervensi (@(aiAnalysis.Blindspots.Count + aiAnalysis.InterventionTargets.Count))
+                    </button>
+                </div>
+
+                <!-- ================= TAB 1: RINGKASAN EKSEKUTIF ================= -->
+                <div id="tabAiSummary" class="ai-tab-pane">
+                    <div class="row g-4">
+                        <div class="col-lg-8 col-12">
+                            <div class="p-3.5 rounded-3 h-100" style="background: rgba(255, 255, 255, 0.02); border: 1.5px solid var(--border-color);">
+                                <h6 class="fw-bold text-white mb-2" style="font-family: 'Outfit', sans-serif; font-size: 14px;">
+                                    <i class="bi bi-journal-check text-primary me-2"></i>Ulasan Komprehensif Kepatuhan Tambang
+                                </h6>
+                                <p style="font-size: 13px; line-height: 1.7; color: var(--text-main);" id="aiSummaryNarrative">
+                                    @Html.Raw(aiAnalysis.ExecutiveSummary.Replace("**", "<strong>").Replace("**", "</strong>").Replace("*", "<em>").Replace("*", "</em>"))
+                                </p>
+                                
+                                <div class="p-3 rounded mt-3" style="background: rgba(59, 130, 246, 0.06); border-left: 4px solid #3b82f6;">
+                                    <div class="fw-bold text-info mb-1" style="font-size: 12px;">
+                                        <i class="bi bi-compass-fill me-1"></i>Fokus Strategis Periode Bulan Depan:
+                                    </div>
+                                    <div style="font-size: 12.5px; color: var(--text-main);">
+                                        @aiAnalysis.NextPeriodFocus
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-12">
+                            <div class="p-3.5 rounded-3 h-100" style="background: rgba(255, 255, 255, 0.02); border: 1.5px solid var(--border-color);">
+                                <h6 class="fw-bold text-success mb-3" style="font-family: 'Outfit', sans-serif; font-size: 13.5px;">
+                                    <i class="bi bi-patch-check-fill text-success me-2"></i>Kekuatan &amp; Hal Positif
+                                </h6>
+                                <div class="d-flex flex-column gap-2.5">
+                                    @foreach (var pos in aiAnalysis.PositiveHighlights)
+                                    {
+                                        <div class="d-flex align-items-start gap-2 p-2 rounded" style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.2); font-size: 12px; color: var(--text-main);">
+                                            <i class="bi bi-check-circle-fill text-success mt-0.5 flex-shrink-0"></i>
+                                            <div>@Html.Raw(pos.Replace("**", "<strong>").Replace("**", "</strong>"))</div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ================= TAB 2: ANALISA CELAH & KEKURANGAN ================= -->
+                <div id="tabAiWeaknesses" class="ai-tab-pane d-none">
+                    <!-- 5 Pilar Progress Bar Breakdown -->
+                    <div class="p-3.5 rounded-3 mb-4" style="background: rgba(255, 255, 255, 0.02); border: 1.5px solid var(--border-color);">
+                        <h6 class="fw-bold text-white mb-3" style="font-family: 'Outfit', sans-serif; font-size: 13.5px;">
+                            <i class="bi bi-bar-chart-steps text-info me-2"></i>Evaluasi Keseimbangan 5 Pilar SAP &amp; Action Plan
+                        </h6>
+                        <div class="row g-3">
+                            @foreach (var p in aiAnalysis.PillarMetrics)
+                            {
+                                <div class="col-md-4 col-sm-6 col-12">
+                                    <div class="p-2.5 rounded h-100" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="fw-bold text-white" style="font-size: 12px;">
+                                                <i class="bi @p.Icon me-1 text-primary"></i>@p.PillarName
+                                            </span>
+                                            <span class="badge" style="background: rgba(255, 255, 255, 0.06); color: @p.StatusColor; font-size: 10px; font-weight: 800;">
+                                                @p.ComplianceRate%
+                                            </span>
+                                        </div>
+                                        <div class="progress mb-1.5" style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 4px;">
+                                            <div class="progress-bar" style="width: @Math.Min(100.0, p.ComplianceRate)%; background: @p.StatusColor; border-radius: 4px;"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between text-muted" style="font-size: 10.5px;">
+                                            <span>Aktual: <strong class="text-white">@p.Actual.ToString("N0")</strong> / Tgt: @p.Target.ToString("N0")</span>
+                                            <span style="color: @(p.Deficit > 0 ? "#ef4444" : "#10b981");">Defisit: @p.Deficit.ToString("N0")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Weaknesses Cards -->
+                    <div class="row g-3">
+                        @foreach (var w in aiAnalysis.Weaknesses)
+                        {
+                            <div class="col-lg-6 col-12">
+                                <div class="ai-item-card" style="border-left: 4px solid @w.SeverityBadgeColor;">
+                                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                        <h6 class="fw-bold mb-0 text-white" style="font-family: 'Outfit', sans-serif; font-size: 13.5px;">
+                                            @w.Title
+                                        </h6>
+                                        <span class="badge" style="background: @w.SeverityBadgeColor; color: #ffffff; font-size: 10px; font-weight: 850; padding: 4px 8px; border-radius: 6px;">
+                                            @w.Severity
+                                        </span>
+                                    </div>
+                                    <div class="badge mb-2.5" style="background: rgba(255,255,255,0.05); color: var(--text-muted); font-size: 10px; font-weight: 600;">
+                                        <i class="bi bi-tag-fill me-1"></i>@w.AffectedArea
+                                    </div>
+
+                                    <div class="p-2 rounded mb-2.5" style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.15); font-size: 11.5px; color: #fca5a5;">
+                                        <strong><i class="bi bi-database-exclamation me-1"></i>Bukti Data Metrik:</strong> @w.MetricEvidence
+                                    </div>
+
+                                    <div class="mb-2" style="font-size: 12px; line-height: 1.5; color: var(--text-main);">
+                                        <strong class="text-warning d-block mb-0.5"><i class="bi bi-search me-1"></i>Akar Penyebab (Root Cause):</strong>
+                                        @w.RootCause
+                                    </div>
+
+                                    <div style="font-size: 11.5px; line-height: 1.5; color: #cbd5e1; background: rgba(0,0,0,0.15); padding: 8px 10px; border-radius: 8px;">
+                                        <strong class="text-danger d-block mb-0.5"><i class="bi bi-exclamation-octagon-fill me-1"></i>Dampak Risiko Keselamatan:</strong>
+                                        @w.ImpactRisk
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- ================= TAB 3: REKOMENDASI TINDAKAN PERBAIKAN ================= -->
+                <div id="tabAiPrescriptions" class="ai-tab-pane d-none">
+                    <div class="row g-3">
+                        @foreach (var act in aiAnalysis.ActionItems)
+                        {
+                            <div class="col-lg-6 col-12">
+                                <div class="ai-item-card" style="border-left: 4px solid @act.PriorityBadgeColor;">
+                                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                        <div>
+                                            <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; font-size: 10.5px; font-weight: 800; padding: 4px 8px; border-radius: 6px;">
+                                                <i class="bi bi-person-fill-gear me-1"></i>@act.TargetRole
+                                            </span>
+                                        </div>
+                                        <span class="badge" style="background: @act.PriorityBadgeColor; color: #ffffff; font-size: 10px; font-weight: 850; padding: 4px 8px; border-radius: 6px;">
+                                            @act.Priority
+                                        </span>
+                                    </div>
+
+                                    <h6 class="fw-bold text-white mb-2" style="font-family: 'Outfit', sans-serif; font-size: 13.5px;">
+                                        @act.Title
+                                    </h6>
+
+                                    <div class="p-2.5 rounded mb-2.5" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); font-size: 12px; line-height: 1.6; color: var(--text-main); white-space: pre-line;">
+                                        @act.ActionDetail
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 p-2 rounded" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); font-size: 11.5px; color: #34d399;">
+                                        <i class="bi bi-trophy-fill text-warning flex-shrink-0"></i>
+                                        <div><strong>Target Hasil Terukur:</strong> @act.ExpectedOutcome</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- ================= TAB 4: RADAR RISIKO & TARGET INTERVENSI ================= -->
+                <div id="tabAiRadar" class="ai-tab-pane d-none">
+                    <div class="row g-4">
+                        <!-- Left: Blindspot Radar Alerts -->
+                        <div class="col-lg-6 col-12">
+                            <h6 class="fw-bold text-white mb-3" style="font-family: 'Outfit', sans-serif; font-size: 13.5px;">
+                                <i class="bi bi-shield-slash text-danger me-2"></i>Radar Risiko &amp; Blindspot Lapangan
+                            </h6>
+                            <div class="d-flex flex-column gap-3">
+                                @foreach (var b in aiAnalysis.Blindspots)
+                                {
+                                    <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.02); border: 1.5px solid var(--border-color); border-left: 4px solid @b.LevelColor;">
+                                        <div class="d-flex justify-content-between align-items-center mb-1.5">
+                                            <strong class="text-white" style="font-size: 12.5px;">@b.Category</strong>
+                                            <span class="badge" style="background: @b.LevelColor; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 3px 6px;">
+                                                @b.Level
+                                            </span>
+                                        </div>
+                                        <p class="mb-2 text-muted" style="font-size: 11.5px; line-height: 1.5;">
+                                            @b.Description
+                                        </p>
+                                        <div class="p-2 rounded" style="background: rgba(59, 130, 246, 0.05); font-size: 11px; color: #93c5fd;">
+                                            <strong><i class="bi bi-lightbulb-fill text-warning me-1"></i>Tindakan Preventif:</strong> @b.PreventiveRecommendation
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Right: Contractor Intervention Targets -->
+                        <div class="col-lg-6 col-12">
+                            <h6 class="fw-bold text-white mb-3" style="font-family: 'Outfit', sans-serif; font-size: 13.5px;">
+                                <i class="bi bi-building-exclamation text-warning me-2"></i>Entitas Mitra Kerja yang Butuh Intervensi Khusus
+                            </h6>
+                            @if (aiAnalysis.InterventionTargets.Any())
+                            {
+                                <div class="table-responsive rounded-3 border" style="border-color: var(--border-color) !important; max-height: 380px; overflow-y: auto;">
+                                    <table class="table table-hover mb-0 align-middle" style="font-size: 11.5px; color: var(--text-main);">
+                                        <thead style="background: rgba(255, 255, 255, 0.04); font-family: 'Outfit', sans-serif;">
+                                            <tr>
+                                                <th class="border-bottom-0">Perusahaan Mitra</th>
+                                                <th class="border-bottom-0">Isu Kepatuhan</th>
+                                                <th class="border-bottom-0">Rekomendasi Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var tgt in aiAnalysis.InterventionTargets)
+                                            {
+                                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                                    <td class="fw-bold text-white">
+                                                        @tgt.CompanyName
+                                                        <div class="text-muted" style="font-size: 9.5px;">@tgt.ParentGroup</div>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 9.5px; font-weight: 700;">
+                                                            @tgt.IssueType
+                                                        </span>
+                                                        <div class="text-muted mt-0.5" style="font-size: 9.5px;">@tgt.Detail</div>
+                                                    </td>
+                                                    <td style="font-size: 11px; color: #94a3b8;">
+                                                        @tgt.RecommendedIntervention
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="p-4 text-center text-success rounded-3" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2);">
+                                    <i class="bi bi-shield-check fs-2 d-block mb-2"></i>
+                                    Seluruh perusahaan mitra telah aktif melakukan submisi dan onboarding digital.
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    }
 
     <!-- Maincon Group Comparison: 3 Separate Focused Charts & 4x3 Card Grid -->
     @if (mainconComparison != null && mainconComparison.Any())
@@ -942,6 +1411,108 @@
             window.hideTooltip = function(id) {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
+            };
+
+            // AI Safety Advisor Tab Switching
+            window.switchAiTab = function(targetTabId, btnEl) {
+                document.querySelectorAll('.ai-tab-pane').forEach(el => el.classList.add('d-none'));
+                document.querySelectorAll('.ai-tab-pill').forEach(el => el.classList.remove('active'));
+
+                const target = document.getElementById(targetTabId);
+                if (target) {
+                    target.classList.remove('d-none');
+                }
+                if (btnEl) {
+                    btnEl.classList.add('active');
+                }
+            };
+
+            // AI Section Toggle (Collapse / Expand)
+            window.toggleAiSection = function() {
+                const body = document.getElementById('aiAdvisorBody');
+                const icon = document.getElementById('aiToggleIcon');
+                if (!body || !icon) return;
+
+                if (body.style.display === 'none') {
+                    body.style.display = 'block';
+                    icon.classList.remove('bi-chevron-down');
+                    icon.classList.add('bi-chevron-up');
+                } else {
+                    body.style.display = 'none';
+                    icon.classList.remove('bi-chevron-up');
+                    icon.classList.add('bi-chevron-down');
+                }
+            };
+
+            // Copy AI Summary to Clipboard for Safety Committee Meeting
+            window.copyAiSummaryToClipboard = function() {
+                @if (aiAnalysis != null)
+                {
+                    <text>
+                    const summaryText = `📋 *NOTULEN RAPAT K3: AUDIT KEPATUHAN SAP*
+Periode: @aiAnalysis.PeriodName
+Cakupan: @aiAnalysis.ScopeDescription
+Health Index: @aiAnalysis.HealthScore / 100 (Grade @aiAnalysis.HealthGrade - @aiAnalysis.HealthStatusText)
+
+📊 *INDIKATOR METRIK MAKRO:*
+• Realisasi Submisi: @aiAnalysis.OverallSubmissionRate% (@aiAnalysis.TotalActualAll.ToString("N0") / @aiAnalysis.TotalTargetAll.ToString("N0") Laporan)
+• Close Rate Action Plan: @aiAnalysis.OverallClosureRate% (@aiAnalysis.ClosedActionPlansInScope Closed, @aiAnalysis.OpenActionPlansInScope Outstanding)
+• Defisit Laporan Wajib: @aiAnalysis.TotalDeficitAll.ToString("N0") Kegiatan
+• Partisipasi Pengawas: @aiAnalysis.SupervisoryParticipationRate% (@aiAnalysis.EmployeesWithTargetCount / @aiAnalysis.TotalEmployeesInScope Orang)
+
+⚡ *DIAGNOSIS EKSEKUTIF KTT:*
+@aiAnalysis.ExecutiveVerdict
+
+⚠️ *IDENTIFIKASI KEKURANGAN & CELAH KRITIS:*
+@foreach (var w in aiAnalysis.Weaknesses.Take(3))
+{
+@:• [@w.Severity] @w.Title
+@:  Bukti: @w.MetricEvidence
+@:  Akar Masalah: @w.RootCause
+}
+
+🛠️ *REKOMENDASI PRIORITAS KTT & PJO:*
+@foreach (var a in aiAnalysis.ActionItems.Take(3))
+{
+@:• [@a.Priority] Untuk @a.TargetRole:
+@:  @a.Title
+@:  Target: @a.ExpectedOutcome
+}
+
+🎯 *FOKUS STRATEGIS BULAN DEPAN:*
+@aiAnalysis.NextPeriodFocus
+
+---
+_Digenerate Otomatis oleh MBS SAP AI Safety Advisor (Kepmen ESDM 1827 K)_`;
+
+                    if (navigator.clipboard && window.isSecureContext) {
+                        navigator.clipboard.writeText(summaryText).then(function() {
+                            alert("✅ Notulen Analisa AI berhasil disalin ke clipboard! Siap ditempel di Notulen Rapat K3 atau WhatsApp Group PJO.");
+                        }).catch(function() {
+                            fallbackCopy(summaryText);
+                        });
+                    } else {
+                        fallbackCopy(summaryText);
+                    }
+
+                    function fallbackCopy(text) {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = text;
+                        textArea.style.position = "fixed";
+                        textArea.style.left = "-999999px";
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            alert("✅ Notulen Analisa AI berhasil disalin ke clipboard!");
+                        } catch (err) {
+                            alert("Gagal menyalin notulen otomatis. Silakan salin manual dari teks ringkasan.");
+                        }
+                        document.body.removeChild(textArea);
+                    }
+                    </text>
+                }
             };
         });
     </script>

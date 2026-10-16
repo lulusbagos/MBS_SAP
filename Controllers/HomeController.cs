@@ -148,21 +148,25 @@ namespace MBS_SAP.Controllers
                 int computedOnsiteDays = totalDaysInMonth;
                 bool hasRoster = false;
 
-                if (stats.RosterHistory != null && stats.RosterHistory.Any())
+                var relevantRoster = stats.RosterHistory?
+                    .Where(r => r.AwalDinas.Date <= endOfMonth.Date && (r.AkhirCuti.Date >= startOfMonth.Date || r.AkhirDinas.Date >= startOfMonth.Date))
+                    .ToList();
+
+                if (relevantRoster != null && relevantRoster.Any())
                 {
                     hasRoster = true;
                     int computedOnsite = 0;
                     int tugasDays = 0;
                     for (var cur = startOfMonth.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
                     {
-                        bool isTugas = stats.RosterHistory.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                        bool isTugas = relevantRoster.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
                         if (isTugas)
                         {
                             tugasDays++;
                         }
                         else
                         {
-                            bool isDinas = stats.RosterHistory.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                            bool isDinas = relevantRoster.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
                             if (isDinas)
                             {
                                 computedOnsite++;

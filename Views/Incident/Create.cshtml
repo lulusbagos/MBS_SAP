@@ -1,15 +1,21 @@
 @{
-    ViewData["Title"] = "Buat Berita Insiden";
+    ViewData["Title"] = "Upload Berita Safety & Updates";
 }
 
 <div class="animate-fade-in pb-4">
 
-    <div class="position-relative mb-4" style="margin: -20px -20px 20px -20px;">
-        <div style="background: linear-gradient(135deg, #dc2626, #f43f5e); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden;">
+    <div class="mb-3">
+        <a asp-action="Index" class="btn btn-sm text-decoration-none p-0" style="color: var(--text-muted); font-weight: 600;">
+            <i class="bi bi-arrow-left me-1"></i> Kembali ke Berita Safety
+        </a>
+    </div>
+
+    <div class="position-relative mb-4" style="margin: -10px -20px 20px -20px;">
+        <div style="background: linear-gradient(135deg, #0369a1, #0284c7 60%, #0ea5e9); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.3);">
             <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
-            <i class="bi bi-pencil-square text-white mb-2 d-block" style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
-            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px;">BUAT BERITA INSIDEN</h4>
-            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Publikasikan informasi insiden untuk awareness karyawan.</p>
+            <i class="bi bi-cloud-arrow-up-fill text-white mb-2 d-block" style="font-size: 34px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+            <h4 style="font-weight: 800; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 4px;">UPLOAD BERITA SAFETY</h4>
+            <p style="color: rgba(255,255,255,0.9); font-size: 12px; margin: 0; font-weight: 500;">Publikasikan informasi K3LH dan atur penayangan di Banner Mobile atau Safety Updates.</p>
         </div>
     </div>
 

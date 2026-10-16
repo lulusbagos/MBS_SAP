@@ -95,7 +95,9 @@ namespace MBS_SAP.Services
         string? DepartemenPja,
         string StatusTemuan,
         string? FotoTemuan,
-        DateTime CreatedAt);
+        DateTime CreatedAt,
+        string? FotoPerbaikan = null,
+        string? RencanaPerbaikan = null);
 
     internal record InspectionSourceRow(
         string? SourceCode,
@@ -327,7 +329,7 @@ namespace MBS_SAP.Services
             };
 
             var existingHazardsData = await _context.HazardReports
-                .Where(h => !h.IsDeleted && h.Tanggal >= since.AddDays(-7))
+                .Where(h => !h.IsDeleted && (h.Tanggal >= since.AddDays(-7) || h.StatusTemuan == "Open"))
                 .Select(h => new HazardReplicationDto
                 {
                     Id = h.Id,
@@ -343,6 +345,9 @@ namespace MBS_SAP.Services
                     Pja = h.Pja,
                     NikPja = h.NikPja,
                     DepartemenPja = h.DepartemenPja,
+                    Perbaikan = h.Perbaikan,
+                    TindakanPerbaikan = h.TindakanPerbaikan,
+                    FotoPerbaikan = h.FotoPerbaikan,
                     CreatedAt = h.CreatedAt
                 })
                 .ToListAsync(cancellationToken);
@@ -374,12 +379,18 @@ namespace MBS_SAP.Services
                     var newPja = Truncate(row.Pja, 150);
                     var newNikPja = Truncate(row.NikPja, 50);
                     var newDeptPja = Truncate(row.DepartemenPja, 150);
+                    var newPerbaikan = Truncate(row.Perbaikan, 1000);
+                    var newTindakan = Truncate(row.RencanaPerbaikan ?? row.TindakanPerbaikan, 1000);
+                    var newFotoPerbaikan = Truncate(row.FotoPerbaikan, 500);
 
                     if (!string.Equals(existingHazard.StatusTemuan ?? string.Empty, newStatus, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existingHazard.TingkatResiko ?? string.Empty, newRisk ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existingHazard.Pja ?? string.Empty, newPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existingHazard.NikPja ?? string.Empty, newNikPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
-                        !string.Equals(existingHazard.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                        !string.Equals(existingHazard.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        (!string.IsNullOrWhiteSpace(newPerbaikan) && !string.Equals(existingHazard.Perbaikan ?? string.Empty, newPerbaikan, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(newTindakan) && !string.Equals(existingHazard.TindakanPerbaikan ?? string.Empty, newTindakan, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(newFotoPerbaikan) && !string.Equals(existingHazard.FotoPerbaikan ?? string.Empty, newFotoPerbaikan, StringComparison.OrdinalIgnoreCase)))
                     {
                         var realHazard = await _context.HazardReports.FindAsync(new object[] { existingHazard.Id }, cancellationToken);
                         if (realHazard != null)
@@ -389,6 +400,9 @@ namespace MBS_SAP.Services
                             realHazard.Pja = newPja;
                             realHazard.NikPja = newNikPja;
                             realHazard.DepartemenPja = newDeptPja;
+                            if (!string.IsNullOrWhiteSpace(newPerbaikan)) realHazard.Perbaikan = newPerbaikan;
+                            if (!string.IsNullOrWhiteSpace(newTindakan)) realHazard.TindakanPerbaikan = newTindakan;
+                            if (!string.IsNullOrWhiteSpace(newFotoPerbaikan)) realHazard.FotoPerbaikan = newFotoPerbaikan;
                             hasHazardChanges = true;
                         }
                     }
@@ -408,6 +422,7 @@ namespace MBS_SAP.Services
                 var report = new HazardReport
                 {
                     FotoTemuan = row.FotoTemuan,
+                    FotoPerbaikan = row.FotoPerbaikan,
                     Tanggal = row.Tanggal,
                     Waktu = row.Waktu,
                     Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
@@ -422,7 +437,7 @@ namespace MBS_SAP.Services
                     JenisKetidaksesuaian = Truncate(row.JenisKetidaksesuaian, 150),
                     TingkatResiko = Truncate(row.TingkatResiko, 50),
                     Perbaikan = row.Perbaikan,
-                    TindakanPerbaikan = row.TindakanPerbaikan,
+                    TindakanPerbaikan = row.RencanaPerbaikan ?? row.TindakanPerbaikan,
                     Pja = Truncate(row.Pja, 150),
                     NikPja = Truncate(row.NikPja, 50),
                     DepartemenPja = Truncate(row.DepartemenPja, 150),
@@ -448,6 +463,9 @@ namespace MBS_SAP.Services
                     Pja = report.Pja,
                     NikPja = report.NikPja,
                     DepartemenPja = report.DepartemenPja,
+                    Perbaikan = report.Perbaikan,
+                    TindakanPerbaikan = report.TindakanPerbaikan,
+                    FotoPerbaikan = report.FotoPerbaikan,
                     CreatedAt = report.CreatedAt
                 };
                 result.HazardInserted++;
@@ -1155,7 +1173,7 @@ namespace MBS_SAP.Services
 
             // 1. Process Hazards
             var existingHazardsData = await _context.HazardReports
-                .Where(h => !h.IsDeleted && h.Nik == targetNik && h.Tanggal >= since.AddDays(-7))
+                .Where(h => !h.IsDeleted && h.Nik == targetNik && (h.Tanggal >= since.AddDays(-7) || h.StatusTemuan == "Open"))
                 .Select(h => new HazardReplicationDto
                 {
                     Id = h.Id,
@@ -1171,6 +1189,9 @@ namespace MBS_SAP.Services
                     Pja = h.Pja,
                     NikPja = h.NikPja,
                     DepartemenPja = h.DepartemenPja,
+                    Perbaikan = h.Perbaikan,
+                    TindakanPerbaikan = h.TindakanPerbaikan,
+                    FotoPerbaikan = h.FotoPerbaikan,
                     CreatedAt = h.CreatedAt
                 })
                 .ToListAsync(cancellationToken);
@@ -1201,12 +1222,18 @@ namespace MBS_SAP.Services
                     var newPja = Truncate(row.Pja, 150);
                     var newNikPja = Truncate(row.NikPja, 50);
                     var newDeptPja = Truncate(row.DepartemenPja, 150);
+                    var newPerbaikan = Truncate(row.Perbaikan, 1000);
+                    var newTindakan = Truncate(row.RencanaPerbaikan ?? row.TindakanPerbaikan, 1000);
+                    var newFotoPerbaikan = Truncate(row.FotoPerbaikan, 500);
 
                     if (!string.Equals(existingHazard.StatusTemuan ?? string.Empty, newStatus, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existingHazard.TingkatResiko ?? string.Empty, newRisk ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existingHazard.Pja ?? string.Empty, newPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existingHazard.NikPja ?? string.Empty, newNikPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
-                        !string.Equals(existingHazard.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                        !string.Equals(existingHazard.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
+                        (!string.IsNullOrWhiteSpace(newPerbaikan) && !string.Equals(existingHazard.Perbaikan ?? string.Empty, newPerbaikan, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(newTindakan) && !string.Equals(existingHazard.TindakanPerbaikan ?? string.Empty, newTindakan, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(newFotoPerbaikan) && !string.Equals(existingHazard.FotoPerbaikan ?? string.Empty, newFotoPerbaikan, StringComparison.OrdinalIgnoreCase)))
                     {
                         var realHazard = await _context.HazardReports.FindAsync(new object[] { existingHazard.Id }, cancellationToken);
                         if (realHazard != null)
@@ -1216,6 +1243,9 @@ namespace MBS_SAP.Services
                             realHazard.Pja = newPja;
                             realHazard.NikPja = newNikPja;
                             realHazard.DepartemenPja = newDeptPja;
+                            if (!string.IsNullOrWhiteSpace(newPerbaikan)) realHazard.Perbaikan = newPerbaikan;
+                            if (!string.IsNullOrWhiteSpace(newTindakan)) realHazard.TindakanPerbaikan = newTindakan;
+                            if (!string.IsNullOrWhiteSpace(newFotoPerbaikan)) realHazard.FotoPerbaikan = newFotoPerbaikan;
                             hasHazardChanges = true;
                         }
                     }
@@ -1234,6 +1264,7 @@ namespace MBS_SAP.Services
                 var report = new HazardReport
                 {
                     FotoTemuan = row.FotoTemuan,
+                    FotoPerbaikan = row.FotoPerbaikan,
                     Tanggal = row.Tanggal,
                     Waktu = row.Waktu,
                     Nama = Truncate(GetOfficialName(row.Nik, row.Nama), 150) ?? "Unknown",
@@ -1248,7 +1279,7 @@ namespace MBS_SAP.Services
                     JenisKetidaksesuaian = Truncate(row.JenisKetidaksesuaian, 150),
                     TingkatResiko = Truncate(row.TingkatResiko, 50),
                     Perbaikan = row.Perbaikan,
-                    TindakanPerbaikan = row.TindakanPerbaikan,
+                    TindakanPerbaikan = row.RencanaPerbaikan ?? row.TindakanPerbaikan,
                     Pja = Truncate(row.Pja, 150),
                     NikPja = Truncate(row.NikPja, 50),
                     DepartemenPja = Truncate(row.DepartemenPja, 150),
@@ -1908,7 +1939,7 @@ namespace MBS_SAP.Services
                         h.perusahaan_id, h.is_deleted, h.created_at
                     FROM tbl_t_hazard_report h
                     LEFT JOIN tbl_t_action_plan a ON a.item_sap = CONCAT('hazard:', h.id)
-                    WHERE h.tanggal >= {0}
+                    WHERE (h.tanggal >= {0} OR h.status_temuan = 'Open')
                       AND h.is_deleted = 0
                       AND a.id IS NULL";
 
@@ -1919,17 +1950,19 @@ namespace MBS_SAP.Services
                         a.pja = h.pja,
                         a.nik_pja = h.nik_pja,
                         a.departemen_pja = h.departemen_pja,
-                        a.perbaikan = COALESCE(h.perbaikan, a.perbaikan),
-                        a.foto_perbaikan = COALESCE(h.foto_perbaikan, a.foto_perbaikan),
+                        a.rencana_perbaikan = COALESCE(NULLIF(h.tindakan_perbaikan, ''), a.rencana_perbaikan),
+                        a.perbaikan = COALESCE(NULLIF(h.perbaikan, ''), a.perbaikan),
+                        a.foto_perbaikan = COALESCE(NULLIF(h.foto_perbaikan, ''), a.foto_perbaikan),
                         a.is_deleted = h.is_deleted
                     FROM tbl_t_action_plan a
                     INNER JOIN tbl_t_hazard_report h ON a.item_sap = CONCAT('hazard:', h.id)
-                    WHERE h.tanggal >= {0}
+                    WHERE (h.tanggal >= {0} OR a.status <> h.status_temuan)
                       AND (
                           a.status <> h.status_temuan OR
                           ISNULL(a.pja, '') <> ISNULL(h.pja, '') OR
                           ISNULL(a.nik_pja, '') <> ISNULL(h.nik_pja, '') OR
                           ISNULL(a.departemen_pja, '') <> ISNULL(h.departemen_pja, '') OR
+                          (h.tindakan_perbaikan IS NOT NULL AND ISNULL(a.rencana_perbaikan, '') <> h.tindakan_perbaikan) OR
                           (h.perbaikan IS NOT NULL AND ISNULL(a.perbaikan, '') <> h.perbaikan) OR
                           (h.foto_perbaikan IS NOT NULL AND ISNULL(a.foto_perbaikan, '') <> h.foto_perbaikan) OR
                           a.is_deleted <> h.is_deleted
@@ -2018,38 +2051,58 @@ namespace MBS_SAP.Services
         {
             var sql = $@"
 SELECT
-    code,
-    date,
-    time,
-    title,
-    area_name,
-    location_name,
-    location_detail,
-    hazard_name,
-    hazard_type_name,
-    hazard_subtype_name,
-    hazard_danger_name,
-    remark,
-    repair,
-    repair_remark,
-    status,
-    pja_name,
-    pja_nik,
-    pja_departemen,
-    employee_name,
-    employee_nik,
-    employee_departemen,
-    employee_company,
-    foto_temuan
-FROM {sourceView}
-WHERE (date >= @sinceDate OR status IS NULL OR LOWER(status::text) NOT IN ('close', 'closed', '1'))";
+    v.code,
+    v.date,
+    v.time,
+    v.title,
+    v.area_name,
+    v.location_name,
+    v.location_detail,
+    v.hazard_name,
+    v.hazard_type_name,
+    v.hazard_subtype_name,
+    v.hazard_danger_name,
+    v.remark,
+    CASE 
+        WHEN ap.status IN (2, 3) OR v.status ILIKE 'close%' THEN 'Yes'
+        ELSE v.repair 
+    END AS repair,
+    COALESCE(NULLIF(ap.action, ''), v.repair_remark) AS repair_remark,
+    COALESCE(NULLIF(ap.plan, ''), v.repair_remark) AS plan_remark,
+    CASE 
+        WHEN ap.status IN (2, 3) THEN 'Close'
+        WHEN ap.status = 1 THEN 'Progress'
+        ELSE v.status 
+    END AS status,
+    v.pja_name,
+    v.pja_nik,
+    v.pja_departemen,
+    v.employee_name,
+    v.employee_nik,
+    v.employee_departemen,
+    v.employee_company,
+    v.foto_temuan,
+    CASE 
+        WHEN ap.action_image IS NOT NULL AND ap.action_image <> '' 
+        THEN 'https://apiis.idcapps.net/image/' || ap.action_image 
+        ELSE NULL 
+    END AS foto_perbaikan
+FROM {sourceView} v
+LEFT JOIN LATERAL (
+    SELECT status, plan, action, action_image
+    FROM action_plans
+    WHERE tran_id = v.id AND (""table"" = 'hazard' OR ""table"" = 'hazard_trans')
+    ORDER BY updated_at DESC NULLS LAST, id DESC
+    LIMIT 1
+) ap ON true
+WHERE (v.date >= @sinceDate OR (LOWER(v.status::text) NOT IN ('close', 'closed', '1') AND (ap.status IS NULL OR ap.status NOT IN (2, 3))))";
 
             if (targetNiks != null && targetNiks.Length > 0)
             {
-                sql += " AND employee_nik = ANY(@targetNiks)";
+                sql += " AND v.employee_nik = ANY(@targetNiks)";
             }
 
-            sql += " ORDER BY date, time, code;";
+            sql += " ORDER BY v.date, v.time, v.code;";
 
             await using var command = new NpgsqlCommand(sql, connection);
             command.Parameters.AddWithValue("sinceDate", since.Date);
@@ -2094,7 +2147,9 @@ WHERE (date >= @sinceDate OR status IS NULL OR LOWER(status::text) NOT IN ('clos
                     DepartemenPja: GetString(reader, "pja_departemen"),
                     StatusTemuan: NormalizeHazardStatus(GetString(reader, "status")),
                     FotoTemuan: GetString(reader, "foto_temuan"),
-                    CreatedAt: createdAt);
+                    CreatedAt: createdAt,
+                    FotoPerbaikan: GetString(reader, "foto_perbaikan"),
+                    RencanaPerbaikan: GetString(reader, "plan_remark"));
 
                 data.Add(source);
             }
@@ -2652,6 +2707,9 @@ WHERE date >= @sinceDate";
             public string? Pja { get; set; }
             public string? NikPja { get; set; }
             public string? DepartemenPja { get; set; }
+            public string? Perbaikan { get; set; }
+            public string? TindakanPerbaikan { get; set; }
+            public string? FotoPerbaikan { get; set; }
             public DateTime CreatedAt { get; set; }
         }
 

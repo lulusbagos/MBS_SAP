@@ -72,7 +72,23 @@ namespace MBS_SAP.Controllers
             }
         }
 
-        private bool IsAdmin() => User.IsInRole("Admin");
+        private bool IsAdmin()
+        {
+            if (User == null) return false;
+            if (MBS_SAP.Services.CompanyHierarchyService.IsAdminUser(User)) return true;
+            if (User.IsInRole("Admin") || User.IsInRole("Administrator")) return true;
+
+            var jobTitle = User.FindFirst("JobTitle")?.Value ?? "";
+            var department = User.FindFirst("Department")?.Value ?? "";
+            return jobTitle.Contains("Safety", StringComparison.OrdinalIgnoreCase) ||
+                   jobTitle.Contains("HSE", StringComparison.OrdinalIgnoreCase) ||
+                   jobTitle.Contains("OHS", StringComparison.OrdinalIgnoreCase) ||
+                   jobTitle.Contains("SHE", StringComparison.OrdinalIgnoreCase) ||
+                   department.Contains("Safety", StringComparison.OrdinalIgnoreCase) ||
+                   department.Contains("HSE", StringComparison.OrdinalIgnoreCase) ||
+                   department.Contains("OHS", StringComparison.OrdinalIgnoreCase) ||
+                   department.Contains("SHE", StringComparison.OrdinalIgnoreCase);
+        }
 
         private void SetIncidentCategoryOptions(string? selectedValue = null)
         {
@@ -106,24 +122,55 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 20)
+        public async Task<IActionResult> Index(string tab = "all", string? q = null, int page = 1, int pageSize = 20)
         {
-            if (!IsAdmin())
-            {
-                TempData["ErrorMessage"] = "Anda tidak memiliki akses ke halaman ini.";
-                return RedirectToAction("Index", "Home");
-            }
-
             ViewData["ActiveTab"] = "Incident";
-            ViewData["IsAdmin"] = true;
+            bool canManage = IsAdmin();
+            ViewData["IsAdmin"] = canManage;
+            ViewBag.CanManage = canManage;
 
             if (page < 1) page = 1;
             if (pageSize < 5) pageSize = 20;
 
-            var satuBulanLalu = DateTime.Now.AddMonths(-1);
-            var query = _context.IncidentNewsList
-                .Where(i => i.IsPublished && i.CreatedAt >= satuBulanLalu)
-                .OrderByDescending(i => i.TanggalKejadian ?? i.CreatedAt).ThenByDescending(i => i.Id);
+            // Only published, authentic safety news (filter out corrupted excel rows)
+            var baseQuery = _context.IncidentNewsList
+                .Where(i => i.IsPublished && 
+                            i.NikPembuat != "SYSTEM" && 
+                            !i.DibuatOleh.Contains("System Import Excel") && 
+                            i.Konten.Length >= 15);
+
+            int countAll = await baseQuery.CountAsync();
+            int countBanner = await baseQuery.Where(i => i.IsBanner).CountAsync();
+            int countUpdate = await baseQuery.Where(i => i.IsUpdate).CountAsync();
+
+            var query = baseQuery;
+
+            // Tab filtering
+            var normTab = (tab ?? "all").Trim().ToLowerInvariant();
+            if (normTab == "banner")
+            {
+                query = query.Where(i => i.IsBanner);
+            }
+            else if (normTab == "update")
+            {
+                query = query.Where(i => i.IsUpdate);
+            }
+            else
+            {
+                normTab = "all";
+            }
+
+            // Search query filtering
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var qTrim = q.Trim().ToLower();
+                query = query.Where(i => (i.Judul != null && i.Judul.ToLower().Contains(qTrim)) ||
+                                         (i.Konten != null && i.Konten.ToLower().Contains(qTrim)) ||
+                                         (i.Lokasi != null && i.Lokasi.ToLower().Contains(qTrim)) ||
+                                         (i.Kategori != null && i.Kategori.ToLower().Contains(qTrim)));
+            }
+
+            query = query.OrderByDescending(i => (i.Kategori != null && i.Kategori.Contains("Banner")) || i.IsBanner).ThenByDescending(i => i.TanggalKejadian ?? i.CreatedAt).ThenByDescending(i => i.Id);
 
             var totalItems = await query.CountAsync();
             var totalPages = totalItems == 0 ? 1 : (int)Math.Ceiling(totalItems / (double)pageSize);
@@ -137,11 +184,16 @@ namespace MBS_SAP.Controllers
             var companies = await _context.Perusahaans.AsNoTracking().ToListAsync();
             ViewBag.CompanyLookup = companies.ToDictionary(c => c.PerusahaanId, c => c.NamaPerusahaan);
 
+            ViewBag.ActiveTabFilter = normTab;
+            ViewBag.SearchQuery = q ?? "";
+            ViewBag.CountAll = countAll;
+            ViewBag.CountBanner = countBanner;
+            ViewBag.CountUpdate = countUpdate;
             ViewBag.CurrentPage = page;
             ViewBag.PageSize = pageSize;
             ViewBag.TotalItems = totalItems;
             ViewBag.TotalPages = totalPages;
-            ViewBag.NewestIncident = await query.FirstOrDefaultAsync();
+            ViewBag.NewestIncident = await baseQuery.OrderByDescending(i => i.TanggalKejadian ?? i.CreatedAt).ThenByDescending(i => i.Id).FirstOrDefaultAsync();
 
             return View(incidents);
         }
@@ -149,21 +201,17 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> Detail(int id)
         {
-            if (!IsAdmin())
-            {
-                TempData["ErrorMessage"] = "Anda tidak memiliki akses ke halaman ini.";
-                return RedirectToAction("Index", "Home");
-            }
-
             ViewData["ActiveTab"] = "Incident";
-            ViewData["IsAdmin"] = true;
+            bool canManage = IsAdmin();
+            ViewData["IsAdmin"] = canManage;
+            ViewBag.CanManage = canManage;
 
             var incident = await _context.IncidentNewsList
                 .FirstOrDefaultAsync(i => i.Id == id);
 
-            if (incident == null || (!incident.IsPublished && !IsAdmin()))
+            if (incident == null || (!incident.IsPublished && !canManage))
             {
-                TempData["ErrorMessage"] = "Berita insiden tidak ditemukan.";
+                TempData["ErrorMessage"] = "Berita safety tidak ditemukan.";
                 return RedirectToAction("Index");
             }
 
@@ -640,7 +688,7 @@ namespace MBS_SAP.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleBanner(int id, int page = 1)
+        public async Task<IActionResult> ToggleBanner(int id, string tab = "all", int page = 1)
         {
             if (!IsAdmin()) return Forbid();
 
@@ -650,14 +698,14 @@ namespace MBS_SAP.Controllers
                 incident.IsBanner = !incident.IsBanner;
                 incident.UpdatedAt = DateTime.Now;
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Penayangan Banner Home untuk #{incident.Id} diubah menjadi {(incident.IsBanner ? "AKTIF" : "NONAKTIF")}.";
+                TempData["SuccessMessage"] = $"Penayangan Banner Mobile untuk #{incident.Id} diubah menjadi {(incident.IsBanner ? "AKTIF" : "NONAKTIF")}.";
             }
-            return RedirectToAction(nameof(Index), new { page });
+            return RedirectToAction(nameof(Index), new { tab, page });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleUpdate(int id, int page = 1)
+        public async Task<IActionResult> ToggleUpdate(int id, string tab = "all", int page = 1)
         {
             if (!IsAdmin()) return Forbid();
 
@@ -667,9 +715,9 @@ namespace MBS_SAP.Controllers
                 incident.IsUpdate = !incident.IsUpdate;
                 incident.UpdatedAt = DateTime.Now;
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Penayangan Safety Updates untuk #{incident.Id} diubah menjadi {(incident.IsUpdate ? "AKTIF" : "NONAKTIF")}.";
+                TempData["SuccessMessage"] = $"Penayangan Safety Updates Mobile untuk #{incident.Id} diubah menjadi {(incident.IsUpdate ? "AKTIF" : "NONAKTIF")}.";
             }
-            return RedirectToAction(nameof(Index), new { page });
+            return RedirectToAction(nameof(Index), new { tab, page });
         }
 
         [HttpPost]

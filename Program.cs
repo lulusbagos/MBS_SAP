@@ -232,6 +232,92 @@ using (var scope = app.Services.CreateScope())
                 ALTER TABLE tbl_t_incident_news ADD perusahaan_id int NULL;
             END
 
+            IF OBJECT_ID(N'[dbo].[tbl_t_gci_report]', N'U') IS NULL
+            BEGIN
+                CREATE TABLE [dbo].[tbl_t_gci_report] (
+                    [id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    [tanggal] DATE NOT NULL DEFAULT CAST(GETDATE() AS DATE),
+                    [waktu] TIME NOT NULL DEFAULT CAST(GETDATE() AS TIME),
+                    [nik] NVARCHAR(50) NOT NULL,
+                    [nama] NVARCHAR(150) NOT NULL,
+                    [departemen] NVARCHAR(100) NULL,
+                    [perusahaan] NVARCHAR(200) NULL,
+                    [perusahaan_id] INT NULL,
+                    [area] NVARCHAR(100) NOT NULL,
+                    [lokasi] NVARCHAR(200) NOT NULL,
+                    [detil_lokasi] NVARCHAR(250) NULL,
+                    [pit] NVARCHAR(100) NULL,
+                    [nama_lereng] NVARCHAR(100) NULL,
+                    [area_type] NVARCHAR(50) NULL DEFAULT 'Highwall',
+                    [shift] NVARCHAR(20) NULL,
+                    [latitude] NVARCHAR(50) NULL,
+                    [longitude] NVARCHAR(50) NULL,
+                    [skor_geometri_lereng] INT NOT NULL DEFAULT 100,
+                    [skor_kondisi_crest_toe] INT NOT NULL DEFAULT 100,
+                    [skor_tension_crack] INT NOT NULL DEFAULT 100,
+                    [skor_kestabilan_batuan] INT NOT NULL DEFAULT 100,
+                    [skor_rembesan_drainase] INT NOT NULL DEFAULT 100,
+                    [skor_pemantauan_sensor] INT NOT NULL DEFAULT 100,
+                    [skor_demarkasi_zona] INT NOT NULL DEFAULT 100,
+                    [skor_kepatuhan_rekomendasi] INT NOT NULL DEFAULT 100,
+                    [total_score] FLOAT NOT NULL DEFAULT 100,
+                    [kategori_index] NVARCHAR(50) NOT NULL DEFAULT 'Baik',
+                    [tarp_level] NVARCHAR(50) NOT NULL DEFAULT 'GREEN',
+                    [catatan] NVARCHAR(2000) NULL,
+                    [tindakan_perbaikan] NVARCHAR(2000) NULL,
+                    [pic] NVARCHAR(100) NULL,
+                    [foto_url] NVARCHAR(500) NULL,
+                    [peta_hazard_url] NVARCHAR(500) NULL,
+                    [is_deleted] BIT NOT NULL DEFAULT 0,
+                    [created_at] DATETIME NOT NULL DEFAULT GETDATE(),
+                    [updated_at] DATETIME NULL
+                );
+            END
+
+            IF EXISTS (SELECT * FROM sys.tables WHERE name = 'tbl_t_gci_report')
+            BEGIN
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('tbl_t_gci_report') AND name = 'jenis_inspeksi')
+                BEGIN
+                    ALTER TABLE tbl_t_gci_report ADD 
+                        jenis_inspeksi NVARCHAR(50) NULL,
+                        pja_nama NVARCHAR(100) NULL,
+                        pja_nik NVARCHAR(50) NULL,
+                        elevasi_rl FLOAT NULL,
+                        tinggi_jenjang FLOAT NULL,
+                        lebar_berm FLOAT NULL,
+                        actual_face_angle FLOAT NULL,
+                        design_face_angle FLOAT NULL,
+                        overall_slope_angle FLOAT NULL,
+                        kondisi_desain NVARCHAR(50) NULL,
+                        kondisi_retakan NVARCHAR(50) NULL,
+                        kondisi_rockfall NVARCHAR(50) NULL,
+                        kondisi_bulging NVARCHAR(50) NULL,
+                        kondisi_rembesan NVARCHAR(50) NULL,
+                        debit_rembesan FLOAT NULL,
+                        kondisi_erosi NVARCHAR(50) NULL,
+                        kondisi_settlement NVARCHAR(50) NULL,
+                        lebar_retakan_mm FLOAT NULL,
+                        panjang_retakan_m FLOAT NULL,
+                        kedalaman_retakan_m FLOAT NULL,
+                        arah_retakan NVARCHAR(50) NULL,
+                        pertumbuhan_retakan NVARCHAR(50) NULL,
+                        kecepatan_retakan NVARCHAR(50) NULL,
+                        peta_monitoring_url NVARCHAR(500) NULL,
+                        peta_desain_url NVARCHAR(500) NULL,
+                        status_workflow NVARCHAR(50) NULL DEFAULT 'Menunggu Review PJA';
+                END
+
+                IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('tbl_t_gci_report') AND name = 'pic_nik')
+                BEGIN
+                    ALTER TABLE tbl_t_gci_report ADD 
+                        pic_nik NVARCHAR(50) NULL,
+                        judul_temuan NVARCHAR(250) NULL,
+                        due_date DATETIME NULL,
+                        foto_temuan_url NVARCHAR(500) NULL,
+                        foto_rekomendasi_url NVARCHAR(500) NULL;
+                END
+            END
+
             IF OBJECT_ID(N'[dbo].[tbl_t_coaching]', N'U') IS NULL
             BEGIN
                 CREATE TABLE [dbo].[tbl_t_coaching] (

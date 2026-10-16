@@ -1414,16 +1414,20 @@ namespace MBS_SAP.Controllers
                         int onsiteDays = totalDaysInMonth;
                         bool hasRoster = false;
 
-                        if (!string.IsNullOrEmpty(nik) && rostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
+                        var relevantRosters = (!string.IsNullOrEmpty(nik) && rostersByNik.TryGetValue(nik, out var empRosters) && empRosters != null)
+                            ? empRosters.Where(r => r.AwalDinas.Date <= endOfMonth.Date && (r.AkhirCuti.Date >= startOfMonth.Date || r.AkhirDinas.Date >= startOfMonth.Date)).ToList()
+                            : null;
+
+                        if (relevantRosters != null && relevantRosters.Count > 0)
                         {
                             hasRoster = true;
                             int computedOnsite = 0;
                             for (var cur = startOfMonth.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
                             {
-                                bool isTugas = empRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                                bool isTugas = relevantRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
                                 if (!isTugas)
                                 {
-                                    bool isDinas = empRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                                    bool isDinas = relevantRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
                                     if (isDinas)
                                     {
                                         computedOnsite++;
@@ -1489,16 +1493,20 @@ namespace MBS_SAP.Controllers
                             int onsiteDays = totalDaysInMonth;
                             bool hasRoster = false;
 
-                            if (!string.IsNullOrEmpty(nik) && rostersByNik.TryGetValue(nik, out var empRosters) && empRosters.Count > 0)
+                            var relevantRosters = (!string.IsNullOrEmpty(nik) && rostersByNik.TryGetValue(nik, out var empRosters) && empRosters != null)
+                                ? empRosters.Where(r => r.AwalDinas.Date <= endOfMonth.Date && (r.AkhirCuti.Date >= startOfMonth.Date || r.AkhirDinas.Date >= startOfMonth.Date)).ToList()
+                                : null;
+
+                            if (relevantRosters != null && relevantRosters.Count > 0)
                             {
                                 hasRoster = true;
                                 int computedOnsite = 0;
                                 for (var cur = startOfMonth.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
                                 {
-                                    bool isTugas = empRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                                    bool isTugas = relevantRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
                                     if (!isTugas)
                                     {
-                                        bool isDinas = empRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                                        bool isDinas = relevantRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
                                         if (isDinas)
                                         {
                                             computedOnsite++;
@@ -2295,16 +2303,20 @@ namespace MBS_SAP.Controllers
                     int onsiteDays = totalDaysInMonth;
                     bool hasRoster = false;
 
-                    if (rostersByNik.TryGetValue(emp.NoNik, out var empRosters) && empRosters.Count > 0)
+                    var relevantRosters = (!string.IsNullOrEmpty(emp.NoNik) && rostersByNik.TryGetValue(emp.NoNik, out var empRosters) && empRosters != null)
+                        ? empRosters.Where(r => r.AwalDinas.Date <= endOfMonth.Date && (r.AkhirCuti.Date >= startOfMonth.Date || r.AkhirDinas.Date >= startOfMonth.Date)).ToList()
+                        : null;
+
+                    if (relevantRosters != null && relevantRosters.Count > 0)
                     {
                         hasRoster = true;
                         int computedOnsite = 0;
                         for (var cur = effectiveEmpStart.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
                         {
-                            bool isTugas = empRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                            bool isTugas = relevantRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
                             if (!isTugas)
                             {
-                                bool isDinas = empRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                                bool isDinas = relevantRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
                                 if (isDinas)
                                 {
                                     computedOnsite++;

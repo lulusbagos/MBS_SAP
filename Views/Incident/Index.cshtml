@@ -1,8 +1,13 @@
 @model IEnumerable<MBS_SAP.Models.IncidentNews>
 @{
-    ViewData["Title"] = "Data Insiden";
-    bool isAdmin = User.IsInRole("Admin");
+    ViewData["Title"] = "Berita Safety & Updates";
+    bool canManage = ViewBag.CanManage as bool? ?? false;
     var incidents = Model.ToList();
+    string activeTab = (ViewBag.ActiveTabFilter as string ?? "all").ToLowerInvariant();
+    string searchQuery = ViewBag.SearchQuery as string ?? "";
+    int countAll = (int)(ViewBag.CountAll ?? incidents.Count);
+    int countBanner = (int)(ViewBag.CountBanner ?? 0);
+    int countUpdate = (int)(ViewBag.CountUpdate ?? 0);
     int currentPage = (int)(ViewBag.CurrentPage ?? 1);
     int totalPages = (int)(ViewBag.TotalPages ?? 1);
     int totalItems = (int)(ViewBag.TotalItems ?? incidents.Count);
@@ -12,63 +17,198 @@
 }
 
 <style>
-    .incident-page { animation: fadeInUp 0.35s ease-out; }
+    .safety-page { animation: fadeInUp 0.35s ease-out; }
     @@keyframes fadeInUp {
         from { opacity: 0; transform: translateY(14px); }
         to { opacity: 1; transform: translateY(0); }
     }
 
-    .incident-top-banner {
-        background: linear-gradient(135deg, #dc2626, #f43f5e);
+    .safety-top-banner {
+        background: linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%);
         border-bottom-left-radius: 24px;
         border-bottom-right-radius: 24px;
-        padding: 28px 20px 24px;
+        padding: 30px 24px 26px;
         color: #fff;
         text-align: center;
-        margin: -20px -20px 20px -20px;
+        margin: -20px -20px 24px -20px;
+        box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .safety-top-banner::before {
+        content: '';
+        position: absolute;
+        top: -60px;
+        right: -60px;
+        width: 180px;
+        height: 180px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .safety-top-banner::after {
+        content: '';
+        position: absolute;
+        bottom: -50px;
+        left: -50px;
+        width: 140px;
+        height: 140px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .safety-nav-tabs {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--bg-card);
+        padding: 6px;
+        border-radius: 14px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        flex-wrap: wrap;
+    }
+
+    .safety-tab-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
+    }
+
+    .safety-tab-link:hover {
+        color: var(--text-main);
+        background: rgba(148, 163, 184, 0.1);
+        text-decoration: none;
+    }
+
+    .safety-tab-link.active {
+        background: #0284c7;
+        color: #fff !important;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+    }
+
+    .safety-tab-count {
+        font-size: 11px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.2);
+        color: inherit;
+        font-weight: 800;
+    }
+
+    .safety-tab-link.active .safety-tab-count {
+        background: rgba(255, 255, 255, 0.25);
+        color: #fff;
+    }
+
+    .btn-create-safety {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: #fff !important;
+        font-weight: 800;
+        font-size: 13px;
+        padding: 10px 18px;
+        border-radius: 12px;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    .btn-create-safety:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+        color: #fff;
+        text-decoration: none;
+    }
+
+    .safety-search-bar {
+        position: relative;
+        flex: 1;
+        min-width: 240px;
+    }
+
+    .safety-search-input {
+        width: 100%;
+        padding: 9px 14px 9px 38px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+        color: var(--text-main);
+        font-size: 13px;
+    }
+
+    .safety-search-input:focus {
+        outline: none;
+        border-color: #0284c7;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18);
+    }
+
+    .safety-search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        font-size: 15px;
     }
 
     .newest-card {
         border: 1px solid var(--border-color);
         background: var(--bg-card);
-        border-radius: 16px;
+        border-radius: 18px;
         overflow: hidden;
-        margin-bottom: 16px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.05);
     }
 
     .newest-header {
-        background: linear-gradient(135deg, rgba(244,63,94,0.16), rgba(220,38,38,0.08));
+        background: linear-gradient(135deg, rgba(2,132,199,0.12), rgba(14,165,233,0.06));
         border-bottom: 1px solid var(--border-color);
-        padding: 10px 14px;
+        padding: 11px 16px;
         font-size: 11px;
         font-weight: 800;
-        letter-spacing: 1px;
+        letter-spacing: 0.8px;
         text-transform: uppercase;
-        color: #f43f5e;
+        color: #0284c7;
     }
 
     .newest-body {
         display: grid;
-        grid-template-columns: 130px 1fr;
-        gap: 14px;
-        padding: 14px;
+        grid-template-columns: 140px 1fr;
+        gap: 16px;
+        padding: 16px;
     }
 
     .newest-image {
-        width: 130px;
-        height: 96px;
+        width: 140px;
+        height: 105px;
         object-fit: cover;
-        border-radius: 10px;
+        border-radius: 12px;
         border: 1px solid var(--border-color);
     }
 
     .newest-placeholder {
-        width: 130px;
-        height: 96px;
-        border-radius: 10px;
+        width: 140px;
+        height: 105px;
+        border-radius: 12px;
         border: 1px dashed var(--border-color);
         background: rgba(148,163,184,0.07);
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         color: var(--text-muted);
@@ -92,6 +232,7 @@
         color: var(--text-muted);
         font-size: 11px;
         margin-bottom: 8px;
+        align-items: center;
     }
 
     .newest-desc {
@@ -107,29 +248,33 @@
 
     .incident-table-card {
         border: 1px solid var(--border-color);
-        border-radius: 16px;
+        border-radius: 18px;
         overflow: hidden;
         background: var(--bg-card);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.04);
     }
 
     .incident-table-head {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 14px;
+        padding: 14px 18px;
         border-bottom: 1px solid var(--border-color);
-        background: rgba(148,163,184,0.08);
+        background: rgba(148,163,184,0.05);
     }
 
     .incident-table-title {
         margin: 0;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 800;
         color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .incident-table-wrap {
-        overflow: auto;
+        overflow-x: auto;
     }
 
     .incident-table {
@@ -139,19 +284,19 @@
     }
 
     .incident-table thead th {
-        background: rgba(15,23,42,0.88);
+        background: rgba(15,23,42,0.92);
         color: #fff;
         font-size: 11px;
         font-weight: 700;
         letter-spacing: .4px;
-        padding: 11px 10px;
+        padding: 12px 12px;
         text-transform: uppercase;
         border-right: 1px solid rgba(255,255,255,0.08);
         white-space: nowrap;
     }
 
     .incident-table tbody td {
-        padding: 10px;
+        padding: 12px;
         border-bottom: 1px solid var(--border-color);
         font-size: 12px;
         color: var(--text-main);
@@ -159,11 +304,11 @@
     }
 
     .incident-table tbody tr:nth-child(even) {
-        background: rgba(148,163,184,0.05);
+        background: rgba(148,163,184,0.04);
     }
 
     .incident-table tbody tr:hover {
-        background: rgba(56,189,248,0.08);
+        background: rgba(2,132,199,0.06);
     }
 
     .badge-soft {
@@ -175,89 +320,77 @@
         white-space: nowrap;
     }
 
-    .badge-nearmiss { background: rgba(34,197,94,.2); color: #15803d; }
-    .badge-property { background: rgba(245,158,11,.2); color: #b45309; }
-    .badge-firstaid { background: rgba(59,130,246,.2); color: #1d4ed8; }
-    .badge-medical { background: rgba(139,92,246,.2); color: #6d28d9; }
+    .badge-nearmiss { background: rgba(34,197,94,.18); color: #15803d; border: 1px solid rgba(34,197,94,.3); }
+    .badge-property { background: rgba(245,158,11,.18); color: #b45309; border: 1px solid rgba(245,158,11,.3); }
+    .badge-firstaid { background: rgba(59,130,246,.18); color: #1d4ed8; border: 1px solid rgba(59,130,246,.3); }
+    .badge-medical { background: rgba(139,92,246,.18); color: #6d28d9; border: 1px solid rgba(139,92,246,.3); }
+    .badge-banner-cat { background: rgba(14,165,233,.18); color: #0284c7; border: 1px solid rgba(14,165,233,.3); }
+    .badge-default { background: rgba(148,163,184,.2); color: #475569; }
 
-    .badge-banner { background: rgba(14,165,233,.22); color: #0284c7; border: 1px solid rgba(14,165,233,.4); }
     .badge-terbaru-pulse {
         background: linear-gradient(135deg, #ef4444, #f97316);
         color: #fff !important;
         font-weight: 800;
-        font-size: 11px;
-        padding: 4px 10px;
-        border-radius: 8px;
-        box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        animation: pulseFire 2s infinite ease-in-out;
-    }
-    .badge-terbaru-sm {
-        background: linear-gradient(135deg, #ef4444, #f97316);
-        color: #fff !important;
-        font-weight: 800;
-        font-size: 9px;
-        padding: 2px 6px;
+        font-size: 10px;
+        padding: 3px 8px;
         border-radius: 6px;
         display: inline-flex;
         align-items: center;
-        gap: 3px;
-        vertical-align: middle;
-        box-shadow: 0 2px 6px rgba(239,68,68,0.3);
-    }
-    @@keyframes pulseFire {
-        0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
-        50% { transform: scale(1.05); box-shadow: 0 0 16px rgba(239, 68, 68, 0.7); }
+        gap: 4px;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
     }
 
     .btn-toggle-badge {
         border: none;
-        border-radius: 6px;
-        font-size: 10px;
+        border-radius: 8px;
+        font-size: 11px;
         font-weight: 700;
-        padding: 2px 6px;
+        padding: 4px 8px;
         cursor: pointer;
         transition: all 0.2s;
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 5px;
         text-align: left;
         white-space: nowrap;
+        width: 100%;
+        justify-content: flex-start;
     }
+
     .btn-toggle-badge.active-banner {
         background: rgba(245, 158, 11, 0.18);
         color: #b45309;
         border: 1px solid rgba(245, 158, 11, 0.4);
     }
+
     .btn-toggle-badge.active-update {
         background: rgba(16, 185, 129, 0.18);
         color: #047857;
         border: 1px solid rgba(16, 185, 129, 0.4);
     }
+
     .btn-toggle-badge.inactive {
         background: rgba(148, 163, 184, 0.12);
         color: #64748b;
-        border: 1px dashed rgba(148, 163, 184, 0.3);
+        border: 1px dashed rgba(148, 163, 184, 0.35);
     }
+
     .btn-toggle-badge:hover {
         transform: translateY(-1px);
-        filter: brightness(1.1);
+        filter: brightness(1.08);
     }
 
-    .badge-default { background: rgba(148,163,184,.22); color: #334155; }
-
     .row-title {
-        max-width: 260px;
+        max-width: 250px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        font-weight: 600;
+        font-weight: 700;
+        color: var(--text-main);
     }
 
     .row-content {
-        max-width: 280px;
+        max-width: 260px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -281,19 +414,20 @@
         border-radius: 8px;
         font-size: 11px;
         font-weight: 700;
-        padding: 5px 8px;
+        padding: 5px 9px;
         border: 1px solid var(--border-color);
-        background: #fff;
-        color: #0f172a;
+        background: var(--bg-card);
+        color: var(--text-main);
         text-decoration: none;
         display: inline-flex;
         align-items: center;
         gap: 4px;
+        transition: all 0.2s;
     }
 
     .btn-table:hover {
-        background: #f8fafc;
-        color: #0f172a;
+        background: rgba(2,132,199,0.1);
+        color: #0284c7;
         text-decoration: none;
     }
 
@@ -302,22 +436,27 @@
         color: #1d4ed8;
     }
 
+    .btn-table-edit:hover {
+        background: rgba(37,99,235,.1);
+        color: #1d4ed8;
+    }
+
     .incident-pager {
         display: flex;
         justify-content: center;
         align-items: center;
-        gap: 8px;
-        margin-top: 14px;
+        gap: 6px;
+        margin-top: 18px;
         flex-wrap: wrap;
     }
 
     .pager-link {
-        min-width: 34px;
-        height: 34px;
+        min-width: 36px;
+        height: 36px;
         border-radius: 8px;
         border: 1px solid var(--border-color);
-        background: #fff;
-        color: #0f172a;
+        background: var(--bg-card);
+        color: var(--text-main);
         text-decoration: none;
         font-size: 12px;
         font-weight: 700;
@@ -325,17 +464,18 @@
         align-items: center;
         justify-content: center;
         padding: 0 10px;
+        transition: all 0.2s;
     }
 
     .pager-link:hover {
         text-decoration: none;
-        color: #0f172a;
-        background: #f8fafc;
+        color: #0284c7;
+        border-color: #0284c7;
     }
 
     .pager-link.active {
-        background: #0ea5e9;
-        border-color: #0ea5e9;
+        background: #0284c7;
+        border-color: #0284c7;
         color: #fff;
     }
 
@@ -348,7 +488,6 @@
         .newest-body {
             grid-template-columns: 1fr;
         }
-
         .newest-image,
         .newest-placeholder {
             width: 100%;
@@ -357,52 +496,98 @@
     }
 </style>
 
-<div class="incident-page pb-4">
-    <div class="incident-top-banner">
-        <i class="bi bi-exclamation-triangle-fill d-block mb-2" style="font-size: 30px;"></i>
-        <h4 style="font-weight: 800; margin-bottom: 4px; letter-spacing: .4px;">DATA INSIDEN</h4>
-        <p style="margin: 0; font-size: 12px; opacity: .92;">Data ditampilkan dari yang paling baru agar monitoring lebih cepat.</p>
+<div class="safety-page pb-4">
+    <!-- Header Banner -->
+    <div class="safety-top-banner">
+        <i class="bi bi-shield-fill-check d-block mb-2" style="font-size: 34px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></i>
+        <h4 style="font-weight: 800; margin-bottom: 4px; letter-spacing: .4px;">BERITA SAFETY & SAFETY UPDATES</h4>
+        <p style="margin: 0; font-size: 12px; opacity: .92; max-width: 600px; margin-inline: auto;">
+            Pusat publikasi berita K3LH, penayangan Banner Mobile (Home Carousel), dan Safety Updates untuk aplikasi lapangan.
+        </p>
     </div>
 
     @if (TempData["SuccessMessage"] != null)
     {
-        <div class="alert alert-success alert-dismissible fade show border-0 mb-3" role="alert" style="background-color: rgba(16, 185, 129, 0.15); color: var(--color-green); border-radius: 12px;">
+        <div class="alert alert-success alert-dismissible fade show border-0 mb-3" role="alert" style="background-color: rgba(16, 185, 129, 0.15); color: #047857; border-radius: 12px; font-weight: 600;">
             <i class="bi bi-check-circle-fill me-2"></i> @TempData["SuccessMessage"]
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
     @if (TempData["ErrorMessage"] != null)
     {
-        <div class="alert alert-danger alert-dismissible fade show border-0 mb-3" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: var(--color-red); border-radius: 12px;">
+        <div class="alert alert-danger alert-dismissible fade show border-0 mb-3" role="alert" style="background-color: rgba(244, 63, 94, 0.15); color: #be123c; border-radius: 12px; font-weight: 600;">
             <i class="bi bi-x-circle-fill me-2"></i> @TempData["ErrorMessage"]
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
-    @if (isAdmin)
-    {
-        <a asp-action="Create" class="btn btn-sap-primary w-100 py-2 mb-3" style="border-radius: 12px; font-weight: 700;">
-            <i class="bi bi-plus-circle-fill me-2"></i> Tambah Data Insiden
-        </a>
-    }
+    <!-- Tab Bar & Actions -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <!-- Navigation Tabs -->
+        <div class="safety-nav-tabs">
+            <a href="@Url.Action("Index", new { tab = "all", q = searchQuery })" class="safety-tab-link @(activeTab == "all" ? "active" : "")">
+                <i class="bi bi-collection-fill"></i>
+                <span>Semua Berita</span>
+                <span class="safety-tab-count">@countAll</span>
+            </a>
+            <a href="@Url.Action("Index", new { tab = "banner", q = searchQuery })" class="safety-tab-link @(activeTab == "banner" ? "active" : "")">
+                <i class="bi bi-badge-ad-fill text-warning"></i>
+                <span>Banner Mobile</span>
+                <span class="safety-tab-count">@countBanner</span>
+            </a>
+            <a href="@Url.Action("Index", new { tab = "update", q = searchQuery })" class="safety-tab-link @(activeTab == "update" ? "active" : "")">
+                <i class="bi bi-bell-fill text-info"></i>
+                <span>Safety Updates</span>
+                <span class="safety-tab-count">@countUpdate</span>
+            </a>
+        </div>
+
+        <!-- Right Side: Upload Button & Search -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <form method="get" asp-action="Index" class="safety-search-bar" style="margin: 0;">
+                <input type="hidden" name="tab" value="@activeTab" />
+                <i class="bi bi-search safety-search-icon"></i>
+                <input type="text" name="q" value="@searchQuery" class="safety-search-input" placeholder="Cari judul / lokasi / kategori..." />
+            </form>
+
+            @if (canManage)
+            {
+                <a asp-action="Create" class="btn-create-safety">
+                    <i class="bi bi-cloud-arrow-up-fill"></i>
+                    <span>+ Upload Berita Safety</span>
+                </a>
+            }
+        </div>
+    </div>
 
     @if (!incidents.Any())
     {
-        <div class="card-sap text-center py-5 text-muted">
-            <i class="bi bi-journal-x d-block mb-3" style="font-size: 44px;"></i>
-            <h5>Belum ada data insiden</h5>
-            <p class="mb-0">Data akan muncul di sini setelah input dilakukan.</p>
+        <div class="card-sap text-center py-5 text-muted" style="border-radius: 18px; border: 1px dashed var(--border-color); background: var(--bg-card);">
+            <i class="bi bi-newspaper d-block mb-3" style="font-size: 48px; color: var(--text-muted);"></i>
+            <h5 style="font-weight: 700; color: var(--text-main);">Tidak ada berita safety pada tab ini</h5>
+            <p class="mb-3" style="font-size: 13px;">
+                @(string.IsNullOrWhiteSpace(searchQuery) ? "Silakan upload berita safety atau aktifkan penayangan banner/update." : $"Tidak ditemukan berita dengan kata kunci '{searchQuery}'.")
+            </p>
+            @if (canManage)
+            {
+                <div>
+                    <a asp-action="Create" class="btn-create-safety">
+                        <i class="bi bi-plus-circle-fill"></i> Upload Berita Sekarang
+                    </a>
+                </div>
+            }
         </div>
     }
     else
     {
-        if (newest != null)
+        <!-- Featured / Newest Card -->
+        if (newest != null && activeTab == "all" && string.IsNullOrWhiteSpace(searchQuery))
         {
             var newestBadge = GetCategoryBadgeClass(newest.Kategori);
             <div class="newest-card">
                 <div class="newest-header d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-stars me-1"></i> Data Insiden / Informasi Paling Baru</span>
+                    <span><i class="bi bi-stars me-1"></i> Publikasi Paling Baru</span>
                     <span class="badge-terbaru-pulse"><i class="bi bi-fire"></i> TERBARU</span>
                 </div>
                 <div class="newest-body">
@@ -414,13 +599,14 @@
                     else
                     {
                         <div class="newest-placeholder">
-                            Belum ada ilustrasi
+                            <i class="bi bi-image mb-1" style="font-size: 20px;"></i>
+                            <span>Tanpa Gambar</span>
                         </div>
                     }
                     <div>
                         <div class="newest-title">@newest.Judul</div>
                         <div class="newest-meta">
-                            <span><i class="bi bi-hash"></i> ID @newest.Id</span>
+                            <span><i class="bi bi-hash"></i> ID #@newest.Id</span>
                             <span><i class="bi bi-calendar3"></i> Input @newest.CreatedAt.ToString("dd MMM yyyy HH:mm")</span>
                             @if (newest.TanggalKejadian.HasValue)
                             {
@@ -450,10 +636,22 @@
             </div>
         }
 
+        <!-- Table Card -->
         <div class="incident-table-card">
             <div class="incident-table-head">
-                <h6 class="incident-table-title"><i class="bi bi-table me-1"></i> Tabel Data Insiden</h6>
-                <span style="font-size:11px; color: var(--text-muted);">Total @totalItems data | Halaman @currentPage dari @totalPages</span>
+                <h6 class="incident-table-title">
+                    <i class="bi bi-table text-primary"></i> 
+                    <span>Daftar Berita Safety</span>
+                    @if (activeTab == "banner")
+                    {
+                        <span class="badge bg-warning text-dark ms-2" style="font-size: 11px;">Filter: Banner Mobile</span>
+                    }
+                    else if (activeTab == "update")
+                    {
+                        <span class="badge bg-info text-dark ms-2" style="font-size: 11px;">Filter: Safety Updates</span>
+                    }
+                </h6>
+                <span style="font-size:12px; color: var(--text-muted);">Total <strong>@totalItems</strong> berita | Hal. @currentPage dari @totalPages</span>
             </div>
 
             <div class="incident-table-wrap">
@@ -461,16 +659,16 @@
                     <thead>
                         <tr>
                             <th style="width: 60px;">ID</th>
-                            <th style="width: 210px;">Judul</th>
-                            <th style="width: 140px;">Perusahaan</th>
-                            <th style="width: 120px;">Kategori</th>
-                            <th style="width: 130px;">Target Mobile</th>
-                            <th style="width: 140px;">Tgl Kejadian</th>
-                            <th style="width: 180px;">Lokasi</th>
-                            <th style="width: 230px;">Keterangan</th>
-                            <th style="width: 120px;">Ilustrasi</th>
-                            <th style="width: 160px;">Diinput</th>
-                            <th style="width: 160px;">Aksi</th>
+                            <th style="width: 230px;">Judul & Info</th>
+                            <th style="width: 140px;">Kategori</th>
+                            <th style="width: 150px;">Perusahaan</th>
+                            <th style="width: 160px;">Target Mobile</th>
+                            <th style="width: 130px;">Tgl Kejadian</th>
+                            <th style="width: 160px;">Lokasi</th>
+                            <th style="width: 240px;">Keterangan</th>
+                            <th style="width: 110px;">Ilustrasi</th>
+                            <th style="width: 140px;">Diinput</th>
+                            <th style="width: 150px;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -484,10 +682,16 @@
                                     <div class="d-flex align-items-center gap-1">
                                         @if (isItemNewest)
                                         {
-                                            <span class="badge-terbaru-sm" title="Berita Paling Baru"><i class="bi bi-fire"></i> TERBARU</span>
+                                            <span class="badge-terbaru-pulse" style="font-size: 8px; padding: 2px 5px;" title="Berita Paling Baru"><i class="bi bi-fire"></i> NEW</span>
                                         }
                                         <div class="row-title" title="@item.Judul">@item.Judul</div>
                                     </div>
+                                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">
+                                        By: @item.DibuatOleh
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge-soft @badgeClass">@(item.Kategori ?? "-")</span>
                                 </td>
                                 <td>
                                     @{
@@ -497,29 +701,40 @@
                                             companyName = cName ?? "-";
                                         }
                                     }
-                                    @companyName
-                                </td>
-                                <td>
-                                    <span class="badge-soft @badgeClass">@(item.Kategori ?? "-")</span>
+                                    <span style="font-weight: 600;">@companyName</span>
                                 </td>
                                 <td>
                                     <div class="d-flex flex-column gap-1">
-                                        <form asp-action="ToggleBanner" method="post" style="display:inline; margin:0;">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@item.Id" />
-                                            <input type="hidden" name="page" value="@currentPage" />
-                                            <button type="submit" class="btn-toggle-badge @(item.IsBanner ? "active-banner" : "inactive")" title="Klik untuk ubah tayang Banner Home">
-                                                <i class="bi bi-badge-ad"></i> @(item.IsBanner ? "Banner ON" : "Banner OFF")
-                                            </button>
-                                        </form>
-                                        <form asp-action="ToggleUpdate" method="post" style="display:inline; margin:0;">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="id" value="@item.Id" />
-                                            <input type="hidden" name="page" value="@currentPage" />
-                                            <button type="submit" class="btn-toggle-badge @(item.IsUpdate ? "active-update" : "inactive")" title="Klik untuk ubah tayang Safety Update">
-                                                <i class="bi bi-bell"></i> @(item.IsUpdate ? "Update ON" : "Update OFF")
-                                            </button>
-                                        </form>
+                                        @if (canManage)
+                                        {
+                                            <form asp-action="ToggleBanner" method="post" style="display:inline; margin:0;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <input type="hidden" name="tab" value="@activeTab" />
+                                                <input type="hidden" name="page" value="@currentPage" />
+                                                <button type="submit" class="btn-toggle-badge @(item.IsBanner ? "active-banner" : "inactive")" title="Klik untuk ubah tayang Banner Carousel Home Mobile">
+                                                    <i class="bi bi-badge-ad"></i> @(item.IsBanner ? "Banner ON" : "Banner OFF")
+                                                </button>
+                                            </form>
+                                            <form asp-action="ToggleUpdate" method="post" style="display:inline; margin:0;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <input type="hidden" name="tab" value="@activeTab" />
+                                                <input type="hidden" name="page" value="@currentPage" />
+                                                <button type="submit" class="btn-toggle-badge @(item.IsUpdate ? "active-update" : "inactive")" title="Klik untuk ubah tayang di tab Safety Updates Mobile">
+                                                    <i class="bi bi-bell"></i> @(item.IsUpdate ? "Update ON" : "Update OFF")
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge @(item.IsBanner ? "bg-warning text-dark" : "bg-light text-muted border")" style="font-size: 10px;">
+                                                <i class="bi bi-badge-ad"></i> Banner @(item.IsBanner ? "ON" : "OFF")
+                                            </span>
+                                            <span class="badge @(item.IsUpdate ? "bg-success" : "bg-light text-muted border")" style="font-size: 10px;">
+                                                <i class="bi bi-bell"></i> Update @(item.IsUpdate ? "ON" : "OFF")
+                                            </span>
+                                        }
                                     </div>
                                 </td>
                                 <td>
@@ -541,21 +756,21 @@
                                 </td>
                                 <td>@item.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
                                 <td>
-                                    <div class="d-flex gap-1">
-                                        <a asp-action="Detail" asp-route-id="@item.Id" class="btn-table">
+                                    <div class="d-flex gap-1 align-items-center">
+                                        <a asp-action="Detail" asp-route-id="@item.Id" class="btn-table" title="Lihat detail berita">
                                             <i class="bi bi-eye"></i> Detail
                                         </a>
 
-                                        @if (isAdmin)
+                                        @if (canManage)
                                         {
-                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn-table btn-table-edit" title="Edit data dan tambah ilustrasi">
-                                                <i class="bi bi-pencil-square"></i> Edit
+                                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn-table btn-table-edit" title="Edit berita & gambar">
+                                                <i class="bi bi-pencil-square"></i>
                                             </a>
 
-                                            <form asp-action="Delete" method="post" onsubmit="return confirm('Yakin hapus data insiden ini?');" style="display:inline;">
+                                            <form asp-action="Delete" method="post" onsubmit="return confirm('Yakin hapus berita ini?');" style="display:inline;">
                                                 @Html.AntiForgeryToken()
                                                 <input type="hidden" name="id" value="@item.Id" />
-                                                <button type="submit" class="btn-table" style="color:#dc2626; border-color:rgba(220,38,38,.35);">
+                                                <button type="submit" class="btn-table" style="color:#dc2626; border-color:rgba(220,38,38,.35);" title="Hapus berita">
                                                     <i class="bi bi-trash3"></i>
                                                 </button>
                                             </form>
@@ -570,17 +785,26 @@
 
             @if (totalPages > 1)
             {
-                <div class="incident-pager pb-3 px-2">
-                    <a asp-action="Index" asp-route-page="@(currentPage - 1)" asp-route-pageSize="@pageSize" class="pager-link @(currentPage <= 1 ? "disabled" : string.Empty)">
+                <div class="incident-pager pb-3">
+                    <a asp-action="Index" asp-route-tab="@activeTab" asp-route-q="@searchQuery" asp-route-page="@(currentPage - 1)" class="pager-link @(currentPage <= 1 ? "disabled" : "")">
                         <i class="bi bi-chevron-left"></i>
                     </a>
 
-                    @for (int p = Math.Max(1, currentPage - 2); p <= Math.Min(totalPages, currentPage + 2); p++)
+                    @for (int p = 1; p <= totalPages; p++)
                     {
-                        <a asp-action="Index" asp-route-page="@p" asp-route-pageSize="@pageSize" class="pager-link @(p == currentPage ? "active" : string.Empty)">@p</a>
+                        if (p == 1 || p == totalPages || (p >= currentPage - 2 && p <= currentPage + 2))
+                        {
+                            <a asp-action="Index" asp-route-tab="@activeTab" asp-route-q="@searchQuery" asp-route-page="@p" class="pager-link @(p == currentPage ? "active" : "")">
+                                @p
+                            </a>
+                        }
+                        else if (p == currentPage - 3 || p == currentPage + 3)
+                        {
+                            <span class="pager-link disabled">...</span>
+                        }
                     }
 
-                    <a asp-action="Index" asp-route-page="@(currentPage + 1)" asp-route-pageSize="@pageSize" class="pager-link @(currentPage >= totalPages ? "disabled" : string.Empty)">
+                    <a asp-action="Index" asp-route-tab="@activeTab" asp-route-q="@searchQuery" asp-route-page="@(currentPage + 1)" class="pager-link @(currentPage >= totalPages ? "disabled" : "")">
                         <i class="bi bi-chevron-right"></i>
                     </a>
                 </div>
@@ -590,14 +814,14 @@
 </div>
 
 @functions {
-    private static string GetCategoryBadgeClass(string? category)
+    public static string GetCategoryBadgeClass(string? kategori)
     {
-        var c = (category ?? string.Empty).Trim().ToLowerInvariant();
-        if (c.Contains("banner")) return "badge-banner";
-        if (c.Contains("near")) return "badge-nearmiss";
-        if (c.Contains("property")) return "badge-property";
-        if (c.Contains("first aid")) return "badge-firstaid";
-        if (c.Contains("medical")) return "badge-medical";
+        var k = (kategori ?? string.Empty).Trim().ToLowerInvariant();
+        if (k.Contains("near miss")) return "badge-nearmiss";
+        if (k.Contains("property")) return "badge-property";
+        if (k.Contains("first aid")) return "badge-firstaid";
+        if (k.Contains("medical")) return "badge-medical";
+        if (k.Contains("banner")) return "badge-banner-cat";
         return "badge-default";
     }
 }
