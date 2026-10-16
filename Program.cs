@@ -177,11 +177,13 @@ app.Use(async (context, next) =>
     // Content Security Policy
     context.Response.Headers["Content-Security-Policy"] =
         "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://unpkg.com; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://unpkg.com https://static.cloudflareinsights.com; " +
+        "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://unpkg.com https://static.cloudflareinsights.com; " +
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://unpkg.com; " +
+        "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://unpkg.com; " +
         "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
         "img-src 'self' data: blob: https://erp.indexim.co.id https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.basemaps.cartocdn.com; " +
-        "connect-src 'self' https://nominatim.openstreetmap.org https://cdn.datatables.net; " +
+        "connect-src 'self' https://nominatim.openstreetmap.org https://cdn.datatables.net https://cloudflareinsights.com; " +
         "frame-ancestors 'self';";
 
     // Hide Server information
