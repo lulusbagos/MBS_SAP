@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using MBS_SAP.Models;
 
 namespace MBS_SAP.Data
@@ -32,6 +32,7 @@ namespace MBS_SAP.Data
         public DbSet<IncidentNews> IncidentNewsList { get; set; } = null!;
         public DbSet<AttendanceEvent> AttendanceEvents { get; set; } = null!;
         public DbSet<AttendanceRecord> AttendanceRecords { get; set; } = null!;
+        public DbSet<UserScanPermission> UserScanPermissions { get; set; } = null!;
         public DbSet<Coaching> Coachings { get; set; } = null!;
         public DbSet<CoachingParticipant> CoachingParticipants { get; set; } = null!;
         public DbSet<Roster> Rosters { get; set; } = null!;

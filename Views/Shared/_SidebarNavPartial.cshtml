@@ -1,4 +1,4 @@
-@{
+﻿@{
     var isAdminUser = MBS_SAP.Services.CompanyHierarchyService.IsAdminUser(User); 
     var userCompany = User.FindFirst("Company")?.Value;
     var isKPPUser = string.Equals(userCompany?.Trim(), "PT KALIMANTAN PRIMA PERSADA", StringComparison.OrdinalIgnoreCase);
@@ -152,6 +152,10 @@
         <a asp-controller="EventQr" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "EventQrAdmin" ? "active" : "")">
             <i class="bi bi-qr-code-scan" style="color: #22c55e;"></i>
             <span>Event QR (Admin)</span>
+        </a>
+                <a asp-controller="UserScan" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "UserScanAdmin" ? "active" : "")">
+            <i class="bi bi-person-bounding-box" style="color: #06b6d4;"></i>
+            <span>User Scan</span>
         </a>
         <a asp-controller="UserManagement" asp-action="Index" class="menu-item @(ViewData["ActiveTab"]?.ToString() == "UserMgmt" ? "active" : "")">
             <i class="bi bi-person-gear" style="color: #a855f7;"></i>

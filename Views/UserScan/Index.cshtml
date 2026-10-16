@@ -1,0 +1,573 @@
+@model MBS_SAP.Controllers.UserScanIndexViewModel
+@{
+    ViewData["Title"] = "User Scan Permission";
+    Layout = "_Layout";
+}
+
+<style>
+    .userscan-shell {
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 24px;
+        background:
+            radial-gradient(circle at 10% 8%, rgba(6, 182, 212, 0.08), transparent 30%),
+            radial-gradient(circle at 90% 12%, rgba(59, 130, 246, 0.06), transparent 32%),
+            linear-gradient(180deg, rgba(17, 24, 39, 0.25) 0%, rgba(3, 7, 18, 0.25) 100%);
+    }
+
+    .userscan-card {
+        border: 1px solid var(--border-color);
+        border-radius: 18px;
+        background: var(--bg-card);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+    }
+
+    .stat-pill {
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.02);
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        transition: all 0.2s ease;
+    }
+    .stat-pill:hover {
+        border-color: rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.03);
+    }
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+    .table-modern {
+        width: 100%;
+        border-collapse: collapse;
+        color: var(--text-main);
+        font-size: 13px;
+    }
+    .table-modern th {
+        padding: 14px 16px;
+        background: rgba(255, 255, 255, 0.02);
+        border-bottom: 1px solid var(--border-color);
+        font-family: 'Outfit', sans-serif;
+        font-size: 11px;
+        font-weight: 800;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        text-align: left;
+    }
+    .table-modern td {
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        vertical-align: middle;
+    }
+    .table-modern tr:hover {
+        background: rgba(255, 255, 255, 0.015);
+    }
+
+    /* Custom Switch Toggle */
+    .switch-toggle {
+        position: relative;
+        display: inline-block;
+        width: 38px;
+        height: 22px;
+    }
+    .switch-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .slider-toggle {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: rgba(255, 255, 255, 0.12);
+        transition: .25s;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .slider-toggle:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: #cbd5e1;
+        transition: .25s;
+        border-radius: 50%;
+    }
+    input:checked + .slider-toggle {
+        background-color: #0284c7;
+        border-color: #38bdf8;
+    }
+    input:checked + .slider-toggle:before {
+        transform: translateX(16px);
+        background-color: #ffffff;
+    }
+
+    /* Colors per permission */
+    input:checked.sw-green + .slider-toggle { background-color: #10b981; border-color: #34d399; }
+    input:checked.sw-purple + .slider-toggle { background-color: #8b5cf6; border-color: #a78bfa; }
+    input:checked.sw-amber + .slider-toggle { background-color: #f59e0b; border-color: #fbbf24; }
+    input:checked.sw-teal + .slider-toggle { background-color: #0d9488; border-color: #14b8a6; }
+</style>
+
+<div class="userscan-shell animate-fade-in">
+    <!-- Back to Admin & Breadcrumb -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <a asp-controller="Home" asp-action="Index" class="btn btn-sap-secondary btn-sm d-inline-flex align-items-center mb-2">
+                <i class="bi bi-arrow-left me-1"></i> Kembali ke Menu
+            </a>
+            <h3 class="screen-title m-0"><i class="bi bi-person-bounding-box me-2" style="color: #06b6d4;"></i>User Scan Permission</h3>
+            <p class="text-muted mb-0" style="font-size: 13px;">Kelola hak akses scanner mobile per karyawan (Default: semua pengguna dapat melakukan Scan Acara).</p>
+        </div>
+        <button type="button" class="btn-sap-primary btn-sm px-3 py-2" data-bs-toggle="modal" data-bs-target="#bulkAssignModal">
+            <i class="bi bi-diagram-3-fill me-2"></i>Penetapan Departemen
+        </button>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert" style="border-radius: 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.2); color: var(--color-green); font-weight: 700;">
+            <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert" style="border-radius: 12px; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.2); color: var(--color-red); font-weight: 700;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Stat Summary Pills -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4 col-xl-2">
+            <div class="stat-pill">
+                <div class="stat-icon" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div>
+                    <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total User</div>
+                    <div style="font-size: 18px; font-weight: 800; color: var(--text-main);">@Model.Stats.TotalUsers</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-xl-2">
+            <div class="stat-pill">
+                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                    <i class="bi bi-badge-ad-fill"></i>
+                </div>
+                <div>
+                    <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Mine Permit</div>
+                    <div style="font-size: 18px; font-weight: 800; color: #10b981;">@Model.Stats.TotalMinePermit</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-xl-2">
+            <div class="stat-pill">
+                <div class="stat-icon" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9;">
+                    <i class="bi bi-card-checklist"></i>
+                </div>
+                <div>
+                    <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">SIMPER</div>
+                    <div style="font-size: 18px; font-weight: 800; color: #0ea5e9;">@Model.Stats.TotalSimper</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-xl-2">
+            <div class="stat-pill">
+                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                    <i class="bi bi-truck-front-fill"></i>
+                </div>
+                <div>
+                    <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Commissioning</div>
+                    <div style="font-size: 18px; font-weight: 800; color: #f59e0b;">@Model.Stats.TotalCommissioning</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-xl-2">
+            <div class="stat-pill">
+                <div class="stat-icon" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <div>
+                    <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Special Permit</div>
+                    <div style="font-size: 18px; font-weight: 800; color: #a855f7;">@Model.Stats.TotalSpecialPermit</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-xl-2">
+            <div class="stat-pill">
+                <div class="stat-icon" style="background: rgba(13, 148, 136, 0.15); color: #0d9488;">
+                    <i class="bi bi-qr-code-scan"></i>
+                </div>
+                <div>
+                    <div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Scan Lainnya</div>
+                    <div style="font-size: 18px; font-weight: 800; color: #0d9488;">@Model.Stats.TotalOther</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter & Search Toolbar -->
+    <div class="userscan-card mb-4 p-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" value="@Model.Query" class="form-control border-start-0" placeholder="Cari Nama atau NIK..." />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="filterDept" class="form-select">
+                    <option value="All" selected="@(Model.FilterDept == "All")">-- Semua Departemen --</option>
+                    @foreach (var dept in Model.Departments)
+                    {
+                        <option value="@dept" selected="@(Model.FilterDept == dept)">@dept</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="filterScan" class="form-select">
+                    <option value="All" selected="@(Model.FilterScan == "All")">-- Semua Izin Scan --</option>
+                    <option value="HasSpecial" selected="@(Model.FilterScan == "HasSpecial")">Punya Izin Khusus</option>
+                    <option value="MinePermit" selected="@(Model.FilterScan == "MinePermit")">Izin Mine Permit</option>
+                    <option value="Simper" selected="@(Model.FilterScan == "Simper")">Izin SIMPER</option>
+                    <option value="Commissioning" selected="@(Model.FilterScan == "Commissioning")">Izin Commissioning</option>
+                    <option value="SpecialPermit" selected="@(Model.FilterScan == "SpecialPermit")">Izin Special Permit</option>
+                    <option value="Other" selected="@(Model.FilterScan == "Other")">Izin Lainnya</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn-sap-primary w-100"><i class="bi bi-funnel-fill me-1"></i>Filter</button>
+                <a asp-action="Index" class="btn btn-sap-secondary"><i class="bi bi-arrow-counterclockwise"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table Container -->
+    <div class="userscan-card">
+        <div class="table-responsive">
+            <table class="table-modern">
+                <thead>
+                    <tr>
+                        <th style="width: 250px;">Karyawan</th>
+                        <th>Departemen & PT</th>
+                        <th class="text-center" style="width: 110px;">
+                            <span title="Default: Semua orang dapat melakukan scan acara">Scan Acara</span>
+                        </th>
+                        <th class="text-center" style="width: 110px;">
+                            <span style="color: #10b981;" title="Izin verifikasi Mine Permit">Mine Permit</span>
+                        </th>
+                        <th class="text-center" style="width: 110px;">
+                            <span style="color: #0ea5e9;" title="Izin verifikasi SIMPER & Driver">SIMPER</span>
+                        </th>
+                        <th class="text-center" style="width: 110px;">
+                            <span style="color: #f59e0b;" title="Izin inspeksi & commissioning unit">Commissioning</span>
+                        </th>
+                        <th class="text-center" style="width: 110px;">
+                            <span style="color: #a855f7;" title="Izin scan Special Permit / Pekerjaan Kritis">Special Permit</span>
+                        </th>
+                        <th class="text-center" style="width: 110px;">
+                            <span style="color: #0d9488;" title="Izin scan lainnya">Other</span>
+                        </th>
+                        <th class="text-end" style="width: 90px;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Rows.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="bi bi-person-x-fill d-block mb-2" style="font-size: 36px; opacity: 0.5;"></i>
+                                Tidak ditemukan data karyawan yang sesuai filter pencarian.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-main" style="font-size: 14px;">@row.Nama</div>
+                                <div class="text-muted" style="font-size: 11px;">
+                                    NIK: <span class="fw-semibold text-primary">@row.Nik</span> &bull; Role: @row.Role
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold" style="font-size: 12px;">@row.Departemen</div>
+                                <div class="text-muted" style="font-size: 11px;">@row.Perusahaan</div>
+                            </td>
+
+                            <!-- Toggle: Acara -->
+                            <td class="text-center">
+                                <label class="switch-toggle" title="Scan Kehadiran Acara">
+                                    <input type="checkbox" @(row.CanScanAcara ? "checked" : "") onchange="togglePerm('@row.Nik', 'acara', this.checked)">
+                                    <span class="slider-toggle"></span>
+                                </label>
+                            </td>
+
+                            <!-- Toggle: Mine Permit -->
+                            <td class="text-center">
+                                <label class="switch-toggle" title="Verifikasi Mine Permit">
+                                    <input type="checkbox" class="sw-green" @(row.CanScanMinePermit ? "checked" : "") onchange="togglePerm('@row.Nik', 'minepermit', this.checked)">
+                                    <span class="slider-toggle"></span>
+                                </label>
+                            </td>
+
+                            <!-- Toggle: SIMPER -->
+                            <td class="text-center">
+                                <label class="switch-toggle" title="Verifikasi SIMPER">
+                                    <input type="checkbox" @(row.CanScanSimper ? "checked" : "") onchange="togglePerm('@row.Nik', 'simper', this.checked)">
+                                    <span class="slider-toggle"></span>
+                                </label>
+                            </td>
+
+                            <!-- Toggle: Commissioning -->
+                            <td class="text-center">
+                                <label class="switch-toggle" title="Scan Commissioning Unit">
+                                    <input type="checkbox" class="sw-amber" @(row.CanScanCommissioning ? "checked" : "") onchange="togglePerm('@row.Nik', 'commissioning', this.checked)">
+                                    <span class="slider-toggle"></span>
+                                </label>
+                            </td>
+
+                            <!-- Toggle: Special Permit -->
+                            <td class="text-center">
+                                <label class="switch-toggle" title="Scan Special Permit K3">
+                                    <input type="checkbox" class="sw-purple" @(row.CanScanSpecialPermit ? "checked" : "") onchange="togglePerm('@row.Nik', 'specialpermit', this.checked)">
+                                    <span class="slider-toggle"></span>
+                                </label>
+                            </td>
+
+                            <!-- Toggle: Other -->
+                            <td class="text-center">
+                                <label class="switch-toggle" title="Scan Lainnya">
+                                    <input type="checkbox" class="sw-teal" @(row.CanScanOther ? "checked" : "") onchange="togglePerm('@row.Nik', 'other', this.checked)">
+                                    <span class="slider-toggle"></span>
+                                </label>
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-sap-secondary" onclick="openEditModal('@row.Nik', '@row.Nama', '@row.Departemen', @(row.CanScanAcara ? "true" : "false"), @(row.CanScanMinePermit ? "true" : "false"), @(row.CanScanSimper ? "true" : "false"), @(row.CanScanCommissioning ? "true" : "false"), @(row.CanScanSpecialPermit ? "true" : "false"), @(row.CanScanOther ? "true" : "false"))">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (Model.TotalPages > 1)
+        {
+            <div class="d-flex align-items-center justify-content-between p-3 border-top" style="border-color: var(--border-color) !important;">
+                <div class="text-muted" style="font-size: 12px;">
+                    Menampilkan hal <strong>@Model.Page</strong> dari <strong>@Model.TotalPages</strong> (Total @Model.TotalFilteredUsers data)
+                </div>
+                <div class="d-flex gap-1">
+                    @if (Model.Page > 1)
+                    {
+                        <a asp-action="Index" asp-route-page="@(Model.Page - 1)" asp-route-q="@Model.Query" asp-route-filterDept="@Model.FilterDept" asp-route-filterScan="@Model.FilterScan" class="btn btn-sap-secondary btn-sm">Sebelumnya</a>
+                    }
+                    @if (Model.Page < Model.TotalPages)
+                    {
+                        <a asp-action="Index" asp-route-page="@(Model.Page + 1)" asp-route-q="@Model.Query" asp-route-filterDept="@Model.FilterDept" asp-route-filterScan="@Model.FilterScan" class="btn btn-sap-secondary btn-sm">Berikutnya</a>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal Edit Individual -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content userscan-card border-primary-accent" style="background: var(--bg-card);">
+            <div class="modal-header border-bottom" style="border-color: var(--border-color) !important;">
+                <h5 class="modal-title font-outfit fw-bold"><i class="bi bi-shield-check text-primary me-2"></i>Edit Izin Scan Karyawan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="SaveModal" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Nik" id="modalNik" />
+                <div class="modal-body">
+                    <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
+                        <div class="fw-bold" id="modalNama" style="font-size: 15px;">-</div>
+                        <div class="text-muted" style="font-size: 12px;">
+                            NIK: <span id="modalNikText" class="text-primary fw-bold"></span> &bull; <span id="modalDept"></span>
+                        </div>
+                    </div>
+
+                    <label class="form-label fw-bold text-muted" style="font-size: 11px; text-transform: uppercase;">Hak Akses Pemindaian QR Mobile:</label>
+                    
+                    <div class="d-flex flex-column gap-2 mt-1">
+                        <div class="form-check form-switch p-2 rounded-2" style="background: rgba(255, 255, 255, 0.015); border: 1px solid var(--border-color);">
+                            <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanAcara" value="true" id="chkAcara">
+                            <label class="form-check-label fw-bold" for="chkAcara">
+                                📅 Scan Acara & Presensi Kegiatan
+                                <small class="d-block text-muted fw-normal" style="font-size: 11px;">Izin mencatat kehadiran pada event K3, briefing shift, dan sosialisasi.</small>
+                            </label>
+                        </div>
+                        <div class="form-check form-switch p-2 rounded-2" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2);">
+                            <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanMinePermit" value="true" id="chkMinePermit">
+                            <label class="form-check-label fw-bold text-success" for="chkMinePermit">
+                                🪪 Scan & Verifikasi Mine Permit
+                                <small class="d-block text-muted fw-normal" style="font-size: 11px;">Melihat profil pekerja, kelayakan tambang, dan catatan pelanggaran.</small>
+                            </label>
+                        </div>
+                        <div class="form-check form-switch p-2 rounded-2" style="background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.2);">
+                            <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanSimper" value="true" id="chkSimper">
+                            <label class="form-check-label fw-bold" style="color: #0ea5e9;" for="chkSimper">
+                                🚗 Scan SIMPER & Lisensi Operator
+                                <small class="d-block text-muted fw-normal" style="font-size: 11px;">Verifikasi unit yang diizinkan dan masa berlaku SIMPER driver.</small>
+                            </label>
+                        </div>
+                        <div class="form-check form-switch p-2 rounded-2" style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2);">
+                            <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanCommissioning" value="true" id="chkCommissioning">
+                            <label class="form-check-label fw-bold text-warning" for="chkCommissioning">
+                                ⚙️ Scan Commissioning Unit / Alat
+                                <small class="d-block text-muted fw-normal" style="font-size: 11px;">Inspeksi kelaikan unit alat berat dan checklist stiker komisioning.</small>
+                            </label>
+                        </div>
+                        <div class="form-check form-switch p-2 rounded-2" style="background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.2);">
+                            <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanSpecialPermit" value="true" id="chkSpecialPermit">
+                            <label class="form-check-label fw-bold" style="color: #a855f7;" for="chkSpecialPermit">
+                                🔒 Scan Special Permit K3
+                                <small class="d-block text-muted fw-normal" style="font-size: 11px;">Izin verifikasi izin kerja risiko tinggi (Hot Work, Confined Space, dll).</small>
+                            </label>
+                        </div>
+                        <div class="form-check form-switch p-2 rounded-2" style="background: rgba(13, 148, 136, 0.05); border: 1px solid rgba(13, 148, 136, 0.2);">
+                            <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanOther" value="true" id="chkOther">
+                            <label class="form-check-label fw-bold" style="color: #0d9488;" for="chkOther">
+                                🔍 Scan Lainnya (Custom Tools)
+                                <small class="d-block text-muted fw-normal" style="font-size: 11px;">Fitur pemindaian umum untuk integrasi modul baru.</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top" style="border-color: var(--border-color) !important;">
+                    <button type="button" class="btn btn-sap-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn-sap-primary btn-sm px-4">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Bulk Assign Department -->
+<div class="modal fade" id="bulkAssignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content userscan-card" style="background: var(--bg-card);">
+            <div class="modal-header border-bottom" style="border-color: var(--border-color) !important;">
+                <h5 class="modal-title font-outfit fw-bold"><i class="bi bi-diagram-3-fill text-primary me-2"></i>Penetapan Izin per Departemen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="BulkAssignDepartment" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <p class="text-muted" style="font-size: 13px;">Berikan atau cabut izin scan secara massal untuk seluruh karyawan dalam satu departemen sekaligus.</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size: 12px;">Pilih Departemen:</label>
+                        <select name="department" class="form-select" required>
+                            <option value="">-- Pilih Departemen --</option>
+                            @foreach (var dept in Model.Departments)
+                            {
+                                <option value="@dept">@dept</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size: 12px;">Jenis Scan yang Diatur:</label>
+                        <select name="scanType" class="form-select" required>
+                            <option value="minepermit">Mine Permit</option>
+                            <option value="simper">SIMPER</option>
+                            <option value="commissioning">Commissioning</option>
+                            <option value="specialpermit">Special Permit</option>
+                            <option value="other">Scan Lainnya</option>
+                            <option value="acara">Scan Acara</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size: 12px;">Aksi:</label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="enable" value="true" id="actionGrant" checked>
+                                <label class="form-check-label fw-bold text-success" for="actionGrant">Berikan Akses (ON)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="enable" value="false" id="actionRevoke">
+                                <label class="form-check-label fw-bold text-danger" for="actionRevoke">Cabut Akses (OFF)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top" style="border-color: var(--border-color) !important;">
+                    <button type="button" class="btn btn-sap-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                    <button type="submit" class="btn-sap-primary btn-sm px-4">Terapkan Sekarang</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function togglePerm(nik, type, isChecked) {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            const formData = new FormData();
+            formData.append('nik', nik);
+            formData.append('type', type);
+            formData.append('isChecked', isChecked);
+            if (token) formData.append('__RequestVerificationToken', token);
+
+            fetch('@Url.Action("TogglePermission", "UserScan")', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Gagal: ' + (data.message || 'Terjadi kesalahan sistem.'));
+                    location.reload();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Gagal menghubungi server.');
+            });
+        }
+
+        function openEditModal(nik, nama, dept, acara, mine, simper, comm, spec, other) {
+            document.getElementById('modalNik').value = nik;
+            document.getElementById('modalNikText').textContent = nik;
+            document.getElementById('modalNama').textContent = nama;
+            document.getElementById('modalDept').textContent = dept;
+
+            document.getElementById('chkAcara').checked = acara;
+            document.getElementById('chkMinePermit').checked = mine;
+            document.getElementById('chkSimper').checked = simper;
+            document.getElementById('chkCommissioning').checked = comm;
+            document.getElementById('chkSpecialPermit').checked = spec;
+            document.getElementById('chkOther').checked = other;
+
+            const modal = new bootstrap.Modal(document.getElementById('editModal'));
+            modal.show();
+        }
+    </script>
+}
