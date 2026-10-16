@@ -320,8 +320,14 @@ namespace MBS_SAP.Services
                        ?? "";
 
             if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(role, "Owner", StringComparison.OrdinalIgnoreCase))
+                string.Equals(role, "Administrator", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            var nik = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Trim() ?? "";
+            if (string.Equals(nik, "admin.owner", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(nik, "admin", StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
