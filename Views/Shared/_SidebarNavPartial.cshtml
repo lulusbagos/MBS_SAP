@@ -22,17 +22,15 @@
     var sheCount = 8;
     var ciCount = 5;
     var transportCount = 1 + (userCompanyId == "1" ? 1 : 0);
-    var qrCount = 1 + (isAdminUser ? 2 : 0);
-    var masterCount = (isAdminUser ? 2 : 0) + (isSafetyAdmin ? 3 : 0) + (canAccessUploadData ? 1 : 0);
+    var masterCount = isAdminUser ? 8 : 0;
 
     // Active state checkers for parent groups
     var isKpiActive = activeTab == "Performance" || activeTab == "League" || activeTab == "SapQuality";
     var isSheActive = activeTab == "Hazard" || activeTab == "Inspection" || activeTab == "BBS" || activeTab == "Observation" || activeTab == "ActionPlan" || activeTab == "SafetyTalk" || activeTab == "P5m" || activeTab == "Coaching";
     var isCiActive = activeTab == "Rci" || activeTab == "Fci" || activeTab == "Dci" || activeTab == "Spi" || activeTab == "Gci";
     var isTransportActive = activeTab == "P2h" || activeTab == "Dpa";
-    var isQrActive = activeTab == "QrCode" || activeTab == "EventQrAdmin" || activeTab == "UserScanAdmin";
     var isIncidentActive = activeTab == "Incident";
-    var isMasterActive = activeTab == "BbsMaster" || activeTab == "RosterSap" || activeTab == "SapTarget" || activeTab == "Admin" || activeTab == "UserMgmt" || activeTab == "ResetPassword";
+    var isMasterActive = activeTab == "BbsMaster" || activeTab == "RosterSap" || activeTab == "SapTarget" || activeTab == "Admin" || activeTab == "UserMgmt" || activeTab == "ResetPassword" || activeTab == "EventQrAdmin" || activeTab == "UserScanAdmin";
 }
 
 
@@ -718,40 +716,15 @@ body.light-theme .sub-menu-item.active::before {
         </div>
     </div>
 
-    <!-- SECTION 6: LAYANAN & QR SCANNER -->
+    <!-- SECTION 6: FITUR LAYANAN -->
     <div class="menu-section">
         <div class="menu-section-header">
-            <span class="menu-section-title">LAYANAN & SCANNER</span>
-            <span class="menu-section-badge">@qrCount</span>
+            <span class="menu-section-title">LAYANAN</span>
         </div>
-        <div class="menu-group">
-            <button class="menu-group-toggle @(isQrActive ? "active-parent" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLayanan" aria-expanded="@(isQrActive ? "true" : "false")">
-                <div class="d-flex align-items-center gap-2">
-                    <i class="bi bi-qr-code-scan group-icon" style="color: #14b8a6;"></i>
-                    <span>Validasi & QR Scanner</span>
-                </div>
-                <i class="bi bi-chevron-down group-chevron"></i>
-            </button>
-            <div class="collapse menu-sub-collapse @(isQrActive ? "show" : "")" id="collapseLayanan">
-                <div class="menu-sub-list">
-                    <a asp-controller="QrCode" asp-action="Index" class="sub-menu-item @(activeTab == "QrCode" ? "active" : "")">
-                        <i class="bi bi-qr-code"></i>
-                        <span>Scan QR Code SAP</span>
-                    </a>
-                    @if (isAdminUser)
-                    {
-                        <a asp-controller="EventQr" asp-action="Index" class="sub-menu-item @(activeTab == "EventQrAdmin" ? "active" : "")">
-                            <i class="bi bi-calendar-event-fill" style="color: #22c55e;"></i>
-                            <span>Event QR (Admin)</span>
-                        </a>
-                        <a asp-controller="UserScan" asp-action="Index" class="sub-menu-item @(activeTab == "UserScanAdmin" ? "active" : "")">
-                            <i class="bi bi-person-bounding-box" style="color: #06b6d4;"></i>
-                            <span>Hak Akses Scan User</span>
-                        </a>
-                    }
-                </div>
-            </div>
-        </div>
+        <a asp-controller="QrCode" asp-action="Index" class="menu-item-standalone @(activeTab == "QrCode" ? "active" : "")" title="Scan QR Code SAP">
+            <i class="bi bi-qr-code-scan" style="color: #14b8a6;"></i>
+            <span>Scan QR Code SAP</span>
+        </a>
     </div>
 
     <!-- SECTION 7: PUSAT INFORMASI K3 (if isSafetyAdmin) -->
@@ -783,63 +756,56 @@ body.light-theme .sub-menu-item.active::before {
         </div>
     }
 
-    <!-- SECTION 8: SYSTEM MASTER & SETTING -->
-    @if (masterCount > 0)
+    <!-- SECTION 8: SYSTEM MASTER & PENGATURAN (KHUSUS ADMINISTRATOR SAJA) -->
+    @if (isAdminUser)
     {
         <div class="menu-section">
             <div class="menu-section-header">
                 <span class="menu-section-title">PENGATURAN & MASTER</span>
-                <span class="menu-section-badge">@masterCount</span>
+                <span class="menu-section-badge">8</span>
             </div>
             <div class="menu-group">
                 <button class="menu-group-toggle @(isMasterActive ? "active-parent" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMaster" aria-expanded="@(isMasterActive ? "true" : "false")">
                     <div class="d-flex align-items-center gap-2">
                         <i class="bi bi-sliders group-icon" style="color: #a855f7;"></i>
-                        <span>Master Data & Konfigurasi</span>
+                        <span>Master Data & Admin</span>
                     </div>
                     <i class="bi bi-chevron-down group-chevron"></i>
                 </button>
                 <div class="collapse menu-sub-collapse @(isMasterActive ? "show" : "")" id="collapseMaster">
                     <div class="menu-sub-list">
-                        @if (isAdminUser)
-                        {
-                            <a asp-controller="BbsMaster" asp-action="Index" class="sub-menu-item @(activeTab == "BbsMaster" ? "active" : "")">
-                                <i class="bi bi-sliders2-vertical" style="color: #38bdf8;"></i>
-                                <span>Master Dokumen BBS</span>
-                            </a>
-                        }
-                        @if (isSafetyAdmin)
-                        {
-                            <a asp-controller="Roster" asp-action="Index" class="sub-menu-item @(activeTab == "RosterSap" ? "active" : "")">
-                                <i class="bi bi-calendar2-week-fill" style="color: #38bdf8;"></i>
-                                <span>Roster Kerja Karyawan</span>
-                            </a>
-                            <a asp-controller="SapTarget" asp-action="Index" class="sub-menu-item @(activeTab == "SapTarget" ? "active" : "")">
-                                <i class="bi bi-crosshair" style="color: #6366f1;"></i>
-                                <span>Override Target SAP</span>
-                            </a>
-                        }
-                        @if (canAccessUploadData)
-                        {
-                            <a asp-controller="Admin" asp-action="Index" class="sub-menu-item @(activeTab == "Admin" ? "active" : "")">
-                                <i class="bi bi-cloud-arrow-up-fill" style="color: #22c55e;"></i>
-                                <span>Unggah & Sinkron Data</span>
-                            </a>
-                        }
-                        @if (isAdminUser)
-                        {
-                            <a asp-controller="UserManagement" asp-action="Index" class="sub-menu-item @(activeTab == "UserMgmt" ? "active" : "")">
-                                <i class="bi bi-person-gear" style="color: #a855f7;"></i>
-                                <span>Manajemen Pengguna</span>
-                            </a>
-                        }
-                        @if (isSafetyAdmin)
-                        {
-                            <a asp-controller="UserSupport" asp-action="ResetPassword" class="sub-menu-item @(activeTab == "ResetPassword" ? "active" : "")">
-                                <i class="bi bi-key-fill" style="color: #ef4444;"></i>
-                                <span>Reset Password User</span>
-                            </a>
-                        }
+                        <a asp-controller="EventQr" asp-action="Index" class="sub-menu-item @(activeTab == "EventQrAdmin" ? "active" : "")">
+                            <i class="bi bi-calendar-event-fill" style="color: #22c55e;"></i>
+                            <span>Event QR (Admin)</span>
+                        </a>
+                        <a asp-controller="UserScan" asp-action="Index" class="sub-menu-item @(activeTab == "UserScanAdmin" ? "active" : "")">
+                            <i class="bi bi-person-bounding-box" style="color: #06b6d4;"></i>
+                            <span>Hak Akses Scan User</span>
+                        </a>
+                        <a asp-controller="UserManagement" asp-action="Index" class="sub-menu-item @(activeTab == "UserMgmt" ? "active" : "")">
+                            <i class="bi bi-person-gear" style="color: #a855f7;"></i>
+                            <span>Manajemen Pengguna</span>
+                        </a>
+                        <a asp-controller="BbsMaster" asp-action="Index" class="sub-menu-item @(activeTab == "BbsMaster" ? "active" : "")">
+                            <i class="bi bi-sliders2-vertical" style="color: #38bdf8;"></i>
+                            <span>Master Dokumen BBS</span>
+                        </a>
+                        <a asp-controller="Admin" asp-action="Index" class="sub-menu-item @(activeTab == "Admin" ? "active" : "")">
+                            <i class="bi bi-cloud-arrow-up-fill" style="color: #22c55e;"></i>
+                            <span>Unggah & Sinkron Data</span>
+                        </a>
+                        <a asp-controller="Roster" asp-action="Index" class="sub-menu-item @(activeTab == "RosterSap" ? "active" : "")">
+                            <i class="bi bi-calendar2-week-fill" style="color: #38bdf8;"></i>
+                            <span>Roster Kerja Karyawan</span>
+                        </a>
+                        <a asp-controller="SapTarget" asp-action="Index" class="sub-menu-item @(activeTab == "SapTarget" ? "active" : "")">
+                            <i class="bi bi-crosshair" style="color: #6366f1;"></i>
+                            <span>Override Target SAP</span>
+                        </a>
+                        <a asp-controller="UserSupport" asp-action="ResetPassword" class="sub-menu-item @(activeTab == "ResetPassword" ? "active" : "")">
+                            <i class="bi bi-key-fill" style="color: #ef4444;"></i>
+                            <span>Reset Password User</span>
+                        </a>
                     </div>
                 </div>
             </div>
