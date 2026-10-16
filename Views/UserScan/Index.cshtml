@@ -589,8 +589,9 @@
                     location.reload();
                 }
             },
-            error: function () {
-                alert('Terjadi kesalahan koneksi server saat mengubah izin.');
+            error: function (xhr, status, error) {
+                var msg = xhr.responseJSON ? xhr.responseJSON.message : (xhr.responseText || error);
+                alert('Terjadi kesalahan koneksi server saat mengubah izin: ' + msg);
                 location.reload();
             }
         });

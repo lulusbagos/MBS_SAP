@@ -153,7 +153,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
+        [IgnoreAntiforgeryToken]
         public async Task<IActionResult> TogglePermission(string nik, string type, bool isChecked)
         {
             if (string.IsNullOrWhiteSpace(nik) || string.IsNullOrWhiteSpace(type))
@@ -164,74 +164,89 @@ namespace MBS_SAP.Controllers
             var cleanNik = nik.Trim();
             var currentUser = User.Identity?.Name ?? "Admin";
 
-            var perm = await _context.UserScanPermissions.FirstOrDefaultAsync(p => p.Nik == cleanNik);
-            if (perm == null)
+            try
             {
-                var appUser = await _context.AppUsers.FirstOrDefaultAsync(u => u.Nik == cleanNik);
-                perm = new UserScanPermission
+                var perm = await _context.UserScanPermissions.FirstOrDefaultAsync(p => p.Nik == cleanNik);
+                if (perm == null)
                 {
-                    Nik = cleanNik,
-                    Nama = appUser?.Nama,
-                    Departemen = appUser?.Departemen,
-                    Perusahaan = appUser?.Perusahaan,
-                    CanScanAcara = true,
-                    CanScanMinePermit = false,
-                    CanScanPermitPelanggaran = false,
-                    CanScanPermitKeluarMasuk = false,
-                    CanScanSimper = false,
-                    CanScanCommissioning = false,
-                    CanScanSpecialPermit = false,
-                    CanScanOther = false,
-                    UpdatedAt = DateTime.Now,
-                    UpdatedBy = currentUser
-                };
-                _context.UserScanPermissions.Add(perm);
+                    var appUser = await _context.AppUsers.FirstOrDefaultAsync(u => u.Nik == cleanNik);
+                    perm = new UserScanPermission
+                    {
+                        Nik = cleanNik,
+                        Nama = appUser?.Nama,
+                        Departemen = appUser?.Departemen,
+                        Perusahaan = appUser?.Perusahaan,
+                        CanScanAcara = true,
+                        CanScanMinePermit = false,
+                        CanScanPermitPelanggaran = false,
+                        CanScanPermitKeluarMasuk = false,
+                        CanScanSimper = false,
+                        CanScanCommissioning = false,
+                        CanScanSpecialPermit = false,
+                        CanScanOther = false,
+                        UpdatedAt = DateTime.Now,
+                        UpdatedBy = currentUser
+                    };
+                    _context.UserScanPermissions.Add(perm);
+                }
+
+                switch (type.ToLower())
+                {
+                    case "acara":
+                        perm.CanScanAcara = isChecked;
+                        break;
+                    case "minepermit":
+                    case "permitdetail":
+                    case "detailpermit":
+                    case "permit":
+                        perm.CanScanMinePermit = isChecked;
+                        break;
+                    case "permitpelanggaran":
+                    case "pelanggaran":
+                    case "violation":
+                        perm.CanScanPermitPelanggaran = isChecked;
+                        break;
+                    case "permitkeluarmasuk":
+                    case "keluarmasuk":
+                    case "gatelog":
+                    case "gate":
+                        perm.CanScanPermitKeluarMasuk = isChecked;
+                        break;
+                    case "simper":
+                        perm.CanScanSimper = isChecked;
+                        break;
+                    case "commissioning":
+                        perm.CanScanCommissioning = isChecked;
+                        break;
+                    case "specialpermit":
+                        perm.CanScanSpecialPermit = isChecked;
+                        break;
+                    case "other":
+                        perm.CanScanOther = isChecked;
+                        break;
+                    default:
+                        return Json(new { success = false, message = "Jenis scan tidak dikenali." });
+                }
+
+                perm.UpdatedAt = DateTime.Now;
+                perm.UpdatedBy = currentUser;
+
+                await _context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    message = $"Izin {type} untuk NIK {cleanNik} berhasil diubah menjadi {(isChecked ? "AKTIF" : "NONAKTIF")}."
+                });
             }
-
-            switch (type.ToLower())
+            catch (Exception ex)
             {
-                case "acara":
-                    perm.CanScanAcara = isChecked;
-                    break;
-                case "minepermit":
-                case "permitdetail":
-                    perm.CanScanMinePermit = isChecked;
-                    break;
-                case "permitpelanggaran":
-                case "pelanggaran":
-                    perm.CanScanPermitPelanggaran = isChecked;
-                    break;
-                case "permitkeluarmasuk":
-                case "keluarmasuk":
-                case "gatelog":
-                    perm.CanScanPermitKeluarMasuk = isChecked;
-                    break;
-                case "simper":
-                    perm.CanScanSimper = isChecked;
-                    break;
-                case "commissioning":
-                    perm.CanScanCommissioning = isChecked;
-                    break;
-                case "specialpermit":
-                    perm.CanScanSpecialPermit = isChecked;
-                    break;
-                case "other":
-                    perm.CanScanOther = isChecked;
-                    break;
-                default:
-                    return Json(new { success = false, message = "Jenis scan tidak dikenali." });
+                return Json(new
+                {
+                    success = false,
+                    message = "Terjadi kesalahan saat menyimpan izin: " + ex.Message
+                });
             }
-
-            perm.UpdatedAt = DateTime.Now;
-            perm.UpdatedBy = currentUser;
-
-            await _context.SaveChangesAsync();
-
-            return Json(new
-            {
-                success = true,
-                message = $"Izin {type} untuk NIK {cleanNik} berhasil diubah menjadi {(isChecked ? "AKTIF" : "NONAKTIF")}."
-            });
         }
 
         [HttpPost]
