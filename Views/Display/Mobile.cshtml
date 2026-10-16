@@ -1,0 +1,946 @@
+@{
+    Layout = null;
+    int initialYear = ViewBag.SelectedYear ?? DateTime.Today.Year;
+    int initialMonth = ViewBag.SelectedMonth ?? DateTime.Today.Month;
+}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#030712" />
+    <title>Rekap SAP Mobile &mdash; PT INDEXIM COALINDO</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        :root {
+            --bg-body: #030712;
+            --bg-card: rgba(17, 24, 39, 0.75);
+            --bg-card-subtle: rgba(31, 41, 55, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-focus: rgba(56, 189, 248, 0.4);
+            --color-primary: #38bdf8;
+            --color-primary-glow: rgba(56, 189, 248, 0.25);
+            --color-success: #10b981;
+            --color-warning: #f59e0b;
+            --color-danger: #ef4444;
+            --text-main: #f9fafb;
+            --text-muted: #94a3b8;
+            --font-main: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+            --radius-card: 16px;
+            --radius-pill: 999px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            background-image: 
+                radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.06) 0%, transparent 40%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            padding: 12px 14px 30px 14px;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Header ── */
+        .mobile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 6px 2px 14px 2px;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-brand-logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #0284c7, #06b6d4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+            overflow: hidden;
+            padding: 5px;
+        }
+
+        .header-brand-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .header-brand-title {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.2;
+            letter-spacing: 0.3px;
+        }
+
+        .header-brand-sub {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--color-primary);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .btn-refresh {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-refresh:active {
+            transform: scale(0.92);
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--color-primary);
+        }
+
+        .btn-refresh.spinning i {
+            animation: spin 0.8s linear infinite;
+        }
+
+        @@keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* ── Period Selector Bar ── */
+        .period-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-card);
+            padding: 8px 10px;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .btn-nav-period {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .btn-nav-period:active {
+            transform: scale(0.9);
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--color-primary);
+        }
+
+        .period-dropdown-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .period-select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 700;
+            padding: 6px 10px;
+            outline: none;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .period-select option {
+            background: #111827;
+            color: #ffffff;
+        }
+
+        /* ── Hero Compliance Card ── */
+        .hero-card {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(15, 23, 42, 0.9));
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 20px;
+            padding: 18px 16px;
+            margin-bottom: 14px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .hero-card::before {
+            content: "";
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 130px;
+            height: 130px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.25), transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.6px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            text-transform: uppercase;
+        }
+
+        .hero-score-row {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .hero-score-val {
+            font-size: 42px;
+            font-weight: 900;
+            line-height: 1;
+            color: #ffffff;
+            letter-spacing: -1px;
+        }
+
+        .hero-score-unit {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--color-primary);
+        }
+
+        .hero-status-pill {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: var(--radius-pill);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-excellent { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .status-good { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+        .status-warning { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .status-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+
+        .hero-progress-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+        .hero-progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #0284c7, #10b981);
+            transition: width 0.6s ease;
+        }
+
+        .hero-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .hero-stat-box {
+            text-align: center;
+        }
+
+        .hero-stat-lbl {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-bottom: 2px;
+        }
+
+        .hero-stat-val {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        /* ── Section Title ── */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 18px 2px 10px 2px;
+        }
+
+        .section-title {
+            font-size: 11.5px;
+            font-weight: 800;
+            color: #94a3b8;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .section-badge {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--color-primary);
+            background: rgba(56, 189, 248, 0.12);
+            padding: 2px 7px;
+            border-radius: 6px;
+        }
+
+        /* ── Pillars Grid ── */
+        .pillars-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .pillar-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 11px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: transform 0.15s ease;
+        }
+
+        .pillar-card:active {
+            transform: scale(0.97);
+        }
+
+        .pillar-icon-box {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+        }
+
+        .pillar-info {
+            overflow: hidden;
+            line-height: 1.2;
+        }
+
+        .pillar-name {
+            font-size: 10.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pillar-count {
+            font-size: 16px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-top: 1px;
+        }
+
+        /* ── Segmented Control Tabs ── */
+        .tab-segment {
+            display: flex;
+            background: rgba(17, 24, 39, 0.9);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 3px;
+            margin-bottom: 12px;
+            gap: 3px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 8px 6px;
+            border-radius: 9px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            background: var(--color-primary);
+            color: #030712;
+            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
+        }
+
+        /* ── Standings / Leaderboard List ── */
+        .standings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .standing-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 12px 14px;
+            transition: all 0.2s ease;
+        }
+
+        .standing-card:active {
+            background: rgba(31, 41, 55, 0.8);
+        }
+
+        .standing-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .standing-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            overflow: hidden;
+        }
+
+        .rank-badge {
+            width: 26px;
+            height: 26px;
+            min-width: 26px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.08);
+            color: #94a3b8;
+        }
+
+        .rank-1 { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #000000; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4); }
+        .rank-2 { background: linear-gradient(135deg, #94a3b8, #cbd5e1); color: #000000; }
+        .rank-3 { background: linear-gradient(135deg, #b45309, #d97706); color: #ffffff; }
+
+        .standing-name {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .standing-pct {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: var(--color-primary);
+            flex-shrink: 0;
+        }
+
+        .standing-bar-wrap {
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .standing-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.4s ease;
+        }
+
+        .standing-sub {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 10.5px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* ── Loading Skeleton ── */
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.09) 50%, rgba(255, 255, 255, 0.04) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @@keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .loading-wrap {
+            padding: 30px 10px;
+            text-align: center;
+        }
+
+        /* ── Footer ── */
+        .mobile-footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 10px;
+            color: #64748b;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="mobile-header">
+        <div class="header-brand">
+            <div class="header-brand-logo">
+                <img src="/images/logo_mbs.png" alt="MBS Logo" />
+            </div>
+            <div>
+                <div class="header-brand-title">MBS SAP Performance</div>
+                <div class="header-brand-sub">PT INDEXIM COALINDO</div>
+            </div>
+        </div>
+        <button type="button" id="btnRefresh" class="btn-refresh" title="Perbarui Data">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </header>
+
+    <!-- Period Navigator -->
+    <div class="period-card">
+        <button type="button" id="btnPrevMonth" class="btn-nav-period" title="Bulan Sebelumnya">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        <div class="period-dropdown-wrap">
+            <select id="selectMonth" class="period-select">
+                <option value="1">Januari</option>
+                <option value="2">Februari</option>
+                <option value="3">Maret</option>
+                <option value="4">April</option>
+                <option value="5">Mei</option>
+                <option value="6">Juni</option>
+                <option value="7">Juli</option>
+                <option value="8">Agustus</option>
+                <option value="9">September</option>
+                <option value="10">Oktober</option>
+                <option value="11">November</option>
+                <option value="12">Desember</option>
+            </select>
+            <select id="selectYear" class="period-select">
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+                <option value="2027">2027</option>
+            </select>
+        </div>
+        <button type="button" id="btnNextMonth" class="btn-nav-period" title="Bulan Selanjutnya">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+    </div>
+
+    <!-- Content Area (Populated via JS) -->
+    <main id="mainContent">
+        <!-- Hero Scorecard -->
+        <section class="hero-card">
+            <div class="hero-top">
+                <span class="hero-badge"><i class="bi bi-activity"></i> Rekap Kepatuhan SAP</span>
+                <span id="heroStatusBadge" class="hero-status-pill status-good"><i class="bi bi-shield-check"></i> Memuat...</span>
+            </div>
+            <div class="hero-score-row">
+                <span id="heroCompliance" class="hero-score-val">--</span>
+                <span class="hero-score-unit">%</span>
+            </div>
+            <div class="hero-progress-track">
+                <div id="heroProgressBar" class="hero-progress-fill" style="width: 0%;"></div>
+            </div>
+            <div class="hero-stats-grid">
+                <div class="hero-stat-box">
+                    <div class="hero-stat-lbl">Realisasi</div>
+                    <div id="statActual" class="hero-stat-val">--</div>
+                </div>
+                <div class="hero-stat-box">
+                    <div class="hero-stat-lbl">Target</div>
+                    <div id="statTarget" class="hero-stat-val">--</div>
+                </div>
+                <div class="hero-stat-box">
+                    <div class="hero-stat-lbl">Karyawan</div>
+                    <div id="statEmployees" class="hero-stat-val">--</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pilar Breakdown -->
+        <div class="section-header">
+            <span class="section-title"><i class="bi bi-pie-chart-fill" style="color: #38bdf8;"></i> Rincian Aktivitas SAP</span>
+            <span id="periodLabelBadge" class="section-badge">Periode</span>
+        </div>
+        <section class="pillars-grid">
+            <div class="pillar-card">
+                <div class="pillar-icon-box" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div class="pillar-info">
+                    <div class="pillar-name">Hazard Report</div>
+                    <div id="pillarHazard" class="pillar-count">--</div>
+                </div>
+            </div>
+            <div class="pillar-card">
+                <div class="pillar-icon-box" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
+                    <i class="bi bi-clipboard-check-fill"></i>
+                </div>
+                <div class="pillar-info">
+                    <div class="pillar-name">Inspeksi K3</div>
+                    <div id="pillarInspeksi" class="pillar-count">--</div>
+                </div>
+            </div>
+            <div class="pillar-card">
+                <div class="pillar-icon-box" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div class="pillar-info">
+                    <div class="pillar-name">BBS Perilaku</div>
+                    <div id="pillarBbs" class="pillar-count">--</div>
+                </div>
+            </div>
+            <div class="pillar-card">
+                <div class="pillar-icon-box" style="background: rgba(168, 85, 247, 0.15); color: #c084fc;">
+                    <i class="bi bi-eye-fill"></i>
+                </div>
+                <div class="pillar-info">
+                    <div class="pillar-name">Observasi Tugas</div>
+                    <div id="pillarObservasi" class="pillar-count">--</div>
+                </div>
+            </div>
+            <div class="pillar-card">
+                <div class="pillar-icon-box" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">
+                    <i class="bi bi-megaphone-fill"></i>
+                </div>
+                <div class="pillar-info">
+                    <div class="pillar-name">Safety Talk</div>
+                    <div id="pillarSafetyTalk" class="pillar-count">--</div>
+                </div>
+            </div>
+            <div class="pillar-card">
+                <div class="pillar-icon-box" style="background: rgba(20, 184, 166, 0.15); color: #2dd4bf;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="pillar-info">
+                    <div class="pillar-name">P5M & Coaching</div>
+                    <div id="pillarP5mCoaching" class="pillar-count">--</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Segmented Tabs for Standings -->
+        <div class="section-header">
+            <span class="section-title"><i class="bi bi-trophy-fill" style="color: #fbbf24;"></i> Klasemen Kepatuhan</span>
+        </div>
+        <div class="tab-segment">
+            <button type="button" class="tab-btn active" data-tab="dept">Departemen</button>
+            <button type="button" class="tab-btn" data-tab="core">Mitra Utama</button>
+            <button type="button" class="tab-btn" data-tab="subcon">Subkontraktor</button>
+        </div>
+
+        <!-- Standings Container -->
+        <section id="standingsContainer" class="standings-list">
+            <!-- Rendered via JS -->
+            <div class="loading-wrap">
+                <div class="skeleton" style="height: 58px; margin-bottom: 8px;"></div>
+                <div class="skeleton" style="height: 58px; margin-bottom: 8px;"></div>
+                <div class="skeleton" style="height: 58px;"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="mobile-footer">
+        <div>MBS SAP Mobile Display &bull; Safety Accountability Program</div>
+        <div>PT INDEXIM COALINDO &bull; Tanpa Perlu Login</div>
+    </footer>
+
+    <script>
+        (function () {
+            let currentYear = @initialYear;
+            let currentMonth = @initialMonth;
+            let currentTab = 'dept';
+            let summaryDataCache = null;
+
+            const selectMonth = document.getElementById('selectMonth');
+            const selectYear = document.getElementById('selectYear');
+            const btnPrevMonth = document.getElementById('btnPrevMonth');
+            const btnNextMonth = document.getElementById('btnNextMonth');
+            const btnRefresh = document.getElementById('btnRefresh');
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const standingsContainer = document.getElementById('standingsContainer');
+
+            // Sync selects
+            selectMonth.value = currentMonth;
+            selectYear.value = currentYear;
+
+            function formatNumber(num) {
+                if (num === null || num === undefined) return '0';
+                return Number(num).toLocaleString('id-ID');
+            }
+
+            function getStatusColor(pct) {
+                if (pct >= 85) return '#10b981';
+                if (pct >= 70) return '#38bdf8';
+                if (pct >= 50) return '#f59e0b';
+                return '#ef4444';
+            }
+
+            async function loadData() {
+                btnRefresh.classList.add('spinning');
+                standingsContainer.innerHTML = `
+                    <div class="loading-wrap">
+                        <div class="skeleton" style="height: 58px; margin-bottom: 8px;"></div>
+                        <div class="skeleton" style="height: 58px; margin-bottom: 8px;"></div>
+                        <div class="skeleton" style="height: 58px;"></div>
+                    </div>
+                `;
+
+                try {
+                    const res = await fetch(`/Display/GetDisplaySummaryData?year=${currentYear}&month=${currentMonth}`);
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.error || 'Gagal memuat data');
+
+                    summaryDataCache = data;
+                    renderHero(data);
+                    renderPillars(data);
+                    renderStandings();
+                } catch (err) {
+                    standingsContainer.innerHTML = `
+                        <div style="text-align: center; padding: 25px 10px; color: #ef4444; font-size: 13px;">
+                            <i class="bi bi-exclamation-octagon" style="font-size: 26px; display: block; margin-bottom: 6px;"></i>
+                            Gagal memuat data: ${err.message}<br/>
+                            <button type="button" onclick="window.location.reload()" style="margin-top: 10px; padding: 6px 14px; background: rgba(239,68,68,0.2); border: 1px solid #ef4444; border-radius: 8px; color: #fff; font-size: 12px; cursor: pointer;">Coba Lagi</button>
+                        </div>
+                    `;
+                } finally {
+                    btnRefresh.classList.remove('spinning');
+                }
+            }
+
+            function renderHero(data) {
+                const stats = data.statistics || {};
+                const compPct = stats.OverallCompliance || 0;
+
+                document.getElementById('heroCompliance').textContent = compPct;
+                document.getElementById('heroProgressBar').style.width = Math.min(100, compPct) + '%';
+                document.getElementById('heroProgressBar').style.background = `linear-gradient(90deg, #0284c7, ${getStatusColor(compPct)})`;
+
+                const badgeEl = document.getElementById('heroStatusBadge');
+                if (compPct >= 85) {
+                    badgeEl.className = 'hero-status-pill status-excellent';
+                    badgeEl.innerHTML = '<i class="bi bi-stars"></i> SANGAT BAIK';
+                } else if (compPct >= 70) {
+                    badgeEl.className = 'hero-status-pill status-good';
+                    badgeEl.innerHTML = '<i class="bi bi-shield-check"></i> BAIK';
+                } else if (compPct >= 50) {
+                    badgeEl.className = 'hero-status-pill status-warning';
+                    badgeEl.innerHTML = '<i class="bi bi-exclamation-triangle"></i> CUKUP';
+                } else {
+                    badgeEl.className = 'hero-status-pill status-danger';
+                    badgeEl.innerHTML = '<i class="bi bi-shield-x"></i> PERLU PERHATIAN';
+                }
+
+                document.getElementById('statActual').textContent = formatNumber(stats.GrandTotalActual);
+                document.getElementById('statTarget').textContent = formatNumber(stats.GrandTotalTarget);
+                document.getElementById('statEmployees').textContent = formatNumber(stats.TotalEmployees);
+
+                if (data.period && data.period.formatted) {
+                    document.getElementById('periodLabelBadge').textContent = data.period.formatted;
+                }
+            }
+
+            function renderPillars(data) {
+                const p = data.statistics?.Pillars || {};
+                document.getElementById('pillarHazard').textContent = formatNumber(p.Hazard);
+                document.getElementById('pillarInspeksi').textContent = formatNumber(p.Inspeksi);
+                document.getElementById('pillarSafetyTalk').textContent = formatNumber(p.SafetyTalk);
+                document.getElementById('pillarObservasi').textContent = formatNumber(p.Observasi);
+                document.getElementById('pillarBbs').textContent = formatNumber(p.Observasi); // BBS/Observasi
+                document.getElementById('pillarP5mCoaching').textContent = formatNumber((p.P5m || 0) + (p.Coaching || 0));
+            }
+
+            function renderStandings() {
+                if (!summaryDataCache) return;
+
+                let list = [];
+                if (currentTab === 'dept') {
+                    list = summaryDataCache.deptStandings || [];
+                } else if (currentTab === 'core') {
+                    list = summaryDataCache.coreStandings || [];
+                } else if (currentTab === 'subcon') {
+                    list = summaryDataCache.subconStandings || [];
+                }
+
+                if (!list.length) {
+                    standingsContainer.innerHTML = `
+                        <div style="text-align: center; padding: 25px 10px; color: #94a3b8; font-size: 12.5px;">
+                            Tidak ada data untuk kategori ini pada periode ini.
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                list.forEach((item, index) => {
+                    const rank = item.Rank || (index + 1);
+                    const name = item.DepartmentName || item.CompanyName || item.CompanyCode || 'Unknown';
+                    const pct = item.AchievementRate || 0;
+                    const act = formatNumber(item.TotalActual || 0);
+                    const tgt = formatNumber(item.TotalTarget || 0);
+                    const color = getStatusColor(pct);
+
+                    let rankClass = 'rank-badge';
+                    if (rank === 1) rankClass += ' rank-1';
+                    else if (rank === 2) rankClass += ' rank-2';
+                    else if (rank === 3) rankClass += ' rank-3';
+
+                    html += `
+                        <div class="standing-card">
+                            <div class="standing-top">
+                                <div class="standing-left">
+                                    <div class="${rankClass}">#${rank}</div>
+                                    <div class="standing-name">${name}</div>
+                                </div>
+                                <div class="standing-pct" style="color: ${color};">${pct}%</div>
+                            </div>
+                            <div class="standing-bar-wrap">
+                                <div class="standing-bar-fill" style="width: ${Math.min(100, pct)}%; background: ${color};"></div>
+                            </div>
+                            <div class="standing-sub">
+                                <span>Realisasi: <strong>${act}</strong> / ${tgt}</span>
+                                <span style="color: ${color};">${pct >= 80 ? '✓ Sesuai Target' : 'Di Bawah Target'}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                standingsContainer.innerHTML = html;
+            }
+
+            // Tab Buttons
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    tabButtons.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentTab = this.getAttribute('data-tab');
+                    renderStandings();
+                });
+            });
+
+            // Date navigation
+            function changeMonth(delta) {
+                let m = currentMonth + delta;
+                let y = currentYear;
+                if (m < 1) {
+                    m = 12;
+                    y--;
+                } else if (m > 12) {
+                    m = 1;
+                    y++;
+                }
+                currentMonth = m;
+                currentYear = y;
+                selectMonth.value = currentMonth;
+                selectYear.value = currentYear;
+                loadData();
+            }
+
+            btnPrevMonth.addEventListener('click', () => changeMonth(-1));
+            btnNextMonth.addEventListener('click', () => changeMonth(1));
+            btnRefresh.addEventListener('click', () => loadData());
+
+            selectMonth.addEventListener('change', function () {
+                currentMonth = parseInt(this.value);
+                loadData();
+            });
+
+            selectYear.addEventListener('change', function () {
+                currentYear = parseInt(this.value);
+                loadData();
+            });
+
+            // Initial load
+            loadData();
+        })();
+    </script>
+</body>
+</html>

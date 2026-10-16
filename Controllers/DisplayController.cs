@@ -2146,6 +2146,20 @@ namespace MBS_SAP.Controllers
             return Ok();
         }
 
+        [HttpGet("/displaymobile")]
+        [HttpGet("Mobile")]
+        public IActionResult Mobile(int? year = null, int? month = null)
+        {
+            ViewData["HideHeader"] = true;
+            ViewData["HideNav"] = true;
+            var today = DateTime.Today;
+            int selectedYear = year ?? today.Year;
+            int selectedMonth = month ?? today.Month;
+            ViewBag.SelectedYear = selectedYear;
+            ViewBag.SelectedMonth = selectedMonth;
+            return View();
+        }
+
         [HttpGet("/displaysumary")]
         [HttpGet("/displaysummary")]
         [HttpGet("displaysumary")]
