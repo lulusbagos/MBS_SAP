@@ -124,8 +124,14 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(string tab = "all", string? q = null, int page = 1, int pageSize = 20)
         {
+            if (!IsAdmin())
+            {
+                TempData["ErrorMessage"] = "Akses ditolak. Halaman manajemen Berita Safety hanya dapat diakses oleh Administrator.";
+                return RedirectToAction("Index", "Home");
+            }
+
             ViewData["ActiveTab"] = "Incident";
-            bool canManage = IsAdmin();
+            bool canManage = true;
             ViewData["IsAdmin"] = canManage;
             ViewBag.CanManage = canManage;
 
@@ -212,7 +218,7 @@ namespace MBS_SAP.Controllers
             if (incident == null || (!incident.IsPublished && !canManage))
             {
                 TempData["ErrorMessage"] = "Berita safety tidak ditemukan.";
-                return RedirectToAction("Index");
+                return canManage ? RedirectToAction("Index") : RedirectToAction("Index", "Home");
             }
 
             if (incident.PerusahaanId.HasValue)
