@@ -900,14 +900,65 @@
             background: #f0f9ff !important;
             box-shadow: 0 12px 28px rgba(2, 132, 199, 0.12);
         }
+
+        /* Modal Dialog & Scrollable Handling for Mobile & Desktop */
+        #fieldIndexModal .modal-dialog {
+            max-height: calc(100vh - 2rem);
+            max-height: calc(100dvh - 2rem);
+            display: flex;
+        }
+        #fieldIndexModal .modal-content {
+            max-height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #fieldIndexModal .modal-header-custom {
+            flex-shrink: 0;
+        }
+        #fieldIndexModal .modal-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            scrollbar-width: thin;
+        }
+        #fieldIndexModal .modal-footer {
+            flex-shrink: 0;
+        }
+
+        @@media (max-width: 768px) {
+            #fieldIndexModal .modal-dialog {
+                margin: 0.5rem auto;
+                max-width: calc(100% - 1rem);
+                max-height: calc(100dvh - 1rem);
+            }
+            #fieldIndexModal .modal-content {
+                border-radius: 18px !important;
+            }
+            #fieldIndexModal .modal-header-custom {
+                padding: 16px 18px 14px !important;
+            }
+            #fieldIndexModal .modal-body {
+                padding: 12px 12px 16px !important;
+            }
+            .field-index-select-card {
+                padding: 14px 14px !important;
+                border-radius: 14px !important;
+            }
+            #fieldIndexModal .modal-footer {
+                padding: 10px 14px !important;
+            }
+        }
     </style>
 
     <div class="modal fade" id="fieldIndexModal" tabindex="-1" aria-labelledby="fieldIndexModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
             <div class="modal-content" style="background: var(--bg-card); backdrop-filter: blur(20px) saturate(180%); border: 1px solid var(--border-color); border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
                 <!-- Modal Header -->
-                <div style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(99, 102, 241, 0.15)); border-bottom: 1px solid var(--border-color); padding: 22px 24px 18px; position: relative;">
-                    <button type="button" class="btn-close position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 20px; right: 20px; filter: invert(var(--text-contrast));"></button>
+                <div class="modal-header-custom" style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(99, 102, 241, 0.15)); border-bottom: 1px solid var(--border-color); padding: 22px 24px 18px; position: relative;">
+                    <button type="button" class="btn-close position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 20px; right: 20px; filter: invert(var(--text-contrast)); z-index: 2;"></button>
                     <div class="d-flex align-items-center gap-3">
                         <div style="width: 50px; height: 50px; border-radius: 16px; background: linear-gradient(135deg, #0ea5e9, #6366f1); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 8px 20px rgba(14, 165, 233, 0.35); flex-shrink: 0;">
                             <i class="bi bi-speedometer2"></i>
@@ -934,7 +985,7 @@
                                     </div>
                                     <div style="flex: 1; min-width: 0;">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <h6 class="mb-0 fw-bold" style="color: var(--text-main); font-size: 14px;">FCI (Front Condition)</h6>
+                                             <h6 class="mb-0 fw-bold" style="color: var(--text-main); font-size: 14px;">FCI (Front Condition)</h6>
                                             <span class="badge" style="background: rgba(20, 184, 166, 0.15); color: #14b8a6; font-size: 9.5px; font-weight: 700; border-radius: 6px;">Front Tambang</span>
                                         </div>
                                         <p class="mb-2 text-muted" style="font-size: 11.5px; line-height: 1.4;">Inspeksi front penambangan, loading point, safety berm, floor, kestabilan lereng &amp; penerangan.</p>
@@ -1042,11 +1093,11 @@
 
                 <!-- Modal Footer -->
                 <div class="modal-footer border-top px-4 py-3" style="border-color: var(--border-color) !important; background: rgba(0,0,0,0.05);">
-                    <div class="d-flex justify-content-between align-items-center w-100">
+                    <div class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-2">
                         <span class="text-muted" style="font-size: 11.5px;">
                             <i class="bi bi-info-circle me-1 text-info"></i>Hasil penilaian langsung masuk ke Display Monitor &amp; evaluasi berkala.
                         </span>
-                        <button type="button" class="btn btn-sm btn-secondary px-3" data-bs-dismiss="modal" style="border-radius: 10px; font-size: 12px; font-weight: 600;">Tutup</button>
+                        <button type="button" class="btn btn-sm btn-secondary px-3 ms-auto" data-bs-dismiss="modal" style="border-radius: 10px; font-size: 12px; font-weight: 600;">Tutup</button>
                     </div>
                 </div>
             </div>

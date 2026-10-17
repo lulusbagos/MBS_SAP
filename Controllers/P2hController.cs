@@ -390,25 +390,25 @@ namespace MBS_SAP.Controllers
             var report = await _context.P2hReports.FindAsync(id);
             if (report == null || report.IsDeleted) return NotFound();
 
-            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
             var isAdmin = User.IsInRole("Admin");
-            var companyIdStr = User.FindFirst("CompanyId")?.Value;
-            if (int.TryParse(companyIdStr, out var companyId) && companyId > 0)
+            bool isOwnerOrAdmin = (!string.IsNullOrEmpty(userNik) && string.Equals(report.Nik?.Trim(), userNik, StringComparison.OrdinalIgnoreCase)) || isAdmin;
+
+            if (!isOwnerOrAdmin)
             {
-                var belongsToSameCompany = await _context.Karyawans.AnyAsync(k => k.NoNik == report.Nik && k.IdPerusahaan == companyId);
-                if (!belongsToSameCompany)
+                var companyIdStr = User.FindFirst("CompanyId")?.Value;
+                if (int.TryParse(companyIdStr, out var companyId) && companyId > 0)
+                {
+                    var belongsToSameCompany = await _context.Karyawans.AnyAsync(k => k.NoNik == report.Nik && k.IdPerusahaan == companyId);
+                    if (!belongsToSameCompany)
+                    {
+                        return Unauthorized();
+                    }
+                }
+                else
                 {
                     return Unauthorized();
                 }
-            }
-            else
-            {
-                return Unauthorized();
-            }
-
-            if (!isAdmin && !string.Equals(report.Nik, userNik, StringComparison.OrdinalIgnoreCase))
-            {
-                return Unauthorized();
             }
 
             return Json(new
@@ -424,6 +424,7 @@ namespace MBS_SAP.Controllers
                 merek = report.Merek,
                 simperKimper = report.SimperKimper,
                 fotoSpeedometer = report.FotoSpeedometer,
+                canEdit = isOwnerOrAdmin,
                 golA = string.IsNullOrEmpty(report.GolA_Json) ? new List<ChecklistItem>() : JsonSerializer.Deserialize<List<ChecklistItem>>(report.GolA_Json),
                 golB = string.IsNullOrEmpty(report.GolB_Json) ? new List<ChecklistItem>() : JsonSerializer.Deserialize<List<ChecklistItem>>(report.GolB_Json),
                 golC = string.IsNullOrEmpty(report.GolC_Json) ? new List<ChecklistItem>() : JsonSerializer.Deserialize<List<ChecklistItem>>(report.GolC_Json)

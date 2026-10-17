@@ -45,6 +45,38 @@
         border-color: rgba(2, 132, 199, 0.35) !important;
         color: #0369a1 !important;
     }
+
+    /* P2H Detail Modal Styles */
+    #p2hDetailModal .modal-dialog {
+        max-height: calc(100vh - 2rem);
+        max-height: calc(100dvh - 2rem);
+        display: flex;
+    }
+    #p2hDetailModal .modal-content {
+        max-height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    #p2hDetailModal .modal-header,
+    #p2hDetailModal .modal-footer {
+        flex-shrink: 0;
+    }
+    #p2hDetailModal .modal-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-y: contain;
+        scrollbar-width: thin;
+    }
+    @@media (max-width: 768px) {
+        #p2hDetailModal .modal-dialog {
+            margin: 0.5rem auto;
+            max-width: calc(100% - 1rem);
+            max-height: calc(100dvh - 1rem);
+        }
+    }
 </style>
 
 <div class="animate-fade-in pb-4">
@@ -436,6 +468,7 @@
                                             <i class="bi bi-three-dots-vertical"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border: 1px solid var(--border-color); background: var(--bg-card); font-size: 13px;">
+                                            <li><a class="dropdown-item" href="javascript:void(0)" style="color: var(--text-main);" onclick="viewP2hDetail(@item.Id)"><i class="bi bi-eye-fill me-2 text-info"></i>Detail Pemeriksaan</a></li>
                                             @if (string.Equals(item.Nik?.Trim(), userNik?.Trim(), StringComparison.OrdinalIgnoreCase) || isAdmin)
                                             {
                                                 <li><a class="dropdown-item" href="javascript:void(0)" style="color: var(--text-main);" onclick="editP2h(@item.Id)"><i class="bi bi-pencil-square me-2 text-primary"></i>Edit Laporan</a></li>
@@ -553,15 +586,70 @@
                                 }
                             }
 
-                            <div class="d-flex justify-content-between align-items-center pt-2" style="border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
+                            <div class="d-flex justify-content-between align-items-center pt-2 mt-2" style="border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
                                 <span><i class="bi bi-calendar-event me-1"></i>@item.Tanggal.ToString("dd MMM yyyy") @item.Waktu.ToString(@"hh\:mm")</span>
-                                <span><i class="bi bi-shield-check me-1"></i>P2H Selesai</span>
+                                <div class="d-flex align-items-center gap-1.5">
+                                    <button type="button" class="btn btn-sm btn-outline-info d-inline-flex align-items-center gap-1 px-2.5 py-1" style="font-size: 11px; font-weight: 600; border-radius: 8px; transition: all 0.2s;" onclick="viewP2hDetail(@item.Id)" title="Lihat rincian lengkap pemeriksaan P2H">
+                                        <i class="bi bi-eye-fill"></i>
+                                        <span>Detail</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         loopIndex++;
                     }
                 </div>
             }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detail Pemeriksaan P2H -->
+<div class="modal fade" id="p2hDetailModal" tabindex="-1" aria-labelledby="p2hDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="background: var(--bg-card); backdrop-filter: blur(20px) saturate(180%); border: 1px solid var(--border-color); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 45px rgba(0,0,0,0.45);">
+            <!-- Modal Header -->
+            <div class="modal-header border-bottom px-3 py-3 px-md-4" style="border-color: var(--border-color) !important; background: linear-gradient(135deg, rgba(2, 132, 199, 0.15), rgba(56, 189, 248, 0.08));">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35); flex-shrink: 0;">
+                        <i class="bi bi-truck-front-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold d-flex align-items-center flex-wrap gap-1" style="color: var(--text-main); font-size: 16px;" id="p2hDetailTitle">
+                            Detail Pemeriksaan P2H
+                        </h5>
+                        <p class="mb-0 text-muted" style="font-size: 11.5px;" id="p2hDetailSubtitle">
+                            Pemeriksaan kondisi unit dan kelayakan operasional
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(var(--text-contrast));"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-3 p-md-4" id="p2hDetailBody" style="overflow-y: auto; -webkit-overflow-scrolling: touch;">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="text-muted mt-2" style="font-size: 12px;">Memuat rincian laporan P2H...</div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer border-top px-3 py-2.5 px-md-4" style="border-color: var(--border-color) !important; background: rgba(0,0,0,0.04);">
+                <div class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1.5" id="p2hDetailBtnShare" style="border-radius: 8px; font-size: 12px; font-weight: 600;">
+                            <i class="bi bi-share-fill"></i>
+                            <span>Bagikan</span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-1.5 d-none" id="p2hDetailBtnEdit" style="border-radius: 8px; font-size: 12px; font-weight: 600;">
+                            <i class="bi bi-pencil-square"></i>
+                            <span>Edit Laporan</span>
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-secondary px-3 ms-auto" data-bs-dismiss="modal" style="border-radius: 8px; font-size: 12px; font-weight: 600;">Tutup</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -1291,6 +1379,250 @@
 
                 document.body.appendChild(form);
                 form.submit();
+            }
+        }
+
+        // ========= P2H DETAIL MODAL VIEW =========
+        let currentDetailData = null;
+
+        function viewP2hDetail(id) {
+            $('#p2hDetailModal').modal('show');
+            $('#p2hDetailTitle').html('<i class="bi bi-truck-front-fill me-2 text-info"></i>Memuat Detail P2H...');
+            $('#p2hDetailSubtitle').text('Sedang mengambil data laporan pemeriksaan kendaraan...');
+            $('#p2hDetailBtnEdit').addClass('d-none');
+            $('#p2hDetailBody').html(`
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;"></div>
+                    <div class="text-muted mt-3" style="font-size: 13px; font-weight: 500;">Mengambil rincian checklist & foto...</div>
+                </div>
+            `);
+
+            $.get('/P2h/GetData/' + id, function(data) {
+                if (!data) {
+                    $('#p2hDetailBody').html('<div class="alert alert-danger m-3">Data P2H tidak ditemukan.</div>');
+                    return;
+                }
+                currentDetailData = data;
+
+                const golA = data.golA || [];
+                const golB = data.golB || [];
+                const golC = data.golC || [];
+
+                const defectsA = golA.filter(x => x.status === 'NOT_GOOD');
+                const defectsB = golB.filter(x => x.status === 'NOT_GOOD');
+                const defectsC = golC.filter(x => x.status === 'NOT_GOOD');
+                const totalDefects = defectsA.length + defectsB.length + defectsC.length;
+                const isGood = totalDefects === 0;
+
+                const proxyUrl = url => (url && url.startsWith('http')) ? ('/ImageProxy/Get?url=' + encodeURIComponent(url)) : (url || '');
+
+                // Format Header Title
+                $('#p2hDetailTitle').html(`
+                    <span class="text-primary me-1"><i class="bi bi-truck-front-fill"></i></span>
+                    <span style="letter-spacing: 0.5px;">${escapeHtml(data.noLambung)}</span>
+                    <span class="badge ${isGood ? 'bg-success' : 'bg-danger'} ms-2 py-1 px-2.5 rounded-pill" style="font-size: 10px; font-weight: 700;">
+                        ${isGood ? '<i class="bi bi-check-circle-fill me-1"></i>AMAN' : `<i class="bi bi-exclamation-triangle-fill me-1"></i>${totalDefects} TEMUAN`}
+                    </span>
+                `);
+                $('#p2hDetailSubtitle').text(`${data.merek || '-'} (${data.jenisKendaraan || '-'}) • Tanggal: ${data.tanggal} ${data.waktu}`);
+
+                // Footer Buttons
+                if (data.canEdit) {
+                    $('#p2hDetailBtnEdit').removeClass('d-none').off('click').on('click', function() {
+                        $('#p2hDetailModal').modal('hide');
+                        editP2h(data.id);
+                    });
+                } else {
+                    $('#p2hDetailBtnEdit').addClass('d-none');
+                }
+
+                $('#p2hDetailBtnShare').off('click').on('click', function() {
+                    shareP2h(data.noLambung, data.tanggal, data.merek, data.jenisKendaraan, totalDefects, data.nama);
+                });
+
+                // Build HTML Content
+                let html = `
+                    <!-- 1. Status Kelayakan Banner -->
+                    <div class="p-3 rounded-4 mb-3" style="background: ${isGood ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.05))' : 'linear-gradient(135deg, rgba(244, 63, 94, 0.15), rgba(225, 29, 72, 0.06))'}; border: 1.5px solid ${isGood ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.4)'};">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2.5">
+                                <div style="width: 44px; height: 44px; border-radius: 12px; background: ${isGood ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)'}; color: ${isGood ? '#10b981' : '#f43f5e'}; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+                                    <i class="bi ${isGood ? 'bi-shield-check' : 'bi-exclamation-octagon-fill'}"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 800; font-size: 14px; color: ${isGood ? '#10b981' : '#f43f5e'};">
+                                        ${isGood ? 'UNIT LAYAK OPERASIONAL (GOOD)' : `UNIT MEMILIKI ${totalDefects} TEMUAN KERUSAKAN`}
+                                    </div>
+                                    <div class="text-muted" style="font-size: 11.5px;">
+                                        ${isGood ? 'Seluruh 37 komponen checklist memenuhi standar kelayakan dan siap digunakan.' : 'Perhatikan daftar temuan kerusakan berikut sebelum mengoperasikan unit!'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-1.5 flex-wrap">
+                                <span class="badge ${defectsA.length > 0 ? 'bg-danger' : 'bg-secondary bg-opacity-25 text-muted'}" style="font-size: 10px; font-weight: 700; border-radius: 6px;">Gol. A: ${defectsA.length}</span>
+                                <span class="badge ${defectsB.length > 0 ? 'bg-warning text-dark' : 'bg-secondary bg-opacity-25 text-muted'}" style="font-size: 10px; font-weight: 700; border-radius: 6px;">Gol. B: ${defectsB.length}</span>
+                                <span class="badge ${defectsC.length > 0 ? 'bg-info text-dark' : 'bg-secondary bg-opacity-25 text-muted'}" style="font-size: 10px; font-weight: 700; border-radius: 6px;">Gol. C: ${defectsC.length}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Detail Data Grid -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6 col-md-3">
+                            <div class="p-2.5 rounded-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                                <span class="text-muted d-block" style="font-size: 10.5px;">No. Lambung</span>
+                                <strong style="font-size: 13px; color: var(--text-main);">${escapeHtml(data.noLambung)}</strong>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2.5 rounded-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                                <span class="text-muted d-block" style="font-size: 10.5px;">Merek & Tipe</span>
+                                <strong style="font-size: 13px; color: var(--text-main);">${escapeHtml(data.merek || '-')}</strong>
+                                <small class="text-muted d-block" style="font-size: 10px;">${escapeHtml(data.jenisKendaraan || '-')}</small>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2.5 rounded-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                                <span class="text-muted d-block" style="font-size: 10.5px;">Odometer</span>
+                                <strong style="font-size: 13px; color: #38bdf8;">${data.kilometer ? Number(data.kilometer).toLocaleString('id-ID') : 0} KM</strong>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2.5 rounded-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                                <span class="text-muted d-block" style="font-size: 10.5px;">SIMPER / KIMPER</span>
+                                <span class="badge ${data.simperKimper === 'YA' ? 'bg-success' : 'bg-danger'} py-1 px-2" style="font-size: 10px; font-weight: 700; border-radius: 6px;">
+                                    ${data.simperKimper === 'YA' ? 'YA (AKTIF)' : 'TIDAK'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="p-2.5 rounded-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                                <span class="text-muted d-block" style="font-size: 10.5px;">Pemeriksa</span>
+                                <strong style="font-size: 13px; color: var(--text-main);">${escapeHtml(data.nama)}</strong>
+                                <span class="text-muted ms-1" style="font-size: 11px;">(NIK: ${escapeHtml(data.nik)})</span>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="p-2.5 rounded-3 h-100" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                                <span class="text-muted d-block" style="font-size: 10.5px;">Waktu Pemeriksaan</span>
+                                <strong style="font-size: 13px; color: var(--text-main);">${data.tanggal}</strong>
+                                <span class="text-muted ms-1" style="font-size: 11px;">pukul ${data.waktu} WITA</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Speedometer Photo Section (if available)
+                if (data.fotoSpeedometer) {
+                    const proxySpeedo = proxyUrl(data.fotoSpeedometer);
+                    html += `
+                        <div class="mb-3 p-3 rounded-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color);">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="fw-bold" style="font-size: 12px; color: var(--text-main);"><i class="bi bi-speedometer me-1 text-primary"></i>Foto Speedometer & Odometer</span>
+                                <a href="${proxySpeedo}" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size: 11px; padding: 2px 8px; border-radius: 6px;">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Buka Resolusi Penuh
+                                </a>
+                            </div>
+                            <div class="text-center">
+                                <a href="${proxySpeedo}" target="_blank">
+                                    <img src="${proxySpeedo}" alt="Foto Speedometer" class="img-fluid rounded-3 shadow-sm" style="max-height: 220px; object-fit: contain; border: 1px solid var(--border-color);" />
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // 3. Filter Nav Pills for Checklist
+                html += `
+                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                        <h6 class="mb-0 fw-bold" style="color: var(--text-main); font-size: 13px;">
+                            <i class="bi bi-card-checklist me-1 text-primary"></i>Hasil Rincian Checklist (37 Item)
+                        </h6>
+                        <div class="btn-group btn-group-sm p2h-detail-filter" role="group">
+                            <button type="button" class="btn btn-outline-secondary active py-1 px-2.5" style="font-size: 11px;" onclick="filterP2hDetailItems('all', this)">Semua (37)</button>
+                            ${totalDefects > 0 ? `<button type="button" class="btn btn-outline-danger py-1 px-2.5" style="font-size: 11px; font-weight: 700;" onclick="filterP2hDetailItems('defect', this)">Temuan (${totalDefects})</button>` : ''}
+                            <button type="button" class="btn btn-outline-secondary py-1 px-2" style="font-size: 11px;" onclick="filterP2hDetailItems('A', this)">Gol. A (16)</button>
+                            <button type="button" class="btn btn-outline-secondary py-1 px-2" style="font-size: 11px;" onclick="filterP2hDetailItems('B', this)">Gol. B (10)</button>
+                            <button type="button" class="btn btn-outline-secondary py-1 px-2" style="font-size: 11px;" onclick="filterP2hDetailItems('C', this)">Gol. C (11)</button>
+                        </div>
+                    </div>
+
+                    <!-- 4. Checklist Item List -->
+                    <div class="p2h-detail-checklist-container" style="display: flex; flex-direction: column; gap: 8px;">
+                `;
+
+                // Helper to render items
+                const renderCategoryItems = (items, catLabel, catCode, badgeBg, badgeColor) => {
+                    let catHtml = '';
+                    items.forEach((item, idx) => {
+                        const isBad = item.status === 'NOT_GOOD';
+                        const itemPhoto = proxyUrl(item.photoUrl);
+                        catHtml += `
+                            <div class="p2h-detail-row p-2.5 rounded-3 d-flex align-items-start justify-content-between gap-2" 
+                                 data-cat="${catCode}" 
+                                 data-status="${isBad ? 'defect' : 'good'}"
+                                 style="background: ${isBad ? 'rgba(244, 63, 94, 0.08)' : 'rgba(255,255,255,0.02)'}; border: 1px solid ${isBad ? 'rgba(244, 63, 94, 0.3)' : 'var(--border-color)'};">
+                                <div class="d-flex align-items-start gap-2.5" style="flex: 1; min-width: 0;">
+                                    <div style="font-size: 16px; line-height: 1.2; color: ${isBad ? '#f43f5e' : '#10b981'}; margin-top: 1px;">
+                                        <i class="bi ${isBad ? 'bi-x-circle-fill' : 'bi-check-circle-fill'}"></i>
+                                    </div>
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div class="d-flex align-items-center gap-1.5 flex-wrap mb-0.5">
+                                            <span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 9px; font-weight: 700; border-radius: 4px;">
+                                                ${catLabel} #${idx + 1}
+                                            </span>
+                                            <span style="font-weight: 600; font-size: 12.5px; color: var(--text-main);">
+                                                ${escapeHtml(item.name)}
+                                            </span>
+                                        </div>
+                                        ${isBad && itemPhoto ? `
+                                            <div class="mt-2 d-flex align-items-center gap-2">
+                                                <a href="${itemPhoto}" target="_blank" title="Klik untuk memperbesar foto temuan">
+                                                    <img src="${itemPhoto}" alt="Temuan" style="width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1.5px solid rgba(244,63,94,0.4);" />
+                                                </a>
+                                                <a href="${itemPhoto}" target="_blank" class="text-danger fw-semibold" style="font-size: 11px;">
+                                                    <i class="bi bi-image me-1"></i>Lihat Foto Kerusakan
+                                                </a>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="badge ${isBad ? 'bg-danger' : 'bg-success'}" style="font-size: 10px; font-weight: 700; border-radius: 6px; padding: 4px 8px;">
+                                        ${isBad ? 'NOT GOOD' : 'GOOD'}
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    return catHtml;
+                };
+
+                html += renderCategoryItems(golA, 'GOL. A (KRITIS)', 'A', 'rgba(239, 68, 68, 0.15)', '#ef4444');
+                html += renderCategoryItems(golB, 'GOL. B (PEMELIHARAAN)', 'B', 'rgba(245, 158, 11, 0.15)', '#f59e0b');
+                html += renderCategoryItems(golC, 'GOL. C (PENDUKUNG)', 'C', 'rgba(56, 189, 248, 0.15)', '#38bdf8');
+
+                html += `</div>`; // Close p2h-detail-checklist-container
+
+                $('#p2hDetailBody').html(html);
+            }).fail(function(xhr) {
+                const msg = xhr.status === 401 ? 'Anda tidak memiliki otorisasi untuk melihat detail laporan ini.' : 'Gagal mengambil detail P2H. Silakan coba kembali.';
+                $('#p2hDetailBody').html(`<div class="alert alert-danger m-3"><i class="bi bi-exclamation-triangle-fill me-2"></i>${msg}</div>`);
+            });
+        }
+
+        function filterP2hDetailItems(type, btn) {
+            $('.p2h-detail-filter button').removeClass('active');
+            $(btn).addClass('active');
+
+            if (type === 'all') {
+                $('.p2h-detail-row').show();
+            } else if (type === 'defect') {
+                $('.p2h-detail-row').hide();
+                $('.p2h-detail-row[data-status="defect"]').show();
+            } else {
+                $('.p2h-detail-row').hide();
+                $(`.p2h-detail-row[data-cat="${type}"]`).show();
             }
         }
     </script>
