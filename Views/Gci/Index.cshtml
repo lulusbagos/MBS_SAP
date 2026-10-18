@@ -6,18 +6,19 @@
     var userDept = ViewBag.UserDept as string ?? "Geotechnical Engineering";
     var userCompany = ViewBag.UserCompany as string ?? "PT INDEXIM COALINDO";
     var pitList = ViewBag.PitList as List<string> ?? new List<string>();
-    var totalReports = ViewBag.TotalReports as int? ?? 36;
-    var avgScore = ViewBag.AvgScore as double? ?? 86.5;
-    var goodCount = ViewBag.GoodCount as int? ?? 17;
-    var fairCount = ViewBag.FairCount as int? ?? 16;
-    var poorCount = ViewBag.PoorCount as int? ?? 3;
-    var tarpGreenCount = ViewBag.TarpGreenCount as int? ?? 17;
-    var tarpYellowCount = ViewBag.TarpYellowCount as int? ?? 11;
-    var tarpOrangeCount = ViewBag.TarpOrangeCount as int? ?? 5;
-    var tarpRedCount = ViewBag.TarpRedCount as int? ?? 3;
+    var totalReports = ViewBag.TotalReports as int? ?? (Model != null ? Model.Count() : 0);
+    var avgScore = ViewBag.AvgScore as double? ?? 100.0;
+    var goodCount = ViewBag.GoodCount as int? ?? 0;
+    var fairCount = ViewBag.FairCount as int? ?? 0;
+    var poorCount = ViewBag.PoorCount as int? ?? 0;
+    var tarpGreenCount = ViewBag.TarpGreenCount as int? ?? 0;
+    var tarpYellowCount = ViewBag.TarpYellowCount as int? ?? 0;
+    var tarpOrangeCount = ViewBag.TarpOrangeCount as int? ?? 0;
+    var tarpRedCount = ViewBag.TarpRedCount as int? ?? 0;
+    var reportsList = Model != null ? Model.ToList() : new List<MBS_SAP.Models.GciReport>();
 }
 
-<div class="animate-fade-in pb-5">
+<div class="animate-fade-in gci-container pb-5">
     <!-- Top Header Bar -->
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
@@ -31,23 +32,27 @@
                     PT Indexim Coalindo
                 </span>
             </div>
-            <p class="screen-subtitle mb-0" style="color: var(--text-muted);">Sistem Inspeksi Kestabilan Lereng &amp; Penanganan Ketidaksesuaian Geoteknik Berdasarkan Kepmen ESDM 1827 K/30/MEM/2018.</p>
+            <p class="screen-subtitle mb-0 text-muted" style="font-size: 11.5px;">Sistem Inspeksi Kestabilan Lereng &amp; Penanganan Ketidaksesuaian Geoteknik Berdasarkan Kepmen ESDM 1827 K/30/MEM/2018.</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <div class="d-flex align-items-center gap-2 px-3 py-1.5 rounded-3 d-none d-sm-flex" style="background: var(--bg-card); border: 1px solid var(--border-color);">
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100 w-sm-auto justify-content-start justify-content-sm-end">
+            <div class="d-flex align-items-center gap-2 px-3 py-1.5 rounded-3 d-none d-md-flex" style="background: var(--bg-card); border: 1px solid var(--border-color);">
                 <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 13px;">
                     @(userNama.Length >= 2 ? userNama.Substring(0, 2).ToUpper() : "AP")
                 </div>
                 <div>
                     <div style="font-size: 12px; font-weight: 700; color: var(--text-main);">@userNama</div>
-                    <div style="font-size: 10px; color: var(--text-muted);">Geoteknik Engineer</div>
+                    <div style="font-size: 10px; color: var(--text-muted);">@userDept</div>
                 </div>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 shadow-sm" style="border-radius: 10px; padding: 8px 14px; font-weight: 600;" onclick="resetGciForm()">
+            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center justify-content-center gap-1 shadow-sm flex-fill flex-sm-grow-0" style="border-radius: 10px; padding: 7px 12px; font-weight: 600; font-size: 11.5px;" onclick="resetGciForm()">
                 <i class="bi bi-arrow-counterclockwise"></i>
-                <span class="d-none d-md-inline">Reset Form</span>
+                <span>Reset Form</span>
             </button>
-            <a asp-action="ExportExcel" asp-route-startDate="@ViewBag.StartDate" asp-route-endDate="@ViewBag.EndDate" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1 shadow-sm" style="border-radius: 10px; padding: 8px 14px; font-weight: 600;">
+            <a href="#riwayatTableSection" class="btn btn-sm btn-outline-info d-flex align-items-center justify-content-center gap-1 shadow-sm flex-fill flex-sm-grow-0" style="border-radius: 10px; padding: 7px 12px; font-weight: 600; font-size: 11.5px;">
+                <i class="bi bi-table"></i>
+                <span>Riwayat (@reportsList.Count)</span>
+            </a>
+            <a asp-action="ExportExcel" asp-route-startDate="@ViewBag.StartDate" asp-route-endDate="@ViewBag.EndDate" class="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center gap-1 shadow-sm flex-fill flex-sm-grow-0" style="border-radius: 10px; padding: 7px 12px; font-weight: 600; font-size: 11.5px;">
                 <i class="bi bi-file-earmark-excel-fill"></i>
                 <span>Export Excel</span>
             </a>
@@ -70,91 +75,96 @@
         </div>
     }
 
-    <!-- 1. Top Summary Metric Cards (5 KPI Cards Responsive) -->
+    <!-- 1. Top Summary Metric Cards (Mobile: 2 per row, Desktop: 5 per row) -->
     <div class="row g-2 mb-3">
         <!-- Card 1: Total Hazard -->
-        <div class="col-6 col-md-4 col-xl-2" style="flex: 1 1 180px;">
-            <div class="card-sap p-2.5 p-md-3 h-100" style="border-left: 4px solid #0284c7;">
-                <div style="color: var(--text-muted); font-size: 10.5px; font-weight: 700; text-transform: uppercase;">Total Hazard</div>
+        <div class="col-6 col-md-4 col-xl">
+            <div class="card-sap p-2 p-md-3 h-100" style="border-left: 4px solid #0284c7;">
+                <div style="color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase;">Total MTD</div>
                 <div class="d-flex align-items-baseline gap-2 mt-1">
-                    <h3 class="mb-0 font-weight-bold" style="color: var(--text-main); font-size: 1.6rem;">@totalReports</h3>
+                    <h3 class="mb-0 font-weight-bold kpi-num" style="color: var(--text-main); font-size: 1.5rem;">@totalReports</h3>
                 </div>
-                <div style="color: var(--text-muted); font-size: 10px;" class="mt-1.5">12 Open &bull; 18 Monitor &bull; 6 Closed</div>
+                <div style="color: var(--text-muted); font-size: 9.5px;" class="mt-1">Rata-rata: <strong>@avgScore%</strong></div>
             </div>
         </div>
 
         <!-- Card 2: Critical TARP 3 -->
-        <div class="col-6 col-md-4 col-xl-2" style="flex: 1 1 180px;">
-            <div class="card-sap p-2.5 p-md-3 h-100" style="border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.04);">
-                <div class="text-danger fw-bold" style="font-size: 10.5px; text-transform: uppercase;">
-                    <i class="bi bi-exclamation-octagon-fill me-1"></i> Critical (TARP 3)
+        <div class="col-6 col-md-4 col-xl">
+            <div class="card-sap p-2 p-md-3 h-100" style="border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.04);">
+                <div class="text-danger fw-bold" style="font-size: 10px; text-transform: uppercase;">
+                    <i class="bi bi-exclamation-octagon-fill me-1"></i> TARP 3 (Red)
                 </div>
                 <div class="d-flex align-items-baseline gap-2 mt-1">
-                    <h3 class="mb-0 font-weight-bold text-danger" style="font-size: 1.6rem;">@tarpRedCount</h3>
+                    <h3 class="mb-0 font-weight-bold text-danger kpi-num" style="font-size: 1.5rem;">@tarpRedCount</h3>
                 </div>
-                <div style="color: var(--text-muted); font-size: 10px;" class="mt-1.5">2 Pit &bull; 1 Disposal</div>
+                <div style="color: var(--text-muted); font-size: 9.5px;" class="mt-1">Kritis / Evakuasi</div>
             </div>
         </div>
 
         <!-- Card 3: Action TARP 2 -->
-        <div class="col-6 col-md-4 col-xl-2" style="flex: 1 1 180px;">
-            <div class="card-sap p-2.5 p-md-3 h-100" style="border-left: 4px solid #f97316; background: rgba(249, 115, 22, 0.04);">
-                <div style="color: #ea580c; font-size: 10.5px; font-weight: 700; text-transform: uppercase;">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Action (TARP 2)
+        <div class="col-6 col-md-4 col-xl">
+            <div class="card-sap p-2 p-md-3 h-100" style="border-left: 4px solid #f97316; background: rgba(249, 115, 22, 0.04);">
+                <div style="color: #ea580c; font-size: 10px; font-weight: 700; text-transform: uppercase;">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> TARP 2 (Orange)
                 </div>
                 <div class="d-flex align-items-baseline gap-2 mt-1">
-                    <h3 class="mb-0 font-weight-bold" style="color: #ea580c; font-size: 1.6rem;">@tarpOrangeCount</h3>
+                    <h3 class="mb-0 font-weight-bold kpi-num" style="color: #ea580c; font-size: 1.5rem;">@tarpOrangeCount</h3>
                 </div>
-                <div style="color: var(--text-muted); font-size: 10px;" class="mt-1.5">3 Pit &bull; 2 Disposal</div>
+                <div style="color: var(--text-muted); font-size: 9.5px;" class="mt-1">Mitigasi Diperlukan</div>
             </div>
         </div>
 
         <!-- Card 4: Alert TARP 1 -->
-        <div class="col-6 col-md-4 col-xl-2" style="flex: 1 1 180px;">
-            <div class="card-sap p-2.5 p-md-3 h-100" style="border-left: 4px solid #eab308; background: rgba(234, 179, 8, 0.04);">
-                <div style="color: #ca8a04; font-size: 10.5px; font-weight: 700; text-transform: uppercase;">
-                    <i class="bi bi-exclamation-circle-fill me-1"></i> Alert (TARP 1)
+        <div class="col-6 col-md-4 col-xl">
+            <div class="card-sap p-2 p-md-3 h-100" style="border-left: 4px solid #eab308; background: rgba(234, 179, 8, 0.04);">
+                <div style="color: #ca8a04; font-size: 10px; font-weight: 700; text-transform: uppercase;">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i> TARP 1 (Yellow)
                 </div>
                 <div class="d-flex align-items-baseline gap-2 mt-1">
-                    <h3 class="mb-0 font-weight-bold" style="color: #ca8a04; font-size: 1.6rem;">@tarpYellowCount</h3>
+                    <h3 class="mb-0 font-weight-bold kpi-num" style="color: #ca8a04; font-size: 1.5rem;">@tarpYellowCount</h3>
                 </div>
-                <div style="color: var(--text-muted); font-size: 10px;" class="mt-1.5">7 Pit &bull; 4 Disposal</div>
+                <div style="color: var(--text-muted); font-size: 9.5px;" class="mt-1">Tingkatkan Monitoring</div>
             </div>
         </div>
 
         <!-- Card 5: Normal TARP 0 -->
-        <div class="col-12 col-md-4 col-xl-2" style="flex: 1 1 180px;">
-            <div class="card-sap p-2.5 p-md-3 h-100" style="border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.04);">
-                <div class="text-success fw-bold" style="font-size: 10.5px; text-transform: uppercase;">
-                    <i class="bi bi-check-circle-fill me-1"></i> Normal (TARP 0)
+        <div class="col-12 col-md-4 col-xl">
+            <div class="card-sap p-2 p-md-3 h-100" style="border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.04);">
+                <div class="text-success fw-bold" style="font-size: 10px; text-transform: uppercase;">
+                    <i class="bi bi-check-circle-fill me-1"></i> TARP 0 (Green)
                 </div>
                 <div class="d-flex align-items-baseline gap-2 mt-1">
-                    <h3 class="mb-0 font-weight-bold text-success" style="font-size: 1.6rem;">@tarpGreenCount</h3>
+                    <h3 class="mb-0 font-weight-bold text-success kpi-num" style="font-size: 1.5rem;">@tarpGreenCount</h3>
                 </div>
-                <div style="color: var(--text-muted); font-size: 10px;" class="mt-1.5">8 Pit &bull; 9 Disposal</div>
+                <div style="color: var(--text-muted); font-size: 9.5px;" class="mt-1">Lereng Stabil &amp; Aman</div>
             </div>
         </div>
     </div>
 
-    <!-- 2. FORM INSPEKSI GEOTEKNIK UTAMA (Sesuai Referensi Format Memo & Temuan Ketidaksesuaian) -->
+    <!-- 2. FORM INSPEKSI GEOTEKNIK UTAMA -->
     <form id="formGci" asp-action="Submit" method="post" enctype="multipart/form-data">
         @Html.AntiForgeryToken()
         <input type="hidden" id="gciId" name="id" value="" />
 
         <!-- Header Memo Temuan / Ketidaksesuaian Geoteknik -->
-        <div class="card-sap p-3 mb-3" style="border-left: 4px solid #0284c7;">
+        <div class="card-sap p-3 mb-3" style="border-left: 4px solid #0284c7;" id="formHeaderCard">
             <div class="row g-2 align-items-center">
                 <div class="col-12 col-md-8">
-                    <label class="form-label-sap mb-1" style="font-size: 11px;">
-                        <i class="bi bi-card-heading text-primary me-1"></i> Judul Temuan / Ketidaksesuaian Geoteknik <span class="text-danger">*</span>
-                    </label>
-                    <input type="text" id="judulTemuan" name="judulTemuan" class="input-sap fw-bold" value="Ketidaksesuaian Material Pembentukan Pad Extend Stockpile ROM D" placeholder="Contoh: Ketidaksesuaian Material Pembentukan Pad Extend Stockpile ROM D..." required style="font-size: 13px;" />
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label-sap mb-0" style="font-size: 11px;">
+                            <i class="bi bi-card-heading text-primary me-1"></i> Judul Temuan / Laporan Inspeksi Geoteknik <span class="text-danger">*</span>
+                        </label>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-none" id="editModeBadge" style="font-size: 10px;">
+                            <i class="bi bi-pencil-square me-1"></i> Mode Edit Laporan
+                        </span>
+                    </div>
+                    <input type="text" id="judulTemuan" name="judulTemuan" class="input-sap fw-bold" value="" placeholder="Contoh: Inspeksi Kestabilan Lereng Highwall Pit A atau Ketidaksesuaian Material..." required style="font-size: 12.5px;" />
                 </div>
                 <div class="col-12 col-md-4">
                     <label class="form-label-sap mb-1" style="font-size: 11px;">
                         <i class="bi bi-calendar-check text-warning me-1"></i> Target Due Date (Penyelesaian)
                     </label>
-                    <input type="date" id="dueDate" name="dueDate" class="input-sap" value="@DateTime.Today.AddDays(7).ToString("yyyy-MM-dd")" />
+                    <input type="date" id="dueDate" name="dueDate" class="input-sap" value="" />
                 </div>
             </div>
         </div>
@@ -172,16 +182,16 @@
                     </div>
 
                     <!-- Stepper Bar Ringkas Berkontras Tinggi -->
-                    <div class="d-flex justify-content-between align-items-center mb-3 px-2.5 py-1.5 rounded-2 overflow-auto text-nowrap" style="background: rgba(14, 165, 233, 0.08); border: 1px solid var(--border-color); font-size: 10.5px;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 px-2.5 py-1.5 rounded-2 overflow-auto text-nowrap" style="background: rgba(14, 165, 233, 0.08); border: 1px solid var(--border-color); font-size: 10px;">
                         <span class="fw-bold text-primary"><i class="bi bi-check2-circle me-1"></i>1. Lokasi</span>
                         <span class="mx-1" style="color: var(--text-muted);">&bull;</span>
                         <span style="color: var(--text-main);">2. Geometri</span>
                         <span class="mx-1" style="color: var(--text-muted);">&bull;</span>
-                        <span style="color: var(--text-main);">3. Ukur</span>
+                        <span style="color: var(--text-main);">3. Fisik</span>
                         <span class="mx-1" style="color: var(--text-muted);">&bull;</span>
-                        <span style="color: var(--text-main);">4. Sensor</span>
+                        <span style="color: var(--text-main);">4. Foto</span>
                         <span class="mx-1" style="color: var(--text-muted);">&bull;</span>
-                        <span style="color: var(--text-main);">5. Dokumen</span>
+                        <span style="color: var(--text-main);">5. PIC</span>
                     </div>
 
                     <div class="form-group-sap mb-2">
@@ -218,95 +228,99 @@
                         <div class="col-6 form-group-sap mb-0">
                             <label class="form-label-sap">Perusahaan / Kontraktor</label>
                             <select id="perusahaan" name="perusahaan" class="input-sap">
-                                <option value="KPP" selected>KPP</option>
-                                <option value="PT Indexim Coalindo">Indexim</option>
+                                <option value="PT Indexim Coalindo" selected>PT Indexim Coalindo</option>
+                                <option value="KPP">KPP</option>
                                 <option value="PAMA">PAMA</option>
                                 <option value="UNGGUL">UNGGUL</option>
+                                <option value="MGE">MGE</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="row g-2 mb-2">
-                        <div class="col-6 form-group-sap mb-0">
+                        <div class="col-12 col-sm-6 form-group-sap mb-0">
                             <label class="form-label-sap">Inspector (Geotek IC)</label>
                             <input type="text" id="inspectorPic" name="nama" class="input-sap" value="@userNama" readonly />
                             <input type="hidden" name="nik" value="@userNik" />
                         </div>
-                        <div class="col-6 form-group-sap mb-0 position-relative">
-                            <label class="form-label-sap d-flex justify-content-between align-items-center">
-                                <span>Supervisor (PJA)</span>
-                                <span class="badge bg-secondary" style="font-size: 8px;">Search</span>
-                            </label>
-                            <input type="text" id="pjaSearchInput" class="input-sap" value="Rudi Saputra" placeholder="Ketik nama / NIK PJA..." autocomplete="off" oninput="searchPjaLive(this.value)" />
+                        <div class="col-12 col-sm-6 form-group-sap mb-0 position-relative">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label-sap mb-0">Supervisor (PJA)</label>
+                                <span class="badge bg-secondary" style="font-size: 8px;">Cari</span>
+                            </div>
+                            <input type="text" id="pjaSearchInput" class="input-sap" value="" placeholder="Ketik nama / NIK PJA..." autocomplete="off" oninput="searchPjaLive(this.value)" />
                             <div id="pjaSearchResults" class="position-absolute shadow-lg rounded-3 mt-1 w-100 d-none" style="z-index: 1050; max-height: 200px; overflow-y: auto; background: var(--bg-card); border: 1px solid var(--border-color);"></div>
-                            <input type="hidden" id="pjaNama" name="pjaNama" value="Rudi Saputra" />
-                            <input type="hidden" id="pjaNik" name="pjaNik" value="51022424" />
+                            <input type="hidden" id="pjaNama" name="pjaNama" value="" />
+                            <input type="hidden" id="pjaNik" name="pjaNik" value="" />
                         </div>
                     </div>
 
-                    <!-- Lokasi Praktis & Koordinat Tanpa Peta Berat -->
+                    <!-- AREA & KOORDINAT LAPANGAN (PIT & SEKTOR BISA DIKETIK LANGSUNG) -->
                     <div class="p-2.5 rounded-3 mb-2" style="background: rgba(14, 165, 233, 0.04); border: 1px solid var(--border-color);">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="fw-bold" style="font-size: 11.5px; color: var(--text-main);">
-                                <i class="bi bi-geo-alt-fill text-primary me-1"></i> Area &amp; Koordinat Lapangan
+                                <i class="bi bi-geo-alt-fill text-primary me-1"></i> Area &amp; Titik Lapangan
                             </span>
                             <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" style="font-size: 10.5px; color: #0284c7; font-weight: 600;" onclick="getGciGpsLocation()">
                                 <i class="bi bi-crosshair me-1"></i> GPS Otomatis
                             </button>
                         </div>
 
+                        <!-- Baris 1: Pit & Sektor (BISA DIKETIK BEBAS OLEH USER) -->
                         <div class="row g-2 mb-2">
-                            <div class="col-6">
-                                <label class="form-label-sap mb-1" style="font-size: 10px;">Pit / Sektor</label>
-                                <select id="pitSelect" class="input-sap" onchange="updateAreaPit(this.value)">
-                                    <option value="STOCKPILE ROM D" selected>STOCKPILE ROM D</option>
-                                    <option value="PIT A">PIT A</option>
-                                    <option value="PIT B">PIT B</option>
-                                    <option value="PIT C">PIT C</option>
-                                    <option value="DISPOSAL D01">DISPOSAL D01</option>
-                                    <option value="DISPOSAL D02">DISPOSAL D02</option>
-                                    <option value="ROM 33">ROM 33</option>
-                                    <option value="SUMP CENTRAL">SUMP CENTRAL</option>
-                                </select>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label-sap mb-1" style="font-size: 10.5px;">
+                                    <i class="bi bi-gem text-primary me-1"></i>Pit <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" id="pit" name="pit" class="input-sap" value="" placeholder="Ketik Pit (contoh: PIT A, PIT B, ROM 33)..." autocomplete="off" oninput="syncPitArea()" required />
                             </div>
-                            <div class="col-6">
-                                <label class="form-label-sap mb-1" style="font-size: 10px;">Sub Area / Nama Lereng</label>
-                                <input type="text" id="namaLereng" name="namaLereng" class="input-sap" value="Pad Extend Stockpile ROM D Port" placeholder="Nama lereng..." required />
+
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label-sap mb-1" style="font-size: 10.5px;">
+                                    <i class="bi bi-pin-map-fill text-warning me-1"></i>Sektor / Area <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" id="area" name="area" class="input-sap" value="" placeholder="Ketik Sektor (contoh: Sektor 1, Sektor Barat)..." autocomplete="off" oninput="syncPitArea()" required />
                             </div>
                         </div>
 
+                        <!-- Baris 2: Sub Area / Nama Lereng & Detail Titik Benchmark -->
                         <div class="row g-2 mb-2">
-                            <div class="col-6">
-                                <label class="form-label-sap mb-1" style="font-size: 10px;">Elevasi (EL / RL dalam meter)</label>
-                                <input type="number" step="1" id="elevasiRl" name="elevasiRl" class="input-sap" value="65" placeholder="EL (m)..." />
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label-sap mb-1" style="font-size: 10.5px;">
+                                    <i class="bi bi-layers-half text-info me-1"></i>Sub Area / Nama Lereng <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" id="namaLereng" name="namaLereng" class="input-sap" value="" placeholder="Contoh: Highwall Ramp 2, Lowwall Seam A..." oninput="updateLokasiFull()" required />
                             </div>
-                            <div class="col-6">
-                                <label class="form-label-sap mb-1" style="font-size: 10px;">Detail Titik / Benchmark</label>
-                                <input type="text" id="detilLokasi" name="detilLokasi" class="input-sap" value="Port Stockpile D, Titik DCP 1-1.5m" placeholder="Benchmark/RL..." />
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label-sap mb-1" style="font-size: 10.5px;">Detail Titik / Benchmark</label>
+                                <input type="text" id="detilLokasi" name="detilLokasi" class="input-sap" value="" placeholder="Contoh: BM-04, Patok 12, DCP 1-1.5m..." />
                             </div>
                         </div>
 
+                        <!-- Baris 3: Elevasi & Koordinat GPS -->
                         <div class="row g-2">
-                            <div class="col-6">
-                                <label class="form-label-sap mb-1" style="font-size: 10px;">Northing / Latitude</label>
-                                <input type="text" id="latitude" name="latitude" class="input-sap" value="N 90246" style="font-size: 11px;" />
+                            <div class="col-12 col-sm-4">
+                                <label class="form-label-sap mb-1" style="font-size: 10px;">Elevasi (RL meter)</label>
+                                <input type="number" step="1" id="elevasiRl" name="elevasiRl" class="input-sap" value="" placeholder="EL (m)..." oninput="updateLokasiFull()" />
                             </div>
-                            <div class="col-6">
+                            <div class="col-6 col-sm-4">
+                                <label class="form-label-sap mb-1" style="font-size: 10px;">Northing / Latitude</label>
+                                <input type="text" id="latitude" name="latitude" class="input-sap" value="" placeholder="Lat / N..." style="font-size: 11px;" />
+                            </div>
+                            <div class="col-6 col-sm-4">
                                 <label class="form-label-sap mb-1" style="font-size: 10px;">Easting / Longitude</label>
-                                <input type="text" id="longitude" name="longitude" class="input-sap" value="E 596604" style="font-size: 11px;" />
+                                <input type="text" id="longitude" name="longitude" class="input-sap" value="" placeholder="Long / E..." style="font-size: 11px;" />
                             </div>
                         </div>
 
-                        <input type="hidden" id="area" name="area" value="STOCKPILE ROM D" />
-                        <input type="hidden" id="pit" name="pit" value="STOCKPILE ROM D" />
-                        <input type="hidden" id="lokasi" name="lokasi" value="Stockpile ROM D Port EL 65" />
+                        <input type="hidden" id="lokasi" name="lokasi" value="" />
                     </div>
                 </div>
             </div>
 
             <!-- PANEL 2: DETAIL KONDISI LERENG (Geometri & Fisik) -->
             <div class="col-12 col-lg-4">
-                <div class="card-sap p-3 h-100" style="border-top: 3px solid #0284c7;">
+                <div class="card-sap p-3 h-100" style="border-top: 3px solid #0ea5e9;">
                     <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
                         <h6 class="mb-0 d-flex align-items-center gap-1.5 fw-bold" style="font-size: 13px; color: var(--text-main);">
                             <span class="badge bg-info text-dark" style="font-size: 10px;">2</span>
@@ -316,13 +330,13 @@
 
                     <!-- Tabs Area Type -->
                     <div class="d-flex gap-1 mb-2 overflow-auto pb-1" id="areaTypeTabs" style="font-size: 10.5px;">
-                        <button type="button" class="btn btn-sm btn-outline-info active py-1 px-2.5 text-nowrap" style="border-radius: 6px;" onclick="selectAreaType('Stockpile', this)">Stockpile</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2.5 text-nowrap" style="border-radius: 6px;" onclick="selectAreaType('Highwall', this)">Highwall</button>
+                        <button type="button" class="btn btn-sm btn-outline-info active py-1 px-2.5 text-nowrap" style="border-radius: 6px;" onclick="selectAreaType('Highwall', this)">Highwall</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2.5 text-nowrap" style="border-radius: 6px;" onclick="selectAreaType('Lowwall', this)">Lowwall</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2.5 text-nowrap" style="border-radius: 6px;" onclick="selectAreaType('Stockpile', this)">Stockpile</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2.5 text-nowrap" style="border-radius: 6px;" onclick="selectAreaType('Disposal', this)">Disposal</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2.5 text-nowrap" style="border-radius: 6px;" onclick="selectAreaType('Infrastruktur', this)">Infrastruktur</button>
                     </div>
-                    <input type="hidden" id="areaType" name="areaType" value="Stockpile" />
+                    <input type="hidden" id="areaType" name="areaType" value="Highwall" />
 
                     <!-- Geometri Lereng -->
                     <div class="p-2.5 rounded-2 mb-2" style="background: rgba(14, 165, 233, 0.04); border: 1px solid var(--border-color);">
@@ -332,32 +346,32 @@
                         </div>
                         <div class="row g-1.5 mb-1.5">
                             <div class="col-4">
-                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Tinggi Jenjang (m)</label>
-                                <input type="number" step="0.1" id="tinggiJenjang" name="tinggiJenjang" class="input-sap py-1 px-2 text-center" value="15.5" onchange="renderBenchSvg()" />
+                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Tinggi (m)</label>
+                                <input type="number" step="0.1" id="tinggiJenjang" name="tinggiJenjang" class="input-sap py-1 px-1 text-center" value="" placeholder="15.0" oninput="renderBenchSvg()" />
                             </div>
                             <div class="col-4">
-                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Lebar Berm (m)</label>
-                                <input type="number" step="0.1" id="lebarBerm" name="lebarBerm" class="input-sap py-1 px-2 text-center" value="8.0" onchange="renderBenchSvg()" />
+                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Berm (m)</label>
+                                <input type="number" step="0.1" id="lebarBerm" name="lebarBerm" class="input-sap py-1 px-1 text-center" value="" placeholder="8.0" oninput="renderBenchSvg()" />
                             </div>
                             <div class="col-4">
-                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Actual Face (&deg;)</label>
-                                <input type="number" step="1" id="actualFaceAngle" name="actualFaceAngle" class="input-sap py-1 px-2 text-center" value="68" onchange="renderBenchSvg()" />
+                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Face (&deg;)</label>
+                                <input type="number" step="1" id="actualFaceAngle" name="actualFaceAngle" class="input-sap py-1 px-1 text-center" value="" placeholder="65" oninput="renderBenchSvg()" />
                             </div>
                         </div>
                         <div class="row g-1.5 mb-2">
                             <div class="col-4">
-                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Design Face (&deg;)</label>
-                                <input type="number" step="1" id="designFaceAngle" name="designFaceAngle" class="input-sap py-1 px-2 text-center" value="70" />
+                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Des Face (&deg;)</label>
+                                <input type="number" step="1" id="designFaceAngle" name="designFaceAngle" class="input-sap py-1 px-1 text-center" value="" placeholder="70" />
                             </div>
                             <div class="col-4">
-                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Overall Slope (&deg;)</label>
-                                <input type="number" step="1" id="overallSlopeAngle" name="overallSlopeAngle" class="input-sap py-1 px-2 text-center" value="42" />
+                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Overall (&deg;)</label>
+                                <input type="number" step="1" id="overallSlopeAngle" name="overallSlopeAngle" class="input-sap py-1 px-1 text-center" value="" placeholder="40" />
                             </div>
                             <div class="col-4">
-                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Status Desain</label>
-                                <select id="kondisiDesain" name="kondisiDesain" class="input-sap py-1 px-1 text-center" style="font-size: 10px;">
-                                    <option value="Sesuai">Sesuai</option>
-                                    <option value="Tidak Sesuai" selected>Tidak Sesuai</option>
+                                <label class="form-label-sap mb-0" style="font-size: 9.5px;">Desain</label>
+                                <select id="kondisiDesain" name="kondisiDesain" class="input-sap py-1 px-0 text-center" style="font-size: 10px;">
+                                    <option value="Sesuai" selected>Sesuai</option>
+                                    <option value="Tidak Sesuai">Tidak Sesuai</option>
                                     <option value="Perlu Kajian">Perlu Kajian</option>
                                 </select>
                             </div>
@@ -368,10 +382,10 @@
                             <svg viewBox="0 0 280 65" id="benchSvg" style="width: 100%; height: 50px; display: block; margin: 0 auto;">
                                 <path d="M 15 20 L 75 20 L 125 55 L 205 55 L 245 20 L 270 20" fill="none" stroke="#0284c7" stroke-width="2.5" />
                                 <text x="40" y="14" fill="var(--text-muted)" font-size="8">Crest</text>
-                                <text x="145" y="50" fill="var(--text-muted)" font-size="8" id="svgBermText">Berm: 8m</text>
-                                <text x="82" y="44" fill="#f59e0b" font-size="8" id="svgFaceText">Face: 68&deg;</text>
+                                <text x="145" y="50" fill="var(--text-muted)" font-size="8" id="svgBermText">Berm: -</text>
+                                <text x="82" y="44" fill="#0284c7" font-size="8" id="svgFaceText">Face: -</text>
                                 <line x1="75" y1="20" x2="75" y2="55" stroke="#ef4444" stroke-width="1" stroke-dasharray="2" />
-                                <text x="50" y="38" fill="#ef4444" font-size="7.5" id="svgHeightText">H: 15.5m</text>
+                                <text x="50" y="38" fill="#ef4444" font-size="7.5" id="svgHeightText">H: -</text>
                             </svg>
                         </div>
                     </div>
@@ -383,51 +397,51 @@
                         </div>
                         <div class="d-flex flex-column gap-2" style="color: var(--text-main);">
                             <!-- Retakan / Crack -->
-                            <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1">
                                 <span>Retakan / Crack:</span>
                                 <div class="btn-group btn-group-sm" role="group">
                                     <input type="radio" class="btn-check" name="kondisiRetakan" id="crackNo" value="Tidak Ada" checked onchange="updateMockupScores()">
-                                    <label class="btn btn-outline-secondary py-0.5 px-2" style="font-size: 10px;" for="crackNo">Tidak</label>
+                                    <label class="btn btn-outline-secondary py-0.5 px-2" style="font-size: 9.5px;" for="crackNo">Tidak</label>
                                     <input type="radio" class="btn-check" name="kondisiRetakan" id="crackMin" value="Ada (Minor)" onchange="updateMockupScores()">
-                                    <label class="btn btn-outline-warning py-0.5 px-2" style="font-size: 10px;" for="crackMin">Minor</label>
+                                    <label class="btn btn-outline-warning py-0.5 px-2" style="font-size: 9.5px;" for="crackMin">Minor</label>
                                     <input type="radio" class="btn-check" name="kondisiRetakan" id="crackSig" value="Ada (Signifikan)" onchange="updateMockupScores()">
-                                    <label class="btn btn-outline-danger py-0.5 px-2" style="font-size: 10px;" for="crackSig">Signifikan</label>
+                                    <label class="btn btn-outline-danger py-0.5 px-2" style="font-size: 9.5px;" for="crackSig">Signifikan</label>
                                 </div>
                             </div>
 
                             <!-- Rockfall -->
-                            <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1">
                                 <span>Rockfall / Runtuhan:</span>
                                 <div class="btn-group btn-group-sm" role="group">
                                     <input type="radio" class="btn-check" name="kondisiRockfall" id="rockNo" value="Tidak Ada" checked onchange="updateMockupScores()">
-                                    <label class="btn btn-outline-secondary py-0.5 px-2" style="font-size: 10px;" for="rockNo">Tidak</label>
+                                    <label class="btn btn-outline-secondary py-0.5 px-2" style="font-size: 9.5px;" for="rockNo">Tidak</label>
                                     <input type="radio" class="btn-check" name="kondisiRockfall" id="rockAda" value="Ada" onchange="updateMockupScores()">
-                                    <label class="btn btn-outline-warning py-0.5 px-2" style="font-size: 10px;" for="rockAda">Ada</label>
+                                    <label class="btn btn-outline-warning py-0.5 px-2" style="font-size: 9.5px;" for="rockAda">Ada</label>
                                 </div>
                             </div>
 
                             <!-- Deformasi / Bulging -->
-                            <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1">
                                 <span>Deformasi / Bulging:</span>
                                 <div class="btn-group btn-group-sm" role="group">
                                     <input type="radio" class="btn-check" name="kondisiBulging" id="bulgNo" value="Tidak Ada" checked onchange="updateMockupScores()">
-                                    <label class="btn btn-outline-secondary py-0.5 px-2" style="font-size: 10px;" for="bulgNo">Tidak</label>
+                                    <label class="btn btn-outline-secondary py-0.5 px-2" style="font-size: 9.5px;" for="bulgNo">Tidak</label>
                                     <input type="radio" class="btn-check" name="kondisiBulging" id="bulgAda" value="Ada" onchange="updateMockupScores()">
-                                    <label class="btn btn-outline-danger py-0.5 px-2" style="font-size: 10px;" for="bulgAda">Ada</label>
+                                    <label class="btn btn-outline-danger py-0.5 px-2" style="font-size: 9.5px;" for="bulgAda">Ada</label>
                                 </div>
                             </div>
 
                             <!-- Rembesan / Seepage -->
-                            <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1">
                                 <span>Rembesan / Seepage:</span>
                                 <div class="d-flex align-items-center gap-1.5">
                                     <div class="btn-group btn-group-sm" role="group">
                                         <input type="radio" class="btn-check" name="kondisiRembesan" id="seepNo" value="Tidak Ada" checked onchange="updateMockupScores()">
-                                        <label class="btn btn-outline-secondary py-0.5 px-2" style="font-size: 10px;" for="seepNo">Tidak</label>
+                                        <label class="btn btn-outline-secondary py-0.5 px-2" style="font-size: 9.5px;" for="seepNo">Tidak</label>
                                         <input type="radio" class="btn-check" name="kondisiRembesan" id="seepAda" value="Ada" onchange="updateMockupScores()">
-                                        <label class="btn btn-outline-info py-0.5 px-2" style="font-size: 10px;" for="seepAda">Ada</label>
+                                        <label class="btn btn-outline-info py-0.5 px-2" style="font-size: 9.5px;" for="seepAda">Ada</label>
                                     </div>
-                                    <input type="number" step="0.1" name="debitRembesan" id="debitRembesan" class="input-sap py-0 px-1 text-center" style="width: 58px; font-size: 10px;" placeholder="Debit" value="0.5" />
+                                    <input type="number" step="0.1" name="debitRembesan" id="debitRembesan" class="input-sap py-0 px-1 text-center" style="width: 58px; font-size: 10px;" placeholder="L/dtk" value="" />
                                 </div>
                             </div>
                         </div>
@@ -465,32 +479,32 @@
                                 <div class="row g-2 mb-2">
                                     <div class="col-4">
                                         <label class="form-label-sap mb-1" style="font-size: 9.5px;">Lebar (mm)</label>
-                                        <input type="number" step="1" id="lebarRetakanMm" name="lebarRetakanMm" class="input-sap py-1 px-2 text-center" value="25" onchange="updateMockupScores()" />
+                                        <input type="number" step="1" id="lebarRetakanMm" name="lebarRetakanMm" class="input-sap py-1 px-1 text-center" value="" placeholder="0" oninput="updateMockupScores()" />
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label-sap mb-1" style="font-size: 9.5px;">Panjang (m)</label>
-                                        <input type="number" step="0.5" id="panjangRetakanM" name="panjangRetakanM" class="input-sap py-1 px-2 text-center" value="12" />
+                                        <input type="number" step="0.5" id="panjangRetakanM" name="panjangRetakanM" class="input-sap py-1 px-1 text-center" value="" placeholder="0" />
                                     </div>
                                     <div class="col-4">
-                                        <label class="form-label-sap mb-1" style="font-size: 9.5px;">Kedalaman (m)</label>
-                                        <input type="number" step="0.1" id="kedalamanRetakanM" name="kedalamanRetakanM" class="input-sap py-1 px-2 text-center" value="0.3" />
+                                        <label class="form-label-sap mb-1" style="font-size: 9.5px;">Dalam (m)</label>
+                                        <input type="number" step="0.1" id="kedalamanRetakanM" name="kedalamanRetakanM" class="input-sap py-1 px-1 text-center" value="" placeholder="0" />
                                     </div>
                                 </div>
                                 <div class="row g-2">
                                     <div class="col-4">
-                                        <label class="form-label-sap mb-1" style="font-size: 9.5px;">Arah / Orientasi</label>
-                                        <input type="text" id="arahRetakan" name="arahRetakan" class="input-sap py-1 px-2 text-center" value="NNE-SW" />
+                                        <label class="form-label-sap mb-1" style="font-size: 9.5px;">Arah Orientasi</label>
+                                        <input type="text" id="arahRetakan" name="arahRetakan" class="input-sap py-1 px-1 text-center" value="" placeholder="N-S..." />
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label-sap mb-1" style="font-size: 9.5px;">Pertumbuhan</label>
-                                        <select id="pertumbuhanRetakan" name="pertumbuhanRetakan" class="input-sap py-1 px-1 text-center" style="font-size: 10px;">
-                                            <option value="Ada" selected>Ada</option>
-                                            <option value="Tidak">Tidak</option>
+                                        <select id="pertumbuhanRetakan" name="pertumbuhanRetakan" class="input-sap py-1 px-0 text-center" style="font-size: 10px;">
+                                            <option value="Tidak" selected>Tidak</option>
+                                            <option value="Ada">Ada</option>
                                         </select>
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label-sap mb-1" style="font-size: 9.5px;">Kecepatan</label>
-                                        <input type="text" id="kecepatanRetakan" name="kecepatanRetakan" class="input-sap py-1 px-2 text-center" value="3 mm/hari" />
+                                        <input type="text" id="kecepatanRetakan" name="kecepatanRetakan" class="input-sap py-1 px-1 text-center" value="" placeholder="mm/hari" />
                                     </div>
                                 </div>
                             </div>
@@ -500,7 +514,7 @@
                         <div class="tab-pane fade" id="pills-sensor" role="tabpanel">
                             <div class="p-2.5 rounded-2 mb-2" style="background: rgba(14, 165, 233, 0.04); border: 1px solid var(--border-color);">
                                 <div class="d-flex justify-content-between align-items-center mb-1.5">
-                                    <span class="fw-bold" style="font-size: 11px; color: var(--text-main);"><i class="bi bi-broadcast text-info me-1"></i> Data Monitoring Sensor Realtime</span>
+                                    <span class="fw-bold" style="font-size: 11px; color: var(--text-main);"><i class="bi bi-broadcast text-info me-1"></i> Data Sensor &amp; Instrumentasi</span>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-sm mb-0 align-middle" style="font-size: 10px; color: var(--text-main);">
@@ -508,8 +522,7 @@
                                             <tr class="border-bottom" style="color: var(--text-muted); border-color: var(--border-color) !important;">
                                                 <th>Instrumen</th>
                                                 <th>ID</th>
-                                                <th>Nilai</th>
-                                                <th>Tren</th>
+                                                <th>Nilai Terkini</th>
                                                 <th>Status</th>
                                             </tr>
                                         </thead>
@@ -517,36 +530,25 @@
                                             <tr style="border-color: var(--border-color);">
                                                 <td class="fw-semibold">Extensometer</td>
                                                 <td>EX-01</td>
-                                                <td>12.5 mm</td>
-                                                <td><i class="bi bi-arrow-up-right text-danger"></i></td>
-                                                <td><span class="badge bg-warning text-dark" style="font-size: 8.5px;">Alert</span></td>
+                                                <td>Normal (0.0 mm)</td>
+                                                <td><span class="badge bg-success" style="font-size: 8.5px;">Normal</span></td>
                                             </tr>
                                             <tr style="border-color: var(--border-color);">
-                                                <td class="fw-semibold">Prism</td>
+                                                <td class="fw-semibold">Prism Monitoring</td>
                                                 <td>PR-03</td>
-                                                <td>-1.2 mm</td>
-                                                <td><i class="bi bi-arrow-right text-success"></i></td>
+                                                <td>Stabil (&lt; 2mm)</td>
                                                 <td><span class="badge bg-success" style="font-size: 8.5px;">Normal</span></td>
                                             </tr>
                                             <tr style="border-color: var(--border-color);">
                                                 <td class="fw-semibold">Piezometer</td>
                                                 <td>PZ-01</td>
-                                                <td>125 kPa</td>
-                                                <td><i class="bi bi-arrow-up text-danger"></i></td>
-                                                <td><span class="badge bg-danger" style="font-size: 8.5px;">Action</span></td>
+                                                <td>TMA Normal</td>
+                                                <td><span class="badge bg-success" style="font-size: 8.5px;">Normal</span></td>
                                             </tr>
                                             <tr style="border-color: var(--border-color);">
-                                                <td class="fw-semibold">InSAR/GBSAR</td>
+                                                <td class="fw-semibold">SSR Radar</td>
                                                 <td>GB-01</td>
-                                                <td>2.8 mm/h</td>
-                                                <td><i class="bi bi-arrow-up-right text-danger"></i></td>
-                                                <td><span class="badge bg-warning text-dark" style="font-size: 8.5px;">Alert</span></td>
-                                            </tr>
-                                            <tr style="border-color: var(--border-color);">
-                                                <td class="fw-semibold">Rainfall Stn</td>
-                                                <td>RF-01</td>
-                                                <td>65 mm/h</td>
-                                                <td><i class="bi bi-arrow-right text-success"></i></td>
+                                                <td>No Velocity Trigger</td>
                                                 <td><span class="badge bg-success" style="font-size: 8.5px;">Normal</span></td>
                                             </tr>
                                         </tbody>
@@ -559,67 +561,67 @@
                     <!-- Hidden 8 Parameter Inputs for Model Compatibility -->
                     <input type="hidden" id="skorGeometriLereng" name="skorGeometriLereng" value="100" />
                     <input type="hidden" id="skorKondisiCrestToe" name="skorKondisiCrestToe" value="100" />
-                    <input type="hidden" id="skorTensionCrack" name="skorTensionCrack" value="70" />
+                    <input type="hidden" id="skorTensionCrack" name="skorTensionCrack" value="100" />
                     <input type="hidden" id="skorKestabilanBatuan" name="skorKestabilanBatuan" value="100" />
-                    <input type="hidden" id="skorRembesanDrainase" name="skorRembesanDrainase" value="70" />
-                    <input type="hidden" id="skorPemantauanSensor" name="skorPemantauanSensor" value="70" />
-                    <input type="hidden" id="skorDemarkasiZona" name="skorDemarkasiZona" value="70" />
+                    <input type="hidden" id="skorRembesanDrainase" name="skorRembesanDrainase" value="100" />
+                    <input type="hidden" id="skorPemantauanSensor" name="skorPemantauanSensor" value="100" />
+                    <input type="hidden" id="skorDemarkasiZona" name="skorDemarkasiZona" value="100" />
                     <input type="hidden" id="skorKepatuhanRekomendasi" name="skorKepatuhanRekomendasi" value="100" />
 
                     <!-- Live Real-time TARP Trigger Card -->
-                    <div class="p-2.5 rounded-2 mt-auto" id="tarpSummaryCard" style="background: rgba(249, 115, 22, 0.12); border: 1.5px solid #f97316;">
+                    <div class="p-2.5 rounded-2 mt-auto" id="tarpSummaryCard" style="background: rgba(16, 185, 129, 0.12); border: 1.5px solid #10b981;">
                         <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge bg-warning text-dark fw-bold px-2 py-1" style="font-size: 11px;" id="tarpBadgeDisplay">TARP 2 - ACTION</span>
-                            <span class="fw-bold" style="font-size: 12px; color: var(--text-main);">Skor Indeks: <span id="gciScoreDisplay">82.5%</span></span>
+                            <span class="badge bg-success fw-bold px-2 py-1" style="font-size: 11px;" id="tarpBadgeDisplay">TARP 0 - NORMAL</span>
+                            <span class="fw-bold" style="font-size: 12px; color: var(--text-main);">Skor: <span id="gciScoreDisplay">100.0%</span></span>
                         </div>
-                        <div class="mt-1" style="font-size: 10.5px; color: var(--text-main);" id="tarpActionHint">
-                            Ketidaksesuaian terdeteksi &bull; Wajib perbaikan jenis material &amp; pembatasan akses operasional.
+                        <div class="mt-1" style="font-size: 10px; color: var(--text-main);" id="tarpActionHint">
+                            Kondisi lereng stabil &amp; aman untuk operasional penambangan.
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ROW 2: Panel 4 (Upload Foto & Dokumen Sesuai Memo) | Panel 5 (Alur Kerja & Personel) | Panel 6 (Tindakan & PIC Search) -->
+        <!-- ROW 2: Panel 4 (Upload Foto) | Panel 5 (Alur Kerja) | Panel 6 (Tindakan & PIC) -->
         <div class="row g-3">
-            <!-- PANEL 4: UPLOAD DOKUMEN & FOTO TEMUAN (SESUAI MEMO FORMAT) -->
+            <!-- PANEL 4: UPLOAD DOKUMEN & FOTO TEMUAN -->
             <div class="col-12 col-lg-4">
                 <div class="card-sap p-3 h-100" style="border-top: 3px solid #eab308;">
                     <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
                         <h6 class="mb-0 d-flex align-items-center gap-1.5 fw-bold" style="font-size: 13px; color: var(--text-main);">
                             <span class="badge bg-warning text-dark" style="font-size: 10px;">4</span>
-                            <span>DOKUMENTASI FOTO &amp; LAPORAN (WAJIB)</span>
+                            <span>DOKUMENTASI FOTO &amp; LAPORAN</span>
                         </h6>
                     </div>
 
                     <div class="d-flex flex-column gap-2 mb-2">
-                        <!-- Foto 1: Foto Temuan / Kondisi Sebelum (seperti Foto Alat Berat & Base Original) -->
+                        <!-- Foto 1: Foto Temuan / Kondisi Sebelum -->
                         <div class="p-2 rounded-2 d-flex align-items-center gap-2" style="background: rgba(14, 165, 233, 0.04); border: 1px solid var(--border-color);">
                             <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
                                 <i class="bi bi-camera-fill"></i>
                             </div>
                             <div style="flex: 1; min-width: 0;">
-                                <div class="fw-bold text-truncate" style="font-size: 11px; color: var(--text-main);">1. Foto Temuan (Kondisi Sebelum)</div>
-                                <div style="font-size: 9.5px; color: var(--text-muted);" id="fotoTemuanName">Foto_Temuan_Base_ROM_D.jpg</div>
+                                <div class="fw-bold text-truncate" style="font-size: 11px; color: var(--text-main);">1. Foto Temuan Lapangan</div>
+                                <div style="font-size: 9.5px; color: var(--text-muted);" id="fotoTemuanName">Belum ada file dipilih</div>
                             </div>
                             <label class="btn btn-sm btn-outline-info py-1 px-2 mb-0" style="font-size: 10px; cursor: pointer;">
                                 <i class="bi bi-upload"></i>
-                                <input type="file" name="fotoTemuan" class="d-none" accept="image/*" onchange="previewUpload(this, '#fotoTemuanName')" />
+                                <input type="file" id="fotoTemuan" name="fotoTemuan" class="d-none" accept="image/*" onchange="previewUpload(this, '#fotoTemuanName')" />
                             </label>
                         </div>
 
-                        <!-- Foto 2: Foto Rekomendasi / Desain Penanganan (seperti Frame Design OB Fresh) -->
+                        <!-- Foto 2: Foto Rekomendasi / Desain Penanganan -->
                         <div class="p-2 rounded-2 d-flex align-items-center gap-2" style="background: rgba(14, 165, 233, 0.04); border: 1px solid var(--border-color);">
                             <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(6, 182, 212, 0.15); color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
                                 <i class="bi bi-images"></i>
                             </div>
                             <div style="flex: 1; min-width: 0;">
-                                <div class="fw-bold text-truncate" style="font-size: 11px; color: var(--text-main);">2. Foto Rekomendasi / Frame Desain</div>
-                                <div style="font-size: 9.5px; color: var(--text-muted);" id="fotoRekomendasiName">Desain_Rekomendasi_ROM_D.jpg</div>
+                                <div class="fw-bold text-truncate" style="font-size: 11px; color: var(--text-main);">2. Foto Desain / Rekomendasi</div>
+                                <div style="font-size: 9.5px; color: var(--text-muted);" id="fotoRekomendasiName">Belum ada file dipilih</div>
                             </div>
                             <label class="btn btn-sm btn-outline-info py-1 px-2 mb-0" style="font-size: 10px; cursor: pointer;">
                                 <i class="bi bi-upload"></i>
-                                <input type="file" name="fotoRekomendasi" class="d-none" accept="image/*" onchange="previewUpload(this, '#fotoRekomendasiName')" />
+                                <input type="file" id="fotoRekomendasi" name="fotoRekomendasi" class="d-none" accept="image/*" onchange="previewUpload(this, '#fotoRekomendasiName')" />
                             </label>
                         </div>
 
@@ -630,11 +632,11 @@
                             </div>
                             <div style="flex: 1; min-width: 0;">
                                 <div class="fw-bold text-truncate" style="font-size: 11px; color: var(--text-main);">3. Dokumen Topo / Drone Update</div>
-                                <div style="font-size: 9.5px; color: var(--text-muted);" id="petaDesainName">Memo_Geotek_ROM_D.pdf</div>
+                                <div style="font-size: 9.5px; color: var(--text-muted);" id="petaDesainName">Belum ada file dipilih</div>
                             </div>
                             <label class="btn btn-sm btn-outline-info py-1 px-2 mb-0" style="font-size: 10px; cursor: pointer;">
                                 <i class="bi bi-upload"></i>
-                                <input type="file" name="petaDesain" class="d-none" accept="image/*,.pdf,.zip,.kmz" onchange="previewUpload(this, '#petaDesainName')" />
+                                <input type="file" id="petaDesain" name="petaDesain" class="d-none" accept="image/*,.pdf,.zip,.kmz" onchange="previewUpload(this, '#petaDesainName')" />
                             </label>
                         </div>
                     </div>
@@ -661,7 +663,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-3 px-1" style="font-size: 9.5px;">
                         <div class="text-center">
                             <div style="width: 24px; height: 24px; border-radius: 50%; background: #0284c7; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 2px; font-weight: 700;">1</div>
-                            <span class="fw-bold" style="color: var(--text-main);">Inspeksi</span>
+                            <span class="fw-bold text-primary">Inspeksi</span>
                         </div>
                         <div style="height: 2px; background: #0284c7; flex: 1; margin: 0 4px -12px;"></div>
                         <div class="text-center">
@@ -699,17 +701,17 @@
                                 <tr style="border-color: var(--border-color);">
                                     <td class="fw-bold">@userNama</td>
                                     <td><span class="badge bg-primary" style="font-size: 8.5px;">Inspector</span></td>
-                                    <td style="color: var(--text-muted);">Inspeksi lapangan &amp; rekomendasi</td>
+                                    <td style="color: var(--text-muted);">Inspeksi lapangan &amp; penilaian GCI</td>
                                 </tr>
                                 <tr style="border-color: var(--border-color);">
-                                    <td class="fw-bold" id="pjaTableDisplay">Rudi Saputra</td>
+                                    <td class="fw-bold" id="pjaTableDisplay">-</td>
                                     <td><span class="badge bg-warning text-dark" style="font-size: 8.5px;">PJA</span></td>
-                                    <td style="color: var(--text-muted);">Review operasional kontraktor</td>
+                                    <td style="color: var(--text-muted);">Review operasional &amp; validasi</td>
                                 </tr>
                                 <tr style="border-color: var(--border-color);">
-                                    <td class="fw-bold" id="picTableDisplay">Andi Pratama</td>
+                                    <td class="fw-bold" id="picTableDisplay">-</td>
                                     <td><span class="badge bg-info text-dark" style="font-size: 8.5px;">PIC Action</span></td>
-                                    <td style="color: var(--text-muted);">Pelaksana tindakan perbaikan</td>
+                                    <td style="color: var(--text-muted);">Pelaksana tindakan perbaikan lereng</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -717,7 +719,7 @@
 
                     <div class="form-group-sap mb-0">
                         <label class="form-label-sap" style="font-size: 10px;">Deskripsi Temuan / Catatan Inspeksi:</label>
-                        <textarea id="catatan" name="catatan" class="input-sap py-1 px-2" rows="2" style="font-size: 11px;" placeholder="Berdasarkan hasil inspeksi di area plan Extend Stockpile ROM D, ditemukan adanya ketidaksesuaian jenis material yang telah didumping pada area tersebut...">Berdasarkan inspeksi area Extend Stockpile ROM D, base dumpingan hanya vegetasi clearing tanpa scraping material original lunak. Uji DCP menunjukkan kedalaman 1-1.5m sangat lunak.</textarea>
+                        <textarea id="catatan" name="catatan" class="input-sap py-1 px-2" rows="2" style="font-size: 11px;" placeholder="Tuliskan catatan observasi lapangan, kondisi geologi, rembesan air, atau situasi khusus..."></textarea>
                     </div>
                 </div>
             </div>
@@ -737,13 +739,13 @@
                         <label class="form-label-sap" style="font-size: 10.5px;">
                             <i class="bi bi-shield-check text-success me-1"></i> Rekomendasi Tindakan Geoteknik: <span class="text-danger">*</span>
                         </label>
-                        <textarea id="tindakanPerbaikan" name="tindakanPerbaikan" class="input-sap py-1 px-2" rows="2" style="font-size: 11px;" required>Wajib scraping / eliminasi material original lunak minimal 2m. Gunakan OB Fresh pada frame design & lakukan compacting 7-8x passing.</textarea>
+                        <textarea id="tindakanPerbaikan" name="tindakanPerbaikan" class="input-sap py-1 px-2" rows="2" style="font-size: 11px;" placeholder="Contoh: Pembuatan saluran drainase keliling, perataan crest, atau penutupan retakan..." required></textarea>
                     </div>
 
                     <!-- PIC PELAKSANA (SEARCH DATA KARYAWAN + NOTIFIKASI) -->
                     <div class="form-group-sap mb-2 position-relative">
                         <label class="form-label-sap d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-person-fill-check text-info me-1"></i> PIC Pelaksana (Action By) <span class="text-danger">*</span></span>
+                            <span><i class="bi bi-person-fill-check text-info me-1"></i> PIC Pelaksana (Action By)</span>
                             <span class="badge bg-primary" style="font-size: 8.5px;"><i class="bi bi-bell-fill me-1"></i>Notifikasi SAP</span>
                         </label>
 
@@ -762,14 +764,14 @@
                         </div>
 
                         <!-- Card PIC Terpilih -->
-                        <div id="picSelectedCard" class="p-2 rounded-2 mt-1.5 d-flex align-items-center justify-content-between" style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.3);">
+                        <div id="picSelectedCard" class="p-2 rounded-2 mt-1.5 d-flex align-items-center justify-content-between d-none" style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.3);">
                             <div class="d-flex align-items-center gap-2">
                                 <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 11px;" id="picAvatar">
-                                    AP
+                                    ?
                                 </div>
                                 <div>
-                                    <div class="fw-bold" style="font-size: 11.5px; color: var(--text-main);" id="picNamaText">Andi Pratama</div>
-                                    <div style="font-size: 9.5px; color: var(--text-muted);" id="picDetailText">NIK: 506231043 &bull; Geoteknik &bull; INDEXIM</div>
+                                    <div class="fw-bold" style="font-size: 11.5px; color: var(--text-main);" id="picNamaText">-</div>
+                                    <div style="font-size: 9.5px; color: var(--text-muted);" id="picDetailText">Pilih PIC pelaksana perbaikan</div>
                                 </div>
                             </div>
                             <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 10px; border-radius: 6px;" onclick="clearSelectedPic()">
@@ -777,8 +779,8 @@
                             </button>
                         </div>
 
-                        <input type="hidden" id="pic" name="pic" value="Andi Pratama" />
-                        <input type="hidden" id="picNik" name="picNik" value="506231043" />
+                        <input type="hidden" id="pic" name="pic" value="" />
+                        <input type="hidden" id="picNik" name="picNik" value="" />
                         <div style="font-size: 9.5px; color: var(--text-muted);" class="mt-1">
                             <i class="bi bi-info-circle me-1"></i>PIC terpilih akan otomatis menerima notifikasi tugas perbaikan di dashboard &amp; lonceng SAP.
                         </div>
@@ -786,15 +788,224 @@
 
                     <!-- Action Buttons -->
                     <div class="d-flex gap-2 mt-auto pt-2 border-top" style="border-color: var(--border-color) !important;">
-                        <button type="submit" class="btn btn-primary flex-grow-1 shadow-sm font-weight-bold py-2.5 d-flex align-items-center justify-content-center gap-1.5" style="background: linear-gradient(135deg, #0284c7, #38bdf8); border: none; font-size: 13.5px; border-radius: 10px;">
+                        <button type="button" class="btn btn-outline-secondary py-2.5 px-3 d-none" id="btnCancelEdit" style="border-radius: 10px; font-weight: 600; font-size: 13px;" onclick="resetGciForm()">
+                            Batal Edit
+                        </button>
+                        <button type="submit" id="btnSubmitGci" class="btn btn-primary flex-grow-1 shadow-sm font-weight-bold py-2.5 d-flex align-items-center justify-content-center gap-1.5" style="background: linear-gradient(135deg, #0284c7, #38bdf8); border: none; font-size: 13.5px; border-radius: 10px;">
                             <i class="bi bi-save-fill"></i>
-                            <span>Submit Inspeksi &amp; Kirim Tugas</span>
+                            <span id="btnSubmitText">Submit Inspeksi &amp; Kirim Tugas</span>
                         </button>
                     </div>
                 </div>
             </div>
         </div>
     </form>
+
+    <!-- 3. TABEL RIWAYAT LAPORAN INSPEKSI GCI & FILTER SECTION -->
+    <div class="mt-4" id="riwayatTableSection">
+        <div class="card-sap p-3 p-md-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <div>
+                    <h5 class="mb-0 fw-bold d-flex align-items-center gap-2" style="color: var(--text-main); font-size: 15px;">
+                        <i class="bi bi-journal-text text-primary"></i>
+                        <span>Riwayat Laporan Geotechnical Condition Index (GCI)</span>
+                        <span class="badge bg-secondary" style="font-size: 11px;">@reportsList.Count Laporan</span>
+                    </h5>
+                    <p class="mb-0 text-muted" style="font-size: 11px;">Daftar lengkap hasil inspeksi lereng geoteknik, status TARP, dan tindak lanjut perbaikan.</p>
+                </div>
+            </div>
+
+            <!-- Filter Bar Form (GET) -->
+            <form method="get" asp-action="Index" class="mb-3 p-2.5 rounded-3" style="background: rgba(14, 165, 233, 0.04); border: 1px solid var(--border-color);">
+                <div class="row g-2 align-items-center">
+                    <div class="col-12 col-md-3">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text" style="background: var(--bg-card); border-color: var(--border-color); color: var(--text-muted);"><i class="bi bi-search"></i></span>
+                            <input type="text" name="search" class="form-control input-sap" placeholder="Cari pelapor, lereng, pit..." value="@ViewBag.CurrentSearch" />
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <select name="pit" class="input-sap py-1">
+                            <option value="">Semua Pit / Sektor</option>
+                            @if (pitList != null)
+                            {
+                                @foreach (var p in pitList)
+                                {
+                                    if (p == (string)ViewBag.CurrentPit)
+                                    {
+                                        <option value="@p" selected>@p</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@p">@p</option>
+                                    }
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <select name="tarpLevel" class="input-sap py-1">
+                            <option value="">Semua Status TARP</option>
+                            <option value="GREEN" selected="@(ViewBag.CurrentTarpLevel == "GREEN")">GREEN (TARP 0)</option>
+                            <option value="YELLOW" selected="@(ViewBag.CurrentTarpLevel == "YELLOW")">YELLOW (TARP 1)</option>
+                            <option value="ORANGE" selected="@(ViewBag.CurrentTarpLevel == "ORANGE")">ORANGE (TARP 2)</option>
+                            <option value="RED" selected="@(ViewBag.CurrentTarpLevel == "RED")">RED (TARP 3)</option>
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <input type="date" name="startDate" class="input-sap py-1" value="@ViewBag.StartDate" title="Tanggal Mulai" />
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <input type="date" name="endDate" class="input-sap py-1" value="@ViewBag.EndDate" title="Tanggal Selesai" />
+                    </div>
+                    <div class="col-12 col-md-1 d-flex gap-1">
+                        <button type="submit" class="btn btn-sm btn-primary flex-fill" style="background: #0284c7; border: none; border-radius: 8px;">
+                            <i class="bi bi-filter"></i> Filter
+                        </button>
+                        <a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Reset Filter" style="border-radius: 8px;">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Table Riwayat Laporan -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="font-size: 11.5px; color: var(--text-main);">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 11px;">
+                            <th style="width: 40px;">No</th>
+                            <th>Tanggal &amp; Waktu</th>
+                            <th>Judul / Temuan</th>
+                            <th>Pit &amp; Sektor</th>
+                            <th>Nama Lereng &amp; Tipe</th>
+                            <th>Skor GCI</th>
+                            <th>TARP Status</th>
+                            <th>Inspector / PJA</th>
+                            <th>PIC &amp; Target</th>
+                            <th class="text-center" style="width: 100px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!reportsList.Any())
+                        {
+                            <tr>
+                                <td colspan="10" class="text-center py-4 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-1"></i>
+                                    Belum ada data laporan GCI untuk filter periode ini.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            int no = 1;
+                            foreach (var r in reportsList)
+                            {
+                                string tarpBadgeClass = r.TarpLevel switch
+                                {
+                                    "RED" => "bg-danger",
+                                    "ORANGE" => "bg-warning text-dark",
+                                    "YELLOW" => "bg-warning text-dark",
+                                    _ => "bg-success"
+                                };
+
+                                <tr style="border-bottom: 1px solid var(--border-color);">
+                                    <td class="text-muted fw-bold">@no</td>
+                                    <td>
+                                        <div class="fw-bold">@r.Tanggal.ToString("dd MMM yyyy")</div>
+                                        <div style="font-size: 10px; color: var(--text-muted);">@r.Waktu.ToString(@"hh\:mm") &bull; @(r.Shift ?? "Day Shift")</div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-truncate" style="max-width: 200px;" title="@r.JudulTemuan">
+                                            @(string.IsNullOrEmpty(r.JudulTemuan) ? "Inspeksi Kestabilan Lereng" : r.JudulTemuan)
+                                        </div>
+                                        <div style="font-size: 10px; color: var(--text-muted);">
+                                            @(r.JenisInspeksi ?? "Inspeksi Rutin")
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge" style="background: rgba(14, 165, 233, 0.12); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.25); font-size: 10.5px;">
+                                            @(string.IsNullOrEmpty(r.Pit) ? "-" : r.Pit)
+                                        </span>
+                                        @if (!string.IsNullOrEmpty(r.Area) && r.Area != r.Pit)
+                                        {
+                                            <div style="font-size: 9.5px; color: var(--text-muted);" class="mt-0.5">@r.Area</div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">@(r.NamaLereng ?? r.Lokasi)</div>
+                                        <div style="font-size: 10px; color: var(--text-muted);">
+                                            Tipe: @(r.AreaType ?? "Highwall") &bull; RL: @(r.ElevasiRl.HasValue ? r.ElevasiRl.Value.ToString("0") + "m" : "-")
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold" style="font-size: 12px;">@r.TotalScore%</span>
+                                        <div style="font-size: 10px; color: var(--text-muted);">@r.KategoriIndex</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge @tarpBadgeClass px-2 py-1" style="font-size: 10.5px; font-weight: 700;">
+                                            TARP @r.TarpLevel
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">@r.Nama</div>
+                                        <div style="font-size: 10px; color: var(--text-muted);">PJA: @(string.IsNullOrEmpty(r.PjaNama) ? "-" : r.PjaNama)</div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-truncate" style="max-width: 140px;">@(string.IsNullOrEmpty(r.Pic) ? "-" : r.Pic)</div>
+                                        <div style="font-size: 10px; color: var(--text-muted);">
+                                            Target: @(r.DueDate.HasValue ? r.DueDate.Value.ToString("dd/MM/yy") : "-")
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-info py-0.5 px-1.5" title="Muat / Edit Form" onclick="loadReportToForm(@System.Text.Json.JsonSerializer.Serialize(r))">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary py-0.5 px-1.5" title="Lihat Detail" onclick="showDetailModal(@System.Text.Json.JsonSerializer.Serialize(r))">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <form asp-action="Delete" asp-route-id="@r.Id" method="post" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus laporan GCI di @(r.NamaLereng ?? r.Lokasi)?');">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-outline-danger py-0.5 px-1.5" title="Hapus">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                no++;
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DETAIL LAPORAN GCI -->
+<div class="modal fade" id="modalGciDetail" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px;">
+            <div class="modal-header pb-2" style="border-bottom: 1px solid var(--border-color);">
+                <div>
+                    <h6 class="modal-title fw-bold d-flex align-items-center gap-2" style="color: var(--text-main);">
+                        <i class="bi bi-triangle-half text-primary"></i>
+                        <span id="modalDetailTitle">Detail Laporan Geoteknik (GCI)</span>
+                    </h6>
+                    <div style="font-size: 11px; color: var(--text-muted);" id="modalDetailSubtitle">-</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="font-size: 12px; color: var(--text-main);" id="modalDetailBody">
+                <!-- Content will be rendered dynamically -->
+            </div>
+            <div class="modal-footer pt-2" style="border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -836,18 +1047,68 @@
     .emp-search-item:last-child {
         border-bottom: none;
     }
+
+    /* Penyesuaian Responsif & Tampilan Mobile */
     @@media (max-width: 768px) {
+        .gci-container {
+            padding-bottom: 95px !important;
+        }
         .card-sap {
             padding: 12px !important;
+            margin-bottom: 12px !important;
+            border-radius: 12px !important;
+        }
+        .screen-title {
+            font-size: 14.5px !important;
+        }
+        .screen-subtitle {
+            font-size: 10px !important;
+        }
+        .kpi-num {
+            font-size: 1.25rem !important;
         }
         .btn {
-            min-height: 38px;
+            min-height: 36px;
+        }
+        .btn-group-sm > .btn {
+            padding: 3px 6px;
+            font-size: 9.5px;
+        }
+        .input-group > .input-sap {
+            font-size: 11.5px;
         }
     }
 </style>
 
 @section Scripts {
 <script>
+    // Set Pit dari Dropdown atau Pilihan Cepat
+    function setPitValue(val) {
+        $('#pit').val(val);
+        syncPitArea();
+    }
+
+    function syncPitArea() {
+        updateLokasiFull();
+    }
+
+    function updateLokasiFull() {
+        const pitVal = ($('#pit').val() || '').trim();
+        const areaVal = ($('#area').val() || '').trim();
+        const lerengVal = ($('#namaLereng').val() || '').trim();
+        const elVal = $('#elevasiRl').val() ? ` EL ${$('#elevasiRl').val()}m` : '';
+
+        let parts = [];
+        if (pitVal) parts.push(pitVal);
+        if (areaVal) parts.push(areaVal);
+        if (lerengVal) parts.push(lerengVal);
+
+        let loc = parts.join(' - ');
+        if (elVal) loc += elVal;
+
+        $('#lokasi').val(loc || 'Area Geoteknik');
+    }
+
     // Live Search PIC (Action By)
     let picSearchTimeout = null;
     function searchPicLive(query) {
@@ -893,7 +1154,7 @@
         $('#pic').val(nama);
         $('#picNik').val(nik);
         $('#picNamaText').text(nama);
-        $('#picDetailText').text(`NIK: ${nik} • ${jabatan} • ${perusahaan}`);
+        $('#picDetailText').text(`NIK: ${nik} • ${jabatan || 'Pelaksana'} • ${perusahaan || ''}`);
         $('#picTableDisplay').text(nama);
         
         const initials = (nama || 'XX').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
@@ -906,6 +1167,9 @@
     }
 
     function clearSelectedPic() {
+        $('#pic').val('');
+        $('#picNik').val('');
+        $('#picTableDisplay').text('-');
         $('#picSearchWrapper').removeClass('d-none');
         $('#picSelectedCard').addClass('d-none');
         $('#picSearchInput').focus();
@@ -968,36 +1232,32 @@
         $(btn).addClass('active btn-outline-info').removeClass('btn-outline-secondary');
     }
 
-    function updateAreaPit(val) {
-        $('#pit').val(val);
-        $('#area').val(val);
-        $('#namaLereng').val(`Pad ${val} - Sektor Utama`);
-        $('#lokasi').val(`${val} EL 65`);
-    }
-
     function renderBenchSvg() {
-        const h = $('#tinggiJenjang').val() || 15.5;
-        const b = $('#lebarBerm').val() || 8.0;
-        const f = $('#actualFaceAngle').val() || 68;
+        const h = $('#tinggiJenjang').val();
+        const b = $('#lebarBerm').val();
+        const f = $('#actualFaceAngle').val();
 
-        $('#svgHeightText').text(`H: ${h}m`);
-        $('#svgBermText').text(`Berm: ${b}m`);
-        $('#svgFaceText').text(`Face: ${f}°`);
+        $('#svgHeightText').text(h ? `H: ${h}m` : 'H: -');
+        $('#svgBermText').text(b ? `Berm: ${b}m` : 'Berm: -');
+        $('#svgFaceText').text(f ? `Face: ${f}°` : 'Face: -');
     }
 
     function previewUpload(input, targetLabel) {
         if (input.files && input.files[0]) {
             $(targetLabel).text(input.files[0].name);
+        } else {
+            $(targetLabel).text('Belum ada file dipilih');
         }
     }
 
     function updateMockupScores() {
-        const crackVal = $('input[name="kondisiRetakan"]:checked').val();
-        const seepVal = $('input[name="kondisiRembesan"]:checked').val();
-        const bulgVal = $('input[name="kondisiBulging"]:checked').val();
+        const crackVal = $('input[name="kondisiRetakan"]:checked').val() || "Tidak Ada";
+        const seepVal = $('input[name="kondisiRembesan"]:checked').val() || "Tidak Ada";
+        const bulgVal = $('input[name="kondisiBulging"]:checked').val() || "Tidak Ada";
+        const rockVal = $('input[name="kondisiRockfall"]:checked').val() || "Tidak Ada";
         const crackMm = parseFloat($('#lebarRetakanMm').val()) || 0;
 
-        let score = 100;
+        let score = 100.0;
         let tarp = "TARP 0 - NORMAL";
         let tarpBadge = "bg-success";
         let tarpBorder = "#10b981";
@@ -1005,23 +1265,28 @@
         let hint = "Kondisi lereng stabil & aman untuk operasional.";
 
         if (crackVal === "Ada (Signifikan)" || bulgVal === "Ada" || crackMm >= 50) {
-            score = 65.0;
+            score = 60.0;
             tarp = "TARP 2 - ACTION";
             tarpBadge = "bg-warning text-dark";
             tarpBorder = "#f97316";
             tarpBg = "rgba(249, 115, 22, 0.12)";
-            hint = `Ketidaksesuaian material / retakan signifikan (${crackMm} mm)! Terapkan zona eksklusi & perbaikan dumping.`;
+            hint = `Ketidaksesuaian kritis / retakan signifikan (${crackMm} mm)! Terapkan zona eksklusi & perbaikan dumping.`;
             $('#skorTensionCrack').val(40);
-        } else if (crackVal === "Ada (Minor)" || seepVal === "Ada" || crackMm > 0) {
-            score = 82.5;
+            $('#skorKestabilanBatuan').val(bulgVal === "Ada" ? 40 : 70);
+        } else if (crackVal === "Ada (Minor)" || seepVal === "Ada" || rockVal === "Ada" || crackMm > 0) {
+            score = 80.0;
             tarp = "TARP 1 - ALERT";
             tarpBadge = "bg-warning text-dark";
             tarpBorder = "#eab308";
             tarpBg = "rgba(234, 179, 8, 0.12)";
-            hint = `Retakan minor (${crackMm} mm) / rembesan air terdeteksi. Tingkatkan monitoring berkala.`;
-            $('#skorTensionCrack').val(70);
+            hint = `Retakan minor (${crackMm} mm) / rembesan air / rockfall terdeteksi. Tingkatkan monitoring berkala.`;
+            $('#skorTensionCrack').val(crackMm > 0 ? 70 : 100);
+            $('#skorRembesanDrainase').val(seepVal === "Ada" ? 70 : 100);
+            $('#skorKestabilanBatuan').val(rockVal === "Ada" ? 70 : 100);
         } else {
             $('#skorTensionCrack').val(100);
+            $('#skorKestabilanBatuan').val(100);
+            $('#skorRembesanDrainase').val(100);
         }
 
         $('#gciScoreDisplay').text(score.toFixed(1) + "%");
@@ -1031,11 +1296,285 @@
     }
 
     function resetGciForm() {
+        // Reset form inputs
         $('#formGci')[0].reset();
+        $('#gciId').val('');
+        $('#judulTemuan').val('');
+        $('#dueDate').val('');
         $('#tanggal').val('@DateTime.Today.ToString("yyyy-MM-dd")');
         $('#waktuStr').val('@DateTime.Now.ToString("HH:mm")');
+        $('#shift').val('Day Shift');
+        $('#perusahaan').val('PT Indexim Coalindo');
+        $('#pjaSearchInput').val('');
+        $('#pjaNama').val('');
+        $('#pjaNik').val('');
+        $('#pjaTableDisplay').text('-');
+
+        // Reset Pit, Sektor & Lokasi
+        $('#pit').val('');
+        $('#area').val('');
+        $('#namaLereng').val('');
+        $('#elevasiRl').val('');
+        $('#detilLokasi').val('');
+        $('#latitude').val('');
+        $('#longitude').val('');
+        $('#lokasi').val('');
+
+        // Reset Geometri
+        $('#tinggiJenjang').val('');
+        $('#lebarBerm').val('');
+        $('#actualFaceAngle').val('');
+        $('#designFaceAngle').val('');
+        $('#overallSlopeAngle').val('');
+        $('#kondisiDesain').val('Sesuai');
+
+        // Reset Radio Fisik
+        $('#crackNo').prop('checked', true);
+        $('#rockNo').prop('checked', true);
+        $('#bulgNo').prop('checked', true);
+        $('#seepNo').prop('checked', true);
+        $('#debitRembesan').val('');
+
+        // Reset Ukur Retakan
+        $('#lebarRetakanMm').val('');
+        $('#panjangRetakanM').val('');
+        $('#kedalamanRetakanM').val('');
+        $('#arahRetakan').val('');
+        $('#pertumbuhanRetakan').val('Tidak');
+        $('#kecepatanRetakan').val('');
+
+        // Reset Foto Labels
+        $('#fotoTemuanName').text('Belum ada file dipilih');
+        $('#fotoRekomendasiName').text('Belum ada file dipilih');
+        $('#petaDesainName').text('Belum ada file dipilih');
+
+        // Reset Catatan & Tindakan
+        $('#catatan').val('');
+        $('#tindakanPerbaikan').val('');
+
+        // Reset PIC
+        clearSelectedPic();
+
+        // Reset Edit Mode UI
+        $('#editModeBadge').addClass('d-none');
+        $('#btnCancelEdit').addClass('d-none');
+        $('#btnSubmitText').text('Submit Inspeksi & Kirim Tugas');
+
         renderBenchSvg();
         updateMockupScores();
+    }
+
+    function loadReportToForm(report) {
+        if (!report) return;
+
+        // Set ID & Edit mode
+        $('#gciId').val(report.Id);
+        $('#editModeBadge').removeClass('d-none');
+        $('#btnCancelEdit').removeClass('d-none');
+        $('#btnSubmitText').text('Perbarui Laporan GCI #' + report.Id);
+
+        // Header
+        $('#judulTemuan').val(report.JudulTemuan || '');
+        if (report.DueDate) {
+            $('#dueDate').val(report.DueDate.substring(0, 10));
+        } else {
+            $('#dueDate').val('');
+        }
+
+        // Panel 1
+        $('#jenisInspeksi').val(report.JenisInspeksi || 'Inspeksi Rutin');
+        if (report.Tanggal) {
+            $('#tanggal').val(report.Tanggal.substring(0, 10));
+        }
+        if (report.Waktu) {
+            $('#waktuStr').val(typeof report.Waktu === 'string' ? report.Waktu.substring(0, 5) : '08:00');
+        }
+        $('#shift').val(report.Shift || 'Day Shift');
+        $('#perusahaan').val(report.Perusahaan || 'PT Indexim Coalindo');
+
+        if (report.PjaNama) {
+            selectPja(report.PjaNik || '', report.PjaNama);
+        } else {
+            $('#pjaSearchInput').val('');
+            $('#pjaNama').val('');
+            $('#pjaNik').val('');
+            $('#pjaTableDisplay').text('-');
+        }
+
+        // Pit, Sektor & Lokasi
+        $('#pit').val(report.Pit || '');
+        $('#area').val(report.Area || '');
+        $('#namaLereng').val(report.NamaLereng || '');
+        $('#elevasiRl').val(report.ElevasiRl || '');
+        $('#detilLokasi').val(report.DetilLokasi || '');
+        $('#latitude').val(report.Latitude || '');
+        $('#longitude').val(report.Longitude || '');
+        $('#lokasi').val(report.Lokasi || '');
+
+        // Panel 2
+        if (report.AreaType) {
+            const btn = $(`#areaTypeTabs button:contains("${report.AreaType}")`);
+            if (btn.length) {
+                selectAreaType(report.AreaType, btn[0]);
+            } else {
+                $('#areaType').val(report.AreaType);
+            }
+        }
+        $('#tinggiJenjang').val(report.TinggiJenjang || '');
+        $('#lebarBerm').val(report.LebarBerm || '');
+        $('#actualFaceAngle').val(report.ActualFaceAngle || '');
+        $('#designFaceAngle').val(report.DesignFaceAngle || '');
+        $('#overallSlopeAngle').val(report.OverallSlopeAngle || '');
+        $('#kondisiDesain').val(report.KondisiDesain || 'Sesuai');
+
+        // Radios Fisik
+        if (report.KondisiRetakan === 'Ada (Signifikan)') $('#crackSig').prop('checked', true);
+        else if (report.KondisiRetakan === 'Ada (Minor)') $('#crackMin').prop('checked', true);
+        else $('#crackNo').prop('checked', true);
+
+        if (report.KondisiRockfall === 'Ada') $('#rockAda').prop('checked', true);
+        else $('#rockNo').prop('checked', true);
+
+        if (report.KondisiBulging === 'Ada') $('#bulgAda').prop('checked', true);
+        else $('#bulgNo').prop('checked', true);
+
+        if (report.KondisiRembesan === 'Ada') $('#seepAda').prop('checked', true);
+        else $('#seepNo').prop('checked', true);
+
+        $('#debitRembesan').val(report.DebitRembesan || '');
+
+        // Panel 3
+        $('#lebarRetakanMm').val(report.LebarRetakanMm || '');
+        $('#panjangRetakanM').val(report.PanjangRetakanM || '');
+        $('#kedalamanRetakanM').val(report.KedalamanRetakanM || '');
+        $('#arahRetakan').val(report.ArahRetakan || '');
+        $('#pertumbuhanRetakan').val(report.PertumbuhanRetakan || 'Tidak');
+        $('#kecepatanRetakan').val(report.KecepatanRetakan || '');
+
+        // Panel 4 foto
+        $('#fotoTemuanName').text(report.FotoTemuanUrl ? 'File tersimpan sebelumnya' : 'Belum ada file dipilih');
+        $('#fotoRekomendasiName').text(report.FotoRekomendasiUrl ? 'File tersimpan sebelumnya' : 'Belum ada file dipilih');
+        $('#petaDesainName').text(report.PetaDesainUrl ? 'File tersimpan sebelumnya' : 'Belum ada file dipilih');
+
+        // Panel 5 & 6
+        $('#catatan').val(report.Catatan || '');
+        $('#tindakanPerbaikan').val(report.TindakanPerbaikan || '');
+
+        if (report.Pic) {
+            selectPic(report.PicNik || '', report.Pic, 'PIC', '');
+        } else {
+            clearSelectedPic();
+        }
+
+        renderBenchSvg();
+        updateMockupScores();
+
+        // Scroll to form smoothly
+        $('html, body').animate({
+            scrollTop: $('#formHeaderCard').offset().top - 80
+        }, 300);
+    }
+
+    function showDetailModal(report) {
+        if (!report) return;
+
+        $('#modalDetailTitle').text(report.JudulTemuan || 'Laporan GCI: ' + (report.NamaLereng || report.Lokasi));
+        $('#modalDetailSubtitle').text(`${report.Pit || '-'} • ${report.Tanggal ? report.Tanggal.substring(0, 10) : ''} • TARP ${report.TarpLevel || 'GREEN'}`);
+
+        let html = `
+            <div class="row g-2 mb-3">
+                <div class="col-6 col-md-3">
+                    <div class="p-2 rounded-2" style="background: rgba(14, 165, 233, 0.08);">
+                        <div class="text-muted" style="font-size: 10px;">TARP LEVEL</div>
+                        <div class="fw-bold fs-6 text-primary">TARP ${report.TarpLevel || 'GREEN'}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-2 rounded-2" style="background: rgba(16, 185, 129, 0.08);">
+                        <div class="text-muted" style="font-size: 10px;">SKOR INDEKS GCI</div>
+                        <div class="fw-bold fs-6 text-success">${report.TotalScore}% (${report.KategoriIndex})</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-2 rounded-2" style="background: rgba(249, 115, 22, 0.08);">
+                        <div class="text-muted" style="font-size: 10px;">INSPECTOR</div>
+                        <div class="fw-bold">${report.Nama || '-'}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-2 rounded-2" style="background: rgba(168, 85, 247, 0.08);">
+                        <div class="text-muted" style="font-size: 10px;">PJA SUPERVISOR</div>
+                        <div class="fw-bold">${report.PjaNama || '-'}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <h6 class="fw-bold border-bottom pb-1" style="font-size: 12px; color: var(--text-main);"><i class="bi bi-geo-alt me-1 text-primary"></i>Lokasi &amp; Geometri</h6>
+                    <table class="table table-sm table-borderless mb-2" style="font-size: 11px;">
+                        <tr><td class="text-muted" style="width: 130px;">Pit:</td><td class="fw-bold">${report.Pit || '-'}</td></tr>
+                        <tr><td class="text-muted">Sektor / Area:</td><td class="fw-bold">${report.Area || '-'}</td></tr>
+                        <tr><td class="text-muted">Nama Lereng:</td><td>${report.NamaLereng || '-'}</td></tr>
+                        <tr><td class="text-muted">Tipe Area:</td><td>${report.AreaType || 'Highwall'}</td></tr>
+                        <tr><td class="text-muted">Elevasi (RL):</td><td>${report.ElevasiRl ? report.ElevasiRl + ' m' : '-'}</td></tr>
+                        <tr><td class="text-muted">Tinggi Jenjang:</td><td>${report.TinggiJenjang ? report.TinggiJenjang + ' m' : '-'}</td></tr>
+                        <tr><td class="text-muted">Lebar Berm:</td><td>${report.LebarBerm ? report.LebarBerm + ' m' : '-'}</td></tr>
+                        <tr><td class="text-muted">Actual Face Angle:</td><td>${report.ActualFaceAngle ? report.ActualFaceAngle + '°' : '-'}</td></tr>
+                        <tr><td class="text-muted">Koordinat:</td><td>${report.Latitude || '-'}, ${report.Longitude || '-'}</td></tr>
+                    </table>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <h6 class="fw-bold border-bottom pb-1" style="font-size: 12px; color: var(--text-main);"><i class="bi bi-activity me-1 text-warning"></i>Kondisi Fisik &amp; Retakan</h6>
+                    <table class="table table-sm table-borderless mb-2" style="font-size: 11px;">
+                        <tr><td class="text-muted" style="width: 130px;">Kondisi Retakan:</td><td class="fw-bold">${report.KondisiRetakan || 'Tidak Ada'}</td></tr>
+                        <tr><td class="text-muted">Dimensi Retakan:</td><td>Lebar: ${report.LebarRetakanMm || 0}mm, P: ${report.PanjangRetakanM || 0}m, D: ${report.KedalamanRetakanM || 0}m</td></tr>
+                        <tr><td class="text-muted">Kondisi Rockfall:</td><td>${report.KondisiRockfall || 'Tidak Ada'}</td></tr>
+                        <tr><td class="text-muted">Kondisi Bulging:</td><td>${report.KondisiBulging || 'Tidak Ada'}</td></tr>
+                        <tr><td class="text-muted">Rembesan Air:</td><td>${report.KondisiRembesan || 'Tidak Ada'} (Debit: ${report.DebitRembesan || 0} L/s)</td></tr>
+                        <tr><td class="text-muted">PIC Perbaikan:</td><td class="fw-bold text-primary">${report.Pic || '-'} (Target: ${report.DueDate ? report.DueDate.substring(0, 10) : '-'})</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="p-2.5 rounded-2 mt-2 mb-2" style="background: rgba(14, 165, 233, 0.04); border: 1px solid var(--border-color);">
+                <div class="fw-bold text-primary mb-1" style="font-size: 11px;">Catatan Observasi Inspeksi:</div>
+                <div style="font-size: 11.5px;">${report.Catatan || 'Tidak ada catatan observasi tambahan.'}</div>
+            </div>
+
+            <div class="p-2.5 rounded-2 mb-2" style="background: rgba(34, 197, 94, 0.06); border: 1px solid rgba(34, 197, 94, 0.2);">
+                <div class="fw-bold text-success mb-1" style="font-size: 11px;"><i class="bi bi-check-circle me-1"></i>Rekomendasi Tindakan Geoteknik:</div>
+                <div style="font-size: 11.5px;">${report.TindakanPerbaikan || 'Tidak ada tindakan khusus.'}</div>
+            </div>
+        `;
+
+        if (report.FotoTemuanUrl || report.FotoRekomendasiUrl) {
+            html += `
+                <div class="mt-3">
+                    <h6 class="fw-bold border-bottom pb-1" style="font-size: 12px; color: var(--text-main);"><i class="bi bi-image me-1 text-info"></i>Dokumentasi Foto</h6>
+                    <div class="row g-2">
+                        ${report.FotoTemuanUrl ? `
+                            <div class="col-6">
+                                <div class="text-muted mb-1" style="font-size: 10px;">Foto Temuan (Sebelum):</div>
+                                <a href="${report.FotoTemuanUrl}" target="_blank">
+                                    <img src="${report.FotoTemuanUrl}" class="img-fluid rounded-2 shadow-sm border" style="max-height: 160px; width: 100%; object-fit: cover;" />
+                                </a>
+                            </div>` : ''}
+                        ${report.FotoRekomendasiUrl ? `
+                            <div class="col-6">
+                                <div class="text-muted mb-1" style="font-size: 10px;">Foto Rekomendasi (Desain):</div>
+                                <a href="${report.FotoRekomendasiUrl}" target="_blank">
+                                    <img src="${report.FotoRekomendasiUrl}" class="img-fluid rounded-2 shadow-sm border" style="max-height: 160px; width: 100%; object-fit: cover;" />
+                                </a>
+                            </div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        $('#modalDetailBody').html(html);
+        new bootstrap.Modal(document.getElementById('modalGciDetail')).show();
     }
 
     function getGciGpsLocation() {
@@ -1047,7 +1586,6 @@
             function(pos) {
                 $('#latitude').val(pos.coords.latitude.toFixed(6));
                 $('#longitude').val(pos.coords.longitude.toFixed(6));
-                alert(`GPS berhasil diambil: ${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`);
             },
             function(err) {
                 alert("Gagal mengambil GPS: " + err.message);
@@ -1056,9 +1594,10 @@
         );
     }
 
-    // Inisialisasi awal
+    // Inisialisasi awal saat halaman dibuka
     $(document).ready(function() {
-        $('#picSearchWrapper').addClass('d-none');
+        renderBenchSvg();
+        updateMockupScores();
     });
 </script>
 }
