@@ -508,6 +508,12 @@
             border-color: rgba(239, 68, 68, 0.7);
             background: rgba(127, 29, 29, 0.3);
         }
+        .point-card.active-card-highlight {
+            border-color: #38bdf8 !important;
+            background: rgba(14, 165, 233, 0.25) !important;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
+            transform: translateX(5px);
+        }
 
         .point-badge {
             width: 38px; height: 38px; border-radius: 8px;
@@ -754,10 +760,10 @@
                         <i class="bi bi-map-fill text-info"></i> PETA SEBARAN CUACA &amp; RADAR MONITORING TITIK OPERASIONAL TAMBANG
                     </div>
                     <div class="map-layer-controls">
-                        <button type="button" class="layer-btn active" id="btnLayerDark" onclick="setMapLayer('dark')">
+                        <button type="button" class="layer-btn" id="btnLayerDark" onclick="setMapLayer('dark')">
                             <i class="bi bi-moon-stars-fill"></i> Dark Radar
                         </button>
-                        <button type="button" class="layer-btn" id="btnLayerSat" onclick="setMapLayer('satellite')">
+                        <button type="button" class="layer-btn active" id="btnLayerSat" onclick="setMapLayer('satellite')">
                             <i class="bi bi-globe-americas"></i> Satelit
                         </button>
                         <button type="button" class="layer-btn" onclick="resetMapView()">
@@ -782,13 +788,13 @@
             <!-- Right: Tabbed Detail (Points List / 24-Hour Trend / K3 Guidelines) -->
             <div class="right-panel">
                 <div class="nav-tabs-ews">
-                    <button type="button" class="tab-ews-btn active" id="tabPointsBtn" onclick="switchRightTab('points')">
+                    <button type="button" class="tab-ews-btn active" id="tabPointsBtn" onclick="switchRightTab('points', true)">
                         <i class="bi bi-list-check"></i> Daftar Titik (<span id="tabPointsCount">17</span>)
                     </button>
-                    <button type="button" class="tab-ews-btn" id="tabChartBtn" onclick="switchRightTab('chart')">
+                    <button type="button" class="tab-ews-btn" id="tabChartBtn" onclick="switchRightTab('chart', true)">
                         <i class="bi bi-graph-up"></i> Tren 24 Jam
                     </button>
-                    <button type="button" class="tab-ews-btn" id="tabSafetyBtn" onclick="switchRightTab('safety')">
+                    <button type="button" class="tab-ews-btn" id="tabSafetyBtn" onclick="switchRightTab('safety', true)">
                         <i class="bi bi-shield-exclamation"></i> Panduan K3 Operasional
                     </button>
                 </div>
@@ -1206,15 +1212,18 @@
             maxNativeZoom: 16
         });
         darkTileLayer = L.layerGroup([darkBase, darkRef]);
-        darkTileLayer.addTo(map);
 
-        // Esri World Imagery (Satellite)
+        // Esri World Imagery (Satellite) - DEFAULT ACTIVE LAYER
         satTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
             maxNativeZoom: 18
-        });
+        }).addTo(map);
 
         markersLayer = L.layerGroup().addTo(map);
+
+        // Pause auto-popup rotation on user map interactions
+        map.on('dragstart', () => { pausePopupCycle(20000); });
+        map.on('zoomstart', () => { pausePopupCycle(20000); });
     }
 
     function setMapLayer(layerType) {
@@ -1227,6 +1236,65 @@
         } else {
             if (map.hasLayer(darkTileLayer)) map.removeLayer(darkTileLayer);
             if (!map.hasLayer(satTileLayer)) map.addLayer(satTileLayer);
+        }
+    }
+
+    let markerItems = [];
+    let currentPopupIndex = -1;
+    let popupCycleTimer = null;
+    let isPopupCyclePaused = false;
+    let popupPauseResumeTimeout = null;
+
+    function startPopupCycle() {
+        if (popupCycleTimer) clearInterval(popupCycleTimer);
+        if (!markerItems || markerItems.length === 0) return;
+
+        // Auto rotate popup on map every 7.5 seconds
+        popupCycleTimer = setInterval(() => {
+            if (isPopupCyclePaused) return;
+            if (!markerItems || markerItems.length === 0) return;
+
+            currentPopupIndex = (currentPopupIndex + 1) % markerItems.length;
+            showPointPopup(currentPopupIndex, false);
+        }, 7500);
+    }
+
+    function pausePopupCycle(durationMs = 15000) {
+        isPopupCyclePaused = true;
+        clearTimeout(popupPauseResumeTimeout);
+        popupPauseResumeTimeout = setTimeout(() => {
+            isPopupCyclePaused = false;
+        }, durationMs);
+    }
+
+    function showPointPopup(index, isManual = false) {
+        if (!markerItems || !markerItems[index]) return;
+        currentPopupIndex = index;
+        const mi = markerItems[index];
+        const p = mi.point;
+
+        const currentZoom = map.getZoom();
+        const targetZoom = Math.max(currentZoom, 14);
+        map.panTo([p.latitude, p.longitude], { animate: true, duration: 0.9 });
+
+        mi.marker.openPopup();
+        document.getElementById('selectedPointName').innerText = p.name;
+        updateHourlyChart(mi.item);
+
+        // Highlight active card in the list
+        document.querySelectorAll('.point-card').forEach(c => c.classList.remove('active-card-highlight'));
+        if (mi.card) {
+            mi.card.classList.add('active-card-highlight');
+            if (!isUserInteractingWithPoints && document.getElementById('tabContentPoints').style.display !== 'none') {
+                mi.card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        if (isManual) {
+            pausePopupCycle(20000);
+            isUserInteractingWithPoints = true;
+            clearTimeout(autoScrollPauseTimeout);
+            autoScrollPauseTimeout = setTimeout(() => { isUserInteractingWithPoints = false; }, 8000);
         }
     }
 
@@ -1275,6 +1343,7 @@
         if (!results || results.length === 0) return;
 
         markersLayer.clearLayers();
+        markerItems = [];
 
         let maxRain = 0;
         let maxRainLocation = 'Seluruh Pit Kering';
@@ -1389,6 +1458,9 @@
                 </div>
             `;
             marker.bindPopup(popupHtml);
+            marker.on('click', () => {
+                showPointPopup(index, true);
+            });
             markersLayer.addLayer(marker);
 
             // Right Panel Point Card
@@ -1399,15 +1471,16 @@
             const card = document.createElement('div');
             card.className = cardClass;
             card.onclick = () => {
-                isUserInteractingWithPoints = true;
-                clearTimeout(autoScrollPauseTimeout);
-                autoScrollPauseTimeout = setTimeout(() => { isUserInteractingWithPoints = false; }, 8000);
-
-                map.flyTo([p.latitude, p.longitude], 15, { duration: 1.2 });
-                marker.openPopup();
-                document.getElementById('selectedPointName').innerText = p.name;
-                updateHourlyChart(item);
+                showPointPopup(index, true);
             };
+
+            markerItems.push({
+                marker: marker,
+                point: p,
+                item: item,
+                card: card,
+                index: index
+            });
 
             card.innerHTML = `
                 <div class="point-badge" style="background:${severity === 'red' ? 'rgba(239,68,68,0.2)' : severity === 'orange' ? 'rgba(251,146,60,0.2)' : severity === 'yellow' ? 'rgba(251,191,36,0.2)' : 'rgba(16,185,129,0.2)'}; color:${severity === 'red' ? '#ef4444' : severity === 'orange' ? '#fb923c' : severity === 'yellow' ? '#fbbf24' : '#10b981'};">
@@ -1517,9 +1590,51 @@
 
         // Render Initial Hourly Chart (Combined or Point 1)
         updateHourlyChart(results[0]);
+
+        // Start cycling popups across the 17 mining operational points on satellite map
+        startPopupCycle();
     }
 
-    function switchRightTab(tabName) {
+    /* ──────────────────────────────────────────────────────────────────────────
+       6. AUTOMATIC TAB ROTATION (Daftar Titik -> Tren 24 Jam -> Panduan K3)
+       ────────────────────────────────────────────────────────────────────────── */
+    const TABS_SEQUENCE = [
+        { id: 'points', duration: 35000 }, // 35 seconds for points list
+        { id: 'chart', duration: 25000 },  // 25 seconds for hourly trend chart
+        { id: 'safety', duration: 20000 }  // 20 seconds for safety protocols
+    ];
+    let currentTabSeqIndex = 0;
+    let tabRotationTimeout = null;
+    let isTabRotationPaused = false;
+
+    function startTabRotation() {
+        scheduleNextTab();
+    }
+
+    function scheduleNextTab() {
+        if (tabRotationTimeout) clearTimeout(tabRotationTimeout);
+        if (isTabRotationPaused) return;
+
+        const currentTabObj = TABS_SEQUENCE[currentTabSeqIndex];
+        tabRotationTimeout = setTimeout(() => {
+            if (isTabRotationPaused) return;
+            currentTabSeqIndex = (currentTabSeqIndex + 1) % TABS_SEQUENCE.length;
+            const nextTab = TABS_SEQUENCE[currentTabSeqIndex];
+            switchRightTab(nextTab.id, false);
+            scheduleNextTab();
+        }, currentTabObj.duration);
+    }
+
+    function pauseTabRotation(durationMs = 25000) {
+        isTabRotationPaused = true;
+        if (tabRotationTimeout) clearTimeout(tabRotationTimeout);
+        setTimeout(() => {
+            isTabRotationPaused = false;
+            scheduleNextTab();
+        }, durationMs);
+    }
+
+    function switchRightTab(tabName, isManual = false) {
         document.getElementById('tabPointsBtn').classList.toggle('active', tabName === 'points');
         document.getElementById('tabChartBtn').classList.toggle('active', tabName === 'chart');
         document.getElementById('tabSafetyBtn').classList.toggle('active', tabName === 'safety');
@@ -1527,6 +1642,18 @@
         document.getElementById('tabContentPoints').style.display = tabName === 'points' ? 'flex' : 'none';
         document.getElementById('tabContentChart').style.display = tabName === 'chart' ? 'flex' : 'none';
         document.getElementById('tabContentSafety').style.display = tabName === 'safety' ? 'flex' : 'none';
+
+        if (tabName === 'chart' && hourlyChartInstance) {
+            setTimeout(() => {
+                hourlyChartInstance.resize();
+            }, 60);
+        }
+
+        if (isManual) {
+            const idx = TABS_SEQUENCE.findIndex(t => t.id === tabName);
+            if (idx !== -1) currentTabSeqIndex = idx;
+            pauseTabRotation(30000);
+        }
     }
 
     function updateHourlyChart(item) {
@@ -1708,11 +1835,12 @@
         autoScrollRaf = requestAnimationFrame(stepAutoScroll);
     }
 
-    // Initialize Map, Speech, Auto-Scroll and Fetch Live Forecast
+    // Initialize Map, Speech, Auto-Scroll, Tab Carousel, and Fetch Live Forecast
     window.addEventListener('DOMContentLoaded', () => {
         initVoiceSynthesis();
         initMap();
         initAutoScroll();
+        startTabRotation();
         fetchForecastData();
 
         // Refresh forecast every 5 minutes (300,000 ms) as specified by IMORA integration guide
