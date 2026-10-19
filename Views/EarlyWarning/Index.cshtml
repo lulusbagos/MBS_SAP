@@ -1,0 +1,1723 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Display 4 &mdash; IMORA Early Warning Weather Command Center</title>
+
+    <!-- Bootstrap & Icons -->
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <!-- Leaflet.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <!-- Chart.js for Hourly Trend -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg: #050811;
+            --panel: rgba(10, 18, 32, 0.85);
+            --panel-card: rgba(15, 23, 42, 0.7);
+            --border: rgba(56, 189, 248, 0.16);
+            --border-bright: rgba(56, 189, 248, 0.45);
+            --txt: #ffffff;
+            --muted: #94a3b8;
+            --blue: #38bdf8;
+            --cyan: #00d2ff;
+            --emerald: #10b981;
+            --green: #34d399;
+            --amber: #fbbf24;
+            --orange: #fb923c;
+            --red: #ef4444;
+            --purple: #a855f7;
+            --r: 16px;
+        }
+
+        html { background: var(--bg); }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; font-family: inherit; }
+
+        body {
+            background: var(--bg);
+            background-image:
+                radial-gradient(rgba(56, 189, 248, 0.035) 1px, transparent 1px),
+                radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.09) 0%, transparent 40%),
+                radial-gradient(circle at 90% 90%, rgba(16, 185, 129, 0.07) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(2, 132, 199, 0.04) 0%, transparent 60%);
+            background-size: 28px 28px, 100% 100%, 100% 100%, 100% 100%;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--txt);
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── Top Countdown Progress Bar ── */
+        .top-progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            z-index: 9999;
+        }
+        .top-progress-inner {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00d2ff, #38bdf8, #10b981, #fbbf24, #ef4444);
+            box-shadow: 0 0 14px rgba(0, 210, 255, 0.9);
+            transition: width 1s linear;
+        }
+
+        /* ── TV Main Layout ── */
+        .tv-container {
+            display: grid;
+            grid-template-rows: auto auto auto 1fr auto;
+            height: 100vh;
+            padding: 8px 16px 8px 16px;
+            gap: 8px;
+        }
+
+        /* ── Header ── */
+        .tv-header {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 8px 18px;
+            display: grid;
+            grid-template-columns: auto 1fr auto auto;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.06);
+        }
+
+        .brand-box { display: flex; align-items: center; gap: 12px; }
+        .brand-icon {
+            width: 44px; height: 44px; border-radius: 12px;
+            background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(16, 185, 129, 0.25));
+            border: 1.5px solid var(--cyan);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 18px rgba(0, 210, 255, 0.45);
+        }
+        .brand-title {
+            font-size: 18px; font-weight: 800;
+            background: linear-gradient(90deg, #ffffff, #38bdf8, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex; align-items: center; gap: 8px;
+            letter-spacing: 0.3px;
+        }
+        .brand-sub {
+            font-size: 10.5px; color: var(--muted); font-weight: 600;
+            letter-spacing: 0.6px; text-transform: uppercase;
+        }
+
+        /* Slide Switcher Widget */
+        .slide-indicator-widget {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            padding: 4px 12px 4px 10px;
+            justify-self: center;
+        }
+        .slide-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.14);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            padding: 3px 9px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .slide-timer-text {
+            font-size: 11px;
+            font-weight: 700;
+            color: #cbd5e1;
+            font-variant-numeric: tabular-nums;
+        }
+        .slide-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #fff;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 10.5px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+        .slide-btn:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--blue);
+            color: #fff;
+        }
+        .slide-btn.active-display {
+            background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            border-color: #38bdf8;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+        }
+
+        /* Sound & Header Controls */
+        .hdr-actions { display: flex; align-items: center; gap: 10px; }
+        .hdr-ctrl-btn {
+            height: 36px; padding: 0 12px; border-radius: 9px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--txt); display: flex; align-items: center; justify-content: center; gap: 6px;
+            font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+        }
+        .hdr-ctrl-btn:hover { background: rgba(56, 189, 248, 0.2); border-color: var(--blue); color: #fff; }
+        .hdr-ctrl-btn.sound-active {
+            background: rgba(16, 185, 129, 0.18);
+            border-color: rgba(16, 185, 129, 0.5);
+            color: #34d399;
+        }
+        .hdr-ctrl-btn.sound-muted {
+            background: rgba(239, 68, 68, 0.18);
+            border-color: rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+        }
+
+        .clock-widget {
+            display: flex; flex-direction: column; align-items: flex-end;
+            padding: 4px 12px; background: rgba(0, 0, 0, 0.35);
+            border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .clock-time {
+            font-size: 17px; font-weight: 800;
+            color: #38bdf8; letter-spacing: 0.5px;
+            font-variant-numeric: tabular-nums;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .clock-date { font-size: 9.5px; color: var(--muted); font-weight: 600; }
+
+        /* ── Weather Warning Banner (Dynamic) ── */
+        .warning-banner {
+            border-radius: 12px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        .warning-banner.normal {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.15), rgba(6, 78, 59, 0.3));
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #a7f3d0;
+        }
+        .warning-banner.waspada {
+            background: linear-gradient(90deg, rgba(251, 191, 36, 0.22), rgba(120, 53, 15, 0.35));
+            border: 1px solid rgba(251, 191, 36, 0.5);
+            color: #fde68a;
+            animation: pulse-yellow 2s infinite ease-in-out;
+        }
+        .warning-banner.siaga {
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.25), rgba(127, 29, 29, 0.45));
+            border: 1.5px solid rgba(239, 68, 68, 0.7);
+            color: #fecaca;
+            animation: pulse-red 1.5s infinite ease-in-out;
+        }
+
+        @@keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); border-color: rgba(239, 68, 68, 0.7); }
+            50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.85); border-color: #ef4444; }
+        }
+        @@keyframes pulse-yellow {
+            0%, 100% { box-shadow: 0 0 12px rgba(251, 191, 36, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(251, 191, 36, 0.7); }
+        }
+
+        .warning-left { display: flex; align-items: center; gap: 12px; }
+        .warning-icon-box {
+            width: 38px; height: 38px; border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px;
+        }
+        .warning-banner.normal .warning-icon-box { background: rgba(16, 185, 129, 0.25); color: #34d399; }
+        .warning-banner.waspada .warning-icon-box { background: rgba(251, 191, 36, 0.3); color: #fbbf24; }
+        .warning-banner.siaga .warning-icon-box { background: rgba(239, 68, 68, 0.35); color: #ef4444; }
+
+        .warning-title { font-size: 13px; font-weight: 800; letter-spacing: 0.3px; text-transform: uppercase; }
+        .warning-desc { font-size: 11px; opacity: 0.9; font-weight: 500; }
+        .warning-meta { display: flex; align-items: center; gap: 10px; font-size: 11px; }
+
+        /* ── KPI HUD Cards Row ── */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+        }
+        .kpi-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px 12px;
+            backdrop-filter: blur(16px);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+            transition: all 0.2s ease;
+        }
+        .kpi-card:hover { transform: translateY(-2px); border-color: var(--border-bright); }
+        .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+        .kpi-card.status::before { background: linear-gradient(180deg, #10b981, #059669); }
+        .kpi-card.points::before { background: linear-gradient(180deg, #00d2ff, #0284c7); }
+        .kpi-card.rain::before { background: linear-gradient(180deg, #38bdf8, #0369a1); }
+        .kpi-card.prob::before { background: linear-gradient(180deg, #a855f7, #7e22ce); }
+        .kpi-card.wind::before { background: linear-gradient(180deg, #fb923c, #c2410c); }
+        .kpi-card.temp::before { background: linear-gradient(180deg, #fbbf24, #d97706); }
+
+        .kpi-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+        .kpi-title {
+            font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+            color: var(--muted); display: flex; align-items: center; gap: 5px;
+        }
+        .kpi-num {
+            font-size: 22px; font-weight: 800; line-height: 1.1; letter-spacing: -0.3px;
+            font-family: 'JetBrains Mono', 'Poppins', monospace;
+        }
+        .kpi-sub { font-size: 9.5px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+
+        /* ── Main View Grid: Map (Left) + Detail Tabs (Right) ── */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1.25fr 1fr;
+            gap: 10px;
+            min-height: 0;
+            height: 100%;
+        }
+
+        /* ── Map Panel ── */
+        .map-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+        .panel-header {
+            padding: 8px 14px;
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .panel-title {
+            font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+            display: flex; align-items: center; gap: 7px; color: #fff;
+        }
+        .map-layer-controls {
+            display: flex; align-items: center; gap: 6px;
+        }
+        .layer-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--muted);
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .layer-btn.active, .layer-btn:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--blue);
+            color: #fff;
+        }
+
+        #weatherMap {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            background: #060b17;
+            z-index: 10;
+        }
+
+        /* Leaflet Custom Marker & Pulsing Radar Pin */
+        .radar-pin {
+            position: relative;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .radar-pin .core-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #ffffff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.8);
+            z-index: 2;
+        }
+        .radar-pin .pulse-wave {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            animation: radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+            z-index: 1;
+        }
+        .radar-pin.green .core-dot { background: #10b981; }
+        .radar-pin.green .pulse-wave { border: 2px solid rgba(16, 185, 129, 0.6); }
+
+        .radar-pin.yellow .core-dot { background: #fbbf24; }
+        .radar-pin.yellow .pulse-wave { border: 2.5px solid rgba(251, 191, 36, 0.8); animation-duration: 1.3s; }
+
+        .radar-pin.orange .core-dot { background: #fb923c; }
+        .radar-pin.orange .pulse-wave { border: 3px solid rgba(251, 146, 60, 0.85); animation-duration: 1.0s; }
+
+        .radar-pin.red .core-dot { background: #ef4444; }
+        .radar-pin.red .pulse-wave { border: 3.5px solid rgba(239, 68, 68, 0.95); animation-duration: 0.8s; }
+
+        @@keyframes radar-ping {
+            0% { width: 12px; height: 12px; opacity: 1; }
+            100% { width: 44px; height: 44px; opacity: 0; }
+        }
+
+        .map-legend {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(10, 18, 32, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 12px;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-dot { width: 9px; height: 9px; border-radius: 50%; }
+
+        /* ── Right Panel: Tabs, Points List & Hourly Forecast ── */
+        .right-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            min-height: 0;
+        }
+        .nav-tabs-ews {
+            display: flex;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid var(--border);
+            padding: 4px 8px;
+            gap: 4px;
+        }
+        .tab-ews-btn {
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            padding: 6px 14px;
+            border-radius: 7px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+        }
+        .tab-ews-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+        .tab-ews-btn.active {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #fff;
+            box-shadow: 0 0 10px rgba(2, 132, 199, 0.5);
+        }
+
+        .tab-content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .tab-content-area::-webkit-scrollbar { width: 5px; }
+        .tab-content-area::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.25); border-radius: 10px; }
+
+        /* Operational Point Cards */
+        .point-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 10px;
+            padding: 8px 12px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 12px;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .point-card:hover {
+            background: rgba(30, 41, 59, 0.7);
+            border-color: var(--blue);
+            transform: translateX(3px);
+        }
+        .point-card.warning-item {
+            border-color: rgba(251, 191, 36, 0.6);
+            background: rgba(120, 53, 15, 0.2);
+        }
+        .point-card.alert-item {
+            border-color: rgba(239, 68, 68, 0.7);
+            background: rgba(127, 29, 29, 0.3);
+        }
+
+        .point-badge {
+            width: 38px; height: 38px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+        }
+        .point-name { font-size: 12px; font-weight: 800; color: #fff; }
+        .point-meta { font-size: 10px; color: var(--muted); margin-top: 1px; display: flex; gap: 8px; }
+        .point-weather-col { text-align: right; }
+        .point-temp { font-size: 15px; font-weight: 800; color: #38bdf8; font-family: 'JetBrains Mono', monospace; }
+        .point-precip { font-size: 10.5px; font-weight: 700; }
+        .point-precip.wet { color: #f87171; }
+        .point-precip.dry { color: #34d399; }
+
+        /* Hourly Forecast Chart Container */
+        .chart-box {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            height: 220px;
+            position: relative;
+        }
+
+        /* ── Safety Recommendations Box ── */
+        .safety-box {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .safety-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 11px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 3px solid var(--blue);
+        }
+
+        /* ── Bottom Ticker ── */
+        .tv-footer-ticker {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 5px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            overflow: hidden;
+        }
+        .ticker-lbl {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: #fff;
+            font-size: 10.5px;
+            font-weight: 800;
+            padding: 3px 9px;
+            border-radius: 5px;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 10px rgba(2, 132, 199, 0.5);
+            flex-shrink: 0;
+            z-index: 2;
+        }
+        .ticker-scroll-wrap {
+            flex: 1;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+        }
+        .ticker-scroll {
+            display: inline-block;
+            white-space: nowrap;
+            font-size: 11px;
+            font-weight: 600;
+            color: #e2e8f0;
+            animation: ticker-marquee 70s linear infinite;
+        }
+        .ticker-scroll:hover {
+            animation-play-state: paused;
+        }
+        @@keyframes ticker-marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Progress Bar -->
+    <div class="top-progress-bar">
+        <div class="top-progress-inner" id="slideProgressBar"></div>
+    </div>
+
+    <div class="tv-container">
+        <!-- 1. Header -->
+        <header class="tv-header">
+            <div class="brand-box">
+                <div class="brand-icon">
+                    <i class="bi bi-cloud-lightning-rain-fill text-info" style="font-size: 22px;"></i>
+                </div>
+                <div>
+                    <div class="brand-title">
+                        IMORA &bull; EARLY WARNING SYSTEM
+                        <span style="font-size:12px; color:var(--muted); font-weight:600;">[DISPLAY 4 &bull; WEATHER RADAR]</span>
+                    </div>
+                    <div class="brand-sub">
+                        INDEXIM METEOROLOGICAL &amp; OPERATIONAL RADAR COMMAND CENTER
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide Indicator Widget -->
+            <div class="slide-indicator-widget">
+                <div class="slide-pill">
+                    <i class="bi bi-display"></i> Slide 4 / 4
+                </div>
+                <div class="slide-timer-text">
+                    <i class="bi bi-clock-history" style="color:#38bdf8;"></i> Ganti ke Display 1 dalam: <span id="slideCountdown">05:00</span>
+                </div>
+                <a href="/Display" class="slide-btn" title="Pindah ke Display 1">
+                    <i class="bi bi-arrow-left-right"></i> Display 1
+                </a>
+                <a href="/Display2" class="slide-btn" title="Pindah ke Display 2">
+                    <i class="bi bi-flag-fill"></i> Display 2
+                </a>
+                <a href="/Display3" class="slide-btn" title="Pindah ke Display 3">
+                    <i class="bi bi-shield-check"></i> Display 3
+                </a>
+                <a href="/EarlyWarning" class="slide-btn active-display" title="Display 4 (Aktif)">
+                    <i class="bi bi-cloud-rain-fill"></i> Display 4
+                </a>
+                <button class="slide-btn" id="togglePauseBtn" onclick="togglePauseSlide()" title="Jeda rotasi otomatis">
+                    <i class="bi bi-pause-fill" id="pauseIcon"></i> <span id="pauseText">Jeda</span>
+                </button>
+            </div>
+
+            <!-- Sound & Fullscreen Controls -->
+            <div class="hdr-actions">
+                <button type="button" class="hdr-ctrl-btn sound-active" id="btnToggleSound" onclick="toggleSoundAlert()" title="Aktifkan / Bisukan suara Google">
+                    <i class="bi bi-volume-up-fill" id="soundIcon"></i>
+                    <span id="soundText">Suara: ON</span>
+                </button>
+                <button type="button" class="hdr-ctrl-btn" onclick="testSoundAlert()" title="Uji coba suara Google dan sirene radar">
+                    <i class="bi bi-megaphone-fill text-warning"></i>
+                    <span>Test Suara Google</span>
+                </button>
+                <button type="button" class="hdr-ctrl-btn" onclick="toggleFullScreen()" title="Fullscreen TV Mode">
+                    <i class="bi bi-arrows-fullscreen"></i>
+                </button>
+            </div>
+
+            <!-- Live Clock Widget -->
+            <div class="clock-widget">
+                <div class="clock-time" id="liveClock">00:00:00</div>
+                <div class="clock-date" id="liveDate">WITA &bull; -- OKT 2026</div>
+            </div>
+        </header>
+
+        <!-- 2. Early Warning Notification Banner -->
+        <div class="warning-banner normal" id="warningBanner">
+            <div class="warning-left">
+                <div class="warning-icon-box" id="warningIconBox">
+                    <i class="bi bi-shield-check" id="warningIcon"></i>
+                </div>
+                <div>
+                    <div class="warning-title" id="warningTitle">KONDISI CUACA SITE: NORMAL &amp; AMAN</div>
+                    <div class="warning-desc" id="warningDesc">Tidak ada potensi hujan lebat, petir, atau hembusan angin kencang berisiko di seluruh 17 titik operasional tambang.</div>
+                </div>
+            </div>
+            <div class="warning-meta">
+                <span class="badge bg-dark border border-secondary px-2 py-1" id="warningTimeBadge"><i class="bi bi-stopwatch"></i> Update Tiap 5 Menit</span>
+                <span class="badge bg-info text-dark px-2 py-1" id="warningPointsBadge">0 Titik Waspada</span>
+            </div>
+        </div>
+
+        <!-- 3. KPI Telemetry Row -->
+        <div class="kpi-row">
+            <div class="kpi-card status">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-activity text-success"></i> STATUS CUACA</span>
+                    <span class="badge bg-success" id="kpiStatusBadge">AMAN</span>
+                </div>
+                <div class="kpi-num text-success" id="kpiStatusText">NORMAL</div>
+                <div class="kpi-sub">Indeks Risiko Keselamatan</div>
+            </div>
+
+            <div class="kpi-card points">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-geo-alt-fill text-info"></i> TITIK OPERASIONAL</span>
+                    <span class="badge bg-info text-dark">17 PIT &amp; DUMP</span>
+                </div>
+                <div class="kpi-num text-info" id="kpiPointsCount">17</div>
+                <div class="kpi-sub">KPP, UDU &amp; MGE Monitored</div>
+            </div>
+
+            <div class="kpi-card rain">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-cloud-rain-heavy-fill text-primary"></i> HUJAN MAKS. (NOW)</span>
+                    <span class="badge bg-primary" id="kpiRainBadge">0.0 mm</span>
+                </div>
+                <div class="kpi-num text-primary" id="kpiMaxRain">0.0 <span style="font-size:12px;">mm/h</span></div>
+                <div class="kpi-sub" id="kpiMaxRainLoc">Seluruh Pit Kering</div>
+            </div>
+
+            <div class="kpi-card prob">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-percent text-purple"></i> PROBABILITAS HUJAN</span>
+                    <span class="badge" style="background:#a855f7;">MAKS</span>
+                </div>
+                <div class="kpi-num" style="color:#c084fc;" id="kpiMaxProb">0 <span style="font-size:12px;">%</span></div>
+                <div class="kpi-sub" id="kpiMaxProbLoc">Peluang presipitasi 24 Jam</div>
+            </div>
+
+            <div class="kpi-card wind">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-wind text-warning"></i> GUST ANGIN MAKS.</span>
+                    <span class="badge bg-warning text-dark">KECEPATAN</span>
+                </div>
+                <div class="kpi-num text-warning" id="kpiMaxWind">0 <span style="font-size:12px;">km/h</span></div>
+                <div class="kpi-sub" id="kpiMaxWindLoc">Hembusan aman &lt; 35 km/h</div>
+            </div>
+
+            <div class="kpi-card temp">
+                <div class="kpi-hdr">
+                    <span class="kpi-title"><i class="bi bi-thermometer-half text-danger"></i> SUHU RATA-RATA</span>
+                    <span class="badge bg-danger">WITA</span>
+                </div>
+                <div class="kpi-num text-danger" id="kpiAvgTemp">25.0 <span style="font-size:12px;">&deg;C</span></div>
+                <div class="kpi-sub" id="kpiWeatherDesc">Cerah / Berawan Ringan</div>
+            </div>
+        </div>
+
+        <!-- 4. Main Grid: Leaflet Map (Left) + Detail Tabs & Chart (Right) -->
+        <div class="main-grid">
+            <!-- Left: Leaflet Interactive Map -->
+            <div class="map-panel">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="bi bi-map-fill text-info"></i> PETA SEBARAN CUACA &amp; RADAR MONITORING TITIK OPERASIONAL TAMBANG
+                    </div>
+                    <div class="map-layer-controls">
+                        <button type="button" class="layer-btn active" id="btnLayerDark" onclick="setMapLayer('dark')">
+                            <i class="bi bi-moon-stars-fill"></i> Dark Radar
+                        </button>
+                        <button type="button" class="layer-btn" id="btnLayerSat" onclick="setMapLayer('satellite')">
+                            <i class="bi bi-globe-americas"></i> Satelit
+                        </button>
+                        <button type="button" class="layer-btn" onclick="resetMapView()">
+                            <i class="bi bi-aspect-ratio"></i> Fit All
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Leaflet Map Container -->
+                <div id="weatherMap"></div>
+
+                <!-- Map Legend -->
+                <div class="map-legend">
+                    <span style="color:var(--muted); margin-right:4px;">STATUS:</span>
+                    <div class="legend-item"><span class="legend-dot" style="background:#10b981;"></span> Normal (Cerah)</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#fbbf24;"></span> Waspada (Prob. &gt;50% / Gerimis)</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#fb923c;"></span> Siaga (Hujan &ge;2mm / Angin &gt;30)</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> Awas (Hujan &ge;5mm / Badai Petir)</div>
+                </div>
+            </div>
+
+            <!-- Right: Tabbed Detail (Points List / 24-Hour Trend / K3 Guidelines) -->
+            <div class="right-panel">
+                <div class="nav-tabs-ews">
+                    <button type="button" class="tab-ews-btn active" id="tabPointsBtn" onclick="switchRightTab('points')">
+                        <i class="bi bi-list-check"></i> Daftar Titik (<span id="tabPointsCount">17</span>)
+                    </button>
+                    <button type="button" class="tab-ews-btn" id="tabChartBtn" onclick="switchRightTab('chart')">
+                        <i class="bi bi-graph-up"></i> Tren 24 Jam
+                    </button>
+                    <button type="button" class="tab-ews-btn" id="tabSafetyBtn" onclick="switchRightTab('safety')">
+                        <i class="bi bi-shield-exclamation"></i> Panduan K3 Operasional
+                    </button>
+                </div>
+
+                <!-- Tab 1: Points List -->
+                <div class="tab-content-area" id="tabContentPoints">
+                    <div style="font-size:10.5px; color:var(--muted); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+                        <span><i class="bi bi-hand-index-thumb"></i> Klik titik untuk fokus peta</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="autoScrollBadge" class="badge" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:9.5px; cursor:pointer;" onclick="toggleAutoScroll()" title="Klik untuk jeda/lanjutkan auto-scroll">
+                                <i class="bi bi-arrow-down-up"></i> Auto-Scroll: ON
+                            </span>
+                            <span id="selectedPointName" class="text-info fw-bold">Semua Titik</span>
+                        </div>
+                    </div>
+                    <div id="pointsCardList" class="d-flex flex-column gap-2">
+                        <!-- Loaded dynamically via JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Tab 2: Hourly Forecast Trend Chart -->
+                <div class="tab-content-area" id="tabContentChart" style="display:none;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:11px; font-weight:700; color:#fff;" id="chartLocationLabel">Prakiraan 24 Jam: Rata-Rata Seluruh Titik Tambang</span>
+                        <span class="badge bg-primary" id="chartTimeSpanBadge">24 Jam Mendatang</span>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="hourlyWeatherChart"></canvas>
+                    </div>
+                    <div class="mt-2 p-2 rounded" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); font-size:10.5px;">
+                        <strong class="text-info"><i class="bi bi-info-circle"></i> Interpretasi Tren:</strong>
+                        Grafik batang biru menampilkan intensitas curah hujan (mm/jam), sedangkan garis kuning/cyan menunjukkan temperatur dan kecepatan angin.
+                    </div>
+                </div>
+
+                <!-- Tab 3: Safety Action Protocols -->
+                <div class="tab-content-area" id="tabContentSafety" style="display:none;">
+                    <div class="safety-box">
+                        <div style="font-size:12px; font-weight:800; color:#38bdf8; margin-bottom:4px; text-transform:uppercase;">
+                            <i class="bi bi-shield-fill-check"></i> Standard Operating Procedure (SOP) Cuaca Ekstrem
+                        </div>
+                        <div class="safety-item">
+                            <i class="bi bi-truck text-warning fs-5"></i>
+                            <div>
+                                <strong class="text-white">Hauling Road &amp; Batas Kecepatan:</strong><br />
+                                Saat curah hujan &ge; 1 mm/jam atau jalanan mulai basah/licin, kurangi kecepatan unit DT maksimal 30 km/jam dan jaga jarak aman minimal 4x panjang kendaraan.
+                            </div>
+                        </div>
+                        <div class="safety-item">
+                            <i class="bi bi-water text-info fs-5"></i>
+                            <div>
+                                <strong class="text-white">Manajemen Sediment Pond &amp; Sump Tambang:</strong><br />
+                                Pastikan pompa dewatering di sump aktif dan kapasitas kolam pengendapan (SPI) mencukupi limpasan air hujan guna mencegah luapan ke area sekitar.
+                            </div>
+                        </div>
+                        <div class="safety-item">
+                            <i class="bi bi-lightning-charge-fill text-danger fs-5"></i>
+                            <div>
+                                <strong class="text-white">Protokol Sambaran Petir (Lightning Hazard):</strong><br />
+                                Jika terdeteksi petir atau weather code 95-99, seluruh personel di area terbuka, tangki bahan bakar, dan tower elevasi wajib segera evakuasi ke shelter petir.
+                            </div>
+                        </div>
+                        <div class="safety-item">
+                            <i class="bi bi-cone-striped text-warning fs-5"></i>
+                            <div>
+                                <strong class="text-white">Kestabilan Lereng &amp; Disposal (DCI):</strong><br />
+                                Tingkatkan frekuensi monitoring retakan lereng disposal (cracking) saat intensitas hujan tinggi berlanjut lebih dari 1 jam.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Bottom Running Ticker -->
+        <footer class="tv-footer-ticker">
+            <div class="ticker-lbl">
+                <i class="bi bi-broadcast"></i> LIVE RADAR IMORA
+            </div>
+            <div class="ticker-scroll-wrap">
+                <div class="ticker-scroll" id="weatherTickerText">
+                    Memuat data telemetri cuaca seluruh titik tambang Indexim...
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Leaflet.js JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script>
+    /* ──────────────────────────────────────────────────────────────────────────
+       1. 5-MINUTE AUTO SLIDE ROTATION (/EarlyWarning -> /Display)
+       ────────────────────────────────────────────────────────────────────────── */
+    const SLIDE_DURATION_SECONDS = 300; // 5 minutes
+    let slideTimeRemaining = SLIDE_DURATION_SECONDS;
+    let isSlidePaused = false;
+
+    function updateSlideTimer() {
+        if (isSlidePaused) return;
+
+        slideTimeRemaining--;
+
+        if (slideTimeRemaining <= 0) {
+            // Rotate to Display 1 (continuous loop: Display 1 -> 2 -> 3 -> 4 -> 1)
+            window.location.href = '/Display';
+            return;
+        }
+
+        const mins = Math.floor(slideTimeRemaining / 60);
+        const secs = slideTimeRemaining % 60;
+        const countdownEl = document.getElementById('slideCountdown');
+        if (countdownEl) {
+            countdownEl.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        const progressPct = ((SLIDE_DURATION_SECONDS - slideTimeRemaining) / SLIDE_DURATION_SECONDS) * 100;
+        const barEl = document.getElementById('slideProgressBar');
+        if (barEl) {
+            barEl.style.width = `${progressPct}%`;
+        }
+    }
+    setInterval(updateSlideTimer, 1000);
+
+    function togglePauseSlide() {
+        isSlidePaused = !isSlidePaused;
+        const icon = document.getElementById('pauseIcon');
+        const text = document.getElementById('pauseText');
+        if (isSlidePaused) {
+            if (icon) icon.className = 'bi bi-play-fill';
+            if (text) text.innerText = 'Lanjut';
+        } else {
+            if (icon) icon.className = 'bi bi-pause-fill';
+            if (text) text.innerText = 'Jeda';
+        }
+    }
+
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+            if (document.exitFullscreen) document.exitFullscreen();
+        }
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       2. LIVE DIGITAL CLOCK (WITA)
+       ────────────────────────────────────────────────────────────────────────── */
+    function updateClock() {
+        const now = new Date();
+        const hrs = String(now.getHours()).padStart(2, '0');
+        const mins = String(now.getMinutes()).padStart(2, '0');
+        const secs = String(now.getSeconds()).padStart(2, '0');
+
+        const clockEl = document.getElementById('liveClock');
+        if (clockEl) clockEl.innerText = `${hrs}:${mins}:${secs}`;
+
+        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+        const dateStr = `WITA • ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+        const dateEl = document.getElementById('liveDate');
+        if (dateEl) dateEl.innerText = dateStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       3. AUDIO CHIME, EMERGENCY SIREN & GOOGLE VOICE SYNTHESIS (TTS)
+       ────────────────────────────────────────────────────────────────────────── */
+    let audioContext = null;
+    let isSoundMuted = false;
+    let lastAudioAlertTime = 0;
+    let speechVoices = [];
+
+    function initVoiceSynthesis() {
+        if ('speechSynthesis' in window) {
+            speechVoices = window.speechSynthesis.getVoices();
+            window.speechSynthesis.onvoiceschanged = () => {
+                speechVoices = window.speechSynthesis.getVoices();
+            };
+        }
+    }
+
+    function getAudioContext() {
+        if (!audioContext) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+                audioContext = new AudioCtx();
+            }
+        }
+        if (audioContext && audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        return audioContext;
+    }
+
+    // Unlock audio on first user touch/click anywhere on page
+    document.addEventListener('click', () => {
+        getAudioContext();
+        if ('speechSynthesis' in window && speechVoices.length === 0) {
+            speechVoices = window.speechSynthesis.getVoices();
+        }
+    }, { once: true });
+
+    function toggleSoundAlert() {
+        isSoundMuted = !isSoundMuted;
+        const btn = document.getElementById('btnToggleSound');
+        const icon = document.getElementById('soundIcon');
+        const text = document.getElementById('soundText');
+
+        if (isSoundMuted) {
+            btn.className = 'hdr-ctrl-btn sound-muted';
+            icon.className = 'bi bi-volume-mute-fill';
+            text.innerText = 'Suara: OFF';
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        } else {
+            btn.className = 'hdr-ctrl-btn sound-active';
+            icon.className = 'bi bi-volume-up-fill';
+            text.innerText = 'Suara: ON';
+            testSoundAlert();
+        }
+    }
+
+    function playRadarChime() {
+        if (isSoundMuted) return;
+        const ctx = getAudioContext();
+        if (!ctx) return;
+
+        try {
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, now); // A5 note
+            osc.frequency.exponentialRampToValueAtTime(440, now + 0.35);
+
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.36);
+        } catch(e) {}
+    }
+
+    function playEmergencyWarningSiren() {
+        if (isSoundMuted) return;
+        const ctx = getAudioContext();
+        if (!ctx) return;
+
+        try {
+            const now = ctx.currentTime;
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc1.type = 'triangle';
+            osc2.type = 'sawtooth';
+
+            osc1.frequency.setValueAtTime(950, now);
+            osc1.frequency.linearRampToValueAtTime(650, now + 0.25);
+            osc1.frequency.linearRampToValueAtTime(950, now + 0.5);
+
+            osc2.frequency.setValueAtTime(475, now);
+            osc2.frequency.linearRampToValueAtTime(325, now + 0.25);
+            osc2.frequency.linearRampToValueAtTime(475, now + 0.5);
+
+            gain.gain.setValueAtTime(0.4, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 0.7);
+            osc2.stop(now + 0.7);
+        } catch(e) {}
+    }
+
+    function getGoogleIndonesianVoice() {
+        if (!speechVoices || speechVoices.length === 0) {
+            if ('speechSynthesis' in window) speechVoices = window.speechSynthesis.getVoices();
+        }
+        // 1. Prioritize Google Indonesian voice
+        let voice = speechVoices.find(v => (v.name.includes('Google') || v.name.includes('google')) && (v.lang === 'id-ID' || v.lang.startsWith('id')));
+        // 2. Any Indonesian voice (Microsoft Gadis, Apple Damayanti, etc.)
+        if (!voice) voice = speechVoices.find(v => v.lang === 'id-ID' || v.lang.startsWith('id'));
+        // 3. Any Google voice
+        if (!voice) voice = speechVoices.find(v => v.name.includes('Google') || v.name.includes('google'));
+        return voice;
+    }
+
+    function speakGoogleVoice(text) {
+        if (isSoundMuted) return;
+
+        showVoiceNotificationToast(text);
+
+        // Web Speech API
+        if ('speechSynthesis' in window) {
+            try {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'id-ID';
+                utterance.rate = 0.95;
+                utterance.pitch = 1.0;
+
+                const voice = getGoogleIndonesianVoice();
+                if (voice) {
+                    utterance.voice = voice;
+                }
+
+                utterance.onerror = () => {
+                    playGoogleTranslateFallback(text);
+                };
+
+                window.speechSynthesis.speak(utterance);
+                return;
+            } catch (err) {
+                console.warn('SpeechSynthesis failed, trying fallback:', err);
+            }
+        }
+
+        playGoogleTranslateFallback(text);
+    }
+
+    function playGoogleTranslateFallback(text) {
+        if (isSoundMuted) return;
+        try {
+            const safeText = text.substring(0, 180);
+            const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${encodeURIComponent(safeText)}`;
+            const audio = new Audio(ttsUrl);
+            audio.play().catch(e => console.warn('TTS playback prevented:', e));
+        } catch(e) {}
+    }
+
+    function showVoiceNotificationToast(text) {
+        let toastEl = document.getElementById('voiceToastIndicator');
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.id = 'voiceToastIndicator';
+            toastEl.style.position = 'fixed';
+            toastEl.style.bottom = '46px';
+            toastEl.style.right = '20px';
+            toastEl.style.background = 'rgba(15, 23, 42, 0.92)';
+            toastEl.style.border = '1px solid #38bdf8';
+            toastEl.style.boxShadow = '0 8px 32px rgba(0, 210, 255, 0.35)';
+            toastEl.style.borderRadius = '10px';
+            toastEl.style.padding = '8px 14px';
+            toastEl.style.display = 'flex';
+            toastEl.style.alignItems = 'center';
+            toastEl.style.gap = '10px';
+            toastEl.style.zIndex = '99999';
+            toastEl.style.fontSize = '11px';
+            toastEl.style.color = '#fff';
+            toastEl.style.transition = 'all 0.3s ease';
+            document.body.appendChild(toastEl);
+        }
+
+        toastEl.innerHTML = `
+            <span class="spinner-grow spinner-grow-sm text-info" role="status"></span>
+            <div>
+                <strong style="color:#38bdf8; display:block; font-size:10px; text-transform:uppercase; letter-spacing:0.5px;">Google Voice Notification</strong>
+                <span style="color:#e2e8f0;">${text.length > 70 ? text.substring(0, 67) + '...' : text}</span>
+            </div>
+        `;
+        toastEl.style.opacity = '1';
+        toastEl.style.transform = 'translateY(0)';
+
+        clearTimeout(toastEl._timer);
+        toastEl._timer = setTimeout(() => {
+            toastEl.style.opacity = '0';
+            toastEl.style.transform = 'translateY(10px)';
+        }, 7000);
+    }
+
+    function testSoundAlert() {
+        playRadarChime();
+        setTimeout(() => {
+            const testMsg = "Perhatian. Ini adalah uji coba sistem suara Google pada peringatan dini cuaca IMORA. Pemantauan 17 titik tambang beroperasi normal.";
+            speakGoogleVoice(testMsg);
+        }, 450);
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       4. LEAFLET MAP & WEATHER DATA INTEGRATION (NO API KEY REQUIRED)
+       ────────────────────────────────────────────────────────────────────────── */
+    let map = null;
+    let markersLayer = null;
+    let darkTileLayer = null;
+    let satTileLayer = null;
+    let weatherResults = [];
+    let hourlyChartInstance = null;
+    let activeFilter = 'all';
+
+    function initMap() {
+        // Center around Indexim Coalindo mining leasehold (Sangkulirang / Kaliorang, East Kutai)
+        map = L.map('weatherMap', {
+            zoomControl: false,
+            attributionControl: false
+        }).setView([1.045, 117.658], 13);
+
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // Esri World Dark Gray Base & Reference - Clean dark radar basemap with NO API KEY REQUIRED / NO WATERMARKS
+        const darkBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            maxNativeZoom: 16
+        });
+        const darkRef = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            maxNativeZoom: 16
+        });
+        darkTileLayer = L.layerGroup([darkBase, darkRef]);
+        darkTileLayer.addTo(map);
+
+        // Esri World Imagery (Satellite)
+        satTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            maxNativeZoom: 18
+        });
+
+        markersLayer = L.layerGroup().addTo(map);
+    }
+
+    function setMapLayer(layerType) {
+        document.getElementById('btnLayerDark').classList.toggle('active', layerType === 'dark');
+        document.getElementById('btnLayerSat').classList.toggle('active', layerType === 'satellite');
+
+        if (layerType === 'dark') {
+            if (map.hasLayer(satTileLayer)) map.removeLayer(satTileLayer);
+            if (!map.hasLayer(darkTileLayer)) map.addLayer(darkTileLayer);
+        } else {
+            if (map.hasLayer(darkTileLayer)) map.removeLayer(darkTileLayer);
+            if (!map.hasLayer(satTileLayer)) map.addLayer(satTileLayer);
+        }
+    }
+
+    function resetMapView() {
+        if (weatherResults && weatherResults.length > 0) {
+            const bounds = L.latLngBounds(weatherResults.map(r => [r.point.latitude, r.point.longitude]));
+            map.fitBounds(bounds, { padding: [40, 40] });
+        } else {
+            map.setView([1.045, 117.658], 13);
+        }
+    }
+
+    // WMO Weather code helper
+    function interpretWmoCode(code) {
+        if (code === 0) return { desc: 'Cerah', icon: 'bi-sun-fill text-warning' };
+        if (code === 1 || code === 2) return { desc: 'Cerah Berawan', icon: 'bi-cloud-sun-fill text-info' };
+        if (code === 3) return { desc: 'Berawan Tebal', icon: 'bi-clouds-fill text-secondary' };
+        if (code >= 51 && code <= 55) return { desc: 'Gerimis Ringan', icon: 'bi-cloud-drizzle-fill text-info' };
+        if (code >= 61 && code <= 65) return { desc: 'Hujan', icon: 'bi-cloud-rain-fill text-primary' };
+        if (code >= 80 && code <= 82) return { desc: 'Hujan Lebat (Showers)', icon: 'bi-cloud-rain-heavy-fill text-danger' };
+        if (code >= 95 && code <= 99) return { desc: 'Badai Petir', icon: 'bi-cloud-lightning-rain-fill text-danger' };
+        return { desc: 'Normal', icon: 'bi-cloud-fill text-muted' };
+    }
+
+    async function fetchForecastData() {
+        try {
+            // First attempt to call the local cached backend endpoint
+            let response = await fetch('/EarlyWarning/GetForecast');
+            if (!response.ok) {
+                // Direct fallback to IMORA API
+                response = await fetch('https://imora.indexim.id/api/v1/forecast');
+            }
+            if (!response.ok) throw new Error('Forecast unavailable');
+
+            const payload = await response.json();
+            weatherResults = payload.results || [];
+
+            renderWeatherDashboard(weatherResults);
+        } catch (err) {
+            console.warn('Error fetching forecast, retrying in 10s:', err);
+            setTimeout(fetchForecastData, 10000);
+        }
+    }
+
+    function renderWeatherDashboard(results) {
+        if (!results || results.length === 0) return;
+
+        markersLayer.clearLayers();
+
+        let maxRain = 0;
+        let maxRainLocation = 'Seluruh Pit Kering';
+        let maxProb = 0;
+        let maxProbLocation = '-';
+        let maxWind = 0;
+        let maxWindLocation = '-';
+        let tempSum = 0;
+        let warningPointsCount = 0;
+        let activeAlertPoints = [];
+
+        const bounds = [];
+        const cardListEl = document.getElementById('pointsCardList');
+        cardListEl.innerHTML = '';
+
+        let tickerItems = [];
+
+        results.forEach((item, index) => {
+            const p = item.point;
+            const fc = item.forecast.hourly;
+
+            const curTemp = fc.temperature_2m ? fc.temperature_2m[0] : 25;
+            const curPrecip = fc.precipitation ? fc.precipitation[0] : 0;
+            const curProb = fc.precipitation_probability ? fc.precipitation_probability[0] : 0;
+            const curWind = fc.wind_speed_10m ? fc.wind_speed_10m[0] : 0;
+            const curGust = fc.wind_gusts_10m ? fc.wind_gusts_10m[0] : 0;
+            const curCode = fc.weather_code ? fc.weather_code[0] : 0;
+
+            tempSum += curTemp;
+
+            // Track max stats
+            if (curPrecip > maxRain) {
+                maxRain = curPrecip;
+                maxRainLocation = p.name;
+            }
+            if (curProb > maxProb) {
+                maxProb = curProb;
+                maxProbLocation = p.name;
+            }
+            if (curGust > maxWind) {
+                maxWind = curGust;
+                maxWindLocation = p.name;
+            }
+
+            // Determine Severity Level
+            // 0: Green (Normal), 1: Yellow (Waspada), 2: Orange (Siaga), 3: Red (Awas)
+            let severity = 'green';
+            let statusText = 'Normal';
+
+            if (curPrecip >= 5 || curGust >= 45 || curCode >= 95) {
+                severity = 'red';
+                statusText = 'Awas';
+                warningPointsCount++;
+                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, status: 'Awas' });
+            } else if (curPrecip >= 2 || curGust >= 32) {
+                severity = 'orange';
+                statusText = 'Siaga';
+                warningPointsCount++;
+                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, status: 'Siaga' });
+            } else if (curPrecip > 0 || curProb >= 50 || curGust >= 24) {
+                severity = 'yellow';
+                statusText = 'Waspada';
+                warningPointsCount++;
+                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, status: 'Waspada' });
+            }
+
+            bounds.push([p.latitude, p.longitude]);
+
+            // Create Custom Radar Marker Pin for Leaflet
+            const pinHtml = `
+                <div class="radar-pin ${severity}">
+                    <div class="core-dot"></div>
+                    <div class="pulse-wave"></div>
+                </div>
+            `;
+            const customIcon = L.divIcon({
+                html: pinHtml,
+                className: '',
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            });
+
+            const marker = L.marker([p.latitude, p.longitude], { icon: customIcon });
+
+            // Marker Popup Content
+            const wmoInfo = interpretWmoCode(curCode);
+            const popupHtml = `
+                <div style="font-family:'Poppins',sans-serif; min-width:200px; padding:4px;">
+                    <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:4px; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">
+                        <i class="bi bi-geo-alt-fill text-primary"></i> ${p.name}
+                    </div>
+                    <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span>Kondisi Cuaca:</span>
+                        <strong style="color:#0f172a;"><i class="${wmoInfo.icon}"></i> ${wmoInfo.desc}</strong>
+                    </div>
+                    <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span>Curah Hujan (Now):</span>
+                        <strong style="color:${curPrecip > 0 ? '#ef4444' : '#10b981'}; font-weight:800;">${curPrecip} mm/h</strong>
+                    </div>
+                    <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span>Probabilitas Hujan:</span>
+                        <strong style="color:#7c3aed;">${curProb}%</strong>
+                    </div>
+                    <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span>Suhu Udara:</span>
+                        <strong style="color:#0284c7;">${curTemp} &deg;C</strong>
+                    </div>
+                    <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between;">
+                        <span>Kecepatan / Gust:</span>
+                        <strong style="color:#d97706;">${curWind} / ${curGust} km/h</strong>
+                    </div>
+                </div>
+            `;
+            marker.bindPopup(popupHtml);
+            markersLayer.addLayer(marker);
+
+            // Right Panel Point Card
+            let cardClass = 'point-card';
+            if (severity === 'red') cardClass += ' alert-item';
+            else if (severity === 'yellow' || severity === 'orange') cardClass += ' warning-item';
+
+            const card = document.createElement('div');
+            card.className = cardClass;
+            card.onclick = () => {
+                isUserInteractingWithPoints = true;
+                clearTimeout(autoScrollPauseTimeout);
+                autoScrollPauseTimeout = setTimeout(() => { isUserInteractingWithPoints = false; }, 8000);
+
+                map.flyTo([p.latitude, p.longitude], 15, { duration: 1.2 });
+                marker.openPopup();
+                document.getElementById('selectedPointName').innerText = p.name;
+                updateHourlyChart(item);
+            };
+
+            card.innerHTML = `
+                <div class="point-badge" style="background:${severity === 'red' ? 'rgba(239,68,68,0.2)' : severity === 'orange' ? 'rgba(251,146,60,0.2)' : severity === 'yellow' ? 'rgba(251,191,36,0.2)' : 'rgba(16,185,129,0.2)'}; color:${severity === 'red' ? '#ef4444' : severity === 'orange' ? '#fb923c' : severity === 'yellow' ? '#fbbf24' : '#10b981'};">
+                    <i class="${wmoInfo.icon}"></i>
+                </div>
+                <div>
+                    <div class="point-name">${p.name}</div>
+                    <div class="point-meta">
+                        <span><i class="bi bi-wind"></i> ${curGust} km/h</span>
+                        <span><i class="bi bi-percent"></i> ${curProb}% Prob</span>
+                        <span class="badge ${severity === 'red' ? 'bg-danger' : severity === 'orange' ? 'bg-warning text-dark' : severity === 'yellow' ? 'bg-warning text-dark' : 'bg-success'}">${statusText}</span>
+                    </div>
+                </div>
+                <div class="point-weather-col">
+                    <div class="point-temp">${curTemp}&deg;C</div>
+                    <div class="point-precip ${curPrecip > 0 ? 'wet' : 'dry'}">${curPrecip > 0 ? curPrecip + ' mm/h' : 'Kering'}</div>
+                </div>
+            `;
+            cardListEl.appendChild(card);
+
+            tickerItems.push(`${p.name}: ${curTemp}°C • Hujan: ${curPrecip}mm • Gust: ${curGust}km/h (${wmoInfo.desc})`);
+        });
+
+        // Fit map bounds initially
+        if (bounds.length > 0) {
+            map.fitBounds(L.latLngBounds(bounds), { padding: [35, 35] });
+        }
+
+        // Update HUD KPI Cards
+        const avgTemp = (tempSum / results.length).toFixed(1);
+        document.getElementById('kpiPointsCount').innerText = results.length;
+        document.getElementById('kpiMaxRain').innerHTML = `${maxRain} <span style="font-size:12px;">mm/h</span>`;
+        document.getElementById('kpiMaxRainLoc').innerText = maxRainLocation;
+        document.getElementById('kpiRainBadge').innerText = `${maxRain} mm`;
+
+        document.getElementById('kpiMaxProb').innerHTML = `${maxProb} <span style="font-size:12px;">%</span>`;
+        document.getElementById('kpiMaxProbLoc').innerText = maxProbLocation;
+
+        document.getElementById('kpiMaxWind').innerHTML = `${maxWind} <span style="font-size:12px;">km/h</span>`;
+        document.getElementById('kpiMaxWindLoc').innerText = maxWindLocation;
+
+        document.getElementById('kpiAvgTemp').innerHTML = `${avgTemp} <span style="font-size:12px;">&deg;C</span>`;
+
+        // Update Warning Notification Banner & Sound Trigger
+        const banner = document.getElementById('warningBanner');
+        const iconBox = document.getElementById('warningIconBox');
+        const icon = document.getElementById('warningIcon');
+        const title = document.getElementById('warningTitle');
+        const desc = document.getElementById('warningDesc');
+        const kpiStatusBadge = document.getElementById('kpiStatusBadge');
+        const kpiStatusText = document.getElementById('kpiStatusText');
+
+        document.getElementById('warningPointsBadge').innerText = `${warningPointsCount} Titik Terindikasi`;
+
+        if (activeAlertPoints.some(a => a.status === 'Awas')) {
+            banner.className = 'warning-banner siaga';
+            icon.className = 'bi bi-exclamation-octagon-fill text-danger';
+            title.innerText = 'PERINGATAN DINI CUACA EKSTREM: SIAGA TINGGI!';
+            desc.innerText = `Terdeteksi potensi hujan lebat & angin kencang di area: ${activeAlertPoints.filter(a => a.status === 'Awas').map(a => a.name).join(', ')}. Terapkan mitigasi K3 dan kurangi aktivitas di area lereng terbuka!`;
+            kpiStatusBadge.className = 'badge bg-danger';
+            kpiStatusBadge.innerText = 'SIAGA';
+            kpiStatusText.className = 'kpi-num text-danger';
+            kpiStatusText.innerText = 'AWAS';
+
+            // Trigger emergency audio siren + Google Voice announcement (limit once per 90 seconds)
+            const nowTime = Date.now();
+            if (nowTime - lastAudioAlertTime > 90000) {
+                lastAudioAlertTime = nowTime;
+                playEmergencyWarningSiren();
+                setTimeout(() => {
+                    const alertMsg = `Peringatan dini cuaca ekstrem status siaga. Terdeteksi potensi hujan lebat dan angin kencang di pit tambang. Seluruh personel wajib mematuhi keselamatan kerja.`;
+                    speakGoogleVoice(alertMsg);
+                }, 1200);
+            }
+        } else if (warningPointsCount > 0) {
+            banner.className = 'warning-banner waspada';
+            icon.className = 'bi bi-exclamation-triangle-fill text-warning';
+            title.innerText = 'PERINGATAN DINI CUACA: STATUS WASPADA';
+            desc.innerText = `Terdapat potensi gerimis/presipitasi meningkat di ${warningPointsCount} titik (${activeAlertPoints.slice(0, 3).map(a => a.name).join(', ')}). Waspada jalan hauling licin dan jaga jarak aman berkendara.`;
+            kpiStatusBadge.className = 'badge bg-warning text-dark';
+            kpiStatusBadge.innerText = 'WASPADA';
+            kpiStatusText.className = 'kpi-num text-warning';
+            kpiStatusText.innerText = 'WASPADA';
+
+            const nowTime = Date.now();
+            if (nowTime - lastAudioAlertTime > 120000) {
+                lastAudioAlertTime = nowTime;
+                playRadarChime();
+                setTimeout(() => {
+                    const warnMsg = `Peringatan dini cuaca status waspada. Terdeteksi potensi hujan pada ${warningPointsCount} titik tambang. Harap berhati-hati dan kurangi kecepatan unit.`;
+                    speakGoogleVoice(warnMsg);
+                }, 500);
+            }
+        } else {
+            banner.className = 'warning-banner normal';
+            icon.className = 'bi bi-shield-check text-success';
+            title.innerText = 'KONDISI CUACA SITE: NORMAL & AMAN';
+            desc.innerText = 'Tidak ada potensi hujan lebat, petir, atau hembusan angin kencang berisiko di seluruh 17 titik operasional tambang.';
+            kpiStatusBadge.className = 'badge bg-success';
+            kpiStatusBadge.innerText = 'AMAN';
+            kpiStatusText.className = 'kpi-num text-success';
+            kpiStatusText.innerText = 'NORMAL';
+        }
+
+        // Update Bottom Ticker
+        document.getElementById('weatherTickerText').innerText = tickerItems.join('  •  ');
+
+        // Render Initial Hourly Chart (Combined or Point 1)
+        updateHourlyChart(results[0]);
+    }
+
+    function switchRightTab(tabName) {
+        document.getElementById('tabPointsBtn').classList.toggle('active', tabName === 'points');
+        document.getElementById('tabChartBtn').classList.toggle('active', tabName === 'chart');
+        document.getElementById('tabSafetyBtn').classList.toggle('active', tabName === 'safety');
+
+        document.getElementById('tabContentPoints').style.display = tabName === 'points' ? 'flex' : 'none';
+        document.getElementById('tabContentChart').style.display = tabName === 'chart' ? 'flex' : 'none';
+        document.getElementById('tabContentSafety').style.display = tabName === 'safety' ? 'flex' : 'none';
+    }
+
+    function updateHourlyChart(item) {
+        if (!item || !item.forecast || !item.forecast.hourly) return;
+        const fc = item.forecast.hourly;
+        const labels = (fc.time || []).slice(0, 24).map(t => {
+            const parts = t.split('T');
+            return parts.length > 1 ? parts[1] : t;
+        });
+        const precipData = (fc.precipitation || []).slice(0, 24);
+        const tempData = (fc.temperature_2m || []).slice(0, 24);
+        const windData = (fc.wind_gusts_10m || []).slice(0, 24);
+
+        document.getElementById('chartLocationLabel').innerText = `Prakiraan 24 Jam: ${item.point.name}`;
+
+        const ctx = document.getElementById('hourlyWeatherChart').getContext('2d');
+        if (hourlyChartInstance) {
+            hourlyChartInstance.destroy();
+        }
+
+        hourlyChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Hujan (mm)',
+                        data: precipData,
+                        backgroundColor: 'rgba(56, 189, 248, 0.65)',
+                        borderColor: '#0284c7',
+                        borderWidth: 1,
+                        yAxisID: 'yPrecip',
+                        order: 2
+                    },
+                    {
+                        label: 'Suhu (°C)',
+                        data: tempData,
+                        type: 'line',
+                        borderColor: '#fbbf24',
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 2,
+                        yAxisID: 'yTemp',
+                        order: 1
+                    },
+                    {
+                        label: 'Gust Angin (km/h)',
+                        data: windData,
+                        type: 'line',
+                        borderColor: '#fb923c',
+                        borderDash: [4, 4],
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.5,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        yAxisID: 'yWind',
+                        order: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        labels: { color: '#cbd5e1', font: { family: 'Poppins', size: 10 } }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 45 },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    yPrecip: {
+                        type: 'linear',
+                        position: 'left',
+                        title: { display: true, text: 'Hujan (mm)', color: '#38bdf8', font: { size: 9 } },
+                        ticks: { color: '#38bdf8', font: { size: 9 }, beginAtZero: true },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    yTemp: {
+                        type: 'linear',
+                        position: 'right',
+                        title: { display: true, text: 'Suhu (°C)', color: '#fbbf24', font: { size: 9 } },
+                        ticks: { color: '#fbbf24', font: { size: 9 } },
+                        grid: { drawOnChartArea: false }
+                    },
+                    yWind: {
+                        type: 'linear',
+                        position: 'right',
+                        display: false,
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────────
+       5. AUTO-SCROLL ENGINE FOR OPERATIONAL POINTS (TV DASHBOARD MODE)
+       ────────────────────────────────────────────────────────────────────────── */
+    let isAutoScrollEnabled = true;
+    let isUserInteractingWithPoints = false;
+    let autoScrollPauseTimeout = null;
+    let autoScrollRaf = null;
+    let lastScrollTimestamp = 0;
+    let edgeHoldUntil = 0;
+
+    function toggleAutoScroll() {
+        isAutoScrollEnabled = !isAutoScrollEnabled;
+        const badge = document.getElementById('autoScrollBadge');
+        if (badge) {
+            if (isAutoScrollEnabled) {
+                badge.style.background = 'rgba(56,189,248,0.15)';
+                badge.style.borderColor = 'rgba(56,189,248,0.4)';
+                badge.style.color = '#38bdf8';
+                badge.innerHTML = '<i class="bi bi-arrow-down-up"></i> Auto-Scroll: ON';
+            } else {
+                badge.style.background = 'rgba(148,163,184,0.15)';
+                badge.style.borderColor = 'rgba(148,163,184,0.3)';
+                badge.style.color = '#94a3b8';
+                badge.innerHTML = '<i class="bi bi-pause-circle"></i> Auto-Scroll: OFF';
+            }
+        }
+    }
+
+    function initAutoScroll() {
+        const container = document.getElementById('tabContentPoints');
+        if (!container) return;
+
+        // Pause auto-scroll on hover, wheel, or touch interaction
+        container.addEventListener('mouseenter', () => { isUserInteractingWithPoints = true; });
+        container.addEventListener('mouseleave', () => { isUserInteractingWithPoints = false; });
+        container.addEventListener('wheel', () => {
+            isUserInteractingWithPoints = true;
+            clearTimeout(autoScrollPauseTimeout);
+            autoScrollPauseTimeout = setTimeout(() => { isUserInteractingWithPoints = false; }, 4000);
+        }, { passive: true });
+        container.addEventListener('touchstart', () => { isUserInteractingWithPoints = true; }, { passive: true });
+        container.addEventListener('touchend', () => {
+            clearTimeout(autoScrollPauseTimeout);
+            autoScrollPauseTimeout = setTimeout(() => { isUserInteractingWithPoints = false; }, 4000);
+        }, { passive: true });
+
+        const holdDurationMs = 2500;
+
+        function stepAutoScroll(timestamp) {
+            if (!lastScrollTimestamp) lastScrollTimestamp = timestamp;
+            const delta = timestamp - lastScrollTimestamp;
+            lastScrollTimestamp = timestamp;
+
+            if (isAutoScrollEnabled && !isUserInteractingWithPoints) {
+                const tabPoints = document.getElementById('tabContentPoints');
+                if (tabPoints && tabPoints.style.display !== 'none') {
+                    const now = Date.now();
+                    if (now >= edgeHoldUntil) {
+                        const maxScroll = tabPoints.scrollHeight - tabPoints.clientHeight;
+                        if (maxScroll > 10) {
+                            if (tabPoints.scrollTop >= maxScroll - 2) {
+                                // Bottom reached: hold for 2.5s, then smooth return to top
+                                edgeHoldUntil = now + holdDurationMs;
+                                setTimeout(() => {
+                                    tabPoints.scrollTo({ top: 0, behavior: 'smooth' });
+                                    edgeHoldUntil = Date.now() + 2000;
+                                }, 500);
+                            } else {
+                                tabPoints.scrollTop += Math.max(0.4, (delta / 16.6) * 0.4);
+                            }
+                        }
+                    }
+                }
+            }
+            autoScrollRaf = requestAnimationFrame(stepAutoScroll);
+        }
+
+        if (autoScrollRaf) cancelAnimationFrame(autoScrollRaf);
+        autoScrollRaf = requestAnimationFrame(stepAutoScroll);
+    }
+
+    // Initialize Map, Speech, Auto-Scroll and Fetch Live Forecast
+    window.addEventListener('DOMContentLoaded', () => {
+        initVoiceSynthesis();
+        initMap();
+        initAutoScroll();
+        fetchForecastData();
+
+        // Refresh forecast every 5 minutes (300,000 ms) as specified by IMORA integration guide
+        setInterval(fetchForecastData, 300000);
+    });
+    </script>
+</body>
+</html>

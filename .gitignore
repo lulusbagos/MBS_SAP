@@ -45,6 +45,8 @@ _ReSharper*/
 ## Uploads (User generated photos)
 wwwroot/uploads/
 wwwroot/uploads/**/*
+publish/wwwroot/uploads/
+publish/wwwroot/uploads/**/*
 
 ## Miscellaneous
 .DS_Store
@@ -56,6 +58,7 @@ publish/wwwroot/video/*.mp4
 
 ## Python Scratch
 scratch/
+publish/Scripts/
 __pycache__/
 *.pyc
 
