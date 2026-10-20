@@ -1470,7 +1470,21 @@
        ────────────────────────────────────────────────────────────────────────── */
     let audioContext = null;
     let isSoundMuted = false;
-    let lastAudioAlertTime = 0;
+    const AUDIO_ALERT_INTERVAL_MS = 3600000; // 1 Jam sekali (60 menit)
+    function getLastAudioAlertTime() {
+        try {
+            const val = localStorage.getItem('MBS_EWS_LAST_AUDIO_ALERT_TIME');
+            return val ? parseInt(val, 10) : 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+    function setLastAudioAlertTime(ts) {
+        try {
+            localStorage.setItem('MBS_EWS_LAST_AUDIO_ALERT_TIME', ts.toString());
+        } catch (e) {}
+    }
+    let lastAudioAlertTime = getLastAudioAlertTime();
     let speechVoices = [];
 
     function initVoiceSynthesis() {
@@ -1682,7 +1696,7 @@
     function testSoundAlert() {
         playRadarChime();
         setTimeout(() => {
-            const testMsg = "Perhatian. Uji coba sistem suara peringatan dini cuaca IMORA. Terdeteksi potensi hujan di Pit T2 dan T4 dengan curah hujan 3.2 milimeter per jam. Seluruh personel diinstruksikan berhati-hati terhadap jalan hauling licin dan kurangi kecepatan unit.";
+            const testMsg = "Perhatian. Uji coba sistem suara peringatan dini cuaca IMORA. Terdeteksi potensi hujan di beberapa lokasi, antara lain area Pit T2 dan T4 dengan curah hujan 3.2 milimeter per jam. Seluruh personel diinstruksikan berhati-hati terhadap jalan hauling licin dan kurangi kecepatan unit.";
             speakGoogleVoice(testMsg);
         }, 450);
     }
@@ -2298,36 +2312,48 @@
 
         document.getElementById('warningPointsBadge').innerText = `${warningPointsCount} Titik Terindikasi`;
 
-        const thunderPoints = activeAlertPoints.filter(a => a.status === 'Awas');
-        const activeRainNames = activeNowRainPoints.map(a => a.name.replace(/\s*-\s*(KPP|UDU|MGE)\b/gi, '').trim()).slice(0, 3).join(', ');
+        const alertLocations = (activeNowRainPoints.length > 0 ? activeNowRainPoints : activeAlertPoints)
+            .map(a => a.name.replace(/\s*-\s*(KPP|UDU|MGE)\b/gi, '').trim());
+        const uniqueLocations = [...new Set(alertLocations)];
+        const locationsPreview = uniqueLocations.slice(0, 3).join(', ');
+        const locationsSpoken = uniqueLocations.length > 0 
+            ? `di beberapa lokasi, antara lain area ${locationsPreview}${uniqueLocations.length > 3 ? ', dan sekitarnya' : ''}` 
+            : 'di beberapa lokasi pit operasional';
+        const locationsBanner = uniqueLocations.length > 0 
+            ? `di beberapa lokasi (${locationsPreview}${uniqueLocations.length > 3 ? ', dll' : ''})` 
+            : 'di beberapa lokasi operasional';
 
         const hasAwasActive = (maxRainNow >= 5 || maxGustNow >= 45 || activeNowThunderPoints.length > 0);
         const hasActiveRain = (maxRainNow > 0);
         const hasSevereForecast = (siteMaxRainRate >= 5 || activeNowThunderPoints.length > 0);
         const hasRainForecast = (siteMaxProb >= 50 || siteMaxRainRate > 0 || siteMaxTotalRain >= 2.0);
 
+        const nowTime = Date.now();
+        const lastAlert = getLastAudioAlertTime();
+        const isAlertIntervalPassed = (nowTime - lastAlert >= AUDIO_ALERT_INTERVAL_MS);
+
         if (hasAwasActive || hasSevereForecast) {
             banner.className = 'warning-banner siaga';
             icon.className = 'bi bi-exclamation-octagon-fill text-danger';
             if (hasAwasActive) {
                 title.innerText = 'PERINGATAN DINI: STATUS AWAS CUACA EKSTREM!';
-                desc.innerText = `Terdeteksi potensi cuaca ekstrem & hujan lebat (${maxRainNow} mm/h) di area: ${activeRainNames || maxRainNowLocation}. Terapkan mitigasi K3 dan kurangi aktivitas di area lereng terbuka!`;
+                desc.innerText = `Terdeteksi potensi cuaca ekstrem & hujan lebat (${maxRainNow} mm/h) ${locationsBanner}. Terapkan mitigasi K3 dan kurangi aktivitas di area lereng terbuka!`;
             } else {
                 title.innerText = 'PERINGATAN DINI: POTENSI CUACA EKSTREM HARI INI!';
-                desc.innerText = `Prakiraan cuaca menunjukkan potensi badai petir / hujan lebat hari ini pada ${rainTimeWindowStr || 'siang/sore'}. Waspada petir di lereng pit terbuka dan siapkan shelter aman.`;
+                desc.innerText = `Prakiraan cuaca menunjukkan potensi badai petir / hujan lebat hari ini ${locationsBanner} pada ${rainTimeWindowStr || 'siang/sore'}. Waspada petir di lereng pit terbuka dan siapkan shelter aman.`;
             }
             kpiStatusBadge.className = 'badge bg-danger';
             kpiStatusBadge.innerText = 'SIAGA TINGGI';
             kpiStatusText.className = 'kpi-num text-danger';
             kpiStatusText.innerText = 'AWAS';
 
-            // Trigger emergency audio siren + Google Voice announcement (limit once per 90 seconds)
-            const nowTime = Date.now();
-            if (nowTime - lastAudioAlertTime > 90000) {
+            // Trigger emergency audio siren + Google Voice announcement (1 jam sekali agar tidak terlalu sering)
+            if (isAlertIntervalPassed) {
+                setLastAudioAlertTime(nowTime);
                 lastAudioAlertTime = nowTime;
                 playEmergencyWarningSiren();
                 setTimeout(() => {
-                    let alertMsg = `Peringatan bahaya cuaca ekstrem. Terdeteksi potensi cuaca berisiko di site tambang. Seluruh operator dan personel wajib waspada dan hentikan pekerjaan berisiko tinggi.`;
+                    let alertMsg = `Peringatan bahaya cuaca ekstrem. Terdeteksi potensi cuaca berisiko ${locationsSpoken}. Seluruh operator dan personel wajib waspada dan hentikan pekerjaan berisiko tinggi.`;
                     speakGoogleVoice(alertMsg);
                 }, 1200);
             }
@@ -2335,18 +2361,18 @@
             banner.className = 'warning-banner waspada';
             icon.className = 'bi bi-cloud-rain-heavy-fill text-warning';
             title.innerText = 'PERINGATAN CUACA: HUJAN AKTIF SEDANG BERLANGSUNG';
-            desc.innerText = `Saat ini terpantau hujan/gerimis dengan intensitas hingga ${maxRainNow} mm/jam di area ${activeRainNames}. Waspada jalan hauling licin, kurangi batas kecepatan maksimal 30 km/jam dan jaga jarak aman berkendara.`;
+            desc.innerText = `Saat ini terpantau hujan/gerimis dengan intensitas hingga ${maxRainNow} mm/jam ${locationsBanner}. Waspada jalan hauling licin, kurangi batas kecepatan maksimal 30 km/jam dan jaga jarak aman berkendara.`;
             kpiStatusBadge.className = 'badge bg-warning text-dark';
             kpiStatusBadge.innerText = 'HUJAN AKTIF';
             kpiStatusText.className = 'kpi-num text-warning';
             kpiStatusText.innerText = 'HUJAN';
 
-            const nowTime = Date.now();
-            if (nowTime - lastAudioAlertTime > 120000) {
+            if (isAlertIntervalPassed) {
+                setLastAudioAlertTime(nowTime);
                 lastAudioAlertTime = nowTime;
                 playRadarChime();
                 setTimeout(() => {
-                    const warnMsg = `Perhatian. Terdeteksi hujan aktif di area ${activeRainNames} dengan curah hujan ${maxRainNow} milimeter per jam. Harap waspada jalan hauling licin dan kurangi kecepatan unit.`;
+                    const warnMsg = `Perhatian. Terdeteksi hujan aktif ${locationsSpoken} dengan curah hujan ${maxRainNow} milimeter per jam. Harap waspada jalan hauling licin dan kurangi kecepatan unit.`;
                     speakGoogleVoice(warnMsg);
                 }, 500);
             }
@@ -2354,18 +2380,18 @@
             banner.className = 'warning-banner waspada';
             icon.className = 'bi bi-cloud-sun-fill text-warning';
             title.innerText = 'PERINGATAN DINI CUACA: STATUS WASPADA PREDIKSI HARI INI';
-            desc.innerText = `Saat ini kondisi site kondusif & hauling normal (${avgTemp}°C). Namun diprediksi potensi hujan/gerimis pada ${rainTimeWindowStr || 'siang hingga sore'} dengan probabilitas mencapai ${siteMaxProb}% (akumulasi hingga ${siteMaxTotalRain.toFixed(1)} mm, gust ${siteMaxGust} km/h). Seluruh tim operasional diimbau waspada terhadap jalan hauling licin & siapkan drainase pit.`;
+            desc.innerText = `Saat ini kondisi site kondusif & hauling normal (${avgTemp}°C). Namun diprediksi potensi hujan/gerimis ${locationsBanner} pada ${rainTimeWindowStr || 'siang hingga sore'} dengan probabilitas mencapai ${siteMaxProb}% (akumulasi hingga ${siteMaxTotalRain.toFixed(1)} mm, gust ${siteMaxGust} km/h). Seluruh tim operasional diimbau waspada terhadap jalan hauling licin & siapkan drainase pit.`;
             kpiStatusBadge.className = 'badge bg-warning text-dark';
             kpiStatusBadge.innerText = 'WASPADA';
             kpiStatusText.className = 'kpi-num text-warning';
             kpiStatusText.innerText = 'WASPADA';
 
-            const nowTime = Date.now();
-            if (nowTime - lastAudioAlertTime > 120000) {
+            if (isAlertIntervalPassed) {
+                setLastAudioAlertTime(nowTime);
                 lastAudioAlertTime = nowTime;
                 playRadarChime();
                 setTimeout(() => {
-                    const warnMsg = `Perhatian. Peringatan dini cuaca status waspada. Kondisi site saat ini kondusif, namun diprediksi terdapat potensi hujan pada ${rainTimeWindowStr || 'siang hari'} dengan peluang mencapai ${siteMaxProb} persen. Seluruh pengawas dan operator pit diimbau waspada terhadap jalan hauling licin.`;
+                    const warnMsg = `Perhatian. Peringatan dini cuaca status waspada. Kondisi site saat ini kondusif, namun diprediksi terdapat potensi hujan ${locationsSpoken} pada ${rainTimeWindowStr || 'siang hari'} dengan peluang mencapai ${siteMaxProb} persen. Seluruh pengawas dan operator pit diimbau waspada terhadap jalan hauling licin.`;
                     speakGoogleVoice(warnMsg);
                 }, 500);
             }
