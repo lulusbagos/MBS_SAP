@@ -1852,20 +1852,98 @@
         }
     }
 
+    // Helper: Determine Current Hour Index in WITA (UTC+8)
+    function getCurrentHourIndex(timeArray) {
+        if (!timeArray || timeArray.length === 0) return 0;
+        const now = new Date();
+        const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const witaDate = new Date(utcMs + (8 * 3600000));
+        const y = witaDate.getFullYear();
+        const m = String(witaDate.getMonth() + 1).padStart(2, '0');
+        const d = String(witaDate.getDate()).padStart(2, '0');
+        const h = String(witaDate.getHours()).padStart(2, '0');
+        const targetPrefix = `${y}-${m}-${d}T${h}:00`;
+        const idx = timeArray.findIndex(t => t.startsWith(targetPrefix));
+        if (idx !== -1) return idx;
+
+        // Fallback closest match
+        const witaTargetMs = new Date(`${y}-${m}-${d}T${h}:00:00+08:00`).getTime();
+        let closestIdx = 0;
+        let minDiff = Infinity;
+        for (let i = 0; i < timeArray.length; i++) {
+            const tDate = new Date(timeArray[i] + ':00+08:00');
+            const diff = Math.abs(tDate.getTime() - witaTargetMs);
+            if (diff < minDiff) {
+                minDiff = diff;
+                closestIdx = i;
+            }
+        }
+        return closestIdx;
+    }
+
     function renderWeatherDashboard(results) {
         if (!results || results.length === 0) return;
 
         markersLayer.clearLayers();
         markerItems = [];
 
-        let maxRain = 0;
-        let maxRainLocation = 'Seluruh Pit Kering';
-        let maxProb = 0;
-        let maxProbLocation = '-';
-        let maxWind = 0;
-        let maxWindLocation = '-';
+        // 1. Determine Current Hour Index (WITA UTC+8) & Today's Remaining Forecast Window
+        const fc0 = results[0].forecast.hourly;
+        const currentHourIdx = getCurrentHourIndex(fc0.time);
+
+        const now = new Date();
+        const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const witaDate = new Date(utcMs + (8 * 3600000));
+        const todayStr = `${witaDate.getFullYear()}-${String(witaDate.getMonth() + 1).padStart(2, '0')}-${String(witaDate.getDate()).padStart(2, '0')}`;
+
+        // Today's remaining hours (from current hour until 23:00)
+        let todayRemainingIndices = [];
+        for (let i = currentHourIdx; i < fc0.time.length; i++) {
+            if (fc0.time[i].startsWith(todayStr)) {
+                todayRemainingIndices.push(i);
+            }
+        }
+        // If late night (< 6 hours remaining), include overnight hours up to +12h for night shift
+        if (todayRemainingIndices.length < 6) {
+            for (let i = currentHourIdx; i < Math.min(fc0.time.length, currentHourIdx + 12); i++) {
+                if (!todayRemainingIndices.includes(i)) todayRemainingIndices.push(i);
+            }
+        }
+
+        // 2. Scan Site-Wide Hourly Trends for Today's Forecast Peak
+        const hourlySiteSummary = todayRemainingIndices.map(idx => {
+            const timeStr = fc0.time[idx].split('T')[1];
+            const maxProbAtHour = Math.max(...results.map(r => r.forecast.hourly.precipitation_probability ? r.forecast.hourly.precipitation_probability[idx] : 0));
+            const maxRainAtHour = Math.max(...results.map(r => r.forecast.hourly.precipitation ? r.forecast.hourly.precipitation[idx] : 0));
+            const maxGustAtHour = Math.max(...results.map(r => r.forecast.hourly.wind_gusts_10m ? r.forecast.hourly.wind_gusts_10m[idx] : 0));
+            return { time: timeStr, prob: maxProbAtHour, rain: maxRainAtHour, gust: maxGustAtHour, index: idx };
+        });
+
+        const rainForecastHours = hourlySiteSummary.filter(h => h.prob >= 50 || h.rain > 0);
+        let rainTimeWindowStr = '';
+        if (rainForecastHours.length > 0) {
+            const startHour = rainForecastHours[0].time;
+            const endHour = rainForecastHours[rainForecastHours.length - 1].time;
+            rainTimeWindowStr = (startHour === endHour) ? `Pukul ${startHour} WITA` : `Pukul ${startHour} - ${endHour} WITA`;
+        }
+
+        let maxRainNow = 0;
+        let maxRainNowLocation = 'Seluruh Pit Kering';
+        let maxGustNow = 0;
+        let maxGustNowLocation = '-';
         let tempSum = 0;
+
+        let siteMaxProb = 0;
+        let siteMaxProbLocation = '-';
+        let siteMaxRainRate = 0;
+        let siteMaxRainRateLocation = '-';
+        let siteMaxTotalRain = 0;
+        let siteMaxGust = 0;
+        let siteMaxGustLocation = '-';
+
         let warningPointsCount = 0;
+        let activeNowRainPoints = [];
+        let activeNowThunderPoints = [];
         let activeAlertPoints = [];
 
         const bounds = [];
@@ -1878,27 +1956,59 @@
             const p = item.point;
             const fc = item.forecast.hourly;
 
-            const curTemp = fc.temperature_2m ? fc.temperature_2m[0] : 25;
-            const curPrecip = fc.precipitation ? fc.precipitation[0] : 0;
-            const curProb = fc.precipitation_probability ? fc.precipitation_probability[0] : 0;
-            const curWind = fc.wind_speed_10m ? fc.wind_speed_10m[0] : 0;
-            const curGust = fc.wind_gusts_10m ? fc.wind_gusts_10m[0] : 0;
-            const curCode = fc.weather_code ? fc.weather_code[0] : 0;
+            // Actual telemetry for Current Hour (Now)
+            const curTemp = fc.temperature_2m ? fc.temperature_2m[currentHourIdx] : 25;
+            const curPrecip = fc.precipitation ? fc.precipitation[currentHourIdx] : 0;
+            const curProb = fc.precipitation_probability ? fc.precipitation_probability[currentHourIdx] : 0;
+            const curWind = fc.wind_speed_10m ? fc.wind_speed_10m[currentHourIdx] : 0;
+            const curGust = fc.wind_gusts_10m ? fc.wind_gusts_10m[currentHourIdx] : 0;
+            const curCode = fc.weather_code ? fc.weather_code[currentHourIdx] : 0;
 
             tempSum += curTemp;
 
-            // Track max stats
-            if (curPrecip > maxRain) {
-                maxRain = curPrecip;
-                maxRainLocation = p.name;
+            // Track Real-Time Stats (Now)
+            if (curPrecip > maxRainNow) {
+                maxRainNow = curPrecip;
+                maxRainNowLocation = p.name;
             }
-            if (curProb > maxProb) {
-                maxProb = curProb;
-                maxProbLocation = p.name;
+            if (curGust > maxGustNow) {
+                maxGustNow = curGust;
+                maxGustNowLocation = p.name;
             }
-            if (curGust > maxWind) {
-                maxWind = curGust;
-                maxWindLocation = p.name;
+
+            // Forecast Stats for This Point (Today)
+            const ptTodayPrecip = todayRemainingIndices.map(i => fc.precipitation ? fc.precipitation[i] : 0);
+            const ptTodayProb = todayRemainingIndices.map(i => fc.precipitation_probability ? fc.precipitation_probability[i] : 0);
+            const ptTodayGust = todayRemainingIndices.map(i => fc.wind_gusts_10m ? fc.wind_gusts_10m[i] : 0);
+            const ptTodayCode = todayRemainingIndices.map(i => fc.weather_code ? fc.weather_code[i] : 0);
+
+            const ptMaxPrecip = Math.max(...ptTodayPrecip, 0);
+            const ptTotalRain = ptTodayPrecip.reduce((a, b) => a + b, 0);
+            const ptMaxProb = Math.max(...ptTodayProb, 0);
+            const ptMaxGust = Math.max(...ptTodayGust, 0);
+            const ptMaxCode = Math.max(...ptTodayCode, 0);
+
+            if (ptMaxProb > siteMaxProb) {
+                siteMaxProb = ptMaxProb;
+                siteMaxProbLocation = p.name;
+            }
+            if (ptMaxPrecip > siteMaxRainRate) {
+                siteMaxRainRate = ptMaxPrecip;
+                siteMaxRainRateLocation = p.name;
+            }
+            if (ptTotalRain > siteMaxTotalRain) {
+                siteMaxTotalRain = ptTotalRain;
+            }
+            if (ptMaxGust > siteMaxGust) {
+                siteMaxGust = ptMaxGust;
+                siteMaxGustLocation = p.name;
+            }
+
+            if (curPrecip > 0) {
+                activeNowRainPoints.push({ name: p.name, precip: curPrecip, gust: curGust });
+            }
+            if (curCode >= 95 || ptMaxCode >= 95) {
+                activeNowThunderPoints.push({ name: p.name, code: curCode });
             }
 
             // Determine Severity Level
@@ -1906,21 +2016,21 @@
             let severity = 'green';
             let statusText = 'Normal';
 
-            if (curPrecip >= 5 || curGust >= 45 || curCode >= 95) {
+            if (curPrecip >= 5 || curGust >= 45 || curCode >= 95 || ptMaxCode >= 95 || ptMaxPrecip >= 5) {
                 severity = 'red';
-                statusText = 'Awas';
+                statusText = curPrecip >= 5 ? 'Awas (Aktif)' : 'Awas (Prediksi)';
                 warningPointsCount++;
-                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, code: curCode, status: 'Awas' });
-            } else if (curPrecip >= 2 || curGust >= 32) {
+                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, code: curCode, ptMaxProb, ptMaxPrecip, status: 'Awas' });
+            } else if (curPrecip >= 2 || curGust >= 32 || ptMaxPrecip >= 2 || ptMaxGust >= 32) {
                 severity = 'orange';
-                statusText = 'Siaga';
+                statusText = curPrecip >= 2 ? 'Siaga (Aktif)' : 'Siaga (Prediksi)';
                 warningPointsCount++;
-                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, code: curCode, status: 'Siaga' });
-            } else if (curPrecip > 0 || curProb >= 50 || curGust >= 24) {
+                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, code: curCode, ptMaxProb, ptMaxPrecip, status: 'Siaga' });
+            } else if (curPrecip > 0 || ptMaxProb >= 50 || ptTotalRain >= 1.0 || ptMaxGust >= 24) {
                 severity = 'yellow';
-                statusText = 'Waspada';
+                statusText = curPrecip > 0 ? 'Hujan (Aktif)' : 'Waspada (Prediksi)';
                 warningPointsCount++;
-                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, code: curCode, status: 'Waspada' });
+                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, code: curCode, ptMaxProb, ptMaxPrecip, status: 'Waspada' });
             }
 
             bounds.push([p.latitude, p.longitude]);
@@ -1931,11 +2041,11 @@
             let weatherBadgeHtml = '';
             let rippleEffectHtml = '';
 
-            const isThunder = (curCode >= 95 || curCode === 96 || curCode === 99);
-            const isRaining = (curPrecip > 0 || (curCode >= 51 && curCode <= 65) || (curCode >= 80 && curCode <= 82));
-            const isHeavyRain = (curPrecip >= 2 || (curCode >= 63 && curCode <= 65) || (curCode >= 81 && curCode <= 82));
-            const isHighWind = (curGust >= 30 && !isRaining && !isThunder);
-            const isHighProb = (curProb >= 60 && !isRaining && !isThunder);
+            const isThunder = (curCode >= 95 || curCode === 96 || curCode === 99 || ptMaxCode >= 95);
+            const isRainingNow = (curPrecip > 0 || (curCode >= 51 && curCode <= 65) || (curCode >= 80 && curCode <= 82));
+            const isHeavyRainNow = (curPrecip >= 2 || (curCode >= 63 && curCode <= 65) || (curCode >= 81 && curCode <= 82));
+            const isHighWindNow = (curGust >= 30 && !isRainingNow && !isThunder);
+            const isHighProbToday = (ptMaxProb >= 60 && !isRainingNow && !isThunder);
 
             if (isThunder) {
                 weatherBadgeHtml = `
@@ -1945,7 +2055,7 @@
                     </div>
                 `;
                 rippleEffectHtml = `<div class="thunder-ripple"></div>`;
-            } else if (isHeavyRain) {
+            } else if (isHeavyRainNow) {
                 weatherBadgeHtml = `
                     <div class="marker-weather-badge badge-heavy-rain" title="Hujan Lebat: ${curPrecip} mm/h">
                         <i class="bi bi-cloud-rain-heavy-fill rain-bounce"></i>
@@ -1953,26 +2063,26 @@
                     </div>
                 `;
                 rippleEffectHtml = `<div class="rain-ripple"></div>`;
-            } else if (isRaining) {
+            } else if (isRainingNow) {
                 weatherBadgeHtml = `
-                    <div class="marker-weather-badge badge-rain" title="Hujan: ${curPrecip} mm/h">
+                    <div class="marker-weather-badge badge-rain" title="Hujan Aktif: ${curPrecip} mm/h">
                         <i class="bi bi-cloud-rain-fill rain-bounce"></i>
                         <span>${curPrecip > 0 ? curPrecip + ' mm' : 'Hujan'}</span>
                     </div>
                 `;
                 rippleEffectHtml = `<div class="rain-ripple"></div>`;
-            } else if (isHighWind) {
+            } else if (isHighWindNow) {
                 weatherBadgeHtml = `
-                    <div class="marker-weather-badge badge-wind" title="Hembusan Angin Kencang: ${curGust} km/h">
+                    <div class="marker-weather-badge badge-wind" title="Hembusan Angin: ${curGust} km/h">
                         <i class="bi bi-wind wind-spin"></i>
                         <span>${curGust} km/h</span>
                     </div>
                 `;
-            } else if (isHighProb) {
+            } else if (isHighProbToday) {
                 weatherBadgeHtml = `
-                    <div class="marker-weather-badge badge-prob" title="Peluang Hujan: ${curProb}%">
+                    <div class="marker-weather-badge badge-prob" title="Peluang Hujan Hari Ini: ${ptMaxProb}%">
                         <i class="bi bi-cloud-sun-fill"></i>
-                        <span>${curProb}%</span>
+                        <span>${ptMaxProb}% Prob</span>
                     </div>
                 `;
             }
@@ -1983,14 +2093,14 @@
             let beaconIcon = '<i class="bi bi-geo-alt-fill text-white"></i>';
             if (isThunder) {
                 beaconIcon = '<i class="bi bi-lightning-charge-fill text-warning"></i>';
-            } else if (isHeavyRain || isRaining) {
+            } else if (isHeavyRainNow || isRainingNow) {
                 beaconIcon = '<i class="bi bi-cloud-rain-fill text-white"></i>';
-            } else if (isHighWind) {
+            } else if (isHighWindNow) {
                 beaconIcon = '<i class="bi bi-wind text-warning"></i>';
             }
 
             const pinHtml = `
-                <div class="marker-pin-wrap" title="${p.name} • ${wmoInfo.desc} • ${curPrecip} mm/h">
+                <div class="marker-pin-wrap" title="${p.name} • ${wmoInfo.desc} • Saat Ini: ${curPrecip} mm/h (Maks Hari Ini: ${ptMaxPrecip} mm/h)">
                     ${rippleEffectHtml}
                     ${weatherBadgeHtml}
                     <div class="marker-radar-core">
@@ -2013,30 +2123,31 @@
             const marker = L.marker([p.latitude, p.longitude], { icon: customIcon });
 
             // Marker Popup Content
+            const currentHourLabel = fc0.time[currentHourIdx] ? fc0.time[currentHourIdx].split('T')[1] : '--:--';
             const popupHtml = `
-                <div style="font-family:'Poppins',sans-serif; min-width:200px; padding:4px;">
+                <div style="font-family:'Poppins',sans-serif; min-width:215px; padding:4px;">
                     <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:4px; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">
                         <i class="bi bi-geo-alt-fill text-primary"></i> ${p.name}
                     </div>
                     <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
-                        <span>Kondisi Cuaca:</span>
+                        <span>Kondisi Saat Ini (${currentHourLabel}):</span>
                         <strong style="color:#0f172a;"><i class="bi ${wmoInfo.icon}" style="color:${wmoInfo.color};"></i> ${wmoInfo.desc}</strong>
                     </div>
                     <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
                         <span>Curah Hujan (Now):</span>
-                        <strong style="color:${curPrecip > 0 ? '#ef4444' : '#10b981'}; font-weight:800;">${curPrecip} mm/h</strong>
+                        <strong style="color:${curPrecip > 0 ? '#ef4444' : '#10b981'}; font-weight:800;">${curPrecip > 0 ? curPrecip + ' mm/h' : '0.0 mm/h (Kering)'}</strong>
                     </div>
                     <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
-                        <span>Probabilitas Hujan:</span>
-                        <strong style="color:#7c3aed;">${curProb}%</strong>
+                        <span>Peluang Hujan (Hari Ini):</span>
+                        <strong style="color:#7c3aed;">${ptMaxProb}% (Puncak ${ptMaxPrecip > 0 ? ptMaxPrecip + ' mm/h' : 'Nihil'})</strong>
                     </div>
                     <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
-                        <span>Suhu Udara:</span>
-                        <strong style="color:#0284c7;">${curTemp} &deg;C</strong>
+                        <span>Akumulasi Hujan Hari Ini:</span>
+                        <strong style="color:#0284c7;">${ptTotalRain.toFixed(1)} mm</strong>
                     </div>
-                    <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between;">
-                        <span>Kecepatan / Gust:</span>
-                        <strong style="color:#d97706;">${curWind} / ${curGust} km/h</strong>
+                    <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span>Suhu / Gust:</span>
+                        <strong style="color:#d97706;">${curTemp}&deg;C / ${curGust} km/h</strong>
                     </div>
                 </div>
             `;
@@ -2053,7 +2164,7 @@
 
             const card = document.createElement('div');
             card.className = cardClass;
-            card.setAttribute('data-point-type', (curPrecip > 0 || severity !== 'green') ? 'warning' : 'dry');
+            card.setAttribute('data-point-type', (curPrecip > 0 || ptMaxProb >= 50 || severity !== 'green') ? 'warning' : 'dry');
             card.onclick = () => {
                 showPointPopup(index, true);
             };
@@ -2082,6 +2193,8 @@
                 roadBadge = '<span class="hauling-badge hauling-danger"><i class="bi bi-exclamation-triangle-fill"></i> Sangat Licin / Standby</span>';
             } else if (curPrecip > 0) {
                 roadBadge = '<span class="hauling-badge hauling-caution"><i class="bi bi-speedometer2"></i> Basah • Maks 30 km/h</span>';
+            } else if (ptMaxProb >= 50 || ptTotalRain >= 1.0) {
+                roadBadge = '<span class="hauling-badge hauling-caution" style="border-color:rgba(251,191,36,0.4);"><i class="bi bi-cloud-rain"></i> Waspada Siang/Sore</span>';
             } else {
                 roadBadge = '<span class="hauling-badge hauling-normal"><i class="bi bi-check-circle-fill"></i> Kering • Normal</span>';
             }
@@ -2100,6 +2213,10 @@
                 statusDotColor = '#fbbf24';
             }
 
+            const displayPrecipText = curPrecip > 0 
+                ? `${curPrecip} mm/h` 
+                : (ptMaxPrecip > 0 ? `Kering • Maks ${ptMaxPrecip}mm` : 'Kering');
+
             card.innerHTML = `
                 <div class="point-badge ${badgeThemeClass}" title="${wmoInfo.desc}">
                     <span class="badge-status-dot" style="background:${statusDotColor}; box-shadow:0 0 8px ${statusDotColor};"></span>
@@ -2115,23 +2232,23 @@
                         ${roadBadge}
                         <span style="font-size:9.5px; color:#cbd5e1; font-weight:600;"><i class="bi bi-wind text-warning"></i> ${curGust} km/h</span>
                     </div>
-                    <!-- Rain Probability Mini Bar -->
+                    <!-- Rain Probability Mini Bar (Today Max) -->
                     <div style="display:flex; align-items:center; gap:6px;">
                         <div style="flex:1; height:4px; background:rgba(255,255,255,0.12); border-radius:3px; overflow:hidden;">
-                            <div style="width:${curProb}%; height:100%; background:${curProb >= 60 ? '#a855f7' : curProb >= 30 ? '#38bdf8' : '#00d2ff'}; border-radius:3px;"></div>
+                            <div style="width:${ptMaxProb}%; height:100%; background:${ptMaxProb >= 60 ? '#a855f7' : ptMaxProb >= 30 ? '#38bdf8' : '#00d2ff'}; border-radius:3px;"></div>
                         </div>
-                        <span style="font-size:9px; color:#94a3b8; font-weight:700;">${curProb}% Prob</span>
+                        <span style="font-size:9px; color:#94a3b8; font-weight:700;">${ptMaxProb}% Prob Hari Ini</span>
                     </div>
                 </div>
                 <div class="point-weather-col">
                     <div class="point-temp">${curTemp}&deg;C</div>
-                    <div class="point-precip ${curPrecip > 0 ? 'wet' : 'dry'}" style="font-size:11.5px; font-weight:800;">${curPrecip > 0 ? curPrecip + ' mm/h' : 'Kering'}</div>
+                    <div class="point-precip ${curPrecip > 0 ? 'wet' : 'dry'}" style="font-size:11.5px; font-weight:800;">${displayPrecipText}</div>
                     <span style="font-size:9.5px; color:${wmoInfo.color}; font-weight:700;">${wmoInfo.desc}</span>
                 </div>
             `;
             cardListEl.appendChild(card);
 
-            tickerItems.push(`${p.name}: ${curTemp}°C • Hujan: ${curPrecip}mm • Gust: ${curGust}km/h (${wmoInfo.desc})`);
+            tickerItems.push(`${p.name}: ${curTemp}°C (${wmoInfo.desc}) • Now: ${curPrecip > 0 ? curPrecip + 'mm' : 'Kering'} • Prediksi Hari Ini: Peluang ${ptMaxProb}%, Maks ${ptMaxPrecip}mm, Gust ${ptMaxGust}km/h`);
         });
 
         // Fit map bounds initially
@@ -2139,20 +2256,36 @@
             map.fitBounds(L.latLngBounds(bounds), { padding: [35, 35] });
         }
 
-        // Update HUD KPI Cards
+        // Update HUD KPI Cards (Reflecting Real-Time Telemetry & Today's Peak Forecast)
         const avgTemp = (tempSum / results.length).toFixed(1);
         document.getElementById('kpiPointsCount').innerText = results.length;
-        document.getElementById('kpiMaxRain').innerHTML = `${maxRain} <span style="font-size:12px;">mm/h</span>`;
-        document.getElementById('kpiMaxRainLoc').innerText = maxRainLocation;
-        document.getElementById('kpiRainBadge').innerText = `${maxRain} mm`;
 
-        document.getElementById('kpiMaxProb').innerHTML = `${maxProb} <span style="font-size:12px;">%</span>`;
-        document.getElementById('kpiMaxProbLoc').innerText = maxProbLocation;
+        // KPI 1: Curah Hujan Sekarang (Now) & Prediksi Puncak Hari Ini
+        document.getElementById('kpiMaxRain').innerHTML = `${maxRainNow.toFixed(1)} <span style="font-size:12px;">mm/h</span>`;
+        if (maxRainNow > 0) {
+            document.getElementById('kpiMaxRainLoc').innerText = `${maxRainNowLocation} (Sedang Hujan)`;
+            document.getElementById('kpiRainBadge').innerText = `${maxRainNow} mm/h`;
+            document.getElementById('kpiRainBadge').className = 'badge bg-danger';
+        } else {
+            document.getElementById('kpiMaxRainLoc').innerText = siteMaxRainRate > 0 ? `Puncak Prediksi Hari Ini: ${siteMaxRainRate} mm/h` : 'Seluruh Pit Kering';
+            document.getElementById('kpiRainBadge').innerText = 'NOW: 0.0 mm';
+            document.getElementById('kpiRainBadge').className = 'badge bg-primary';
+        }
 
-        document.getElementById('kpiMaxWind').innerHTML = `${maxWind} <span style="font-size:12px;">km/h</span>`;
-        document.getElementById('kpiMaxWindLoc').innerText = maxWindLocation;
+        // KPI 2: Probabilitas Hujan Maksimum Hari Ini
+        document.getElementById('kpiMaxProb').innerHTML = `${siteMaxProb} <span style="font-size:12px;">%</span>`;
+        document.getElementById('kpiMaxProbLoc').innerText = rainTimeWindowStr ? `Puncak ${rainTimeWindowStr}` : `Maks Hari Ini: ${siteMaxProbLocation}`;
 
+        // KPI 3: Gust Angin Maksimum Hari Ini
+        document.getElementById('kpiMaxWind').innerHTML = `${siteMaxGust} <span style="font-size:12px;">km/h</span>`;
+        document.getElementById('kpiMaxWindLoc').innerText = `Maks Hari Ini: ${siteMaxGustLocation}`;
+
+        // KPI 4: Suhu Udara Rata-Rata Saat Ini
         document.getElementById('kpiAvgTemp').innerHTML = `${avgTemp} <span style="font-size:12px;">&deg;C</span>`;
+        const currentCodeSite = results[0].forecast.hourly.weather_code ? results[0].forecast.hourly.weather_code[currentHourIdx] : 0;
+        const wmoInfoSite = interpretWmoCode(currentCodeSite);
+        const kpiWeatherDescEl = document.getElementById('kpiWeatherDesc');
+        if (kpiWeatherDescEl) kpiWeatherDescEl.innerText = `Saat Ini: ${wmoInfoSite.desc}`;
 
         // Update Warning Notification Banner & Sound Trigger
         const banner = document.getElementById('warningBanner');
@@ -2165,23 +2298,26 @@
 
         document.getElementById('warningPointsBadge').innerText = `${warningPointsCount} Titik Terindikasi`;
 
-        // Filter points by weather hazard types for contextual voice announcement
-        const thunderPoints = activeAlertPoints.filter(a => (a.code >= 95 || a.status === 'Awas'));
-        const rainPoints = activeAlertPoints.filter(a => a.precip > 0 || (a.code >= 51 && a.code <= 82));
-        const windPoints = activeAlertPoints.filter(a => a.gust >= 30 && a.precip === 0);
+        const thunderPoints = activeAlertPoints.filter(a => a.status === 'Awas');
+        const activeRainNames = activeNowRainPoints.map(a => a.name.replace(/\s*-\s*(KPP|UDU|MGE)\b/gi, '').trim()).slice(0, 3).join(', ');
 
-        const formatPitNames = (arr) => arr.map(a => a.name.replace(/\s*-\s*(KPP|UDU|MGE)\b/gi, '').trim()).slice(0, 3).join(', ');
-        const thunderNames = formatPitNames(thunderPoints);
-        const rainNames = formatPitNames(rainPoints);
-        const windNames = formatPitNames(windPoints);
+        const hasAwasActive = (maxRainNow >= 5 || maxGustNow >= 45 || activeNowThunderPoints.length > 0);
+        const hasActiveRain = (maxRainNow > 0);
+        const hasSevereForecast = (siteMaxRainRate >= 5 || activeNowThunderPoints.length > 0);
+        const hasRainForecast = (siteMaxProb >= 50 || siteMaxRainRate > 0 || siteMaxTotalRain >= 2.0);
 
-        if (activeAlertPoints.some(a => a.status === 'Awas')) {
+        if (hasAwasActive || hasSevereForecast) {
             banner.className = 'warning-banner siaga';
             icon.className = 'bi bi-exclamation-octagon-fill text-danger';
-            title.innerText = 'PERINGATAN DINI CUACA EKSTREM: SIAGA TINGGI!';
-            desc.innerText = `Terdeteksi potensi hujan lebat & cuaca ekstrem di area: ${activeAlertPoints.filter(a => a.status === 'Awas').map(a => a.name).join(', ')}. Terapkan mitigasi K3 dan kurangi aktivitas di area lereng terbuka!`;
+            if (hasAwasActive) {
+                title.innerText = 'PERINGATAN DINI: STATUS AWAS CUACA EKSTREM!';
+                desc.innerText = `Terdeteksi potensi cuaca ekstrem & hujan lebat (${maxRainNow} mm/h) di area: ${activeRainNames || maxRainNowLocation}. Terapkan mitigasi K3 dan kurangi aktivitas di area lereng terbuka!`;
+            } else {
+                title.innerText = 'PERINGATAN DINI: POTENSI CUACA EKSTREM HARI INI!';
+                desc.innerText = `Prakiraan cuaca menunjukkan potensi badai petir / hujan lebat hari ini pada ${rainTimeWindowStr || 'siang/sore'}. Waspada petir di lereng pit terbuka dan siapkan shelter aman.`;
+            }
             kpiStatusBadge.className = 'badge bg-danger';
-            kpiStatusBadge.innerText = 'SIAGA';
+            kpiStatusBadge.innerText = 'SIAGA TINGGI';
             kpiStatusText.className = 'kpi-num text-danger';
             kpiStatusText.innerText = 'AWAS';
 
@@ -2191,22 +2327,34 @@
                 lastAudioAlertTime = nowTime;
                 playEmergencyWarningSiren();
                 setTimeout(() => {
-                    let alertMsg = '';
-                    if (thunderPoints.length > 0) {
-                        alertMsg = `Peringatan bahaya cuaca ekstrem. Terdeteksi potensi badai petir dan hujan lebat di area ${thunderNames}. Seluruh operator dan personel wajib waspada dan hentikan pekerjaan berisiko tinggi.`;
-                    } else if (rainPoints.length > 0) {
-                        alertMsg = `Peringatan siaga cuaca. Terdeteksi hujan lebat di area ${rainNames} dengan curah hujan hingga ${maxRain} milimeter per jam. Hati-hati jalan hauling licin dan jaga jarak aman.`;
-                    } else {
-                        alertMsg = `Peringatan dini cuaca ekstrem status siaga. Terdeteksi potensi hujan lebat dan angin kencang di pit tambang. Seluruh personel wajib mematuhi keselamatan kerja.`;
-                    }
+                    let alertMsg = `Peringatan bahaya cuaca ekstrem. Terdeteksi potensi cuaca berisiko di site tambang. Seluruh operator dan personel wajib waspada dan hentikan pekerjaan berisiko tinggi.`;
                     speakGoogleVoice(alertMsg);
                 }, 1200);
             }
-        } else if (warningPointsCount > 0) {
+        } else if (hasActiveRain) {
             banner.className = 'warning-banner waspada';
-            icon.className = 'bi bi-exclamation-triangle-fill text-warning';
-            title.innerText = 'PERINGATAN DINI CUACA: STATUS WASPADA';
-            desc.innerText = `Terdapat potensi hujan/gerimis di ${warningPointsCount} titik (${activeAlertPoints.slice(0, 3).map(a => a.name).join(', ')}). Waspada jalan hauling licin dan jaga jarak aman berkendara.`;
+            icon.className = 'bi bi-cloud-rain-heavy-fill text-warning';
+            title.innerText = 'PERINGATAN CUACA: HUJAN AKTIF SEDANG BERLANGSUNG';
+            desc.innerText = `Saat ini terpantau hujan/gerimis dengan intensitas hingga ${maxRainNow} mm/jam di area ${activeRainNames}. Waspada jalan hauling licin, kurangi batas kecepatan maksimal 30 km/jam dan jaga jarak aman berkendara.`;
+            kpiStatusBadge.className = 'badge bg-warning text-dark';
+            kpiStatusBadge.innerText = 'HUJAN AKTIF';
+            kpiStatusText.className = 'kpi-num text-warning';
+            kpiStatusText.innerText = 'HUJAN';
+
+            const nowTime = Date.now();
+            if (nowTime - lastAudioAlertTime > 120000) {
+                lastAudioAlertTime = nowTime;
+                playRadarChime();
+                setTimeout(() => {
+                    const warnMsg = `Perhatian. Terdeteksi hujan aktif di area ${activeRainNames} dengan curah hujan ${maxRainNow} milimeter per jam. Harap waspada jalan hauling licin dan kurangi kecepatan unit.`;
+                    speakGoogleVoice(warnMsg);
+                }, 500);
+            }
+        } else if (hasRainForecast) {
+            banner.className = 'warning-banner waspada';
+            icon.className = 'bi bi-cloud-sun-fill text-warning';
+            title.innerText = 'PERINGATAN DINI CUACA: STATUS WASPADA PREDIKSI HARI INI';
+            desc.innerText = `Saat ini kondisi site kondusif & hauling normal (${avgTemp}°C). Namun diprediksi potensi hujan/gerimis pada ${rainTimeWindowStr || 'siang hingga sore'} dengan probabilitas mencapai ${siteMaxProb}% (akumulasi hingga ${siteMaxTotalRain.toFixed(1)} mm, gust ${siteMaxGust} km/h). Seluruh tim operasional diimbau waspada terhadap jalan hauling licin & siapkan drainase pit.`;
             kpiStatusBadge.className = 'badge bg-warning text-dark';
             kpiStatusBadge.innerText = 'WASPADA';
             kpiStatusText.className = 'kpi-num text-warning';
@@ -2217,14 +2365,7 @@
                 lastAudioAlertTime = nowTime;
                 playRadarChime();
                 setTimeout(() => {
-                    let warnMsg = '';
-                    if (rainPoints.length > 0) {
-                        warnMsg = `Perhatian. Terdeteksi hujan di area ${rainNames} dengan curah hujan hingga ${maxRain} milimeter per jam. Harap waspada jalan hauling licin dan kurangi kecepatan unit.`;
-                    } else if (windPoints.length > 0) {
-                        warnMsg = `Peringatan hembusan angin kencang mencapai ${maxWind} kilometer per jam di area ${windNames || maxWindLocation}. Harap waspada terhadap debu dan stabilitas lereng.`;
-                    } else {
-                        warnMsg = `Peringatan dini cuaca status waspada. Terdeteksi potensi hujan pada ${warningPointsCount} titik tambang. Harap seluruh personel berhati-hati saat beraktivitas.`;
-                    }
+                    const warnMsg = `Perhatian. Peringatan dini cuaca status waspada. Kondisi site saat ini kondusif, namun diprediksi terdapat potensi hujan pada ${rainTimeWindowStr || 'siang hari'} dengan peluang mencapai ${siteMaxProb} persen. Seluruh pengawas dan operator pit diimbau waspada terhadap jalan hauling licin.`;
                     speakGoogleVoice(warnMsg);
                 }, 500);
             }
@@ -2232,7 +2373,7 @@
             banner.className = 'warning-banner normal';
             icon.className = 'bi bi-shield-check text-success';
             title.innerText = 'KONDISI CUACA SITE: NORMAL & AMAN';
-            desc.innerText = 'Tidak ada potensi hujan lebat, petir, atau hembusan angin kencang berisiko di seluruh 17 titik operasional tambang.';
+            desc.innerText = 'Kondisi cuaca saat ini kondusif dan prakiraan cuaca hari ini cerah/berawan di seluruh 17 titik tambang. Tidak terindikasi potensi hujan berisiko atau hembusan angin kencang.';
             kpiStatusBadge.className = 'badge bg-success';
             kpiStatusBadge.innerText = 'AMAN';
             kpiStatusText.className = 'kpi-num text-success';
@@ -2399,15 +2540,19 @@
     function updateHourlyChart(item) {
         if (!item || !item.forecast || !item.forecast.hourly) return;
         const fc = item.forecast.hourly;
-        const labels = (fc.time || []).slice(0, 24).map(t => {
+
+        const currentHourIdx = getCurrentHourIndex(fc.time);
+        const sliceEnd = Math.min(fc.time.length, currentHourIdx + 24);
+
+        const labels = (fc.time || []).slice(currentHourIdx, sliceEnd).map(t => {
             const parts = t.split('T');
             return parts.length > 1 ? parts[1] : t;
         });
-        const precipData = (fc.precipitation || []).slice(0, 24);
-        const probData = (fc.precipitation_probability || []).slice(0, 24);
-        const tempData = (fc.temperature_2m || []).slice(0, 24);
-        const windData = (fc.wind_gusts_10m || []).slice(0, 24);
-        const codes = (fc.weather_code || []).slice(0, 24);
+        const precipData = (fc.precipitation || []).slice(currentHourIdx, sliceEnd);
+        const probData = (fc.precipitation_probability || []).slice(currentHourIdx, sliceEnd);
+        const tempData = (fc.temperature_2m || []).slice(currentHourIdx, sliceEnd);
+        const windData = (fc.wind_gusts_10m || []).slice(currentHourIdx, sliceEnd);
+        const codes = (fc.weather_code || []).slice(currentHourIdx, sliceEnd);
 
         document.getElementById('chartLocationLabel').innerText = `Prakiraan 24 Jam: ${item.point.name}`;
 
@@ -2446,7 +2591,7 @@
             }
         }
 
-        // 2. Render Hourly Strip (Next 8 Hours)
+        // 2. Render Hourly Strip (Next 8 Hours from Current Hour)
         const stripContainer = document.getElementById('hourlyStripWrap');
         if (stripContainer) {
             stripContainer.innerHTML = '';
@@ -2461,7 +2606,7 @@
                 const cardEl = document.createElement('div');
                 cardEl.className = `hourly-strip-card ${i === 0 ? 'active-now' : ''} ${hRain > 0 ? 'wet-hour' : ''}`;
                 cardEl.innerHTML = `
-                    <div class="strip-time">${i === 0 ? 'SEKARANG' : hourTime}</div>
+                    <div class="strip-time">${i === 0 ? 'SEKARANG (' + hourTime + ')' : hourTime}</div>
                     <div class="strip-icon"><i class="bi ${wInfo.icon}" style="color:${wInfo.color}; font-size:16px;"></i></div>
                     <div class="strip-rain" style="color:${hRain > 0 ? '#38bdf8' : '#64748b'};">${hRain > 0 ? hRain + 'mm' : '0mm'}</div>
                     <div class="strip-prob">${hProb}%</div>
