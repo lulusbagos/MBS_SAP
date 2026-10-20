@@ -367,44 +367,266 @@
             z-index: 10;
         }
 
-        /* Leaflet Custom Marker & Pulsing Radar Pin */
-        .radar-pin {
+        /* Leaflet Custom Marker & Enhanced Dynamic Radar Pin */
+        .custom-map-div-icon {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .marker-pin-wrap {
+            position: relative;
+            width: 80px;
+            height: 64px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        .marker-radar-core {
             position: relative;
             width: 32px;
             height: 32px;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
+            z-index: 5;
         }
-        .radar-pin .core-dot {
-            width: 14px;
-            height: 14px;
+        .marker-radar-core .core-beacon {
+            width: 25px;
+            height: 25px;
             border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
             border: 2px solid #ffffff;
-            box-shadow: 0 0 10px rgba(0,0,0,0.8);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.9), 0 0 12px rgba(0, 210, 255, 0.85);
             z-index: 2;
+            transition: all 0.25s ease;
         }
-        .radar-pin .pulse-wave {
+        .marker-radar-core .pulse-wave {
             position: absolute;
             top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 32px; height: 32px;
+            width: 28px; height: 28px;
             border-radius: 50%;
-            animation: radar-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+            animation: radar-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* High Visibility Status Themes for Satellite Forest Contrast */
+        /* NORMAL / AMAN: Electric Neon Cyan & Deep Obsidian -> ZERO camouflage against green forest */
+        .marker-radar-core .core-beacon.green,
+        .marker-radar-core .core-beacon.cyan {
+            background: radial-gradient(circle, #0284c7 0%, #0369a1 60%, #082f49 100%);
+            border-color: #ffffff;
+            color: #ffffff;
+            box-shadow: 0 0 0 2px #00d2ff, 0 4px 14px rgba(0,0,0,0.9), 0 0 16px rgba(0, 210, 255, 0.95);
+        }
+        .marker-radar-core .pulse-wave.green,
+        .marker-radar-core .pulse-wave.cyan {
+            border: 2.5px solid rgba(0, 210, 255, 0.85);
+            background: radial-gradient(circle, rgba(0, 210, 255, 0.2) 0%, transparent 70%);
+        }
+
+        /* WASPADA: Radiant Golden Amber */
+        .marker-radar-core .core-beacon.yellow {
+            background: radial-gradient(circle, #f59e0b 0%, #d97706 60%, #451a03 100%);
+            border-color: #ffffff;
+            color: #ffffff;
+            box-shadow: 0 0 0 2px #fbbf24, 0 4px 14px rgba(0,0,0,0.9), 0 0 18px rgba(251, 191, 36, 0.95);
+        }
+        .marker-radar-core .pulse-wave.yellow {
+            border: 3px solid rgba(251, 191, 36, 0.9);
+            animation-duration: 1.4s;
+            background: radial-gradient(circle, rgba(251, 191, 36, 0.25) 0%, transparent 70%);
+        }
+
+        /* SIAGA: Vivid Orange */
+        .marker-radar-core .core-beacon.orange {
+            background: radial-gradient(circle, #ea580c 0%, #c2410c 60%, #431407 100%);
+            border-color: #ffffff;
+            color: #ffffff;
+            box-shadow: 0 0 0 2px #fb923c, 0 4px 14px rgba(0,0,0,0.9), 0 0 20px rgba(251, 146, 60, 1);
+        }
+        .marker-radar-core .pulse-wave.orange {
+            border: 3.5px solid rgba(251, 146, 60, 0.95);
+            animation-duration: 1.1s;
+        }
+
+        /* AWAS: High-Intensity Crimson Flash */
+        .marker-radar-core .core-beacon.red {
+            background: radial-gradient(circle, #ef4444 0%, #b91c1c 60%, #450a0a 100%);
+            border-color: #ffffff;
+            color: #ffffff;
+            box-shadow: 0 0 0 2.5px #f87171, 0 4px 16px rgba(0,0,0,0.95), 0 0 24px rgba(239, 68, 68, 1);
+            animation: pulse-beacon-danger 0.8s infinite alternate;
+        }
+        .marker-radar-core .pulse-wave.red {
+            border: 4px solid rgba(239, 68, 68, 1);
+            animation-duration: 0.8s;
+        }
+
+        @@keyframes pulse-beacon-danger {
+            from { transform: scale(1); }
+            to { transform: scale(1.15); }
+        }
+
+        /* Pit Label below the marker dot - Ultra Sharp Pill */
+        .marker-pit-label {
+            margin-top: 3px;
+            background: rgba(3, 7, 18, 0.95);
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            border: 1.5px solid rgba(0, 210, 255, 0.6);
+            white-space: nowrap;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.85);
+            pointer-events: none;
+            z-index: 4;
+            transition: all 0.2s ease;
+        }
+        .marker-pit-label.cyan, .marker-pit-label.green { border-color: rgba(0, 210, 255, 0.7); }
+        .marker-pit-label.yellow { border-color: rgba(251, 191, 36, 0.8); }
+        .marker-pit-label.orange { border-color: rgba(251, 146, 60, 0.85); }
+        .marker-pit-label.red { border-color: rgba(239, 68, 68, 0.95); color: #fca5a5; }
+
+        /* Highlighted / Focused Marker on Map */
+        .marker-pin-wrap.active-pin-focus .core-beacon {
+            transform: scale(1.35);
+            border-color: #ffffff;
+            box-shadow: 0 0 0 3px #00d2ff, 0 8px 20px rgba(0,0,0,0.95), 0 0 25px #00d2ff !important;
+            z-index: 10;
+        }
+        .marker-pin-wrap.active-pin-focus .marker-pit-label {
+            background: #0284c7;
+            border-color: #ffffff;
+            color: #ffffff;
+            box-shadow: 0 0 16px rgba(2, 132, 199, 0.95);
+            transform: scale(1.15);
+            z-index: 10;
+        }
+
+        /* Floating Weather Alert Badge above the marker */
+        .marker-weather-badge {
+            position: absolute;
+            top: 2px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 7px;
+            border-radius: 12px;
+            font-size: 9.5px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.7);
+            z-index: 10;
+            animation: float-badge 2s ease-in-out infinite alternate;
+        }
+
+        .badge-thunder {
+            background: linear-gradient(135deg, #991b1b, #ef4444);
+            color: #fff;
+            border: 1.5px solid #fecaca;
+            box-shadow: 0 0 16px rgba(239, 68, 68, 0.85);
+            animation: pulse-thunder 0.9s infinite alternate;
+        }
+        .badge-heavy-rain {
+            background: linear-gradient(135deg, #0369a1, #0284c7);
+            color: #fff;
+            border: 1.5px solid #7dd3fc;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.7);
+        }
+        .badge-rain {
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            color: #0f172a;
+            border: 1.5px solid #bae6fd;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.55);
+            font-weight: 800;
+        }
+        .badge-wind {
+            background: linear-gradient(135deg, #c2410c, #ea580c);
+            color: #fff;
+            border: 1.5px solid #fed7aa;
+            box-shadow: 0 0 12px rgba(234, 88, 12, 0.6);
+        }
+        .badge-prob {
+            background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+            color: #fff;
+            border: 1.5px solid #ddd6fe;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+        }
+
+        /* Animated Water & Thunder Ripples on Map */
+        .rain-ripple {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            border: 2px solid rgba(56, 189, 248, 0.7);
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, transparent 70%);
+            animation: water-ripple 2.2s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+            pointer-events: none;
             z-index: 1;
         }
-        .radar-pin.green .core-dot { background: #10b981; }
-        .radar-pin.green .pulse-wave { border: 2px solid rgba(16, 185, 129, 0.6); }
+        .thunder-ripple {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            border: 2.5px solid rgba(239, 68, 68, 0.85);
+            background: radial-gradient(circle, rgba(239, 68, 68, 0.25) 0%, transparent 70%);
+            animation: water-ripple 1.4s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
 
-        .radar-pin.yellow .core-dot { background: #fbbf24; }
-        .radar-pin.yellow .pulse-wave { border: 2.5px solid rgba(251, 191, 36, 0.8); animation-duration: 1.3s; }
-
-        .radar-pin.orange .core-dot { background: #fb923c; }
-        .radar-pin.orange .pulse-wave { border: 3px solid rgba(251, 146, 60, 0.85); animation-duration: 1.0s; }
-
-        .radar-pin.red .core-dot { background: #ef4444; }
-        .radar-pin.red .pulse-wave { border: 3.5px solid rgba(239, 68, 68, 0.95); animation-duration: 0.8s; }
+        @@keyframes float-badge {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-5px); }
+        }
+        @@keyframes water-ripple {
+            0% { width: 14px; height: 14px; opacity: 1; }
+            100% { width: 75px; height: 75px; opacity: 0; }
+        }
+        @@keyframes pulse-thunder {
+            0% { transform: scale(1); box-shadow: 0 0 10px rgba(239, 68, 68, 0.6); }
+            100% { transform: scale(1.08); box-shadow: 0 0 22px rgba(239, 68, 68, 1); }
+        }
+        .rain-bounce {
+            display: inline-block;
+            animation: rain-drop-bounce 1.2s infinite ease-in-out;
+        }
+        @@keyframes rain-drop-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(2px); }
+        }
+        .lightning-flash {
+            display: inline-block;
+            animation: flash-anim 0.8s infinite;
+        }
+        @@keyframes flash-anim {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(1.25); }
+        }
+        .wind-spin {
+            display: inline-block;
+            animation: wind-wobble 1.5s infinite ease-in-out;
+        }
+        @@keyframes wind-wobble {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(15deg); }
+        }
 
         @@keyframes radar-ping {
             0% { width: 12px; height: 12px; opacity: 1; }
@@ -471,6 +693,173 @@
             box-shadow: 0 0 10px rgba(2, 132, 199, 0.5);
         }
 
+        /* Tab Auto-Rotation Progress Bar */
+        .tab-rotation-track {
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+        .tab-rotation-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #38bdf8, #00d2ff, #10b981);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
+            transition: width 0.2s linear;
+        }
+
+        .tab-fade-in {
+            animation: tabFadeInAnim 0.35s ease-out;
+        }
+        @@keyframes tabFadeInAnim {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Filter Chips for Daftar Titik */
+        .filter-chip-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--muted);
+            border-radius: 20px;
+            padding: 2px 9px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-chip-btn.active, .filter-chip-btn:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: var(--blue);
+            color: #fff;
+        }
+
+        /* Hauling Road Condition Badges */
+        .hauling-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 4px;
+            letter-spacing: 0.2px;
+        }
+        .hauling-normal {
+            background: rgba(16, 185, 129, 0.14);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .hauling-caution {
+            background: rgba(251, 191, 36, 0.16);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.35);
+        }
+        .hauling-danger {
+            background: rgba(239, 68, 68, 0.22);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            animation: pulse-red 1.5s infinite;
+        }
+
+        /* ── 24-Hour Trend Enhanced Styles ── */
+        .trend-hud-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .trend-stat-card {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 6px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+        .trend-stat-lbl {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .trend-stat-val {
+            font-size: 15px;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1.1;
+        }
+        .trend-stat-sub {
+            font-size: 8.5px;
+            color: var(--muted);
+        }
+
+        /* Hourly Strip Cards Container (8 Jam ke Depan) */
+        .hourly-strip-wrap {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 4px;
+            margin-bottom: 8px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+        .hourly-strip-wrap::-webkit-scrollbar { height: 4px; }
+        .hourly-strip-wrap::-webkit-scrollbar-thumb { background: rgba(56, 189, 248, 0.25); border-radius: 10px; }
+        .hourly-strip-card {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 5px 3px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5px;
+            transition: all 0.2s;
+        }
+        .hourly-strip-card.active-now {
+            border-color: #38bdf8;
+            background: rgba(14, 165, 233, 0.2);
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+        }
+        .hourly-strip-card.wet-hour {
+            border-color: rgba(56, 189, 248, 0.5);
+            background: rgba(2, 132, 199, 0.2);
+        }
+        .strip-time {
+            font-size: 9.5px;
+            font-weight: 800;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .strip-icon {
+            font-size: 15px;
+            margin: 1px 0;
+        }
+        .strip-rain {
+            font-size: 9.5px;
+            font-weight: 800;
+            color: #38bdf8;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .strip-prob {
+            font-size: 8.5px;
+            color: #c084fc;
+            font-weight: 700;
+        }
+        .strip-temp {
+            font-size: 9px;
+            color: #fbbf24;
+            font-weight: 700;
+        }
+
         .tab-content-area {
             flex: 1;
             overflow-y: auto;
@@ -484,8 +873,8 @@
 
         /* Operational Point Cards */
         .point-card {
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.07);
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 10px;
             padding: 8px 12px;
             display: grid;
@@ -502,11 +891,11 @@
         }
         .point-card.warning-item {
             border-color: rgba(251, 191, 36, 0.6);
-            background: rgba(120, 53, 15, 0.2);
+            background: rgba(120, 53, 15, 0.25);
         }
         .point-card.alert-item {
             border-color: rgba(239, 68, 68, 0.7);
-            background: rgba(127, 29, 29, 0.3);
+            background: rgba(127, 29, 29, 0.35);
         }
         .point-card.active-card-highlight {
             border-color: #38bdf8 !important;
@@ -516,15 +905,61 @@
         }
 
         .point-badge {
-            width: 38px; height: 38px; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 18px;
+            width: 46px;
+            height: 46px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            flex-shrink: 0;
+            transition: all 0.25s ease;
         }
-        .point-name { font-size: 12px; font-weight: 800; color: #fff; }
+        .point-badge .badge-weather-icon {
+            font-size: 24px;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6));
+        }
+        .point-badge .badge-status-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 2px solid #0f172a;
+            box-shadow: 0 0 6px currentColor;
+        }
+
+        .point-badge.badge-cyan {
+            background: linear-gradient(135deg, rgba(8, 47, 73, 0.9), rgba(15, 23, 42, 0.95));
+            border: 1.5px solid #00d2ff;
+            box-shadow: 0 0 14px rgba(0, 210, 255, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+            color: #00d2ff;
+        }
+        .point-badge.badge-yellow {
+            background: linear-gradient(135deg, rgba(120, 53, 15, 0.9), rgba(69, 26, 3, 0.95));
+            border: 1.5px solid #fbbf24;
+            box-shadow: 0 0 14px rgba(251, 191, 36, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+            color: #fbbf24;
+        }
+        .point-badge.badge-orange {
+            background: linear-gradient(135deg, rgba(154, 52, 18, 0.9), rgba(67, 20, 7, 0.95));
+            border: 1.5px solid #fb923c;
+            box-shadow: 0 0 16px rgba(251, 146, 60, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+            color: #fb923c;
+        }
+        .point-badge.badge-red {
+            background: linear-gradient(135deg, rgba(153, 27, 27, 0.95), rgba(69, 10, 10, 0.95));
+            border: 1.5px solid #ef4444;
+            box-shadow: 0 0 18px rgba(239, 68, 68, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+            color: #ef4444;
+        }
+
+        .point-name { font-size: 13px; font-weight: 800; color: #fff; letter-spacing: 0.2px; }
         .point-meta { font-size: 10px; color: var(--muted); margin-top: 1px; display: flex; gap: 8px; }
         .point-weather-col { text-align: right; }
-        .point-temp { font-size: 15px; font-weight: 800; color: #38bdf8; font-family: 'JetBrains Mono', monospace; }
-        .point-precip { font-size: 10.5px; font-weight: 700; }
+        .point-temp { font-size: 16px; font-weight: 800; color: #38bdf8; font-family: 'JetBrains Mono', monospace; }
+        .point-precip { font-size: 11px; font-weight: 800; }
         .point-precip.wet { color: #f87171; }
         .point-precip.dry { color: #34d399; }
 
@@ -533,8 +968,7 @@
             background: rgba(15, 23, 42, 0.5);
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 12px;
-            height: 220px;
+            padding: 10px;
             position: relative;
         }
 
@@ -778,10 +1212,16 @@
                 <!-- Map Legend -->
                 <div class="map-legend">
                     <span style="color:var(--muted); margin-right:4px;">STATUS:</span>
-                    <div class="legend-item"><span class="legend-dot" style="background:#10b981;"></span> Normal (Cerah)</div>
-                    <div class="legend-item"><span class="legend-dot" style="background:#fbbf24;"></span> Waspada (Prob. &gt;50% / Gerimis)</div>
-                    <div class="legend-item"><span class="legend-dot" style="background:#fb923c;"></span> Siaga (Hujan &ge;2mm / Angin &gt;30)</div>
-                    <div class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> Awas (Hujan &ge;5mm / Badai Petir)</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#00d2ff; box-shadow:0 0 8px rgba(0,210,255,0.8);"></span> Normal</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#fbbf24; box-shadow:0 0 8px rgba(251,191,36,0.8);"></span> Waspada</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#fb923c; box-shadow:0 0 8px rgba(251,146,60,0.8);"></span> Siaga</div>
+                    <div class="legend-item"><span class="legend-dot" style="background:#ef4444; box-shadow:0 0 8px rgba(239,68,68,0.8);"></span> Awas</div>
+                    <span style="color:rgba(255,255,255,0.2); margin: 0 4px;">|</span>
+                    <span style="color:var(--muted); margin-right:4px;">BEACON:</span>
+                    <div class="legend-item"><span class="badge" style="background:rgba(2,132,199,0.35); border:1px solid #00d2ff; color:#fff; font-size:9px; padding:2px 6px;"><i class="bi bi-geo-alt-fill text-info"></i> Titik Aktif</span></div>
+                    <div class="legend-item"><span class="badge" style="background:#0284c7; color:#fff; font-size:9px; padding:2px 6px;"><i class="bi bi-cloud-rain-heavy-fill"></i> Hujan (mm/h)</span></div>
+                    <div class="legend-item"><span class="badge" style="background:#991b1b; color:#fff; font-size:9px; padding:2px 6px;"><i class="bi bi-lightning-charge-fill text-warning"></i> Petir</span></div>
+                    <div class="legend-item"><span class="badge" style="background:#c2410c; color:#fff; font-size:9px; padding:2px 6px;"><i class="bi bi-wind"></i> Angin Kencang</span></div>
                 </div>
             </div>
 
@@ -795,19 +1235,41 @@
                         <i class="bi bi-graph-up"></i> Tren 24 Jam
                     </button>
                     <button type="button" class="tab-ews-btn" id="tabSafetyBtn" onclick="switchRightTab('safety', true)">
-                        <i class="bi bi-shield-exclamation"></i> Panduan K3 Operasional
+                        <i class="bi bi-shield-exclamation"></i> Panduan K3
                     </button>
+
+                    <!-- Auto-Rotation Status Badge -->
+                    <div style="margin-left:auto; display:flex; align-items:center; gap:6px;">
+                        <span id="tabRotationStatusBadge" class="badge" style="background:rgba(56,189,248,0.14); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); font-size:9.5px; font-weight:700; cursor:pointer;" onclick="toggleTabRotationPause()" title="Klik untuk Jeda/Lanjutkan rotasi bergantian">
+                            <i class="bi bi-arrow-repeat" id="tabRotIcon"></i> Rotasi: <span id="tabCountdownSec">18s</span>
+                        </span>
+                    </div>
+                </div>
+                <!-- Mini Progress Bar below Tab Header -->
+                <div class="tab-rotation-track">
+                    <div class="tab-rotation-bar" id="tabRotationProgressBar"></div>
                 </div>
 
                 <!-- Tab 1: Points List -->
                 <div class="tab-content-area" id="tabContentPoints">
-                    <div style="font-size:10.5px; color:var(--muted); margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                        <span><i class="bi bi-hand-index-thumb"></i> Klik titik untuk fokus peta</span>
+                    <div style="font-size:10px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                        <!-- Quick Filter Chips -->
+                        <div class="d-flex align-items-center gap-1">
+                            <button type="button" class="filter-chip-btn active" id="filterAllBtn" onclick="setPointFilter('all')">
+                                Semua (17)
+                            </button>
+                            <button type="button" class="filter-chip-btn" id="filterWarnBtn" onclick="setPointFilter('warning')">
+                                <i class="bi bi-cloud-rain-fill text-info"></i> Hujan/Waspada (<span id="warnCountBadge">0</span>)
+                            </button>
+                            <button type="button" class="filter-chip-btn" id="filterDryBtn" onclick="setPointFilter('dry')">
+                                <i class="bi bi-sun-fill text-warning"></i> Kering (<span id="dryCountBadge">17</span>)
+                            </button>
+                        </div>
                         <div class="d-flex align-items-center gap-2">
                             <span id="autoScrollBadge" class="badge" style="background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:9.5px; cursor:pointer;" onclick="toggleAutoScroll()" title="Klik untuk jeda/lanjutkan auto-scroll">
                                 <i class="bi bi-arrow-down-up"></i> Auto-Scroll: ON
                             </span>
-                            <span id="selectedPointName" class="text-info fw-bold">Semua Titik</span>
+                            <span id="selectedPointName" class="text-info fw-bold" style="font-size:11px;">Semua Titik</span>
                         </div>
                     </div>
                     <div id="pointsCardList" class="d-flex flex-column gap-2">
@@ -815,18 +1277,61 @@
                     </div>
                 </div>
 
-                <!-- Tab 2: Hourly Forecast Trend Chart -->
+                <!-- Tab 2: Hourly Forecast Trend Chart & 8-Hour Strip -->
                 <div class="tab-content-area" id="tabContentChart" style="display:none;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <span style="font-size:11px; font-weight:700; color:#fff;" id="chartLocationLabel">Prakiraan 24 Jam: Rata-Rata Seluruh Titik Tambang</span>
-                        <span class="badge bg-primary" id="chartTimeSpanBadge">24 Jam Mendatang</span>
+                    <!-- Top 4 Trend Highlights -->
+                    <div class="trend-hud-grid">
+                        <div class="trend-stat-card">
+                            <div class="trend-stat-lbl"><i class="bi bi-cloud-rain-heavy-fill text-info"></i> TOTAL 24 JAM</div>
+                            <div class="trend-stat-val text-info" id="trendTotalRain">0.0 mm</div>
+                            <div class="trend-stat-sub">Akumulasi presipitasi</div>
+                        </div>
+                        <div class="trend-stat-card">
+                            <div class="trend-stat-lbl"><i class="bi bi-clock-history text-danger"></i> PUNCAK HUJAN</div>
+                            <div class="trend-stat-val text-danger" id="trendPeakRain">--:--</div>
+                            <div class="trend-stat-sub" id="trendPeakRainVal">Maks 0.0 mm/h</div>
+                        </div>
+                        <div class="trend-stat-card">
+                            <div class="trend-stat-lbl"><i class="bi bi-wind text-warning"></i> GUST MAKS.</div>
+                            <div class="trend-stat-val text-warning" id="trendMaxGust">0 km/h</div>
+                            <div class="trend-stat-sub" id="trendMaxGustTime">Pukul --:--</div>
+                        </div>
+                        <div class="trend-stat-card">
+                            <div class="trend-stat-lbl"><i class="bi bi-thermometer-half text-amber"></i> SUHU UDARA</div>
+                            <div class="trend-stat-val" style="color:#fbbf24;" id="trendTempRange">-- &deg;C</div>
+                            <div class="trend-stat-sub" id="trendTempDesc">Min -- / Max --</div>
+                        </div>
                     </div>
-                    <div class="chart-box">
+
+                    <!-- Header with Location & Timespan Badge -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <div style="font-size:11px; font-weight:800; color:#fff; display:flex; align-items:center; gap:6px;">
+                            <span class="spinner-grow spinner-grow-sm text-info" style="width:7px; height:7px;"></span>
+                            <span id="chartLocationLabel">Prakiraan 24 Jam: Rata-Rata Seluruh Titik Tambang</span>
+                        </div>
+                        <span class="badge" style="background:rgba(56,189,248,0.16); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; font-size:9.5px;" id="chartTimeSpanBadge">
+                            <i class="bi bi-clock"></i> 24 Jam Mendatang
+                        </span>
+                    </div>
+
+                    <!-- Hourly Strip (Prakiraan 8 Jam ke Depan) -->
+                    <div style="font-size:9.5px; font-weight:700; color:var(--muted); text-transform:uppercase; margin-bottom:3px; display:flex; justify-content:space-between;">
+                        <span><i class="bi bi-calendar3-range text-info"></i> Prakiraan Cuaca 8 Jam Mendatang:</span>
+                        <span style="color:#38bdf8;">Per-Jam Live Forecast</span>
+                    </div>
+                    <div class="hourly-strip-wrap" id="hourlyStripWrap">
+                        <!-- Loaded dynamically via JavaScript -->
+                    </div>
+
+                    <!-- Chart Container -->
+                    <div class="chart-box" style="height:175px;">
                         <canvas id="hourlyWeatherChart"></canvas>
                     </div>
-                    <div class="mt-2 p-2 rounded" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); font-size:10.5px;">
-                        <strong class="text-info"><i class="bi bi-info-circle"></i> Interpretasi Tren:</strong>
-                        Grafik batang biru menampilkan intensitas curah hujan (mm/jam), sedangkan garis kuning/cyan menunjukkan temperatur dan kecepatan angin.
+
+                    <!-- Operational Hauling Guidance Note -->
+                    <div class="mt-2 p-2 rounded" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); font-size:10px;">
+                        <strong class="text-info"><i class="bi bi-shield-check"></i> Rekomendasi Hauling Road (24 Jam):</strong>
+                        <span id="trendHaulingText" style="color:#cbd5e1; margin-left:4px;">Kondisi hauling road diprediksi kering dan aman untuk kecepatan normal.</span>
                     </div>
                 </div>
 
@@ -1177,7 +1682,7 @@
     function testSoundAlert() {
         playRadarChime();
         setTimeout(() => {
-            const testMsg = "Perhatian. Ini adalah uji coba sistem suara Google pada peringatan dini cuaca IMORA. Pemantauan 17 titik tambang beroperasi normal.";
+            const testMsg = "Perhatian. Uji coba sistem suara peringatan dini cuaca IMORA. Terdeteksi potensi hujan di Pit T2 dan T4 dengan curah hujan 3.2 milimeter per jam. Seluruh personel diinstruksikan berhati-hati terhadap jalan hauling licin dan kurangi kecepatan unit.";
             speakGoogleVoice(testMsg);
         }, 450);
     }
@@ -1281,6 +1786,14 @@
         document.getElementById('selectedPointName').innerText = p.name;
         updateHourlyChart(mi.item);
 
+        // Highlight active marker pin on map
+        document.querySelectorAll('.marker-pin-wrap').forEach(w => w.classList.remove('active-pin-focus'));
+        const mEl = mi.marker.getElement();
+        if (mEl) {
+            const wrap = mEl.querySelector('.marker-pin-wrap');
+            if (wrap) wrap.classList.add('active-pin-focus');
+        }
+
         // Highlight active card in the list
         document.querySelectorAll('.point-card').forEach(c => c.classList.remove('active-card-highlight'));
         if (mi.card) {
@@ -1309,14 +1822,14 @@
 
     // WMO Weather code helper
     function interpretWmoCode(code) {
-        if (code === 0) return { desc: 'Cerah', icon: 'bi-sun-fill text-warning' };
-        if (code === 1 || code === 2) return { desc: 'Cerah Berawan', icon: 'bi-cloud-sun-fill text-info' };
-        if (code === 3) return { desc: 'Berawan Tebal', icon: 'bi-clouds-fill text-secondary' };
-        if (code >= 51 && code <= 55) return { desc: 'Gerimis Ringan', icon: 'bi-cloud-drizzle-fill text-info' };
-        if (code >= 61 && code <= 65) return { desc: 'Hujan', icon: 'bi-cloud-rain-fill text-primary' };
-        if (code >= 80 && code <= 82) return { desc: 'Hujan Lebat (Showers)', icon: 'bi-cloud-rain-heavy-fill text-danger' };
-        if (code >= 95 && code <= 99) return { desc: 'Badai Petir', icon: 'bi-cloud-lightning-rain-fill text-danger' };
-        return { desc: 'Normal', icon: 'bi-cloud-fill text-muted' };
+        if (code === 0) return { desc: 'Cerah', icon: 'bi-sun-fill', color: '#fbbf24' };
+        if (code === 1 || code === 2) return { desc: 'Cerah Berawan', icon: 'bi-cloud-sun-fill', color: '#38bdf8' };
+        if (code === 3) return { desc: 'Berawan Tebal', icon: 'bi-clouds-fill', color: '#bae6fd' };
+        if (code >= 51 && code <= 55) return { desc: 'Gerimis Ringan', icon: 'bi-cloud-drizzle-fill', color: '#00d2ff' };
+        if (code >= 61 && code <= 65) return { desc: 'Hujan', icon: 'bi-cloud-rain-fill', color: '#38bdf8' };
+        if (code >= 80 && code <= 82) return { desc: 'Hujan Lebat (Showers)', icon: 'bi-cloud-rain-heavy-fill', color: '#f87171' };
+        if (code >= 95 && code <= 99) return { desc: 'Badai Petir', icon: 'bi-cloud-lightning-rain-fill', color: '#facc15' };
+        return { desc: 'Cerah Berawan', icon: 'bi-cloud-sun-fill', color: '#38bdf8' };
     }
 
     async function fetchForecastData() {
@@ -1397,39 +1910,109 @@
                 severity = 'red';
                 statusText = 'Awas';
                 warningPointsCount++;
-                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, status: 'Awas' });
+                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, code: curCode, status: 'Awas' });
             } else if (curPrecip >= 2 || curGust >= 32) {
                 severity = 'orange';
                 statusText = 'Siaga';
                 warningPointsCount++;
-                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, status: 'Siaga' });
+                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, code: curCode, status: 'Siaga' });
             } else if (curPrecip > 0 || curProb >= 50 || curGust >= 24) {
                 severity = 'yellow';
                 statusText = 'Waspada';
                 warningPointsCount++;
-                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, status: 'Waspada' });
+                activeAlertPoints.push({ name: p.name, precip: curPrecip, gust: curGust, code: curCode, status: 'Waspada' });
             }
 
             bounds.push([p.latitude, p.longitude]);
 
-            // Create Custom Radar Marker Pin for Leaflet
+            const wmoInfo = interpretWmoCode(curCode);
+
+            // Dynamic Weather Badges & Ripples on Map Point
+            let weatherBadgeHtml = '';
+            let rippleEffectHtml = '';
+
+            const isThunder = (curCode >= 95 || curCode === 96 || curCode === 99);
+            const isRaining = (curPrecip > 0 || (curCode >= 51 && curCode <= 65) || (curCode >= 80 && curCode <= 82));
+            const isHeavyRain = (curPrecip >= 2 || (curCode >= 63 && curCode <= 65) || (curCode >= 81 && curCode <= 82));
+            const isHighWind = (curGust >= 30 && !isRaining && !isThunder);
+            const isHighProb = (curProb >= 60 && !isRaining && !isThunder);
+
+            if (isThunder) {
+                weatherBadgeHtml = `
+                    <div class="marker-weather-badge badge-thunder" title="Peringatan Petir / Thunderstorm">
+                        <i class="bi bi-lightning-charge-fill lightning-flash text-warning"></i>
+                        <span>PETIR</span>
+                    </div>
+                `;
+                rippleEffectHtml = `<div class="thunder-ripple"></div>`;
+            } else if (isHeavyRain) {
+                weatherBadgeHtml = `
+                    <div class="marker-weather-badge badge-heavy-rain" title="Hujan Lebat: ${curPrecip} mm/h">
+                        <i class="bi bi-cloud-rain-heavy-fill rain-bounce"></i>
+                        <span>${curPrecip} mm/h</span>
+                    </div>
+                `;
+                rippleEffectHtml = `<div class="rain-ripple"></div>`;
+            } else if (isRaining) {
+                weatherBadgeHtml = `
+                    <div class="marker-weather-badge badge-rain" title="Hujan: ${curPrecip} mm/h">
+                        <i class="bi bi-cloud-rain-fill rain-bounce"></i>
+                        <span>${curPrecip > 0 ? curPrecip + ' mm' : 'Hujan'}</span>
+                    </div>
+                `;
+                rippleEffectHtml = `<div class="rain-ripple"></div>`;
+            } else if (isHighWind) {
+                weatherBadgeHtml = `
+                    <div class="marker-weather-badge badge-wind" title="Hembusan Angin Kencang: ${curGust} km/h">
+                        <i class="bi bi-wind wind-spin"></i>
+                        <span>${curGust} km/h</span>
+                    </div>
+                `;
+            } else if (isHighProb) {
+                weatherBadgeHtml = `
+                    <div class="marker-weather-badge badge-prob" title="Peluang Hujan: ${curProb}%">
+                        <i class="bi bi-cloud-sun-fill"></i>
+                        <span>${curProb}%</span>
+                    </div>
+                `;
+            }
+
+            const shortPitName = p.name.replace(/\s*-\s*(KPP|UDU|MGE)\b/gi, '').trim();
+
+            const markerSeverityClass = (severity === 'green') ? 'cyan' : severity;
+            let beaconIcon = '<i class="bi bi-geo-alt-fill text-white"></i>';
+            if (isThunder) {
+                beaconIcon = '<i class="bi bi-lightning-charge-fill text-warning"></i>';
+            } else if (isHeavyRain || isRaining) {
+                beaconIcon = '<i class="bi bi-cloud-rain-fill text-white"></i>';
+            } else if (isHighWind) {
+                beaconIcon = '<i class="bi bi-wind text-warning"></i>';
+            }
+
             const pinHtml = `
-                <div class="radar-pin ${severity}">
-                    <div class="core-dot"></div>
-                    <div class="pulse-wave"></div>
+                <div class="marker-pin-wrap" title="${p.name} • ${wmoInfo.desc} • ${curPrecip} mm/h">
+                    ${rippleEffectHtml}
+                    ${weatherBadgeHtml}
+                    <div class="marker-radar-core">
+                        <div class="pulse-wave ${markerSeverityClass}"></div>
+                        <div class="core-beacon ${markerSeverityClass}">
+                            ${beaconIcon}
+                        </div>
+                    </div>
+                    <div class="marker-pit-label ${markerSeverityClass}">${shortPitName}</div>
                 </div>
             `;
+
             const customIcon = L.divIcon({
                 html: pinHtml,
-                className: '',
-                iconSize: [32, 32],
-                iconAnchor: [16, 16]
+                className: 'custom-map-div-icon',
+                iconSize: [80, 64],
+                iconAnchor: [40, 32]
             });
 
             const marker = L.marker([p.latitude, p.longitude], { icon: customIcon });
 
             // Marker Popup Content
-            const wmoInfo = interpretWmoCode(curCode);
             const popupHtml = `
                 <div style="font-family:'Poppins',sans-serif; min-width:200px; padding:4px;">
                     <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:4px; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">
@@ -1437,7 +2020,7 @@
                     </div>
                     <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
                         <span>Kondisi Cuaca:</span>
-                        <strong style="color:#0f172a;"><i class="${wmoInfo.icon}"></i> ${wmoInfo.desc}</strong>
+                        <strong style="color:#0f172a;"><i class="bi ${wmoInfo.icon}" style="color:${wmoInfo.color};"></i> ${wmoInfo.desc}</strong>
                     </div>
                     <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
                         <span>Curah Hujan (Now):</span>
@@ -1470,6 +2053,7 @@
 
             const card = document.createElement('div');
             card.className = cardClass;
+            card.setAttribute('data-point-type', (curPrecip > 0 || severity !== 'green') ? 'warning' : 'dry');
             card.onclick = () => {
                 showPointPopup(index, true);
             };
@@ -1482,21 +2066,67 @@
                 index: index
             });
 
+            // Contractor Badge
+            let contractorBadge = '';
+            if (p.name.includes('KPP')) {
+                contractorBadge = '<span class="badge" style="background:rgba(56,189,248,0.22); color:#38bdf8; border:1px solid rgba(56,189,248,0.5); font-size:8.5px; font-weight:800;">KPP</span>';
+            } else if (p.name.includes('UDU')) {
+                contractorBadge = '<span class="badge" style="background:rgba(52,211,153,0.22); color:#34d399; border:1px solid rgba(52,211,153,0.5); font-size:8.5px; font-weight:800;">UDU</span>';
+            } else if (p.name.includes('MGE')) {
+                contractorBadge = '<span class="badge" style="background:rgba(251,191,36,0.22); color:#fbbf24; border:1px solid rgba(251,191,36,0.5); font-size:8.5px; font-weight:800;">MGE</span>';
+            }
+
+            // Hauling Road Condition
+            let roadBadge = '';
+            if (curPrecip >= 2) {
+                roadBadge = '<span class="hauling-badge hauling-danger"><i class="bi bi-exclamation-triangle-fill"></i> Sangat Licin / Standby</span>';
+            } else if (curPrecip > 0) {
+                roadBadge = '<span class="hauling-badge hauling-caution"><i class="bi bi-speedometer2"></i> Basah • Maks 30 km/h</span>';
+            } else {
+                roadBadge = '<span class="hauling-badge hauling-normal"><i class="bi bi-check-circle-fill"></i> Kering • Normal</span>';
+            }
+
+            // High Contrast Badge Class & Glowing Status Corner Dot
+            let badgeThemeClass = 'badge-cyan';
+            let statusDotColor = '#00d2ff';
+            if (severity === 'red') {
+                badgeThemeClass = 'badge-red';
+                statusDotColor = '#ef4444';
+            } else if (severity === 'orange') {
+                badgeThemeClass = 'badge-orange';
+                statusDotColor = '#fb923c';
+            } else if (severity === 'yellow') {
+                badgeThemeClass = 'badge-yellow';
+                statusDotColor = '#fbbf24';
+            }
+
             card.innerHTML = `
-                <div class="point-badge" style="background:${severity === 'red' ? 'rgba(239,68,68,0.2)' : severity === 'orange' ? 'rgba(251,146,60,0.2)' : severity === 'yellow' ? 'rgba(251,191,36,0.2)' : 'rgba(16,185,129,0.2)'}; color:${severity === 'red' ? '#ef4444' : severity === 'orange' ? '#fb923c' : severity === 'yellow' ? '#fbbf24' : '#10b981'};">
-                    <i class="${wmoInfo.icon}"></i>
+                <div class="point-badge ${badgeThemeClass}" title="${wmoInfo.desc}">
+                    <span class="badge-status-dot" style="background:${statusDotColor}; box-shadow:0 0 8px ${statusDotColor};"></span>
+                    <i class="bi ${wmoInfo.icon} badge-weather-icon" style="color: ${wmoInfo.color};"></i>
                 </div>
-                <div>
-                    <div class="point-name">${p.name}</div>
-                    <div class="point-meta">
-                        <span><i class="bi bi-wind"></i> ${curGust} km/h</span>
-                        <span><i class="bi bi-percent"></i> ${curProb}% Prob</span>
-                        <span class="badge ${severity === 'red' ? 'bg-danger' : severity === 'orange' ? 'bg-warning text-dark' : severity === 'yellow' ? 'bg-warning text-dark' : 'bg-success'}">${statusText}</span>
+                <div style="flex:1; min-width:0;">
+                    <div class="d-flex align-items-center gap-1 mb-1">
+                        <span class="point-name text-truncate" style="max-width:140px;">${p.name}</span>
+                        ${contractorBadge}
+                        <span class="badge ${severity === 'red' ? 'bg-danger' : severity === 'orange' ? 'bg-warning text-dark' : severity === 'yellow' ? 'bg-warning text-dark' : 'bg-info text-dark'}" style="font-size:8.5px; padding:2px 5px; font-weight:800;">${statusText}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        ${roadBadge}
+                        <span style="font-size:9.5px; color:#cbd5e1; font-weight:600;"><i class="bi bi-wind text-warning"></i> ${curGust} km/h</span>
+                    </div>
+                    <!-- Rain Probability Mini Bar -->
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <div style="flex:1; height:4px; background:rgba(255,255,255,0.12); border-radius:3px; overflow:hidden;">
+                            <div style="width:${curProb}%; height:100%; background:${curProb >= 60 ? '#a855f7' : curProb >= 30 ? '#38bdf8' : '#00d2ff'}; border-radius:3px;"></div>
+                        </div>
+                        <span style="font-size:9px; color:#94a3b8; font-weight:700;">${curProb}% Prob</span>
                     </div>
                 </div>
                 <div class="point-weather-col">
                     <div class="point-temp">${curTemp}&deg;C</div>
-                    <div class="point-precip ${curPrecip > 0 ? 'wet' : 'dry'}">${curPrecip > 0 ? curPrecip + ' mm/h' : 'Kering'}</div>
+                    <div class="point-precip ${curPrecip > 0 ? 'wet' : 'dry'}" style="font-size:11.5px; font-weight:800;">${curPrecip > 0 ? curPrecip + ' mm/h' : 'Kering'}</div>
+                    <span style="font-size:9.5px; color:${wmoInfo.color}; font-weight:700;">${wmoInfo.desc}</span>
                 </div>
             `;
             cardListEl.appendChild(card);
@@ -1535,11 +2165,21 @@
 
         document.getElementById('warningPointsBadge').innerText = `${warningPointsCount} Titik Terindikasi`;
 
+        // Filter points by weather hazard types for contextual voice announcement
+        const thunderPoints = activeAlertPoints.filter(a => (a.code >= 95 || a.status === 'Awas'));
+        const rainPoints = activeAlertPoints.filter(a => a.precip > 0 || (a.code >= 51 && a.code <= 82));
+        const windPoints = activeAlertPoints.filter(a => a.gust >= 30 && a.precip === 0);
+
+        const formatPitNames = (arr) => arr.map(a => a.name.replace(/\s*-\s*(KPP|UDU|MGE)\b/gi, '').trim()).slice(0, 3).join(', ');
+        const thunderNames = formatPitNames(thunderPoints);
+        const rainNames = formatPitNames(rainPoints);
+        const windNames = formatPitNames(windPoints);
+
         if (activeAlertPoints.some(a => a.status === 'Awas')) {
             banner.className = 'warning-banner siaga';
             icon.className = 'bi bi-exclamation-octagon-fill text-danger';
             title.innerText = 'PERINGATAN DINI CUACA EKSTREM: SIAGA TINGGI!';
-            desc.innerText = `Terdeteksi potensi hujan lebat & angin kencang di area: ${activeAlertPoints.filter(a => a.status === 'Awas').map(a => a.name).join(', ')}. Terapkan mitigasi K3 dan kurangi aktivitas di area lereng terbuka!`;
+            desc.innerText = `Terdeteksi potensi hujan lebat & cuaca ekstrem di area: ${activeAlertPoints.filter(a => a.status === 'Awas').map(a => a.name).join(', ')}. Terapkan mitigasi K3 dan kurangi aktivitas di area lereng terbuka!`;
             kpiStatusBadge.className = 'badge bg-danger';
             kpiStatusBadge.innerText = 'SIAGA';
             kpiStatusText.className = 'kpi-num text-danger';
@@ -1551,7 +2191,14 @@
                 lastAudioAlertTime = nowTime;
                 playEmergencyWarningSiren();
                 setTimeout(() => {
-                    const alertMsg = `Peringatan dini cuaca ekstrem status siaga. Terdeteksi potensi hujan lebat dan angin kencang di pit tambang. Seluruh personel wajib mematuhi keselamatan kerja.`;
+                    let alertMsg = '';
+                    if (thunderPoints.length > 0) {
+                        alertMsg = `Peringatan bahaya cuaca ekstrem. Terdeteksi potensi badai petir dan hujan lebat di area ${thunderNames}. Seluruh operator dan personel wajib waspada dan hentikan pekerjaan berisiko tinggi.`;
+                    } else if (rainPoints.length > 0) {
+                        alertMsg = `Peringatan siaga cuaca. Terdeteksi hujan lebat di area ${rainNames} dengan curah hujan hingga ${maxRain} milimeter per jam. Hati-hati jalan hauling licin dan jaga jarak aman.`;
+                    } else {
+                        alertMsg = `Peringatan dini cuaca ekstrem status siaga. Terdeteksi potensi hujan lebat dan angin kencang di pit tambang. Seluruh personel wajib mematuhi keselamatan kerja.`;
+                    }
                     speakGoogleVoice(alertMsg);
                 }, 1200);
             }
@@ -1559,7 +2206,7 @@
             banner.className = 'warning-banner waspada';
             icon.className = 'bi bi-exclamation-triangle-fill text-warning';
             title.innerText = 'PERINGATAN DINI CUACA: STATUS WASPADA';
-            desc.innerText = `Terdapat potensi gerimis/presipitasi meningkat di ${warningPointsCount} titik (${activeAlertPoints.slice(0, 3).map(a => a.name).join(', ')}). Waspada jalan hauling licin dan jaga jarak aman berkendara.`;
+            desc.innerText = `Terdapat potensi hujan/gerimis di ${warningPointsCount} titik (${activeAlertPoints.slice(0, 3).map(a => a.name).join(', ')}). Waspada jalan hauling licin dan jaga jarak aman berkendara.`;
             kpiStatusBadge.className = 'badge bg-warning text-dark';
             kpiStatusBadge.innerText = 'WASPADA';
             kpiStatusText.className = 'kpi-num text-warning';
@@ -1570,7 +2217,14 @@
                 lastAudioAlertTime = nowTime;
                 playRadarChime();
                 setTimeout(() => {
-                    const warnMsg = `Peringatan dini cuaca status waspada. Terdeteksi potensi hujan pada ${warningPointsCount} titik tambang. Harap berhati-hati dan kurangi kecepatan unit.`;
+                    let warnMsg = '';
+                    if (rainPoints.length > 0) {
+                        warnMsg = `Perhatian. Terdeteksi hujan di area ${rainNames} dengan curah hujan hingga ${maxRain} milimeter per jam. Harap waspada jalan hauling licin dan kurangi kecepatan unit.`;
+                    } else if (windPoints.length > 0) {
+                        warnMsg = `Peringatan hembusan angin kencang mencapai ${maxWind} kilometer per jam di area ${windNames || maxWindLocation}. Harap waspada terhadap debu dan stabilitas lereng.`;
+                    } else {
+                        warnMsg = `Peringatan dini cuaca status waspada. Terdeteksi potensi hujan pada ${warningPointsCount} titik tambang. Harap seluruh personel berhati-hati saat beraktivitas.`;
+                    }
                     speakGoogleVoice(warnMsg);
                 }, 500);
             }
@@ -1585,6 +2239,12 @@
             kpiStatusText.innerText = 'NORMAL';
         }
 
+        // Update filter badge numbers
+        const warnCountEl = document.getElementById('warnCountBadge');
+        if (warnCountEl) warnCountEl.innerText = warningPointsCount;
+        const dryCountEl = document.getElementById('dryCountBadge');
+        if (dryCountEl) dryCountEl.innerText = Math.max(0, results.length - warningPointsCount);
+
         // Update Bottom Ticker
         document.getElementById('weatherTickerText').innerText = tickerItems.join('  •  ');
 
@@ -1596,64 +2256,144 @@
     }
 
     /* ──────────────────────────────────────────────────────────────────────────
-       6. AUTOMATIC TAB ROTATION (Daftar Titik -> Tren 24 Jam -> Panduan K3)
+       6. AUTOMATIC TAB ROTATION (Daftar Titik <-> Tren 24 Jam Bergantian)
        ────────────────────────────────────────────────────────────────────────── */
-    const TABS_SEQUENCE = [
-        { id: 'points', duration: 35000 }, // 35 seconds for points list
-        { id: 'chart', duration: 25000 },  // 25 seconds for hourly trend chart
-        { id: 'safety', duration: 20000 }  // 20 seconds for safety protocols
-    ];
-    let currentTabSeqIndex = 0;
-    let tabRotationTimeout = null;
+    const TAB_ROTATION_CYCLE_MS = 18000; // 18 seconds alternating between tabs
+    let tabRotationProgressMs = 0;
+    let tabRotationTimer = null;
     let isTabRotationPaused = false;
+    let currentActiveTab = 'points';
+    let tabCycleCount = 0;
 
     function startTabRotation() {
-        scheduleNextTab();
+        if (tabRotationTimer) clearInterval(tabRotationTimer);
+        tabRotationProgressMs = 0;
+
+        tabRotationTimer = setInterval(() => {
+            if (isTabRotationPaused) return;
+
+            tabRotationProgressMs += 200;
+            const pct = Math.min(100, (tabRotationProgressMs / TAB_ROTATION_CYCLE_MS) * 100);
+
+            const pBar = document.getElementById('tabRotationProgressBar');
+            if (pBar) pBar.style.width = `${pct}%`;
+
+            const secLeft = Math.max(0, Math.ceil((TAB_ROTATION_CYCLE_MS - tabRotationProgressMs) / 1000));
+            const secEl = document.getElementById('tabCountdownSec');
+            if (secEl) secEl.innerText = `${secLeft}s`;
+
+            if (tabRotationProgressMs >= TAB_ROTATION_CYCLE_MS) {
+                tabRotationProgressMs = 0;
+                tabCycleCount++;
+
+                // Alternate between 'points' and 'chart' primarily, with 'safety' every 4 cycles
+                if (tabCycleCount % 4 === 0) {
+                    switchRightTab('safety', false);
+                } else if (currentActiveTab === 'points') {
+                    switchRightTab('chart', false);
+                } else {
+                    switchRightTab('points', false);
+                }
+            }
+        }, 200);
     }
 
-    function scheduleNextTab() {
-        if (tabRotationTimeout) clearTimeout(tabRotationTimeout);
-        if (isTabRotationPaused) return;
-
-        const currentTabObj = TABS_SEQUENCE[currentTabSeqIndex];
-        tabRotationTimeout = setTimeout(() => {
-            if (isTabRotationPaused) return;
-            currentTabSeqIndex = (currentTabSeqIndex + 1) % TABS_SEQUENCE.length;
-            const nextTab = TABS_SEQUENCE[currentTabSeqIndex];
-            switchRightTab(nextTab.id, false);
-            scheduleNextTab();
-        }, currentTabObj.duration);
+    function toggleTabRotationPause() {
+        isTabRotationPaused = !isTabRotationPaused;
+        const badge = document.getElementById('tabRotationStatusBadge');
+        if (isTabRotationPaused) {
+            if (badge) {
+                badge.style.background = 'rgba(239,68,68,0.2)';
+                badge.style.color = '#f87171';
+                badge.style.borderColor = 'rgba(239,68,68,0.4)';
+                badge.innerHTML = '<i class="bi bi-pause-fill"></i> Rotasi: JEDA';
+            }
+        } else {
+            if (badge) {
+                badge.style.background = 'rgba(56,189,248,0.14)';
+                badge.style.color = '#38bdf8';
+                badge.style.borderColor = 'rgba(56,189,248,0.35)';
+                badge.innerHTML = '<i class="bi bi-arrow-repeat" id="tabRotIcon"></i> Rotasi: <span id="tabCountdownSec">18s</span>';
+            }
+            tabRotationProgressMs = 0;
+        }
     }
 
     function pauseTabRotation(durationMs = 25000) {
         isTabRotationPaused = true;
-        if (tabRotationTimeout) clearTimeout(tabRotationTimeout);
-        setTimeout(() => {
+        const badge = document.getElementById('tabRotationStatusBadge');
+        if (badge) {
+            badge.style.background = 'rgba(251,191,36,0.2)';
+            badge.style.color = '#fbbf24';
+            badge.innerHTML = '<i class="bi bi-hand-index-thumb"></i> Manual: Jeda';
+        }
+        clearTimeout(window._tabResumeTimeout);
+        window._tabResumeTimeout = setTimeout(() => {
             isTabRotationPaused = false;
-            scheduleNextTab();
+            tabRotationProgressMs = 0;
+            if (badge) {
+                badge.style.background = 'rgba(56,189,248,0.14)';
+                badge.style.color = '#38bdf8';
+                badge.innerHTML = '<i class="bi bi-arrow-repeat" id="tabRotIcon"></i> Rotasi: <span id="tabCountdownSec">18s</span>';
+            }
         }, durationMs);
     }
 
     function switchRightTab(tabName, isManual = false) {
+        currentActiveTab = tabName;
+        tabRotationProgressMs = 0;
+        const pBar = document.getElementById('tabRotationProgressBar');
+        if (pBar) pBar.style.width = '0%';
+
         document.getElementById('tabPointsBtn').classList.toggle('active', tabName === 'points');
         document.getElementById('tabChartBtn').classList.toggle('active', tabName === 'chart');
         document.getElementById('tabSafetyBtn').classList.toggle('active', tabName === 'safety');
 
-        document.getElementById('tabContentPoints').style.display = tabName === 'points' ? 'flex' : 'none';
-        document.getElementById('tabContentChart').style.display = tabName === 'chart' ? 'flex' : 'none';
-        document.getElementById('tabContentSafety').style.display = tabName === 'safety' ? 'flex' : 'none';
+        const pEl = document.getElementById('tabContentPoints');
+        const cEl = document.getElementById('tabContentChart');
+        const sEl = document.getElementById('tabContentSafety');
 
-        if (tabName === 'chart' && hourlyChartInstance) {
-            setTimeout(() => {
-                hourlyChartInstance.resize();
-            }, 60);
+        pEl.style.display = tabName === 'points' ? 'flex' : 'none';
+        cEl.style.display = tabName === 'chart' ? 'flex' : 'none';
+        sEl.style.display = tabName === 'safety' ? 'flex' : 'none';
+
+        if (tabName === 'points') {
+            pEl.classList.remove('tab-fade-in');
+            void pEl.offsetWidth; // trigger reflow
+            pEl.classList.add('tab-fade-in');
+        } else if (tabName === 'chart') {
+            cEl.classList.remove('tab-fade-in');
+            void cEl.offsetWidth;
+            cEl.classList.add('tab-fade-in');
+            if (hourlyChartInstance) {
+                setTimeout(() => hourlyChartInstance.resize(), 60);
+            }
+        } else if (tabName === 'safety') {
+            sEl.classList.remove('tab-fade-in');
+            void sEl.offsetWidth;
+            sEl.classList.add('tab-fade-in');
         }
 
         if (isManual) {
-            const idx = TABS_SEQUENCE.findIndex(t => t.id === tabName);
-            if (idx !== -1) currentTabSeqIndex = idx;
-            pauseTabRotation(30000);
+            pauseTabRotation(25000);
         }
+    }
+
+    function setPointFilter(type) {
+        document.getElementById('filterAllBtn').classList.toggle('active', type === 'all');
+        document.getElementById('filterWarnBtn').classList.toggle('active', type === 'warning');
+        document.getElementById('filterDryBtn').classList.toggle('active', type === 'dry');
+
+        document.querySelectorAll('.point-card').forEach(card => {
+            const pType = card.getAttribute('data-point-type');
+            if (type === 'all') {
+                card.style.display = 'grid';
+            } else if (type === 'warning') {
+                card.style.display = (pType === 'warning') ? 'grid' : 'none';
+            } else if (type === 'dry') {
+                card.style.display = (pType === 'dry') ? 'grid' : 'none';
+            }
+        });
     }
 
     function updateHourlyChart(item) {
@@ -1664,11 +2404,74 @@
             return parts.length > 1 ? parts[1] : t;
         });
         const precipData = (fc.precipitation || []).slice(0, 24);
+        const probData = (fc.precipitation_probability || []).slice(0, 24);
         const tempData = (fc.temperature_2m || []).slice(0, 24);
         const windData = (fc.wind_gusts_10m || []).slice(0, 24);
+        const codes = (fc.weather_code || []).slice(0, 24);
 
         document.getElementById('chartLocationLabel').innerText = `Prakiraan 24 Jam: ${item.point.name}`;
 
+        // 1. Calculate 24-Hour HUD Highlights
+        const totalRain = precipData.reduce((a, b) => a + b, 0).toFixed(1);
+        const maxPrecipVal = Math.max(...precipData);
+        let peakRainHour = '--:--';
+        if (maxPrecipVal > 0) {
+            const peakIdx = precipData.indexOf(maxPrecipVal);
+            peakRainHour = labels[peakIdx] || '--:--';
+        }
+        const maxGustVal = Math.max(...windData);
+        const maxGustIdx = windData.indexOf(maxGustVal);
+        const maxGustHour = labels[maxGustIdx] || '--:--';
+
+        const minTemp = Math.min(...tempData).toFixed(0);
+        const maxTemp = Math.max(...tempData).toFixed(0);
+
+        document.getElementById('trendTotalRain').innerText = `${totalRain} mm`;
+        document.getElementById('trendPeakRain').innerText = peakRainHour !== '--:--' ? `Pk ${peakRainHour}` : 'Nihil Hujan';
+        document.getElementById('trendPeakRainVal').innerText = maxPrecipVal > 0 ? `Maks ${maxPrecipVal} mm/h` : 'Kering 24 Jam';
+        document.getElementById('trendMaxGust').innerText = `${maxGustVal} km/h`;
+        document.getElementById('trendMaxGustTime').innerText = `Pukul ${maxGustHour}`;
+        document.getElementById('trendTempRange').innerHTML = `${minTemp}&deg; — ${maxTemp}&deg;C`;
+        document.getElementById('trendTempDesc').innerText = `Min ${minTemp}°C / Maks ${maxTemp}°C`;
+
+        // Hauling Road Guidance text
+        const guidanceEl = document.getElementById('trendHaulingText');
+        if (guidanceEl) {
+            if (maxPrecipVal >= 2 || totalRain >= 5) {
+                guidanceEl.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> Peringatan Jalan Sangat Licin:</span> Terdeteksi potensi hujan lebat puncak ${maxPrecipVal} mm/h pada pukul ${peakRainHour}. Rekomendasi pembatasan kecepatan armada dan siapkan motor grader.`;
+            } else if (totalRain > 0) {
+                guidanceEl.innerHTML = `<span class="text-warning fw-bold"><i class="bi bi-speedometer2"></i> Waspada Jalan Basah:</span> Potensi gerimis basah pada jam ${peakRainHour}. Batasi kecepatan hauling DT maksimal 30 km/jam dan jaga jarak aman.`;
+            } else {
+                guidanceEl.innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i> Hauling Road Normal:</span> Kondisi jalan tambang diprediksi kering dan aman untuk kecepatan standar selama 24 jam ke depan.`;
+            }
+        }
+
+        // 2. Render Hourly Strip (Next 8 Hours)
+        const stripContainer = document.getElementById('hourlyStripWrap');
+        if (stripContainer) {
+            stripContainer.innerHTML = '';
+            for (let i = 0; i < Math.min(8, labels.length); i++) {
+                const hourTime = labels[i];
+                const hRain = precipData[i] || 0;
+                const hProb = probData[i] || 0;
+                const hTemp = Math.round(tempData[i] || 25);
+                const hCode = codes[i] || 0;
+                const wInfo = interpretWmoCode(hCode);
+
+                const cardEl = document.createElement('div');
+                cardEl.className = `hourly-strip-card ${i === 0 ? 'active-now' : ''} ${hRain > 0 ? 'wet-hour' : ''}`;
+                cardEl.innerHTML = `
+                    <div class="strip-time">${i === 0 ? 'SEKARANG' : hourTime}</div>
+                    <div class="strip-icon"><i class="bi ${wInfo.icon}" style="color:${wInfo.color}; font-size:16px;"></i></div>
+                    <div class="strip-rain" style="color:${hRain > 0 ? '#38bdf8' : '#64748b'};">${hRain > 0 ? hRain + 'mm' : '0mm'}</div>
+                    <div class="strip-prob">${hProb}%</div>
+                    <div class="strip-temp">${hTemp}&deg;C</div>
+                `;
+                stripContainer.appendChild(cardEl);
+            }
+        }
+
+        // 3. Render Chart.js Multi-Layer
         const ctx = document.getElementById('hourlyWeatherChart').getContext('2d');
         if (hourlyChartInstance) {
             hourlyChartInstance.destroy();
@@ -1680,13 +2483,27 @@
                 labels: labels,
                 datasets: [
                     {
-                        label: 'Hujan (mm)',
+                        label: 'Curah Hujan (mm)',
                         data: precipData,
-                        backgroundColor: 'rgba(56, 189, 248, 0.65)',
+                        backgroundColor: 'rgba(56, 189, 248, 0.7)',
                         borderColor: '#0284c7',
-                        borderWidth: 1,
+                        borderWidth: 1.2,
+                        borderRadius: 3,
                         yAxisID: 'yPrecip',
                         order: 2
+                    },
+                    {
+                        label: 'Peluang Hujan (%)',
+                        data: probData,
+                        type: 'line',
+                        borderColor: '#a855f7',
+                        borderDash: [3, 3],
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.5,
+                        tension: 0.35,
+                        pointRadius: 0,
+                        yAxisID: 'yProb',
+                        order: 3
                     },
                     {
                         label: 'Suhu (°C)',
@@ -1695,7 +2512,7 @@
                         borderColor: '#fbbf24',
                         backgroundColor: 'transparent',
                         borderWidth: 2,
-                        tension: 0.3,
+                        tension: 0.35,
                         pointRadius: 2,
                         yAxisID: 'yTemp',
                         order: 1
@@ -1708,7 +2525,7 @@
                         borderDash: [4, 4],
                         backgroundColor: 'transparent',
                         borderWidth: 1.5,
-                        tension: 0.3,
+                        tension: 0.35,
                         pointRadius: 0,
                         yAxisID: 'yWind',
                         order: 0
@@ -1721,26 +2538,33 @@
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: {
-                        labels: { color: '#cbd5e1', font: { family: 'Poppins', size: 10 } }
+                        labels: { color: '#cbd5e1', font: { family: 'Poppins', size: 9 }, boxWidth: 10, padding: 6 }
                     }
                 },
                 scales: {
                     x: {
-                        ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 45 },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
+                        ticks: { color: '#94a3b8', font: { size: 8.5 }, maxRotation: 0 },
+                        grid: { color: 'rgba(255,255,255,0.04)' }
                     },
                     yPrecip: {
                         type: 'linear',
                         position: 'left',
-                        title: { display: true, text: 'Hujan (mm)', color: '#38bdf8', font: { size: 9 } },
-                        ticks: { color: '#38bdf8', font: { size: 9 }, beginAtZero: true },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
+                        title: { display: true, text: 'Hujan (mm)', color: '#38bdf8', font: { size: 8.5 } },
+                        ticks: { color: '#38bdf8', font: { size: 8.5 }, beginAtZero: true },
+                        grid: { color: 'rgba(255,255,255,0.04)' }
+                    },
+                    yProb: {
+                        type: 'linear',
+                        position: 'right',
+                        display: false,
+                        min: 0,
+                        max: 100
                     },
                     yTemp: {
                         type: 'linear',
                         position: 'right',
-                        title: { display: true, text: 'Suhu (°C)', color: '#fbbf24', font: { size: 9 } },
-                        ticks: { color: '#fbbf24', font: { size: 9 } },
+                        title: { display: true, text: 'Suhu (°C)', color: '#fbbf24', font: { size: 8.5 } },
+                        ticks: { color: '#fbbf24', font: { size: 8.5 } },
                         grid: { drawOnChartArea: false }
                     },
                     yWind: {

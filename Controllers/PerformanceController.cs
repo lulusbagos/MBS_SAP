@@ -4304,7 +4304,7 @@ namespace MBS_SAP.Controllers
 
                     return new DepartmentAchievementViewModel
                     {
-                        DepartmentName = d.DeptName,
+                        DepartmentName = d.DeptName ?? "",
                         EmployeeCount = d.EmployeeCount,
                         TotalTarget = d.TotalTarget,
                         TotalActual = d.TotalActual,
@@ -4892,7 +4892,7 @@ namespace MBS_SAP.Controllers
 
                     return new DepartmentAchievementViewModel
                     {
-                        DepartmentName = d.DeptName,
+                        DepartmentName = d.DeptName ?? "",
                         EmployeeCount = d.EmployeeCount,
                         TotalTarget = d.TotalTarget,
                         TotalActual = d.TotalActual,
@@ -9111,7 +9111,7 @@ namespace MBS_SAP.Controllers
 
             var groupCoachingParticipants = await (from p in _context.CoachingParticipants.AsNoTracking()
                                                    join k in _context.Karyawans.AsNoTracking() on p.Nik equals k.NoNik
-                                                   where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonthM && p.Coaching.CreatedAt <= endOfMonthM && k.IdPerusahaan != null
+                                                   where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonthM && p.Coaching.CreatedAt <= endOfMonthM && k.IdPerusahaan > 0
                                                    select new { PerusahaanId = (int?)k.IdPerusahaan })
                                                    .ToListAsync();
 
@@ -9119,7 +9119,7 @@ namespace MBS_SAP.Controllers
 
             var groupObservations = await (from o in _context.Observations.AsNoTracking()
                                            join k in _context.Karyawans.AsNoTracking() on o.Nik equals k.NoNik
-                                           where !o.IsDeleted && o.CreatedAt >= startOfMonthM && o.CreatedAt <= endOfMonthM && k.IdPerusahaan != null
+                                           where !o.IsDeleted && o.CreatedAt >= startOfMonthM && o.CreatedAt <= endOfMonthM && k.IdPerusahaan > 0
                                            select new { PerusahaanId = (int?)k.IdPerusahaan })
                                            .ToListAsync();
 
