@@ -1956,7 +1956,7 @@ namespace MBS_SAP.Services
                         a.is_deleted = h.is_deleted
                     FROM tbl_t_action_plan a
                     INNER JOIN tbl_t_hazard_report h ON a.item_sap = CONCAT('hazard:', h.id)
-                    WHERE (h.tanggal >= {0} OR a.status <> h.status_temuan)
+                    WHERE (h.tanggal >= {0} OR a.status <> h.status_temuan OR a.is_deleted <> h.is_deleted)
                       AND (
                           a.status <> h.status_temuan OR
                           ISNULL(a.pja, '') <> ISNULL(h.pja, '') OR
