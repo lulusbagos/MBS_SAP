@@ -2532,6 +2532,7 @@
 
             const isThunder = (curCode >= 95 || curCode === 96 || curCode === 99 || ptMaxCode >= 95);
             const isRainingNow = (curPrecip > 0 || (curCode >= 51 && curCode <= 65) || (curCode >= 80 && curCode <= 82));
+            const isHeavyRainNow = (ptCls.tier >= 3 || curPrecip >= 2 || (curCode >= 63 && curCode <= 65) || (curCode >= 81 && curCode <= 82));
             const isHighWindNow = (curGust >= 30 && !isRainingNow && !isThunder);
             const isHighProbToday = (ptMaxProb >= 60 && !isRainingNow && !isThunder);
 
