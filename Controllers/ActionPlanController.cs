@@ -38,7 +38,8 @@ namespace MBS_SAP.Controllers
             ViewData["HeaderTitle"] = "Action Plan Temuan";
             ViewData["ActiveTab"] = "ActionPlan";
 
-            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
+            var userNikLower = userNik?.ToLowerInvariant();
             var compIdStr = User.FindFirst("CompanyId")?.Value;
             var userDept = User.FindFirst("Department")?.Value;
             int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
@@ -67,15 +68,19 @@ namespace MBS_SAP.Controllers
                 if (filter == "mine")
                 {
                     query = query.Where(r => 
-                        r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik);
+                        (r.Nik != null && r.Nik.ToLower() == userNikLower) || 
+                        (r.NikPja != null && r.NikPja.ToLower() == userNikLower) || 
+                        (r.NikPic != null && r.NikPic.ToLower() == userNikLower));
                 }
                 else if (filter == "created" || filter == "created_by_me")
                 {
-                    query = query.Where(r => r.Nik == userNik);
+                    query = query.Where(r => r.Nik != null && r.Nik.ToLower() == userNikLower);
                 }
                 else if (filter == "assigned" || filter == "assigned_to_me")
                 {
-                    query = query.Where(r => r.NikPja == userNik || r.NikPic == userNik);
+                    query = query.Where(r => 
+                        (r.NikPja != null && r.NikPja.ToLower() == userNikLower) || 
+                        (r.NikPic != null && r.NikPic.ToLower() == userNikLower));
                 }
                 else if (filter == "dept_assigned")
                 {
@@ -107,9 +112,9 @@ namespace MBS_SAP.Controllers
                 var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
                 query = query.Where(r =>
                     (r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value)) ||
-                    r.Nik == userNik ||
-                    r.NikPja == userNik ||
-                    r.NikPic == userNik ||
+                    (r.Nik != null && r.Nik.ToLower() == userNikLower) ||
+                    (r.NikPja != null && r.NikPja.ToLower() == userNikLower) ||
+                    (r.NikPic != null && r.NikPic.ToLower() == userNikLower) ||
                     (userDept != null && (r.Departemen == userDept || r.DepartemenPja == userDept || r.DepartemenPic == userDept))
                 );
             }
@@ -239,14 +244,14 @@ namespace MBS_SAP.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
             var compIdStr = User.FindFirst("CompanyId")?.Value;
             int? userCompanyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
 
             var canUpdate = User.IsInRole("Admin")
-                            || (!string.IsNullOrWhiteSpace(userNik) && plan.Nik == userNik)
-                            || (!string.IsNullOrWhiteSpace(userNik) && !string.IsNullOrWhiteSpace(plan.NikPja) && plan.NikPja == userNik)
-                            || (!string.IsNullOrWhiteSpace(userNik) && !string.IsNullOrWhiteSpace(plan.NikPic) && plan.NikPic == userNik)
+                            || (!string.IsNullOrWhiteSpace(userNik) && string.Equals(plan.Nik, userNik, StringComparison.OrdinalIgnoreCase))
+                            || (!string.IsNullOrWhiteSpace(userNik) && !string.IsNullOrWhiteSpace(plan.NikPja) && string.Equals(plan.NikPja, userNik, StringComparison.OrdinalIgnoreCase))
+                            || (!string.IsNullOrWhiteSpace(userNik) && !string.IsNullOrWhiteSpace(plan.NikPic) && string.Equals(plan.NikPic, userNik, StringComparison.OrdinalIgnoreCase))
                             || (plan.PerusahaanId.HasValue && userCompanyId.HasValue && plan.PerusahaanId == userCompanyId); // Allow anyone in the same company to Take Up
 
             if (!canUpdate)
@@ -292,11 +297,21 @@ namespace MBS_SAP.Controllers
                     {
                         hazard.StatusTemuan = status;
                         hazard.Perbaikan = perbaikan;
+                        if (!string.IsNullOrEmpty(plan.FotoPerbaikan))
+                        {
+                            hazard.FotoPerbaikan = plan.FotoPerbaikan;
+                        }
                         _context.HazardReports.Update(hazard);
                         await _context.SaveChangesAsync();
                     }
                 }
             }
+
+            // Invalidate user dashboard cache so Home updates immediately
+            if (!string.IsNullOrEmpty(userNik)) _cache.Remove($"UserDashboardStats_{userNik}");
+            if (!string.IsNullOrEmpty(plan.Nik)) _cache.Remove($"UserDashboardStats_{plan.Nik.Trim()}");
+            if (!string.IsNullOrEmpty(plan.NikPja)) _cache.Remove($"UserDashboardStats_{plan.NikPja.Trim()}");
+            if (!string.IsNullOrEmpty(plan.NikPic)) _cache.Remove($"UserDashboardStats_{plan.NikPic.Trim()}");
 
 
 
@@ -351,7 +366,8 @@ namespace MBS_SAP.Controllers
         [HttpGet]
         public async Task<IActionResult> DownloadExcel(DateTime? startDate, DateTime? endDate, string? filter, string? dept, string? status, string? type)
         {
-            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
+            var userNikLower = userNik?.ToLowerInvariant();
             var compIdStr = User.FindFirst("CompanyId")?.Value;
             int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
             var isAdmin = User.IsInRole("Admin");
@@ -371,15 +387,19 @@ namespace MBS_SAP.Controllers
                 if (filter == "mine")
                 {
                     query = query.Where(r => 
-                        r.Nik == userNik || r.NikPja == userNik || r.NikPic == userNik);
+                        (r.Nik != null && r.Nik.ToLower() == userNikLower) || 
+                        (r.NikPja != null && r.NikPja.ToLower() == userNikLower) || 
+                        (r.NikPic != null && r.NikPic.ToLower() == userNikLower));
                 }
                 else if (filter == "created" || filter == "created_by_me")
                 {
-                    query = query.Where(r => r.Nik == userNik);
+                    query = query.Where(r => r.Nik != null && r.Nik.ToLower() == userNikLower);
                 }
                 else if (filter == "assigned" || filter == "assigned_to_me")
                 {
-                    query = query.Where(r => r.NikPja == userNik || r.NikPic == userNik);
+                    query = query.Where(r => 
+                        (r.NikPja != null && r.NikPja.ToLower() == userNikLower) || 
+                        (r.NikPic != null && r.NikPic.ToLower() == userNikLower));
                 }
                 else if (filter == "dept_assigned")
                 {
@@ -411,9 +431,9 @@ namespace MBS_SAP.Controllers
                 var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
                 query = query.Where(r =>
                     (r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value)) ||
-                    r.Nik == userNik ||
-                    r.NikPja == userNik ||
-                    r.NikPic == userNik ||
+                    (r.Nik != null && r.Nik.ToLower() == userNikLower) ||
+                    (r.NikPja != null && r.NikPja.ToLower() == userNikLower) ||
+                    (r.NikPic != null && r.NikPic.ToLower() == userNikLower) ||
                     (userDept != null && (r.Departemen == userDept || r.DepartemenPja == userDept || r.DepartemenPic == userDept))
                 );
             }

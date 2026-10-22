@@ -508,7 +508,7 @@
                                     @if (!string.IsNullOrEmpty(userNik) || !string.IsNullOrEmpty(userDept))
                                     {
                                         bool isOutbound = (item.Nik == userNik) || (!string.IsNullOrEmpty(userDept) && string.Equals(item.Departemen?.Trim(), userDept.Trim(), StringComparison.OrdinalIgnoreCase));
-                                        bool isInbound = (item.NikPja == userNik || item.NikPic == userNik) || (!string.IsNullOrEmpty(userDept) && (string.Equals(item.DepartemenPja?.Trim(), userDept.Trim(), StringComparison.OrdinalIgnoreCase) || string.Equals(item.DepartemenPic?.Trim(), userDept.Trim(), StringComparison.OrdinalIgnoreCase)));
+                                        bool isInbound = (!string.IsNullOrEmpty(userNik) && (string.Equals(item.NikPja, userNik, StringComparison.OrdinalIgnoreCase) || string.Equals(item.NikPic, userNik, StringComparison.OrdinalIgnoreCase))) || (!string.IsNullOrEmpty(userDept) && (string.Equals(item.DepartemenPja?.Trim(), userDept.Trim(), StringComparison.OrdinalIgnoreCase) || string.Equals(item.DepartemenPic?.Trim(), userDept.Trim(), StringComparison.OrdinalIgnoreCase)));
 
                                         if (isOutbound && isInbound)
                                         {
@@ -606,8 +606,8 @@
                              }
                              @if (hasPhotos)
                              {
-                                 var isAuthorized = isAdmin || item.Nik == userNik || item.NikPja == userNik || item.NikPic == userNik || 
-                                                    (!string.IsNullOrEmpty(userDept) && (item.Departemen == userDept || item.DepartemenPja == userDept || item.DepartemenPic == userDept));
+                                 var isAuthorized = isAdmin || (!string.IsNullOrEmpty(userNik) && (string.Equals(item.Nik, userNik, StringComparison.OrdinalIgnoreCase) || string.Equals(item.NikPja, userNik, StringComparison.OrdinalIgnoreCase) || string.Equals(item.NikPic, userNik, StringComparison.OrdinalIgnoreCase))) || 
+                                                    (!string.IsNullOrEmpty(userDept) && (string.Equals(item.Departemen, userDept, StringComparison.OrdinalIgnoreCase) || string.Equals(item.DepartemenPja, userDept, StringComparison.OrdinalIgnoreCase) || string.Equals(item.DepartemenPic, userDept, StringComparison.OrdinalIgnoreCase)));
                                  @if (isAuthorized)
                                  {
                                      <div class="row g-2 mb-3">
@@ -1083,7 +1083,7 @@
             let selectedStatus = (urlParams.get('status') || '@(ViewBag.SelectedStatus ?? "all")').toLowerCase();
             let specialFilter  = (urlParams.get('filter') || '@(ViewBag.SelectedFilter ?? "all")').toLowerCase();
             let specialDept    = urlParams.get('dept') || @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.SelectedDept ?? ""));
-            const currentUserNik = '@(userNik ?? "")'.trim();
+            const currentUserNik = ('@(userNik ?? "")'.trim()).toLowerCase();
             const currentUserDept = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(userDept ?? ""));
 
             function normalizeDept(name) {
@@ -1178,9 +1178,9 @@
                     const dpja = $(this).attr('data-departemenpja') || '';
                     const dpic = $(this).attr('data-departemenpic') || '';
                     const r = $(this).attr('data-resiko') || '';
-                    const nik = $(this).attr('data-nik') || '';
-                    const nikpja = $(this).attr('data-nikpja') || '';
-                    const nikpic = $(this).attr('data-nikpic') || '';
+                    const nik = ($(this).attr('data-nik') || '').trim().toLowerCase();
+                    const nikpja = ($(this).attr('data-nikpja') || '').trim().toLowerCase();
+                    const nikpic = ($(this).attr('data-nikpic') || '').trim().toLowerCase();
 
                     let matchT = (selectedType === 'all' || t === selectedType);
                     let matchS = (selectedStatus === 'all' || s === selectedStatus || (selectedStatus === 'open' && (s === 'outstanding' || s === 'progress')));
