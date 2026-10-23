@@ -236,15 +236,15 @@ namespace MBS_SAP.Controllers
                                Math.Min(skorPemantauanSensor,
                                Math.Min(skorDemarkasiZona, skorKepatuhanRekomendasi)))))));
 
-                if (minParam < 40 || totalScore < 50)
+                if (minParam <= 40 || totalScore < 50)
                 {
                     autoTarpLevel = "RED";
                 }
-                else if (minParam < 60 || totalScore < 70)
+                else if (minParam <= 60 || totalScore < 70)
                 {
                     autoTarpLevel = "ORANGE";
                 }
-                else if (minParam < 75 || totalScore < 85)
+                else if (minParam <= 75 || totalScore < 85)
                 {
                     autoTarpLevel = "YELLOW";
                 }
@@ -252,12 +252,7 @@ namespace MBS_SAP.Controllers
                 string finalTarp = autoTarpLevel;
                 if (!string.IsNullOrEmpty(manualTarpLevel))
                 {
-                    int autoRank = GetTarpRank(autoTarpLevel);
-                    int manualRank = GetTarpRank(manualTarpLevel);
-                    if (manualRank > autoRank)
-                    {
-                        finalTarp = manualTarpLevel.ToUpper().Trim();
-                    }
+                    finalTarp = manualTarpLevel.ToUpper().Trim();
                 }
 
                 string? fotoUrl = null;

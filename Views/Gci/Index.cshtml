@@ -90,9 +90,12 @@
 
         <!-- Card 2: Critical TARP 3 -->
         <div class="col-6 col-md-4 col-xl">
-            <div class="card-sap p-2 p-md-3 h-100" style="border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.04);">
-                <div class="text-danger fw-bold" style="font-size: 10px; text-transform: uppercase;">
-                    <i class="bi bi-exclamation-octagon-fill me-1"></i> TARP 3 (Red)
+            <div class="card-sap p-2 p-md-3 h-100 tarp-kpi-card" id="topCardTarpRed" style="border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.04); transition: all 0.25s ease;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-danger fw-bold" style="font-size: 10px; text-transform: uppercase;">
+                        <i class="bi bi-exclamation-octagon-fill me-1"></i> TARP 3 (Red)
+                    </div>
+                    <span class="badge bg-danger text-white live-tarp-indicator d-none" id="pillTarpRed" style="font-size: 8px; font-weight: 800; padding: 2px 6px; letter-spacing: 0.5px; border-radius: 6px;">FORM AKTIF</span>
                 </div>
                 <div class="d-flex align-items-baseline gap-2 mt-1">
                     <h3 class="mb-0 font-weight-bold text-danger kpi-num" style="font-size: 1.5rem;">@tarpRedCount</h3>
@@ -103,9 +106,12 @@
 
         <!-- Card 3: Action TARP 2 -->
         <div class="col-6 col-md-4 col-xl">
-            <div class="card-sap p-2 p-md-3 h-100" style="border-left: 4px solid #f97316; background: rgba(249, 115, 22, 0.04);">
-                <div style="color: #ea580c; font-size: 10px; font-weight: 700; text-transform: uppercase;">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i> TARP 2 (Orange)
+            <div class="card-sap p-2 p-md-3 h-100 tarp-kpi-card" id="topCardTarpOrange" style="border-left: 4px solid #f97316; background: rgba(249, 115, 22, 0.04); transition: all 0.25s ease;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div style="color: #ea580c; font-size: 10px; font-weight: 700; text-transform: uppercase;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> TARP 2 (Orange)
+                    </div>
+                    <span class="badge text-white live-tarp-indicator d-none" id="pillTarpOrange" style="background: #ea580c; font-size: 8px; font-weight: 800; padding: 2px 6px; letter-spacing: 0.5px; border-radius: 6px;">FORM AKTIF</span>
                 </div>
                 <div class="d-flex align-items-baseline gap-2 mt-1">
                     <h3 class="mb-0 font-weight-bold kpi-num" style="color: #ea580c; font-size: 1.5rem;">@tarpOrangeCount</h3>
@@ -116,9 +122,12 @@
 
         <!-- Card 4: Alert TARP 1 -->
         <div class="col-6 col-md-4 col-xl">
-            <div class="card-sap p-2 p-md-3 h-100" style="border-left: 4px solid #eab308; background: rgba(234, 179, 8, 0.04);">
-                <div style="color: #ca8a04; font-size: 10px; font-weight: 700; text-transform: uppercase;">
-                    <i class="bi bi-exclamation-circle-fill me-1"></i> TARP 1 (Yellow)
+            <div class="card-sap p-2 p-md-3 h-100 tarp-kpi-card" id="topCardTarpYellow" style="border-left: 4px solid #eab308; background: rgba(234, 179, 8, 0.04); transition: all 0.25s ease;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div style="color: #ca8a04; font-size: 10px; font-weight: 700; text-transform: uppercase;">
+                        <i class="bi bi-exclamation-circle-fill me-1"></i> TARP 1 (Yellow)
+                    </div>
+                    <span class="badge text-dark live-tarp-indicator d-none" id="pillTarpYellow" style="background: #eab308; font-size: 8px; font-weight: 800; padding: 2px 6px; letter-spacing: 0.5px; border-radius: 6px;">FORM AKTIF</span>
                 </div>
                 <div class="d-flex align-items-baseline gap-2 mt-1">
                     <h3 class="mb-0 font-weight-bold kpi-num" style="color: #ca8a04; font-size: 1.5rem;">@tarpYellowCount</h3>
@@ -129,9 +138,12 @@
 
         <!-- Card 5: Normal TARP 0 -->
         <div class="col-12 col-md-4 col-xl">
-            <div class="card-sap p-2 p-md-3 h-100" style="border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.04);">
-                <div class="text-success fw-bold" style="font-size: 10px; text-transform: uppercase;">
-                    <i class="bi bi-check-circle-fill me-1"></i> TARP 0 (Green)
+            <div class="card-sap p-2 p-md-3 h-100 tarp-kpi-card" id="topCardTarpGreen" style="border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.04); transition: all 0.25s ease;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="text-success fw-bold" style="font-size: 10px; text-transform: uppercase;">
+                        <i class="bi bi-check-circle-fill me-1"></i> TARP 0 (Green)
+                    </div>
+                    <span class="badge bg-success text-white live-tarp-indicator" id="pillTarpGreen" style="font-size: 8px; font-weight: 800; padding: 2px 6px; letter-spacing: 0.5px; border-radius: 6px;">FORM AKTIF</span>
                 </div>
                 <div class="d-flex align-items-baseline gap-2 mt-1">
                     <h3 class="mb-0 font-weight-bold text-success kpi-num" style="font-size: 1.5rem;">@tarpGreenCount</h3>
@@ -154,9 +166,14 @@
                         <label class="form-label-sap mb-0" style="font-size: 11px;">
                             <i class="bi bi-card-heading text-primary me-1"></i> Judul Temuan / Laporan Inspeksi Geoteknik <span class="text-danger">*</span>
                         </label>
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-none" id="editModeBadge" style="font-size: 10px;">
-                            <i class="bi bi-pencil-square me-1"></i> Mode Edit Laporan
-                        </span>
+                        <div class="d-flex align-items-center gap-1.5">
+                            <span class="badge shadow-sm" id="liveHeaderTarpBadge" style="font-size: 10.5px; padding: 3px 9px; font-weight: 700; background: #10b981; color: white;">
+                                <i class="bi bi-shield-check me-1"></i> TARP 0 (GREEN)
+                            </span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-none" id="editModeBadge" style="font-size: 10px;">
+                                <i class="bi bi-pencil-square me-1"></i> Mode Edit Laporan
+                            </span>
+                        </div>
                     </div>
                     <input type="text" id="judulTemuan" name="judulTemuan" class="input-sap fw-bold" value="" placeholder="Contoh: Inspeksi Kestabilan Lereng Highwall Pit A atau Ketidaksesuaian Material..." required style="font-size: 12.5px;" />
                 </div>
@@ -369,7 +386,7 @@
                             </div>
                             <div class="col-4">
                                 <label class="form-label-sap mb-0" style="font-size: 9.5px;">Desain</label>
-                                <select id="kondisiDesain" name="kondisiDesain" class="input-sap py-1 px-0 text-center" style="font-size: 10px;">
+                                <select id="kondisiDesain" name="kondisiDesain" class="input-sap py-1 px-0 text-center" style="font-size: 10px;" onchange="updateMockupScores()">
                                     <option value="Sesuai" selected>Sesuai</option>
                                     <option value="Tidak Sesuai">Tidak Sesuai</option>
                                     <option value="Perlu Kajian">Perlu Kajian</option>
@@ -441,7 +458,7 @@
                                         <input type="radio" class="btn-check" name="kondisiRembesan" id="seepAda" value="Ada" onchange="updateMockupScores()">
                                         <label class="btn btn-outline-info py-0.5 px-2" style="font-size: 9.5px;" for="seepAda">Ada</label>
                                     </div>
-                                    <input type="number" step="0.1" name="debitRembesan" id="debitRembesan" class="input-sap py-0 px-1 text-center" style="width: 58px; font-size: 10px;" placeholder="L/dtk" value="" />
+                                    <input type="number" step="0.1" name="debitRembesan" id="debitRembesan" class="input-sap py-0 px-1 text-center" style="width: 58px; font-size: 10px;" placeholder="L/dtk" value="" oninput="updateMockupScores()" />
                                 </div>
                             </div>
                         </div>
@@ -497,7 +514,7 @@
                                     </div>
                                     <div class="col-4">
                                         <label class="form-label-sap mb-1" style="font-size: 9.5px;">Pertumbuhan</label>
-                                        <select id="pertumbuhanRetakan" name="pertumbuhanRetakan" class="input-sap py-1 px-0 text-center" style="font-size: 10px;">
+                                        <select id="pertumbuhanRetakan" name="pertumbuhanRetakan" class="input-sap py-1 px-0 text-center" style="font-size: 10px;" onchange="updateMockupScores()">
                                             <option value="Tidak" selected>Tidak</option>
                                             <option value="Ada">Ada</option>
                                         </select>
@@ -567,6 +584,7 @@
                     <input type="hidden" id="skorPemantauanSensor" name="skorPemantauanSensor" value="100" />
                     <input type="hidden" id="skorDemarkasiZona" name="skorDemarkasiZona" value="100" />
                     <input type="hidden" id="skorKepatuhanRekomendasi" name="skorKepatuhanRekomendasi" value="100" />
+                    <input type="hidden" id="manualTarpLevel" name="manualTarpLevel" value="GREEN" />
 
                     <!-- Live Real-time TARP Trigger Card -->
                     <div class="p-2.5 rounded-2 mt-auto" id="tarpSummaryCard" style="background: rgba(16, 185, 129, 0.12); border: 1.5px solid #10b981;">
@@ -1255,44 +1273,150 @@
         const seepVal = $('input[name="kondisiRembesan"]:checked').val() || "Tidak Ada";
         const bulgVal = $('input[name="kondisiBulging"]:checked').val() || "Tidak Ada";
         const rockVal = $('input[name="kondisiRockfall"]:checked').val() || "Tidak Ada";
+        const debitLps = parseFloat($('#debitRembesan').val()) || 0;
         const crackMm = parseFloat($('#lebarRetakanMm').val()) || 0;
+        const pertumbuhan = $('#pertumbuhanRetakan').val() || "Tidak";
+        const desain = $('#kondisiDesain').val() || "Sesuai";
 
         let score = 100.0;
-        let tarp = "TARP 0 - NORMAL";
-        let tarpBadge = "bg-success";
+        let tarpLevel = "GREEN";
+        let tarpTitle = "TARP 0 - NORMAL";
+        let tarpShort = "TARP 0 (GREEN)";
+        let tarpBadge = "bg-success text-white";
         let tarpBorder = "#10b981";
         let tarpBg = "rgba(16, 185, 129, 0.12)";
-        let hint = "Kondisi lereng stabil & aman untuk operasional.";
+        let hint = "Kondisi lereng stabil & aman untuk operasional penambangan.";
 
-        if (crackVal === "Ada (Signifikan)" || bulgVal === "Ada" || crackMm >= 50) {
+        let skorGeometri = 100;
+        let skorCrestToe = 100;
+        let skorCrack = 100;
+        let skorKestabilan = 100;
+        let skorRembesan = 100;
+        let skorSensor = 100;
+        let skorDemarkasi = 100;
+        let skorKepatuhan = 100;
+
+        // 1. KRITIS / BAHAYA TINGGI: TARP 3 (RED)
+        // Pemicu: Retakan Signifikan, Bulging lereng (deformasi), retakan >= 50mm, atau pertumbuhan aktif pada retakan >= 20mm
+        if (crackVal === "Ada (Signifikan)" || bulgVal === "Ada" || crackMm >= 50 || (crackMm >= 20 && pertumbuhan === "Ada")) {
+            score = 40.0;
+            tarpLevel = "RED";
+            tarpTitle = "TARP 3 - KRITIS / EVAKUASI";
+            tarpShort = "TARP 3 (RED)";
+            tarpBadge = "bg-danger text-white";
+            tarpBorder = "#ef4444";
+            tarpBg = "rgba(239, 68, 68, 0.14)";
+            hint = `KRITIS / EVAKUASI SEGERA! Terdeteksi ketidaksesuaian kritis (${crackVal === "Ada (Signifikan)" || crackMm >= 50 ? 'Retakan ' + (crackMm > 0 ? crackMm + 'mm' : 'Signifikan') : 'Deformasi Bulging Lereng'}). Hentikan pekerjaan, evakuasi pekerja & unit dari radius bahaya, pasang exclusion zone dan laporkan ke KTT / Geotek IC!`;
+            skorCrack = 20;
+            skorKestabilan = bulgVal === "Ada" ? 20 : 35;
+            skorDemarkasi = 30;
+            skorRembesan = (seepVal === "Ada" ? 40 : 100);
+            skorGeometri = (desain === "Tidak Sesuai" ? 40 : 100);
+        }
+        // 2. MITIGASI DIPERLUKAN: TARP 2 (ORANGE)
+        // Pemicu: Rockfall aktif, retakan sedang (20-50mm), rembesan air debit tinggi (>= 1.0 L/s), desain tidak sesuai, atau gabungan retakan minor + rembesan
+        else if (rockVal === "Ada" || crackMm >= 20 || pertumbuhan === "Ada" || desain === "Tidak Sesuai" || (seepVal === "Ada" && debitLps >= 1.0) || (crackVal === "Ada (Minor)" && seepVal === "Ada")) {
             score = 60.0;
-            tarp = "TARP 2 - ACTION";
+            tarpLevel = "ORANGE";
+            tarpTitle = "TARP 2 - ACTION / MITIGASI";
+            tarpShort = "TARP 2 (ORANGE)";
             tarpBadge = "bg-warning text-dark";
             tarpBorder = "#f97316";
-            tarpBg = "rgba(249, 115, 22, 0.12)";
-            hint = `Ketidaksesuaian kritis / retakan signifikan (${crackMm} mm)! Terapkan zona eksklusi & perbaikan dumping.`;
-            $('#skorTensionCrack').val(40);
-            $('#skorKestabilanBatuan').val(bulgVal === "Ada" ? 40 : 70);
-        } else if (crackVal === "Ada (Minor)" || seepVal === "Ada" || rockVal === "Ada" || crackMm > 0) {
+            tarpBg = "rgba(249, 115, 22, 0.14)";
+            hint = `TINDAKAN MITIGASI DIPERLUKAN! Terdeteksi ${rockVal === "Ada" ? 'rockfall / runtuhan batuan' : (crackMm >= 20 ? 'retakan sedang (' + crackMm + 'mm)' : (desain === 'Tidak Sesuai' ? 'geometri lereng tidak sesuai desain' : 'rembesan air lereng aktif'))}. Batasi alat berat, lakukan perbaikan dumping/drainase, dan pasang barikade batas aman.`;
+            skorCrack = (crackVal === "Ada (Minor)" || crackMm > 0) ? 50 : 100;
+            skorKestabilan = (rockVal === "Ada" ? 50 : 70);
+            skorRembesan = (seepVal === "Ada" ? 50 : 100);
+            skorGeometri = (desain === "Tidak Sesuai" ? 50 : 100);
+            skorDemarkasi = 60;
+        }
+        // 3. ALERT / WASPADA: TARP 1 (YELLOW)
+        // Pemicu: Retakan minor (<20mm), rembesan air terdeteksi, atau desain perlu kajian
+        else if (crackVal === "Ada (Minor)" || seepVal === "Ada" || crackMm > 0 || desain === "Perlu Kajian") {
             score = 80.0;
-            tarp = "TARP 1 - ALERT";
+            tarpLevel = "YELLOW";
+            tarpTitle = "TARP 1 - ALERT / MONITORING";
+            tarpShort = "TARP 1 (YELLOW)";
             tarpBadge = "bg-warning text-dark";
             tarpBorder = "#eab308";
-            tarpBg = "rgba(234, 179, 8, 0.12)";
-            hint = `Retakan minor (${crackMm} mm) / rembesan air / rockfall terdeteksi. Tingkatkan monitoring berkala.`;
-            $('#skorTensionCrack').val(crackMm > 0 ? 70 : 100);
-            $('#skorRembesanDrainase').val(seepVal === "Ada" ? 70 : 100);
-            $('#skorKestabilanBatuan').val(rockVal === "Ada" ? 70 : 100);
-        } else {
-            $('#skorTensionCrack').val(100);
-            $('#skorKestabilanBatuan').val(100);
-            $('#skorRembesanDrainase').val(100);
+            tarpBg = "rgba(234, 179, 8, 0.14)";
+            hint = `TINGKATKAN MONITORING! Terdeteksi ${crackVal === "Ada (Minor)" || crackMm > 0 ? 'retakan minor (' + (crackMm > 0 ? crackMm + 'mm' : 'visual') + ')' : (seepVal === "Ada" ? 'rembesan air lereng' : 'desain lereng perlu kajian')}. Pasang patok ukur, tingkatkan frekuensi inspeksi geoteknik berkala.`;
+            skorCrack = (crackMm > 0 || crackVal === "Ada (Minor)") ? 70 : 100;
+            skorRembesan = (seepVal === "Ada" ? 70 : 100);
+            skorGeometri = (desain === "Perlu Kajian" ? 70 : 100);
+        }
+        // 4. NORMAL: TARP 0 (GREEN)
+        else {
+            score = 100.0;
+            tarpLevel = "GREEN";
+            tarpTitle = "TARP 0 - NORMAL";
+            tarpShort = "TARP 0 (GREEN)";
+            tarpBadge = "bg-success text-white";
+            tarpBorder = "#10b981";
+            tarpBg = "rgba(16, 185, 129, 0.12)";
+            hint = "Kondisi lereng stabil & aman untuk operasional penambangan.";
         }
 
+        // Simpan nilai parameter hidden ke form
+        $('#skorGeometriLereng').val(skorGeometri);
+        $('#skorKondisiCrestToe').val(skorCrestToe);
+        $('#skorTensionCrack').val(skorCrack);
+        $('#skorKestabilanBatuan').val(skorKestabilan);
+        $('#skorRembesanDrainase').val(skorRembesan);
+        $('#skorPemantauanSensor').val(skorSensor);
+        $('#skorDemarkasiZona').val(skorDemarkasi);
+        $('#skorKepatuhanRekomendasi').val(skorKepatuhan);
+        $('#manualTarpLevel').val(tarpLevel);
+
+        // Update UI Panel 3 Trigger Card
         $('#gciScoreDisplay').text(score.toFixed(1) + "%");
-        $('#tarpBadgeDisplay').text(tarp).attr('class', `badge ${tarpBadge} fw-bold px-2 py-1`);
+        $('#tarpBadgeDisplay').text(tarpTitle).attr('class', `badge ${tarpBadge} fw-bold px-2 py-1`);
         $('#tarpSummaryCard').css({ 'border-color': tarpBorder, 'background': tarpBg });
         $('#tarpActionHint').text(hint);
+
+        // Update Live Header Badge
+        $('#liveHeaderTarpBadge').text(tarpShort).css({
+            'background': tarpBorder,
+            'color': (tarpLevel === 'YELLOW' ? '#000' : '#fff')
+        });
+
+        // Update Top KPI Cards: Highlight kartu TARP yang aktif
+        $('.tarp-kpi-card').css({
+            'box-shadow': 'none',
+            'border-width': '1px 1px 1px 4px',
+            'transform': 'none'
+        });
+        $('.live-tarp-indicator').addClass('d-none');
+
+        if (tarpLevel === 'RED') {
+            $('#topCardTarpRed').css({
+                'box-shadow': '0 0 16px rgba(239, 68, 68, 0.45)',
+                'border-color': '#ef4444',
+                'transform': 'translateY(-2px)'
+            });
+            $('#pillTarpRed').removeClass('d-none');
+        } else if (tarpLevel === 'ORANGE') {
+            $('#topCardTarpOrange').css({
+                'box-shadow': '0 0 16px rgba(249, 115, 22, 0.45)',
+                'border-color': '#f97316',
+                'transform': 'translateY(-2px)'
+            });
+            $('#pillTarpOrange').removeClass('d-none');
+        } else if (tarpLevel === 'YELLOW') {
+            $('#topCardTarpYellow').css({
+                'box-shadow': '0 0 16px rgba(234, 179, 8, 0.45)',
+                'border-color': '#eab308',
+                'transform': 'translateY(-2px)'
+            });
+            $('#pillTarpYellow').removeClass('d-none');
+        } else {
+            $('#topCardTarpGreen').css({
+                'box-shadow': '0 0 16px rgba(16, 185, 129, 0.45)',
+                'border-color': '#10b981',
+                'transform': 'translateY(-2px)'
+            });
+            $('#pillTarpGreen').removeClass('d-none');
+        }
     }
 
     function resetGciForm() {
