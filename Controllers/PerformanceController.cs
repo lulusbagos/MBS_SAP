@@ -766,17 +766,9 @@ namespace MBS_SAP.Controllers
 
                 // 3. KOMBINASI DUAL ACCOUNTABILITY (50:50)
                 double empCloseRate;
-                if (crCreatedTotal > 0 && crAssignedTotal > 0)
+                if (crCreatedTotal > 0 || crAssignedTotal > 0)
                 {
                     empCloseRate = Math.Round((crCreatorScore * 0.50) + (crPicScore * 0.50), 1);
-                }
-                else if (crCreatedTotal > 0)
-                {
-                    empCloseRate = crCreatorScore;
-                }
-                else if (crAssignedTotal > 0)
-                {
-                    empCloseRate = crPicScore;
                 }
                 else
                 {
