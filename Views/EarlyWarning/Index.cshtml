@@ -1221,43 +1221,43 @@
                                 <small>0 - 20 mm/hari (Normal • Tanpa Alarm)</small>
                             </div>
                         </button>
-                        <button type="button" class="test-item-btn" onclick="testRainAlert(35, 5)">
+                        <button type="button" class="test-item-btn" onclick="testRainAlert(35, 5, 'Pukul 12:00 - 14:00 WITA')">
                             <span class="test-item-badge" style="background:rgba(251,191,36,0.2); border:1px solid #fbbf24; color:#fbbf24;">20-50 mm</span>
                             <div class="test-item-info">
-                                <strong>Hujan Sedang</strong>
-                                <small>20 - 50 mm/hari (Waspada • Chime Lembut)</small>
+                                <strong>Hujan Sedang [1x Ting]</strong>
+                                <small>20 - 50 mm/hari &bull; 1x Ting Lonceng Lembut</small>
                             </div>
                         </button>
-                        <button type="button" class="test-item-btn" onclick="testRainAlert(75, 50)">
+                        <button type="button" class="test-item-btn" onclick="testRainAlert(75, 50, 'Pukul 13:00 - 15:00 WITA')">
                             <span class="test-item-badge badge-50">50-100 mm</span>
                             <div class="test-item-info">
-                                <strong>Hujan Lebat [Suara 1]</strong>
-                                <small>50 - 100 mm/hari &bull; 50 mm/jam (Chime Peringatan)</small>
+                                <strong>Hujan Lebat [1x Ting]</strong>
+                                <small>50 - 100 mm/hari &bull; 1x Ting Lembut (Perkiraan: 13:00 - 15:00 WITA)</small>
                             </div>
-                            <i class="bi bi-play-circle-fill ms-auto text-warning"></i>
+                            <i class="bi bi-bell-fill ms-auto text-warning"></i>
                         </button>
-                        <button type="button" class="test-item-btn" onclick="testRainAlert(125, 80)">
+                        <button type="button" class="test-item-btn" onclick="testRainAlert(125, 80, 'Pukul 15:00 - 18:00 WITA')">
                             <span class="test-item-badge badge-80">100-150 mm</span>
                             <div class="test-item-info">
-                                <strong>Hujan Sangat Lebat [Suara 2]</strong>
-                                <small>100 - 150 mm/hari &bull; 80 mm/jam (Sirene Alarm)</small>
+                                <strong>Hujan Sangat Lebat [2x Ting]</strong>
+                                <small>100 - 150 mm/hari &bull; 2x Ting Lembut (Perkiraan: 15:00 - 18:00 WITA)</small>
                             </div>
-                            <i class="bi bi-play-circle-fill ms-auto" style="color:#fb923c;"></i>
+                            <i class="bi bi-bell-fill ms-auto" style="color:#fb923c;"></i>
                         </button>
-                        <button type="button" class="test-item-btn" onclick="testRainAlert(160, 100)">
+                        <button type="button" class="test-item-btn" onclick="testRainAlert(160, 100, 'Pukul 16:00 - 19:00 WITA')">
                             <span class="test-item-badge badge-100">&ge; 150 mm</span>
                             <div class="test-item-info">
-                                <strong>Hujan Ekstrem [Suara 3]</strong>
-                                <small>&ge; 150 mm/hari &bull; 100 mm/jam (Sirene Evakuasi)</small>
+                                <strong>Hujan Ekstrem [3x Ting]</strong>
+                                <small>&ge; 150 mm/hari &bull; 3x Ting Lembut (Perkiraan: 16:00 - 19:00 WITA)</small>
                             </div>
-                            <i class="bi bi-play-circle-fill ms-auto text-danger"></i>
+                            <i class="bi bi-bell-fill ms-auto text-danger"></i>
                         </button>
                         <div class="test-dropdown-divider"></div>
                         <button type="button" class="test-item-btn" onclick="testSoundAlert()">
-                            <i class="bi bi-broadcast text-info"></i>
+                            <i class="bi bi-bell-fill text-info"></i>
                             <div class="test-item-info">
-                                <strong>Test Suara Radar Default</strong>
-                                <small>Uji transmisi audio standar</small>
+                                <strong>Test Suara Ting Lembut Default</strong>
+                                <small>Uji transmisi audio lonceng halus</small>
                             </div>
                         </button>
                     </div>
@@ -1282,7 +1282,12 @@
                     <i class="bi bi-shield-check" id="warningIcon"></i>
                 </div>
                 <div>
-                    <div class="warning-title" id="warningTitle">KONDISI CUACA SITE: NORMAL &amp; AMAN</div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                        <div class="warning-title" id="warningTitle">KONDISI CUACA SITE: NORMAL &amp; AMAN</div>
+                        <span class="badge bg-primary text-white px-2 py-0.5 rounded-pill shadow-xs" id="warningTimeWindowBadge" style="display:none; font-size:10px; font-weight:700;">
+                            <i class="bi bi-clock-history me-1"></i>Perkiraan Terjadi: <span id="warningTimeWindowText">-</span>
+                        </span>
+                    </div>
                     <div class="warning-desc" id="warningDesc">Tidak ada potensi hujan lebat, petir, atau hembusan angin kencang berisiko di seluruh 17 titik operasional tambang.</div>
                 </div>
             </div>
@@ -1856,156 +1861,115 @@
     let lastRainAlertTime = 0;
     const RAIN_ALERT_REPEAT_INTERVAL_MS = 1800000; // 30 minutes repeat interval
 
-    function playRadarChime() {
-        playRainAlertSound50();
-    }
-
-    // Level 1 (50 - 100 mm/hari atau 50 mm/jam): Nada Tri-Tone Melodic Warning Chime
-    function playRainAlertSound50() {
+    /* ── Chime Lonceng Lembut (Ting Ting) Sesuai Permintaan:
+       - Suara tidak terlalu keras (volume nyaman gain 0.18, gelombang sine jernih & harmonic chime)
+       - 1x Ting: Curah Hujan Level 1 / Lebat (50 - 100 mm/hari atau >= 50 mm/jam)
+       - 2x Ting Ting: Curah Hujan Level 2 / Sangat Lebat (100 - 150 mm/hari atau >= 80 mm/jam)
+       - 3x Ting Ting Ting: Curah Hujan Level 3 / Ekstrem (>= 150 mm/hari atau >= 100 mm/jam)
+    ── */
+    function playTingChime(count = 1) {
         if (isSoundMuted) return;
         const ctx = getAudioContext();
         if (!ctx) return;
 
         try {
             const now = ctx.currentTime;
-            // 3 melodic acoustic tones: E5 (659Hz) -> G#5 (830Hz) -> B5 (987Hz)
-            [659, 830, 987].forEach((freq, i) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                const start = now + (i * 0.22);
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, start);
-                gain.gain.setValueAtTime(0.001, start);
-                gain.gain.linearRampToValueAtTime(0.35, start + 0.03);
-                gain.gain.exponentialRampToValueAtTime(0.001, start + 0.38);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start(start);
-                osc.stop(start + 0.4);
-            });
-        } catch(e) {}
-    }
+            const interval = 0.38; // Jeda antar bunyi "ting"
+            const fundamentalFreq = 1046.5; // C6 (nada lonceng lembut & jernih)
+            const overtoneFreq = 2093.0;    // C7 (harmonis kilau lonceng)
 
-    // Level 2 (100 - 150 mm/hari atau 80 mm/jam): Sirene Alarm Siaga Tinggi (Two-Tone Pulsing)
-    function playRainAlertSound80() {
-        if (isSoundMuted) return;
-        const ctx = getAudioContext();
-        if (!ctx) return;
+            for (let i = 0; i < count; i++) {
+                const start = now + (i * interval);
+                const duration = 0.65;
 
-        try {
-            const now = ctx.currentTime;
-            const cycles = 4;
-            const halfPeriod = 0.2;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'triangle';
-            gain.gain.setValueAtTime(0.45, now);
+                // 1. Nada Utama (Fundamental Sine Wave)
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(fundamentalFreq, start);
 
-            for (let i = 0; i < cycles; i++) {
-                const t = now + (i * halfPeriod * 2);
-                osc.frequency.setValueAtTime(880, t);
-                osc.frequency.setValueAtTime(660, t + halfPeriod);
+                // Attack cepat & decay meluruh halus
+                gain1.gain.setValueAtTime(0.0001, start);
+                gain1.gain.linearRampToValueAtTime(0.18, start + 0.008); // Volume lembut & nyaman
+                gain1.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.start(start);
+                osc1.stop(start + duration);
+
+                // 2. Kilau Harmonis Lonceng (Acoustic Bell Shimmer)
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(overtoneFreq, start);
+
+                gain2.gain.setValueAtTime(0.0001, start);
+                gain2.gain.linearRampToValueAtTime(0.06, start + 0.005);
+                gain2.gain.exponentialRampToValueAtTime(0.0001, start + 0.35);
+
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.start(start);
+                osc2.stop(start + 0.38);
             }
-            gain.gain.setValueAtTime(0.45, now + (cycles * halfPeriod * 2) - 0.05);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + (cycles * halfPeriod * 2));
-
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start(now);
-            osc.stop(now + (cycles * halfPeriod * 2));
-        } catch(e) {}
+        } catch(e) {
+            console.warn('playTingChime error:', e);
+        }
     }
 
-    // Level 3 (>= 150 mm/hari atau >= 100 mm/jam): Sirene Darurat Bencana Evakuasi (Wailing Disaster Siren)
-    function playRainAlertSound100() {
-        if (isSoundMuted) return;
-        const ctx = getAudioContext();
-        if (!ctx) return;
+    // Fungsi wrapper kompatibilitas:
+    function playRadarChime() { playTingChime(1); }
+    function playRainAlertSound50() { playTingChime(1); }
+    function playRainAlertSound80() { playTingChime(2); }
+    function playRainAlertSound100() { playTingChime(3); }
+    function playEmergencyWarningSiren() { playTingChime(2); }
 
-        try {
-            const now = ctx.currentTime;
-            const osc1 = ctx.createOscillator();
-            const osc2 = ctx.createOscillator();
-            const gain = ctx.createGain();
-
-            osc1.type = 'sawtooth';
-            osc2.type = 'square';
-
-            const sweeps = 3;
-            const sweepDuration = 0.55;
-            for (let s = 0; s < sweeps; s++) {
-                const st = now + (s * sweepDuration);
-                osc1.frequency.setValueAtTime(520, st);
-                osc1.frequency.linearRampToValueAtTime(1250, st + (sweepDuration / 2));
-                osc1.frequency.linearRampToValueAtTime(520, st + sweepDuration);
-
-                osc2.frequency.setValueAtTime(260, st);
-                osc2.frequency.linearRampToValueAtTime(625, st + (sweepDuration / 2));
-                osc2.frequency.linearRampToValueAtTime(260, st + sweepDuration);
-            }
-
-            gain.gain.setValueAtTime(0.5, now);
-            gain.gain.setValueAtTime(0.5, now + (sweeps * sweepDuration) - 0.08);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + (sweeps * sweepDuration));
-
-            osc1.connect(gain);
-            osc2.connect(gain);
-            gain.connect(ctx.destination);
-
-            osc1.start(now);
-            osc2.start(now);
-            osc1.stop(now + (sweeps * sweepDuration));
-            osc2.stop(now + (sweeps * sweepDuration));
-        } catch(e) {}
-    }
-
-    function playEmergencyWarningSiren() {
-        playRainAlertSound100();
-    }
-
-    function triggerRainAlert(tier, locationStr = '', dailyVal = 0, rateVal = 0, isTest = false) {
+    function triggerRainAlert(tier, locationStr = '', dailyVal = 0, rateVal = 0, isTest = false, timeEstimateStr = '') {
         const cleanLoc = locationStr ? `di area ${locationStr}` : 'di area operasional tambang';
+        const timeInfoSpoken = timeEstimateStr ? `, diperkirakan terjadi pada ${timeEstimateStr}` : '';
 
         if (tier === 5 || tier === 100) {
-            // Hujan Ekstrem (>= 150 mm/hari atau >= 100 mm/jam)
-            playRainAlertSound100();
+            // Hujan Ekstrem (>= 150 mm/hari atau >= 100 mm/jam): 3 KALI TING TING TING
+            playTingChime(3);
             setTimeout(() => {
-                const speechMsg = `Peringatan bahaya darurat! Terdeteksi curah hujan ekstrem ${Math.round(dailyVal || rateVal)} milimeter ${cleanLoc}. Seluruh aktivitas di lereng pit terbuka wajib segera dihentikan. Segera lakukan evakuasi personel ke shelter aman!`;
+                const speechMsg = `Peringatan bahaya darurat! Terdeteksi curah hujan ekstrem ${Math.round(dailyVal || rateVal)} milimeter ${cleanLoc}${timeInfoSpoken}. Seluruh aktivitas di lereng pit terbuka wajib segera dihentikan. Segera lakukan evakuasi personel ke shelter aman!`;
                 speakGoogleVoice(speechMsg);
-            }, 1900);
+            }, 1450);
         } else if (tier === 4 || tier === 80) {
-            // Hujan Sangat Lebat (100 - 150 mm/hari atau >= 80 mm/jam)
-            playRainAlertSound80();
+            // Hujan Sangat Lebat (100 - 150 mm/hari atau >= 80 mm/jam): 2 KALI TING TING
+            playTingChime(2);
             setTimeout(() => {
-                const speechMsg = `Peringatan siaga! Terdeteksi hujan sangat lebat ${Math.round(dailyVal || rateVal)} milimeter ${cleanLoc}. Seluruh pengawas dan operator wajib waspada terhadap potensi ketidakstabilan lereng pit dan genangan air dewatering.`;
+                const speechMsg = `Peringatan siaga! Terdeteksi hujan sangat lebat ${Math.round(dailyVal || rateVal)} milimeter ${cleanLoc}${timeInfoSpoken}. Seluruh pengawas dan operator wajib waspada terhadap potensi ketidakstabilan lereng pit dan genangan air dewatering.`;
                 speakGoogleVoice(speechMsg);
-            }, 1700);
+            }, 1100);
         } else if (tier === 3 || tier === 50) {
-            // Hujan Lebat (50 - 100 mm/hari atau >= 50 mm/jam)
-            playRainAlertSound50();
+            // Hujan Lebat (50 - 100 mm/hari atau >= 50 mm/jam): 1 KALI TING
+            playTingChime(1);
             setTimeout(() => {
-                const speechMsg = `Perhatian! Peringatan dini hujan lebat ${Math.round(dailyVal || rateVal)} milimeter ${cleanLoc}. Seluruh operator unit diimbau waspada jalan hauling sangat licin, kurangi batas kecepatan maksimal 30 kilometer per jam dan jaga jarak aman.`;
+                const speechMsg = `Perhatian! Peringatan dini hujan lebat ${Math.round(dailyVal || rateVal)} milimeter ${cleanLoc}${timeInfoSpoken}. Seluruh operator unit diimbau waspada jalan hauling sangat licin, kurangi batas kecepatan maksimal 30 kilometer per jam dan jaga jarak aman.`;
                 speakGoogleVoice(speechMsg);
-            }, 900);
+            }, 750);
         } else if (tier === 2) {
-            // Hujan Sedang (20 - 50 mm/hari)
-            playRadarChime();
+            // Hujan Sedang (20 - 50 mm/hari): 1 KALI TING LEMBUT
+            playTingChime(1);
             setTimeout(() => {
-                const speechMsg = `Informasi cuaca. Terpantau hujan sedang ${Math.round(dailyVal || rateVal)} milimeter ${cleanLoc}. Jalan hauling mulai licin, kurangi kecepatan dan jaga jarak aman.`;
+                const speechMsg = `Informasi cuaca. Terpantau hujan sedang ${Math.round(dailyVal || rateVal)} milimeter ${cleanLoc}${timeInfoSpoken}. Jalan hauling mulai licin, kurangi kecepatan dan jaga jarak aman.`;
                 speakGoogleVoice(speechMsg);
-            }, 500);
+            }, 750);
         } else {
             // Hujan Ringan (0 - 20 mm/hari)
             showVoiceNotificationToast(`Kondisi Hujan Ringan (0 - 20 mm/hari): Normal & Aman tanpa alarm suara.`);
         }
     }
 
-    function testRainAlert(dailyVal, rateVal = 0) {
+    function testRainAlert(dailyVal, rateVal = 0, sampleTimeStr = '') {
         getAudioContext();
         const classification = classifyRainfall(dailyVal, rateVal);
         const sampleLoc = 'Pit T2, T4, dan IPD S13';
+        const sampleTime = sampleTimeStr || (classification.tier >= 4 ? 'Pukul 15:00 - 18:00 WITA' : 'Pukul 13:00 - 15:00 WITA');
 
-        showVoiceNotificationToast(`[UJI COBA SUARA] ${classification.name} (${classification.rangeLabel})`);
+        showVoiceNotificationToast(`[UJI COBA SUARA] ${classification.name} (${classification.rangeLabel}) • Perkiraan: ${sampleTime}`);
 
         // Flash temporary banner preview for 12 seconds
         const banner = document.getElementById('warningBanner');
@@ -2014,6 +1978,13 @@
         const desc = document.getElementById('warningDesc');
         const kpiStatusBadge = document.getElementById('kpiStatusBadge');
         const kpiStatusText = document.getElementById('kpiStatusText');
+        const timeBadge = document.getElementById('warningTimeWindowBadge');
+        const timeText = document.getElementById('warningTimeWindowText');
+
+        if (timeBadge && timeText) {
+            timeBadge.style.display = 'inline-flex';
+            timeText.innerText = sampleTime;
+        }
 
         if (banner) {
             banner.className = `warning-banner ${classification.severity === 'kritis' ? 'kritis' : classification.severity === 'red' ? 'siaga' : classification.severity === 'orange' ? 'siaga' : classification.severity === 'yellow' ? 'waspada' : 'normal'}`;
@@ -2025,7 +1996,7 @@
                         : 'bi bi-shield-check text-success';
             }
             if (title) title.innerText = `[SIMULASI UJI] ${classification.name.toUpperCase()} (${classification.rangeLabel})`;
-            if (desc) desc.innerText = `${classification.desc} Terdeteksi simulasi ${dailyVal} mm/hari ${rateVal > 0 ? '(' + rateVal + ' mm/jam)' : ''} di ${sampleLoc}.`;
+            if (desc) desc.innerText = `${classification.desc} Terdeteksi simulasi ${dailyVal} mm/hari ${rateVal > 0 ? '(' + rateVal + ' mm/jam)' : ''} di ${sampleLoc}. Perkiraan terjadinya: ${sampleTime}.`;
             if (kpiStatusBadge) {
                 kpiStatusBadge.className = `badge ${classification.kpiClass}`;
                 kpiStatusBadge.innerText = `TEST ${classification.kpiBadge}`;
@@ -2036,7 +2007,7 @@
             }
         }
 
-        triggerRainAlert(classification.tier, sampleLoc, dailyVal, rateVal, true);
+        triggerRainAlert(classification.tier, sampleLoc, dailyVal, rateVal, true, sampleTime);
 
         // Close test dropdown menu
         const menu = document.getElementById('testSoundMenuDropdown');
@@ -2837,12 +2808,36 @@
         const isAlertIntervalPassed = (nowTime - lastAlert >= RAIN_ALERT_REPEAT_INTERVAL_MS);
         const hasTierEscalated = (siteCls.tier > lastRainAlertTier && siteCls.hasAudioAlarm);
 
+        // Format Perkiraan Waktu Terjadinya Hujan
+        let formattedOccurrenceInfo = '';
+        if (maxRainNow > 0) {
+            formattedOccurrenceInfo = rainTimeWindowStr 
+                ? `Sedang berlangsung saat ini (estimasi berlanjut hingga ${rainTimeWindowStr.replace('Pukul ', '')})` 
+                : 'Sedang berlangsung saat ini';
+        } else if (rainTimeWindowStr) {
+            formattedOccurrenceInfo = rainTimeWindowStr;
+        }
+
+        const timeBadge = document.getElementById('warningTimeWindowBadge');
+        const timeText = document.getElementById('warningTimeWindowText');
+        if (timeBadge && timeText) {
+            if (formattedOccurrenceInfo && siteCls.tier >= 2) {
+                timeBadge.style.display = 'inline-flex';
+                timeText.innerText = formattedOccurrenceInfo;
+            } else if (siteMaxProb >= 50 && rainTimeWindowStr) {
+                timeBadge.style.display = 'inline-flex';
+                timeText.innerText = rainTimeWindowStr;
+            } else {
+                timeBadge.style.display = 'none';
+            }
+        }
+
         if (siteCls.tier === 5) {
-            // Level 5: Hujan Ekstrem (>= 150 mm/hari atau >= 100 mm/jam)
+            // Level 5: Hujan Ekstrem (>= 150 mm/hari atau >= 100 mm/jam) -> 3x TING
             banner.className = 'warning-banner kritis';
             icon.className = 'bi bi-exclamation-triangle-fill text-white';
             title.innerText = 'PERINGATAN DARURAT: STATUS AWAS HUJAN EKSTREM (\u2265 150 MM/HARI)!';
-            desc.innerText = `Terdeteksi akumulasi curah hujan ekstrem (${siteMaxTotalRain.toFixed(1)} mm/hari, laju ${maxRainNow.toFixed(1)} mm/jam) ${locationsBanner}. Bahaya banjir bandang limpasan & longsor lereng! Segera hentikan operasi pit dan evakuasi personel ke shelter aman!`;
+            desc.innerText = `Terdeteksi akumulasi curah hujan ekstrem (${siteMaxTotalRain.toFixed(1)} mm/hari, laju ${maxRainNow.toFixed(1)} mm/jam) ${locationsBanner}. Perkiraan terjadinya: ${formattedOccurrenceInfo || 'hari ini'}. Bahaya banjir bandang limpasan & longsor lereng! Segera hentikan operasi pit dan evakuasi personel ke shelter aman!`;
             
             kpiStatusBadge.className = 'badge bg-danger';
             kpiStatusBadge.innerText = 'EKSTREM';
@@ -2853,14 +2848,14 @@
                 lastRainAlertTier = 5;
                 setLastAudioAlertTime(nowTime);
                 lastAudioAlertTime = nowTime;
-                triggerRainAlert(5, locationsSpoken, siteMaxTotalRain, maxRainNow);
+                triggerRainAlert(5, locationsSpoken, siteMaxTotalRain, maxRainNow, false, formattedOccurrenceInfo);
             }
         } else if (siteCls.tier === 4) {
-            // Level 4: Hujan Sangat Lebat (100 - 150 mm/hari atau >= 80 mm/jam)
+            // Level 4: Hujan Sangat Lebat (100 - 150 mm/hari atau >= 80 mm/jam) -> 2x TING TING
             banner.className = 'warning-banner siaga';
             icon.className = 'bi bi-bell-fill text-danger';
             title.innerText = 'PERINGATAN DINI: STATUS AWAS HUJAN SANGAT LEBAT (100 - 150 MM/HARI)!';
-            desc.innerText = `Terdeteksi curah hujan sangat lebat (${siteMaxTotalRain.toFixed(1)} mm/hari, laju ${maxRainNow.toFixed(1)} mm/jam) ${locationsBanner}. Waspada ketidakstabilan lereng disposal (DCI) dan pastikan pompa sump dewatering aktif penuh!`;
+            desc.innerText = `Terdeteksi curah hujan sangat lebat (${siteMaxTotalRain.toFixed(1)} mm/hari, laju ${maxRainNow.toFixed(1)} mm/jam) ${locationsBanner}. Perkiraan terjadinya: ${formattedOccurrenceInfo || 'hari ini'}. Waspada ketidakstabilan lereng disposal (DCI) dan pastikan pompa sump dewatering aktif penuh!`;
             
             kpiStatusBadge.className = 'badge bg-danger';
             kpiStatusBadge.innerText = 'SANGAT LEBAT';
@@ -2871,14 +2866,14 @@
                 lastRainAlertTier = 4;
                 setLastAudioAlertTime(nowTime);
                 lastAudioAlertTime = nowTime;
-                triggerRainAlert(4, locationsSpoken, siteMaxTotalRain, maxRainNow);
+                triggerRainAlert(4, locationsSpoken, siteMaxTotalRain, maxRainNow, false, formattedOccurrenceInfo);
             }
         } else if (siteCls.tier === 3) {
-            // Level 3: Hujan Lebat (50 - 100 mm/hari atau >= 50 mm/jam)
+            // Level 3: Hujan Lebat (50 - 100 mm/hari atau >= 50 mm/jam) -> 1x TING
             banner.className = 'warning-banner siaga';
             icon.className = 'bi bi-cloud-rain-heavy-fill text-warning';
             title.innerText = 'PERINGATAN CUACA: STATUS SIAGA HUJAN LEBAT (50 - 100 MM/HARI)';
-            desc.innerText = `Terdeteksi curah hujan lebat (${siteMaxTotalRain.toFixed(1)} mm/hari, laju ${maxRainNow.toFixed(1)} mm/jam) ${locationsBanner}. Waspada jalan hauling sangat licin, kurangi batas kecepatan armada maksimal 30 km/jam dan jaga jarak aman 4x kendaraan!`;
+            desc.innerText = `Terdeteksi curah hujan lebat (${siteMaxTotalRain.toFixed(1)} mm/hari, laju ${maxRainNow.toFixed(1)} mm/jam) ${locationsBanner}. Perkiraan terjadinya: ${formattedOccurrenceInfo || 'hari ini'}. Waspada jalan hauling sangat licin, kurangi batas kecepatan armada maksimal 30 km/jam dan jaga jarak aman 4x kendaraan!`;
             
             kpiStatusBadge.className = 'badge bg-warning text-dark';
             kpiStatusBadge.innerText = 'LEBAT';
@@ -2889,14 +2884,14 @@
                 lastRainAlertTier = 3;
                 setLastAudioAlertTime(nowTime);
                 lastAudioAlertTime = nowTime;
-                triggerRainAlert(3, locationsSpoken, siteMaxTotalRain, maxRainNow);
+                triggerRainAlert(3, locationsSpoken, siteMaxTotalRain, maxRainNow, false, formattedOccurrenceInfo);
             }
         } else if (hasThunderActive) {
             // Peringatan Sambaran Petir
             banner.className = 'warning-banner siaga';
             icon.className = 'bi bi-lightning-charge-fill text-warning';
             title.innerText = 'PERINGATAN BAHAYA: POTENSI PETIR / THUNDERSTORM';
-            desc.innerText = `Terdeteksi aktivitas petir dan awan konvektif ${locationsBanner}. Seluruh personel di area terbuka segera evakuasi ke shelter petir terdekat.`;
+            desc.innerText = `Terdeteksi aktivitas petir dan awan konvektif ${locationsBanner}. Perkiraan terjadinya: ${formattedOccurrenceInfo || 'saat ini'}. Seluruh personel di area terbuka segera evakuasi ke shelter petir terdekat.`;
             kpiStatusBadge.className = 'badge bg-warning text-dark';
             kpiStatusBadge.innerText = 'BAHAYA PETIR';
             kpiStatusText.className = 'kpi-num text-warning';
@@ -2916,7 +2911,7 @@
             banner.className = 'warning-banner waspada';
             icon.className = 'bi bi-cloud-rain-fill text-warning';
             title.innerText = 'PERINGATAN CUACA: STATUS WASPADA HUJAN SEDANG (20 - 50 MM/HARI)';
-            desc.innerText = `Terpantau hujan intensitas sedang (${siteMaxTotalRain.toFixed(1)} mm/hari, laju ${maxRainNow.toFixed(1)} mm/jam) ${locationsBanner}. Permukaan jalan hauling basah dan mulai licin, kurangi batas kecepatan armada.`;
+            desc.innerText = `Terpantau hujan intensitas sedang (${siteMaxTotalRain.toFixed(1)} mm/hari, laju ${maxRainNow.toFixed(1)} mm/jam) ${locationsBanner}. ${formattedOccurrenceInfo ? 'Perkiraan terjadinya: ' + formattedOccurrenceInfo + '. ' : ''}Permukaan jalan hauling basah dan mulai licin, kurangi batas kecepatan armada.`;
             kpiStatusBadge.className = 'badge bg-warning text-dark';
             kpiStatusBadge.innerText = 'SEDANG';
             kpiStatusText.className = 'kpi-num text-warning';
