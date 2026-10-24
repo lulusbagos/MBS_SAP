@@ -1094,6 +1094,8 @@
             new { Val = 11, Name = "November" },
             new { Val = 12, Name = "Desember" }
         };
+        var selectedMonthName = months.FirstOrDefault(m => m.Val == selectedMonth)?.Name ?? $"Bulan {selectedMonth}";
+        var selectedPeriodLabel = $"{selectedMonthName} {selectedYear}";
     }
 
     <!-- Header Selector with Month & Year Filters -->
@@ -1634,6 +1636,9 @@
                                                                     <i class="bi bi-calculator"></i>
                                                                 </div>
                                                                 <span class="fw-bold text-dark" style="font-size: 12.5px; letter-spacing: -0.2px;">Rincian Formula Skor Akhir (PTS) @comp.TierLabel</span>
+                                                                <span class="badge rounded-pill" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 9.5px; font-weight: 700;">
+                                                                    <i class="bi bi-calendar3 me-1"></i>Periode: @selectedPeriodLabel
+                                                                </span>
                                                                 <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-size: 9.5px; font-weight: 600; border: 1px solid #bfdbfe;">
                                                                     <i class="bi bi-shield-check me-1"></i>Standar Akuntabilitas Perusahaan
                                                                 </span>
@@ -1642,6 +1647,7 @@
                                                                         style="font-size: 10px; font-weight: 600;" 
                                                                         title="Buka rincian hitungan riil &amp; panduan perusahaan"
                                                                         data-type="perusahaan"
+                                                                        data-period="@selectedPeriodLabel"
                                                                         data-name="@comp.CompanyName"
                                                                         data-dept="@comp.CompanyName"
                                                                         data-pos="@comp.TierLabel"
@@ -2039,6 +2045,9 @@
                                                                     <i class="bi bi-calculator"></i>
                                                                 </div>
                                                                 <span class="fw-bold text-dark" style="font-size: 12.5px; letter-spacing: -0.2px;">Rincian Formula Skor Akhir (PTS) @comp.TierLabel</span>
+                                                                <span class="badge rounded-pill" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 9.5px; font-weight: 700;">
+                                                                    <i class="bi bi-calendar3 me-1"></i>Periode: @selectedPeriodLabel
+                                                                </span>
                                                                 <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-size: 9.5px; font-weight: 600; border: 1px solid #bfdbfe;">
                                                                     <i class="bi bi-shield-check me-1"></i>Standar Akuntabilitas Perusahaan
                                                                 </span>
@@ -2047,6 +2056,7 @@
                                                                         style="font-size: 10px; font-weight: 600;" 
                                                                         title="Buka rincian hitungan riil &amp; panduan perusahaan"
                                                                         data-type="perusahaan"
+                                                                        data-period="@selectedPeriodLabel"
                                                                         data-name="@comp.CompanyName"
                                                                         data-dept="@comp.CompanyName"
                                                                         data-pos="@comp.TierLabel"
@@ -2450,6 +2460,9 @@
                                                                     <i class="bi bi-calculator"></i>
                                                                 </div>
                                                                 <span class="fw-bold text-dark" style="font-size: 12.5px; letter-spacing: -0.2px;">Rincian Formula Skor Akhir (PTS) @comp.TierLabel</span>
+                                                                <span class="badge rounded-pill" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 9.5px; font-weight: 700;">
+                                                                    <i class="bi bi-calendar3 me-1"></i>Periode: @selectedPeriodLabel
+                                                                </span>
                                                                 <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-size: 9.5px; font-weight: 600; border: 1px solid #bfdbfe;">
                                                                     <i class="bi bi-shield-check me-1"></i>Standar Akuntabilitas Perusahaan
                                                                 </span>
@@ -2458,6 +2471,7 @@
                                                                         style="font-size: 10px; font-weight: 600;" 
                                                                         title="Buka rincian hitungan riil &amp; panduan perusahaan"
                                                                         data-type="perusahaan"
+                                                                        data-period="@selectedPeriodLabel"
                                                                         data-name="@comp.CompanyName"
                                                                         data-dept="@comp.CompanyName"
                                                                         data-pos="@comp.TierLabel"
@@ -2873,6 +2887,9 @@
                                                                     <i class="bi bi-calculator"></i>
                                                                 </div>
                                                                 <span class="fw-bold text-dark" style="font-size: 12.5px; letter-spacing: -0.2px;">Rincian Formula Skor Akhir (PTS) Perusahaan</span>
+                                                                <span class="badge rounded-pill" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 9.5px; font-weight: 700;">
+                                                                    <i class="bi bi-calendar3 me-1"></i>Periode: @selectedPeriodLabel
+                                                                </span>
                                                                 <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-size: 9.5px; font-weight: 600; border: 1px solid #bfdbfe;">
                                                                     <i class="bi bi-shield-check me-1"></i>Standar Akuntabilitas Perusahaan
                                                                 </span>
@@ -2881,6 +2898,7 @@
                                                                         style="font-size: 10px; font-weight: 600;" 
                                                                         title="Buka rincian hitungan riil & metodologi perusahaan"
                                                                         data-type="perusahaan"
+                                                                        data-period="@selectedPeriodLabel"
                                                                         data-name="@comp.CompanyName"
                                                                         data-dept="@comp.CompanyName"
                                                                         data-pos="Perusahaan Inti"
@@ -3351,6 +3369,9 @@
                                                                     <i class="bi bi-calculator"></i>
                                                                 </div>
                                                                 <span class="fw-bold text-dark" style="font-size: 12.5px; letter-spacing: -0.2px;">Rincian Formula Skor Akhir (PTS) Departemen</span>
+                                                                <span class="badge rounded-pill" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 9.5px; font-weight: 700;">
+                                                                    <i class="bi bi-calendar3 me-1"></i>Periode: @selectedPeriodLabel
+                                                                </span>
                                                                 <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-size: 9.5px; font-weight: 600; border: 1px solid #bfdbfe;">
                                                                     <i class="bi bi-shield-check me-1"></i>Standar Akuntabilitas Departemen
                                                                 </span>
@@ -3359,6 +3380,7 @@
                                                                         style="font-size: 10px; font-weight: 600;" 
                                                                         title="Buka rincian hitungan riil & metodologi departemen"
                                                                         data-type="departemen"
+                                                                        data-period="@selectedPeriodLabel"
                                                                         data-name="@dept.DepartmentName"
                                                                         data-dept="@dept.DepartmentName"
                                                                         data-pos="Departemen"
@@ -3872,8 +3894,12 @@
                                                 <div class="player-detail-box">
                                                     <!-- Header Bar -->
                                                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2 pb-2" style="border-bottom: 1px solid #e2e8f0;">
-                                                        <div class="fw-bold text-dark" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
-                                                            Aktivitas K3 Bulan Ini <span class="text-muted fw-normal text-none">(Realisasi / Target)</span>
+                                                        <div class="fw-bold text-dark d-flex align-items-center gap-1.5 flex-wrap" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                            <span>Aktivitas K3</span>
+                                                            <span class="badge rounded-pill" style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 10px; font-weight: 700; text-transform: none;">
+                                                                <i class="bi bi-calendar-check me-1"></i>Periode @selectedPeriodLabel
+                                                            </span>
+                                                            <span class="text-muted fw-normal text-none" style="text-transform: none;">(Realisasi / Target)</span>
                                                         </div>
                                                         <div class="d-flex align-items-center gap-1.5 flex-wrap">
                                                             @if (!string.IsNullOrEmpty((string)emp.companyName))
@@ -3940,6 +3966,9 @@
                                                                         <i class="bi bi-calculator"></i>
                                                                     </div>
                                                                     <span class="fw-bold text-dark" style="font-size: 12.5px; letter-spacing: -0.2px;">Rincian Formula Skor Akhir (PTS)</span>
+                                                                    <span class="badge rounded-pill" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 9.5px; font-weight: 700;">
+                                                                        <i class="bi bi-calendar3 me-1"></i>Periode: @selectedPeriodLabel
+                                                                    </span>
                                                                     <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-size: 9.5px; font-weight: 600; border: 1px solid #bfdbfe;" title="Dual Accountability: Close Rate dihitung 50% Pembuat dan 50% PIC yang dituju (Self/Internal close maks 50%)">
                                                                         <i class="bi bi-shield-check me-1"></i>Dual Accountability Close Rate
                                                                     </span>
@@ -3948,6 +3977,7 @@
                                                                             style="font-size: 10px; font-weight: 600;" 
                                                                             title="Buka rincian hitungan riil & metodologi penilaian"
                                                                             data-type="karyawan"
+                                                                            data-period="@selectedPeriodLabel"
                                                                             data-name="@emp.name"
                                                                             data-nik="@emp.nik"
                                                                             data-dept="@emp.departmentName"
@@ -4214,6 +4244,7 @@
                                     <div class="text-secondary" style="font-size: 11.5px;">
                                         <span id="mRealDeptNik">-</span>
                                         <span class="badge rounded-pill bg-light text-secondary border ms-1" id="mRealOnsiteBadge" style="font-size: 10px;">-</span>
+                                        <span class="badge rounded-pill ms-1" id="mRealPeriodBadge" style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 10px; font-weight: 700;"><i class="bi bi-calendar-check me-1"></i>Periode @selectedPeriodLabel</span>
                                     </div>
                                 </div>
                             </div>
@@ -4557,8 +4588,11 @@
                             <i class="bi bi-shield-exclamation"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title fw-bold mb-1" id="modalNonSapSupervisorsLabel" style="font-size: 17px; letter-spacing: -0.2px; color: #ffffff;">
-                                Audit Anomali Target Jabatan K3 &bull; @companyName
+                            <h5 class="modal-title fw-bold mb-1 d-flex align-items-center gap-2 flex-wrap" id="modalNonSapSupervisorsLabel" style="font-size: 17px; letter-spacing: -0.2px; color: #ffffff;">
+                                <span>Audit Anomali Target Jabatan K3 &bull; @companyName</span>
+                                <span class="badge rounded-pill bg-white bg-opacity-20 text-white border border-white border-opacity-25" style="font-size: 11px; font-weight: 700;">
+                                    <i class="bi bi-calendar3 me-1"></i>Periode @selectedPeriodLabel
+                                </span>
                             </h5>
                             <div style="font-size: 12px; color: #cbd5e1;" class="d-flex align-items-center gap-2 flex-wrap">
                                 <span>Total <strong>@totalAnomaliesCount Kasus</strong> Anomali Terdeteksi:</span>
@@ -6779,6 +6813,11 @@
                 // Sub info (NIK / Dept / Perusahaan / Posisi)
                 const deptNik = document.getElementById('mRealDeptNik');
                 const onsiteBadge = document.getElementById('mRealOnsiteBadge');
+                const periodBadge = document.getElementById('mRealPeriodBadge');
+                if (periodBadge) {
+                    const periodVal = d.period || '@selectedPeriodLabel';
+                    periodBadge.innerHTML = '<i class="bi bi-calendar-check me-1"></i>Periode ' + periodVal;
+                }
                 if (isComp) {
                     if (deptNik) deptNik.textContent = 'Perusahaan Inti • ' + subjectName;
                     if (onsiteBadge) onsiteBadge.style.display = 'none';

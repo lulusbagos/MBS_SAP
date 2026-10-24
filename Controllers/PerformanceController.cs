@@ -5405,7 +5405,7 @@ namespace MBS_SAP.Controllers
 
                 // Setup Table Headers (Komprehensif dengan Perusahaan jika multi-company)
                 bool hasCompColInSquad = (mode == "company" || mode == "core");
-                List<string> squadHeadersList = new List<string> { "Peringkat" };
+                List<string> squadHeadersList = new List<string> { "Peringkat", "Periode" };
                 if (hasCompColInSquad) squadHeadersList.Add("Perusahaan");
                 squadHeadersList.AddRange(new[] {
                     "Nama Karyawan", "NIK", "Departemen", "Jabatan", "Kategori SAP", "Status Roster",
@@ -5423,7 +5423,7 @@ namespace MBS_SAP.Controllers
                     "P5M Actual *", "P5M Target"
                 });
                 string[] squadHeaders = squadHeadersList.ToArray();
-                int squadOffset = hasCompColInSquad ? 1 : 0;
+                int squadOffset = (hasCompColInSquad ? 1 : 0) + 1;
 
                 for (int i = 0; i < squadHeaders.Length; i++)
                 {
@@ -5462,6 +5462,7 @@ namespace MBS_SAP.Controllers
                 {
                     int col = 1;
                     wsSquad.Cell(row, col++).Value = rank;
+                    wsSquad.Cell(row, col++).Value = periodFormatted;
                     if (hasCompColInSquad)
                     {
                         wsSquad.Cell(row, col++).Value = emp.companyName;
@@ -6803,7 +6804,7 @@ namespace MBS_SAP.Controllers
                 wsEmp.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
 
                 string[] empHeaders = {
-                    "No", "Departemen", "Nama Karyawan", "NIK", "Jabatan", "Kategori SAP", "Bulan Aktif", "Hari Onsite Total",
+                    "No", "Periode", "Departemen", "Nama Karyawan", "NIK", "Jabatan", "Kategori SAP", "Bulan Aktif", "Hari Onsite Total",
                     "Total Target Periode", "Total Realisasi Periode",
                     "Rata-rata Capaian (%)", "Close Rate AP (%)",
                     "Hazard Act", "Hazard Tgt",
@@ -6826,12 +6827,12 @@ namespace MBS_SAP.Controllers
                     cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                     cell.Style.Font.FontColor = XLColor.White;
 
-                    if (i == 8 || i == 9) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a"); // Target & Act
-                    else if (i == 10) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1d4ed8"); // Capaian
-                    else if (i == 11) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Close Rate
-                    else if (i >= 12 && i <= 21) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#334155"); // Programs
-                    else if (i >= 22 && i <= 23) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // P5M
-                    else if (i == 24) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a"); // Status
+                    if (i == 9 || i == 10) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a"); // Target & Act
+                    else if (i == 11) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1d4ed8"); // Capaian
+                    else if (i == 12) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46"); // Close Rate
+                    else if (i >= 13 && i <= 22) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#334155"); // Programs
+                    else if (i >= 23 && i <= 24) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f"); // P5M
+                    else if (i == 25) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a"); // Status
                     else cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a"); // Info
                 }
                 wsEmp.Row(eRow).Height = 28;
@@ -6844,6 +6845,7 @@ namespace MBS_SAP.Controllers
                 {
                     int col = 1;
                     wsEmp.Cell(eRow, col++).Value = empIdx;
+                    wsEmp.Cell(eRow, col++).Value = periodTitle;
                     wsEmp.Cell(eRow, col++).Value = emp.DepartmentName;
                     wsEmp.Cell(eRow, col++).Value = emp.Name;
                     wsEmp.Cell(eRow, col++).Value = emp.Nik;
@@ -7154,7 +7156,7 @@ namespace MBS_SAP.Controllers
                         mRow++;
 
                         string[] mEmpHeaders = {
-                            "No", "Departemen", "Nama Karyawan", "NIK", "Jabatan", "Kategori SAP", "Hari Onsite",
+                            "No", "Bulan", "Departemen", "Nama Karyawan", "NIK", "Jabatan", "Kategori SAP", "Hari Onsite",
                             "Target MTD", "Realisasi MTD", "Capaian (%)", "Close Rate (%)",
                             "Hazard Act", "Hazard Tgt",
                             "Inspeksi Act", "Inspeksi Tgt",
@@ -7176,12 +7178,12 @@ namespace MBS_SAP.Controllers
                             cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                             cell.Style.Font.FontColor = XLColor.White;
 
-                            if (i == 7 || i == 8) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
-                            else if (i == 9) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1d4ed8");
-                            else if (i == 10) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46");
-                            else if (i >= 11 && i <= 20) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#334155");
-                            else if (i >= 21 && i <= 22) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f");
-                            else if (i == 23) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
+                            if (i == 8 || i == 9) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
+                            else if (i == 10) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1d4ed8");
+                            else if (i == 11) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46");
+                            else if (i >= 12 && i <= 21) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#334155");
+                            else if (i >= 22 && i <= 23) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f");
+                            else if (i == 24) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
                             else cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a");
                         }
                         wsMonth.Row(mRow).Height = 26;
@@ -7200,6 +7202,7 @@ namespace MBS_SAP.Controllers
                         {
                             int col = 1;
                             wsMonth.Cell(mRow, col++).Value = mEmpIdx;
+                            wsMonth.Cell(mRow, col++).Value = mLabel;
                             wsMonth.Cell(mRow, col++).Value = (string)emp.departmentName;
                             wsMonth.Cell(mRow, col++).Value = (string)emp.karyawanName;
                             wsMonth.Cell(mRow, col++).Value = (string)emp.nik;
