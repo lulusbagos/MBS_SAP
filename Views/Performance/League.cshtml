@@ -3138,20 +3138,31 @@
                         </div>
                     </div>
 
-                    <!-- Quick Banner: Download Report SAP Rentang Periode -->
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 p-2.5 px-3 rounded-3 mb-3" style="background: linear-gradient(135deg, rgba(30, 58, 138, 0.05), rgba(37, 99, 235, 0.08)); border: 1px solid #bfdbfe;">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center shadow-xs" style="width: 32px; height: 32px; background: #1e40af; color: #fff;">
-                                <i class="bi bi-file-earmark-spreadsheet-fill" style="font-size: 14px;"></i>
+                    <!-- Executive Banner: Download Report SAP Lintas Periode & Analisis Tren -->
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2.5 p-3 rounded-3 mb-3 shadow-xs" style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.03), rgba(30, 58, 138, 0.07)); border: 1.5px solid #bfdbfe;">
+                        <div class="d-flex align-items-center gap-2.5">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center shadow-xs" style="width: 38px; height: 38px; background: #1e40af; color: #fff;">
+                                <i class="bi bi-file-earmark-spreadsheet-fill fs-5"></i>
                             </div>
                             <div>
-                                <div class="fw-bold text-dark" style="font-size: 12.5px;">Download Report SAP Lintas Periode (Rentang Waktu)</div>
-                                <div class="text-muted" style="font-size: 11px;">Ekspor rekapitulasi kinerja departemen & pencapaian detail seluruh karyawan antar bulan/periode dalam 1 file Excel komprehensif.</div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                    <span class="fw-bold text-dark" style="font-size: 13.5px;">Download Report SAP Lintas Periode (Rentang Waktu)</span>
+                                    <span class="badge bg-primary px-2 py-0.5 rounded-pill" style="font-size: 10px;">Fitur: Pisah Per Bulan</span>
+                                    <span class="badge bg-success px-2 py-0.5 rounded-pill" style="font-size: 10px;"><i class="bi bi-graph-up me-1"></i>Grafik Termasuk Per Karyawan</span>
+                                </div>
+                                <div class="text-muted" style="font-size: 11.5px; line-height: 1.35;">
+                                    Ekspor rekapitulasi performa klub & pencapaian detail seluruh karyawan lintas bulan (tersedia opsi sheet terpisah per bulan) serta dashboard analitik grafik interaktif.
+                                </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-primary fw-bold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#exportPeriodicSapModal" style="border-radius: 8px; font-size: 11.5px; background: #1d4ed8; border: 1px solid #1e40af;">
-                            <i class="bi bi-cloud-arrow-down-fill me-1"></i> Buka Filter & Download Report
-                        </button>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold shadow-xs px-3 py-1.5" onclick="openPeriodicModal('analytics');" style="border-radius: 8px; font-size: 11.5px;">
+                                <i class="bi bi-graph-up-arrow me-1 text-primary"></i> Grafik & Analitik
+                            </button>
+                            <button type="button" class="btn btn-sm btn-primary fw-bold shadow-sm px-3.5 py-1.5" onclick="openPeriodicModal('download');" style="border-radius: 8px; font-size: 11.5px; background: #1d4ed8; border: 1px solid #1e40af;">
+                                <i class="bi bi-cloud-arrow-down-fill me-1"></i> Buka Filter & Download Report
+                            </button>
+                        </div>
                     </div>
 
                     <div class="table-responsive league-table-wrap mb-3">
@@ -4846,233 +4857,460 @@
     </div>
 }
 
-<!-- Modal: Download Report SAP Rentang Periode -->
+<!-- Chart.js CDN for Analytics Visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Modal: Download Report SAP & Analitik Lintas Periode (Executive Version) -->
 <div class="modal fade" id="exportPeriodicSapModal" tabindex="-1" aria-labelledby="exportPeriodicSapModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content shadow-lg border-0" style="border-radius: 16px; overflow: hidden;">
-            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); border-bottom: 2px solid #3b82f6;">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px; background: rgba(255, 255, 255, 0.15);">
-                        <i class="bi bi-file-earmark-spreadsheet-fill text-warning" style="font-size: 18px;"></i>
+            <div class="modal-header py-3 px-4 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); border-bottom: 2px solid #3b82f6;">
+                <div class="d-flex align-items-center gap-2.5">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center shadow-xs" style="width: 40px; height: 40px; background: rgba(255, 255, 255, 0.15);">
+                        <i class="bi bi-file-earmark-spreadsheet-fill text-warning fs-5"></i>
                     </div>
                     <div>
-                        <h5 class="modal-title fw-bold mb-0" id="exportPeriodicSapModalLabel" style="font-size: 16px; letter-spacing: -0.2px;">
-                            Download Report SAP Rentang Periode
-                        </h5>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h5 class="modal-title fw-bold mb-0 text-white" id="exportPeriodicSapModalLabel" style="font-size: 16.5px; letter-spacing: -0.2px;">
+                                Download Report SAP & Analitik Lintas Periode
+                            </h5>
+                            <span class="badge bg-primary text-white px-2 py-0.5 rounded-pill" style="font-size: 10px; font-weight: 700;">Multi-Bulan</span>
+                            <span class="badge bg-success text-white px-2 py-0.5 rounded-pill" style="font-size: 10px; font-weight: 700;">Pisah Per Bulan</span>
+                        </div>
                         <div style="font-size: 11.5px; color: #cbd5e1; font-weight: 500;">
-                            Ekspor rekapitulasi performa departemen & pencapaian detail seluruh karyawan lintas bulan
+                            Ekspor rekapitulasi performa klub, detail seluruh karyawan lintas bulan, serta visualisasi grafik interaktif per departemen & per karyawan.
                         </div>
                     </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <div class="modal-body p-4 bg-light">
-                <!-- Company and Department Selection Row -->
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold text-dark mb-1" style="font-size: 12px;">
-                            <i class="bi bi-buildings-fill text-primary me-1"></i> Perusahaan
-                        </label>
-                        <select id="exportPeriodicCompany" class="form-select border-2 fw-bold" style="border-radius: 8px; font-size: 12.5px;">
-                            @foreach (var c in companies)
-                            {
-                                if (c.PerusahaanId == selectedCompanyId)
+            <div class="modal-body p-3 p-md-4 bg-light">
+                <!-- ==================== CONTROL PANEL FILTER ==================== -->
+                <div class="card border-0 shadow-xs rounded-3 p-3 mb-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="row g-2.5 align-items-center mb-2.5">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark mb-1" style="font-size: 11.5px;">
+                                <i class="bi bi-buildings-fill text-primary me-1"></i> Perusahaan
+                            </label>
+                            <select id="exportPeriodicCompany" class="form-select form-select-sm border fw-bold" style="border-radius: 7px; font-size: 12px;" onchange="onPeriodicFilterChange();">
+                                @foreach (var c in companies)
                                 {
-                                    <option value="@c.PerusahaanId" selected>@c.NamaPerusahaan</option>
+                                    if (c.PerusahaanId == selectedCompanyId)
+                                    {
+                                        <option value="@c.PerusahaanId" selected>@c.NamaPerusahaan</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@c.PerusahaanId">@c.NamaPerusahaan</option>
+                                    }
                                 }
-                                else
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark mb-1" style="font-size: 11.5px;">
+                                <i class="bi bi-shield-shaded text-primary me-1"></i> Filter Departemen
+                            </label>
+                            <select id="exportPeriodicDept" class="form-select form-select-sm border fw-semibold" style="border-radius: 7px; font-size: 12px;" onchange="onPeriodicFilterChange();">
+                                <option value="">-- Semua Departemen (Seluruh Klub) --</option>
+                                @foreach (var dept in deptAchievements)
                                 {
-                                    <option value="@c.PerusahaanId">@c.NamaPerusahaan</option>
+                                    <option value="@dept.DepartmentName">@dept.DepartmentName (@dept.EmployeeCount Skuad)</option>
                                 }
-                            }
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold text-dark mb-1" style="font-size: 12px;">
-                            <i class="bi bi-shield-shaded text-primary me-1"></i> Filter Departemen
-                        </label>
-                        <select id="exportPeriodicDept" class="form-select border-2 fw-semibold" style="border-radius: 8px; font-size: 12.5px;">
-                            <option value="">-- Semua Departemen (Seluruh Klub) --</option>
-                            @foreach (var dept in deptAchievements)
-                            {
-                                <option value="@dept.DepartmentName">@dept.DepartmentName (@dept.EmployeeCount Skuad)</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Date Range Selection Card -->
-                <div class="card border p-3 mb-3 bg-white shadow-xs" style="border-radius: 12px; border-color: #cbd5e1 !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
-                        <label class="fw-bold text-dark d-flex align-items-center mb-0" style="font-size: 12px;">
-                            <i class="bi bi-calendar-range text-primary me-1.5"></i> Rentang Waktu Periode Laporan
-                        </label>
-                        <!-- Quick Presets -->
-                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                            <span class="text-muted" style="font-size: 10.5px; font-weight: 600;">Preset Cepat:</span>
-                            <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('current')">1 Bulan Ini</button>
-                            <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('quarter')">3 Bulan Terakhir</button>
-                            <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('semester')">6 Bulan</button>
-                            <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('ytd')">Tahun Berjalan (YTD)</button>
+                            </select>
                         </div>
                     </div>
 
-                    <div class="row g-2 align-items-center">
-                        <!-- Start Month & Year -->
-                        <div class="col-md-5">
-                            <div class="p-2.5 rounded-3" style="background: #f8fafc; border: 1.5px solid #e2e8f0;">
-                                <div class="text-muted fw-bold mb-1.5" style="font-size: 11px;">
-                                    <i class="bi bi-arrow-right-short text-success"></i> DARI PERIODE (AWAL)
-                                </div>
-                                <div class="row g-1">
-                                    <div class="col-7">
-                                        <select id="exportPeriodicStartMonth" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;">
-                                            @foreach (var m in months)
-                                            {
-                                                if (m.Val == 1)
-                                                {
-                                                    <option value="@m.Val" selected>@m.Name</option>
-                                                }
-                                                else
-                                                {
-                                                    <option value="@m.Val">@m.Name</option>
-                                                }
-                                            }
-                                        </select>
-                                    </div>
-                                    <div class="col-5">
-                                        <select id="exportPeriodicStartYear" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;">
-                                            @for (int y = 2024; y <= 2027; y++)
-                                            {
-                                                if (y == selectedYear)
-                                                {
-                                                    <option value="@y" selected>@y</option>
-                                                }
-                                                else
-                                                {
-                                                    <option value="@y">@y</option>
-                                                }
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
+                    <!-- Date Range Selection Card -->
+                    <div class="p-2.5 rounded-3 mb-2.5" style="background: #f8fafc; border: 1.5px solid #cbd5e1;">
+                        <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                            <div class="fw-bold text-dark d-flex align-items-center" style="font-size: 12px;">
+                                <i class="bi bi-calendar-range text-primary me-1.5"></i> Rentang Waktu Periode Laporan:
+                                <span class="badge bg-primary text-white ms-2 px-2 py-0.5 rounded-pill" id="periodicRangeSummaryBadge" style="font-size: 10.5px;">Memuat...</span>
+                            </div>
+                            <!-- Quick Presets -->
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                <span class="text-muted" style="font-size: 10.5px; font-weight: 600;">Preset:</span>
+                                <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('current')">1 Bulan Ini</button>
+                                <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('quarter')">3 Bulan Terakhir</button>
+                                <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('semester')">6 Bulan</button>
+                                <button type="button" class="btn btn-xs btn-outline-primary py-0.5 px-2 rounded-pill fw-bold" style="font-size: 10.5px;" onclick="setPeriodicPreset('ytd')">YTD (Tahun Ini)</button>
                             </div>
                         </div>
 
-                        <!-- Arrow divider -->
-                        <div class="col-md-2 text-center text-muted d-none d-md-block">
-                            <i class="bi bi-arrow-right fs-4 text-primary"></i>
-                            <div style="font-size: 10px; font-weight: 700;">s/d</div>
-                        </div>
-
-                        <!-- End Month & Year -->
-                        <div class="col-md-5">
-                            <div class="p-2.5 rounded-3" style="background: #f8fafc; border: 1.5px solid #e2e8f0;">
-                                <div class="text-muted fw-bold mb-1.5" style="font-size: 11px;">
-                                    <i class="bi bi-arrow-left-short text-danger"></i> SAMPAI PERIODE (AKHIR)
-                                </div>
-                                <div class="row g-1">
-                                    <div class="col-7">
-                                        <select id="exportPeriodicEndMonth" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;">
-                                            @foreach (var m in months)
-                                            {
-                                                if (m.Val == selectedMonth)
-                                                {
-                                                    <option value="@m.Val" selected>@m.Name</option>
-                                                }
-                                                else
-                                                {
-                                                    <option value="@m.Val">@m.Name</option>
-                                                }
-                                            }
-                                        </select>
+                        <div class="row g-2 align-items-center">
+                            <!-- Start Month & Year -->
+                            <div class="col-md-5">
+                                <div class="p-2 rounded-2 bg-white border">
+                                    <div class="text-muted fw-bold mb-1" style="font-size: 10.5px;">
+                                        <i class="bi bi-arrow-right-short text-success"></i> DARI PERIODE (AWAL)
                                     </div>
-                                    <div class="col-5">
-                                        <select id="exportPeriodicEndYear" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;">
-                                            @for (int y = 2024; y <= 2027; y++)
-                                            {
-                                                if (y == selectedYear)
+                                    <div class="row g-1">
+                                        <div class="col-7">
+                                            <select id="exportPeriodicStartMonth" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;" onchange="onPeriodicFilterChange();">
+                                                @foreach (var m in months)
                                                 {
-                                                    <option value="@y" selected>@y</option>
+                                                    if (m.Val == 1)
+                                                    {
+                                                        <option value="@m.Val" selected>@m.Name</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@m.Val">@m.Name</option>
+                                                    }
                                                 }
-                                                else
+                                            </select>
+                                        </div>
+                                        <div class="col-5">
+                                            <select id="exportPeriodicStartYear" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;" onchange="onPeriodicFilterChange();">
+                                                @for (int y = 2024; y <= 2027; y++)
                                                 {
-                                                    <option value="@y">@y</option>
+                                                    if (y == selectedYear)
+                                                    {
+                                                        <option value="@y" selected>@y</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@y">@y</option>
+                                                    }
                                                 }
-                                            }
-                                        </select>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Arrow divider -->
+                            <div class="col-md-2 text-center text-muted d-none d-md-block">
+                                <i class="bi bi-arrow-right fs-4 text-primary"></i>
+                                <div style="font-size: 10px; font-weight: 700;">s/d</div>
+                            </div>
+
+                            <!-- End Month & Year -->
+                            <div class="col-md-5">
+                                <div class="p-2 rounded-2 bg-white border">
+                                    <div class="text-muted fw-bold mb-1" style="font-size: 10.5px;">
+                                        <i class="bi bi-arrow-left-short text-danger"></i> SAMPAI PERIODE (AKHIR)
+                                    </div>
+                                    <div class="row g-1">
+                                        <div class="col-7">
+                                            <select id="exportPeriodicEndMonth" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;" onchange="onPeriodicFilterChange();">
+                                                @foreach (var m in months)
+                                                {
+                                                    if (m.Val == selectedMonth)
+                                                    {
+                                                        <option value="@m.Val" selected>@m.Name</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@m.Val">@m.Name</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="col-5">
+                                            <select id="exportPeriodicEndYear" class="form-select form-select-sm border fw-bold" style="border-radius: 6px; font-size: 12px;" onchange="onPeriodicFilterChange();">
+                                                @for (int y = 2024; y <= 2027; y++)
+                                                {
+                                                    if (y == selectedYear)
+                                                    {
+                                                        <option value="@y" selected>@y</option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@y">@y</option>
+                                                    }
+                                                }
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Target Filter Options -->
-                <div class="mb-3">
-                    <label class="form-label fw-bold text-dark mb-1" style="font-size: 12px;">
-                        <i class="bi bi-people-fill text-primary me-1"></i> Filter Skuad Karyawan
-                    </label>
-                    <div class="d-flex flex-wrap gap-2">
-                        <div class="form-check form-check-inline m-0 p-2 px-3 rounded-3 border bg-white shadow-xs">
-                            <input class="form-check-input" type="radio" name="exportPeriodicTargetFilter" id="ep_tf_target" value="target" checked>
-                            <label class="form-check-label fw-bold text-dark small" for="ep_tf_target">
-                                Hanya Target SAP (Standar)
-                            </label>
+                    <!-- Target Filter & Options Row -->
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pt-1">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="fw-bold text-dark" style="font-size: 11.5px;"><i class="bi bi-people-fill text-primary me-1"></i> Filter Skuad:</span>
+                            <div class="form-check form-check-inline m-0">
+                                <input class="form-check-input" type="radio" name="exportPeriodicTargetFilter" id="ep_tf_target" value="target" checked onchange="onPeriodicFilterChange();">
+                                <label class="form-check-label fw-bold small" for="ep_tf_target">Hanya Target SAP</label>
+                            </div>
+                            <div class="form-check form-check-inline m-0">
+                                <input class="form-check-input" type="radio" name="exportPeriodicTargetFilter" id="ep_tf_all" value="all" onchange="onPeriodicFilterChange();">
+                                <label class="form-check-label fw-bold small" for="ep_tf_all">Semua Skuad (+ Non-Target)</label>
+                            </div>
+                            <div class="form-check form-check-inline m-0">
+                                <input class="form-check-input" type="radio" name="exportPeriodicTargetFilter" id="ep_tf_active" value="nontarget_active" onchange="onPeriodicFilterChange();">
+                                <label class="form-check-label fw-bold small" for="ep_tf_active">Non-Target Aktif SAP</label>
+                            </div>
                         </div>
-                        <div class="form-check form-check-inline m-0 p-2 px-3 rounded-3 border bg-white shadow-xs">
-                            <input class="form-check-input" type="radio" name="exportPeriodicTargetFilter" id="ep_tf_all" value="all">
-                            <label class="form-check-label fw-bold text-dark small" for="ep_tf_all">
-                                Semua Skuad (+ Non-Target)
-                            </label>
-                        </div>
-                        <div class="form-check form-check-inline m-0 p-2 px-3 rounded-3 border bg-white shadow-xs">
-                            <input class="form-check-input" type="radio" name="exportPeriodicTargetFilter" id="ep_tf_active" value="nontarget_active">
-                            <label class="form-check-label fw-bold text-dark small" for="ep_tf_active">
-                                Non-Target Aktif SAP
+
+                        <!-- Checkbox Split Monthly Sheets -->
+                        <div class="form-check form-switch m-0 bg-primary bg-opacity-10 px-3 py-1.5 rounded-pill border border-primary border-opacity-25">
+                            <input class="form-check-input ms-0 me-2" type="checkbox" id="exportPeriodicSplitMonthly" checked>
+                            <label class="form-check-label fw-bold text-primary small" for="exportPeriodicSplitMonthly" style="cursor: pointer;">
+                                <i class="bi bi-folder2-open me-1"></i> Pisahkan Sheet Per Bulan di Excel (.xlsx)
                             </label>
                         </div>
                     </div>
                 </div>
 
-                <!-- Highlights of what the Excel workbook contains -->
-                <div class="p-3 rounded-3 border" style="background: #ffffff; border-color: #cbd5e1 !important;">
-                    <div class="fw-bold text-dark mb-2" style="font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px;">
-                        <i class="bi bi-file-earmark-check-fill text-success me-1"></i> Format Laporan Excel Yang Akan Diunduh:
+                <!-- ==================== TABS NAVIGATION ==================== -->
+                <ul class="nav nav-pills nav-fill gap-2 p-1 bg-white rounded-3 border mb-3 shadow-xs" id="periodicNavTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold py-2" id="pills-periodic-analytics-tab" data-bs-toggle="pill" data-bs-target="#pane-periodic-analytics" type="button" role="tab" style="font-size: 12.5px; border-radius: 8px;">
+                            <i class="bi bi-graph-up-arrow me-1.5"></i> Visualisasi Grafik & Tren Analitik
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold py-2" id="pills-periodic-download-tab" data-bs-toggle="pill" data-bs-target="#pane-periodic-download" type="button" role="tab" style="font-size: 12.5px; border-radius: 8px;">
+                            <i class="bi bi-file-earmark-arrow-down-fill me-1.5 text-success"></i> Unduh File Excel (.xlsx) Profesional
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- ==================== TAB CONTENT ==================== -->
+                <div class="tab-content" id="periodicNavTabsContent">
+                    <!-- ==================== TAB 1: ANALYTICS & CHARTS ==================== -->
+                    <div class="tab-pane fade show active" id="pane-periodic-analytics" role="tabpanel" aria-labelledby="pills-periodic-analytics-tab">
+                        <!-- Loading Overlay inside Analytics Pane -->
+                        <div id="periodicAnalyticsLoading" class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
+                                <span class="visually-hidden">Memuat data...</span>
+                            </div>
+                            <div class="fw-bold text-dark mt-2" style="font-size: 13px;">Sedang Mengkalkulasi Data & Menyusun Grafik Lintas Periode...</div>
+                            <div class="text-muted small">Mengagregasi performa klub, tren 5 pilar SAP, dan pencapaian seluruh karyawan.</div>
+                        </div>
+
+                        <!-- Real Analytics Content -->
+                        <div id="periodicAnalyticsBody" style="display: none;">
+                            <!-- Executive KPI Metric Cards Row -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-6 col-md-2">
+                                    <div class="p-2.5 rounded-3 bg-white border text-center shadow-xs">
+                                        <div class="text-muted fw-bold text-uppercase" style="font-size: 10px;">Total Skuad</div>
+                                        <div class="fw-bold fs-5 text-dark" id="statPeriodicSquad">-</div>
+                                        <div class="text-muted" style="font-size: 9.5px;" id="statPeriodicDeptCount">- Klub</div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <div class="p-2.5 rounded-3 bg-white border text-center shadow-xs">
+                                        <div class="text-muted fw-bold text-uppercase" style="font-size: 10px;">Total Target</div>
+                                        <div class="fw-bold fs-5 text-primary" id="statPeriodicTarget">-</div>
+                                        <div class="text-muted" style="font-size: 9.5px;">MTD Akumulatif</div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <div class="p-2.5 rounded-3 bg-white border text-center shadow-xs">
+                                        <div class="text-muted fw-bold text-uppercase" style="font-size: 10px;">Total Realisasi</div>
+                                        <div class="fw-bold fs-5 text-info" id="statPeriodicActual">-</div>
+                                        <div class="text-muted" style="font-size: 9.5px;">Laporan Terkirim</div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <div class="p-2.5 rounded-3 bg-white border text-center shadow-xs">
+                                        <div class="text-muted fw-bold text-uppercase" style="font-size: 10px;">Rata-rata Capaian</div>
+                                        <div class="fw-bold fs-5 text-success" id="statPeriodicCapaian">-</div>
+                                        <div class="text-muted" style="font-size: 9.5px;">Target vs Realisasi</div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <div class="p-2.5 rounded-3 bg-white border text-center shadow-xs">
+                                        <div class="text-muted fw-bold text-uppercase" style="font-size: 10px;">Close Rate AP</div>
+                                        <div class="fw-bold fs-5 text-teal" id="statPeriodicCloseRate" style="color: #0d9488;">-</div>
+                                        <div class="text-muted" style="font-size: 9.5px;">Tindak Lanjut Action Plan</div>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-2">
+                                    <div class="p-2.5 rounded-3 bg-white border text-center shadow-xs">
+                                        <div class="text-muted fw-bold text-uppercase" style="font-size: 10px;">Tuntas 100%</div>
+                                        <div class="fw-bold fs-5 text-warning" id="statPeriodicPerfect">-</div>
+                                        <div class="text-muted" style="font-size: 9.5px;">Karyawan Sempurna</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Charts Grid Row 1: Dept Trends & Pillars -->
+                            <div class="row g-3 mb-3">
+                                <!-- Chart 1: Tren Capaian (%) Antar Departemen -->
+                                <div class="col-lg-7">
+                                    <div class="card border-0 shadow-xs rounded-3 p-3 bg-white h-100" style="border: 1px solid #e2e8f0 !important;">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <div>
+                                                <div class="fw-bold text-dark" style="font-size: 13px;">
+                                                    <i class="bi bi-line-chart me-1 text-primary"></i> Tren Capaian (%) Antar Departemen per Bulan
+                                                </div>
+                                                <div class="text-muted" style="font-size: 10.5px;">Fluktuasi kepatuhan persentase target SAP lintas bulan</div>
+                                            </div>
+                                            <span class="badge bg-light text-dark border small px-2 py-1">Garis Ref 80% & 100%</span>
+                                        </div>
+                                        <div style="position: relative; height: 280px; width: 100%;">
+                                            <canvas id="chartPeriodicDeptTrends"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Chart 2: Komposisi 5 Pilar SAP per Bulan -->
+                                <div class="col-lg-5">
+                                    <div class="card border-0 shadow-xs rounded-3 p-3 bg-white h-100" style="border: 1px solid #e2e8f0 !important;">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <div>
+                                                <div class="fw-bold text-dark" style="font-size: 13px;">
+                                                    <i class="bi bi-bar-chart-steps me-1 text-primary"></i> Volume 5 Pilar SAP per Bulan
+                                                </div>
+                                                <div class="text-muted" style="font-size: 10.5px;">Hazard, Inspeksi, ST, Observasi, Coaching, P5M</div>
+                                            </div>
+                                            <span class="badge bg-light text-dark border small px-2 py-1">Stacked Bar</span>
+                                        </div>
+                                        <div style="position: relative; height: 280px; width: 100%;">
+                                            <canvas id="chartPeriodicPillars"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Charts Grid Row 2: Top Employees & Per-Employee Analysis -->
+                            <div class="row g-3 mb-3">
+                                <!-- Chart 3: Top 10 Karyawan Berkinerja Terbaik -->
+                                <div class="col-lg-6">
+                                    <div class="card border-0 shadow-xs rounded-3 p-3 bg-white h-100" style="border: 1px solid #e2e8f0 !important;">
+                                        <div class="d-flex align-items-center justify-content-between mb-2">
+                                            <div>
+                                                <div class="fw-bold text-dark" style="font-size: 13px;">
+                                                    <i class="bi bi-trophy-fill me-1 text-warning"></i> Top Karyawan Berkinerja Terbaik Lintas Periode
+                                                </div>
+                                                <div class="text-muted" style="font-size: 10.5px;">Berdasarkan total capaian & realisasi kumulatif</div>
+                                            </div>
+                                            <span class="badge bg-warning bg-opacity-25 text-warning-emphasis border border-warning small px-2 py-1 fw-bold">Top Skuad</span>
+                                        </div>
+                                        <div style="position: relative; height: 300px; width: 100%;">
+                                            <canvas id="chartPeriodicTopEmployees"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Chart 4: Analisis Kinerja Per Karyawan (Interaktif) -->
+                                <div class="col-lg-6">
+                                    <div class="card border-0 shadow-xs rounded-3 p-3 bg-white h-100" style="border: 1.5px solid #93c5fd !important; background: linear-gradient(180deg, #ffffff 0%, #f0f7ff 100%);">
+                                        <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                            <div>
+                                                <div class="fw-bold text-primary" style="font-size: 13px;">
+                                                    <i class="bi bi-person-check-fill me-1"></i> Grafik Kinerja Per Karyawan (Analisis Individu)
+                                                </div>
+                                                <div class="text-muted" style="font-size: 10.5px;">Pilih karyawan dari daftar untuk melihat tren capaian bulanan secara spesifik</div>
+                                            </div>
+                                            <div id="periodicSelectedEmpPill" class="badge bg-primary text-white px-2 py-1" style="font-size: 11px;">
+                                                -
+                                            </div>
+                                        </div>
+
+                                        <!-- Employee Dropdown Selector -->
+                                        <div class="mb-2">
+                                            <select id="periodicEmployeeSelect" class="form-select form-select-sm fw-bold border-2" style="font-size: 12px; border-radius: 8px;" onchange="renderPeriodicSingleEmployeeChart();">
+                                                <option value="">-- Pilih Karyawan --</option>
+                                            </select>
+                                        </div>
+
+                                        <div style="position: relative; height: 250px; width: 100%;">
+                                            <canvas id="chartPeriodicSingleEmployee"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Charts Grid Row 3: Close Rate Trends -->
+                            <div class="card border-0 shadow-xs rounded-3 p-3 bg-white" style="border: 1px solid #e2e8f0 !important;">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 13px;">
+                                            <i class="bi bi-check-circle-fill me-1 text-success"></i> Tren Close Rate Action Plan (%) per Departemen Lintas Bulan
+                                        </div>
+                                        <div class="text-muted" style="font-size: 10.5px;">Persentase ketuntasan tindak lanjut temuan bahaya & inspeksi K3</div>
+                                    </div>
+                                    <span class="badge bg-success bg-opacity-25 text-success border border-success small px-2 py-1">Tindak Lanjut K3</span>
+                                </div>
+                                <div style="position: relative; height: 210px; width: 100%;">
+                                    <canvas id="chartPeriodicCloseRate"></canvas>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="row g-2">
-                        <div class="col-md-4">
-                            <div class="p-2 rounded-2 border" style="background: #f8fafc; font-size: 11px;">
-                                <div class="fw-bold text-primary mb-1"><i class="bi bi-table me-1"></i>Sheet 1: Rekapitulasi Departemen</div>
-                                <div class="text-muted" style="line-height: 1.35;">Akumulasi target, realisasi, close rate AP, rata-rata capaian, dan matriks tren capaian per bulan.</div>
+
+                    <!-- ==================== TAB 2: EXCEL DOWNLOAD ==================== -->
+                    <div class="tab-pane fade" id="pane-periodic-download" role="tabpanel" aria-labelledby="pills-periodic-download-tab">
+                        <!-- Highlights of what the Excel workbook contains -->
+                        <div class="card border-0 shadow-xs p-3.5 mb-3 bg-white" style="border: 1px solid #cbd5e1 !important; border-radius: 12px;">
+                            <div class="d-flex align-items-center justify-content-between mb-2.5 flex-wrap gap-2">
+                                <div class="fw-bold text-dark" style="font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                    <i class="bi bi-file-earmark-check-fill text-success me-1"></i> Struktur Lembar Kerja Excel (.xlsx) Yang Akan Diunduh:
+                                </div>
+                                <span class="badge bg-primary text-white px-2.5 py-1 rounded-pill" style="font-size: 11px;">
+                                    Format Eksekutif Terstandarisasi
+                                </span>
+                            </div>
+                            
+                            <div class="row g-2.5">
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="p-2.5 rounded-3 border h-100" style="background: #f8fafc; font-size: 11px; border-color: #cbd5e1 !important;">
+                                        <div class="fw-bold text-primary mb-1.5"><i class="bi bi-table me-1"></i>Sheet 1: Ikhtisar Eksekutif</div>
+                                        <div class="text-muted" style="line-height: 1.35;">
+                                            Executive KPI Cards, Klasemen Akumulasi Klub, Matriks Tren Capaian (%) Bulan ke Bulan, Matriks Close Rate AP, dan Rekap 5 Pilar SAP.
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="p-2.5 rounded-3 border h-100" style="background: #f8fafc; font-size: 11px; border-color: #cbd5e1 !important;">
+                                        <div class="fw-bold text-success mb-1.5"><i class="bi bi-people-fill me-1"></i>Sheet 2: Kumulatif Karyawan</div>
+                                        <div class="text-muted" style="line-height: 1.35;">
+                                            Peringkat dan akumulasi lengkap seluruh skuad karyawan (Target Kumulatif, Realisasi Kumulatif, Capaian %, Close Rate, HZ, IP, ST, OB, CC, P5M, Status).
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="p-2.5 rounded-3 border h-100" style="background: #eff6ff; font-size: 11px; border-color: #93c5fd !important;">
+                                        <div class="fw-bold text-primary mb-1.5"><i class="bi bi-folder2-open me-1"></i>Sheet 3+: Lembar Terpisah Tiap Bulan</div>
+                                        <div class="text-dark" style="line-height: 1.35;">
+                                            <strong class="text-primary">Opsi Aktif:</strong> Disediakan sheet tersendiri untuk setiap bulan (e.g. <em>Januari 2026, Februari 2026</em>, dll) lengkap dengan klasemen departemen dan seluruh karyawan bulan tersebut!
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="p-2.5 rounded-3 border h-100" style="background: #f8fafc; font-size: 11px; border-color: #cbd5e1 !important;">
+                                        <div class="fw-bold text-secondary mb-1.5"><i class="bi bi-database me-1"></i>Sheet Terakhir: Matriks Audit</div>
+                                        <div class="text-muted" style="line-height: 1.35;">
+                                            Log bulanan individual terstandarisasi untuk kebutuhan audit K3, Pivot Table, dan monitoring kepatuhan berjangka.
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="p-2 rounded-2 border" style="background: #f8fafc; font-size: 11px;">
-                                <div class="fw-bold text-success mb-1"><i class="bi bi-person-badge-fill me-1"></i>Sheet 2: Pencapaian Karyawan</div>
-                                <div class="text-muted" style="line-height: 1.35;">Rincian pencapaian tiap karyawan per departemen (Target, Realisasi HZ, IP, ST, OB, CC, P5M, Capaian %, Status).</div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="p-2 rounded-2 border" style="background: #f8fafc; font-size: 11px;">
-                                <div class="fw-bold text-secondary mb-1"><i class="bi bi-calendar3 me-1"></i>Sheet 3: Matriks Bulanan Karyawan</div>
-                                <div class="text-muted" style="line-height: 1.35;">Log bulanan individual per karyawan untuk keperluan audit K3, Pivot Table, dan monitoring konsistensi performa.</div>
-                            </div>
+
+                        <!-- Big Download Action Card -->
+                        <div class="p-3.5 rounded-3 border bg-white text-center shadow-xs" style="border: 1.5px dashed #3b82f6 !important;">
+                            <i class="bi bi-cloud-arrow-down-fill text-primary mb-2 d-block" style="font-size: 38px;"></i>
+                            <h6 class="fw-bold text-dark mb-1">Siap Mengunduh Laporan Excel SAP Lintas Periode</h6>
+                            <p class="text-muted small mb-3" style="max-width: 650px; margin: 0 auto;">
+                                File Excel akan digenerate secara langsung dengan format korporat profesional, pemisahan sheet per bulan, frozen header rows, zebra striping, dan formula audit kepatuhan resmi.
+                            </p>
+                            <button type="button" class="btn btn-primary fw-bold px-4 py-2.5 shadow-sm" onclick="downloadPeriodicExcel(this);" style="border-radius: 10px; font-size: 13.5px; background: #1d4ed8; border: 1px solid #1e40af;">
+                                <i class="bi bi-file-earmark-excel-fill me-1.5"></i> Unduh File Excel (.xlsx) Sekarang
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="modal-footer bg-light px-4 py-3 d-flex justify-content-between align-items-center border-top">
+            <div class="modal-footer bg-light px-4 py-2.5 d-flex justify-content-between align-items-center border-top">
                 <span class="text-muted small">
-                    <i class="bi bi-shield-check text-success me-1"></i>Data dihitung secara aman sesuai formula resmi SAP & Roster Onsite.
+                    <i class="bi bi-shield-check text-success me-1"></i>Formula Resmi SAP: Capaian (35%) + Close Rate (30%) + AI Quality (25%) + Beban Target (10%).
                 </span>
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-secondary btn-sm fw-bold px-3 py-2" data-bs-dismiss="modal" style="border-radius: 8px; font-size: 12px;">
-                        Batal
+                    <button type="button" class="btn btn-secondary btn-sm fw-bold px-3 py-1.5" data-bs-dismiss="modal" style="border-radius: 8px; font-size: 12px;">
+                        Tutup
                     </button>
-                    <button type="button" class="btn btn-primary btn-sm fw-bold px-4 py-2 shadow-sm" onclick="downloadPeriodicExcel(this);" style="border-radius: 8px; font-size: 12.5px; background: #1d4ed8; border: 1px solid #1e40af;">
+                    <button type="button" class="btn btn-primary btn-sm fw-bold px-3.5 py-1.5 shadow-sm" onclick="downloadPeriodicExcel(this);" style="border-radius: 8px; font-size: 12px; background: #1d4ed8; border: 1px solid #1e40af;">
                         <i class="bi bi-file-earmark-arrow-down-fill me-1"></i> Unduh File Excel (.xlsx)
                     </button>
                 </div>
@@ -5693,43 +5931,42 @@
         );
     }
 
-    function downloadPeriodicExcel(clickedBtn) {
-        const companyId = document.getElementById('exportPeriodicCompany') ? document.getElementById('exportPeriodicCompany').value : '@selectedCompanyId';
-        const deptSelect = document.getElementById('exportPeriodicDept');
-        const departmentName = deptSelect ? deptSelect.value : '';
-        const startMonth = document.getElementById('exportPeriodicStartMonth') ? document.getElementById('exportPeriodicStartMonth').value : '1';
-        const startYear = document.getElementById('exportPeriodicStartYear') ? document.getElementById('exportPeriodicStartYear').value : '@selectedYear';
-        const endMonth = document.getElementById('exportPeriodicEndMonth') ? document.getElementById('exportPeriodicEndMonth').value : '@selectedMonth';
-        const endYear = document.getElementById('exportPeriodicEndYear') ? document.getElementById('exportPeriodicEndYear').value : '@selectedYear';
-        const targetFilterRadio = document.querySelector('input[name="exportPeriodicTargetFilter"]:checked');
-        const targetFilter = targetFilterRadio ? targetFilterRadio.value : 'target';
+    // =========================================================================
+    // PERIODIC REPORT & ANALYTICS JAVASCRIPT CONTROLLER (EXECUTIVE EDITION)
+    // =========================================================================
+    let periodicDeptTrendsChart = null;
+    let periodicPillarsChart = null;
+    let periodicTopEmpsChart = null;
+    let periodicSingleEmpChart = null;
+    let periodicCloseRateChart = null;
+    let periodicEmployeeDataList = [];
+    let periodicMonthsLabels = [];
 
-        let url = '@Url.Action("ExportPeriodicDeptReportToExcel", "Performance")?' +
-            'companyId=' + encodeURIComponent(companyId) +
-            '&departmentName=' + encodeURIComponent(departmentName) +
-            '&startYear=' + encodeURIComponent(startYear) +
-            '&startMonth=' + encodeURIComponent(startMonth) +
-            '&endYear=' + encodeURIComponent(endYear) +
-            '&endMonth=' + encodeURIComponent(endMonth) +
-            '&targetFilter=' + encodeURIComponent(targetFilter);
-
-        if ('@ViewBag.ParentId') {
-            url += '&parentId=' + '@ViewBag.ParentId';
-        }
-
-        // Dismiss modal first
+    function openPeriodicModal(targetTab) {
         const modalEl = document.getElementById('exportPeriodicSapModal');
-        if (modalEl && typeof bootstrap !== 'undefined') {
-            const modalInstance = bootstrap.Modal.getInstance(modalEl);
-            if (modalInstance) modalInstance.hide();
+        if (!modalEl) return;
+
+        // Switch to chosen tab
+        if (targetTab === 'analytics') {
+            const tabBtn = document.getElementById('pills-periodic-analytics-tab');
+            if (tabBtn && typeof bootstrap !== 'undefined') {
+                bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+            }
+        } else if (targetTab === 'download') {
+            const tabBtn = document.getElementById('pills-periodic-download-tab');
+            if (tabBtn && typeof bootstrap !== 'undefined') {
+                bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+            }
         }
 
-        executeExcelDownload(
-            url,
-            "Menyiapkan Laporan SAP Rentang Periode...",
-            "Sedang mengagregasi data kinerja departemen & pencapaian seluruh karyawan lintas bulan ke file Excel (.xlsx)...",
-            clickedBtn
-        );
+        // Show Modal
+        if (typeof bootstrap !== 'undefined') {
+            const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            bsModal.show();
+        }
+
+        // Trigger date badge update and load analytics
+        onPeriodicFilterChange();
     }
 
     function setPeriodicPreset(type) {
@@ -5753,18 +5990,559 @@
             eMonth.value = curMonth;
             eYear.value = curYear;
         } else if (type === 'quarter') {
-            let qStartMonth = Math.max(1, curMonth - 2);
+            let qStartMonth = curMonth - 2;
+            let qStartYear = curYear;
+            if (qStartMonth < 1) {
+                qStartMonth += 12;
+                qStartYear -= 1;
+            }
             sMonth.value = qStartMonth;
-            sYear.value = curYear;
+            sYear.value = qStartYear;
             eMonth.value = curMonth;
             eYear.value = curYear;
         } else if (type === 'semester') {
-            let semStartMonth = Math.max(1, curMonth - 5);
+            let semStartMonth = curMonth - 5;
+            let semStartYear = curYear;
+            if (semStartMonth < 1) {
+                semStartMonth += 12;
+                semStartYear -= 1;
+            }
             sMonth.value = semStartMonth;
-            sYear.value = curYear;
+            sYear.value = semStartYear;
             eMonth.value = curMonth;
             eYear.value = curYear;
         }
+
+        onPeriodicFilterChange();
+    }
+
+    let periodicFilterDebounceTimer = null;
+    function onPeriodicFilterChange() {
+        const sMonth = parseInt(document.getElementById('exportPeriodicStartMonth')?.value || '1');
+        const sYear = parseInt(document.getElementById('exportPeriodicStartYear')?.value || '@selectedYear');
+        const eMonth = parseInt(document.getElementById('exportPeriodicEndMonth')?.value || '@selectedMonth');
+        const eYear = parseInt(document.getElementById('exportPeriodicEndYear')?.value || '@selectedYear');
+
+        const monthNames = ["", "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+        
+        let startVal = sYear * 12 + sMonth;
+        let endVal = eYear * 12 + eMonth;
+        let count = (endVal - startVal) + 1;
+        
+        const badge = document.getElementById('periodicRangeSummaryBadge');
+        if (badge) {
+            if (count < 1) {
+                badge.className = "badge bg-danger text-white ms-2 px-2 py-0.5 rounded-pill";
+                badge.textContent = "Rentang Waktu Tidak Valid (Awal > Akhir)";
+            } else {
+                badge.className = "badge bg-primary text-white ms-2 px-2 py-0.5 rounded-pill";
+                badge.textContent = count + " Bulan (" + monthNames[sMonth] + " " + sYear + " - " + monthNames[eMonth] + " " + eYear + ")";
+            }
+        }
+
+        if (count < 1) return;
+
+        // Debounce fetching data to prevent multiple rapid requests
+        clearTimeout(periodicFilterDebounceTimer);
+        periodicFilterDebounceTimer = setTimeout(loadPeriodicAnalytics, 300);
+    }
+
+    async function loadPeriodicAnalytics() {
+        const loadingEl = document.getElementById('periodicAnalyticsLoading');
+        const bodyEl = document.getElementById('periodicAnalyticsBody');
+
+        if (loadingEl) loadingEl.style.display = 'block';
+        if (bodyEl) bodyEl.style.display = 'none';
+
+        const companyId = document.getElementById('exportPeriodicCompany') ? document.getElementById('exportPeriodicCompany').value : '@selectedCompanyId';
+        const deptSelect = document.getElementById('exportPeriodicDept');
+        const departmentName = deptSelect ? deptSelect.value : '';
+        const startMonth = document.getElementById('exportPeriodicStartMonth') ? document.getElementById('exportPeriodicStartMonth').value : '1';
+        const startYear = document.getElementById('exportPeriodicStartYear') ? document.getElementById('exportPeriodicStartYear').value : '@selectedYear';
+        const endMonth = document.getElementById('exportPeriodicEndMonth') ? document.getElementById('exportPeriodicEndMonth').value : '@selectedMonth';
+        const endYear = document.getElementById('exportPeriodicEndYear') ? document.getElementById('exportPeriodicEndYear').value : '@selectedYear';
+        const targetFilterRadio = document.querySelector('input[name="exportPeriodicTargetFilter"]:checked');
+        const targetFilter = targetFilterRadio ? targetFilterRadio.value : 'target';
+
+        const params = new URLSearchParams({
+            companyId: companyId,
+            departmentName: departmentName,
+            startYear: startYear,
+            startMonth: startMonth,
+            endYear: endYear,
+            endMonth: endMonth,
+            targetFilter: targetFilter
+        });
+        if ('@ViewBag.ParentId') {
+            params.append('parentId', '@ViewBag.ParentId');
+        }
+
+        try {
+            const resp = await fetch('@Url.Action("GetPeriodicAnalyticsData", "Performance")?' + params.toString());
+            if (!resp.ok) throw new Error("HTTP " + resp.status);
+            const data = await resp.json();
+
+            if (!data.success) {
+                throw new Error("Gagal memuat analitik");
+            }
+
+            renderPeriodicAnalyticsUI(data);
+
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (bodyEl) bodyEl.style.display = 'block';
+
+        } catch (err) {
+            console.error("loadPeriodicAnalytics error:", err);
+            if (loadingEl) {
+                loadingEl.innerHTML = `
+                    <div class="text-danger py-4">
+                        <i class="bi bi-exclamation-triangle-fill fs-2 mb-2"></i>
+                        <div class="fw-bold">Gagal memuat grafik analitik</div>
+                        <div class="small text-muted">${err.message || "Silakan periksa koneksi atau coba sesaat lagi"}</div>
+                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="loadPeriodicAnalytics();">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Coba Lagi
+                        </button>
+                    </div>`;
+            }
+        }
+    }
+
+    function renderPeriodicAnalyticsUI(data) {
+        periodicMonthsLabels = data.months || [];
+        periodicEmployeeDataList = data.employeeList || [];
+
+        // 1. Executive Summary KPI Badges
+        const s = data.summary || {};
+        const elSquad = document.getElementById('statPeriodicSquad');
+        if (elSquad) elSquad.textContent = (s.totalSquad || 0).toLocaleString();
+        const elDeptCount = document.getElementById('statPeriodicDeptCount');
+        if (elDeptCount) elDeptCount.textContent = (s.departmentCount || 0) + ' Klub (' + (s.monthsCount || 1) + ' Bln)';
+        
+        const elTarget = document.getElementById('statPeriodicTarget');
+        if (elTarget) elTarget.textContent = (s.totalTarget || 0).toLocaleString();
+        const elActual = document.getElementById('statPeriodicActual');
+        if (elActual) elActual.textContent = (s.totalActual || 0).toLocaleString();
+
+        const elCapaian = document.getElementById('statPeriodicCapaian');
+        if (elCapaian) {
+            elCapaian.textContent = (s.avgCapaian || 0).toFixed(1) + '%';
+            elCapaian.className = 'fw-bold fs-5 ' + ((s.avgCapaian || 0) >= 80 ? 'text-success' : ((s.avgCapaian || 0) >= 50 ? 'text-warning' : 'text-danger'));
+        }
+
+        const elCloseRate = document.getElementById('statPeriodicCloseRate');
+        if (elCloseRate) elCloseRate.textContent = (s.avgCloseRate || 0).toFixed(1) + '%';
+
+        const elPerfect = document.getElementById('statPeriodicPerfect');
+        if (elPerfect) elPerfect.textContent = (s.perfectEmployees || 0).toLocaleString() + ' Org';
+
+        // 2. Chart 1: Department Compliance Trends Line Chart
+        renderPeriodicDeptTrendsChart(data.months, data.deptTrends);
+
+        // 3. Chart 2: 5 Pillars Stacked Bar Chart
+        renderPeriodicPillarsChart(data.months, data.pillarTrends);
+
+        // 4. Chart 3: Top 10 Employees Horizontal Bar Chart
+        renderPeriodicTopEmployeesChart(data.topEmployees);
+
+        // 5. Populate Employee Dropdown & Render Single Employee Chart
+        populatePeriodicEmployeeDropdown(data.employeeList);
+
+        // 6. Chart 5: Action Plan Close Rate Trend Chart
+        renderPeriodicCloseRateChart(data.months, data.deptTrends);
+    }
+
+    // Chart 1: Tren Capaian (%) Antar Departemen
+    function renderPeriodicDeptTrendsChart(months, deptTrends) {
+        const canvas = document.getElementById('chartPeriodicDeptTrends');
+        if (!canvas) return;
+        if (periodicDeptTrendsChart) {
+            periodicDeptTrendsChart.destroy();
+            periodicDeptTrendsChart = null;
+        }
+
+        const datasets = (deptTrends || []).map(d => ({
+            label: d.dept,
+            data: d.monthlyCapaian,
+            borderColor: d.color || '#3b82f6',
+            backgroundColor: d.color || '#3b82f6',
+            fill: false,
+            tension: 0.25,
+            borderWidth: 2.2,
+            pointRadius: 3.5,
+            pointHoverRadius: 5.5
+        }));
+
+        periodicDeptTrendsChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 110,
+                        ticks: {
+                            callback: function(value) { return value + '%'; },
+                            font: { size: 10 }
+                        },
+                        grid: { color: 'rgba(226, 232, 240, 0.7)' }
+                    },
+                    x: {
+                        ticks: { font: { size: 10 } },
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, font: { size: 10 }, usePointStyle: true }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) : 0) + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Chart 2: Komposisi 5 Pilar SAP per Bulan
+    function renderPeriodicPillarsChart(months, pillarTrends) {
+        const canvas = document.getElementById('chartPeriodicPillars');
+        if (!canvas) return;
+        if (periodicPillarsChart) {
+            periodicPillarsChart.destroy();
+            periodicPillarsChart = null;
+        }
+
+        const hazards = [];
+        const inspeksis = [];
+        const safetyTalks = [];
+        const observasis = [];
+        const coachings = [];
+        const p5ms = [];
+
+        (pillarTrends || []).forEach(pt => {
+            hazards.push(pt.hazard || 0);
+            inspeksis.push(pt.inspeksi || 0);
+            safetyTalks.push(pt.safetyTalk || 0);
+            observasis.push(pt.observasi || 0);
+            coachings.push(pt.coaching || 0);
+            p5ms.push(pt.p5m || 0);
+        });
+
+        periodicPillarsChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [
+                    { label: 'Hazard', data: hazards, backgroundColor: '#ef4444', stack: 'sap' },
+                    { label: 'Inspeksi', data: inspeksis, backgroundColor: '#3b82f6', stack: 'sap' },
+                    { label: 'Safety Talk', data: safetyTalks, backgroundColor: '#10b981', stack: 'sap' },
+                    { label: 'Observasi', data: observasis, backgroundColor: '#f59e0b', stack: 'sap' },
+                    { label: 'Coaching', data: coachings, backgroundColor: '#8b5cf6', stack: 'sap' },
+                    { label: 'P5M', data: p5ms, backgroundColor: '#06b6d4', stack: 'sap' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true, ticks: { font: { size: 10 } }, grid: { display: false } },
+                    y: { stacked: true, beginAtZero: true, ticks: { font: { size: 10 } }, grid: { color: 'rgba(226, 232, 240, 0.7)' } }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, font: { size: 10 }, usePointStyle: true }
+                    }
+                }
+            }
+        });
+    }
+
+    // Chart 3: Top Karyawan Berkinerja Terbaik
+    function renderPeriodicTopEmployeesChart(topEmployees) {
+        const canvas = document.getElementById('chartPeriodicTopEmployees');
+        if (!canvas) return;
+        if (periodicTopEmpsChart) {
+            periodicTopEmpsChart.destroy();
+            periodicTopEmpsChart = null;
+        }
+
+        const emps = (topEmployees || []).slice(0, 10).reverse();
+        const labels = emps.map(e => (e.name.length > 18 ? e.name.substring(0, 16) + '..' : e.name));
+        const actuals = emps.map(e => e.actual);
+        const capaians = emps.map(e => e.capaian);
+
+        periodicTopEmpsChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Realisasi Tugas SAP',
+                    data: actuals,
+                    backgroundColor: '#1d4ed8',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { beginAtZero: true, ticks: { font: { size: 10 } }, grid: { color: 'rgba(226, 232, 240, 0.7)' } },
+                    y: { ticks: { font: { size: 10, weight: 'bold' } }, grid: { display: false } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(ctx) {
+                                const emp = emps[ctx.dataIndex];
+                                return 'Dept: ' + (emp ? emp.dept : '-') + '\nCapaian: ' + (emp ? emp.capaian.toFixed(1) : 0) + '% (Target: ' + (emp ? emp.target : 0) + ')';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Populate Employee Selector
+    function populatePeriodicEmployeeDropdown(employees) {
+        const sel = document.getElementById('periodicEmployeeSelect');
+        if (!sel) return;
+
+        sel.innerHTML = '<option value="">-- Pilih Karyawan dari Daftar (' + (employees ? employees.length : 0) + ' Skuad) --</option>';
+
+        (employees || []).forEach(emp => {
+            const opt = document.createElement('option');
+            opt.value = emp.id;
+            opt.textContent = emp.name + ' - ' + emp.dept + ' (Avg: ' + (emp.avgCapaian || 0).toFixed(0) + '%)';
+            sel.appendChild(opt);
+        });
+
+        // Select first employee automatically if available
+        if (employees && employees.length > 0) {
+            sel.value = employees[0].id;
+        }
+
+        renderPeriodicSingleEmployeeChart();
+    }
+
+    // Chart 4: Grafik Kinerja Per Karyawan (Analisis Individu)
+    function renderPeriodicSingleEmployeeChart() {
+        const sel = document.getElementById('periodicEmployeeSelect');
+        const empId = sel ? parseInt(sel.value) : 0;
+        const pill = document.getElementById('periodicSelectedEmpPill');
+
+        const emp = periodicEmployeeDataList.find(e => e.id === empId);
+
+        if (!emp) {
+            if (pill) pill.textContent = 'Pilih karyawan di atas';
+            if (periodicSingleEmpChart) {
+                periodicSingleEmpChart.destroy();
+                periodicSingleEmpChart = null;
+            }
+            return;
+        }
+
+        if (pill) {
+            pill.innerHTML = `<strong>${emp.name}</strong> • ${emp.dept} • Total: ${emp.totalActual}/${emp.totalTarget} (<span class="fw-bold">${emp.avgCapaian.toFixed(1)}%</span>)`;
+        }
+
+        const canvas = document.getElementById('chartPeriodicSingleEmployee');
+        if (!canvas) return;
+        if (periodicSingleEmpChart) {
+            periodicSingleEmpChart.destroy();
+            periodicSingleEmpChart = null;
+        }
+
+        const monthly = emp.monthly || [];
+        const labels = monthly.map(m => m.month);
+        const targets = monthly.map(m => m.target);
+        const actuals = monthly.map(m => m.actual);
+        const capaians = monthly.map(m => m.capaian);
+
+        periodicSingleEmpChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Capaian (%)',
+                        data: capaians,
+                        borderColor: '#10b981',
+                        backgroundColor: '#10b981',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        yAxisID: 'y1',
+                        tension: 0.2
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Target',
+                        data: targets,
+                        backgroundColor: '#cbd5e1',
+                        borderRadius: 4,
+                        yAxisID: 'y'
+                    },
+                    {
+                        type: 'bar',
+                        label: 'Realisasi',
+                        data: actuals,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4,
+                        yAxisID: 'y'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { font: { size: 10 } },
+                        title: { display: true, text: 'Jumlah Tugas', font: { size: 10 } },
+                        grid: { color: 'rgba(226, 232, 240, 0.7)' }
+                    },
+                    y1: {
+                        position: 'right',
+                        beginAtZero: true,
+                        max: 120,
+                        ticks: {
+                            callback: function(v) { return v + '%'; },
+                            font: { size: 10 }
+                        },
+                        title: { display: true, text: 'Kepatuhan (%)', font: { size: 10 } },
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, font: { size: 10 }, usePointStyle: true }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            afterBody: function(items) {
+                                const idx = items[0].dataIndex;
+                                const m = monthly[idx];
+                                if (!m) return '';
+                                return 'Rincian: Hzd: ' + m.hz + ' | Insp: ' + m.ins + ' | ST: ' + m.st + ' | Obs: ' + m.obs + ' | Coach: ' + m.c + ' | P5M: ' + m.p5m;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Chart 5: Action Plan Close Rate Trend Chart
+    function renderPeriodicCloseRateChart(months, deptTrends) {
+        const canvas = document.getElementById('chartPeriodicCloseRate');
+        if (!canvas) return;
+        if (periodicCloseRateChart) {
+            periodicCloseRateChart.destroy();
+            periodicCloseRateChart = null;
+        }
+
+        const datasets = (deptTrends || []).map(d => ({
+            label: d.dept,
+            data: d.monthlyCloseRate,
+            borderColor: d.color || '#10b981',
+            backgroundColor: d.color || '#10b981',
+            fill: false,
+            tension: 0.25,
+            borderWidth: 2,
+            pointRadius: 3
+        }));
+
+        periodicCloseRateChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 105,
+                        ticks: {
+                            callback: function(v) { return v + '%'; },
+                            font: { size: 10 }
+                        },
+                        grid: { color: 'rgba(226, 232, 240, 0.7)' }
+                    },
+                    x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, font: { size: 10 }, usePointStyle: true }
+                    }
+                }
+            }
+        });
+    }
+
+    function downloadPeriodicExcel(clickedBtn) {
+        const companyId = document.getElementById('exportPeriodicCompany') ? document.getElementById('exportPeriodicCompany').value : '@selectedCompanyId';
+        const deptSelect = document.getElementById('exportPeriodicDept');
+        const departmentName = deptSelect ? deptSelect.value : '';
+        const startMonth = document.getElementById('exportPeriodicStartMonth') ? document.getElementById('exportPeriodicStartMonth').value : '1';
+        const startYear = document.getElementById('exportPeriodicStartYear') ? document.getElementById('exportPeriodicStartYear').value : '@selectedYear';
+        const endMonth = document.getElementById('exportPeriodicEndMonth') ? document.getElementById('exportPeriodicEndMonth').value : '@selectedMonth';
+        const endYear = document.getElementById('exportPeriodicEndYear') ? document.getElementById('exportPeriodicEndYear').value : '@selectedYear';
+        const targetFilterRadio = document.querySelector('input[name="exportPeriodicTargetFilter"]:checked');
+        const targetFilter = targetFilterRadio ? targetFilterRadio.value : 'target';
+        const splitMonthly = document.getElementById('exportPeriodicSplitMonthly') ? document.getElementById('exportPeriodicSplitMonthly').checked : true;
+
+        let url = '@Url.Action("ExportPeriodicDeptReportToExcel", "Performance")?' +
+            'companyId=' + encodeURIComponent(companyId) +
+            '&departmentName=' + encodeURIComponent(departmentName) +
+            '&startYear=' + encodeURIComponent(startYear) +
+            '&startMonth=' + encodeURIComponent(startMonth) +
+            '&endYear=' + encodeURIComponent(endYear) +
+            '&endMonth=' + encodeURIComponent(endMonth) +
+            '&targetFilter=' + encodeURIComponent(targetFilter) +
+            '&splitMonthlySheets=' + encodeURIComponent(splitMonthly);
+
+        if ('@ViewBag.ParentId') {
+            url += '&parentId=' + '@ViewBag.ParentId';
+        }
+
+        // Dismiss modal first
+        const modalEl = document.getElementById('exportPeriodicSapModal');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+        }
+
+        executeExcelDownload(
+            url,
+            "Menyiapkan Laporan SAP Rentang Periode...",
+            "Sedang mengagregasi data kinerja departemen & pencapaian seluruh karyawan lintas bulan ke file Excel (.xlsx)...",
+            clickedBtn
+        );
     }
 
     async function executeExcelDownload(url, title, desc, clickedBtn) {

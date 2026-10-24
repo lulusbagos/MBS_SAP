@@ -5634,7 +5634,7 @@ namespace MBS_SAP.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> ExportPeriodicDeptReportToExcel(
+        public async Task<IActionResult> GetPeriodicAnalyticsData(
             int? companyId = null,
             string? departmentName = null,
             int? startYear = null,
@@ -5643,6 +5643,399 @@ namespace MBS_SAP.Controllers
             int? endMonth = null,
             string targetFilter = "target",
             int? parentId = null)
+        {
+            await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
+
+            var today = DateTime.Today;
+            int sYear = startYear ?? today.Year;
+            int sMonth = startMonth ?? 1;
+            int eYear = endYear ?? today.Year;
+            int eMonth = endMonth ?? today.Month;
+
+            sMonth = Math.Clamp(sMonth, 1, 12);
+            eMonth = Math.Clamp(eMonth, 1, 12);
+
+            var startDate = new DateTime(sYear, sMonth, 1);
+            var endDate = new DateTime(eYear, eMonth, 1);
+            if (startDate > endDate)
+            {
+                var temp = startDate;
+                startDate = endDate;
+                endDate = temp;
+                sYear = startDate.Year;
+                sMonth = startDate.Month;
+                eYear = endDate.Year;
+                eMonth = endDate.Month;
+            }
+
+            int totalMonthsSpan = ((eYear - sYear) * 12) + (eMonth - sMonth) + 1;
+            if (totalMonthsSpan > 24)
+            {
+                endDate = startDate.AddMonths(23);
+                eYear = endDate.Year;
+                eMonth = endDate.Month;
+            }
+
+            string[] monthNames = { "", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember" };
+            string[] shortMonthNames = { "", "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des" };
+
+            var periodMonths = new List<(int Year, int Month, string Label, string ShortLabel)>();
+            var cursor = startDate;
+            while (cursor <= endDate)
+            {
+                periodMonths.Add((cursor.Year, cursor.Month, $"{monthNames[cursor.Month]} {cursor.Year}", $"{shortMonthNames[cursor.Month]} {cursor.Year}"));
+                cursor = cursor.AddMonths(1);
+            }
+
+            string periodTitle = periodMonths.Count == 1 
+                ? periodMonths[0].Label.ToUpper() 
+                : $"{periodMonths.First().Label.ToUpper()} S/D {periodMonths.Last().Label.ToUpper()} ({periodMonths.Count} BULAN)";
+
+            var (resolvedCompanyId, allowedCompanyIds) = await ResolveCompanyScopeAsync();
+            var allCompanies = await _context.Perusahaans.Where(p => p.StatusAktif).OrderBy(p => p.NamaPerusahaan).ToListAsync();
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("Role")?.Value ?? "";
+            var isOwnerRole = string.Equals(roleClaim, "Owner", StringComparison.OrdinalIgnoreCase);
+            var userCompanyStr = User.FindFirst("CompanyId")?.Value;
+            int? loggedInUserCompanyId = int.TryParse(userCompanyStr, out int parsedCid) && parsedCid > 0 ? parsedCid : resolvedCompanyId;
+            var isTopCompany = loggedInUserCompanyId.HasValue && loggedInUserCompanyId.Value == 1;
+            var isAdmin = User.IsInRole("Admin") || isOwnerRole || isTopCompany;
+
+            List<PerusahaanView> allowedCompanies;
+            if (isAdmin)
+            {
+                allowedCompanies = allCompanies.Where(p => !ExcludedCompanies.IsExcluded(p.PerusahaanId)).ToList();
+            }
+            else
+            {
+                allowedCompanies = allCompanies
+                    .Where(p => allowedCompanyIds.Contains(p.PerusahaanId) && !ExcludedCompanies.IsExcluded(p.PerusahaanId))
+                    .ToList();
+            }
+
+            if (allowedCompanies == null || !allowedCompanies.Any())
+            {
+                return Json(new { success = false, message = "Akses perusahaan tidak ditemukan." });
+            }
+
+            int defaultCompanyId = isAdmin ? 1 : (loggedInUserCompanyId ?? (allowedCompanies.Any() ? allowedCompanies.First().PerusahaanId : 1));
+            int selectedCompanyId = companyId ?? defaultCompanyId;
+            if (!isAdmin && !allowedCompanyIds.Contains(selectedCompanyId))
+            {
+                selectedCompanyId = defaultCompanyId;
+            }
+
+            var selectedCompany = allCompanies.FirstOrDefault(c => c.PerusahaanId == selectedCompanyId) ?? allowedCompanies.First();
+
+            int? effectiveParentScope = null;
+            if (!isAdmin)
+            {
+                if (loggedInUserCompanyId.HasValue && selectedCompanyId != loggedInUserCompanyId.Value)
+                {
+                    effectiveParentScope = loggedInUserCompanyId.Value;
+                }
+            }
+            else
+            {
+                if (parentId.HasValue && parentId.Value > 0)
+                {
+                    effectiveParentScope = parentId.Value;
+                }
+            }
+
+            bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
+
+            var monthlyEmployeeLogs = new List<(int Year, int Month, string MonthLabel, string ShortLabel, dynamic Emp)>();
+            var monthlyDeptSummaries = new List<(int Year, int Month, string MonthLabel, string DeptName, int Skuad, int Target, int Actual, double CapaianRate, double CloseRate)>();
+
+            foreach (var (mYear, mMonth, mLabel, mShort) in periodMonths)
+            {
+                var rawEmps = await GetEmployeesComplianceData(selectedCompany.PerusahaanId, null, mYear, mMonth, effectiveParentScope, includeNonTarget: includeNonTarget);
+                
+                List<dynamic> filteredEmps;
+                if (string.Equals(targetFilter, "nontarget_pengawas", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmps = rawEmps.Where(e => (bool)e.isPotentialSupervisorNonSap).ToList();
+                }
+                else if (string.Equals(targetFilter, "nontarget_active", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmps = rawEmps.Where(e => (bool)e.isNonTarget && (bool)e.isActivelyReporting).ToList();
+                }
+                else if (string.Equals(targetFilter, "nontarget", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmps = rawEmps.Where(e => (bool)e.isNonTarget).ToList();
+                }
+                else if (string.Equals(targetFilter, "all", StringComparison.OrdinalIgnoreCase))
+                {
+                    filteredEmps = rawEmps;
+                }
+                else
+                {
+                    filteredEmps = rawEmps.Where(e => (bool)e.isTargetSap).ToList();
+                }
+
+                if (!string.IsNullOrEmpty(departmentName))
+                {
+                    filteredEmps = filteredEmps
+                        .Where(e => string.Equals((string)e.departmentName, departmentName, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+
+                foreach (var emp in filteredEmps)
+                {
+                    monthlyEmployeeLogs.Add((mYear, mMonth, mLabel, mShort, emp));
+                }
+
+                var monthlyActionPlans = await GetMonthlyActionPlansAsync(mYear, mMonth);
+                var deptGroups = filteredEmps.GroupBy(e => (string)e.departmentName ?? "General");
+                foreach (var dg in deptGroups)
+                {
+                    string dName = dg.Key;
+                    int dSkuad = dg.Count();
+                    int dTarget = dg.Sum(e => (int)e.mtdTotalTarget);
+                    int dActual = dg.Sum(e => (int)e.mtdTotalActual);
+                    double dCapaian = dTarget > 0 ? Math.Min(100.0, Math.Round((double)dActual / dTarget * 100.0, 1)) : (dActual > 0 ? 100.0 : 0.0);
+
+                    var deptAssignedAp = monthlyActionPlans.Where(a =>
+                        (!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), dName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), dName.Trim(), StringComparison.OrdinalIgnoreCase))
+                    ).ToList();
+
+                    int dApTotal = deptAssignedAp.Count;
+                    int dApClosed = deptAssignedAp.Count(a => IsClosedStatus(a.Status));
+                    double dCloseRate = dApTotal > 0 ? Math.Round(Math.Min(100.0, (double)dApClosed / dApTotal * 100.0), 1) : 100.0;
+
+                    monthlyDeptSummaries.Add((mYear, mMonth, mLabel, dName, dSkuad, dTarget, dActual, dCapaian, dCloseRate));
+                }
+            }
+
+            // Cumulative Employee summaries
+            var employeeCumulative = monthlyEmployeeLogs
+                .GroupBy(x => (string)x.Emp.nik)
+                .Select(g => {
+                    var first = g.First().Emp;
+                    string nik = g.Key;
+                    string name = (string)first.karyawanName;
+                    string dept = (string)first.departmentName;
+                    string jabatan = (string)first.jabatanName;
+                    bool isTargetSap = (bool)first.isTargetSap;
+                    bool isNonTarget = (bool)first.isNonTarget;
+                    bool isActivelyReporting = g.Any(x => (bool)x.Emp.isActivelyReporting);
+
+                    int totalTargetPeriod = g.Sum(x => (int)x.Emp.mtdTotalTarget);
+                    int totalActualPeriod = g.Sum(x => (int)x.Emp.mtdTotalActual);
+                    int totalActualAll = g.Sum(x => (int)x.Emp.totalActualAll);
+
+                    int hAct = g.Sum(x => (int)x.Emp.hazard.actual);
+                    int iAct = g.Sum(x => (int)x.Emp.inspeksi.actual);
+                    int stAct = g.Sum(x => (int)x.Emp.safetyTalk.actual);
+                    int oAct = g.Sum(x => (int)x.Emp.observasi.actual);
+                    int cAct = g.Sum(x => (int)x.Emp.coaching.actual);
+                    int p5mAct = g.Sum(x => (int)x.Emp.p5m.actual);
+
+                    double avgCapaian = totalTargetPeriod > 0 
+                        ? Math.Min(100.0, Math.Round((double)totalActualPeriod / totalTargetPeriod * 100.0, 1))
+                        : (totalActualAll > 0 ? 100.0 : 0.0);
+
+                    double avgCloseRate = g.Any() ? Math.Round(g.Average(x => (double)x.Emp.closeRate), 1) : 100.0;
+
+                    var monthlyProgression = periodMonths.Select(pm => {
+                        var log = g.FirstOrDefault(x => x.Year == pm.Year && x.Month == pm.Month);
+                        if (log.Emp != null)
+                        {
+                            return new {
+                                monthLabel = pm.ShortLabel,
+                                actual = (int)log.Emp.mtdTotalActual,
+                                target = (int)log.Emp.mtdTotalTarget,
+                                capaian = (double)log.Emp.complianceRate,
+                                closeRate = (double)log.Emp.closeRate
+                            };
+                        }
+                        return new {
+                            monthLabel = pm.ShortLabel,
+                            actual = 0,
+                            target = 0,
+                            capaian = 0.0,
+                            closeRate = 100.0
+                        };
+                    }).ToList();
+
+                    return new {
+                        nik,
+                        name,
+                        dept,
+                        jabatan,
+                        isTargetSap,
+                        totalTargetPeriod,
+                        totalActualPeriod,
+                        avgCapaian,
+                        avgCloseRate,
+                        hAct, iAct, stAct, oAct, cAct, p5mAct,
+                        monthlyProgression
+                    };
+                })
+                .ToList();
+
+            var allDeptNames = monthlyDeptSummaries.Select(d => d.DeptName).Distinct().OrderBy(d => d).ToList();
+            var deptTrends = allDeptNames.Select(dName => {
+                var dSummaries = monthlyDeptSummaries.Where(x => string.Equals(x.DeptName, dName, StringComparison.OrdinalIgnoreCase)).ToList();
+                int skuad = dSummaries.Any() ? dSummaries.Max(x => x.Skuad) : 0;
+                int totalTgt = dSummaries.Sum(x => x.Target);
+                int totalAct = dSummaries.Sum(x => x.Actual);
+                double avgCapaian = totalTgt > 0 ? Math.Min(100.0, Math.Round((double)totalAct / totalTgt * 100.0, 1)) : 0.0;
+                double avgCloseRate = dSummaries.Any() ? Math.Round(dSummaries.Average(x => x.CloseRate), 1) : 100.0;
+
+                var monthlyCapaian = periodMonths.Select(pm => {
+                    var m = dSummaries.FirstOrDefault(x => x.Year == pm.Year && x.Month == pm.Month);
+                    return m.Year > 0 ? m.CapaianRate : 0.0;
+                }).ToList();
+
+                var monthlyActual = periodMonths.Select(pm => {
+                    var m = dSummaries.FirstOrDefault(x => x.Year == pm.Year && x.Month == pm.Month);
+                    return m.Year > 0 ? m.Actual : 0;
+                }).ToList();
+
+                var monthlyTarget = periodMonths.Select(pm => {
+                    var m = dSummaries.FirstOrDefault(x => x.Year == pm.Year && x.Month == pm.Month);
+                    return m.Year > 0 ? m.Target : 0;
+                }).ToList();
+
+                var monthlyCloseRate = periodMonths.Select(pm => {
+                    var m = dSummaries.FirstOrDefault(x => x.Year == pm.Year && x.Month == pm.Month);
+                    return m.Year > 0 ? m.CloseRate : 100.0;
+                }).ToList();
+
+                return new {
+                    deptName = dName,
+                    skuad,
+                    totalTarget = totalTgt,
+                    totalActual = totalAct,
+                    avgCapaian,
+                    avgCloseRate,
+                    monthlyCapaian,
+                    monthlyActual,
+                    monthlyTarget,
+                    monthlyCloseRate
+                };
+            }).OrderByDescending(d => d.avgCapaian).ThenByDescending(d => d.totalActual).ToList();
+
+            var pillarTrends = periodMonths.Select(pm => {
+                var mLogs = monthlyEmployeeLogs.Where(x => x.Year == pm.Year && x.Month == pm.Month).ToList();
+                int h = mLogs.Sum(x => (int)x.Emp.hazard.actual);
+                int i = mLogs.Sum(x => (int)x.Emp.inspeksi.actual);
+                int st = mLogs.Sum(x => (int)x.Emp.safetyTalk.actual);
+                int o = mLogs.Sum(x => (int)x.Emp.observasi.actual);
+                int c = mLogs.Sum(x => (int)x.Emp.coaching.actual);
+                int p5m = mLogs.Sum(x => (int)x.Emp.p5m.actual);
+                int tot = h + i + st + o + c + p5m;
+                return new {
+                    monthLabel = pm.ShortLabel,
+                    hazard = h,
+                    inspeksi = i,
+                    safetyTalk = st,
+                    observasi = o,
+                    coaching = c,
+                    p5m,
+                    total = tot
+                };
+            }).ToList();
+
+            var topEmployees = employeeCumulative
+                .OrderByDescending(e => e.avgCapaian >= 100.0 ? 1 : 0)
+                .ThenByDescending(e => e.avgCapaian)
+                .ThenByDescending(e => e.totalActualPeriod)
+                .Take(12)
+                .Select(e => new {
+                    nik = e.nik,
+                    name = e.name,
+                    dept = e.dept,
+                    jabatan = e.jabatan,
+                    totalActual = e.totalActualPeriod,
+                    totalTarget = e.totalTargetPeriod,
+                    avgCapaian = e.avgCapaian,
+                    avgCloseRate = e.avgCloseRate,
+                    hazard = e.hAct,
+                    inspeksi = e.iAct,
+                    safetyTalk = e.stAct,
+                    observasi = e.oAct,
+                    coaching = e.cAct,
+                    p5m = e.p5mAct
+                })
+                .ToList();
+
+            var bottomEmployees = employeeCumulative
+                .Where(e => e.totalTargetPeriod > 0 && e.avgCapaian < 40.0)
+                .OrderBy(e => e.avgCapaian)
+                .ThenBy(e => e.totalActualPeriod)
+                .Take(10)
+                .Select(e => new {
+                    nik = e.nik,
+                    name = e.name,
+                    dept = e.dept,
+                    jabatan = e.jabatan,
+                    totalActual = e.totalActualPeriod,
+                    totalTarget = e.totalTargetPeriod,
+                    avgCapaian = e.avgCapaian
+                })
+                .ToList();
+
+            var employeeList = employeeCumulative
+                .OrderBy(e => e.dept)
+                .ThenBy(e => e.name)
+                .Select(e => new {
+                    nik = e.nik,
+                    name = e.name,
+                    dept = e.dept,
+                    jabatan = e.jabatan,
+                    avgCapaian = e.avgCapaian,
+                    totalActual = e.totalActualPeriod,
+                    totalTarget = e.totalTargetPeriod,
+                    monthly = e.monthlyProgression
+                })
+                .ToList();
+
+            int grandTarget = deptTrends.Sum(d => d.totalTarget);
+            int grandActual = deptTrends.Sum(d => d.totalActual);
+            double grandCapaian = grandTarget > 0 ? Math.Min(100.0, Math.Round((double)grandActual / grandTarget * 100.0, 1)) : 0.0;
+            double grandCloseRate = deptTrends.Any() ? Math.Round(deptTrends.Average(d => d.avgCloseRate), 1) : 100.0;
+
+            var summary = new {
+                totalSquad = employeeCumulative.Count,
+                totalTarget = grandTarget,
+                totalActual = grandActual,
+                avgCapaian = grandCapaian,
+                avgCloseRate = grandCloseRate,
+                perfectEmployees = employeeCumulative.Count(e => e.avgCapaian >= 100.0),
+                criticalEmployees = employeeCumulative.Count(e => e.totalTargetPeriod > 0 && e.avgCapaian < 40.0),
+                departmentCount = deptTrends.Count,
+                monthsCount = periodMonths.Count,
+                periodTitle,
+                companyName = selectedCompany.NamaPerusahaan
+            };
+
+            return Json(new {
+                success = true,
+                periodTitle,
+                months = periodMonths.Select(m => m.ShortLabel).ToList(),
+                summary,
+                deptTrends,
+                pillarTrends,
+                topEmployees,
+                bottomEmployees,
+                employeeList
+            });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportPeriodicDeptReportToExcel(
+            int? companyId = null,
+            string? departmentName = null,
+            int? startYear = null,
+            int? startMonth = null,
+            int? endYear = null,
+            int? endMonth = null,
+            string targetFilter = "target",
+            int? parentId = null,
+            bool splitMonthlySheets = true)
         {
             await _context.Database.ExecuteSqlRawAsync("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;");
 
@@ -5755,7 +6148,7 @@ namespace MBS_SAP.Controllers
             bool includeNonTarget = !string.Equals(targetFilter, "target", StringComparison.OrdinalIgnoreCase);
 
             var monthlyEmployeeLogs = new List<(int Year, int Month, string MonthLabel, dynamic Emp)>();
-            var monthlyDeptSummaries = new List<(int Year, int Month, string MonthLabel, string DeptName, int Skuad, int Target, int Actual, double CapaianRate, double CloseRate)>();
+            var monthlyDeptSummaries = new List<(int Year, int Month, string MonthLabel, string DeptName, int Skuad, int Target, int Actual, double CapaianRate, double CloseRate, int HazardAct, int HazardTgt, int InspAct, int InspTgt, int StAct, int StTgt, int ObsAct, int ObsTgt, int CoachAct, int CoachTgt, int P5mAct, int P5mTgt)>();
 
             foreach (var (mYear, mMonth, mLabel) in periodMonths)
             {
@@ -5814,7 +6207,20 @@ namespace MBS_SAP.Controllers
                     int dApClosed = deptAssignedAp.Count(a => IsClosedStatus(a.Status));
                     double dCloseRate = dApTotal > 0 ? Math.Round(Math.Min(100.0, (double)dApClosed / dApTotal * 100.0), 1) : 100.0;
 
-                    monthlyDeptSummaries.Add((mYear, mMonth, mLabel, dName, dSkuad, dTarget, dActual, dCapaian, dCloseRate));
+                    int dHazAct = dg.Sum(e => (int)e.hazard.actual);
+                    int dHazTgt = dg.Sum(e => (int)e.hazard.target);
+                    int dInspAct = dg.Sum(e => (int)e.inspeksi.actual);
+                    int dInspTgt = dg.Sum(e => (int)e.inspeksi.target);
+                    int dStAct = dg.Sum(e => (int)e.safetyTalk.actual);
+                    int dStTgt = dg.Sum(e => (int)e.safetyTalk.target);
+                    int dObsAct = dg.Sum(e => (int)e.observasi.actual);
+                    int dObsTgt = dg.Sum(e => (int)e.observasi.target);
+                    int dCoachAct = dg.Sum(e => (int)e.coaching.actual);
+                    int dCoachTgt = dg.Sum(e => (int)e.coaching.target);
+                    int dP5mAct = dg.Sum(e => (int)e.p5m.actual);
+                    int dP5mTgt = dg.Sum(e => (int)e.p5m.target);
+
+                    monthlyDeptSummaries.Add((mYear, mMonth, mLabel, dName, dSkuad, dTarget, dActual, dCapaian, dCloseRate, dHazAct, dHazTgt, dInspAct, dInspTgt, dStAct, dStTgt, dObsAct, dObsTgt, dCoachAct, dCoachTgt, dP5mAct, dP5mTgt));
                 }
             }
 
@@ -5943,21 +6349,27 @@ namespace MBS_SAP.Controllers
                 .ThenByDescending(d => d.TotalActual)
                 .ToList();
 
+            int grandTargetAll = deptCumulative.Sum(d => d.TotalTarget);
+            int grandActualAll = deptCumulative.Sum(d => d.TotalActual);
+            double grandCapaianAll = grandTargetAll > 0 ? Math.Min(100.0, Math.Round((double)grandActualAll / grandTargetAll * 100.0, 1)) : 0.0;
+            double grandCloseRateAll = deptCumulative.Any() ? Math.Round(deptCumulative.Average(d => d.AvgCloseRate), 1) : 100.0;
+            int perfectEmployeesCount = employeeCumulative.Count(e => e.AvgCapaian >= 100.0);
+
             using (var workbook = new XLWorkbook())
             {
                 // ==============================================================
-                // SHEET 1: REKAPITULASI DEPARTEMEN
+                // SHEET 1: IKHTISAR EKSEKUTIF (EXECUTIVE SUMMARY DASHBOARD)
                 // ==============================================================
-                var wsDept = workbook.Worksheets.Add("Rekapitulasi Departemen");
+                var wsDept = workbook.Worksheets.Add("Ikhtisar Eksekutif");
                 wsDept.ShowGridLines = true;
 
                 // Title Block
-                wsDept.Cell(1, 1).Value = "LAPORAN KINERJA SAFETY ACCOUNTABILITY PROGRAM (SAP) - RENTANG PERIODE";
+                wsDept.Cell(1, 1).Value = "LAPORAN EKSEKUTIF KINERJA SAFETY ACCOUNTABILITY PROGRAM (SAP)";
                 wsDept.Cell(1, 1).Style.Font.Bold = true;
                 wsDept.Cell(1, 1).Style.Font.FontSize = 14;
                 wsDept.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
 
-                wsDept.Cell(2, 1).Value = $"PERIODE: {periodTitle}";
+                wsDept.Cell(2, 1).Value = $"RENTANG PERIODE: {periodTitle}";
                 wsDept.Cell(2, 1).Style.Font.Bold = true;
                 wsDept.Cell(2, 1).Style.Font.FontSize = 11;
                 wsDept.Cell(2, 1).Style.Font.FontColor = XLColor.FromHtml("#1e40af");
@@ -5973,7 +6385,67 @@ namespace MBS_SAP.Controllers
                 wsDept.Cell(4, 1).Style.Font.FontSize = 9;
                 wsDept.Cell(4, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
 
-                // Headers for Table 1 (Ringkasan Akumulasi Kinerja)
+                // ==============================================================
+                // EXECUTIVE KPI SUMMARY CARDS (ROW 6 & 7)
+                // ==============================================================
+                var kpiDefs = new[] {
+                    (Title: "TOTAL SKUAD TERDATA", Value: employeeCumulative.Count.ToString("#,##0"), Sub: $"{deptCumulative.Count} Klub Terdaftar", Color: "#1e3a8a", StartCol: 1, EndCol: 3),
+                    (Title: "TOTAL TARGET SAP", Value: grandTargetAll.ToString("#,##0"), Sub: $"{periodMonths.Count} Bulan Kumulatif", Color: "#0f172a", StartCol: 4, EndCol: 6),
+                    (Title: "TOTAL REALISASI LAPORAN", Value: grandActualAll.ToString("#,##0"), Sub: "Akumulasi Seluruh Program", Color: "#0369a1", StartCol: 7, EndCol: 9),
+                    (Title: "RATA-RATA CAPAIAN", Value: $"{grandCapaianAll:0.0}%", Sub: grandCapaianAll >= 80 ? "Status Hijau / Patuh" : "Perlu Peningkatan", Color: grandCapaianAll >= 80 ? "#15803d" : "#b91c1c", StartCol: 10, EndCol: 12),
+                    (Title: "CLOSE RATE ACTION PLAN", Value: $"{grandCloseRateAll:0.0}%", Sub: "Tindak Lanjut Temuan K3", Color: "#047857", StartCol: 13, EndCol: 15),
+                    (Title: "KARYAWAN TUNTAS 100%", Value: perfectEmployeesCount.ToString("#,##0"), Sub: $"{(employeeCumulative.Any() ? Math.Round((double)perfectEmployeesCount / employeeCumulative.Count * 100.0, 1) : 0):0.0}% dari Total Skuad", Color: "#b45309", StartCol: 16, EndCol: 19)
+                };
+
+                foreach (var kpi in kpiDefs)
+                {
+                    var rTop = wsDept.Range(6, kpi.StartCol, 6, kpi.EndCol);
+                    rTop.Merge();
+                    rTop.Value = kpi.Title;
+                    rTop.Style.Font.Bold = true;
+                    rTop.Style.Font.FontSize = 9;
+                    rTop.Style.Font.FontColor = XLColor.White;
+                    rTop.Style.Fill.BackgroundColor = XLColor.FromHtml(kpi.Color);
+                    rTop.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    rTop.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+                    var rVal = wsDept.Range(7, kpi.StartCol, 7, kpi.EndCol);
+                    rVal.Merge();
+                    rVal.Value = kpi.Value;
+                    rVal.Style.Font.Bold = true;
+                    rVal.Style.Font.FontSize = 14;
+                    rVal.Style.Font.FontColor = XLColor.FromHtml(kpi.Color);
+                    rVal.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+                    rVal.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    rVal.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+                    var rSub = wsDept.Range(8, kpi.StartCol, 8, kpi.EndCol);
+                    rSub.Merge();
+                    rSub.Value = kpi.Sub;
+                    rSub.Style.Font.Italic = true;
+                    rSub.Style.Font.FontSize = 8.5;
+                    rSub.Style.Font.FontColor = XLColor.FromHtml("#64748b");
+                    rSub.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+                    rSub.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    rSub.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+                    var fullCard = wsDept.Range(6, kpi.StartCol, 8, kpi.EndCol);
+                    fullCard.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                    fullCard.Style.Border.OutsideBorderColor = XLColor.FromHtml(kpi.Color);
+                }
+
+                wsDept.Row(6).Height = 20;
+                wsDept.Row(7).Height = 24;
+                wsDept.Row(8).Height = 16;
+
+                // Section 1: Akumulasi Departemen
+                int dRow = 10;
+                wsDept.Cell(dRow, 1).Value = "1. KLASEMEN AKUMULASI KINERJA KLUB (DEPARTEMEN)";
+                wsDept.Cell(dRow, 1).Style.Font.Bold = true;
+                wsDept.Cell(dRow, 1).Style.Font.FontSize = 11;
+                wsDept.Cell(dRow, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
+                dRow++;
+
                 string[] deptHeaders = {
                     "Pos", "Klub (Departemen)", "Skuad (Orang)", "Total Target Periode", "Total Realisasi Periode",
                     "Rata-rata Capaian (%)", "Close Rate AP (%)",
@@ -5986,7 +6458,6 @@ namespace MBS_SAP.Controllers
                     "Status Evaluasi Departemen"
                 };
 
-                int dRow = 6;
                 for (int i = 0; i < deptHeaders.Length; i++)
                 {
                     var cell = wsDept.Cell(dRow, i + 1);
@@ -6006,7 +6477,7 @@ namespace MBS_SAP.Controllers
                 wsDept.Row(dRow).Height = 28;
 
                 int rankDept = 1;
-                dRow = 7;
+                dRow++;
                 foreach (var d in deptCumulative)
                 {
                     int col = 1;
@@ -6087,7 +6558,7 @@ namespace MBS_SAP.Controllers
 
                 // Table 2: Matriks Tren Capaian (%) Bulan ke Bulan
                 dRow += 2;
-                wsDept.Cell(dRow, 1).Value = "TREN PERSENTASE CAPAIAN (%) DEPARTEMEN PER BULAN";
+                wsDept.Cell(dRow, 1).Value = "2. MATRIKS TREN CAPAIAN (%) DEPARTEMEN BULAN KE BULAN";
                 wsDept.Cell(dRow, 1).Style.Font.Bold = true;
                 wsDept.Cell(dRow, 1).Style.Font.FontSize = 11;
                 wsDept.Cell(dRow, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
@@ -6166,18 +6637,153 @@ namespace MBS_SAP.Controllers
                     dRow++;
                 }
 
-                wsDept.SheetView.FreezeRows(6);
+                // Table 3: Matriks Tren Close Rate Action Plan (%) Bulan ke Bulan
+                dRow += 2;
+                wsDept.Cell(dRow, 1).Value = "3. MATRIKS TREN CLOSE RATE ACTION PLAN (%) BULAN KE BULAN";
+                wsDept.Cell(dRow, 1).Style.Font.Bold = true;
+                wsDept.Cell(dRow, 1).Style.Font.FontSize = 11;
+                wsDept.Cell(dRow, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
+                dRow++;
+
+                wsDept.Cell(dRow, 1).Value = "Klub (Departemen)";
+                wsDept.Cell(dRow, 1).Style.Font.Bold = true;
+                wsDept.Cell(dRow, 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46");
+                wsDept.Cell(dRow, 1).Style.Font.FontColor = XLColor.White;
+
+                for (int m = 0; m < periodMonths.Count; m++)
+                {
+                    var cell = wsDept.Cell(dRow, 2 + m);
+                    cell.Value = periodMonths[m].Label;
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+
+                var crAvgHeader = wsDept.Cell(dRow, avgColIdx);
+                crAvgHeader.Value = "Rata-rata Close Rate (%)";
+                crAvgHeader.Style.Font.Bold = true;
+                crAvgHeader.Style.Fill.BackgroundColor = XLColor.FromHtml("#047857");
+                crAvgHeader.Style.Font.FontColor = XLColor.White;
+                crAvgHeader.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                wsDept.Row(dRow).Height = 24;
+                dRow++;
+
+                foreach (var d in deptCumulative)
+                {
+                    wsDept.Cell(dRow, 1).Value = d.DeptName;
+                    wsDept.Cell(dRow, 1).Style.Font.Bold = true;
+                    wsDept.Cell(dRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+
+                    for (int m = 0; m < periodMonths.Count; m++)
+                    {
+                        var (pYear, pMonth, _) = periodMonths[m];
+                        var summary = monthlyDeptSummaries.FirstOrDefault(x => x.Year == pYear && x.Month == pMonth && string.Equals(x.DeptName, d.DeptName, StringComparison.OrdinalIgnoreCase));
+                        var cell = wsDept.Cell(dRow, 2 + m);
+                        if (summary.Year > 0)
+                        {
+                            cell.Value = summary.CloseRate / 100.0;
+                            cell.Style.NumberFormat.Format = "0.0%";
+                            if (summary.CloseRate >= 80) cell.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                            else cell.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+                        }
+                        else
+                        {
+                            cell.Value = "-";
+                            cell.Style.Font.FontColor = XLColor.FromHtml("#94a3b8");
+                        }
+                        cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    }
+
+                    var cAvg = wsDept.Cell(dRow, avgColIdx);
+                    cAvg.Value = d.AvgCloseRate / 100.0;
+                    cAvg.Style.NumberFormat.Format = "0.0%";
+                    cAvg.Style.Font.Bold = true;
+                    cAvg.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    if (d.AvgCloseRate >= 80) cAvg.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                    else cAvg.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                    var tRange = wsDept.Range(dRow, 1, dRow, avgColIdx);
+                    tRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    tRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    tRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    tRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+                    if (dRow % 2 == 0) tRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    dRow++;
+                }
+
+                // Table 4: Rekapitulasi Realisasi 5 Pilar SAP Lintas Periode
+                dRow += 2;
+                wsDept.Cell(dRow, 1).Value = "4. REKAPITULASI REALISASI 5 PILAR SAP LINTAS PERIODE";
+                wsDept.Cell(dRow, 1).Style.Font.Bold = true;
+                wsDept.Cell(dRow, 1).Style.Font.FontSize = 11;
+                wsDept.Cell(dRow, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
+                dRow++;
+
+                string[] pilarHeaders = { "Periode Bulan", "Hazard Report", "Inspeksi K3", "Safety Talk", "Observasi K3", "Coaching K3", "P5M *", "Total Realisasi SAP" };
+                for (int i = 0; i < pilarHeaders.Length; i++)
+                {
+                    var cell = wsDept.Cell(dRow, i + 1);
+                    cell.Value = pilarHeaders[i];
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml(i == pilarHeaders.Length - 1 ? "#0f172a" : "#1e40af");
+                    cell.Style.Font.FontColor = XLColor.White;
+                    cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                }
+                wsDept.Row(dRow).Height = 24;
+                dRow++;
+
+                foreach (var (mYear, mMonth, mLabel) in periodMonths)
+                {
+                    var mLogs = monthlyEmployeeLogs.Where(x => x.Year == mYear && x.Month == mMonth).ToList();
+                    int h = mLogs.Sum(x => (int)x.Emp.hazard.actual);
+                    int i = mLogs.Sum(x => (int)x.Emp.inspeksi.actual);
+                    int st = mLogs.Sum(x => (int)x.Emp.safetyTalk.actual);
+                    int o = mLogs.Sum(x => (int)x.Emp.observasi.actual);
+                    int c = mLogs.Sum(x => (int)x.Emp.coaching.actual);
+                    int p = mLogs.Sum(x => (int)x.Emp.p5m.actual);
+                    int tot = h + i + st + o + c + p;
+
+                    wsDept.Cell(dRow, 1).Value = mLabel;
+                    wsDept.Cell(dRow, 1).Style.Font.Bold = true;
+                    wsDept.Cell(dRow, 2).Value = h;
+                    wsDept.Cell(dRow, 3).Value = i;
+                    wsDept.Cell(dRow, 4).Value = st;
+                    wsDept.Cell(dRow, 5).Value = o;
+                    wsDept.Cell(dRow, 6).Value = c;
+                    wsDept.Cell(dRow, 7).Value = p;
+                    wsDept.Cell(dRow, 8).Value = tot;
+                    wsDept.Cell(dRow, 8).Style.Font.Bold = true;
+
+                    for (int col = 2; col <= 8; col++)
+                    {
+                        wsDept.Cell(dRow, col).Style.NumberFormat.Format = "#,##0";
+                        wsDept.Cell(dRow, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    }
+
+                    var pRange = wsDept.Range(dRow, 1, dRow, pilarHeaders.Length);
+                    pRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    pRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                    pRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                    pRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+                    if (dRow % 2 == 0) pRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                    dRow++;
+                }
+
+                wsDept.SheetView.FreezeRows(11);
                 wsDept.Columns().AdjustToContents();
                 foreach (var c in wsDept.ColumnsUsed()) if (c.Width < 12) c.Width = 12;
 
                 // ==============================================================
-                // SHEET 2: DETAIL PENCAPAIAN KARYAWAN PER DEPARTEMEN
+                // SHEET 2: DETAIL PENCAPAIAN KARYAWAN (KUMULATIF PERIODE)
                 // ==============================================================
-                var wsEmp = workbook.Worksheets.Add("Pencapaian Karyawan");
+                var wsEmp = workbook.Worksheets.Add("Kumulatif Karyawan");
                 wsEmp.ShowGridLines = true;
 
                 // Title Block
-                wsEmp.Cell(1, 1).Value = "LAPORAN PENCAPAIAN KARYAWAN PER DEPARTEMEN - SAFETY ACCOUNTABILITY PROGRAM";
+                wsEmp.Cell(1, 1).Value = "LAPORAN AKUMULASI PENCAPAIAN KARYAWAN - RENTANG PERIODE";
                 wsEmp.Cell(1, 1).Style.Font.Bold = true;
                 wsEmp.Cell(1, 1).Style.Font.FontSize = 14;
                 wsEmp.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
@@ -6342,7 +6948,369 @@ namespace MBS_SAP.Controllers
                 foreach (var c in wsEmp.ColumnsUsed()) if (c.Width < 12) c.Width = 12;
 
                 // ==============================================================
-                // SHEET 3: MATRIKS BULANAN KARYAWAN (AUDIT & PIVOT FRIENDLY)
+                // MONTHLY INDIVIDUAL SHEETS (PISAHKAN PER BULAN)
+                // ==============================================================
+                if (splitMonthlySheets)
+                {
+                    foreach (var (mYear, mMonth, mLabel) in periodMonths)
+                    {
+                        string safeSheetName = mLabel.Length > 30 ? mLabel.Substring(0, 30) : mLabel;
+                        safeSheetName = safeSheetName.Replace("/", "-").Replace("\\", "-").Replace("?", "").Replace("*", "").Replace("[", "(").Replace("]", ")");
+                        
+                        var wsMonth = workbook.Worksheets.Add(safeSheetName);
+                        wsMonth.ShowGridLines = true;
+
+                        var curMonthEmps = monthlyEmployeeLogs
+                            .Where(x => x.Year == mYear && x.Month == mMonth)
+                            .Select(x => x.Emp)
+                            .ToList();
+
+                        var curMonthDepts = monthlyDeptSummaries
+                            .Where(x => x.Year == mYear && x.Month == mMonth)
+                            .OrderByDescending(d => d.CapaianRate)
+                            .ThenByDescending(d => d.Actual)
+                            .ToList();
+
+                        int mTotalTarget = curMonthDepts.Sum(d => d.Target);
+                        int mTotalActual = curMonthDepts.Sum(d => d.Actual);
+                        double mAvgCapaian = mTotalTarget > 0 ? Math.Min(100.0, Math.Round((double)mTotalActual / mTotalTarget * 100.0, 1)) : 0.0;
+                        double mAvgCloseRate = curMonthDepts.Any() ? Math.Round(curMonthDepts.Average(d => d.CloseRate), 1) : 100.0;
+
+                        // Title
+                        wsMonth.Cell(1, 1).Value = $"LAPORAN PENCAPAIAN KINERJA SAP - {mLabel.ToUpper()}";
+                        wsMonth.Cell(1, 1).Style.Font.Bold = true;
+                        wsMonth.Cell(1, 1).Style.Font.FontSize = 14;
+                        wsMonth.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
+
+                        wsMonth.Cell(2, 1).Value = $"Perusahaan: {selectedCompany.NamaPerusahaan}{deptFilterTxt} | Filter Target: {targetFilterLbl}";
+                        wsMonth.Cell(2, 1).Style.Font.Bold = true;
+                        wsMonth.Cell(2, 1).Style.Font.FontSize = 10;
+                        wsMonth.Cell(2, 1).Style.Font.FontColor = XLColor.FromHtml("#1e40af");
+
+                        wsMonth.Cell(3, 1).Value = $"Total Departemen: {curMonthDepts.Count} Klub | Skuad Aktif: {curMonthEmps.Count} Karyawan | Waktu Ekspor: {DateTime.Now:dd-MM-yyyy HH:mm} WIB";
+                        wsMonth.Cell(3, 1).Style.Font.Italic = true;
+                        wsMonth.Cell(3, 1).Style.Font.FontSize = 9;
+                        wsMonth.Cell(3, 1).Style.Font.FontColor = XLColor.FromHtml("#64748b");
+
+                        // Monthly Mini KPI Card Banner (Row 5 & 6)
+                        var mKpis = new[] {
+                            (Title: "SKUAD AKTIF", Value: curMonthEmps.Count.ToString("#,##0"), Color: "#1e3a8a", StartCol: 1, EndCol: 3),
+                            (Title: "TARGET MTD", Value: mTotalTarget.ToString("#,##0"), Color: "#0f172a", StartCol: 4, EndCol: 6),
+                            (Title: "REALISASI MTD", Value: mTotalActual.ToString("#,##0"), Color: "#0369a1", StartCol: 7, EndCol: 9),
+                            (Title: "CAPAIAN MTD (%)", Value: $"{mAvgCapaian:0.0}%", Color: mAvgCapaian >= 80 ? "#15803d" : "#b91c1c", StartCol: 10, EndCol: 12),
+                            (Title: "CLOSE RATE AP (%)", Value: $"{mAvgCloseRate:0.0}%", Color: "#047857", StartCol: 13, EndCol: 15)
+                        };
+
+                        foreach (var kpi in mKpis)
+                        {
+                            var rTop = wsMonth.Range(5, kpi.StartCol, 5, kpi.EndCol);
+                            rTop.Merge();
+                            rTop.Value = kpi.Title;
+                            rTop.Style.Font.Bold = true;
+                            rTop.Style.Font.FontSize = 8.5;
+                            rTop.Style.Font.FontColor = XLColor.White;
+                            rTop.Style.Fill.BackgroundColor = XLColor.FromHtml(kpi.Color);
+                            rTop.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                            var rVal = wsMonth.Range(6, kpi.StartCol, 6, kpi.EndCol);
+                            rVal.Merge();
+                            rVal.Value = kpi.Value;
+                            rVal.Style.Font.Bold = true;
+                            rVal.Style.Font.FontSize = 13;
+                            rVal.Style.Font.FontColor = XLColor.FromHtml(kpi.Color);
+                            rVal.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+                            rVal.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+                            var cardRange = wsMonth.Range(5, kpi.StartCol, 6, kpi.EndCol);
+                            cardRange.Style.Border.OutsideBorder = XLBorderStyleValues.Medium;
+                            cardRange.Style.Border.OutsideBorderColor = XLColor.FromHtml(kpi.Color);
+                        }
+                        wsMonth.Row(5).Height = 18;
+                        wsMonth.Row(6).Height = 22;
+
+                        // Section 1: Rekap Departemen Bulan Ini
+                        int mRow = 8;
+                        wsMonth.Cell(mRow, 1).Value = $"A. REKAPITULASI KLUB (DEPARTEMEN) - {mLabel.ToUpper()}";
+                        wsMonth.Cell(mRow, 1).Style.Font.Bold = true;
+                        wsMonth.Cell(mRow, 1).Style.Font.FontSize = 11;
+                        wsMonth.Cell(mRow, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
+                        mRow++;
+
+                        string[] mDeptHeaders = {
+                            "Pos", "Klub (Departemen)", "Skuad", "Target MTD", "Realisasi MTD",
+                            "Capaian MTD (%)", "Close Rate AP (%)",
+                            "Hazard Act", "Hazard Tgt",
+                            "Inspeksi Act", "Inspeksi Tgt",
+                            "Safety Talk Act", "Safety Talk Tgt",
+                            "Observasi Act", "Observasi Tgt",
+                            "Coaching Act", "Coaching Tgt",
+                            "P5M Act *", "P5M Tgt",
+                            "Status Evaluasi"
+                        };
+
+                        for (int i = 0; i < mDeptHeaders.Length; i++)
+                        {
+                            var cell = wsMonth.Cell(mRow, i + 1);
+                            cell.Value = mDeptHeaders[i];
+                            cell.Style.Font.Bold = true;
+                            cell.Style.Font.FontSize = 9.5;
+                            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                            cell.Style.Font.FontColor = XLColor.White;
+
+                            if (i == 5) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1d4ed8");
+                            else if (i == 6) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46");
+                            else if (i >= 7 && i <= 18) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#334155");
+                            else if (i == 19) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
+                            else cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a");
+                        }
+                        wsMonth.Row(mRow).Height = 26;
+
+                        int mDeptPos = 1;
+                        mRow++;
+                        foreach (var d in curMonthDepts)
+                        {
+                            int col = 1;
+                            wsMonth.Cell(mRow, col++).Value = mDeptPos;
+                            wsMonth.Cell(mRow, col++).Value = d.DeptName;
+                            wsMonth.Cell(mRow, col++).Value = d.Skuad;
+
+                            var cTgt = wsMonth.Cell(mRow, col++);
+                            cTgt.Value = d.Target;
+                            cTgt.Style.NumberFormat.Format = "#,##0";
+                            cTgt.Style.Font.Bold = true;
+
+                            var cAct = wsMonth.Cell(mRow, col++);
+                            cAct.Value = d.Actual;
+                            cAct.Style.NumberFormat.Format = "#,##0";
+                            cAct.Style.Font.Bold = true;
+
+                            var cCap = wsMonth.Cell(mRow, col++);
+                            cCap.Value = d.CapaianRate / 100.0;
+                            cCap.Style.NumberFormat.Format = "0.0%";
+                            cCap.Style.Font.Bold = true;
+                            if (d.CapaianRate >= 80) cCap.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                            else if (d.CapaianRate >= 40) cCap.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                            var cCr = wsMonth.Cell(mRow, col++);
+                            cCr.Value = d.CloseRate / 100.0;
+                            cCr.Style.NumberFormat.Format = "0.0%";
+                            if (d.CloseRate >= 80) cCr.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                            else cCr.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                            wsMonth.Cell(mRow, col++).Value = d.HazardAct;
+                            wsMonth.Cell(mRow, col++).Value = d.HazardTgt;
+                            wsMonth.Cell(mRow, col++).Value = d.InspAct;
+                            wsMonth.Cell(mRow, col++).Value = d.InspTgt;
+                            wsMonth.Cell(mRow, col++).Value = d.StAct;
+                            wsMonth.Cell(mRow, col++).Value = d.StTgt;
+                            wsMonth.Cell(mRow, col++).Value = d.ObsAct;
+                            wsMonth.Cell(mRow, col++).Value = d.ObsTgt;
+                            wsMonth.Cell(mRow, col++).Value = d.CoachAct;
+                            wsMonth.Cell(mRow, col++).Value = d.CoachTgt;
+                            wsMonth.Cell(mRow, col++).Value = d.P5mAct;
+                            wsMonth.Cell(mRow, col++).Value = d.P5mTgt;
+
+                            string statusDept;
+                            if (d.CapaianRate >= 100.0) statusDept = "🏆 Podium / Sempurna (100%)";
+                            else if (d.CapaianRate >= 80.0) statusDept = "🟢 Patuh (80-99%)";
+                            else if (d.CapaianRate >= 40.0) statusDept = "🟡 Evaluasi (40-79%)";
+                            else statusDept = "🔴 Kritis (<40%)";
+
+                            var cStat = wsMonth.Cell(mRow, col++);
+                            cStat.Value = statusDept;
+                            cStat.Style.Font.Bold = true;
+
+                            wsMonth.Cell(mRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsMonth.Cell(mRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                            wsMonth.Cell(mRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsMonth.Cell(mRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            wsMonth.Cell(mRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            wsMonth.Cell(mRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            wsMonth.Cell(mRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            for (int c = 8; c <= 19; c++)
+                            {
+                                wsMonth.Cell(mRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                                wsMonth.Cell(mRow, c).Style.NumberFormat.Format = "#,##0";
+                            }
+
+                            var rowRange = wsMonth.Range(mRow, 1, mRow, mDeptHeaders.Length);
+                            rowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                            rowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                            rowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                            rowRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+                            if (mRow % 2 == 0) rowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+
+                            mRow++;
+                            mDeptPos++;
+                        }
+
+                        // Section 2: Detail Seluruh Karyawan Bulan Ini
+                        mRow += 2;
+                        wsMonth.Cell(mRow, 1).Value = $"B. DETAIL PENCAPAIAN SELURUH KARYAWAN - {mLabel.ToUpper()}";
+                        wsMonth.Cell(mRow, 1).Style.Font.Bold = true;
+                        wsMonth.Cell(mRow, 1).Style.Font.FontSize = 11;
+                        wsMonth.Cell(mRow, 1).Style.Font.FontColor = XLColor.FromHtml("#0f172a");
+                        mRow++;
+
+                        string[] mEmpHeaders = {
+                            "No", "Departemen", "Nama Karyawan", "NIK", "Jabatan", "Kategori SAP", "Hari Onsite",
+                            "Target MTD", "Realisasi MTD", "Capaian (%)", "Close Rate (%)",
+                            "Hazard Act", "Hazard Tgt",
+                            "Inspeksi Act", "Inspeksi Tgt",
+                            "Safety Talk Act", "Safety Talk Tgt",
+                            "Observasi Act", "Observasi Tgt",
+                            "Coaching Act", "Coaching Tgt",
+                            "P5M Act *", "P5M Tgt",
+                            "Status Kepatuhan Karyawan"
+                        };
+
+                        int empHeaderRow = mRow;
+                        for (int i = 0; i < mEmpHeaders.Length; i++)
+                        {
+                            var cell = wsMonth.Cell(mRow, i + 1);
+                            cell.Value = mEmpHeaders[i];
+                            cell.Style.Font.Bold = true;
+                            cell.Style.Font.FontSize = 9.5;
+                            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+                            cell.Style.Font.FontColor = XLColor.White;
+
+                            if (i == 7 || i == 8) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
+                            else if (i == 9) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1d4ed8");
+                            else if (i == 10) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#065f46");
+                            else if (i >= 11 && i <= 20) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#334155");
+                            else if (i >= 21 && i <= 22) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f");
+                            else if (i == 23) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#0f172a");
+                            else cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a");
+                        }
+                        wsMonth.Row(mRow).Height = 26;
+
+                        int mEmpIdx = 1;
+                        mRow++;
+                        var sortedEmps = curMonthEmps
+                            .OrderBy(e => (string)e.departmentName)
+                            .ThenByDescending(e => (double)e.complianceRate >= 100.0 ? 1 : 0)
+                            .ThenByDescending(e => (double)e.complianceRate)
+                            .ThenByDescending(e => (int)e.mtdTotalActual)
+                            .ToList();
+
+                        string mCurDept = "";
+                        foreach (var emp in sortedEmps)
+                        {
+                            int col = 1;
+                            wsMonth.Cell(mRow, col++).Value = mEmpIdx;
+                            wsMonth.Cell(mRow, col++).Value = (string)emp.departmentName;
+                            wsMonth.Cell(mRow, col++).Value = (string)emp.karyawanName;
+                            wsMonth.Cell(mRow, col++).Value = (string)emp.nik;
+                            wsMonth.Cell(mRow, col++).Value = (string)emp.jabatanName;
+                            wsMonth.Cell(mRow, col++).Value = (bool)emp.isTargetSap ? "Target SAP" : ((bool)emp.isActivelyReporting ? "Non-Target (Aktif)" : "Non-Target");
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.onsiteDays;
+
+                            var mTgt = wsMonth.Cell(mRow, col++);
+                            mTgt.Value = (int)emp.mtdTotalTarget;
+                            mTgt.Style.NumberFormat.Format = "#,##0";
+                            mTgt.Style.Font.Bold = true;
+
+                            var mAct = wsMonth.Cell(mRow, col++);
+                            mAct.Value = (int)emp.mtdTotalActual;
+                            mAct.Style.NumberFormat.Format = "#,##0";
+                            mAct.Style.Font.Bold = true;
+
+                            double capRate = (double)emp.complianceRate;
+                            var mCap = wsMonth.Cell(mRow, col++);
+                            mCap.Value = capRate / 100.0;
+                            mCap.Style.NumberFormat.Format = "0.0%";
+                            mCap.Style.Font.Bold = true;
+                            if (capRate >= 80) mCap.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                            else if (capRate >= 40) mCap.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                            double crRate = (double)emp.closeRate;
+                            var mCr = wsMonth.Cell(mRow, col++);
+                            mCr.Value = crRate / 100.0;
+                            mCr.Style.NumberFormat.Format = "0.0%";
+                            if (crRate >= 80) mCr.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
+                            else mCr.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
+
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.hazard.actual;
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.hazard.target;
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.inspeksi.actual;
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.inspeksi.target;
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.safetyTalk.actual;
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.safetyTalk.target;
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.observasi.actual;
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.observasi.target;
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.coaching.actual;
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.coaching.target;
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.p5m.actual;
+                            wsMonth.Cell(mRow, col++).Value = (int)emp.p5m.target;
+
+                            string statusKaryawan;
+                            if (capRate >= 100.0) statusKaryawan = "⭐ Tuntas 100%";
+                            else if (capRate >= 80.0) statusKaryawan = "✅ Patuh (80-99%)";
+                            else if (capRate >= 40.0) statusKaryawan = "⚠️ Sebagian (40-79%)";
+                            else statusKaryawan = "❌ Kritis (<40%)";
+
+                            var mStat = wsMonth.Cell(mRow, col++);
+                            mStat.Value = statusKaryawan;
+                            mStat.Style.Font.Bold = true;
+
+                            wsMonth.Cell(mRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsMonth.Cell(mRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                            wsMonth.Cell(mRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                            wsMonth.Cell(mRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsMonth.Cell(mRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                            wsMonth.Cell(mRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsMonth.Cell(mRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                            wsMonth.Cell(mRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            wsMonth.Cell(mRow, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            wsMonth.Cell(mRow, 10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            wsMonth.Cell(mRow, 11).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                            for (int c = 12; c <= 23; c++)
+                            {
+                                wsMonth.Cell(mRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                                wsMonth.Cell(mRow, c).Style.NumberFormat.Format = "#,##0";
+                            }
+                            wsMonth.Cell(mRow, 24).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+
+                            var eRowRange = wsMonth.Range(mRow, 1, mRow, mEmpHeaders.Length);
+                            eRowRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                            eRowRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
+                            eRowRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                            eRowRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
+
+                            if (!string.IsNullOrEmpty(mCurDept) && mCurDept != (string)emp.departmentName)
+                            {
+                                eRowRange.Style.Border.TopBorder = XLBorderStyleValues.Medium;
+                                eRowRange.Style.Border.TopBorderColor = XLColor.FromHtml("#94a3b8");
+                            }
+                            mCurDept = (string)emp.departmentName;
+
+                            if ((int)emp.mtdTotalTarget > 0 && capRate == 0)
+                            {
+                                eRowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#fee2e2");
+                            }
+                            else if (capRate >= 100.0)
+                            {
+                                eRowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f0fdf4");
+                            }
+                            else if (mRow % 2 == 0)
+                            {
+                                eRowRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+                            }
+
+                            mRow++;
+                            mEmpIdx++;
+                        }
+
+                        wsMonth.SheetView.FreezeRows(empHeaderRow);
+                        wsMonth.Columns().AdjustToContents();
+                        foreach (var c in wsMonth.ColumnsUsed()) if (c.Width < 12) c.Width = 12;
+                    }
+                }
+
+                // ==============================================================
+                // SHEET LAST: MATRIKS BULANAN KARYAWAN (AUDIT & PIVOT FRIENDLY)
                 // ==============================================================
                 var wsMonthly = workbook.Worksheets.Add("Matriks Bulanan Karyawan");
                 wsMonthly.ShowGridLines = true;
@@ -6374,10 +7342,10 @@ namespace MBS_SAP.Controllers
                     "P5M Act *", "P5M Tgt"
                 };
 
-                int mRow = 5;
+                int mFlatRow = 5;
                 for (int i = 0; i < mHeaders.Length; i++)
                 {
-                    var cell = wsMonthly.Cell(mRow, i + 1);
+                    var cell = wsMonthly.Cell(mFlatRow, i + 1);
                     cell.Value = mHeaders[i];
                     cell.Style.Font.Bold = true;
                     cell.Style.Font.FontSize = 10;
@@ -6392,90 +7360,90 @@ namespace MBS_SAP.Controllers
                     else if (i >= 24) cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#78350f");
                     else cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#1e3a8a");
                 }
-                wsMonthly.Row(mRow).Height = 26;
+                wsMonthly.Row(mFlatRow).Height = 26;
 
                 int mIdx = 1;
-                mRow = 6;
+                mFlatRow = 6;
                 foreach (var log in monthlyEmployeeLogs.OrderBy(x => x.Year).ThenBy(x => x.Month).ThenBy(x => (string)x.Emp.departmentName).ThenBy(x => (string)x.Emp.karyawanName))
                 {
                     var emp = log.Emp;
                     int col = 1;
-                    wsMonthly.Cell(mRow, col++).Value = mIdx;
-                    wsMonthly.Cell(mRow, col++).Value = log.Year;
-                    wsMonthly.Cell(mRow, col++).Value = log.Month;
-                    wsMonthly.Cell(mRow, col++).Value = log.MonthLabel;
-                    wsMonthly.Cell(mRow, col++).Value = (string)emp.departmentName;
-                    wsMonthly.Cell(mRow, col++).Value = (string)emp.karyawanName;
-                    wsMonthly.Cell(mRow, col++).Value = (string)emp.nik;
-                    wsMonthly.Cell(mRow, col++).Value = (string)emp.jabatanName;
-                    wsMonthly.Cell(mRow, col++).Value = (bool)emp.isTargetSap ? "Target SAP" : "Non-Target";
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.onsiteDays;
+                    wsMonthly.Cell(mFlatRow, col++).Value = mIdx;
+                    wsMonthly.Cell(mFlatRow, col++).Value = log.Year;
+                    wsMonthly.Cell(mFlatRow, col++).Value = log.Month;
+                    wsMonthly.Cell(mFlatRow, col++).Value = log.MonthLabel;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (string)emp.departmentName;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (string)emp.karyawanName;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (string)emp.nik;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (string)emp.jabatanName;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (bool)emp.isTargetSap ? "Target SAP" : "Non-Target";
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.onsiteDays;
 
-                    var mTgt = wsMonthly.Cell(mRow, col++);
+                    var mTgt = wsMonthly.Cell(mFlatRow, col++);
                     mTgt.Value = (int)emp.mtdTotalTarget;
                     mTgt.Style.NumberFormat.Format = "#,##0";
                     mTgt.Style.Font.Bold = true;
 
-                    var mAct = wsMonthly.Cell(mRow, col++);
+                    var mAct = wsMonthly.Cell(mFlatRow, col++);
                     mAct.Value = (int)emp.mtdTotalActual;
                     mAct.Style.NumberFormat.Format = "#,##0";
                     mAct.Style.Font.Bold = true;
 
                     double capRate = (double)emp.complianceRate;
-                    var mCap = wsMonthly.Cell(mRow, col++);
+                    var mCap = wsMonthly.Cell(mFlatRow, col++);
                     mCap.Value = capRate / 100.0;
                     mCap.Style.NumberFormat.Format = "0.0%";
                     if (capRate >= 80) mCap.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
                     else if (capRate >= 40) mCap.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
 
                     double crRate = (double)emp.closeRate;
-                    var mCr = wsMonthly.Cell(mRow, col++);
+                    var mCr = wsMonthly.Cell(mFlatRow, col++);
                     mCr.Value = crRate / 100.0;
                     mCr.Style.NumberFormat.Format = "0.0%";
                     if (crRate >= 80) mCr.Style.Font.FontColor = XLColor.FromHtml("#16a34a");
                     else mCr.Style.Font.FontColor = XLColor.FromHtml("#dc2626");
 
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.hazard.actual;
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.hazard.target;
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.inspeksi.actual;
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.inspeksi.target;
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.safetyTalk.actual;
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.safetyTalk.target;
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.observasi.actual;
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.observasi.target;
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.coaching.actual;
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.coaching.target;
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.p5m.actual;
-                    wsMonthly.Cell(mRow, col++).Value = (int)emp.p5m.target;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.hazard.actual;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.hazard.target;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.inspeksi.actual;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.inspeksi.target;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.safetyTalk.actual;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.safetyTalk.target;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.observasi.actual;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.observasi.target;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.coaching.actual;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.coaching.target;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.p5m.actual;
+                    wsMonthly.Cell(mFlatRow, col++).Value = (int)emp.p5m.target;
 
-                    wsMonthly.Cell(mRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMonthly.Cell(mRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMonthly.Cell(mRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMonthly.Cell(mRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMonthly.Cell(mRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                    wsMonthly.Cell(mRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                    wsMonthly.Cell(mRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMonthly.Cell(mRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-                    wsMonthly.Cell(mRow, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMonthly.Cell(mRow, 10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                    wsMonthly.Cell(mRow, 11).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                    wsMonthly.Cell(mRow, 12).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                    wsMonthly.Cell(mRow, 13).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                    wsMonthly.Cell(mRow, 14).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    wsMonthly.Cell(mFlatRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsMonthly.Cell(mFlatRow, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsMonthly.Cell(mFlatRow, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsMonthly.Cell(mFlatRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsMonthly.Cell(mFlatRow, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                    wsMonthly.Cell(mFlatRow, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                    wsMonthly.Cell(mFlatRow, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsMonthly.Cell(mFlatRow, 8).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+                    wsMonthly.Cell(mFlatRow, 9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsMonthly.Cell(mFlatRow, 10).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                    wsMonthly.Cell(mFlatRow, 11).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    wsMonthly.Cell(mFlatRow, 12).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    wsMonthly.Cell(mFlatRow, 13).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+                    wsMonthly.Cell(mFlatRow, 14).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
                     for (int c = 15; c <= 26; c++)
                     {
-                        wsMonthly.Cell(mRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                        wsMonthly.Cell(mRow, c).Style.NumberFormat.Format = "#,##0";
+                        wsMonthly.Cell(mFlatRow, c).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                        wsMonthly.Cell(mFlatRow, c).Style.NumberFormat.Format = "#,##0";
                     }
 
-                    var mRange = wsMonthly.Range(mRow, 1, mRow, mHeaders.Length);
+                    var mRange = wsMonthly.Range(mFlatRow, 1, mFlatRow, mHeaders.Length);
                     mRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                     mRange.Style.Border.OutsideBorderColor = XLColor.FromHtml("#cbd5e1");
                     mRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
                     mRange.Style.Border.InsideBorderColor = XLColor.FromHtml("#e2e8f0");
-                    if (mRow % 2 == 0) mRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
+                    if (mFlatRow % 2 == 0) mRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#f8fafc");
 
-                    mRow++;
+                    mFlatRow++;
                     mIdx++;
                 }
 
