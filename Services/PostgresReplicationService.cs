@@ -1068,10 +1068,7 @@ namespace MBS_SAP.Services
                 await _context.SaveChangesAsync(cancellationToken);
             }
 
-            if (result.HazardInserted > 0 || result.HazardUpdated > 0)
-            {
-                await SyncHazardActionPlansAsync(since, cancellationToken);
-            }
+            await SyncHazardActionPlansAsync(since, cancellationToken);
 
             _logger.LogInformation(
                 "Postgres replication completed. Hazard +{HazardInserted} ~{HazardUpdated}; Inspection +{InspectionInserted} ~{InspectionUpdated}; " +
@@ -1913,10 +1910,7 @@ namespace MBS_SAP.Services
                 await _context.SaveChangesAsync(cancellationToken);
             }
 
-            if (result.HazardInserted > 0 || result.HazardUpdated > 0)
-            {
-                await SyncHazardActionPlansAsync(since, cancellationToken);
-            }
+            await SyncHazardActionPlansAsync(since, cancellationToken);
 
             return result;
         }
