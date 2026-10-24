@@ -119,11 +119,29 @@ namespace MBS_SAP.Controllers
                 );
             }
 
+            // Hitung total Action Plan yang sudah Closed pada periode & filter ini untuk ringkasan KPI card
+            var closedStatusNames = new[] { "Closed", "Close", "Selesai", "Complete" };
+            ViewBag.CountClosed = await query.CountAsync(r => r.Status != null && closedStatusNames.Contains(r.Status));
+
+            // Pastikan yang sudah di-close TIDAK MUNCUL LAGI di /ActionPlan/Index
+            query = query.Where(r => r.Status == null || !closedStatusNames.Contains(r.Status));
+
+            if (!string.IsNullOrEmpty(status) && status != "all")
+            {
+                if (status.Equals("outstanding", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(r => string.IsNullOrEmpty(r.RencanaPerbaikan));
+                }
+                else if (status.Equals("progress", StringComparison.OrdinalIgnoreCase))
+                {
+                    query = query.Where(r => !string.IsNullOrEmpty(r.RencanaPerbaikan));
+                }
+            }
+
             // Non-Admin dapat melihat semua hazard di perusahaan mereka (sesuai hierarki di atas)
             // agar bisa melakukan "Take Up" pada temuan dari user lain.
             var reports = await query
-                .OrderByDescending(r => r.Status == "Open")
-                .ThenByDescending(r => r.Tanggal)
+                .OrderByDescending(r => r.Tanggal)
                 .ThenByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
@@ -209,13 +227,13 @@ namespace MBS_SAP.Controllers
                                          .ToList();
 
             var today = DateTime.Today;
-            ViewBag.CountOutstanding = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(r.RencanaPerbaikan));
-            ViewBag.CountProgress = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(r.RencanaPerbaikan));
-            ViewBag.CountClosed = reports.Count(r => string.Equals(r.Status, "Closed", StringComparison.OrdinalIgnoreCase));
-            ViewBag.CountOverdue = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && r.CalculatedDueDate.HasValue && today > r.CalculatedDueDate.Value.Date);
-            ViewBag.CountDueToday = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && r.CalculatedDueDate.HasValue && today == r.CalculatedDueDate.Value.Date);
-            ViewBag.CountCritical = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && r.PriorityLevel == "CRITICAL");
-            ViewBag.CountHigh = reports.Count(r => string.Equals(r.Status, "Open", StringComparison.OrdinalIgnoreCase) && r.PriorityLevel == "HIGH");
+            ViewBag.CountOutstanding = reports.Count(r => string.IsNullOrEmpty(r.RencanaPerbaikan));
+            ViewBag.CountProgress = reports.Count(r => !string.IsNullOrEmpty(r.RencanaPerbaikan));
+            // ViewBag.CountClosed dihitung dari baseQuery sebelum pemfilteran
+            ViewBag.CountOverdue = reports.Count(r => r.CalculatedDueDate.HasValue && today > r.CalculatedDueDate.Value.Date);
+            ViewBag.CountDueToday = reports.Count(r => r.CalculatedDueDate.HasValue && today == r.CalculatedDueDate.Value.Date);
+            ViewBag.CountCritical = reports.Count(r => r.PriorityLevel == "CRITICAL");
+            ViewBag.CountHigh = reports.Count(r => r.PriorityLevel == "HIGH");
 
             return View(reports);
         }

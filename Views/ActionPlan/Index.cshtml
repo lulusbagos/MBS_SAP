@@ -375,7 +375,7 @@
                     <div>
                         <h6 class="mb-0" style="font-weight: 800; font-size: 13px; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px;">Closed</h6>
                         <h3 class="mb-0" style="font-weight: 900; color: var(--text-main);">@(ViewBag.CountClosed ?? 0)</h3>
-                        <small style="font-size: 10px; color: var(--text-muted);">Perbaikan telah diverifikasi & selesai</small>
+                        <small style="font-size: 10px; color: var(--text-muted);">Selesai & diarsipkan dari daftar aktif</small>
                     </div>
                 </div>
             </div>
@@ -395,11 +395,9 @@
             <!-- Status -->
             <div class="ap-filter-group">
                 <span class="ap-filter-label">Status</span>
-                <button class="ap-pill filter-status active" data-status="all">Semua</button>
-                <button class="ap-pill filter-status" data-status="open" data-active-class="active" style="--color-primary: #38bdf8;">Open</button>
+                <button class="ap-pill filter-status active" data-status="all">Semua Aktif</button>
                 <button class="ap-pill filter-status" data-status="outstanding" data-active-class="active-red">Outstanding</button>
-                <button class="ap-pill filter-status" data-status="progress" data-active-class="active" style="--color-primary: #f59e0b;">Progress</button>
-                <button class="ap-pill filter-status" data-status="closed" data-active-class="active-green">Closed</button>
+                <button class="ap-pill filter-status" data-status="progress" data-active-class="active" style="--color-primary: #f59e0b;">In Progress</button>
             </div>
             
             <div class="ap-divider d-none d-md-block"></div>
@@ -1183,7 +1181,7 @@
                     const nikpic = ($(this).attr('data-nikpic') || '').trim().toLowerCase();
 
                     let matchT = (selectedType === 'all' || t === selectedType);
-                    let matchS = (selectedStatus === 'all' || s === selectedStatus || (selectedStatus === 'open' && (s === 'outstanding' || s === 'progress')));
+                    let matchS = (s !== 'closed') && (selectedStatus === 'all' || s === selectedStatus || (selectedStatus === 'open' && (s === 'outstanding' || s === 'progress')));
                     let matchP = (selectedPerusahaan === 'all' || p === selectedPerusahaan);
                     let matchD = (selectedDepartemen === 'all' || normalizeDept(d) === normalizeDept(selectedDepartemen));
                     
