@@ -812,13 +812,13 @@
 
                                             <div class="form-group-sap">
                                                 <label class="form-label-sap" style="font-size: 11px;">Departemen PIC</label>
-                                                <input type="text" name="departemenPic" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="Departemen PIC" required />
+                                                <input type="text" name="departemenPic" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="Departemen PIC" value="@(string.IsNullOrEmpty(item.DepartemenPic) ? userDept : item.DepartemenPic)" required />
                                             </div>
 
                                             <div class="row">
                                                 <div class="col-md-6 form-group-sap">
                                                     <label class="form-label-sap" style="font-size: 11px;">Rencana Perbaikan</label>
-                                                    <input type="text" name="rencanaPerbaikan" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="Rencana Tindakan" required />
+                                                    <input type="text" name="rencanaPerbaikan" class="input-sap" style="height: 36px; font-size: 12px;" placeholder="Rencana Tindakan" value="@item.RencanaPerbaikan" required />
                                                 </div>
                                                 <div class="col-md-6 form-group-sap">
                                                     <label class="form-label-sap" style="font-size: 11px;">Target Tanggal</label>
@@ -827,18 +827,18 @@
                                             </div>
 
                                             <div class="form-group-sap">
-                                                <label class="form-label-sap" style="font-size: 11px;">Tindakan Perbaikan Nyata</label>
-                                                <textarea name="perbaikan" class="input-sap" rows="2" style="font-size: 12px;" placeholder="Apa perbaikan konkrit yang dikerjakan?" required></textarea>
+                                                <label class="form-label-sap" style="font-size: 11px;">Tindakan Perbaikan Nyata <span class="text-danger" id="perbaikanStar-@item.Id">*</span></label>
+                                                <textarea name="perbaikan" id="perbaikanText-@item.Id" class="input-sap" rows="2" style="font-size: 12px;" placeholder="Apa perbaikan konkrit yang dikerjakan?" required>@item.Perbaikan</textarea>
                                             </div>
 
                                             <div class="row">
                                                 <div class="col-md-6 form-group-sap">
                                                     <label class="form-label-sap" style="font-size: 11px;">Tanggal Selesai</label>
-                                                    <input type="date" name="tanggalPerbaikan" class="input-sap" style="height: 36px; font-size: 12px;" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                                                    <input type="date" name="tanggalPerbaikan" class="input-sap" style="height: 36px; font-size: 12px;" value="@(item.TanggalPerbaikan?.ToString("yyyy-MM-dd") ?? DateTime.Today.ToString("yyyy-MM-dd"))" required />
                                                 </div>
                                                 <div class="col-md-6 form-group-sap">
                                                     <label class="form-label-sap" style="font-size: 11px;">Status</label>
-                                                    <select name="status" class="input-sap" style="height: 36px; font-size: 12px;" required>
+                                                    <select name="status" class="input-sap status-select" style="height: 36px; font-size: 12px;" required onchange="handleStatusChange(this, @item.Id)">
                                                         <option value="Closed" selected>Closed (Selesai)</option>
                                                         <option value="Open">Open (Masih Berjalan)</option>
                                                     </select>
@@ -1264,5 +1264,20 @@
                 applyFilters();
             });
         });
+
+        function handleStatusChange(sel, id) {
+            const isClosed = sel.value === 'Closed';
+            const textEl = document.getElementById('perbaikanText-' + id);
+            const starEl = document.getElementById('perbaikanStar-' + id);
+            if (textEl) {
+                if (isClosed) {
+                    textEl.setAttribute('required', 'required');
+                    if (starEl) starEl.style.display = 'inline';
+                } else {
+                    textEl.removeAttribute('required');
+                    if (starEl) starEl.style.display = 'none';
+                }
+            }
+        }
     </script>
 }

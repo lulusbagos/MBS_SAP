@@ -282,14 +282,24 @@ namespace MBS_SAP.Controllers
             }
 
             var userNik = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Trim();
+            var userDept = User.FindFirst("Department")?.Value?.Trim();
             var compIdStr = User.FindFirst("CompanyId")?.Value;
             int? userCompanyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
+
+            List<int>? accessibleCompanyIds = null;
+            if (userCompanyId.HasValue)
+            {
+                accessibleCompanyIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value);
+            }
 
             var canUpdate = User.IsInRole("Admin")
                             || (!string.IsNullOrWhiteSpace(userNik) && string.Equals(plan.Nik, userNik, StringComparison.OrdinalIgnoreCase))
                             || (!string.IsNullOrWhiteSpace(userNik) && !string.IsNullOrWhiteSpace(plan.NikPja) && string.Equals(plan.NikPja, userNik, StringComparison.OrdinalIgnoreCase))
                             || (!string.IsNullOrWhiteSpace(userNik) && !string.IsNullOrWhiteSpace(plan.NikPic) && string.Equals(plan.NikPic, userNik, StringComparison.OrdinalIgnoreCase))
-                            || (plan.PerusahaanId.HasValue && userCompanyId.HasValue && plan.PerusahaanId == userCompanyId); // Allow anyone in the same company to Take Up
+                            || (!string.IsNullOrWhiteSpace(userDept) && (string.Equals(plan.Departemen, userDept, StringComparison.OrdinalIgnoreCase) || string.Equals(plan.DepartemenPja, userDept, StringComparison.OrdinalIgnoreCase) || string.Equals(plan.DepartemenPic, userDept, StringComparison.OrdinalIgnoreCase)))
+                            || (plan.PerusahaanId.HasValue && accessibleCompanyIds != null && accessibleCompanyIds.Contains(plan.PerusahaanId.Value))
+                            || (plan.PerusahaanId.HasValue && userCompanyId.HasValue && plan.PerusahaanId == userCompanyId)
+                            || (!plan.PerusahaanId.HasValue && userCompanyId.HasValue);
 
             if (!canUpdate)
             {
@@ -297,63 +307,72 @@ namespace MBS_SAP.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            plan.Status = status;
-            plan.Pic = pic;
-            plan.NikPic = nikPic;
-            plan.DepartemenPic = departemenPic;
-            plan.RencanaPerbaikan = rencanaPerbaikan;
-            plan.TanggalRencanaPerbaikan = tanggalRencanaPerbaikan;
-            plan.Perbaikan = perbaikan;
-            plan.TanggalPerbaikan = tanggalPerbaikan;
-            plan.Overdue = overdue;
-            plan.AlasanOverdue = alasanOverdue;
-
-            // Handle Photo Upload for Perbaikan
-            if (fotoPerbaikan != null && fotoPerbaikan.Length > 0)
+            try
             {
-                try
-                {
-                    plan.FotoPerbaikan = await _imageUploadService.UploadAndCompressImageAsync(fotoPerbaikan, "actions");
-                }
-                catch (Exception)
-                {
-                    // Fail silently
-                }
-            }
+                plan.Status = status;
+                plan.Pic = !string.IsNullOrWhiteSpace(pic) ? pic : User.Identity?.Name;
+                plan.NikPic = !string.IsNullOrWhiteSpace(nikPic) ? nikPic : userNik;
+                plan.DepartemenPic = !string.IsNullOrWhiteSpace(departemenPic) ? departemenPic : userDept;
+                plan.RencanaPerbaikan = rencanaPerbaikan;
+                plan.TanggalRencanaPerbaikan = tanggalRencanaPerbaikan;
+                plan.Perbaikan = perbaikan;
+                plan.TanggalPerbaikan = tanggalPerbaikan;
+                plan.Overdue = overdue;
+                plan.AlasanOverdue = alasanOverdue;
 
-            _context.ActionPlans.Update(plan);
-            await _context.SaveChangesAsync();
-
-            // Sync back to HazardReport if it came from hazard
-            if (plan.ItemSap != null && plan.ItemSap.StartsWith("hazard:"))
-            {
-                if (int.TryParse(plan.ItemSap.Substring("hazard:".Length), out int hazardId))
+                // Handle Photo Upload for Perbaikan
+                if (fotoPerbaikan != null && fotoPerbaikan.Length > 0)
                 {
-                    var hazard = await _context.HazardReports.FindAsync(hazardId);
-                    if (hazard != null)
+                    try
                     {
-                        hazard.StatusTemuan = status;
-                        hazard.Perbaikan = perbaikan;
-                        if (!string.IsNullOrEmpty(plan.FotoPerbaikan))
-                        {
-                            hazard.FotoPerbaikan = plan.FotoPerbaikan;
-                        }
-                        _context.HazardReports.Update(hazard);
-                        await _context.SaveChangesAsync();
+                        plan.FotoPerbaikan = await _imageUploadService.UploadAndCompressImageAsync(fotoPerbaikan, "actions");
+                    }
+                    catch (Exception)
+                    {
+                        // Fail silently
                     }
                 }
+
+                _context.ActionPlans.Update(plan);
+                await _context.SaveChangesAsync();
+
+                // Sync back to HazardReport if it came from hazard
+                if (plan.ItemSap != null && plan.ItemSap.StartsWith("hazard:"))
+                {
+                    if (int.TryParse(plan.ItemSap.Substring("hazard:".Length), out int hazardId))
+                    {
+                        var hazard = await _context.HazardReports.FindAsync(hazardId);
+                        if (hazard != null)
+                        {
+                            hazard.StatusTemuan = status;
+                            if (!string.IsNullOrWhiteSpace(perbaikan))
+                            {
+                                hazard.Perbaikan = perbaikan;
+                            }
+                            if (!string.IsNullOrEmpty(plan.FotoPerbaikan))
+                            {
+                                hazard.FotoPerbaikan = plan.FotoPerbaikan;
+                            }
+                            _context.HazardReports.Update(hazard);
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                }
+
+                // Invalidate user dashboard cache so Home updates immediately
+                if (!string.IsNullOrEmpty(userNik)) _cache.Remove($"UserDashboardStats_{userNik}");
+                if (!string.IsNullOrEmpty(plan.Nik)) _cache.Remove($"UserDashboardStats_{plan.Nik.Trim()}");
+                if (!string.IsNullOrEmpty(plan.NikPja)) _cache.Remove($"UserDashboardStats_{plan.NikPja.Trim()}");
+                if (!string.IsNullOrEmpty(plan.NikPic)) _cache.Remove($"UserDashboardStats_{plan.NikPic.Trim()}");
+
+                TempData["SuccessMessage"] = "Action Plan berhasil diperbarui!";
+                return RedirectToAction(nameof(Index));
             }
-
-            // Invalidate user dashboard cache so Home updates immediately
-            if (!string.IsNullOrEmpty(userNik)) _cache.Remove($"UserDashboardStats_{userNik}");
-            if (!string.IsNullOrEmpty(plan.Nik)) _cache.Remove($"UserDashboardStats_{plan.Nik.Trim()}");
-            if (!string.IsNullOrEmpty(plan.NikPja)) _cache.Remove($"UserDashboardStats_{plan.NikPja.Trim()}");
-            if (!string.IsNullOrEmpty(plan.NikPic)) _cache.Remove($"UserDashboardStats_{plan.NikPic.Trim()}");
-
-
-
-            TempData["SuccessMessage"] = "Action Plan berhasil diperbarui!";
-            return RedirectToAction(nameof(Index));
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Gagal memperbarui action plan: {ex.Message}";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         [HttpGet]
