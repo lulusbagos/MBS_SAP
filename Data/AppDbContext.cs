@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MBS_SAP.Models;
 
 namespace MBS_SAP.Data
@@ -76,13 +76,13 @@ namespace MBS_SAP.Data
                 .HasKey(p => p.Nrp);
 
             modelBuilder.Entity<HazardReport>()
-                .ToTable("tbl_t_hazard_report");
+                .ToTable("tbl_t_hazard_report", tb => tb.UseSqlOutputClause(false));
 
             modelBuilder.Entity<Inspection>()
                 .ToTable("tbl_t_inspection");
 
             modelBuilder.Entity<ActionPlan>()
-                .ToTable("tbl_t_action_plan");
+                .ToTable("tbl_t_action_plan", tb => tb.UseSqlOutputClause(false));
 
             modelBuilder.Entity<SafetyTalk>()
                 .ToTable("tbl_t_safety_talk");

@@ -633,18 +633,39 @@
         }
 
         function showSapErrorPopup(title, errors, fallbackMessage) {
-            const cleanErrors = Array.isArray(errors) && errors.length > 0 ? errors : [fallbackMessage || 'Data belum lengkap.'];
+            const hasSpecificErrors = Array.isArray(errors) && errors.length > 0;
             const escapePopupHtml = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
             $('#sapErrorModal').remove();
             $('.modal-backdrop').remove();
             $('body').removeClass('modal-open').css('overflow', '').css('padding-right', '');
 
-            const listHtml = cleanErrors.map(item => `
-                <li class="d-flex align-items-start gap-2 mb-2" style="font-size: 13px;">
-                    <i class="bi bi-exclamation-circle-fill text-danger mt-1 flex-shrink-0"></i>
-                    <span>${escapePopupHtml(item)}</span>
-                </li>
-            `).join('');
+            let modalTitle = '';
+            let bodyContentHtml = '';
+
+            if (hasSpecificErrors) {
+                modalTitle = title || 'Data Belum Lengkap';
+                const listHtml = errors.map(item => `
+                    <li class="d-flex align-items-start gap-2 mb-2" style="font-size: 13px;">
+                        <i class="bi bi-exclamation-circle-fill text-danger mt-1 flex-shrink-0"></i>
+                        <span>${escapePopupHtml(item)}</span>
+                    </li>
+                `).join('');
+                bodyContentHtml = `
+                    <div class="mb-3 fw-semibold text-danger" style="font-size: 13.5px;">
+                        <i class="bi bi-info-circle me-1"></i> Mohon periksa dan lengkapi field berikut:
+                    </div>
+                    <ul class="list-unstyled mb-0" style="color: var(--text-main, #f8fafc); background: rgba(239, 68, 68, 0.06); padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.2);">
+                        ${listHtml}
+                    </ul>`;
+            } else {
+                modalTitle = 'Gagal Menyimpan Data';
+                const mainMsg = title || fallbackMessage || 'Terjadi kesalahan pada sistem saat memproses data.';
+                bodyContentHtml = `
+                    <div class="p-3 text-danger rounded-3" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239,68,68,0.25); font-size: 13px; line-height: 1.6; word-break: break-word;">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> ${escapePopupHtml(mainMsg)}
+                    </div>`;
+            }
+
             const modalHtml = `
                 <div class="modal fade" id="sapErrorModal" tabindex="-1" aria-hidden="true" style="z-index: 10050;">
                     <div class="modal-dialog modal-dialog-centered">
@@ -652,21 +673,16 @@
                             <div class="modal-header" style="border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 16px 20px;">
                                 <h5 class="modal-title d-flex align-items-center mb-0" style="font-size: 16px; font-weight: 800; color: #ef4444;">
                                     <i class="bi bi-exclamation-triangle-fill text-danger me-2" style="font-size: 20px;"></i>
-                                    ${escapePopupHtml(title || 'Data Belum Lengkap')}
+                                    ${escapePopupHtml(modalTitle)}
                                 </h5>
                                 <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
                             </div>
                             <div class="modal-body" style="font-size: 13px; line-height: 1.6; padding: 20px;">
-                                <div class="mb-3 fw-semibold text-danger" style="font-size: 13.5px;">
-                                    <i class="bi bi-info-circle me-1"></i> Mohon periksa dan lengkapi field berikut:
-                                </div>
-                                <ul class="list-unstyled mb-0" style="color: var(--text-main, #f8fafc); background: rgba(239, 68, 68, 0.06); padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.2);">
-                                    ${listHtml}
-                                </ul>
+                                ${bodyContentHtml}
                             </div>
                             <div class="modal-footer" style="border-top: 1px solid var(--border-color, rgba(255,255,255,0.1)); padding: 12px 20px;">
                                 <button type="button" class="btn btn-danger px-4 py-2 w-100" data-bs-dismiss="modal" style="border-radius: 10px; font-weight: 700; font-size: 13.5px;">
-                                    <i class="bi bi-pencil-square me-1"></i> Lengkapi Sekarang
+                                    <i class="bi bi-check2 me-1"></i> Tutup
                                 </button>
                             </div>
                         </div>
