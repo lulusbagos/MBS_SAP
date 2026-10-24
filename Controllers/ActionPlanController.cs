@@ -153,8 +153,27 @@ namespace MBS_SAP.Controllers
                 .Select(r => { int.TryParse(r.ItemSap!.Substring(12), out int id); return id; })
                 .Where(id => id > 0).ToList();
 
-            var hazards = await _context.HazardReports.AsNoTracking().Where(h => hazardIds.Contains(h.Id)).ToDictionaryAsync(h => h.Id, h => h.TingkatResiko);
+            var hazards = await _context.HazardReports.AsNoTracking()
+                .Where(h => hazardIds.Contains(h.Id))
+                .Select(h => new { h.Id, h.TingkatResiko, h.IsDeleted, h.StatusTemuan })
+                .ToDictionaryAsync(h => h.Id);
             var observations = await _context.Observations.AsNoTracking().Where(o => obsIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.TingkatResiko);
+
+            // Defensive filter: jika sumber hazard asalnya sudah di-delete atau berstatus Closed, jangan tampilkan di daftar Open
+            reports = reports.Where(r =>
+            {
+                if (r.ItemSap != null && r.ItemSap.StartsWith("hazard:") && int.TryParse(r.ItemSap.Substring(7), out int hId))
+                {
+                    if (hazards.TryGetValue(hId, out var hInfo))
+                    {
+                        if (hInfo.IsDeleted || (hInfo.StatusTemuan != null && closedStatusNames.Contains(hInfo.StatusTemuan)))
+                        {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }).ToList();
 
             foreach (var r in reports)
             {
@@ -162,7 +181,7 @@ namespace MBS_SAP.Controllers
                 {
                     if (r.ItemSap.StartsWith("hazard:") && int.TryParse(r.ItemSap.Substring(7), out int hId) && hazards.ContainsKey(hId))
                     {
-                        r.TingkatResiko = hazards[hId];
+                        r.TingkatResiko = hazards[hId].TingkatResiko;
                     }
                     else if (r.ItemSap.StartsWith("observation:") && int.TryParse(r.ItemSap.Substring(12), out int oId) && observations.ContainsKey(oId))
                     {

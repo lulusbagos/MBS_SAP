@@ -200,14 +200,22 @@ namespace MBS_SAP.Services
             var context = serviceProvider.GetRequiredService<AppDbContext>();
 
             var sql = @"
-                -- 1. Hazard Report
+                -- 1. Hazard Report (prioritize preserving 'Closed' status over 'Open')
                 WITH cte_h AS (
                     SELECT id, ROW_NUMBER() OVER (
                         PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(CAST(temuan AS NVARCHAR(200)), ''))))
-                        ORDER BY id ASC
+                        ORDER BY CASE WHEN status_temuan = 'Closed' THEN 0 ELSE 1 END, id ASC
                     ) as rn FROM tbl_t_hazard_report WHERE is_deleted = 0
                 )
                 UPDATE tbl_t_hazard_report SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_h WHERE rn > 1);
+
+                -- 1b. Sync Action Plan for soft-deleted hazard reports
+                UPDATE a
+                SET a.is_deleted = 1,
+                    a.status = 'Closed'
+                FROM tbl_t_action_plan a
+                INNER JOIN tbl_t_hazard_report h ON a.item_sap = 'hazard:' + CAST(h.id AS VARCHAR(50))
+                WHERE h.is_deleted = 1 AND a.is_deleted = 0;
 
                 -- 2. Inspeksi K3
                 WITH cte_i AS (
@@ -253,6 +261,17 @@ namespace MBS_SAP.Services
                     ) as rn FROM tbl_t_p5m WHERE is_deleted = 0
                 )
                 UPDATE tbl_t_p5m SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_p WHERE rn > 1);
+
+                -- 7. Dedup Action Plan (item_sap)
+                WITH cte_ap AS (
+                    SELECT id, ROW_NUMBER() OVER (
+                        PARTITION BY item_sap
+                        ORDER BY CASE WHEN status = 'Closed' THEN 0 ELSE 1 END, id ASC
+                    ) as rn
+                    FROM tbl_t_action_plan
+                    WHERE is_deleted = 0 AND item_sap IS NOT NULL AND item_sap <> ''
+                )
+                UPDATE tbl_t_action_plan SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_ap WHERE rn > 1);
             ";
 
             try

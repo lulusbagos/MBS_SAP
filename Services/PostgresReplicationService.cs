@@ -1940,7 +1940,7 @@ namespace MBS_SAP.Services
                 var updateSql = @"
                     UPDATE a
                     SET 
-                        a.status = h.status_temuan,
+                        a.status = CASE WHEN h.is_deleted = 1 THEN 'Closed' ELSE h.status_temuan END,
                         a.pja = h.pja,
                         a.nik_pja = h.nik_pja,
                         a.departemen_pja = h.departemen_pja,
@@ -1960,7 +1960,16 @@ namespace MBS_SAP.Services
                           (h.perbaikan IS NOT NULL AND ISNULL(a.perbaikan, '') <> h.perbaikan) OR
                           (h.foto_perbaikan IS NOT NULL AND ISNULL(a.foto_perbaikan, '') <> h.foto_perbaikan) OR
                           a.is_deleted <> h.is_deleted
-                      )";
+                      );
+
+                    -- Pastikan setiap action plan yang hazard-nya is_deleted = 1 selalu tersinkron
+                    UPDATE a
+                    SET a.is_deleted = 1,
+                        a.status = 'Closed'
+                    FROM tbl_t_action_plan a
+                    INNER JOIN tbl_t_hazard_report h ON a.item_sap = CONCAT('hazard:', h.id)
+                    WHERE h.is_deleted = 1 AND a.is_deleted = 0;
+                ";
 
                 await _context.Database.ExecuteSqlRawAsync(insertSql, new object[] { since }, cancellationToken);
                 await _context.Database.ExecuteSqlRawAsync(updateSql, new object[] { since }, cancellationToken);
