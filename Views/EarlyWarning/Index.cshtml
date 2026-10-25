@@ -1288,7 +1288,7 @@
                             <i class="bi bi-clock-history me-1"></i>Perkiraan Terjadi: <span id="warningTimeWindowText">-</span>
                         </span>
                     </div>
-                    <div class="warning-desc" id="warningDesc">Tidak ada potensi hujan lebat, petir, atau hembusan angin kencang berisiko di seluruh 17 titik operasional tambang.</div>
+                    <div class="warning-desc" id="warningDesc">Tidak ada potensi hujan lebat, petir, atau hembusan angin kencang berisiko di seluruh area operasional tambang.</div>
                 </div>
             </div>
             <div class="warning-meta">
@@ -1311,10 +1311,10 @@
             <div class="kpi-card points">
                 <div class="kpi-hdr">
                     <span class="kpi-title"><i class="bi bi-geo-alt-fill text-info"></i> TITIK OPERASIONAL</span>
-                    <span class="badge bg-info text-dark">17 PIT &amp; DUMP</span>
+                    <span class="badge bg-info text-dark" id="kpiPointsBadge">19 PIT &amp; DUMP</span>
                 </div>
-                <div class="kpi-num text-info" id="kpiPointsCount">17</div>
-                <div class="kpi-sub">KPP, UDU &amp; MGE Monitored</div>
+                <div class="kpi-num text-info" id="kpiPointsCount">19</div>
+                <div class="kpi-sub">KPP, UDU, MGE &amp; Site Monitored</div>
             </div>
 
             <div class="kpi-card rain">
@@ -1398,7 +1398,7 @@
             <div class="right-panel">
                 <div class="nav-tabs-ews">
                     <button type="button" class="tab-ews-btn active" id="tabPointsBtn" onclick="switchRightTab('points', true)">
-                        <i class="bi bi-list-check"></i> Daftar Titik (<span id="tabPointsCount">17</span>)
+                        <i class="bi bi-list-check"></i> Daftar Titik (<span id="tabPointsCount">19</span>)
                     </button>
                     <button type="button" class="tab-ews-btn" id="tabChartBtn" onclick="switchRightTab('chart', true)">
                         <i class="bi bi-graph-up"></i> Tren 24 Jam
@@ -1425,13 +1425,13 @@
                         <!-- Quick Filter Chips -->
                         <div class="d-flex align-items-center gap-1">
                             <button type="button" class="filter-chip-btn active" id="filterAllBtn" onclick="setPointFilter('all')">
-                                Semua (17)
+                                Semua (<span id="allCountBadge">19</span>)
                             </button>
                             <button type="button" class="filter-chip-btn" id="filterWarnBtn" onclick="setPointFilter('warning')">
                                 <i class="bi bi-cloud-rain-fill text-info"></i> Hujan/Waspada (<span id="warnCountBadge">0</span>)
                             </button>
                             <button type="button" class="filter-chip-btn" id="filterDryBtn" onclick="setPointFilter('dry')">
-                                <i class="bi bi-sun-fill text-warning"></i> Kering (<span id="dryCountBadge">17</span>)
+                                <i class="bi bi-sun-fill text-warning"></i> Kering (<span id="dryCountBadge">19</span>)
                             </button>
                         </div>
                         <div class="d-flex align-items-center gap-2">
@@ -1853,7 +1853,7 @@
             soundTier: 0,
             desc: d > 0 
                 ? 'Terpantau hujan ringan / gerimis (0 - 20 mm/hari). Hauling aman dan terkendali, pengemudi tetap waspada.' 
-                : 'Kondisi cuaca saat ini kondusif dan prakiraan cuaca hari ini cerah/berawan di seluruh 17 titik tambang.'
+                : 'Kondisi cuaca saat ini kondusif dan prakiraan cuaca hari ini cerah/berawan di seluruh titik tambang.'
         };
     }
 
@@ -1926,7 +1926,10 @@
     function playEmergencyWarningSiren() { playTingChime(2); }
 
     function triggerRainAlert(tier, locationStr = '', dailyVal = 0, rateVal = 0, isTest = false, timeEstimateStr = '') {
-        const cleanLoc = locationStr ? `di area ${locationStr}` : 'di area operasional tambang';
+        let cleanLoc = locationStr ? locationStr.trim() : 'di area operasional tambang';
+        if (!cleanLoc.startsWith('di ')) {
+            cleanLoc = `di area ${cleanLoc}`;
+        }
         const timeInfoSpoken = timeEstimateStr ? `, diperkirakan terjadi pada ${timeEstimateStr}` : '';
 
         if (tier === 5 || tier === 100) {
@@ -2076,13 +2079,50 @@
     }
 
     function playGoogleTranslateFallback(text) {
-        if (isSoundMuted) return;
+        if (isSoundMuted || !text) return;
         try {
-            const safeText = text.substring(0, 180);
-            const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${encodeURIComponent(safeText)}`;
-            const audio = new Audio(ttsUrl);
-            audio.play().catch(e => console.warn('TTS playback prevented:', e));
-        } catch(e) {}
+            // Split into sentence/phrase chunks under 180 chars so no words or area names are cut off
+            const chunks = [];
+            const sentences = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [text];
+            let current = '';
+            for (const s of sentences) {
+                if ((current + ' ' + s).trim().length <= 180) {
+                    current = (current + ' ' + s).trim();
+                } else {
+                    if (current) chunks.push(current);
+                    if (s.length <= 180) {
+                        current = s.trim();
+                    } else {
+                        const words = s.split(' ');
+                        current = '';
+                        for (const w of words) {
+                            if ((current + ' ' + w).trim().length <= 180) {
+                                current = (current + ' ' + w).trim();
+                            } else {
+                                if (current) chunks.push(current);
+                                current = w;
+                            }
+                        }
+                    }
+                }
+            }
+            if (current) chunks.push(current);
+
+            // Play chunks sequentially
+            let idx = 0;
+            function playNext() {
+                if (idx >= chunks.length || isSoundMuted) return;
+                const chunkUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${encodeURIComponent(chunks[idx])}`;
+                const audio = new Audio(chunkUrl);
+                idx++;
+                audio.onended = playNext;
+                audio.onerror = playNext;
+                audio.play().catch(e => console.warn('TTS chunk playback error:', e));
+            }
+            playNext();
+        } catch(e) {
+            console.warn('TTS fallback error:', e);
+        }
     }
 
     function showVoiceNotificationToast(text) {
@@ -2669,6 +2709,8 @@
                 contractorBadge = '<span class="badge" style="background:rgba(52,211,153,0.22); color:#34d399; border:1px solid rgba(52,211,153,0.5); font-size:8.5px; font-weight:800;">UDU</span>';
             } else if (p.name.includes('MGE')) {
                 contractorBadge = '<span class="badge" style="background:rgba(251,191,36,0.22); color:#fbbf24; border:1px solid rgba(251,191,36,0.5); font-size:8.5px; font-weight:800;">MGE</span>';
+            } else {
+                contractorBadge = '<span class="badge" style="background:rgba(168,85,247,0.22); color:#c084fc; border:1px solid rgba(168,85,247,0.5); font-size:8.5px; font-weight:800;">INDEXIM</span>';
             }
 
             // Hauling Road Condition
@@ -2743,6 +2785,12 @@
         // Update HUD KPI Cards (Reflecting Real-Time Telemetry & Today's Peak Forecast)
         const avgTemp = (tempSum / results.length).toFixed(1);
         document.getElementById('kpiPointsCount').innerText = results.length;
+        const kpiPointsBadge = document.getElementById('kpiPointsBadge');
+        if (kpiPointsBadge) kpiPointsBadge.innerText = `${results.length} PIT & DUMP`;
+        const tabPointsCount = document.getElementById('tabPointsCount');
+        if (tabPointsCount) tabPointsCount.innerText = results.length;
+        const allCountBadge = document.getElementById('allCountBadge');
+        if (allCountBadge) allCountBadge.innerText = results.length;
 
         // KPI 1: Curah Hujan Sekarang (Now) & Prediksi Puncak Hari Ini
         document.getElementById('kpiMaxRain').innerHTML = `${maxRainNow.toFixed(1)} <span style="font-size:12px;">mm/h</span>`;
@@ -2782,16 +2830,41 @@
 
         document.getElementById('warningPointsBadge').innerText = `${warningPointsCount} Titik Terindikasi`;
 
-        const alertLocations = (activeNowRainPoints.length > 0 ? activeNowRainPoints : activeAlertPoints)
+        // Ambil seluruh area yang sedang hujan sekarang maupun yang masuk radar peringatan
+        const combinedAlertPoints = [...activeNowRainPoints, ...activeAlertPoints];
+        const alertLocations = (combinedAlertPoints.length > 0 ? combinedAlertPoints : [])
             .map(a => a.name.replace(/\s*-\s*(KPP|UDU|MGE)\b/gi, '').trim());
         const uniqueLocations = [...new Set(alertLocations)];
-        const locationsPreview = uniqueLocations.slice(0, 3).join(', ');
-        const locationsSpoken = uniqueLocations.length > 0 
-            ? `di beberapa lokasi, antara lain area ${locationsPreview}${uniqueLocations.length > 3 ? ', dan sekitarnya' : ''}` 
-            : 'di beberapa lokasi pit operasional';
-        const locationsBanner = uniqueLocations.length > 0 
-            ? `di beberapa lokasi (${locationsPreview}${uniqueLocations.length > 3 ? ', dll' : ''})` 
-            : 'di beberapa lokasi operasional';
+
+        // Format pembacaan nama-nama area secara lengkap dan natural
+        let locationsSpoken = '';
+        let locationsBanner = '';
+
+        if (uniqueLocations.length === 0) {
+            locationsSpoken = 'di area operasional tambang';
+            locationsBanner = 'di area operasional tambang';
+        } else if (uniqueLocations.length === 1) {
+            locationsSpoken = `di area ${uniqueLocations[0]}`;
+            locationsBanner = `di area ${uniqueLocations[0]}`;
+        } else if (uniqueLocations.length <= 8) {
+            // Sebutkan semua nama area secara lengkap jika <= 8 titik
+            const lastLoc = uniqueLocations[uniqueLocations.length - 1];
+            const otherLocs = uniqueLocations.slice(0, -1);
+            const joinedLocs = `${otherLocs.join(', ')}, dan ${lastLoc}`;
+            locationsSpoken = `di area ${joinedLocs}`;
+            locationsBanner = `di area ${joinedLocs}`;
+        } else if (uniqueLocations.length >= results.length - 2) {
+            // Jika mencakup hampir seluruh / seluruh titik tambang (misal 19 titik)
+            locationsSpoken = `di seluruh ${results.length} titik operasional tambang, meliputi Pit Central, Pit JO North, T2, T3, T4, Panel East, T6, JO South, dan area disposal`;
+            locationsBanner = `di seluruh ${results.length} titik operasional tambang`;
+        } else {
+            // Jika 9 s/d 16 titik: sebutkan jumlahnya dan rincian pit utamanya
+            const lastLoc = uniqueLocations[uniqueLocations.length - 1];
+            const otherLocs = uniqueLocations.slice(0, -1);
+            const joinedLocs = `${otherLocs.join(', ')}, dan ${lastLoc}`;
+            locationsSpoken = `di ${uniqueLocations.length} titik operasional, yaitu area ${joinedLocs}`;
+            locationsBanner = `di ${uniqueLocations.length} area (${uniqueLocations.slice(0, 5).join(', ')}, dll)`;
+        }
 
         // Evaluasi Klasifikasi Site Sesuai Aturan:
         // 1. Hujan Ringan (0 - 20 mm/hari)
@@ -2944,7 +3017,7 @@
             banner.className = 'warning-banner normal';
             icon.className = 'bi bi-shield-check text-success';
             title.innerText = 'KONDISI CUACA SITE: NORMAL & AMAN';
-            desc.innerText = 'Kondisi cuaca saat ini kondusif (akumulasi 0 - 20 mm/hari) dan prakiraan cuaca cerah/berawan di seluruh 17 titik tambang Indexim.';
+            desc.innerText = `Kondisi cuaca saat ini kondusif (akumulasi 0 - 20 mm/hari) dan prakiraan cuaca cerah/berawan di seluruh ${results.length} titik tambang Indexim.`;
             kpiStatusBadge.className = 'badge bg-success';
             kpiStatusBadge.innerText = 'AMAN';
             kpiStatusText.className = 'kpi-num text-success';
