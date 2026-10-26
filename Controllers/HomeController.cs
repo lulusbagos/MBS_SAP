@@ -17,11 +17,13 @@ namespace MBS_SAP.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IMemoryCache _cache;
+        private readonly MBS_SAP.Services.CompanyHierarchyService _companyHierarchyService;
 
-        public HomeController(AppDbContext context, IMemoryCache cache)
+        public HomeController(AppDbContext context, IMemoryCache cache, MBS_SAP.Services.CompanyHierarchyService companyHierarchyService)
         {
             _context = context;
             _cache = cache;
+            _companyHierarchyService = companyHierarchyService;
         }
 
         public async Task<IActionResult> Index()
@@ -294,6 +296,9 @@ namespace MBS_SAP.Controllers
                     .Select(k => new { k.IdPerusahaan, k.IdDepartemen })
                     .FirstOrDefaultAsync();
                 int? userCompanyId = currentKaryawanForAP?.IdPerusahaan;
+                var allowedCompanyIds = userCompanyId.HasValue 
+                    ? await _companyHierarchyService.GetAccessibleCompanyIdsAsync(userCompanyId.Value) 
+                    : new List<int>();
 
                 var userName = User.Identity?.Name ?? string.Empty;
 
@@ -320,7 +325,7 @@ namespace MBS_SAP.Controllers
                         (a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth) ||
                         (a.CreatedAt >= startOfMonth && a.CreatedAt <= endOfMonth)
                     ))
-                    .Select(a => new { a.Nik, a.Status, a.NikPja, a.NikPic, a.Pja, a.Pic, a.Departemen, a.DepartemenPja, a.DepartemenPic })
+                    .Select(a => new { a.Nik, a.Status, a.NikPja, a.NikPic, a.Pja, a.Pic, a.Departemen, a.DepartemenPja, a.DepartemenPic, a.PerusahaanId })
                     .ToListAsync();
 
                 // 1. DIARAHKAN KE SAYA (PJA / PIC) - MTD
@@ -436,8 +441,9 @@ namespace MBS_SAP.Controllers
                 {
                     // 3a. Diarahkan ke Departemen Saya (PJA/PIC) MTD
                     var deptAssignedMtd = rawActionPlansMtd
-                        .Where(a => (!string.IsNullOrEmpty(a.DepartemenPja) && a.DepartemenPja.Equals(userDept, StringComparison.OrdinalIgnoreCase)) ||
-                                    (!string.IsNullOrEmpty(a.DepartemenPic) && a.DepartemenPic.Equals(userDept, StringComparison.OrdinalIgnoreCase)))
+                        .Where(a => (!userCompanyId.HasValue || (a.PerusahaanId.HasValue && allowedCompanyIds.Contains(a.PerusahaanId.Value))) &&
+                                    ((!string.IsNullOrEmpty(a.DepartemenPja) && a.DepartemenPja.Equals(userDept, StringComparison.OrdinalIgnoreCase)) ||
+                                     (!string.IsNullOrEmpty(a.DepartemenPic) && a.DepartemenPic.Equals(userDept, StringComparison.OrdinalIgnoreCase))))
                         .ToList();
                     int deptAssignedOpen = deptAssignedMtd.Count(a => !isClosedStatusHelper(a.Status));
                     int deptAssignedClosed = deptAssignedMtd.Count(a => isClosedStatusHelper(a.Status));
@@ -484,8 +490,8 @@ namespace MBS_SAP.Controllers
                     }
                     else
                     {
-                        int deptActAp = rawActionPlansMtd.Count(a => !string.IsNullOrEmpty(a.Departemen) && a.Departemen.Equals(userDept, StringComparison.OrdinalIgnoreCase));
-                        int deptActApClosed = rawActionPlansMtd.Count(a => !string.IsNullOrEmpty(a.Departemen) && a.Departemen.Equals(userDept, StringComparison.OrdinalIgnoreCase) && isClosedStatusHelper(a.Status));
+                        int deptActAp = rawActionPlansMtd.Count(a => (!userCompanyId.HasValue || (a.PerusahaanId.HasValue && allowedCompanyIds.Contains(a.PerusahaanId.Value))) && !string.IsNullOrEmpty(a.Departemen) && a.Departemen.Equals(userDept, StringComparison.OrdinalIgnoreCase));
+                        int deptActApClosed = rawActionPlansMtd.Count(a => (!userCompanyId.HasValue || (a.PerusahaanId.HasValue && allowedCompanyIds.Contains(a.PerusahaanId.Value))) && !string.IsNullOrEmpty(a.Departemen) && a.Departemen.Equals(userDept, StringComparison.OrdinalIgnoreCase) && isClosedStatusHelper(a.Status));
                         deptEffectiveTotalAp = deptActAp;
                         deptEffectiveClosedAp = deptActApClosed;
                     }
@@ -504,7 +510,9 @@ namespace MBS_SAP.Controllers
 
                     var baseDeptActionPlansQuery = _context.ActionPlans
                         .AsNoTracking()
-                        .Where(a => !a.IsDeleted && (a.Departemen == userDept || a.DepartemenPja == userDept || a.DepartemenPic == userDept));
+                        .Where(a => !a.IsDeleted 
+                            && (!userCompanyId.HasValue || (a.PerusahaanId.HasValue && allowedCompanyIds.Contains(a.PerusahaanId.Value)))
+                            && (a.Departemen == userDept || a.DepartemenPja == userDept || a.DepartemenPic == userDept));
 
                     var deptActionPlanItems = await baseDeptActionPlansQuery
                         .Where(a => a.Status == "Open")

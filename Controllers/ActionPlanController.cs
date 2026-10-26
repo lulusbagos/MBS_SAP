@@ -106,7 +106,7 @@ namespace MBS_SAP.Controllers
                 }
             }
 
-            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin, kecuali jika ditugaskan langsung ke user atau departemen user)
+            // Filter berdasarkan hierarki perusahaan (berlaku untuk Admin maupun non-Admin, kecuali jika ditugaskan langsung ke user)
             if (companyId.HasValue)
             {
                 var allowedIds = await _companyHierarchyService.GetAccessibleCompanyIdsAsync(companyId.Value);
@@ -114,8 +114,7 @@ namespace MBS_SAP.Controllers
                     (r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value)) ||
                     (r.Nik != null && r.Nik.ToLower() == userNikLower) ||
                     (r.NikPja != null && r.NikPja.ToLower() == userNikLower) ||
-                    (r.NikPic != null && r.NikPic.ToLower() == userNikLower) ||
-                    (userDept != null && (r.Departemen == userDept || r.DepartemenPja == userDept || r.DepartemenPic == userDept))
+                    (r.NikPic != null && r.NikPic.ToLower() == userNikLower)
                 );
             }
 
@@ -489,8 +488,7 @@ namespace MBS_SAP.Controllers
                     (r.PerusahaanId.HasValue && allowedIds.Contains(r.PerusahaanId.Value)) ||
                     (r.Nik != null && r.Nik.ToLower() == userNikLower) ||
                     (r.NikPja != null && r.NikPja.ToLower() == userNikLower) ||
-                    (r.NikPic != null && r.NikPic.ToLower() == userNikLower) ||
-                    (userDept != null && (r.Departemen == userDept || r.DepartemenPja == userDept || r.DepartemenPic == userDept))
+                    (r.NikPic != null && r.NikPic.ToLower() == userNikLower)
                 );
             }
 

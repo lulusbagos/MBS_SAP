@@ -4233,8 +4233,9 @@ namespace MBS_SAP.Controllers
 
                         var deptName = g.Key;
                         var deptAssignedAp = monthlyActionPlans.Where(a =>
-                            (!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
-                            (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase))
+                            a.PerusahaanId == selectedCompany.PerusahaanId &&
+                            ((!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
+                             (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase)))
                         ).ToList();
 
                         int deptEffectiveTotalAp = deptAssignedAp.Count;
@@ -4821,8 +4822,9 @@ namespace MBS_SAP.Controllers
 
                         var deptName = g.Key;
                         var deptAssignedAp = monthlyActionPlans.Where(a =>
-                            (!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
-                            (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase))
+                            a.PerusahaanId == selectedCompany.PerusahaanId &&
+                            ((!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
+                             (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), deptName.Trim(), StringComparison.OrdinalIgnoreCase)))
                         ).ToList();
 
                         int deptEffectiveTotalAp = deptAssignedAp.Count;
@@ -5797,8 +5799,9 @@ namespace MBS_SAP.Controllers
                     double dCapaian = dTarget > 0 ? Math.Min(100.0, Math.Round((double)dActual / dTarget * 100.0, 1)) : (dActual > 0 ? 100.0 : 0.0);
 
                     var deptAssignedAp = monthlyActionPlans.Where(a =>
-                        (!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), dName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
-                        (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), dName.Trim(), StringComparison.OrdinalIgnoreCase))
+                        a.PerusahaanId == selectedCompany.PerusahaanId &&
+                        ((!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), dName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
+                         (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), dName.Trim(), StringComparison.OrdinalIgnoreCase)))
                     ).ToList();
 
                     int dApTotal = deptAssignedAp.Count;
@@ -6200,8 +6203,9 @@ namespace MBS_SAP.Controllers
                     double dCapaian = dTarget > 0 ? Math.Min(100.0, Math.Round((double)dActual / dTarget * 100.0, 1)) : (dActual > 0 ? 100.0 : 0.0);
 
                     var deptAssignedAp = monthlyActionPlans.Where(a =>
-                        (!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), dName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
-                        (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), dName.Trim(), StringComparison.OrdinalIgnoreCase))
+                        a.PerusahaanId == selectedCompany.PerusahaanId &&
+                        ((!string.IsNullOrEmpty(a.DepartemenPja) && string.Equals(a.DepartemenPja.Trim(), dName.Trim(), StringComparison.OrdinalIgnoreCase)) ||
+                         (!string.IsNullOrEmpty(a.DepartemenPic) && string.Equals(a.DepartemenPic.Trim(), dName.Trim(), StringComparison.OrdinalIgnoreCase)))
                     ).ToList();
 
                     int dApTotal = deptAssignedAp.Count;
