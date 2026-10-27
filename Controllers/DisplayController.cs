@@ -944,32 +944,84 @@ namespace MBS_SAP.Controllers
                     .Where(m => activeKaryawanIds.Contains(m.KaryawanId))
                     .ToListAsync();
 
-                // Realizations
-                var monthHazardsByCompany = await _context.HazardReports.AsNoTracking()
-                    .Where(h => !h.IsDeleted && h.CreatedAt >= startOfMonth && h.PerusahaanId != null)
-                    .Select(h => h.PerusahaanId!.Value).ToListAsync();
+                // Map target mappings to dictionary
+                var mappingsDict = targetMappings.ToDictionary(m => m.KaryawanId);
 
-                var monthInspectionsByCompany = await _context.Inspections.AsNoTracking()
-                    .Where(i => !i.IsDeleted && i.CreatedAt >= startOfMonth && i.PerusahaanId != null)
-                    .Select(i => i.PerusahaanId!.Value).ToListAsync();
+                // Pre-fetch all group rosters in month
+                var allRosters = await _context.Rosters.AsNoTracking()
+                    .Where(r => r.AwalDinas <= endOfMonth && (r.AkhirCuti >= startOfMonth || r.AkhirDinas >= startOfMonth))
+                    .ToListAsync();
+                var rostersByNik = allRosters
+                    .Where(r => !string.IsNullOrEmpty(r.Nik))
+                    .GroupBy(r => r.Nik!.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
-                var monthSafetyTalksByCompany = await _context.SafetyTalks.AsNoTracking()
-                    .Where(s => !s.IsDeleted && s.CreatedAt >= startOfMonth && s.PerusahaanId != null)
-                    .Select(s => s.PerusahaanId!.Value).ToListAsync();
+                int totalDaysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
 
-                var monthP5msByCompany = await _context.P5ms.AsNoTracking()
-                    .Where(p => !p.IsDeleted && p.CreatedAt >= startOfMonth && p.PerusahaanId != null)
-                    .Select(p => p.PerusahaanId!.Value).ToListAsync();
+                int ScaleTarget(int baseTarget, double rat, int daysOnsite)
+                {
+                    if (baseTarget == 0 || daysOnsite == 0) return 0;
+                    int scaled = (int)Math.Round(baseTarget * Math.Min(1.0, rat), MidpointRounding.AwayFromZero);
+                    return Math.Min(baseTarget, Math.Max(scaled, 1));
+                }
 
-                var monthCoachingsByCompany = await _context.Coachings.AsNoTracking()
-                    .Where(c => !c.IsDeleted && c.CreatedAt >= startOfMonth && c.PerusahaanId != null)
-                    .Select(c => c.PerusahaanId!.Value).ToListAsync();
+                // Query SAP realisations matching Performance/League
+                var allMtdHazards = await _context.HazardReports.AsNoTracking()
+                    .Where(h => !h.IsDeleted && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth && h.Nik != null)
+                    .Select(h => new { PerusahaanId = h.PerusahaanId ?? 0, Nik = h.Nik.Trim(), h.Tanggal, h.Waktu, h.Lokasi, h.StatusTemuan })
+                    .Distinct()
+                    .ToListAsync();
+                var hazByNik = allMtdHazards.GroupBy(h => h.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
 
-                var monthObservationsByCompany = await (from o in _context.Observations.AsNoTracking()
-                                                         join k in _context.Karyawans.AsNoTracking() on o.Nik equals k.NoNik
-                                                         where !o.IsDeleted && o.CreatedAt >= startOfMonth
-                                                         select k.IdPerusahaan)
+                var allMtdInspections = await _context.Inspections.AsNoTracking()
+                    .Where(i => !i.IsDeleted && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth && i.Nik != null)
+                    .Select(i => new { PerusahaanId = i.PerusahaanId ?? 0, Nik = i.Nik.Trim(), i.Tanggal, i.Waktu })
+                    .Distinct()
+                    .ToListAsync();
+                var insByNik = allMtdInspections.GroupBy(i => i.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+                var allMtdSafetyTalks = await _context.SafetyTalks.AsNoTracking()
+                    .Where(s => !s.IsDeleted && s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth && s.Nik != null)
+                    .Select(s => new { PerusahaanId = s.PerusahaanId ?? 0, Nik = s.Nik.Trim(), s.Tanggal, s.Waktu })
+                    .Distinct()
+                    .ToListAsync();
+                var stByNik = allMtdSafetyTalks.GroupBy(s => s.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+                var allMtdCoachingCreators = await _context.Coachings.AsNoTracking()
+                    .Where(co => !co.IsDeleted && co.CreatedAt >= startOfMonth && co.CreatedAt <= endOfMonth && co.Nik != null)
+                    .Select(co => new { PerusahaanId = co.PerusahaanId ?? 0, Nik = co.Nik.Trim(), co.Tanggal, co.Waktu })
+                    .Distinct()
+                    .ToListAsync();
+                var allMtdCoachingParticipants = await (from p in _context.CoachingParticipants.AsNoTracking()
+                                                        join c in _context.Coachings.AsNoTracking() on p.CoachingId equals c.Id
+                                                        join k in _context.Karyawans.AsNoTracking() on p.Nik equals k.NoNik
+                                                        where !c.IsDeleted && c.CreatedAt >= startOfMonth && c.CreatedAt <= endOfMonth && p.Nik != null
+                                                        select new { PerusahaanId = k.IdPerusahaan, Nik = p.Nik.Trim() })
+                                                        .Distinct()
                                                         .ToListAsync();
+                var allMtdCoachings = allMtdCoachingCreators.Select(c => new { c.PerusahaanId, c.Nik }).Concat(allMtdCoachingParticipants).ToList();
+                var coaByNik = allMtdCoachings.GroupBy(c => c.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+                var allMtdObservations = await (from o in _context.Observations.AsNoTracking()
+                                                join k in _context.Karyawans.AsNoTracking() on o.Nik equals k.NoNik
+                                                where !o.IsDeleted && o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth && o.Nik != null
+                                                select new { PerusahaanId = k.IdPerusahaan, Nik = o.Nik.Trim() })
+                                                .Distinct()
+                                                .ToListAsync();
+                var obsByNik = allMtdObservations.GroupBy(o => o.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+                var allMtdP5ms = await _context.P5ms.AsNoTracking()
+                    .Where(p => !p.IsDeleted && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth && p.Nik != null)
+                    .Select(p => new { PerusahaanId = p.PerusahaanId ?? 0, Nik = p.Nik.Trim(), p.Tanggal, p.Waktu })
+                    .Distinct()
+                    .ToListAsync();
+                var p5ByNik = allMtdP5ms.GroupBy(p => p.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+                // Fetch raw action plans for MTD
+                var allMtdActionPlans = await _context.ActionPlans.AsNoTracking()
+                    .Where(a => !a.IsDeleted && a.PerusahaanId.HasValue && a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth)
+                    .Select(a => new { a.PerusahaanId, a.Status, a.RencanaPerbaikan })
+                    .ToListAsync();
 
                 // Active Companies
                 var activeCompanies = await _context.Perusahaans.AsNoTracking()
@@ -1004,55 +1056,135 @@ namespace MBS_SAP.Controllers
 
                 foreach (var c in activeCompanies)
                 {
-                    int tgtH  = targetMappings.Where(m => m.PerusahaanId == c.PerusahaanId).Sum(m => m.TargetHazardReport ?? 0);
-                    int tgtI  = targetMappings.Where(m => m.PerusahaanId == c.PerusahaanId).Sum(m => m.TargetInspeksi    ?? 0);
-                    int tgtST = targetMappings.Where(m => m.PerusahaanId == c.PerusahaanId).Sum(m => m.TargetSafetyTalk  ?? 0);
-                    int tgtO  = targetMappings.Where(m => m.PerusahaanId == c.PerusahaanId).Sum(m => m.TargetObservasi   ?? 0);
-                    int tgtC  = targetMappings.Where(m => m.PerusahaanId == c.PerusahaanId).Sum(m => m.TargetCoaching    ?? 0);
-                    int tgtP5 = targetMappings.Count(m => m.PerusahaanId == c.PerusahaanId);
-                    int totalTarget = tgtH + tgtI + tgtST + tgtO + tgtC;
+                    var companyKaryawans = activeKaryawans.Where(k => k.IdPerusahaan == c.PerusahaanId).ToList();
 
-                    int rH  = monthHazardsByCompany.Count(id => id == c.PerusahaanId);
-                    int rI  = monthInspectionsByCompany.Count(id => id == c.PerusahaanId);
-                    int rST = monthSafetyTalksByCompany.Count(id => id == c.PerusahaanId);
-                    int rP5 = monthP5msByCompany.Count(id => id == c.PerusahaanId);
-                    int rC  = monthCoachingsByCompany.Count(id => id == c.PerusahaanId);
-                    int rO  = monthObservationsByCompany.Count(id => id == c.PerusahaanId);
-                    int totalReal = rH + rI + rST + rC + rO;
+                    int compTargetH = 0, compActualH = 0;
+                    int compTargetI = 0, compActualI = 0;
+                    int compTargetST = 0, compActualST = 0;
+                    int compTargetO = 0, compActualO = 0;
+                    int compTargetC = 0, compActualC = 0;
+                    int compTargetP5 = 0, compActualP5 = 0;
+                    int employeesWithTarget = 0;
 
-                    int empCount = targetMappings.Where(m => m.PerusahaanId == c.PerusahaanId).Select(m => m.KaryawanId).Distinct().Count();
+                    foreach (var emp in companyKaryawans)
+                    {
+                        int hTar = 0, insTar = 0, stTar = 0, obsTar = 0, cTar = 0;
+                        if (mappingsDict.TryGetValue(emp.IdKaryawan, out var t))
+                        {
+                            hTar = t.TargetHazardReport ?? 0;
+                            insTar = t.TargetInspeksi ?? 0;
+                            stTar = t.TargetSafetyTalk ?? 0;
+                            obsTar = t.TargetObservasi ?? 0;
+                            cTar = t.TargetCoaching ?? 0;
+                        }
+
+                        if (hTar + insTar + stTar + obsTar + cTar == 0)
+                        {
+                            continue;
+                        }
+
+                        employeesWithTarget++;
+
+                        int onsiteDays = totalDaysInMonth;
+                        bool hasRoster = false;
+                        DateTime effectiveEmpStart = (emp.TanggalMasuk.HasValue && emp.TanggalMasuk.Value > startOfMonth)
+                            ? emp.TanggalMasuk.Value
+                            : startOfMonth;
+
+                        var nik = (emp.NoNik ?? string.Empty).Trim();
+                        var relevantRosters = (!string.IsNullOrEmpty(nik) && rostersByNik.TryGetValue(nik, out var empRosters) && empRosters != null)
+                            ? empRosters.Where(r => r.AwalDinas.Date <= endOfMonth.Date && (r.AkhirCuti.Date >= startOfMonth.Date || r.AkhirDinas.Date >= startOfMonth.Date)).ToList()
+                            : null;
+
+                        if (relevantRosters != null && relevantRosters.Count > 0)
+                        {
+                            hasRoster = true;
+                            int computedOnsite = 0;
+                            for (var cur = effectiveEmpStart.Date; cur <= endOfMonth.Date; cur = cur.AddDays(1))
+                            {
+                                bool isTugas = relevantRosters.Any(r => r.TipeRoster == "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                                if (!isTugas)
+                                {
+                                    bool isDinas = relevantRosters.Any(r => r.TipeRoster != "TUGAS" && r.AwalDinas.Date <= cur && cur <= r.AkhirDinas.Date);
+                                    if (isDinas) computedOnsite++;
+                                }
+                            }
+                            onsiteDays = Math.Min(computedOnsite, totalDaysInMonth);
+                        }
+                        else if (effectiveEmpStart > startOfMonth)
+                        {
+                            hasRoster = true;
+                            onsiteDays = Math.Min((endOfMonth.Date - effectiveEmpStart.Date).Days + 1, totalDaysInMonth);
+                        }
+
+                        double ratio = hasRoster ? Math.Min(1.0, (double)onsiteDays / totalDaysInMonth) : 1.0;
+
+                        int mtdTgtH  = hasRoster ? ScaleTarget(hTar, ratio, onsiteDays) : hTar;
+                        int mtdTgtI  = hasRoster ? ScaleTarget(insTar, ratio, onsiteDays) : insTar;
+                        int mtdTgtST = hasRoster ? ScaleTarget(stTar, ratio, onsiteDays) : stTar;
+                        int mtdTgtO  = hasRoster ? ScaleTarget(obsTar, ratio, onsiteDays) : obsTar;
+                        int mtdTgtC  = hasRoster ? ScaleTarget(cTar, ratio, onsiteDays) : cTar;
+                        int mtdTgtP5 = 1;
+
+                        int actH  = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
+                        int actI  = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
+                        int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
+                        int actO  = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
+                        int actC  = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
+                        int actP5 = string.IsNullOrEmpty(nik) ? 0 : (p5ByNik.TryGetValue(nik, out var ap) ? ap : 0);
+
+                        int cappedH  = Math.Min(actH, mtdTgtH);
+                        int cappedI  = Math.Min(actI, mtdTgtI);
+                        int cappedST = Math.Min(actST, mtdTgtST);
+                        int cappedO  = Math.Min(actO, mtdTgtO);
+                        int cappedC  = Math.Min(actC, mtdTgtC);
+                        int cappedP5 = Math.Min(actP5, mtdTgtP5);
+
+                        compTargetH += mtdTgtH;   compActualH += cappedH;
+                        compTargetI += mtdTgtI;   compActualI += cappedI;
+                        compTargetST += mtdTgtST; compActualST += cappedST;
+                        compTargetO += mtdTgtO;   compActualO += cappedO;
+                        compTargetC += mtdTgtC;   compActualC += cappedC;
+                        compTargetP5 += mtdTgtP5; compActualP5 += cappedP5;
+                    }
+
+                    int totalTarget = compTargetH + compTargetI + compTargetST + compTargetO + compTargetC;
+                    int totalReal = compActualH + compActualI + compActualST + compActualO + compActualC;
+
+                    int empCount = employeesWithTarget;
                     if (empCount == 0 && totalReal > 0) empCount = 1;
 
                     if (totalTarget == 0 && totalReal == 0) continue;
 
-                    double pct = totalTarget > 0 ? Math.Round((double)totalReal / totalTarget * 100.0, 1) : 0;
-                    double hRate = tgtH > 0 ? Math.Round((double)rH / tgtH * 100.0, 1) : (tgtH == 0 ? -1 : 0);
-                    double iRate = tgtI > 0 ? Math.Round((double)rI / tgtI * 100.0, 1) : (tgtI == 0 ? -1 : 0);
-                    double stRate = tgtST > 0 ? Math.Round((double)rST / tgtST * 100.0, 1) : (tgtST == 0 ? -1 : 0);
-                    double oRate = tgtO > 0 ? Math.Round((double)rO / tgtO * 100.0, 1) : (tgtO == 0 ? -1 : 0);
-                    double cRate = tgtC > 0 ? Math.Round((double)rC / tgtC * 100.0, 1) : (tgtC == 0 ? -1 : 0);
-                    double p5mRate = tgtP5 > 0 ? Math.Round((double)rP5 / tgtP5 * 100.0, 1) : (tgtP5 == 0 ? -1 : 0);
+                    double pct = totalTarget > 0 ? Math.Min(100.0, Math.Round((double)totalReal / totalTarget * 100.0, 1)) : 0;
+                    double hRate = compTargetH > 0 ? Math.Min(100.0, Math.Round((double)compActualH / compTargetH * 100.0, 1)) : (compTargetH == 0 ? -1 : 0);
+                    double iRate = compTargetI > 0 ? Math.Min(100.0, Math.Round((double)compActualI / compTargetI * 100.0, 1)) : (compTargetI == 0 ? -1 : 0);
+                    double stRate = compTargetST > 0 ? Math.Min(100.0, Math.Round((double)compActualST / compTargetST * 100.0, 1)) : (compTargetST == 0 ? -1 : 0);
+                    double oRate = compTargetO > 0 ? Math.Min(100.0, Math.Round((double)compActualO / compTargetO * 100.0, 1)) : (compTargetO == 0 ? -1 : 0);
+                    double cRate = compTargetC > 0 ? Math.Min(100.0, Math.Round((double)compActualC / compTargetC * 100.0, 1)) : (compTargetC == 0 ? -1 : 0);
+                    double p5mRate = compTargetP5 > 0 ? Math.Min(100.0, Math.Round((double)compActualP5 / compTargetP5 * 100.0, 1)) : (compTargetP5 == 0 ? -1 : 0);
 
-                    // Form indicators (5 SAP Pillars)
-                    string FormItem(int actual, int target) {
-                        if (target == 0 && actual > 0) return "W";
-                        if (target == 0) return "D";
-                        double ratio = (double)actual / target;
-                        if (ratio >= 0.8) return "W";
-                        if (ratio >= 0.4) return "D";
+                    // Form indicators (5 SAP Pillars matching Performance/League)
+                    string FormItem(double rate) {
+                        if (rate < 0) return "W";
+                        if (rate >= 80.0) return "W";
+                        if (rate >= 40.0) return "D";
                         return "L";
                     }
 
                     var form = new string[] {
-                        FormItem(rH, tgtH),
-                        FormItem(rI, tgtI),
-                        FormItem(rST, tgtST),
-                        FormItem(rC, tgtC),
-                        FormItem(rO, tgtO)
+                        FormItem(hRate),
+                        FormItem(iRate),
+                        FormItem(stRate),
+                        FormItem(cRate),
+                        FormItem(oRate)
                     };
 
-                    bool isCore = coreCompaniesList.Any(k => (c.NamaPerusahaan ?? "").Contains(k, StringComparison.OrdinalIgnoreCase)) ||
-                                  c.PerusahaanId == 1 || c.PerusahaanId == 3 || c.PerusahaanId == 4 || c.PerusahaanId == 5;
+                    bool isCore = (c.PerusahaanId != 322) && (
+                        c.PerusahaanId == 1 || c.PerusahaanId == 3 || c.PerusahaanId == 4 || c.PerusahaanId == 5 ||
+                        coreCompaniesList.Any(k => string.Equals(c.NamaPerusahaan?.Trim(), k, StringComparison.OrdinalIgnoreCase) ||
+                                                   (k.Contains("ELA SANGATTA") && (c.NamaPerusahaan ?? "").Contains("ELA SANGATTA")))
+                    );
 
                     allStandings.Add(new {
                         CompanyId = c.PerusahaanId,
@@ -1072,12 +1204,12 @@ namespace MBS_SAP.Controllers
                         MtdCoachingRate = cRate,
                         MtdP5mRate = p5mRate,
                         Gap = totalReal - totalTarget,
-                        Hazard = new { Target = tgtH, Real = rH, Rate = hRate },
-                        Inspeksi = new { Target = tgtI, Real = rI, Rate = iRate },
-                        SafetyTalk = new { Target = tgtST, Real = rST, Rate = stRate },
-                        P5m = new { Target = tgtP5, Real = rP5, Rate = p5mRate },
-                        Coaching = new { Target = tgtC, Real = rC, Rate = cRate },
-                        Observasi = new { Target = tgtO, Real = rO, Rate = oRate },
+                        Hazard = new { Target = compTargetH, Real = compActualH, Rate = hRate },
+                        Inspeksi = new { Target = compTargetI, Real = compActualI, Rate = iRate },
+                        SafetyTalk = new { Target = compTargetST, Real = compActualST, Rate = stRate },
+                        P5m = new { Target = compTargetP5, Real = compActualP5, Rate = p5mRate },
+                        Coaching = new { Target = compTargetC, Real = compActualC, Rate = cRate },
+                        Observasi = new { Target = compTargetO, Real = compActualO, Rate = oRate },
                         Form = form
                     });
                 }
@@ -1281,27 +1413,9 @@ namespace MBS_SAP.Controllers
                 {
                     f1GroupDefs.Add((5, "MGE", "MEGA GLOBAL ENERGY", "TOTAL MEGA GLOBAL ENERGY & MITRA", "#00d2ff", "#2563eb", "MGE Blue Racing Fleet", 5, new List<PerusahaanView> { mgeCompany }, mgeSubcons));
                 }
-
-                // Map target mappings to dictionary
-                var mappingsDict = targetMappings.ToDictionary(m => m.KaryawanId);
-
-                // Pre-fetch all group rosters in month
-                var allRosters = await _context.Rosters.AsNoTracking()
-                    .Where(r => r.AwalDinas <= endOfMonth && r.AkhirDinas >= startOfMonth)
-                    .ToListAsync();
-                var rostersByNik = allRosters
-                    .Where(r => !string.IsNullOrEmpty(r.Nik))
-                    .GroupBy(r => r.Nik!.Trim(), StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
-
-                int totalDaysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
-
                 int ScaleTargetSubcon(int baseTarget, double rat, int daysOnsite)
                 {
-                    if (baseTarget == 0) return 0;
-                    if (daysOnsite == 0) return 0;
-                    int scaled = (int)Math.Round(baseTarget * rat, MidpointRounding.AwayFromZero);
-                    return Math.Max(scaled, 1);
+                    return ScaleTarget(baseTarget, rat, daysOnsite);
                 }
 
                 bool isClosedStatus(string? s)
@@ -1313,52 +1427,6 @@ namespace MBS_SAP.Controllers
                         || trimmed.Equals("Selesai", StringComparison.OrdinalIgnoreCase)
                         || trimmed.Equals("Complete", StringComparison.OrdinalIgnoreCase);
                 }
-
-                // Fetch raw action plans for MTD
-                var allMtdActionPlans = await _context.ActionPlans.AsNoTracking()
-                    .Where(a => !a.IsDeleted && a.PerusahaanId.HasValue && a.Tanggal >= startOfMonth && a.Tanggal <= endOfMonth)
-                    .Select(a => new { a.PerusahaanId, a.Status, a.RencanaPerbaikan })
-                    .ToListAsync();
-
-                // Fetch detailed hazards for MTD (for status & count)
-                var allMtdHazards = await _context.HazardReports.AsNoTracking()
-                    .Where(h => !h.IsDeleted && h.PerusahaanId.HasValue && h.Tanggal >= startOfMonth && h.Tanggal <= endOfMonth)
-                    .Select(h => new { PerusahaanId = h.PerusahaanId ?? 0, Nik = h.Nik.Trim(), h.StatusTemuan })
-                    .ToListAsync();
-
-                var allMtdInspections = await _context.Inspections.AsNoTracking()
-                    .Where(i => !i.IsDeleted && i.PerusahaanId.HasValue && i.Tanggal >= startOfMonth && i.Tanggal <= endOfMonth)
-                    .Select(i => new { PerusahaanId = i.PerusahaanId ?? 0, Nik = i.Nik.Trim() })
-                    .ToListAsync();
-
-                var allMtdSafetyTalks = await _context.SafetyTalks.AsNoTracking()
-                    .Where(s => !s.IsDeleted && s.PerusahaanId.HasValue && s.Tanggal >= startOfMonth && s.Tanggal <= endOfMonth)
-                    .Select(s => new { PerusahaanId = s.PerusahaanId ?? 0, Nik = s.Nik.Trim() })
-                    .ToListAsync();
-
-                var allMtdCoachingCreators = await _context.Coachings.AsNoTracking()
-                    .Where(co => !co.IsDeleted && co.PerusahaanId.HasValue && co.CreatedAt >= startOfMonth && co.CreatedAt <= endOfMonth)
-                    .Select(co => new { PerusahaanId = co.PerusahaanId ?? 0, Nik = co.Nik.Trim() })
-                    .ToListAsync();
-
-                var allMtdCoachingParticipants = await (from p in _context.CoachingParticipants.AsNoTracking()
-                                                        join k in _context.Karyawans.AsNoTracking() on p.Nik equals k.NoNik
-                                                        where p.Coaching != null && !p.Coaching.IsDeleted && p.Coaching.CreatedAt >= startOfMonth && p.Coaching.CreatedAt <= endOfMonth
-                                                        select new { PerusahaanId = k.IdPerusahaan, Nik = p.Nik.Trim() })
-                                                        .ToListAsync();
-
-                var allMtdCoachings = allMtdCoachingCreators.Concat(allMtdCoachingParticipants).ToList();
-
-                var allMtdObservations = await (from o in _context.Observations.AsNoTracking()
-                                                join k in _context.Karyawans.AsNoTracking() on o.Nik equals k.NoNik
-                                                where !o.IsDeleted && o.CreatedAt >= startOfMonth && o.CreatedAt <= endOfMonth
-                                                select new { PerusahaanId = k.IdPerusahaan, Nik = o.Nik.Trim() })
-                                                .ToListAsync();
-
-                var allMtdP5ms = await _context.P5ms.AsNoTracking()
-                    .Where(p => !p.IsDeleted && p.PerusahaanId.HasValue && p.Tanggal >= startOfMonth && p.Tanggal <= endOfMonth)
-                    .Select(p => new { PerusahaanId = p.PerusahaanId ?? 0, Nik = p.Nik.Trim() })
-                    .ToListAsync();
 
                 var f1RaceTeams = new List<object>();
 
@@ -1377,11 +1445,11 @@ namespace MBS_SAP.Controllers
                     var groupObservations = allMtdObservations.Where(o => companyIds.Contains(o.PerusahaanId)).ToList();
                     var groupP5ms = allMtdP5ms.Where(p => companyIds.Contains(p.PerusahaanId)).ToList();
 
-                    var hazByNik = groupHazards.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                    var insByNik = groupInspections.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                    var stByNik = groupSafetyTalks.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                    var coaByNik = groupCoachings.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
-                    var obsByNik = groupObservations.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                    var grpHazByNik = groupHazards.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                    var grpInsByNik = groupInspections.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                    var grpStByNik = groupSafetyTalks.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                    var grpCoaByNik = groupCoachings.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+                    var grpObsByNik = groupObservations.GroupBy(n => n.Nik, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
 
                     int totalTargetH = 0, totalActualH = 0;
                     int totalTargetI = 0, totalActualI = 0;
@@ -1445,11 +1513,11 @@ namespace MBS_SAP.Controllers
                         int mtdTgtO = hasRoster ? ScaleTargetSubcon(obsTar, ratio, onsiteDays) : obsTar;
                         int mtdTgtC = hasRoster ? ScaleTargetSubcon(cTar, ratio, onsiteDays) : cTar;
 
-                        int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
-                        int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
-                        int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
-                        int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
-                        int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
+                        int actH = string.IsNullOrEmpty(nik) ? 0 : (grpHazByNik.TryGetValue(nik, out var ah) ? ah : 0);
+                        int actI = string.IsNullOrEmpty(nik) ? 0 : (grpInsByNik.TryGetValue(nik, out var ai) ? ai : 0);
+                        int actST = string.IsNullOrEmpty(nik) ? 0 : (grpStByNik.TryGetValue(nik, out var ast) ? ast : 0);
+                        int actO = string.IsNullOrEmpty(nik) ? 0 : (grpObsByNik.TryGetValue(nik, out var ao) ? ao : 0);
+                        int actC = string.IsNullOrEmpty(nik) ? 0 : (grpCoaByNik.TryGetValue(nik, out var ac) ? ac : 0);
 
                         int cappedH = Math.Min(actH, mtdTgtH);
                         int cappedI = Math.Min(actI, mtdTgtI);
@@ -1523,11 +1591,11 @@ namespace MBS_SAP.Controllers
                             int mtdTgtO = hasRoster ? ScaleTargetSubcon(obsTar, ratio, onsiteDays) : obsTar;
                             int mtdTgtC = hasRoster ? ScaleTargetSubcon(cTar, ratio, onsiteDays) : cTar;
 
-                            int actH = string.IsNullOrEmpty(nik) ? 0 : (hazByNik.TryGetValue(nik, out var ah) ? ah : 0);
-                            int actI = string.IsNullOrEmpty(nik) ? 0 : (insByNik.TryGetValue(nik, out var ai) ? ai : 0);
-                            int actST = string.IsNullOrEmpty(nik) ? 0 : (stByNik.TryGetValue(nik, out var ast) ? ast : 0);
-                            int actO = string.IsNullOrEmpty(nik) ? 0 : (obsByNik.TryGetValue(nik, out var ao) ? ao : 0);
-                            int actC = string.IsNullOrEmpty(nik) ? 0 : (coaByNik.TryGetValue(nik, out var ac) ? ac : 0);
+                            int actH = string.IsNullOrEmpty(nik) ? 0 : (grpHazByNik.TryGetValue(nik, out var ah) ? ah : 0);
+                            int actI = string.IsNullOrEmpty(nik) ? 0 : (grpInsByNik.TryGetValue(nik, out var ai) ? ai : 0);
+                            int actST = string.IsNullOrEmpty(nik) ? 0 : (grpStByNik.TryGetValue(nik, out var ast) ? ast : 0);
+                            int actO = string.IsNullOrEmpty(nik) ? 0 : (grpObsByNik.TryGetValue(nik, out var ao) ? ao : 0);
+                            int actC = string.IsNullOrEmpty(nik) ? 0 : (grpCoaByNik.TryGetValue(nik, out var ac) ? ac : 0);
 
                             subTargetH += mtdTgtH; subActualH += Math.Min(actH, mtdTgtH);
                             subTargetI += mtdTgtI; subActualI += Math.Min(actI, mtdTgtI);

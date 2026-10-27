@@ -2550,7 +2550,10 @@ function getShieldGradient(companyId, companyName) {
 }
 
 function formatPillarCell(rate, target, real) {
-    const val = Number(rate || 0);
+    if (rate === null || rate === undefined || Number(rate) < 0) {
+        return `<div class="pillar-cell" style="color: #64748b;" title="Bebas Target / N/A">-</div>`;
+    }
+    const val = Math.min(100, Math.max(0, Number(rate || 0)));
     let color = '#64748b'; // default 0%
     if (val >= 100) color = '#34d399';
     else if (val >= 80) color = '#38bdf8';
@@ -2600,7 +2603,7 @@ function renderFootballTable(containerId, standings, redZone) {
             const empCount = item.employeeCount ?? item.EmployeeCount ?? '-';
             const target = item.target ?? item.Target ?? 0;
             const realization = item.realization ?? item.Realization ?? 0;
-            const pct = Number(item.percentage ?? item.Percentage ?? 0);
+            const pct = Math.min(100, Math.max(0, Number(item.percentage ?? item.Percentage ?? 0)));
             const form = item.form ?? item.Form ?? ['D','D','D','D','D'];
 
             // Pillar rates

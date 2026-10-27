@@ -348,12 +348,20 @@ namespace MBS_SAP.Services
                     Perbaikan = h.Perbaikan,
                     TindakanPerbaikan = h.TindakanPerbaikan,
                     FotoPerbaikan = h.FotoPerbaikan,
+                    FotoTemuan = h.FotoTemuan,
                     CreatedAt = h.CreatedAt
                 })
                 .ToListAsync(cancellationToken);
 
             var hazardMap = existingHazardsData
                 .GroupBy(h => BuildHazardKey(h.Nik ?? string.Empty, h.Tanggal, h.Waktu, h.Temuan ?? string.Empty, h.Area, h.Lokasi, h.PerusahaanId))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
+
+            var hazardPhotoMap = existingHazardsData
+                .Where(h => !string.IsNullOrEmpty(h.FotoTemuan))
+                .GroupBy(h => h.FotoTemuan!)
                 .ToDictionary(
                     g => g.Key,
                     g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
@@ -370,7 +378,12 @@ namespace MBS_SAP.Services
                 var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
                 var key = BuildHazardKey(row.Nik, row.Tanggal, row.Waktu, row.Temuan, row.Area, row.Lokasi, perusahaanId);
 
-                if (hazardMap.TryGetValue(key, out var existingHazard))
+                if (!hazardMap.TryGetValue(key, out var existingHazard) && !string.IsNullOrEmpty(row.FotoTemuan))
+                {
+                    hazardPhotoMap.TryGetValue(row.FotoTemuan, out existingHazard);
+                }
+
+                if (existingHazard != null)
                 {
                     var hasHazardChanges = false;
 
@@ -382,6 +395,7 @@ namespace MBS_SAP.Services
                     var newPerbaikan = Truncate(row.Perbaikan, 1000);
                     var newTindakan = Truncate(row.RencanaPerbaikan ?? row.TindakanPerbaikan, 1000);
                     var newFotoPerbaikan = Truncate(row.FotoPerbaikan, 500);
+                    var newTemuan = Truncate(row.Temuan, 1000);
 
                     if (!string.Equals(existingHazard.StatusTemuan ?? string.Empty, newStatus, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existingHazard.TingkatResiko ?? string.Empty, newRisk ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
@@ -390,7 +404,8 @@ namespace MBS_SAP.Services
                         !string.Equals(existingHazard.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
                         (!string.IsNullOrWhiteSpace(newPerbaikan) && !string.Equals(existingHazard.Perbaikan ?? string.Empty, newPerbaikan, StringComparison.OrdinalIgnoreCase)) ||
                         (!string.IsNullOrWhiteSpace(newTindakan) && !string.Equals(existingHazard.TindakanPerbaikan ?? string.Empty, newTindakan, StringComparison.OrdinalIgnoreCase)) ||
-                        (!string.IsNullOrWhiteSpace(newFotoPerbaikan) && !string.Equals(existingHazard.FotoPerbaikan ?? string.Empty, newFotoPerbaikan, StringComparison.OrdinalIgnoreCase)))
+                        (!string.IsNullOrWhiteSpace(newFotoPerbaikan) && !string.Equals(existingHazard.FotoPerbaikan ?? string.Empty, newFotoPerbaikan, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(newTemuan) && !string.Equals(existingHazard.Temuan ?? string.Empty, newTemuan, StringComparison.OrdinalIgnoreCase)))
                     {
                         var realHazard = await _context.HazardReports.FindAsync(new object[] { existingHazard.Id }, cancellationToken);
                         if (realHazard != null)
@@ -403,6 +418,7 @@ namespace MBS_SAP.Services
                             if (!string.IsNullOrWhiteSpace(newPerbaikan)) realHazard.Perbaikan = newPerbaikan;
                             if (!string.IsNullOrWhiteSpace(newTindakan)) realHazard.TindakanPerbaikan = newTindakan;
                             if (!string.IsNullOrWhiteSpace(newFotoPerbaikan)) realHazard.FotoPerbaikan = newFotoPerbaikan;
+                            if (!string.IsNullOrWhiteSpace(newTemuan)) realHazard.Temuan = newTemuan;
                             hasHazardChanges = true;
                         }
                     }
@@ -448,7 +464,7 @@ namespace MBS_SAP.Services
                 };
 
                 _context.HazardReports.Add(report);
-                hazardMap[key] = new HazardReplicationDto
+                var createdHazardDto = new HazardReplicationDto
                 {
                     Id = report.Id,
                     Nik = report.Nik,
@@ -466,8 +482,14 @@ namespace MBS_SAP.Services
                     Perbaikan = report.Perbaikan,
                     TindakanPerbaikan = report.TindakanPerbaikan,
                     FotoPerbaikan = report.FotoPerbaikan,
+                    FotoTemuan = report.FotoTemuan,
                     CreatedAt = report.CreatedAt
                 };
+                hazardMap[key] = createdHazardDto;
+                if (!string.IsNullOrEmpty(report.FotoTemuan))
+                {
+                    hazardPhotoMap[report.FotoTemuan] = createdHazardDto;
+                }
                 result.HazardInserted++;
             }
 
@@ -1189,12 +1211,20 @@ namespace MBS_SAP.Services
                     Perbaikan = h.Perbaikan,
                     TindakanPerbaikan = h.TindakanPerbaikan,
                     FotoPerbaikan = h.FotoPerbaikan,
+                    FotoTemuan = h.FotoTemuan,
                     CreatedAt = h.CreatedAt
                 })
                 .ToListAsync(cancellationToken);
 
             var hazardMap = existingHazardsData
                 .GroupBy(h => BuildHazardKey(h.Nik ?? string.Empty, h.Tanggal, h.Waktu, h.Temuan ?? string.Empty, h.Area, h.Lokasi, h.PerusahaanId))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
+
+            var hazardPhotoMap = existingHazardsData
+                .Where(h => !string.IsNullOrEmpty(h.FotoTemuan))
+                .GroupBy(h => h.FotoTemuan!)
                 .ToDictionary(
                     g => g.Key,
                     g => g.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).First());
@@ -1211,7 +1241,12 @@ namespace MBS_SAP.Services
                 var perusahaanId = normalizedCompanyIdMap.TryGetValue(normalizedCompany, out var pid) ? pid : (int?)null;
                 var key = BuildHazardKey(row.Nik, row.Tanggal, row.Waktu, row.Temuan, row.Area, row.Lokasi, perusahaanId);
 
-                if (hazardMap.TryGetValue(key, out var existingHazard))
+                if (!hazardMap.TryGetValue(key, out var existingHazard) && !string.IsNullOrEmpty(row.FotoTemuan))
+                {
+                    hazardPhotoMap.TryGetValue(row.FotoTemuan, out existingHazard);
+                }
+
+                if (existingHazard != null)
                 {
                     var hasHazardChanges = false;
                     var newStatus = Truncate(row.StatusTemuan, 50) ?? "Open";
@@ -1222,6 +1257,7 @@ namespace MBS_SAP.Services
                     var newPerbaikan = Truncate(row.Perbaikan, 1000);
                     var newTindakan = Truncate(row.RencanaPerbaikan ?? row.TindakanPerbaikan, 1000);
                     var newFotoPerbaikan = Truncate(row.FotoPerbaikan, 500);
+                    var newTemuan = Truncate(row.Temuan, 1000);
 
                     if (!string.Equals(existingHazard.StatusTemuan ?? string.Empty, newStatus, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existingHazard.TingkatResiko ?? string.Empty, newRisk ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
@@ -1230,7 +1266,8 @@ namespace MBS_SAP.Services
                         !string.Equals(existingHazard.DepartemenPja ?? string.Empty, newDeptPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
                         (!string.IsNullOrWhiteSpace(newPerbaikan) && !string.Equals(existingHazard.Perbaikan ?? string.Empty, newPerbaikan, StringComparison.OrdinalIgnoreCase)) ||
                         (!string.IsNullOrWhiteSpace(newTindakan) && !string.Equals(existingHazard.TindakanPerbaikan ?? string.Empty, newTindakan, StringComparison.OrdinalIgnoreCase)) ||
-                        (!string.IsNullOrWhiteSpace(newFotoPerbaikan) && !string.Equals(existingHazard.FotoPerbaikan ?? string.Empty, newFotoPerbaikan, StringComparison.OrdinalIgnoreCase)))
+                        (!string.IsNullOrWhiteSpace(newFotoPerbaikan) && !string.Equals(existingHazard.FotoPerbaikan ?? string.Empty, newFotoPerbaikan, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(newTemuan) && !string.Equals(existingHazard.Temuan ?? string.Empty, newTemuan, StringComparison.OrdinalIgnoreCase)))
                     {
                         var realHazard = await _context.HazardReports.FindAsync(new object[] { existingHazard.Id }, cancellationToken);
                         if (realHazard != null)
@@ -1243,6 +1280,7 @@ namespace MBS_SAP.Services
                             if (!string.IsNullOrWhiteSpace(newPerbaikan)) realHazard.Perbaikan = newPerbaikan;
                             if (!string.IsNullOrWhiteSpace(newTindakan)) realHazard.TindakanPerbaikan = newTindakan;
                             if (!string.IsNullOrWhiteSpace(newFotoPerbaikan)) realHazard.FotoPerbaikan = newFotoPerbaikan;
+                            if (!string.IsNullOrWhiteSpace(newTemuan)) realHazard.Temuan = newTemuan;
                             hasHazardChanges = true;
                         }
                     }
@@ -1287,6 +1325,32 @@ namespace MBS_SAP.Services
                 };
 
                 _context.HazardReports.Add(report);
+                var createdSingleHazardDto = new HazardReplicationDto
+                {
+                    Id = report.Id,
+                    Nik = report.Nik,
+                    Tanggal = report.Tanggal,
+                    Waktu = report.Waktu,
+                    Area = report.Area,
+                    Temuan = report.Temuan,
+                    Lokasi = report.Lokasi,
+                    PerusahaanId = report.PerusahaanId,
+                    StatusTemuan = report.StatusTemuan,
+                    TingkatResiko = report.TingkatResiko,
+                    Pja = report.Pja,
+                    NikPja = report.NikPja,
+                    DepartemenPja = report.DepartemenPja,
+                    Perbaikan = report.Perbaikan,
+                    TindakanPerbaikan = report.TindakanPerbaikan,
+                    FotoPerbaikan = report.FotoPerbaikan,
+                    FotoTemuan = report.FotoTemuan,
+                    CreatedAt = report.CreatedAt
+                };
+                hazardMap[key] = createdSingleHazardDto;
+                if (!string.IsNullOrEmpty(report.FotoTemuan))
+                {
+                    hazardPhotoMap[report.FotoTemuan] = createdSingleHazardDto;
+                }
                 result.HazardInserted++;
             }
 
@@ -1947,10 +2011,16 @@ namespace MBS_SAP.Services
                         a.rencana_perbaikan = COALESCE(NULLIF(h.tindakan_perbaikan, ''), a.rencana_perbaikan),
                         a.perbaikan = COALESCE(NULLIF(h.perbaikan, ''), a.perbaikan),
                         a.foto_perbaikan = COALESCE(NULLIF(h.foto_perbaikan, ''), a.foto_perbaikan),
+                        a.foto_temuan = COALESCE(NULLIF(h.foto_temuan, ''), a.foto_temuan),
+                        a.detil_temuan = COALESCE(NULLIF(h.temuan, ''), a.detil_temuan),
+                        a.kategori_temuan = COALESCE(NULLIF(h.kategori_bahaya, ''), a.kategori_temuan),
+                        a.area = COALESCE(NULLIF(h.area, ''), a.area),
+                        a.lokasi = COALESCE(NULLIF(h.lokasi, ''), a.lokasi),
+                        a.detil_lokasi = COALESCE(NULLIF(h.detil_lokasi, ''), a.detil_lokasi),
                         a.is_deleted = h.is_deleted
                     FROM tbl_t_action_plan a
                     INNER JOIN tbl_t_hazard_report h ON a.item_sap = CONCAT('hazard:', h.id)
-                    WHERE (h.tanggal >= {0} OR a.status <> h.status_temuan OR a.is_deleted <> h.is_deleted)
+                    WHERE (h.tanggal >= {0} OR a.status <> h.status_temuan OR a.is_deleted <> h.is_deleted OR ISNULL(a.detil_temuan, '') IN ('Kondisi Tidak Aman', 'Tindakan Tidak Aman', ''))
                       AND (
                           a.status <> h.status_temuan OR
                           ISNULL(a.pja, '') <> ISNULL(h.pja, '') OR
@@ -1959,6 +2029,8 @@ namespace MBS_SAP.Services
                           (h.tindakan_perbaikan IS NOT NULL AND ISNULL(a.rencana_perbaikan, '') <> h.tindakan_perbaikan) OR
                           (h.perbaikan IS NOT NULL AND ISNULL(a.perbaikan, '') <> h.perbaikan) OR
                           (h.foto_perbaikan IS NOT NULL AND ISNULL(a.foto_perbaikan, '') <> h.foto_perbaikan) OR
+                          (h.foto_temuan IS NOT NULL AND ISNULL(a.foto_temuan, '') <> h.foto_temuan) OR
+                          (h.temuan IS NOT NULL AND ISNULL(a.detil_temuan, '') <> h.temuan) OR
                           a.is_deleted <> h.is_deleted
                       );
 
@@ -2124,6 +2196,13 @@ WHERE (v.date >= @sinceDate OR (LOWER(v.status::text) NOT IN ('close', 'closed',
 
                 var title = GetString(reader, "title");
                 var hazardName = GetString(reader, "hazard_name");
+                var remark = GetString(reader, "remark");
+
+                var temuanText = !string.IsNullOrWhiteSpace(remark)
+                    ? remark.Trim()
+                    : (!string.IsNullOrWhiteSpace(title)
+                        ? title.Trim()
+                        : (!string.IsNullOrWhiteSpace(hazardName) ? hazardName.Trim() : "-"));
 
                 var source = new HazardSourceRow(
                     SourceCode: GetString(reader, "code"),
@@ -2136,9 +2215,7 @@ WHERE (v.date >= @sinceDate OR (LOWER(v.status::text) NOT IN ('close', 'closed',
                     Area: GetString(reader, "area_name"),
                     Lokasi: GetString(reader, "location_name"),
                     DetilLokasi: GetString(reader, "location_detail"),
-                    Temuan: !string.IsNullOrWhiteSpace(hazardName)
-                        ? hazardName!
-                        : (!string.IsNullOrWhiteSpace(title) ? title! : "-"),
+                    Temuan: temuanText,
                     KategoriBahaya: GetString(reader, "hazard_name"),
                     JenisBahaya: GetString(reader, "hazard_type_name"),
                     JenisKetidaksesuaian: GetString(reader, "hazard_subtype_name"),
@@ -2713,6 +2790,7 @@ WHERE date >= @sinceDate";
             public string? Perbaikan { get; set; }
             public string? TindakanPerbaikan { get; set; }
             public string? FotoPerbaikan { get; set; }
+            public string? FotoTemuan { get; set; }
             public DateTime CreatedAt { get; set; }
         }
 

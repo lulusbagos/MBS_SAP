@@ -191,7 +191,13 @@ namespace MBS_SAP.Controllers
                     if (r.ItemSap.StartsWith("hazard:") && int.TryParse(r.ItemSap.Substring(7), out int hId) && hazards.TryGetValue(hId, out var hData))
                     {
                         r.TingkatResiko = hData.TingkatResiko;
-                        if (string.IsNullOrWhiteSpace(r.DetilTemuan)) r.DetilTemuan = hData.Temuan;
+                        if (string.IsNullOrWhiteSpace(r.DetilTemuan) || r.DetilTemuan == "Kondisi Tidak Aman" || r.DetilTemuan == "Tindakan Tidak Aman")
+                        {
+                            if (!string.IsNullOrWhiteSpace(hData.Temuan) && hData.Temuan != "Kondisi Tidak Aman" && hData.Temuan != "Tindakan Tidak Aman")
+                            {
+                                r.DetilTemuan = hData.Temuan;
+                            }
+                        }
                         if (string.IsNullOrWhiteSpace(r.KategoriTemuan)) r.KategoriTemuan = hData.KategoriBahaya;
                         if (string.IsNullOrWhiteSpace(r.Area)) r.Area = hData.Area;
                         if (string.IsNullOrWhiteSpace(r.Lokasi)) r.Lokasi = hData.Lokasi;
