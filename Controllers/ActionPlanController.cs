@@ -144,19 +144,29 @@ namespace MBS_SAP.Controllers
                 .ThenByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
-            // Populate TingkatResiko
+            // Populate TingkatResiko & Detail Temuan dari sumber terkait
             var hazardIds = reports.Where(r => r.ItemSap != null && r.ItemSap.StartsWith("hazard:"))
                 .Select(r => { int.TryParse(r.ItemSap!.Substring(7), out int id); return id; })
                 .Where(id => id > 0).ToList();
             var obsIds = reports.Where(r => r.ItemSap != null && r.ItemSap.StartsWith("observation:"))
                 .Select(r => { int.TryParse(r.ItemSap!.Substring(12), out int id); return id; })
                 .Where(id => id > 0).ToList();
+            var inspectionIds = reports.Where(r => r.ItemSap != null && r.ItemSap.StartsWith("inspection:"))
+                .Select(r => { int.TryParse(r.ItemSap!.Substring(11), out int id); return id; })
+                .Where(id => id > 0).ToList();
 
             var hazards = await _context.HazardReports.AsNoTracking()
                 .Where(h => hazardIds.Contains(h.Id))
-                .Select(h => new { h.Id, h.TingkatResiko, h.IsDeleted, h.StatusTemuan })
+                .Select(h => new { h.Id, h.TingkatResiko, h.IsDeleted, h.StatusTemuan, h.Temuan, h.KategoriBahaya, h.Area, h.Lokasi, h.DetilLokasi })
                 .ToDictionaryAsync(h => h.Id);
-            var observations = await _context.Observations.AsNoTracking().Where(o => obsIds.Contains(o.Id)).ToDictionaryAsync(o => o.Id, o => o.TingkatResiko);
+            var observations = await _context.Observations.AsNoTracking()
+                .Where(o => obsIds.Contains(o.Id))
+                .Select(o => new { o.Id, o.TingkatResiko, o.Keterangan, o.Area, o.Lokasi, o.DetilLokasi })
+                .ToDictionaryAsync(o => o.Id);
+            var inspections = await _context.Inspections.AsNoTracking()
+                .Where(i => inspectionIds.Contains(i.Id))
+                .Select(i => new { i.Id, i.JenisInspeksi, i.Catatan, i.Area, i.Lokasi, i.DetilLokasi })
+                .ToDictionaryAsync(i => i.Id);
 
             // Defensive filter: jika sumber hazard asalnya sudah di-delete atau berstatus Closed, jangan tampilkan di daftar Open
             reports = reports.Where(r =>
@@ -178,13 +188,30 @@ namespace MBS_SAP.Controllers
             {
                 if (r.ItemSap != null)
                 {
-                    if (r.ItemSap.StartsWith("hazard:") && int.TryParse(r.ItemSap.Substring(7), out int hId) && hazards.ContainsKey(hId))
+                    if (r.ItemSap.StartsWith("hazard:") && int.TryParse(r.ItemSap.Substring(7), out int hId) && hazards.TryGetValue(hId, out var hData))
                     {
-                        r.TingkatResiko = hazards[hId].TingkatResiko;
+                        r.TingkatResiko = hData.TingkatResiko;
+                        if (string.IsNullOrWhiteSpace(r.DetilTemuan)) r.DetilTemuan = hData.Temuan;
+                        if (string.IsNullOrWhiteSpace(r.KategoriTemuan)) r.KategoriTemuan = hData.KategoriBahaya;
+                        if (string.IsNullOrWhiteSpace(r.Area)) r.Area = hData.Area;
+                        if (string.IsNullOrWhiteSpace(r.Lokasi)) r.Lokasi = hData.Lokasi;
+                        if (string.IsNullOrWhiteSpace(r.DetilLokasi)) r.DetilLokasi = hData.DetilLokasi;
                     }
-                    else if (r.ItemSap.StartsWith("observation:") && int.TryParse(r.ItemSap.Substring(12), out int oId) && observations.ContainsKey(oId))
+                    else if (r.ItemSap.StartsWith("observation:") && int.TryParse(r.ItemSap.Substring(12), out int oId) && observations.TryGetValue(oId, out var oData))
                     {
-                        r.TingkatResiko = observations[oId];
+                        r.TingkatResiko = oData.TingkatResiko;
+                        if (string.IsNullOrWhiteSpace(r.DetilTemuan)) r.DetilTemuan = oData.Keterangan;
+                        if (string.IsNullOrWhiteSpace(r.Area)) r.Area = oData.Area;
+                        if (string.IsNullOrWhiteSpace(r.Lokasi)) r.Lokasi = oData.Lokasi;
+                        if (string.IsNullOrWhiteSpace(r.DetilLokasi)) r.DetilLokasi = oData.DetilLokasi;
+                    }
+                    else if (r.ItemSap.StartsWith("inspection:") && int.TryParse(r.ItemSap.Substring(11), out int iId) && inspections.TryGetValue(iId, out var iData))
+                    {
+                        if (string.IsNullOrWhiteSpace(r.DetilTemuan)) r.DetilTemuan = iData.Catatan;
+                        if (string.IsNullOrWhiteSpace(r.KategoriTemuan)) r.KategoriTemuan = iData.JenisInspeksi;
+                        if (string.IsNullOrWhiteSpace(r.Area)) r.Area = iData.Area;
+                        if (string.IsNullOrWhiteSpace(r.Lokasi)) r.Lokasi = iData.Lokasi;
+                        if (string.IsNullOrWhiteSpace(r.DetilLokasi)) r.DetilLokasi = iData.DetilLokasi;
                     }
                 }
 
