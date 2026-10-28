@@ -57,7 +57,8 @@ namespace MBS_SAP.Controllers
             }
 
             // 2. Load Permissions
-            var allPermissions = await _context.UserScanPermissions.AsNoTracking().ToDictionaryAsync(p => p.Nik);
+            var rawPermissions = await _context.UserScanPermissions.AsNoTracking().ToListAsync();
+            var allPermissions = rawPermissions.GroupBy(p => (p.Nik ?? string.Empty).Trim(), StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
             // Filter scan type if specified
             var candidateUsers = await usersQuery.OrderBy(u => u.Nama).ToListAsync();
@@ -66,7 +67,7 @@ namespace MBS_SAP.Controllers
             {
                 candidateUsers = candidateUsers.Where(u =>
                 {
-                    allPermissions.TryGetValue(u.Nik, out var perm);
+                    allPermissions.TryGetValue((u.Nik ?? string.Empty).Trim(), out var perm);
                     if (normalizedScan == "HasSpecial")
                     {
                         return perm != null && (perm.CanScanMinePermit || perm.CanScanPermitPelanggaran || perm.CanScanPermitKeluarMasuk || perm.CanScanSimper || perm.CanScanCommissioning || perm.CanScanSpecialPermit || perm.CanScanOther);
@@ -93,7 +94,7 @@ namespace MBS_SAP.Controllers
 
             var rows = pagedUsers.Select(u =>
             {
-                allPermissions.TryGetValue(u.Nik, out var p);
+                allPermissions.TryGetValue((u.Nik ?? string.Empty).Trim(), out var p);
                 return new UserScanRowViewModel
                 {
                     Nik = u.Nik,

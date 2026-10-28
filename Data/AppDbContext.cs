@@ -124,8 +124,19 @@ namespace MBS_SAP.Data
             modelBuilder.Entity<RunningText>()
                 .ToTable("tbl_m_running_text");
 
-            modelBuilder.Entity<AppUser>()
-                .ToTable("tbl_t_app_user");
+            modelBuilder.Entity<AppUser>(entity =>
+            {
+                entity.ToTable("tbl_t_app_user");
+                entity.HasKey(e => e.Nik);
+                entity.Property(e => e.Nik).HasColumnName("nik");
+                entity.Property(e => e.Nama).HasColumnName("nama");
+                entity.Property(e => e.Departemen).HasColumnName("departemen");
+                entity.Property(e => e.Perusahaan).HasColumnName("perusahaan");
+                entity.Property(e => e.IdPerusahaan).HasColumnName("id_perusahaan");
+                entity.Property(e => e.KaryawanId).HasColumnName("karyawan_id");
+                entity.Property(e => e.LastLogin).HasColumnName("last_login");
+                entity.Property(e => e.Role).HasColumnName("role");
+            });
 
             modelBuilder.Entity<MasterArea>()
                 .ToTable("tbl_m_area_utama");
