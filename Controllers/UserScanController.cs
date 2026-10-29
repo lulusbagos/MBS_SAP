@@ -97,7 +97,7 @@ namespace MBS_SAP.Controllers
                 allPermissions.TryGetValue((u.Nik ?? string.Empty).Trim(), out var p);
                 return new UserScanRowViewModel
                 {
-                    Nik = u.Nik,
+                    Nik = u.Nik ?? string.Empty,
                     Nama = u.Nama ?? "-",
                     Departemen = u.Departemen ?? "-",
                     Perusahaan = u.Perusahaan ?? "-",
