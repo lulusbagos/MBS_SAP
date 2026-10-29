@@ -200,7 +200,22 @@ namespace MBS_SAP.Services
             var context = serviceProvider.GetRequiredService<AppDbContext>();
 
             var sql = @"
-                -- 1. Hazard Report (prioritize preserving 'Closed' status over 'Open')
+                -- 1a. Hazard Report by foto_temuan (prioritize preserving 'Closed' or detailed temuan)
+                WITH cte_hf AS (
+                    SELECT id, ROW_NUMBER() OVER (
+                        PARTITION BY foto_temuan
+                        ORDER BY 
+                            CASE WHEN status_temuan = 'Closed' THEN 0 ELSE 1 END,
+                            CASE WHEN foto_perbaikan IS NOT NULL AND foto_perbaikan <> '' THEN 0 ELSE 1 END,
+                            CASE WHEN temuan IS NOT NULL AND temuan NOT IN ('Kondisi Tidak Aman', 'Tindakan Tidak Aman', '') THEN 0 ELSE 1 END,
+                            id ASC
+                    ) as rn 
+                    FROM tbl_t_hazard_report 
+                    WHERE is_deleted = 0 AND foto_temuan IS NOT NULL AND foto_temuan <> ''
+                )
+                UPDATE tbl_t_hazard_report SET is_deleted = 1 WHERE id IN (SELECT id FROM cte_hf WHERE rn > 1);
+
+                -- 1b. Hazard Report (prioritize preserving 'Closed' status over 'Open')
                 WITH cte_h AS (
                     SELECT id, ROW_NUMBER() OVER (
                         PARTITION BY LTRIM(RTRIM(UPPER(ISNULL(nik, '')))), tanggal, waktu, LTRIM(RTRIM(UPPER(ISNULL(CAST(temuan AS NVARCHAR(200)), ''))))

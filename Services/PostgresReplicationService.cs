@@ -397,7 +397,15 @@ namespace MBS_SAP.Services
                     var newFotoPerbaikan = Truncate(row.FotoPerbaikan, 500);
                     var newTemuan = Truncate(row.Temuan, 1000);
 
-                    if (!string.Equals(existingHazard.StatusTemuan ?? string.Empty, newStatus, StringComparison.OrdinalIgnoreCase) ||
+                    // Safeguard: Jangan downgrade status yang sudah Closed di SQL Server/Web kembali menjadi Open/Progress
+                    var isCurrentClosed = string.Equals(existingHazard.StatusTemuan, "Closed", StringComparison.OrdinalIgnoreCase)
+                                       || string.Equals(existingHazard.StatusTemuan, "Close", StringComparison.OrdinalIgnoreCase)
+                                       || string.Equals(existingHazard.StatusTemuan, "Selesai", StringComparison.OrdinalIgnoreCase);
+                    var effectiveStatus = (isCurrentClosed && (string.Equals(newStatus, "Open", StringComparison.OrdinalIgnoreCase) || string.Equals(newStatus, "Progress", StringComparison.OrdinalIgnoreCase)))
+                        ? existingHazard.StatusTemuan!
+                        : newStatus;
+
+                    if (!string.Equals(existingHazard.StatusTemuan ?? string.Empty, effectiveStatus, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existingHazard.TingkatResiko ?? string.Empty, newRisk ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existingHazard.Pja ?? string.Empty, newPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
                         !string.Equals(existingHazard.NikPja ?? string.Empty, newNikPja ?? string.Empty, StringComparison.OrdinalIgnoreCase) ||
@@ -410,7 +418,7 @@ namespace MBS_SAP.Services
                         var realHazard = await _context.HazardReports.FindAsync(new object[] { existingHazard.Id }, cancellationToken);
                         if (realHazard != null)
                         {
-                            realHazard.StatusTemuan = newStatus;
+                            realHazard.StatusTemuan = effectiveStatus;
                             realHazard.TingkatResiko = newRisk;
                             realHazard.Pja = newPja;
                             realHazard.NikPja = newNikPja;
@@ -2004,7 +2012,11 @@ namespace MBS_SAP.Services
                 var updateSql = @"
                     UPDATE a
                     SET 
-                        a.status = CASE WHEN h.is_deleted = 1 THEN 'Closed' ELSE h.status_temuan END,
+                        a.status = CASE 
+                            WHEN h.is_deleted = 1 THEN 'Closed' 
+                            WHEN a.status IN ('Closed', 'Close', 'Selesai', 'Complete') THEN a.status
+                            ELSE h.status_temuan 
+                        END,
                         a.pja = h.pja,
                         a.nik_pja = h.nik_pja,
                         a.departemen_pja = h.departemen_pja,
