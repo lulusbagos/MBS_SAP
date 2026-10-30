@@ -298,6 +298,7 @@ namespace MBS_SAP.Data
             if (input == "NoKtp") return "no_ktp";
             if (input == "Hp1") return "hp_1";
             if (input == "RJabatanId") return "r_jabatan_id";
+            if (input == "CanScanMinePermit") return "can_scan_minepermit";
 
             var startUnderscore = System.Text.RegularExpressions.Regex.Replace(input, @"([a-z0-9])([A-Z])", "$1_$2");
             return startUnderscore.ToLower();

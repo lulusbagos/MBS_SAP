@@ -243,10 +243,11 @@ namespace MBS_SAP.Controllers
             }
             catch (Exception ex)
             {
+                var errMsg = ex.InnerException?.Message ?? ex.Message;
                 return Json(new
                 {
                     success = false,
-                    message = "Terjadi kesalahan saat menyimpan izin: " + ex.Message
+                    message = "Terjadi kesalahan saat menyimpan izin: " + errMsg
                 });
             }
         }
@@ -305,8 +306,9 @@ namespace MBS_SAP.Controllers
             }
             catch (Exception ex)
             {
-                if (isAjax) return Json(new { success = false, message = "Gagal menyimpan izin: " + ex.Message });
-                TempData["ErrorMessage"] = "Gagal menyimpan izin: " + ex.Message;
+                var errMsg = ex.InnerException?.Message ?? ex.Message;
+                if (isAjax) return Json(new { success = false, message = "Gagal menyimpan izin: " + errMsg });
+                TempData["ErrorMessage"] = "Gagal menyimpan izin: " + errMsg;
                 return RedirectToAction(nameof(Index), new { q = form.Q, filterDept = form.FilterDept, filterScan = form.FilterScan, page = form.Page });
             }
         }
@@ -343,8 +345,9 @@ namespace MBS_SAP.Controllers
             }
             catch (Exception ex)
             {
-                if (isAjax) return Json(new { success = false, message = "Gagal mereset izin: " + ex.Message });
-                TempData["ErrorMessage"] = "Gagal mereset izin: " + ex.Message;
+                var errMsg = ex.InnerException?.Message ?? ex.Message;
+                if (isAjax) return Json(new { success = false, message = "Gagal mereset izin: " + errMsg });
+                TempData["ErrorMessage"] = "Gagal mereset izin: " + errMsg;
                 return RedirectToAction(nameof(Index), new { q, filterDept, filterScan, page });
             }
         }
