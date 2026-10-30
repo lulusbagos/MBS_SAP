@@ -102,6 +102,7 @@ namespace MBS_SAP.Controllers
                     Departemen = u.Departemen ?? "-",
                     Perusahaan = u.Perusahaan ?? "-",
                     Role = u.Role ?? "Operator",
+                    HasCustomPermission = p != null,
                     CanScanAcara = p?.CanScanAcara ?? true, // Default: semua orang bisa scan acara
                     CanScanMinePermit = p?.CanScanMinePermit ?? false, // Scan Detail Permit
                     CanScanPermitPelanggaran = p?.CanScanPermitPelanggaran ?? false, // Scan Pelanggaran Permit
@@ -254,43 +255,98 @@ namespace MBS_SAP.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveModal(UserScanSaveForm form)
         {
+            var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
+                         Request.Headers["Accept"].ToString().Contains("application/json");
+
             if (string.IsNullOrWhiteSpace(form.Nik))
             {
+                if (isAjax) return Json(new { success = false, message = "NIK wajib diisi." });
                 TempData["ErrorMessage"] = "NIK wajib diisi.";
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction(nameof(Index), new { q = form.Q, filterDept = form.FilterDept, filterScan = form.FilterScan, page = form.Page });
             }
 
             var cleanNik = form.Nik.Trim();
             var currentUser = User.Identity?.Name ?? "Admin";
 
-            var perm = await _context.UserScanPermissions.FirstOrDefaultAsync(p => p.Nik == cleanNik);
-            if (perm == null)
+            try
             {
-                var appUser = await _context.AppUsers.FirstOrDefaultAsync(u => u.Nik == cleanNik);
-                perm = new UserScanPermission
+                var perm = await _context.UserScanPermissions.FirstOrDefaultAsync(p => p.Nik == cleanNik);
+                if (perm == null)
                 {
-                    Nik = cleanNik,
-                    Nama = appUser?.Nama,
-                    Departemen = appUser?.Departemen,
-                    Perusahaan = appUser?.Perusahaan
-                };
-                _context.UserScanPermissions.Add(perm);
+                    var appUser = await _context.AppUsers.FirstOrDefaultAsync(u => u.Nik == cleanNik);
+                    perm = new UserScanPermission
+                    {
+                        Nik = cleanNik,
+                        Nama = appUser?.Nama,
+                        Departemen = appUser?.Departemen,
+                        Perusahaan = appUser?.Perusahaan
+                    };
+                    _context.UserScanPermissions.Add(perm);
+                }
+
+                perm.CanScanAcara = form.CanScanAcara;
+                perm.CanScanMinePermit = form.CanScanMinePermit;
+                perm.CanScanPermitPelanggaran = form.CanScanPermitPelanggaran;
+                perm.CanScanPermitKeluarMasuk = form.CanScanPermitKeluarMasuk;
+                perm.CanScanSimper = form.CanScanSimper;
+                perm.CanScanCommissioning = form.CanScanCommissioning;
+                perm.CanScanSpecialPermit = form.CanScanSpecialPermit;
+                perm.CanScanOther = form.CanScanOther;
+                perm.UpdatedAt = DateTime.Now;
+                perm.UpdatedBy = currentUser;
+
+                await _context.SaveChangesAsync();
+
+                var successMsg = $"Pengaturan izin scan untuk NIK {cleanNik} berhasil disimpan.";
+                if (isAjax) return Json(new { success = true, message = successMsg });
+
+                TempData["SuccessMessage"] = successMsg;
+                return RedirectToAction(nameof(Index), new { q = form.Q, filterDept = form.FilterDept, filterScan = form.FilterScan, page = form.Page });
+            }
+            catch (Exception ex)
+            {
+                if (isAjax) return Json(new { success = false, message = "Gagal menyimpan izin: " + ex.Message });
+                TempData["ErrorMessage"] = "Gagal menyimpan izin: " + ex.Message;
+                return RedirectToAction(nameof(Index), new { q = form.Q, filterDept = form.FilterDept, filterScan = form.FilterScan, page = form.Page });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPermission(string nik, string? q = null, string? filterDept = null, string? filterScan = null, int page = 1)
+        {
+            var isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
+                         Request.Headers["Accept"].ToString().Contains("application/json");
+
+            if (string.IsNullOrWhiteSpace(nik))
+            {
+                if (isAjax) return Json(new { success = false, message = "NIK wajib diisi." });
+                TempData["ErrorMessage"] = "NIK wajib diisi.";
+                return RedirectToAction(nameof(Index), new { q, filterDept, filterScan, page });
             }
 
-            perm.CanScanAcara = form.CanScanAcara;
-            perm.CanScanMinePermit = form.CanScanMinePermit;
-            perm.CanScanPermitPelanggaran = form.CanScanPermitPelanggaran;
-            perm.CanScanPermitKeluarMasuk = form.CanScanPermitKeluarMasuk;
-            perm.CanScanSimper = form.CanScanSimper;
-            perm.CanScanCommissioning = form.CanScanCommissioning;
-            perm.CanScanSpecialPermit = form.CanScanSpecialPermit;
-            perm.CanScanOther = form.CanScanOther;
-            perm.UpdatedAt = DateTime.Now;
-            perm.UpdatedBy = currentUser;
+            var cleanNik = nik.Trim();
+            try
+            {
+                var perm = await _context.UserScanPermissions.FirstOrDefaultAsync(p => p.Nik == cleanNik);
+                if (perm != null)
+                {
+                    _context.UserScanPermissions.Remove(perm);
+                    await _context.SaveChangesAsync();
+                }
 
-            await _context.SaveChangesAsync();
-            TempData["SuccessMessage"] = $"Pengaturan izin scan untuk NIK {cleanNik} berhasil disimpan.";
-            return RedirectToAction(nameof(Index));
+                var successMsg = $"Izin scan untuk NIK {cleanNik} berhasil di-reset ke default.";
+                if (isAjax) return Json(new { success = true, message = successMsg });
+
+                TempData["SuccessMessage"] = successMsg;
+                return RedirectToAction(nameof(Index), new { q, filterDept, filterScan, page });
+            }
+            catch (Exception ex)
+            {
+                if (isAjax) return Json(new { success = false, message = "Gagal mereset izin: " + ex.Message });
+                TempData["ErrorMessage"] = "Gagal mereset izin: " + ex.Message;
+                return RedirectToAction(nameof(Index), new { q, filterDept, filterScan, page });
+            }
         }
 
         [HttpPost]
@@ -356,7 +412,7 @@ namespace MBS_SAP.Controllers
 
             await _context.SaveChangesAsync();
             TempData["SuccessMessage"] = $"Berhasil memperbarui izin {scanType} untuk {usersInDept.Count} karyawan di departemen {department}.";
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(Index), new { filterDept = department });
         }
     }
 
@@ -381,6 +437,7 @@ namespace MBS_SAP.Controllers
         public string Departemen { get; set; } = string.Empty;
         public string Perusahaan { get; set; } = string.Empty;
         public string Role { get; set; } = "Operator";
+        public bool HasCustomPermission { get; set; } = false;
         public bool CanScanAcara { get; set; } = true;
         public bool CanScanMinePermit { get; set; } = false; // Scan Detail Permit
         public bool CanScanPermitPelanggaran { get; set; } = false; // Scan Pelanggaran Permit
@@ -408,7 +465,7 @@ namespace MBS_SAP.Controllers
     public class UserScanSaveForm
     {
         public string Nik { get; set; } = string.Empty;
-        public bool CanScanAcara { get; set; } = true;
+        public bool CanScanAcara { get; set; }
         public bool CanScanMinePermit { get; set; }
         public bool CanScanPermitPelanggaran { get; set; }
         public bool CanScanPermitKeluarMasuk { get; set; }
@@ -416,5 +473,10 @@ namespace MBS_SAP.Controllers
         public bool CanScanCommissioning { get; set; }
         public bool CanScanSpecialPermit { get; set; }
         public bool CanScanOther { get; set; }
+
+        public string? Q { get; set; }
+        public string? FilterDept { get; set; }
+        public string? FilterScan { get; set; }
+        public int Page { get; set; } = 1;
     }
 }

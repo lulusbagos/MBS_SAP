@@ -73,6 +73,10 @@ namespace MBS_SAP.Models
         [MaxLength(50)]
         public string StatusTemuan { get; set; } = "Open"; // Open / Closed
 
+        [Column("closure_note")]
+        [MaxLength(500)]
+        public string? ClosureNote { get; set; }
+
         public int? PerusahaanId { get; set; }
 
         [Column("is_deleted")]

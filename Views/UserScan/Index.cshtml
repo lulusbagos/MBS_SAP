@@ -323,7 +323,7 @@
                             <!-- Toggle: Acara -->
                             <td class="text-center">
                                 <label class="switch-toggle" title="Scan Kehadiran Acara">
-                                    <input type="checkbox" @(row.CanScanAcara ? "checked" : "") onchange="togglePerm('@row.Nik', 'acara', this.checked)">
+                                    <input type="checkbox" @(row.CanScanAcara ? "checked" : "") onchange="togglePerm('@row.Nik', 'acara', this.checked, this)">
                                     <span class="slider-toggle"></span>
                                 </label>
                             </td>
@@ -331,7 +331,7 @@
                             <!-- Toggle: Permit Detail -->
                             <td class="text-center">
                                 <label class="switch-toggle" title="Melihat Detail & Masa Aktif Permit">
-                                    <input type="checkbox" class="sw-green" @(row.CanScanMinePermit ? "checked" : "") onchange="togglePerm('@row.Nik', 'minepermit', this.checked)">
+                                    <input type="checkbox" class="sw-green" @(row.CanScanMinePermit ? "checked" : "") onchange="togglePerm('@row.Nik', 'minepermit', this.checked, this)">
                                     <span class="slider-toggle"></span>
                                 </label>
                             </td>
@@ -339,7 +339,7 @@
                             <!-- Toggle: Permit Pelanggaran -->
                             <td class="text-center">
                                 <label class="switch-toggle" title="Input Pelanggaran K3 dari QR Permit">
-                                    <input type="checkbox" class="sw-red" @(row.CanScanPermitPelanggaran ? "checked" : "") onchange="togglePerm('@row.Nik', 'permitpelanggaran', this.checked)">
+                                    <input type="checkbox" class="sw-red" @(row.CanScanPermitPelanggaran ? "checked" : "") onchange="togglePerm('@row.Nik', 'permitpelanggaran', this.checked, this)">
                                     <span class="slider-toggle"></span>
                                 </label>
                             </td>
@@ -347,7 +347,7 @@
                             <!-- Toggle: Permit Keluar Masuk -->
                             <td class="text-center">
                                 <label class="switch-toggle" title="Input Keluar Masuk Karyawan">
-                                    <input type="checkbox" class="sw-cyan" @(row.CanScanPermitKeluarMasuk ? "checked" : "") onchange="togglePerm('@row.Nik', 'permitkeluarmasuk', this.checked)">
+                                    <input type="checkbox" class="sw-cyan" @(row.CanScanPermitKeluarMasuk ? "checked" : "") onchange="togglePerm('@row.Nik', 'permitkeluarmasuk', this.checked, this)">
                                     <span class="slider-toggle"></span>
                                 </label>
                             </td>
@@ -355,7 +355,7 @@
                             <!-- Toggle: SIMPER -->
                             <td class="text-center">
                                 <label class="switch-toggle" title="Verifikasi SIMPER">
-                                    <input type="checkbox" @(row.CanScanSimper ? "checked" : "") onchange="togglePerm('@row.Nik', 'simper', this.checked)">
+                                    <input type="checkbox" @(row.CanScanSimper ? "checked" : "") onchange="togglePerm('@row.Nik', 'simper', this.checked, this)">
                                     <span class="slider-toggle"></span>
                                 </label>
                             </td>
@@ -363,7 +363,7 @@
                             <!-- Toggle: Commissioning -->
                             <td class="text-center">
                                 <label class="switch-toggle" title="Verifikasi Commissioning Unit">
-                                    <input type="checkbox" class="sw-amber" @(row.CanScanCommissioning ? "checked" : "") onchange="togglePerm('@row.Nik', 'commissioning', this.checked)">
+                                    <input type="checkbox" class="sw-amber" @(row.CanScanCommissioning ? "checked" : "") onchange="togglePerm('@row.Nik', 'commissioning', this.checked, this)">
                                     <span class="slider-toggle"></span>
                                 </label>
                             </td>
@@ -371,7 +371,7 @@
                             <!-- Toggle: Special Permit -->
                             <td class="text-center">
                                 <label class="switch-toggle" title="Verifikasi Special Permit">
-                                    <input type="checkbox" class="sw-purple" @(row.CanScanSpecialPermit ? "checked" : "") onchange="togglePerm('@row.Nik', 'specialpermit', this.checked)">
+                                    <input type="checkbox" class="sw-purple" @(row.CanScanSpecialPermit ? "checked" : "") onchange="togglePerm('@row.Nik', 'specialpermit', this.checked, this)">
                                     <span class="slider-toggle"></span>
                                 </label>
                             </td>
@@ -379,18 +379,38 @@
                             <!-- Toggle: Other -->
                             <td class="text-center">
                                 <label class="switch-toggle" title="Izin Lainnya">
-                                    <input type="checkbox" class="sw-teal" @(row.CanScanOther ? "checked" : "") onchange="togglePerm('@row.Nik', 'other', this.checked)">
+                                    <input type="checkbox" class="sw-teal" @(row.CanScanOther ? "checked" : "") onchange="togglePerm('@row.Nik', 'other', this.checked, this)">
                                     <span class="slider-toggle"></span>
                                 </label>
                             </td>
 
                             <!-- Aksi Edit Modal -->
-                            <td class="text-end">
-                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2"
-                                        onclick="openEditModal('@row.Nik', '@row.Nama', '@row.Departemen', @row.CanScanAcara.ToString().ToLower(), @row.CanScanMinePermit.ToString().ToLower(), @row.CanScanPermitPelanggaran.ToString().ToLower(), @row.CanScanPermitKeluarMasuk.ToString().ToLower(), @row.CanScanSimper.ToString().ToLower(), @row.CanScanCommissioning.ToString().ToLower(), @row.CanScanSpecialPermit.ToString().ToLower(), @row.CanScanOther.ToString().ToLower())"
-                                        title="Edit Lengkap">
+                            <td class="text-end text-nowrap">
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2 btn-edit-userscan"
+                                        data-nik="@row.Nik"
+                                        data-nama="@row.Nama"
+                                        data-dept="@row.Departemen"
+                                        data-custom="@(row.HasCustomPermission.ToString().ToLower())"
+                                        data-acara="@(row.CanScanAcara.ToString().ToLower())"
+                                        data-mine="@(row.CanScanMinePermit.ToString().ToLower())"
+                                        data-pelanggaran="@(row.CanScanPermitPelanggaran.ToString().ToLower())"
+                                        data-keluarmasuk="@(row.CanScanPermitKeluarMasuk.ToString().ToLower())"
+                                        data-simper="@(row.CanScanSimper.ToString().ToLower())"
+                                        data-comm="@(row.CanScanCommissioning.ToString().ToLower())"
+                                        data-special="@(row.CanScanSpecialPermit.ToString().ToLower())"
+                                        data-other="@(row.CanScanOther.ToString().ToLower())"
+                                        title="Edit Izin Scan">
                                     <i class="bi bi-pencil-square"></i>
                                 </button>
+                                @if (row.HasCustomPermission)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 ms-1 btn-reset-userscan"
+                                            data-nik="@row.Nik"
+                                            data-nama="@row.Nama"
+                                            title="Reset Izin ke Default">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                }
                             </td>
                         </tr>
                     }
@@ -432,9 +452,13 @@
                 <h5 class="modal-title font-outfit fw-bold"><i class="bi bi-shield-check text-primary me-2"></i>Edit Izin Scan Karyawan</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form asp-action="SaveModal" method="post">
+            <form asp-action="SaveModal" method="post" id="formEditUserScan">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="Nik" id="modalNik" />
+                <input type="hidden" name="Q" value="@Model.Query" />
+                <input type="hidden" name="FilterDept" value="@Model.FilterDept" />
+                <input type="hidden" name="FilterScan" value="@Model.FilterScan" />
+                <input type="hidden" name="Page" value="@Model.Page" />
                 <div class="modal-body">
                     <div class="p-3 mb-3 rounded-3" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
                         <div class="fw-bold" id="modalNama" style="font-size: 15px;">-</div>
@@ -449,69 +473,86 @@
                         <div class="form-check form-switch p-2 rounded-2" style="background: rgba(255, 255, 255, 0.015); border: 1px solid var(--border-color);">
                             <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanAcara" value="true" id="chkAcara">
                             <label class="form-check-label fw-bold" for="chkAcara">
-                                📅 Scan Acara & Presensi Kegiatan
+                                ðŸ“… Scan Acara & Presensi Kegiatan
                                 <small class="d-block text-muted fw-normal" style="font-size: 11px;">Izin mencatat kehadiran pada event K3, briefing shift, dan sosialisasi.</small>
                             </label>
                         </div>
                         <div class="form-check form-switch p-2 rounded-2" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2);">
                             <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanMinePermit" value="true" id="chkMinePermit">
                             <label class="form-check-label fw-bold text-success" for="chkMinePermit">
-                                🪪 Scan Detail Permit (Masa Aktif & Akses)
+                                ðŸªª Scan Detail Permit (Masa Aktif & Akses)
                                 <small class="d-block text-muted fw-normal" style="font-size: 11px;">Melihat profil pekerja, masa berlaku izin kerja, dan akses lokasi.</small>
                             </label>
                         </div>
                         <div class="form-check form-switch p-2 rounded-2" style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2);">
                             <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanPermitPelanggaran" value="true" id="chkPermitPelanggaran">
                             <label class="form-check-label fw-bold text-danger" for="chkPermitPelanggaran">
-                                ⚠️ Scan Pelanggaran Permit (Input Pelanggaran K3)
+                                âš ï¸ Scan Pelanggaran Permit (Input Pelanggaran K3)
                                 <small class="d-block text-muted fw-normal" style="font-size: 11px;">Izin mencatat dan memberikan tindakan pelanggaran K3 dari QR permit.</small>
                             </label>
                         </div>
                         <div class="form-check form-switch p-2 rounded-2" style="background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2);">
                             <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanPermitKeluarMasuk" value="true" id="chkPermitKeluarMasuk">
                             <label class="form-check-label fw-bold" style="color: #06b6d4;" for="chkPermitKeluarMasuk">
-                                🚪 Scan Keluar Masuk Karyawan
+                                ðŸšª Scan Keluar Masuk Karyawan
                                 <small class="d-block text-muted fw-normal" style="font-size: 11px;">Pencatatan check-in/out gate: nomor unit dan keperluan di area tambang.</small>
                             </label>
                         </div>
                         <div class="form-check form-switch p-2 rounded-2" style="background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.2);">
                             <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanSimper" value="true" id="chkSimper">
                             <label class="form-check-label fw-bold" style="color: #0ea5e9;" for="chkSimper">
-                                🚗 Scan SIMPER & Lisensi Operator
+                                ðŸš— Scan SIMPER & Lisensi Operator
                                 <small class="d-block text-muted fw-normal" style="font-size: 11px;">Verifikasi unit yang diizinkan dan masa berlaku SIMPER driver.</small>
                             </label>
                         </div>
                         <div class="form-check form-switch p-2 rounded-2" style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2);">
                             <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanCommissioning" value="true" id="chkCommissioning">
                             <label class="form-check-label fw-bold text-warning" for="chkCommissioning">
-                                ⚙️ Scan Commissioning Unit / Alat
+                                âš™ï¸ Scan Commissioning Unit / Alat
                                 <small class="d-block text-muted fw-normal" style="font-size: 11px;">Inspeksi kelaikan unit alat berat dan checklist stiker komisioning.</small>
                             </label>
                         </div>
                         <div class="form-check form-switch p-2 rounded-2" style="background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.2);">
                             <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanSpecialPermit" value="true" id="chkSpecialPermit">
                             <label class="form-check-label fw-bold" style="color: #a855f7;" for="chkSpecialPermit">
-                                🔒 Scan Special Permit K3
+                                ðŸ”’ Scan Special Permit K3
                                 <small class="d-block text-muted fw-normal" style="font-size: 11px;">Izin verifikasi izin kerja risiko tinggi (Hot Work, Confined Space, dll).</small>
                             </label>
                         </div>
                         <div class="form-check form-switch p-2 rounded-2" style="background: rgba(13, 148, 136, 0.05); border: 1px solid rgba(13, 148, 136, 0.2);">
                             <input class="form-check-input ms-0 me-3" type="checkbox" name="CanScanOther" value="true" id="chkOther">
                             <label class="form-check-label fw-bold" style="color: #0d9488;" for="chkOther">
-                                🔍 Scan Lainnya (Custom Tools)
+                                ðŸ” Scan Lainnya (Custom Tools)
                                 <small class="d-block text-muted fw-normal" style="font-size: 11px;">Fitur pemindaian umum untuk integrasi modul baru.</small>
                             </label>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top" style="border-color: var(--border-color) !important;">
-                    <button type="button" class="btn btn-sap-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn-sap-primary btn-sm px-4">Simpan Perubahan</button>
+                <div class="modal-footer border-top d-flex justify-content-between" style="border-color: var(--border-color) !important;">
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="btnModalReset" style="display: none;">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Reset ke Default
+                    </button>
+                    <div class="d-flex gap-2 ms-auto">
+                        <button type="button" class="btn btn-sap-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn-sap-primary btn-sm px-4">
+                            <i class="bi bi-check2 me-1"></i>Simpan Perubahan
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<!-- Form tersembunyi untuk Reset Permission -->
+<form id="formResetUserScan" asp-action="ResetPermission" method="post" style="display: none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="nik" id="resetNik" />
+    <input type="hidden" name="q" value="@Model.Query" />
+    <input type="hidden" name="filterDept" value="@Model.FilterDept" />
+    <input type="hidden" name="filterScan" value="@Model.FilterScan" />
+    <input type="hidden" name="page" value="@Model.Page" />
+</form>
 
 <!-- Modal Bulk Assign Department -->
 <div class="modal fade" id="bulkAssignModal" tabindex="-1" aria-hidden="true">
@@ -571,9 +612,13 @@
     </div>
 </div>
 
+@section Scripts {
 <script>
-    function togglePerm(nik, type, isChecked) {
+    // Toggle switch handler via AJAX
+    function togglePerm(nik, type, isChecked, checkboxEl) {
         const token = $('input[name="__RequestVerificationToken"]').first().val();
+        if (checkboxEl) checkboxEl.disabled = true;
+
         $.ajax({
             url: '@Url.Action("TogglePermission", "UserScan")',
             type: 'POST',
@@ -584,35 +629,79 @@
                 __RequestVerificationToken: token
             },
             success: function (res) {
+                if (checkboxEl) checkboxEl.disabled = false;
                 if (!res.success) {
                     alert(res.message || 'Gagal mengubah izin.');
-                    location.reload();
+                    if (checkboxEl) checkboxEl.checked = !isChecked;
                 }
             },
             error: function (xhr, status, error) {
+                if (checkboxEl) {
+                    checkboxEl.disabled = false;
+                    checkboxEl.checked = !isChecked;
+                }
                 var msg = xhr.responseJSON ? xhr.responseJSON.message : (xhr.responseText || error);
                 alert('Terjadi kesalahan koneksi server saat mengubah izin: ' + msg);
-                location.reload();
             }
         });
     }
 
-    function openEditModal(nik, nama, dept, canAcara, canMine, canPelanggaran, canKeluarMasuk, canSimper, canComm, canSpecial, canOther) {
-        $('#modalNik').val(nik);
-        $('#modalNikText').text(nik);
-        $('#modalNama').text(nama);
-        $('#modalDept').text(dept);
+    $(document).ready(function () {
+        // Event listener saat tombol edit ditekan
+        $(document).on('click', '.btn-edit-userscan', function () {
+            const btn = $(this);
+            const nik = String(btn.data('nik'));
+            const nama = btn.data('nama');
+            const dept = btn.data('dept');
+            const hasCustom = btn.data('custom') === true || btn.data('custom') === 'true';
 
-        $('#chkAcara').prop('checked', canAcara);
-        $('#chkMinePermit').prop('checked', canMine);
-        $('#chkPermitPelanggaran').prop('checked', canPelanggaran);
-        $('#chkPermitKeluarMasuk').prop('checked', canKeluarMasuk);
-        $('#chkSimper').prop('checked', canSimper);
-        $('#chkCommissioning').prop('checked', canComm);
-        $('#chkSpecialPermit').prop('checked', canSpecial);
-        $('#chkOther').prop('checked', canOther);
+            $('#modalNik').val(nik);
+            $('#modalNikText').text(nik);
+            $('#modalNama').text(nama);
+            $('#modalDept').text(dept);
 
-        var modal = new bootstrap.Modal(document.getElementById('editModal'));
-        modal.show();
-    }
+            $('#chkAcara').prop('checked', btn.data('acara') === true || btn.data('acara') === 'true');
+            $('#chkMinePermit').prop('checked', btn.data('mine') === true || btn.data('mine') === 'true');
+            $('#chkPermitPelanggaran').prop('checked', btn.data('pelanggaran') === true || btn.data('pelanggaran') === 'true');
+            $('#chkPermitKeluarMasuk').prop('checked', btn.data('keluarmasuk') === true || btn.data('keluarmasuk') === 'true');
+            $('#chkSimper').prop('checked', btn.data('simper') === true || btn.data('simper') === 'true');
+            $('#chkCommissioning').prop('checked', btn.data('comm') === true || btn.data('comm') === 'true');
+            $('#chkSpecialPermit').prop('checked', btn.data('special') === true || btn.data('special') === 'true');
+            $('#chkOther').prop('checked', btn.data('other') === true || btn.data('other') === 'true');
+
+            if (hasCustom) {
+                $('#btnModalReset').show().data('nik', nik).data('nama', nama);
+            } else {
+                $('#btnModalReset').hide();
+            }
+
+            const modalEl = document.getElementById('editModal');
+            if (modalEl) {
+                const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                modal.show();
+            }
+        });
+
+        // Event listener Reset via modal
+        $('#btnModalReset').on('click', function () {
+            const nik = $(this).data('nik') || $('#modalNik').val();
+            const nama = $(this).data('nama') || $('#modalNama').text();
+            if (confirm('Apakah Anda yakin ingin mereset izin scan untuk ' + nama + ' (NIK: ' + nik + ') ke pengaturan default?')) {
+                $('#resetNik').val(nik);
+                $('#formResetUserScan').submit();
+            }
+        });
+
+        // Event listener Reset via tabel
+        $(document).on('click', '.btn-reset-userscan', function () {
+            const btn = $(this);
+            const nik = String(btn.data('nik'));
+            const nama = btn.data('nama');
+            if (confirm('Apakah Anda yakin ingin mereset izin scan untuk ' + nama + ' (NIK: ' + nik + ') ke pengaturan default?')) {
+                $('#resetNik').val(nik);
+                $('#formResetUserScan').submit();
+            }
+        });
+    });
 </script>
+}
