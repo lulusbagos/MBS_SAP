@@ -133,6 +133,15 @@
     }
 
     /* ─── Card accent ─────────────────────────────────────────────── */
+    .border-focus-highlight {
+        border: 2px solid #10b981 !important;
+        box-shadow: 0 0 25px rgba(16, 185, 129, 0.45) !important;
+        animation: focusPulse 2s infinite ease-in-out;
+    }
+    @@keyframes focusPulse {
+        0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.35); }
+        50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.7); }
+    }
     .border-red-accent  { border-left: 3px solid var(--color-red)  !important; }
     .border-green-accent { border-left: 3px solid var(--color-green) !important; }
 
@@ -452,7 +461,7 @@
                      data-nikpja="@(item.NikPja)"
                      data-nikpic="@(item.NikPic)"
                      data-resiko="@(item.TingkatResiko?.ToLower() ?? "unknown")">
-                    <div id="card-@item.Id" class="card-sap @(isClosed ? "border-green-accent" : (isProgress ? "border-warning-accent" : "border-red-accent")) h-100 d-flex flex-column justify-content-between" style="@(isClosed ? "" : (isProgress ? "box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15); border-color: #f59e0b;" : "box-shadow: 0 4px 15px rgba(244, 63, 94, 0.15);"))">
+                    <div id="card-@item.Id" class="card-sap @(ViewBag.FocusId != null && (int)ViewBag.FocusId == item.Id ? "border-focus-highlight" : "") @(isClosed ? "border-green-accent" : (isProgress ? "border-warning-accent" : "border-red-accent")) h-100 d-flex flex-column justify-content-between" style="@(isClosed ? "" : (isProgress ? "box-shadow: 0 4px 15px rgba(245, 158, 11, 0.15); border-color: #f59e0b;" : "box-shadow: 0 4px 15px rgba(244, 63, 94, 0.15);"))">
                         <div>
                             <!-- ── PDF Official Header (Hanya tampil saat dicetak/share PDF) ── -->
                             <div class="pdf-only mb-3 pb-3" style="border-bottom: 2px solid #0284c7;">
@@ -756,7 +765,7 @@
 
                             @if (isOpen)
                             {
-                                <div class="collapse mt-3 pdf-exclude" id="updateForm-@item.Id">
+                                <div class="collapse @(ViewBag.FocusId != null && (int)ViewBag.FocusId == item.Id ? "show" : "") mt-3 pdf-exclude" id="updateForm-@item.Id">
                                     <div class="card-sap bg-dark-card border-0 p-3 mb-0">
                                         <form asp-controller="ActionPlan" asp-action="Update" method="post" enctype="multipart/form-data">
                                             @Html.AntiForgeryToken()
@@ -1189,6 +1198,31 @@
                 $('#hiddenStatusInput').val(selectedStatus);
                 applyFilters();
             });
+        });
+
+        // Auto-scroll and focus to target card when focusId is present
+        $(document).ready(function () {
+            const focusId = '@(ViewBag.FocusId ?? "")' || new URLSearchParams(window.location.search).get('focusId');
+            if (focusId) {
+                setTimeout(function () {
+                    const cardEl = document.getElementById('card-' + focusId);
+                    if (cardEl) {
+                        cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        cardEl.style.boxShadow = '0 0 0 3px #10b981, 0 8px 30px rgba(16, 185, 129, 0.45)';
+                        cardEl.style.transition = 'all 0.4s ease';
+
+                        const formEl = document.getElementById('updateForm-' + focusId);
+                        if (formEl && typeof bootstrap !== 'undefined') {
+                            const bsCollapse = bootstrap.Collapse.getOrCreateInstance(formEl, { toggle: false });
+                            bsCollapse.show();
+                        }
+                        const perbaikanInput = document.getElementById('perbaikanText-' + focusId);
+                        if (perbaikanInput) {
+                            perbaikanInput.focus();
+                        }
+                    }
+                }, 350);
+            }
         });
 
         function handleStatusChange(sel, id) {

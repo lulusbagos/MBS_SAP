@@ -364,14 +364,15 @@ namespace MBS_SAP.Controllers
                         TargetRole = a.NikPic == userNik ? "PIC" : "PJA",
                         Pja = a.Pja ?? "-",
                         Pic = a.Pic ?? "-",
-                        ActionUrl = "/ActionPlan/Index?startDate=" + startOfMonth.ToString("yyyy-MM-dd") + "&filter=assigned&status=open"
+                        ActionUrl = "/ActionPlan/Index?startDate=2000-01-01&endDate=" + DateTime.Now.ToString("yyyy-MM-dd") + "&filter=assigned&status=open&focusId=" + a.Id + "#card-" + a.Id
                     })
                     .ToListAsync();
 
+                int assignedAllTimeOpen = await baseAssignedActionPlansQuery.CountAsync(a => a.Status == "Open");
                 stats.AssignedTasksToClose = assignedActionPlanItems;
                 stats.AssignedHazardsCount = 0;
-                stats.AssignedActionPlansCount = assignedMtdOpen;
-                stats.AssignedToMeCount = assignedMtdOpen;
+                stats.AssignedActionPlansCount = Math.Max(assignedAllTimeOpen, assignedMtdOpen);
+                stats.AssignedToMeCount = Math.Max(assignedAllTimeOpen, assignedMtdOpen);
                 stats.AssignedTotalCount = assignedMtdTotal;
                 stats.AssignedClosedCount = assignedMtdClosed;
                 stats.AssignedCloseRate = assignedCloseRate;
@@ -411,12 +412,13 @@ namespace MBS_SAP.Controllers
                         TargetRole = "Pembuat",
                         Pja = a.Pja ?? "-",
                         Pic = a.Pic ?? "-",
-                        ActionUrl = "/ActionPlan/Index?startDate=" + startOfMonth.ToString("yyyy-MM-dd") + "&filter=created&status=open"
+                        ActionUrl = "/ActionPlan/Index?startDate=2000-01-01&endDate=" + DateTime.Now.ToString("yyyy-MM-dd") + "&filter=created&status=open&focusId=" + a.Id + "#card-" + a.Id
                     })
                     .ToListAsync();
 
+                int myCreatedOpenAllTime = await baseMyCreatedActionPlansQuery.CountAsync(a => a.Status == "Open");
                 stats.CreatedByMeTasks = myCreatedActionPlanItems;
-                stats.CreatedByMeOpenCount = userEffectiveOpenAp;
+                stats.CreatedByMeOpenCount = Math.Max(myCreatedOpenAllTime, userEffectiveOpenAp);
                 stats.CreatedByMeTotalCount = userEffectiveTotalAp;
                 stats.CreatedByMeClosedCount = userEffectiveClosedAp;
                 stats.CreatedByMeCloseRate = userCloseRate;
@@ -533,7 +535,7 @@ namespace MBS_SAP.Controllers
                             TargetRole = "Dept",
                             Pja = a.Pja ?? "-",
                             Pic = a.Pic ?? "-",
-                            ActionUrl = "/ActionPlan/Index?startDate=" + startOfMonth.ToString("yyyy-MM-dd") + "&filter=dept&status=open&dept=" + Uri.EscapeDataString(userDept)
+                            ActionUrl = "/ActionPlan/Index?startDate=2000-01-01&endDate=" + DateTime.Now.ToString("yyyy-MM-dd") + "&filter=dept&status=open&dept=" + Uri.EscapeDataString(userDept) + "&focusId=" + a.Id + "#card-" + a.Id
                         })
                         .ToListAsync();
 

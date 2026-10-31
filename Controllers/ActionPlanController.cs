@@ -33,7 +33,7 @@ namespace MBS_SAP.Controllers
         }
 
         // GET: ActionPlan
-        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, string? filter, string? dept, string? status, string? type)
+        public async Task<IActionResult> Index(DateTime? startDate, DateTime? endDate, string? filter, string? dept, string? status, string? type, int? focusId)
         {
             ViewData["HeaderTitle"] = "Action Plan Temuan";
             ViewData["ActiveTab"] = "ActionPlan";
@@ -45,7 +45,23 @@ namespace MBS_SAP.Controllers
             int? companyId = int.TryParse(compIdStr, out int cid) && cid > 0 ? cid : (int?)null;
             var isAdmin = User.IsInRole("Admin");
 
-            var start = startDate ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            // If filter is assigned and startDate is not specified, or if focusId is passed, default to all-time open window
+            DateTime? effectiveStart = startDate;
+            if (!effectiveStart.HasValue && (filter == "assigned" || filter == "assigned_to_me"))
+            {
+                effectiveStart = new DateTime(2000, 1, 1);
+            }
+            if (focusId.HasValue)
+            {
+                ViewBag.FocusId = focusId.Value;
+                var targetFocus = await _context.ActionPlans.AsNoTracking().FirstOrDefaultAsync(r => r.Id == focusId.Value && !r.IsDeleted);
+                if (targetFocus != null && (!effectiveStart.HasValue || targetFocus.Tanggal < effectiveStart.Value))
+                {
+                    effectiveStart = targetFocus.Tanggal;
+                }
+            }
+
+            var start = effectiveStart ?? new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             var end = endDate ?? DateTime.Now.Date;
             var endOfDay = end.AddDays(1).AddTicks(-1);
 
