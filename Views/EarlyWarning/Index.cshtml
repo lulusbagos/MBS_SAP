@@ -651,25 +651,6 @@
         }
 
         /* Special Office Point Styling */
-        .marker-office-tag {
-            position: absolute;
-            top: -18px;
-            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-            color: #ffffff;
-            font-size: 8.5px;
-            font-weight: 800;
-            padding: 1.5px 6.5px;
-            border-radius: 10px;
-            border: 1px solid #38bdf8;
-            white-space: nowrap;
-            letter-spacing: 0.5px;
-            box-shadow: 0 0 12px rgba(56, 189, 248, 0.8), 0 3px 8px rgba(0,0,0,0.8);
-            z-index: 12;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            pointer-events: none;
-        }
         .core-beacon.is-office-beacon {
             width: 32px !important;
             height: 32px !important;
@@ -1321,6 +1302,14 @@
                             <i class="bi bi-bell-fill ms-auto text-danger"></i>
                         </button>
                         <div class="test-dropdown-divider"></div>
+                        <button type="button" class="test-item-btn" onclick="testOfficeHeatAlert()">
+                            <span class="test-item-badge" style="background:rgba(249,115,22,0.25); border:1px solid #f97316; color:#fb923c;"><i class="bi bi-buildings-fill"></i> Office</span>
+                            <div class="test-item-info">
+                                <strong>Uji Suara Khusus Office (UV & Panas)</strong>
+                                <small>Simulasi UV Sangat Tinggi & Suara Panas</small>
+                            </div>
+                            <i class="bi bi-sun-fill ms-auto text-warning"></i>
+                        </button>
                         <button type="button" class="test-item-btn" onclick="testSoundAlert()">
                             <i class="bi bi-bell-fill text-info"></i>
                             <div class="test-item-info">
@@ -1934,6 +1923,51 @@
     let lastRainAlertTime = 0;
     const RAIN_ALERT_REPEAT_INTERVAL_MS = 1800000; // 30 minutes repeat interval
 
+    let lastOfficeHeatAlertTime = 0;
+    const OFFICE_HEAT_ALERT_REPEAT_INTERVAL_MS = 1800000; // 30 minutes repeat interval for office heat alert
+
+    function getUvCategory(uv) {
+        const u = Number(uv) || 0;
+        if (u >= 11) return 'Ekstrem';
+        if (u >= 8) return 'Sangat Tinggi';
+        if (u >= 6) return 'Tinggi';
+        if (u >= 3) return 'Sedang';
+        return 'Rendah';
+    }
+
+    function triggerOfficeHeatAlert(temp, uv, apparent = 0, isTest = false) {
+        if (isSoundMuted && !isTest) return;
+        const uvVal = Number(uv) || 0;
+        const tempVal = Math.round(Number(temp) || 30);
+        const apparentVal = Math.round(Number(apparent) || tempVal);
+        const uvCategory = getUvCategory(uvVal);
+
+        // 1. Nada Ting Ting lembut untuk menarik perhatian
+        playTingChime(2);
+
+        // 2. Notifikasi suara bahasa Indonesia khusus Office
+        setTimeout(() => {
+            let speechMsg = '';
+            if (uvVal >= 8 && tempVal >= 33) {
+                speechMsg = `Perhatian! Informasi cuaca khusus Office PT Indexim Coalindo. Terdeteksi cuaca panas dengan suhu ${tempVal} derajat Celcius serta radiasi sinar ultra violet level ${uvVal.toFixed(1)} kategori ${uvCategory}. Disarankan untuk membatasi aktivitas di luar ruangan, memakai pelindung matahari, dan memperbanyak minum air.`;
+            } else if (uvVal >= 8) {
+                speechMsg = `Perhatian! Informasi cuaca khusus Office PT Indexim Coalindo. Terdeteksi radiasi sinar ultra violet sangat tinggi mencapai indeks ${uvVal.toFixed(1)} kategori ${uvCategory}. Gunakan tabir surya atau pelindung saat beraktivitas di area terbuka.`;
+            } else {
+                speechMsg = `Perhatian! Informasi cuaca khusus Office PT Indexim Coalindo. Terpantau suhu udara panas mencapai ${tempVal} derajat Celcius dengan suhu terasa ${apparentVal} derajat. Jaga kondisi tubuh dan pastikan hidrasi cukup.`;
+            }
+            speakGoogleVoice(speechMsg);
+        }, 1100);
+
+        showVoiceNotificationToast(`[INFO CUACA OFFICE] Peringatan Panas & Indeks UV: ${tempVal}°C | UV ${uvVal.toFixed(1)} (${uvCategory})`);
+    }
+
+    function testOfficeHeatAlert() {
+        getAudioContext();
+        triggerOfficeHeatAlert(35, 9.2, 38, true);
+        const menu = document.getElementById('testSoundMenuDropdown');
+        if (menu) menu.style.display = 'none';
+    }
+
     /* ── Chime Lonceng Lembut (Ting Ting) Sesuai Permintaan:
        - Suara tidak terlalu keras (volume nyaman gain 0.18, gelombang sine jernih & harmonic chime)
        - 1x Ting: Curah Hujan Level 1 / Lebat (50 - 100 mm/hari atau >= 50 mm/jam)
@@ -2408,7 +2442,7 @@
             const hasOffice = weatherResults.some(r => (r.point && (r.point.name.toUpperCase().includes('OFFICE') || (Math.abs(r.point.latitude - 0.891809) < 0.001 && Math.abs(r.point.longitude - 117.808226) < 0.001))));
             if (!hasOffice) {
                 try {
-                    const officeRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=0.891809&longitude=117.808226&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&timezone=Asia/Makassar');
+                    const officeRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=0.891809&longitude=117.808226&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,uv_index,apparent_temperature&timezone=Asia/Makassar');
                     if (officeRes.ok) {
                         const officeFc = await officeRes.json();
                         weatherResults.unshift({
@@ -2540,6 +2574,8 @@
 
             // Actual telemetry for Current Hour (Now)
             const curTemp = fc.temperature_2m ? fc.temperature_2m[currentHourIdx] : 25;
+            const curUv = fc.uv_index ? (fc.uv_index[currentHourIdx] || 0) : 0;
+            const curApparent = fc.apparent_temperature ? (fc.apparent_temperature[currentHourIdx] || curTemp) : curTemp;
             const curPrecip = fc.precipitation ? fc.precipitation[currentHourIdx] : 0;
             const curProb = fc.precipitation_probability ? fc.precipitation_probability[currentHourIdx] : 0;
             const curWind = fc.wind_speed_10m ? fc.wind_speed_10m[currentHourIdx] : 0;
@@ -2721,9 +2757,20 @@
                 beaconIcon = '<i class="bi bi-wind text-warning"></i>';
             }
 
-            const officeTagHtml = isOffice ? '<div class="marker-office-tag"><i class="bi bi-buildings-fill text-info"></i> HEAD OFFICE</div>' : '';
+            const officeTagHtml = ''; // No HEAD OFFICE tag per user request
             const coreBeaconClass = isOffice ? 'core-beacon is-office-beacon' : `core-beacon ${markerSeverityClass}`;
             const labelClass = isOffice ? 'marker-pit-label office-label' : `marker-pit-label ${markerSeverityClass}`;
+
+            // Specific Heat / High UV Badge on Marker for Office
+            if (isOffice && (curUv >= 8 || curTemp >= 34) && !isRainingNow && !isThunder) {
+                const uvCat = getUvCategory(curUv);
+                weatherBadgeHtml = `
+                    <div class="marker-weather-badge" style="background:rgba(234,88,12,0.92); border-color:#fb923c;" title="Indeks UV: ${curUv.toFixed(1)} (${uvCat}) • Suhu: ${curTemp}°C">
+                        <i class="bi bi-sun-fill text-warning"></i>
+                        <span>${curUv >= 8 ? 'UV ' + curUv.toFixed(1) : Math.round(curTemp) + '°C'}</span>
+                    </div>
+                `;
+            }
 
             const pinHtml = `
                 <div class="marker-pin-wrap" title="${p.name} • ${wmoInfo.desc} • Saat Ini: ${curPrecip} mm/h (Maks Hari Ini: ${ptMaxPrecip} mm/h)">
@@ -2755,7 +2802,7 @@
                 ? '<i class="bi bi-buildings-fill text-primary" style="font-size:15px;"></i>' 
                 : '<i class="bi bi-geo-alt-fill text-primary"></i>';
             const officeSubHeader = isOffice 
-                ? '<div style="font-size:9.5px; color:#64748b; margin-bottom:4px; font-weight:600;"><i class="bi bi-geo-alt"></i> 0.891809, 117.808226 • Head Office & Basecamp</div>' 
+                ? '<div style="font-size:9.5px; color:#64748b; margin-bottom:4px; font-weight:600;"><i class="bi bi-geo-alt"></i> 0.891809, 117.808226 • Area Perkantoran</div>' 
                 : '';
             const popupHtml = `
                 <div style="font-family:'Poppins',sans-serif; min-width:225px; padding:4px;">
@@ -2767,6 +2814,18 @@
                         <span>Kondisi Saat Ini (${currentHourLabel}):</span>
                         <strong style="color:#0f172a;"><i class="bi ${wmoInfo.icon}" style="color:${wmoInfo.color};"></i> ${wmoInfo.desc}</strong>
                     </div>
+                    ${isOffice ? `
+                    <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span>Indeks UV (Saat Ini):</span>
+                        <strong style="color:${curUv >= 8 ? '#ea580c' : curUv >= 6 ? '#d97706' : '#10b981'}; font-weight:800;">
+                            <i class="bi bi-sun-fill text-warning"></i> ${curUv.toFixed(1)} (${getUvCategory(curUv)})
+                        </strong>
+                    </div>
+                    <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
+                        <span>Suhu Terasa:</span>
+                        <strong style="color:#d97706;">${Math.round(curApparent)}&deg;C (Aktual ${Math.round(curTemp)}&deg;C)</strong>
+                    </div>
+                    ` : ''}
                     <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
                         <span>Curah Hujan (Now):</span>
                         <strong style="color:${curPrecip > 0 ? '#ef4444' : '#10b981'}; font-weight:800;">${curPrecip > 0 ? curPrecip + ' mm/h' : '0.0 mm/h (Kering)'}</strong>
@@ -2814,7 +2873,7 @@
             // Contractor Badge
             let contractorBadge = '';
             if (isOffice) {
-                contractorBadge = '<span class="badge" style="background:rgba(2,132,199,0.25); color:#38bdf8; border:1px solid #38bdf8; font-size:8.5px; font-weight:800;"><i class="bi bi-buildings-fill me-1"></i>HEAD OFFICE</span>';
+                contractorBadge = '<span class="badge" style="background:rgba(2,132,199,0.25); color:#38bdf8; border:1px solid #38bdf8; font-size:8.5px; font-weight:800;"><i class="bi bi-buildings-fill me-1"></i>OFFICE</span>';
             } else if (p.name.includes('KPP')) {
                 contractorBadge = '<span class="badge" style="background:rgba(56,189,248,0.22); color:#38bdf8; border:1px solid rgba(56,189,248,0.5); font-size:8.5px; font-weight:800;">KPP</span>';
             } else if (p.name.includes('UDU')) {
@@ -2828,7 +2887,8 @@
             // Hauling Road Condition
             let roadBadge = '';
             if (isOffice) {
-                roadBadge = '<span class="hauling-badge hauling-normal" style="border-color:#38bdf8; color:#38bdf8;"><i class="bi bi-buildings"></i> Office Area • Akses Terbuka</span>';
+                const isHotOrUv = (curUv >= 8 || curTemp >= 34);
+                roadBadge = `<span class="hauling-badge hauling-normal" style="border-color:${isHotOrUv ? '#f97316' : '#38bdf8'}; color:${isHotOrUv ? '#fb923c' : '#38bdf8'};"><i class="bi ${isHotOrUv ? 'bi-sun-fill text-warning' : 'bi-shield-check'}"></i> ${isHotOrUv ? 'UV ' + curUv.toFixed(1) + ' (' + getUvCategory(curUv) + ')' : 'Office Area • Akses Normal'}</span>`;
             } else if (curPrecip >= 2) {
                 roadBadge = '<span class="hauling-badge hauling-danger"><i class="bi bi-exclamation-triangle-fill"></i> Sangat Licin / Standby</span>';
             } else if (curPrecip > 0) {
@@ -3136,6 +3196,26 @@
             kpiStatusBadge.innerText = 'AMAN';
             kpiStatusText.className = 'kpi-num text-success';
             kpiStatusText.innerText = 'NORMAL';
+        }
+
+        // Peringatan Suara Khusus Office Jika Cuaca Terlalu Panas atau Radiasi UV Tinggi
+        const officePointItem = results.find(r => r.point && (r.point.isOffice || r.point.name.toUpperCase().includes('OFFICE')));
+        if (officePointItem) {
+            const ofcHourIdx = getCurrentHourIndex(officePointItem.forecast.hourly.time);
+            const ofcHourly = officePointItem.forecast.hourly;
+            const ofcCurTemp = ofcHourly.temperature_2m ? ofcHourly.temperature_2m[ofcHourIdx] : 25;
+            const ofcCurUv = ofcHourly.uv_index ? (ofcHourly.uv_index[ofcHourIdx] || 0) : 0;
+            const ofcCurApparent = ofcHourly.apparent_temperature ? (ofcHourly.apparent_temperature[ofcHourIdx] || ofcCurTemp) : ofcCurTemp;
+
+            const isOfficeHotOrHighUv = (ofcCurUv >= 8 || ofcCurTemp >= 34 || ofcCurApparent >= 37);
+            const isOfficeHeatIntervalPassed = (nowTime - lastOfficeHeatAlertTime >= OFFICE_HEAT_ALERT_REPEAT_INTERVAL_MS);
+
+            if (isOfficeHotOrHighUv && isOfficeHeatIntervalPassed) {
+                lastOfficeHeatAlertTime = nowTime;
+                setTimeout(() => {
+                    triggerOfficeHeatAlert(ofcCurTemp, ofcCurUv, ofcCurApparent, false);
+                }, 3000);
+            }
         }
 
         // Update filter badge numbers

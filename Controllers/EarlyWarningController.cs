@@ -15,7 +15,7 @@ namespace MBS_SAP.Controllers
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IMemoryCache _cache;
-        private const string CacheKey = "IMORA_FORECAST_CACHE_V2";
+        private const string CacheKey = "IMORA_FORECAST_CACHE_V3";
         private static string? _lastKnownPayload = null;
         private static DateTime? _lastFetchTime = null;
 
@@ -131,7 +131,7 @@ namespace MBS_SAP.Controllers
         {
             try
             {
-                const string officeUrl = "https://api.open-meteo.com/v1/forecast?latitude=0.891809&longitude=117.808226&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&timezone=Asia/Makassar";
+                const string officeUrl = "https://api.open-meteo.com/v1/forecast?latitude=0.891809&longitude=117.808226&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,uv_index,apparent_temperature&timezone=Asia/Makassar";
                 var officeResponse = await client.GetAsync(officeUrl);
                 if (officeResponse.IsSuccessStatusCode)
                 {
