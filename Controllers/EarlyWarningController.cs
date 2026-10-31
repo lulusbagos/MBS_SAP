@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
 namespace MBS_SAP.Controllers
@@ -14,7 +15,7 @@ namespace MBS_SAP.Controllers
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IMemoryCache _cache;
-        private const string CacheKey = "IMORA_FORECAST_CACHE_V1";
+        private const string CacheKey = "IMORA_FORECAST_CACHE_V2";
         private static string? _lastKnownPayload = null;
         private static DateTime? _lastFetchTime = null;
 
@@ -55,6 +56,51 @@ namespace MBS_SAP.Controllers
                 {
                     var json = await response.Content.ReadAsStringAsync();
                     
+                    // Inject OFFICE PT INDEXIM COALINDO (0.891809, 117.808226) if not already in IMORA payload
+                    try
+                    {
+                        var root = JsonNode.Parse(json);
+                        if (root?["results"] is JsonArray resultsArray)
+                        {
+                            bool hasOffice = false;
+                            foreach (var item in resultsArray)
+                            {
+                                var pointName = item?["point"]?["name"]?.ToString() ?? "";
+                                if (pointName.Contains("OFFICE", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    hasOffice = true;
+                                    break;
+                                }
+                            }
+
+                            if (!hasOffice)
+                            {
+                                var officeForecastNode = await FetchOfficeForecastAsync(client);
+                                if (officeForecastNode != null)
+                                {
+                                    var officeNode = new JsonObject
+                                    {
+                                        ["point"] = new JsonObject
+                                        {
+                                            ["name"] = "OFFICE PT INDEXIM COALINDO",
+                                            ["latitude"] = 0.891809,
+                                            ["longitude"] = 117.808226,
+                                            ["isOffice"] = true
+                                        },
+                                        ["forecast"] = officeForecastNode
+                                    };
+                                    // Place office at index 0 for immediate visibility
+                                    resultsArray.Insert(0, officeNode);
+                                    json = root.ToJsonString();
+                                }
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Fallback to original json if transformation fails
+                    }
+
                     // Cache for 5 minutes per IMORA integration guide specification
                     _cache.Set(CacheKey, json, TimeSpan.FromMinutes(5));
                     _lastKnownPayload = json;
@@ -79,6 +125,25 @@ namespace MBS_SAP.Controllers
                 error = "Forecast data is temporarily unavailable. Retrying...",
                 last_updated = _lastFetchTime
             });
+        }
+
+        private async Task<JsonNode?> FetchOfficeForecastAsync(HttpClient client)
+        {
+            try
+            {
+                const string officeUrl = "https://api.open-meteo.com/v1/forecast?latitude=0.891809&longitude=117.808226&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&timezone=Asia/Makassar";
+                var officeResponse = await client.GetAsync(officeUrl);
+                if (officeResponse.IsSuccessStatusCode)
+                {
+                    var stream = await officeResponse.Content.ReadAsStreamAsync();
+                    return await JsonNode.ParseAsync(stream);
+                }
+            }
+            catch
+            {
+                // Non-critical, ignore
+            }
+            return null;
         }
     }
 }

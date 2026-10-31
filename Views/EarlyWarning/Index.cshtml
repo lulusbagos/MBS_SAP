@@ -650,6 +650,43 @@
             z-index: 10;
         }
 
+        /* Special Office Point Styling */
+        .marker-office-tag {
+            position: absolute;
+            top: -18px;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            font-size: 8.5px;
+            font-weight: 800;
+            padding: 1.5px 6.5px;
+            border-radius: 10px;
+            border: 1px solid #38bdf8;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.8), 0 3px 8px rgba(0,0,0,0.8);
+            z-index: 12;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            pointer-events: none;
+        }
+        .core-beacon.is-office-beacon {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 9px !important;
+            background: linear-gradient(135deg, #0284c7 0%, #082f49 100%) !important;
+            border: 2px solid #38bdf8 !important;
+            box-shadow: 0 0 0 2px #00d2ff, 0 4px 14px rgba(0,0,0,0.9), 0 0 20px rgba(56, 189, 248, 0.95) !important;
+        }
+        .marker-pit-label.office-label {
+            background: rgba(8, 47, 73, 0.95) !important;
+            border: 1.5px solid #38bdf8 !important;
+            color: #e0f2fe !important;
+            font-size: 9.5px !important;
+            font-weight: 800 !important;
+            box-shadow: 0 0 12px rgba(2, 132, 199, 0.7) !important;
+        }
+
         /* Floating Weather Alert Badge above the marker */
         .marker-weather-badge {
             position: absolute;
@@ -2367,6 +2404,28 @@
             const payload = await response.json();
             weatherResults = payload.results || [];
 
+            // Ensure OFFICE PT INDEXIM COALINDO (0.891809, 117.808226) is always included
+            const hasOffice = weatherResults.some(r => (r.point && (r.point.name.toUpperCase().includes('OFFICE') || (Math.abs(r.point.latitude - 0.891809) < 0.001 && Math.abs(r.point.longitude - 117.808226) < 0.001))));
+            if (!hasOffice) {
+                try {
+                    const officeRes = await fetch('https://api.open-meteo.com/v1/forecast?latitude=0.891809&longitude=117.808226&hourly=temperature_2m,relative_humidity_2m,precipitation,precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m&timezone=Asia/Makassar');
+                    if (officeRes.ok) {
+                        const officeFc = await officeRes.json();
+                        weatherResults.unshift({
+                            point: {
+                                name: 'OFFICE PT INDEXIM COALINDO',
+                                latitude: 0.891809,
+                                longitude: 117.808226,
+                                isOffice: true
+                            },
+                            forecast: officeFc
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Fallback office forecast fetch failed:', e);
+                }
+            }
+
             renderWeatherDashboard(weatherResults);
         } catch (err) {
             console.warn('Error fetching forecast, retrying in 10s:', err);
@@ -2477,6 +2536,7 @@
         results.forEach((item, index) => {
             const p = item.point;
             const fc = item.forecast.hourly;
+            const isOffice = p.isOffice === true || p.name.toUpperCase().includes('OFFICE') || (Math.abs(p.latitude - 0.891809) < 0.0005 && Math.abs(p.longitude - 117.808226) < 0.0005);
 
             // Actual telemetry for Current Hour (Now)
             const curTemp = fc.temperature_2m ? fc.temperature_2m[currentHourIdx] : 25;
@@ -2651,7 +2711,9 @@
 
             const markerSeverityClass = (severity === 'green') ? 'cyan' : severity;
             let beaconIcon = '<i class="bi bi-geo-alt-fill text-white"></i>';
-            if (isThunder) {
+            if (isOffice) {
+                beaconIcon = '<i class="bi bi-buildings-fill text-white" style="font-size: 15px; color: #38bdf8;"></i>';
+            } else if (isThunder) {
                 beaconIcon = '<i class="bi bi-lightning-charge-fill text-warning"></i>';
             } else if (isHeavyRainNow || isRainingNow) {
                 beaconIcon = '<i class="bi bi-cloud-rain-fill text-white"></i>';
@@ -2659,17 +2721,22 @@
                 beaconIcon = '<i class="bi bi-wind text-warning"></i>';
             }
 
+            const officeTagHtml = isOffice ? '<div class="marker-office-tag"><i class="bi bi-buildings-fill text-info"></i> HEAD OFFICE</div>' : '';
+            const coreBeaconClass = isOffice ? 'core-beacon is-office-beacon' : `core-beacon ${markerSeverityClass}`;
+            const labelClass = isOffice ? 'marker-pit-label office-label' : `marker-pit-label ${markerSeverityClass}`;
+
             const pinHtml = `
                 <div class="marker-pin-wrap" title="${p.name} • ${wmoInfo.desc} • Saat Ini: ${curPrecip} mm/h (Maks Hari Ini: ${ptMaxPrecip} mm/h)">
+                    ${officeTagHtml}
                     ${rippleEffectHtml}
                     ${weatherBadgeHtml}
                     <div class="marker-radar-core">
                         <div class="pulse-wave ${markerSeverityClass}"></div>
-                        <div class="core-beacon ${markerSeverityClass}">
+                        <div class="${coreBeaconClass}">
                             ${beaconIcon}
                         </div>
                     </div>
-                    <div class="marker-pit-label ${markerSeverityClass}">${shortPitName}</div>
+                    <div class="${labelClass}">${shortPitName}</div>
                 </div>
             `;
 
@@ -2684,11 +2751,18 @@
 
             // Marker Popup Content
             const currentHourLabel = fc0.time[currentHourIdx] ? fc0.time[currentHourIdx].split('T')[1] : '--:--';
+            const popupHeaderIcon = isOffice 
+                ? '<i class="bi bi-buildings-fill text-primary" style="font-size:15px;"></i>' 
+                : '<i class="bi bi-geo-alt-fill text-primary"></i>';
+            const officeSubHeader = isOffice 
+                ? '<div style="font-size:9.5px; color:#64748b; margin-bottom:4px; font-weight:600;"><i class="bi bi-geo-alt"></i> 0.891809, 117.808226 • Head Office & Basecamp</div>' 
+                : '';
             const popupHtml = `
-                <div style="font-family:'Poppins',sans-serif; min-width:215px; padding:4px;">
-                    <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:4px; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">
-                        <i class="bi bi-geo-alt-fill text-primary"></i> ${p.name}
+                <div style="font-family:'Poppins',sans-serif; min-width:225px; padding:4px;">
+                    <div style="font-size:12px; font-weight:800; color:#0f172a; margin-bottom:4px; border-bottom:1px solid #e2e8f0; padding-bottom:4px; display:flex; align-items:center; gap:6px;">
+                        ${popupHeaderIcon} <span>${p.name}</span>
                     </div>
+                    ${officeSubHeader}
                     <div style="font-size:11px; color:#475569; display:flex; justify-content:space-between; margin-bottom:2px;">
                         <span>Kondisi Saat Ini (${currentHourLabel}):</span>
                         <strong style="color:#0f172a;"><i class="bi ${wmoInfo.icon}" style="color:${wmoInfo.color};"></i> ${wmoInfo.desc}</strong>
@@ -2739,7 +2813,9 @@
 
             // Contractor Badge
             let contractorBadge = '';
-            if (p.name.includes('KPP')) {
+            if (isOffice) {
+                contractorBadge = '<span class="badge" style="background:rgba(2,132,199,0.25); color:#38bdf8; border:1px solid #38bdf8; font-size:8.5px; font-weight:800;"><i class="bi bi-buildings-fill me-1"></i>HEAD OFFICE</span>';
+            } else if (p.name.includes('KPP')) {
                 contractorBadge = '<span class="badge" style="background:rgba(56,189,248,0.22); color:#38bdf8; border:1px solid rgba(56,189,248,0.5); font-size:8.5px; font-weight:800;">KPP</span>';
             } else if (p.name.includes('UDU')) {
                 contractorBadge = '<span class="badge" style="background:rgba(52,211,153,0.22); color:#34d399; border:1px solid rgba(52,211,153,0.5); font-size:8.5px; font-weight:800;">UDU</span>';
@@ -2751,7 +2827,9 @@
 
             // Hauling Road Condition
             let roadBadge = '';
-            if (curPrecip >= 2) {
+            if (isOffice) {
+                roadBadge = '<span class="hauling-badge hauling-normal" style="border-color:#38bdf8; color:#38bdf8;"><i class="bi bi-buildings"></i> Office Area • Akses Terbuka</span>';
+            } else if (curPrecip >= 2) {
                 roadBadge = '<span class="hauling-badge hauling-danger"><i class="bi bi-exclamation-triangle-fill"></i> Sangat Licin / Standby</span>';
             } else if (curPrecip > 0) {
                 roadBadge = '<span class="hauling-badge hauling-caution"><i class="bi bi-speedometer2"></i> Basah • Maks 30 km/h</span>';
