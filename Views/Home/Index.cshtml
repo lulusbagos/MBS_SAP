@@ -1113,10 +1113,14 @@
 
         .roster-modal-content {
             background: var(--bg-card) !important;
-            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            backdrop-filter: blur(16px) saturate(180%);
             border: 1px solid var(--border-color) !important;
             border-radius: 24px !important;
             overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+            max-height: 90vh;
+            max-height: 90dvh;
         }
         .roster-header-banner {
             background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(59, 130, 246, 0.15));
@@ -1171,6 +1175,9 @@
             width: 100%;
             font-size: 13px !important;
             font-weight: 500 !important;
+            min-height: 44px !important;
+            -webkit-appearance: none;
+            appearance: none;
             transition: all 0.2s ease !important;
         }
         .roster-date-input:focus {
@@ -1245,7 +1252,7 @@
     </style>
 
     <div class="modal fade" id="rosterSettingsModal" tabindex="-1" aria-labelledby="rosterSettingsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content roster-modal-content">
                 <div class="roster-header-banner">
                     <div class="roster-header-icon">
@@ -1263,11 +1270,11 @@
                         }
                     </h5>
                     <p style="font-size: 11.5px; color: var(--text-muted); max-width: 340px; margin: 0 auto;">Sesuaikan siklus dinas/cuti atau periode penugasan luar Anda.</p>
-                    <button type="button" class="btn-close position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 20px; right: 20px; filter: invert(var(--text-contrast));"></button>
+                    <button type="button" class="btn-close position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 20px; right: 20px; filter: invert(var(--text-contrast)); z-index: 1055; cursor: pointer;"></button>
                 </div>
                 
-                <div class="modal-body" style="padding: 20px; max-height: calc(100vh - 200px); overflow-y: auto;">
-                    <form id="rosterSettingsForm">
+                <div class="modal-body" style="padding: 20px; -webkit-overflow-scrolling: touch; max-height: min(72vh, 72dvh);">
+                    <form id="rosterSettingsForm" onsubmit="event.preventDefault(); return false;">
                         @{
                             var currentTipe = (ViewData["RosterTipe"] as string) ?? "REGULER";
                             var isTugasActive = currentTipe.Equals("TUGAS", StringComparison.OrdinalIgnoreCase);
@@ -1325,11 +1332,11 @@
                                 <div class="row g-2">
                                     <div class="col-6">
                                         <label class="roster-label">Mulai Dinas</label>
-                                        <input type="date" class="roster-date-input" id="awalDinas" name="awalDinas" value="@ViewData["RosterAwalDinas"]" required />
+                                        <input type="date" class="roster-date-input" id="awalDinas" name="awalDinas" value="@ViewData["RosterAwalDinas"]" />
                                     </div>
                                     <div class="col-6">
                                         <label class="roster-label">Akhir Dinas</label>
-                                        <input type="date" class="roster-date-input" id="akhirDinas" name="akhirDinas" value="@ViewData["RosterAkhirDinas"]" required />
+                                        <input type="date" class="roster-date-input" id="akhirDinas" name="akhirDinas" value="@ViewData["RosterAkhirDinas"]" />
                                     </div>
                                 </div>
                             </div>
@@ -1342,11 +1349,11 @@
                                 <div class="row g-2">
                                     <div class="col-6">
                                         <label class="roster-label">Mulai Cuti</label>
-                                        <input type="date" class="roster-date-input" id="awalCuti" name="awalCuti" value="@ViewData["RosterAwalCuti"]" required />
+                                        <input type="date" class="roster-date-input" id="awalCuti" name="awalCuti" value="@ViewData["RosterAwalCuti"]" />
                                     </div>
                                     <div class="col-6">
                                         <label class="roster-label">Akhir Cuti</label>
-                                        <input type="date" class="roster-date-input" id="akhirCuti" name="akhirCuti" value="@ViewData["RosterAkhirCuti"]" required />
+                                        <input type="date" class="roster-date-input" id="akhirCuti" name="akhirCuti" value="@ViewData["RosterAkhirCuti"]" />
                                     </div>
                                 </div>
                             </div>
@@ -1390,11 +1397,11 @@
                                 <div class="row g-2 mb-3">
                                     <div class="col-6">
                                         <label class="roster-label">Mulai Tugas</label>
-                                        <input type="date" class="roster-date-input" id="awalTugas" name="awalTugas" value="@(isTugasActive ? ViewData["RosterAwalDinas"] : (ViewData["RosterAwalDinas"] ?? DateTime.Today.ToString("yyyy-MM-dd")))" required />
+                                        <input type="date" class="roster-date-input" id="awalTugas" name="awalTugas" value="@(isTugasActive ? ViewData["RosterAwalDinas"] : (ViewData["RosterAwalDinas"] ?? DateTime.Today.ToString("yyyy-MM-dd")))" />
                                     </div>
                                     <div class="col-6">
                                         <label class="roster-label">Akhir Tugas</label>
-                                        <input type="date" class="roster-date-input" id="akhirTugas" name="akhirTugas" value="@(isTugasActive ? ViewData["RosterAkhirDinas"] : (ViewData["RosterAkhirDinas"] ?? DateTime.Today.AddDays(30).ToString("yyyy-MM-dd")))" required />
+                                        <input type="date" class="roster-date-input" id="akhirTugas" name="akhirTugas" value="@(isTugasActive ? ViewData["RosterAkhirDinas"] : (ViewData["RosterAkhirDinas"] ?? DateTime.Today.AddDays(30).ToString("yyyy-MM-dd")))" />
                                     </div>
                                 </div>
                                 <div>
@@ -1554,46 +1561,68 @@
     @section Scripts {
         <script>
             $(document).ready(function() {
-                // Auto-trigger popup via query parameter
+                // Unified modal opener using getOrCreateInstance to prevent duplicate backdrops & Safari WebKit focus recursion crashes
+                function triggerRosterModal() {
+                    const modalEl = document.getElementById('rosterSettingsModal');
+                    if (!modalEl) return;
+
+                    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl, {
+                        backdrop: 'static',
+                        keyboard: false
+                    });
+
+                    if (!modalEl.classList.contains('show')) {
+                        modalInstance.show();
+                    }
+                }
+
+                // Explicit dismiss handler to ensure Safari on iOS cleanly closes the modal on Batal or X
+                $(document).on('click', '#rosterSettingsModal [data-bs-dismiss="modal"]', function(e) {
+                    e.preventDefault();
+                    const modalEl = document.getElementById('rosterSettingsModal');
+                    if (modalEl) {
+                        const inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) inst.hide();
+                    }
+                });
+
+                // Auto-trigger popup via query parameter (?openRoster=true)
                 const urlParams = new URLSearchParams(window.location.search);
+                let rosterTriggeredByParam = false;
                 if (urlParams.get('openRoster') === 'true') {
+                    rosterTriggeredByParam = true;
+                    // Clean URL parameter in browser history to prevent infinite reload loop in Safari/PWA
+                    if (window.history && window.history.replaceState) {
+                        const cleanUrl = window.location.pathname + window.location.search.replace(/[\?&]openRoster=true/, '').replace(/^&/, '?');
+                        window.history.replaceState({}, document.title, cleanUrl || window.location.pathname);
+                    }
                     setTimeout(function() {
-                        var myModal = new bootstrap.Modal(document.getElementById('rosterSettingsModal'), {
-                            backdrop: 'static',
-                            keyboard: false
-                        });
-                        myModal.show();
+                        triggerRosterModal();
                     }, 300);
                 }
 
-                // Auto-trigger popup if configured by backend, taking care not to overlap with incident popup
+                // Auto-trigger popup if configured by backend, taking care not to overlap with incident popup or openRoster param
                 @if (ViewData["ShowRosterPopup"] is bool show && show)
                 {
                     <text>
-                    setTimeout(function() {
-                        // Roster wajib diset jika belum pernah diset sama sekali atau sudah kedaluwarsa.
-                        var $incidentModal = $('#incidentPopupModal');
-                        if ($incidentModal.length) {
-                            var incidentId = $incidentModal.attr('data-incident-id');
-                            var incidentShown = sessionStorage.getItem('incident_popup_shown');
-                            
-                            if (incidentId && incidentShown !== incidentId) {
-                                $incidentModal.on('hidden.bs.modal', function() {
-                                    showRosterModal();
-                                });
-                                return;
+                    if (!rosterTriggeredByParam) {
+                        setTimeout(function() {
+                            // Roster wajib diset jika belum pernah diset sama sekali atau sudah kedaluwarsa.
+                            var $incidentModal = $('#incidentPopupModal');
+                            if ($incidentModal.length) {
+                                var incidentId = $incidentModal.attr('data-incident-id');
+                                var incidentShown = sessionStorage.getItem('incident_popup_shown');
+                                
+                                if (incidentId && incidentShown !== incidentId) {
+                                    $incidentModal.on('hidden.bs.modal', function() {
+                                        triggerRosterModal();
+                                    });
+                                    return;
+                                }
                             }
-                        }
-                        
-                        showRosterModal();
-                    }, 500);
-
-                    function showRosterModal() {
-                        var rosterModal = new bootstrap.Modal(document.getElementById('rosterSettingsModal'), {
-                            backdrop: 'static',
-                            keyboard: false
-                        });
-                        rosterModal.show();
+                            
+                            triggerRosterModal();
+                        }, 500);
                     }
                     </text>
                 }
