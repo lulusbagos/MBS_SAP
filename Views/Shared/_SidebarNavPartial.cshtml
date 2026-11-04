@@ -702,11 +702,6 @@ body.light-theme .user-role {
             </button>
             <div class="collapse menu-sub-collapse @(isKpiActive ? "show" : "")" id="collapseKpi">
                 <div class="menu-sub-list">
-                        <a asp-controller="Incident" asp-action="Banner" class="sub-menu-item @(activeTab == "BannerInformasi" ? "active" : "")">
-                            <i class="bi bi-images" style="color: #0284c7;"></i>
-                            <span>Banner Informasi (Mobile)</span>
-                            <span class="badge ms-auto" style="background: linear-gradient(135deg, #0284c7, #38bdf8); color: white; font-size: 8.5px; font-weight: 800; padding: 2px 4px; border-radius: 4px;">MOBILE</span>
-                        </a>
                     <a asp-controller="Performance" asp-action="Index" class="sub-menu-item @(activeTab == "Performance" ? "active" : "")">
                         <i class="bi bi-graph-up-arrow"></i>
                         <span>Pencapaian SAP</span>
@@ -888,6 +883,11 @@ body.light-theme .user-role {
                 </button>
                 <div class="collapse menu-sub-collapse @(isIncidentActive ? "show" : "")" id="collapseNews">
                     <div class="menu-sub-list">
+                        <a asp-controller="Incident" asp-action="Banner" class="sub-menu-item @(activeTab == "BannerInformasi" ? "active" : "")">
+                            <i class="bi bi-images" style="color: #0284c7;"></i>
+                            <span>Banner Informasi (Mobile)</span>
+                            <span class="badge ms-auto" style="background: linear-gradient(135deg, #0284c7, #38bdf8); color: white; font-size: 8.5px; font-weight: 800; padding: 2px 4px; border-radius: 4px;">NEW</span>
+                        </a>
                         <a asp-controller="Incident" asp-action="Index" class="sub-menu-item @(activeTab == "Incident" ? "active" : "")">
                             <i class="bi bi-shield-fill-plus" style="color: #f43f5e;"></i>
                             <span>Berita Keselamatan & Insiden</span>
